@@ -70,6 +70,8 @@
 // emitVtableStub() sizes each stub's transact buffer against can never
 // drift apart.
 #define STRING_RETURN_BUF_BYTES 256
+// quick 261026-rqb: transact buffer for a string reply, 4 + the helper's max encode.
+#define STRING_RETURN_WIRE_BYTES 259
 
 /*
 Wire marshaling layout (51-06 Task 3; 51-10 mirrors this exactly):
@@ -91,7 +93,9 @@ Request blob (per method, params in manifest declaration order):
 Response blob (per method):
   - the return value: 0 bytes (returnKind 'void'), 4 bytes (int32/pointer/
     float), 8 bytes (int64/double), [u32 len][bytes] (returnKind 'string',
-    decoded by the dedicated string-return branch), or structSize bytes
+    decoded by the dedicated string-return branch: accepted only when
+    retlen >= 4, len <= retlen - 4 and len < STRING_RETURN_BUF_BYTES,
+    otherwise the empty string), or structSize bytes
     (returnKind 'class', the sret branch).
   - then, for every 'out-value' param in declaration order: valueType's
     width (int32/uint32/float/bool = 4 bytes, uint64 = 8 bytes).
@@ -1235,13 +1239,17 @@ static char vt_SteamFriends018_GetPersonaName_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamFriends018_GetPersonaName(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(2, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamFriends018_GetPersonaName_buf[0] = '\0';
     return vt_SteamFriends018_GetPersonaName_buf;
   }
-  memcpy(vt_SteamFriends018_GetPersonaName_buf, retbuf, retlen);
-  vt_SteamFriends018_GetPersonaName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamFriends018_GetPersonaName_buf[0] = '\0'; return vt_SteamFriends018_GetPersonaName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamFriends018_GetPersonaName_buf[0] = '\0'; return vt_SteamFriends018_GetPersonaName_buf; }
+  memcpy(vt_SteamFriends018_GetPersonaName_buf, retbuf + 4, declLen);
+  vt_SteamFriends018_GetPersonaName_buf[declLen] = '\0';
   return vt_SteamFriends018_GetPersonaName_buf;
 }
 
@@ -1287,13 +1295,17 @@ static const char * THISCALL vt_SteamFriends018_GetFriendPersonaName(void *self,
   uint8_t argbuf[8];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &steamIDFriend, 8); argOff += 8;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(2, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamFriends018_GetFriendPersonaName_buf[0] = '\0';
     return vt_SteamFriends018_GetFriendPersonaName_buf;
   }
-  memcpy(vt_SteamFriends018_GetFriendPersonaName_buf, retbuf, retlen);
-  vt_SteamFriends018_GetFriendPersonaName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamFriends018_GetFriendPersonaName_buf[0] = '\0'; return vt_SteamFriends018_GetFriendPersonaName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamFriends018_GetFriendPersonaName_buf[0] = '\0'; return vt_SteamFriends018_GetFriendPersonaName_buf; }
+  memcpy(vt_SteamFriends018_GetFriendPersonaName_buf, retbuf + 4, declLen);
+  vt_SteamFriends018_GetFriendPersonaName_buf[declLen] = '\0';
   return vt_SteamFriends018_GetFriendPersonaName_buf;
 }
 
@@ -1979,13 +1991,17 @@ static char vt_SteamFriends011_GetPersonaName_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamFriends011_GetPersonaName(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(4, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamFriends011_GetPersonaName_buf[0] = '\0';
     return vt_SteamFriends011_GetPersonaName_buf;
   }
-  memcpy(vt_SteamFriends011_GetPersonaName_buf, retbuf, retlen);
-  vt_SteamFriends011_GetPersonaName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamFriends011_GetPersonaName_buf[0] = '\0'; return vt_SteamFriends011_GetPersonaName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamFriends011_GetPersonaName_buf[0] = '\0'; return vt_SteamFriends011_GetPersonaName_buf; }
+  memcpy(vt_SteamFriends011_GetPersonaName_buf, retbuf + 4, declLen);
+  vt_SteamFriends011_GetPersonaName_buf[declLen] = '\0';
   return vt_SteamFriends011_GetPersonaName_buf;
 }
 
@@ -2036,13 +2052,17 @@ static const char * THISCALL vt_SteamFriends011_GetFriendPersonaName(void *self,
   uint8_t argbuf[8];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &steamIDFriend, 8); argOff += 8;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(4, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamFriends011_GetFriendPersonaName_buf[0] = '\0';
     return vt_SteamFriends011_GetFriendPersonaName_buf;
   }
-  memcpy(vt_SteamFriends011_GetFriendPersonaName_buf, retbuf, retlen);
-  vt_SteamFriends011_GetFriendPersonaName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamFriends011_GetFriendPersonaName_buf[0] = '\0'; return vt_SteamFriends011_GetFriendPersonaName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamFriends011_GetFriendPersonaName_buf[0] = '\0'; return vt_SteamFriends011_GetFriendPersonaName_buf; }
+  memcpy(vt_SteamFriends011_GetFriendPersonaName_buf, retbuf + 4, declLen);
+  vt_SteamFriends011_GetFriendPersonaName_buf[declLen] = '\0';
   return vt_SteamFriends011_GetFriendPersonaName_buf;
 }
 
@@ -2490,13 +2510,17 @@ static char vt_SteamUtils005_GetIPCountry_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamUtils005_GetIPCountry(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(5, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamUtils005_GetIPCountry_buf[0] = '\0';
     return vt_SteamUtils005_GetIPCountry_buf;
   }
-  memcpy(vt_SteamUtils005_GetIPCountry_buf, retbuf, retlen);
-  vt_SteamUtils005_GetIPCountry_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamUtils005_GetIPCountry_buf[0] = '\0'; return vt_SteamUtils005_GetIPCountry_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamUtils005_GetIPCountry_buf[0] = '\0'; return vt_SteamUtils005_GetIPCountry_buf; }
+  memcpy(vt_SteamUtils005_GetIPCountry_buf, retbuf + 4, declLen);
+  vt_SteamUtils005_GetIPCountry_buf[declLen] = '\0';
   return vt_SteamUtils005_GetIPCountry_buf;
 }
 
@@ -2694,13 +2718,17 @@ static char vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf[STRING_
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(6, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf[0] = '\0';
     return vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf;
   }
-  memcpy(vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf, retbuf, retlen);
-  vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf; }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf, retbuf + 4, declLen);
+  vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf[declLen] = '\0';
   return vt_STEAMAPPS_INTERFACE_VERSION004_GetCurrentGameLanguage_buf;
 }
 
@@ -2709,13 +2737,17 @@ static char vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf[STRI
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(6, 5, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf[0] = '\0';
     return vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf;
   }
-  memcpy(vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf, retbuf, retlen);
-  vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf; }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf, retbuf + 4, declLen);
+  vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf[declLen] = '\0';
   return vt_STEAMAPPS_INTERFACE_VERSION004_GetAvailableGameLanguages_buf;
 }
 
@@ -3218,13 +3250,17 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchieveme
       }
     }
   }
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(7, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_buf[0] = '\0';
     return vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_buf;
   }
-  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_buf, retbuf, retlen);
-  vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_buf; }
+  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_buf, retbuf + 4, declLen);
+  vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_buf[declLen] = '\0';
   return vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_buf;
 }
 
@@ -3485,13 +3521,17 @@ static char vt_SteamFriends013_GetPersonaName_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamFriends013_GetPersonaName(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(8, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamFriends013_GetPersonaName_buf[0] = '\0';
     return vt_SteamFriends013_GetPersonaName_buf;
   }
-  memcpy(vt_SteamFriends013_GetPersonaName_buf, retbuf, retlen);
-  vt_SteamFriends013_GetPersonaName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamFriends013_GetPersonaName_buf[0] = '\0'; return vt_SteamFriends013_GetPersonaName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamFriends013_GetPersonaName_buf[0] = '\0'; return vt_SteamFriends013_GetPersonaName_buf; }
+  memcpy(vt_SteamFriends013_GetPersonaName_buf, retbuf + 4, declLen);
+  vt_SteamFriends013_GetPersonaName_buf[declLen] = '\0';
   return vt_SteamFriends013_GetPersonaName_buf;
 }
 
@@ -3543,13 +3583,17 @@ static const char * THISCALL vt_SteamFriends013_GetFriendPersonaName(void *self,
   uint8_t argbuf[8];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &steamIDFriend, 8); argOff += 8;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(8, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamFriends013_GetFriendPersonaName_buf[0] = '\0';
     return vt_SteamFriends013_GetFriendPersonaName_buf;
   }
-  memcpy(vt_SteamFriends013_GetFriendPersonaName_buf, retbuf, retlen);
-  vt_SteamFriends013_GetFriendPersonaName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamFriends013_GetFriendPersonaName_buf[0] = '\0'; return vt_SteamFriends013_GetFriendPersonaName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamFriends013_GetFriendPersonaName_buf[0] = '\0'; return vt_SteamFriends013_GetFriendPersonaName_buf; }
+  memcpy(vt_SteamFriends013_GetFriendPersonaName_buf, retbuf + 4, declLen);
+  vt_SteamFriends013_GetFriendPersonaName_buf[declLen] = '\0';
   return vt_SteamFriends013_GetFriendPersonaName_buf;
 }
 
@@ -3997,13 +4041,17 @@ static char vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf[STRING_
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(9, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf[0] = '\0';
     return vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf;
   }
-  memcpy(vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf, retbuf, retlen);
-  vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf; }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf, retbuf + 4, declLen);
+  vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf[declLen] = '\0';
   return vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentGameLanguage_buf;
 }
 
@@ -4012,13 +4060,17 @@ static char vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf[STRI
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(9, 5, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf[0] = '\0';
     return vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf;
   }
-  memcpy(vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf, retbuf, retlen);
-  vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf; }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf, retbuf + 4, declLen);
+  vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf[declLen] = '\0';
   return vt_STEAMAPPS_INTERFACE_VERSION005_GetAvailableGameLanguages_buf;
 }
 
@@ -4567,13 +4619,17 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchieveme
       }
     }
   }
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(10, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementDisplayAttribute_buf[0] = '\0';
     return vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementDisplayAttribute_buf;
   }
-  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementDisplayAttribute_buf, retbuf, retlen);
-  vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementDisplayAttribute_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementDisplayAttribute_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementDisplayAttribute_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementDisplayAttribute_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementDisplayAttribute_buf; }
+  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementDisplayAttribute_buf, retbuf + 4, declLen);
+  vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementDisplayAttribute_buf[declLen] = '\0';
   return vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementDisplayAttribute_buf;
 }
 
@@ -4628,13 +4684,17 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchieveme
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &iAchievement, 4); argOff += 4;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(10, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_buf[0] = '\0';
     return vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_buf;
   }
-  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_buf, retbuf, retlen);
-  vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_buf; }
+  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_buf, retbuf + 4, declLen);
+  vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_buf[declLen] = '\0';
   return vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_buf;
 }
 
@@ -7399,13 +7459,17 @@ static char vt_SteamFriends015_GetPersonaName_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamFriends015_GetPersonaName(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(18, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamFriends015_GetPersonaName_buf[0] = '\0';
     return vt_SteamFriends015_GetPersonaName_buf;
   }
-  memcpy(vt_SteamFriends015_GetPersonaName_buf, retbuf, retlen);
-  vt_SteamFriends015_GetPersonaName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamFriends015_GetPersonaName_buf[0] = '\0'; return vt_SteamFriends015_GetPersonaName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamFriends015_GetPersonaName_buf[0] = '\0'; return vt_SteamFriends015_GetPersonaName_buf; }
+  memcpy(vt_SteamFriends015_GetPersonaName_buf, retbuf + 4, declLen);
+  vt_SteamFriends015_GetPersonaName_buf[declLen] = '\0';
   return vt_SteamFriends015_GetPersonaName_buf;
 }
 
@@ -7457,13 +7521,17 @@ static const char * THISCALL vt_SteamFriends015_GetFriendPersonaName(void *self,
   uint8_t argbuf[8];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &steamIDFriend, 8); argOff += 8;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(18, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamFriends015_GetFriendPersonaName_buf[0] = '\0';
     return vt_SteamFriends015_GetFriendPersonaName_buf;
   }
-  memcpy(vt_SteamFriends015_GetFriendPersonaName_buf, retbuf, retlen);
-  vt_SteamFriends015_GetFriendPersonaName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamFriends015_GetFriendPersonaName_buf[0] = '\0'; return vt_SteamFriends015_GetFriendPersonaName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamFriends015_GetFriendPersonaName_buf[0] = '\0'; return vt_SteamFriends015_GetFriendPersonaName_buf; }
+  memcpy(vt_SteamFriends015_GetFriendPersonaName_buf, retbuf + 4, declLen);
+  vt_SteamFriends015_GetFriendPersonaName_buf[declLen] = '\0';
   return vt_SteamFriends015_GetFriendPersonaName_buf;
 }
 
@@ -7973,13 +8041,17 @@ static char vt_SteamUtils008_GetIPCountry_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamUtils008_GetIPCountry(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(19, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamUtils008_GetIPCountry_buf[0] = '\0';
     return vt_SteamUtils008_GetIPCountry_buf;
   }
-  memcpy(vt_SteamUtils008_GetIPCountry_buf, retbuf, retlen);
-  vt_SteamUtils008_GetIPCountry_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamUtils008_GetIPCountry_buf[0] = '\0'; return vt_SteamUtils008_GetIPCountry_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamUtils008_GetIPCountry_buf[0] = '\0'; return vt_SteamUtils008_GetIPCountry_buf; }
+  memcpy(vt_SteamUtils008_GetIPCountry_buf, retbuf + 4, declLen);
+  vt_SteamUtils008_GetIPCountry_buf[declLen] = '\0';
   return vt_SteamUtils008_GetIPCountry_buf;
 }
 
@@ -8105,13 +8177,17 @@ static char vt_SteamUtils008_GetSteamUILanguage_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamUtils008_GetSteamUILanguage(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(19, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamUtils008_GetSteamUILanguage_buf[0] = '\0';
     return vt_SteamUtils008_GetSteamUILanguage_buf;
   }
-  memcpy(vt_SteamUtils008_GetSteamUILanguage_buf, retbuf, retlen);
-  vt_SteamUtils008_GetSteamUILanguage_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamUtils008_GetSteamUILanguage_buf[0] = '\0'; return vt_SteamUtils008_GetSteamUILanguage_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamUtils008_GetSteamUILanguage_buf[0] = '\0'; return vt_SteamUtils008_GetSteamUILanguage_buf; }
+  memcpy(vt_SteamUtils008_GetSteamUILanguage_buf, retbuf + 4, declLen);
+  vt_SteamUtils008_GetSteamUILanguage_buf[declLen] = '\0';
   return vt_SteamUtils008_GetSteamUILanguage_buf;
 }
 
@@ -8227,13 +8303,17 @@ static char vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf[STRING_
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(20, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf[0] = '\0';
     return vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf;
   }
-  memcpy(vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf, retbuf, retlen);
-  vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf; }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf, retbuf + 4, declLen);
+  vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf[declLen] = '\0';
   return vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf;
 }
 
@@ -8242,13 +8322,17 @@ static char vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf[STRI
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(20, 5, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf[0] = '\0';
     return vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf;
   }
-  memcpy(vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf, retbuf, retlen);
-  vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf; }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf, retbuf + 4, declLen);
+  vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf[declLen] = '\0';
   return vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf;
 }
 
@@ -13088,13 +13172,17 @@ static char vt_SteamFriends017_GetPersonaName_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamFriends017_GetPersonaName(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(28, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamFriends017_GetPersonaName_buf[0] = '\0';
     return vt_SteamFriends017_GetPersonaName_buf;
   }
-  memcpy(vt_SteamFriends017_GetPersonaName_buf, retbuf, retlen);
-  vt_SteamFriends017_GetPersonaName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamFriends017_GetPersonaName_buf[0] = '\0'; return vt_SteamFriends017_GetPersonaName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamFriends017_GetPersonaName_buf[0] = '\0'; return vt_SteamFriends017_GetPersonaName_buf; }
+  memcpy(vt_SteamFriends017_GetPersonaName_buf, retbuf + 4, declLen);
+  vt_SteamFriends017_GetPersonaName_buf[declLen] = '\0';
   return vt_SteamFriends017_GetPersonaName_buf;
 }
 
@@ -13146,13 +13234,17 @@ static const char * THISCALL vt_SteamFriends017_GetFriendPersonaName(void *self,
   uint8_t argbuf[8];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &steamIDFriend, 8); argOff += 8;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(28, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamFriends017_GetFriendPersonaName_buf[0] = '\0';
     return vt_SteamFriends017_GetFriendPersonaName_buf;
   }
-  memcpy(vt_SteamFriends017_GetFriendPersonaName_buf, retbuf, retlen);
-  vt_SteamFriends017_GetFriendPersonaName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamFriends017_GetFriendPersonaName_buf[0] = '\0'; return vt_SteamFriends017_GetFriendPersonaName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamFriends017_GetFriendPersonaName_buf[0] = '\0'; return vt_SteamFriends017_GetFriendPersonaName_buf; }
+  memcpy(vt_SteamFriends017_GetFriendPersonaName_buf, retbuf + 4, declLen);
+  vt_SteamFriends017_GetFriendPersonaName_buf[declLen] = '\0';
   return vt_SteamFriends017_GetFriendPersonaName_buf;
 }
 
@@ -13716,13 +13808,17 @@ static char vt_SteamUtils010_GetIPCountry_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamUtils010_GetIPCountry(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(29, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamUtils010_GetIPCountry_buf[0] = '\0';
     return vt_SteamUtils010_GetIPCountry_buf;
   }
-  memcpy(vt_SteamUtils010_GetIPCountry_buf, retbuf, retlen);
-  vt_SteamUtils010_GetIPCountry_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamUtils010_GetIPCountry_buf[0] = '\0'; return vt_SteamUtils010_GetIPCountry_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamUtils010_GetIPCountry_buf[0] = '\0'; return vt_SteamUtils010_GetIPCountry_buf; }
+  memcpy(vt_SteamUtils010_GetIPCountry_buf, retbuf + 4, declLen);
+  vt_SteamUtils010_GetIPCountry_buf[declLen] = '\0';
   return vt_SteamUtils010_GetIPCountry_buf;
 }
 
@@ -13848,13 +13944,17 @@ static char vt_SteamUtils010_GetSteamUILanguage_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamUtils010_GetSteamUILanguage(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(29, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamUtils010_GetSteamUILanguage_buf[0] = '\0';
     return vt_SteamUtils010_GetSteamUILanguage_buf;
   }
-  memcpy(vt_SteamUtils010_GetSteamUILanguage_buf, retbuf, retlen);
-  vt_SteamUtils010_GetSteamUILanguage_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamUtils010_GetSteamUILanguage_buf[0] = '\0'; return vt_SteamUtils010_GetSteamUILanguage_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamUtils010_GetSteamUILanguage_buf[0] = '\0'; return vt_SteamUtils010_GetSteamUILanguage_buf; }
+  memcpy(vt_SteamUtils010_GetSteamUILanguage_buf, retbuf + 4, declLen);
+  vt_SteamUtils010_GetSteamUILanguage_buf[declLen] = '\0';
   return vt_SteamUtils010_GetSteamUILanguage_buf;
 }
 
@@ -14404,13 +14504,17 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchieveme
       }
     }
   }
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(30, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf[0] = '\0';
     return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf;
   }
-  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf, retbuf, retlen);
-  vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf; }
+  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf, retbuf + 4, declLen);
+  vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf[declLen] = '\0';
   return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf;
 }
 
@@ -14465,13 +14569,17 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchieveme
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &iAchievement, 4); argOff += 4;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(30, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf[0] = '\0';
     return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf;
   }
-  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf, retbuf, retlen);
-  vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf; }
+  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf, retbuf + 4, declLen);
+  vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf[declLen] = '\0';
   return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf;
 }
 
@@ -15107,13 +15215,17 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchieveme
       }
     }
   }
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(31, 11, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf[0] = '\0';
     return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf;
   }
-  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf, retbuf, retlen);
-  vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf; }
+  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf, retbuf + 4, declLen);
+  vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf[declLen] = '\0';
   return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf;
 }
 
@@ -15168,13 +15280,17 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchieveme
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &iAchievement, 4); argOff += 4;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(31, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf[0] = '\0';
     return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf;
   }
-  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf, retbuf, retlen);
-  vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf[0] = '\0'; return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf; }
+  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf, retbuf + 4, declLen);
+  vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf[declLen] = '\0';
   return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf;
 }
 
@@ -19947,13 +20063,17 @@ static char vt_SteamUtils009_GetIPCountry_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamUtils009_GetIPCountry(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(54, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamUtils009_GetIPCountry_buf[0] = '\0';
     return vt_SteamUtils009_GetIPCountry_buf;
   }
-  memcpy(vt_SteamUtils009_GetIPCountry_buf, retbuf, retlen);
-  vt_SteamUtils009_GetIPCountry_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamUtils009_GetIPCountry_buf[0] = '\0'; return vt_SteamUtils009_GetIPCountry_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamUtils009_GetIPCountry_buf[0] = '\0'; return vt_SteamUtils009_GetIPCountry_buf; }
+  memcpy(vt_SteamUtils009_GetIPCountry_buf, retbuf + 4, declLen);
+  vt_SteamUtils009_GetIPCountry_buf[declLen] = '\0';
   return vt_SteamUtils009_GetIPCountry_buf;
 }
 
@@ -20079,13 +20199,17 @@ static char vt_SteamUtils009_GetSteamUILanguage_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamUtils009_GetSteamUILanguage(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(54, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamUtils009_GetSteamUILanguage_buf[0] = '\0';
     return vt_SteamUtils009_GetSteamUILanguage_buf;
   }
-  memcpy(vt_SteamUtils009_GetSteamUILanguage_buf, retbuf, retlen);
-  vt_SteamUtils009_GetSteamUILanguage_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamUtils009_GetSteamUILanguage_buf[0] = '\0'; return vt_SteamUtils009_GetSteamUILanguage_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamUtils009_GetSteamUILanguage_buf[0] = '\0'; return vt_SteamUtils009_GetSteamUILanguage_buf; }
+  memcpy(vt_SteamUtils009_GetSteamUILanguage_buf, retbuf + 4, declLen);
+  vt_SteamUtils009_GetSteamUILanguage_buf[declLen] = '\0';
   return vt_SteamUtils009_GetSteamUILanguage_buf;
 }
 
@@ -21743,13 +21867,17 @@ static char vt_SteamUtils007_GetIPCountry_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamUtils007_GetIPCountry(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(60, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamUtils007_GetIPCountry_buf[0] = '\0';
     return vt_SteamUtils007_GetIPCountry_buf;
   }
-  memcpy(vt_SteamUtils007_GetIPCountry_buf, retbuf, retlen);
-  vt_SteamUtils007_GetIPCountry_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamUtils007_GetIPCountry_buf[0] = '\0'; return vt_SteamUtils007_GetIPCountry_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamUtils007_GetIPCountry_buf[0] = '\0'; return vt_SteamUtils007_GetIPCountry_buf; }
+  memcpy(vt_SteamUtils007_GetIPCountry_buf, retbuf + 4, declLen);
+  vt_SteamUtils007_GetIPCountry_buf[declLen] = '\0';
   return vt_SteamUtils007_GetIPCountry_buf;
 }
 
@@ -21875,13 +22003,17 @@ static char vt_SteamUtils007_GetSteamUILanguage_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamUtils007_GetSteamUILanguage(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(60, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_SteamUtils007_GetSteamUILanguage_buf[0] = '\0';
     return vt_SteamUtils007_GetSteamUILanguage_buf;
   }
-  memcpy(vt_SteamUtils007_GetSteamUILanguage_buf, retbuf, retlen);
-  vt_SteamUtils007_GetSteamUILanguage_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamUtils007_GetSteamUILanguage_buf[0] = '\0'; return vt_SteamUtils007_GetSteamUILanguage_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamUtils007_GetSteamUILanguage_buf[0] = '\0'; return vt_SteamUtils007_GetSteamUILanguage_buf; }
+  memcpy(vt_SteamUtils007_GetSteamUILanguage_buf, retbuf + 4, declLen);
+  vt_SteamUtils007_GetSteamUILanguage_buf[declLen] = '\0';
   return vt_SteamUtils007_GetSteamUILanguage_buf;
 }
 
@@ -21980,13 +22112,17 @@ static char vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf[STRING_
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(61, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf[0] = '\0';
     return vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf;
   }
-  memcpy(vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf, retbuf, retlen);
-  vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf; }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf, retbuf + 4, declLen);
+  vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf[declLen] = '\0';
   return vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf;
 }
 
@@ -21995,13 +22131,17 @@ static char vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf[STRI
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
   if (!bridge_transact(61, 5, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
     vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf[0] = '\0';
     return vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf;
   }
-  memcpy(vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf, retbuf, retlen);
-  vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf[retlen] = '\0';
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf[0] = '\0'; return vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf; }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf, retbuf + 4, declLen);
+  vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf[declLen] = '\0';
   return vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf;
 }
 

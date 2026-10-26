@@ -30,6 +30,10 @@ import {
   GAMESERVER_FLAT_STUBS,
   MODERN_LOOKUP_FLAT_EXPORTS,
   STRING_RETURN_BUF_BYTES,
+  STRING_RETURN_WIRE_BYTES,
+  DISPATCH_STRING_RETURN_MAX_BYTES,
+  emitStringReturnDecode,
+  emitStringReturnEncodeLines,
   WIRE_LAYOUT_DOC,
   X64_NULL_OBJECT_SLOTS,
   type InterfaceManifestV2
@@ -389,16 +393,14 @@ describe('gen_vtables', () => {
         expect(body).not.toContain('memcpy(&ret, retbuf')
 
         // The shim-owned-buffer copy-and-return.
-        expect(body).toContain('uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]')
+        expect(body).toContain('uint8_t retbuf[STRING_RETURN_WIRE_BYTES]')
         expect(body).toContain(
           "vt_SteamFriends018_GetPersonaName_buf[0] = '\\0';"
         )
         expect(body).toContain(
-          'memcpy(vt_SteamFriends018_GetPersonaName_buf, retbuf, retlen);'
+          emitStringReturnDecode('vt_SteamFriends018_GetPersonaName_buf')
         )
-        expect(body).toContain(
-          "vt_SteamFriends018_GetPersonaName_buf[retlen] = '\\0';"
-        )
+        expect(body).not.toContain('_buf, retbuf, retlen)')
         expect(body).toContain('return vt_SteamFriends018_GetPersonaName_buf;')
 
         expect(source).toContain(
@@ -450,9 +452,9 @@ describe('gen_vtables', () => {
         expect(body).toContain(
           `bridge_transact(${ordinal}, ${slot}, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)`
         )
-        expect(body).toContain('uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]')
-        expect(body).toContain(`memcpy(${fn}_buf, retbuf, retlen);`)
-        expect(body).toContain(`${fn}_buf[retlen] = '\\0';`)
+        expect(body).toContain('uint8_t retbuf[STRING_RETURN_WIRE_BYTES]')
+        expect(body).toContain(emitStringReturnDecode(`${fn}_buf`))
+        expect(body).not.toContain('_buf, retbuf, retlen)')
         expect(body).toContain(`return ${fn}_buf;`)
         expect(source).toContain(
           `static char ${fn}_buf[STRING_RETURN_BUF_BYTES];`
@@ -1329,6 +1331,12 @@ describe('gen_vtables', () => {
       expect(body).toContain('if (strLen > 255) strLen = 255;')
       expect(body).toContain('memcpy(resp, &strLen, 4);')
       expect(body).toContain('memcpy(resp + 4, result, strLen);')
+    })
+
+    it('GetPersonaName case body uses the shared encode emitter verbatim (261026-rqb)', () => {
+      expect(dispatch).toContain(
+        emitStringReturnEncodeLines('result').join('\n')
+      )
     })
 
     it('an unknown (ordinal, slot) pair falls through the default case and returns STATUS_ERR (1)', () => {
@@ -3408,5 +3416,59 @@ describe('55 WR-02: bridge_transact_once malformed and oversized responses', () 
     expect(branch.indexOf('closesocket')).toBeLessThan(
       branch.indexOf('return 0;')
     )
+  })
+
+  describe('quick 261026-rqb: string-return wire decode ([u32 len][bytes])', () => {
+    const shimC = readFileSync(
+      join(
+        __dirname,
+        '..',
+        '..',
+        'native',
+        'steam-bridge',
+        'generated',
+        'steam_api_shim.c'
+      ),
+      'utf-8'
+    )
+    const generated = generateShimC(loadAllManifests())
+
+    it('wire cap is 4 + the helper max and the decoded buffer always fits', () => {
+      expect(STRING_RETURN_WIRE_BYTES).toBe(
+        4 + DISPATCH_STRING_RETURN_MAX_BYTES
+      )
+      expect(DISPATCH_STRING_RETURN_MAX_BYTES).toBeLessThan(
+        STRING_RETURN_BUF_BYTES
+      )
+      expect(generated).toContain(
+        `#define STRING_RETURN_WIRE_BYTES ${STRING_RETURN_WIRE_BYTES}`
+      )
+    })
+
+    it('decode is length-checked and never a raw copy', () => {
+      const d = emitStringReturnDecode('b')
+      expect(d).toContain('retlen < 4')
+      expect(d).toContain('declLen > retlen - 4')
+      expect(d).not.toContain('memcpy(b, retbuf, retlen)')
+      expect(d).not.toContain('b[retlen]')
+    })
+
+    it.each<[string, string]>([
+      ['generateShimC output', generated],
+      ['committed shim', shimC]
+    ])('(%s) every string thunk decodes via the shared emitter', (_l, src) => {
+      expect(src).not.toContain('retbuf, retlen)')
+      const thunks = [
+        ...src.matchAll(
+          /static const char \* THISCALL (vt_\w+)\([^)]*\) \{[\s\S]*?\n\}/g
+        )
+      ]
+      const wired = thunks.filter((t) => t[0].includes('bridge_transact'))
+      expect(wired.length).toBeGreaterThan(0)
+      for (const t of wired) {
+        expect(t[0]).toContain('uint8_t retbuf[STRING_RETURN_WIRE_BYTES]')
+        expect(t[0]).toContain(emitStringReturnDecode(`${t[1]}_buf`))
+      }
+    })
   })
 })

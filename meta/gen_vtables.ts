@@ -294,8 +294,9 @@ export function isStringReturn(method: MethodSignature): boolean {
 
 /**
  * Byte capacity of the shim-owned static buffer a string-returning stub
- * copies its wire-received bytes into (plus a NUL terminator written at
- * `retlen`, so the usable transact buffer is one byte smaller). 256 is
+ * decodes its `[u32 len][bytes]` reply into (the NUL terminator is written
+ * at the DECODED length, so a string must be < this). It must exceed
+ * DISPATCH_STRING_RETURN_MAX_BYTES. 256 is
  * generous headroom over Steamworks' documented persona-name ceiling
  * (`k_cchPersonaNameMax` = 128 bytes including NUL) while staying far
  * under the frame-level `MAX_FRAME_BYTES` cap (protocol.ts / T-24-03).
@@ -583,7 +584,9 @@ Request blob (per method, params in manifest declaration order):
 Response blob (per method):
   - the return value: 0 bytes (returnKind 'void'), 4 bytes (int32/pointer/
     float), 8 bytes (int64/double), [u32 len][bytes] (returnKind 'string',
-    decoded by the dedicated string-return branch), or structSize bytes
+    decoded by the dedicated string-return branch: accepted only when
+    retlen >= 4, len <= retlen - 4 and len < STRING_RETURN_BUF_BYTES,
+    otherwise the empty string), or structSize bytes
     (returnKind 'class', the sret branch).
   - then, for every 'out-value' param in declaration order: valueType's
     width (int32/uint32/float/bool = 4 bytes, uint64 = 8 bytes).
@@ -1793,9 +1796,11 @@ function emitVtableStub(
 
   if (stringReturn) {
     // CR-01: a register-return const char* cannot marshal a remote
-    // pointer -- the helper sends the raw string bytes (length implied by
-    // the response frame, protocol.ts), and this stub must copy those
-    // bytes into memory IT owns, then return a pointer into that buffer
+    // pointer -- the helper encodes [u32 len][bytes] (WIRE_LAYOUT_DOC,
+    // emitStringReturnEncodeLines) and this stub decodes through the
+    // same-module emitStringReturnDecode so both sides share one definition
+    // (quick 261026-rqb: the raw copy leaked the length prefix, e.g. 0x07 in
+    // Overlooting's godot.log). It must copy the bytes into memory IT owns, then return a pointer into that buffer
     // (matching the real Steamworks contract of returning a pointer to
     // SDK-internally-owned memory). A transact failure (including a
     // string longer than the buffer, which bridge_transact rejects by
@@ -1807,14 +1812,12 @@ function emitVtableStub(
       `static const char * THISCALL ${funcName}(${signatureParams}) {\n` +
       `  (void)self;\n` +
       `${argBufDecl}\n` +
-      `  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;\n` +
+      `  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;\n` +
       `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen)) {\n` +
       `    ${funcName}_buf[0] = '\\0';\n` +
       `    return ${funcName}_buf;\n` +
       `  }\n` +
-      `  memcpy(${funcName}_buf, retbuf, retlen);\n` +
-      `  ${funcName}_buf[retlen] = '\\0';\n` +
-      `  return ${funcName}_buf;\n` +
+      emitStringReturnDecode(`${funcName}_buf`) +
       `}\n`
     )
   }
@@ -2662,6 +2665,8 @@ export function generateShimC(
 // emitVtableStub() sizes each stub's transact buffer against can never
 // drift apart.
 #define STRING_RETURN_BUF_BYTES ${STRING_RETURN_BUF_BYTES}
+// quick 261026-rqb: transact buffer for a string reply, 4 + the helper's max encode.
+#define STRING_RETURN_WIRE_BYTES ${STRING_RETURN_WIRE_BYTES}
 
 /*
 ${WIRE_LAYOUT_DOC}
@@ -3196,6 +3201,47 @@ export const BRIDGE_DISPATCH_RESP_SCRATCH_BYTES = 4096
  * `k_cchPersonaNameMax` - 1. */
 export const DISPATCH_STRING_RETURN_MAX_BYTES = 255
 
+/** Bytes of the shim's string-return transact buffer: the helper's largest
+ * encode, `[u32 len]` + DISPATCH_STRING_RETURN_MAX_BYTES. Sized so a
+ * maximal string never trips bridge_transact's oversize-response drop. */
+export const STRING_RETURN_WIRE_BYTES = 4 + DISPATCH_STRING_RETURN_MAX_BYTES
+
+/**
+ * Helper-side string-return encode (`[u32 len][bytes]`), from the NULL check
+ * through `return 0;`. Single source: the dispatch generator emits it and the
+ * round-trip harness compiles it (quick 261026-rqb).
+ */
+export function emitStringReturnEncodeLines(resultVar: string): string[] {
+  return [
+    `      if (${resultVar} == NULL) { *respLen = 0; return 1; }`,
+    `      uint32_t strLen = (uint32_t)strlen(${resultVar});`,
+    `      if (strLen > ${DISPATCH_STRING_RETURN_MAX_BYTES}) strLen = ${DISPATCH_STRING_RETURN_MAX_BYTES};`,
+    `      if (respCap < 4 + strLen) { *respLen = 0; return 1; }`,
+    `      memcpy(resp, &strLen, 4);`,
+    `      memcpy(resp + 4, ${resultVar}, strLen);`,
+    `      *respLen = 4 + strLen;`,
+    `      return 0;`
+  ]
+}
+
+/**
+ * Shim-side string-return decode, run after a successful bridge_transact.
+ * Reads `[u32 len][bytes]` from retbuf/retlen. The declared length is
+ * untrusted: accepted only when retlen >= 4, len <= retlen - 4 and
+ * len < STRING_RETURN_BUF_BYTES; anything else yields "".
+ */
+export function emitStringReturnDecode(bufName: string): string {
+  return (
+    `  uint32_t declLen = 0;\n` +
+    `  if (retlen < 4) { ${bufName}[0] = '\\0'; return ${bufName}; }\n` +
+    `  memcpy(&declLen, retbuf, 4);\n` +
+    `  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { ${bufName}[0] = '\\0'; return ${bufName}; }\n` +
+    `  memcpy(${bufName}, retbuf + 4, declLen);\n` +
+    `  ${bufName}[declLen] = '\\0';\n` +
+    `  return ${bufName};\n`
+  )
+}
+
 /**
  * Per-manifest, de-duplicated accessor var names -- `g_bd_self_<interface
  * lowercased>` holds the resolved interface-instance pointer,
@@ -3583,14 +3629,7 @@ function emitDispatchCase(
   } else if (method.returnKind === 'string') {
     lines.push(
       `      const char *result = ${callExpr};`,
-      `      if (result == NULL) { *respLen = 0; return 1; }`,
-      `      uint32_t strLen = (uint32_t)strlen(result);`,
-      `      if (strLen > ${DISPATCH_STRING_RETURN_MAX_BYTES}) strLen = ${DISPATCH_STRING_RETURN_MAX_BYTES};`,
-      `      if (respCap < 4 + strLen) { *respLen = 0; return 1; }`,
-      `      memcpy(resp, &strLen, 4);`,
-      `      memcpy(resp + 4, result, strLen);`,
-      `      *respLen = 4 + strLen;`,
-      `      return 0;`
+      ...emitStringReturnEncodeLines('result')
     )
   } else {
     const width = dispatchReturnWidth(method, manifest)
