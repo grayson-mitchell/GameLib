@@ -172,6 +172,7 @@ static void reset(void) {
   gl_cb_have_drained = 0;
   gl_cb_fail_count = 0;
   gl_cb_overflow = 0;
+  gl_cb_no_target = 0;
   g_qhead = g_qtail = 0;
   g_tcalls = 0;
   g_lastbuf = NULL;
@@ -306,6 +307,24 @@ static void case_cross_thread_unregister_waits(void) {
   CHECK(gl_cb_count == 0);
   CHECK(gl_cb_dispatching == NULL);
   CHECK(gl_cb_running == 0);
+  PASS();
+}
+
+static void case_no_target_counted(void) {
+  g_case = "no_target_counted";
+  reset();
+  objG.flags = 0x02; /* gameserver-only handler: never a target */
+  gl_cb_register(&objG, 168);
+  push_msg(168, 1, 2572, 2572);
+  gl_cb_run_callbacks();
+  CHECK(objG.calls == 0);
+  CHECK(gl_cb_no_target == 1);
+  gl_cb_register(&objA, 168);
+  push_msg(168, 1, 2572, 2572);
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(objA.calls == 1);
+  CHECK(gl_cb_no_target == 1);
   PASS();
 }
 
@@ -471,6 +490,7 @@ int main(void) {
   case_reentrant_handler();
   case_cross_thread_unregister_waits();
   case_reentrant_run_skipped();
+  case_no_target_counted();
   case_throttle();
   case_max_per_run();
   case_backoff();

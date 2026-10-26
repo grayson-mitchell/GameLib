@@ -457,6 +457,7 @@ static uint32_t gl_cb_last_drain_ms;
 static int gl_cb_have_drained;
 static uint32_t gl_cb_fail_count;
 static uint32_t gl_cb_overflow;
+static uint32_t gl_cb_no_target;
 /* In-flight state (55 WR-01), all guarded by the registry lock. */
 static int gl_cb_running;
 static uint32_t gl_cb_run_tid;
@@ -575,7 +576,7 @@ static void gl_cb_run_callbacks(void) {
 
   for (iter = 0; iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
     uint32_t len = 0;
-    uint32_t count, cub, size, ntargets, i;
+    uint32_t count, cub, size, ntargets, ndispatched, i;
     int32_t id;
     int ok = gl_cb_transport_drain(buf, GL_CB_DRAIN_RESP_MAX_BYTES, &len);
     if (!ok) {
@@ -608,6 +609,7 @@ static void gl_cb_run_callbacks(void) {
     }
     GL_CB_UNLOCK();
 
+    ndispatched = 0;
     for (i = 0; i < ntargets; i++) {
       int idx, still;
       GL_CB_LOCK();
@@ -616,11 +618,17 @@ static void gl_cb_run_callbacks(void) {
       if (still) gl_cb_dispatching = targets[i];
       GL_CB_UNLOCK();
       if (still) {
+        ndispatched++;
         gl_cb_dispatch_one(targets[i], buf + 12);
         GL_CB_LOCK();
         gl_cb_dispatching = NULL;
         GL_CB_UNLOCK();
       }
+    }
+    if (ndispatched == 0) {
+      GL_CB_LOCK();
+      gl_cb_no_target++;
+      GL_CB_UNLOCK();
     }
   }
 

@@ -25,6 +25,7 @@ const CASES = [
   'reentrant_handler',
   'cross_thread_unregister_waits',
   'reentrant_run_skipped',
+  'no_target_counted',
   'throttle',
   'max_per_run',
   'backoff',
