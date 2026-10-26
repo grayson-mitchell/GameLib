@@ -51,3 +51,9 @@ Fix: single-sourced `emitStringReturnEncodeLines` / `emitStringReturnDecode` in 
 HYPOTHESIS (unproven): Mining Mechs' Win32 error dialogs (todo `completed/2026-10-25-mining-mechs-win32-error-dialogs-on-launch.md`) may come from a garbage GetCurrentGameLanguage. Recorded here because that todo is under completed/ and carries an unrelated uncommitted edit.
 
 Next: a live re-run on a packaged build with the rebuilt shim must show the real persona name after `Usernam:` in godot.log. Restart dev so the rebuilt helper and shim are used.
+
+## Live gate passed (2026-10-26)
+
+20:09, rebuilt packaged debug bundle carrying the 261026-rqb shim (bottle steam_api64.dll 506368 = built; helper 156688), launched via `gamelib://launch?appName=3410180&runner=steam`. The nvapi64 per-exe override applied, with no `page fault on read access to 0x0`. The bridge logged HELLO, `GINIT fn=SteamInternal_SteamAPI_Init ret=0 ok=1`, `CALL SteamUser023.GetSteamID` and `CALL SteamFriends018.GetFriendPersonaName`, with no NOVER. The operator reached the menu (normal) and quit via the game's Quit button. godot.log now reads `Usernam: Grayson` (hex `... 3a 20 47 72 61 79 73 6f 6e 0a`, no length byte). `pnpm bridge-census` reads 3410180 `verified`. Closed.
+
+The Mining Mechs language hypothesis above is moot for that todo: it was already closed on a separate D3DMetal cause. Whether other titles misbehaved on the garbled GetPersonaName/GetCurrentGameLanguage returns before 261026-rqb is unmeasured.
