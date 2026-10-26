@@ -3,6 +3,7 @@ created: 2026-10-25
 title: "Depot 200511 gets an empty GetCDNAuthToken response every minute; chunk timeouts ~18% during XCOM download (cause unknown)"
 source: quick 261025-rd0, XCOM 200510 cross-depot collision live gate, packaged debug bundle
 area: steam-depot-download
+status: RESOLVED
 files:
   - src/backend/storeManagers/steam/depot/cdnAuth.ts
   - src/backend/storeManagers/steam/depot.ts
@@ -35,3 +36,14 @@ Investigation directions:
 2. Whether timeouts cluster on 200511 chunks or on particular hosts.
 
 At minimum the per-minute stack-trace noise is worth removing either way.
+
+## Resolution (2026-10-26, quick-261026-piq)
+
+- Direction 1 is fixed. An eresult=OK empty token is now cached as "no token required" for
+  `CDN_AUTH_NO_TOKEN_TTL_MS` (30 min), with one info line per fetch, no stack and no 60s cooldown.
+- Evidence: in the 2026-10-23 log the token-less type=CDN hosts served chunks with zero timeouts,
+  and the 2026-09-07 Californium run showed the same.
+- Direction 2 (timeout clustering) is split to
+  `.planning/todos/pending/2026-10-26-chunk-timeouts-by-depot-or-host-unmeasured.md`.
+- Real failures (eresult != OK, decode error, timeout, empty token with undefined eresult) still
+  take the 60s cooldown and the warning.
