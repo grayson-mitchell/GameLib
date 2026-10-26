@@ -6745,6 +6745,76 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     )
   })
 
+  describe('quick 261027-bqe: curated known-fix seed', () => {
+    const arrange = (lipoOut: string, meta: Record<string, unknown>) => {
+      ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+        if (dir === INSTALL_PATH) return ['OldGame.app']
+        if (dir === MACOS_DIR) return ['OldGame']
+        return []
+      })
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+        if (cmd === 'lipo') return lipoOut
+        throw new Error(`unexpected command ${cmd}`)
+      })
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue(meta)
+    }
+    const logger = () =>
+      jest.requireMock<{ logInfo: jest.Mock; logWarning: jest.Mock }>(
+        'backend/logger'
+      )
+
+    it("a known-fix '32' seed does not skip: Mach-O '32' is persisted as macho/verified", async () => {
+      arrange('i386\n', { mac_arch: '32', mac_arch_source: 'known-fix' })
+      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      expect(steamMetadataStore.set).toHaveBeenCalledWith(
+        APP_ID,
+        expect.objectContaining({
+          mac_arch: '32',
+          mac_arch_source: 'macho',
+          mac_arch_verified: true
+        })
+      )
+    })
+
+    it("a known-fix '32' seed contradicted by Mach-O '64' persists '64' and warns", async () => {
+      arrange('x86_64\n', { mac_arch: '32', mac_arch_source: 'known-fix' })
+      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      expect(steamMetadataStore.set).toHaveBeenCalledWith(
+        APP_ID,
+        expect.objectContaining({
+          mac_arch: '64',
+          mac_arch_source: 'macho',
+          mac_arch_verified: true
+        })
+      )
+      expect(
+        logger().logWarning.mock.calls.some((c: unknown[]) =>
+          /contradicted/.test(String(c[0]))
+        )
+      ).toBe(true)
+    })
+
+    it("any '32' verdict logs a paste-ready known-fixes entry", async () => {
+      arrange('i386\n', { art_cover: '', art_square: '', extra: { reqs: [] } })
+      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      expect(
+        logger().logInfo.mock.calls.some(
+          (c: unknown[]) =>
+            String(c[0]).includes('-steam.json') &&
+            String(c[0]).includes('"macArch":"32"')
+        )
+      ).toBe(true)
+    })
+
+    it("a macho '32' entry still short-circuits", async () => {
+      arrange('i386\n', { mac_arch: '32', mac_arch_source: 'macho' })
+      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      expect(execFileSync).not.toHaveBeenCalled()
+      expect(steamMetadataStore.set).not.toHaveBeenCalled()
+    })
+  })
+
   it('MAC32-03/CONTEXT D-6: an i386 flip triggers the user-consent dialog (never a silent uninstall) — decoupled fire-and-forget, cancel leaves the cached verdict untouched', async () => {
     ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
       if (dir === INSTALL_PATH) return ['OldGame.app']

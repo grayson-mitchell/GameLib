@@ -34,6 +34,7 @@ import {
 } from './electronStores'
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
+import { formatMacArch32KnownFixEntry } from './macArchKnownFix'
 import SteamGame, {
   isNativeInstallInFlight,
   clearForcedWindowsViaBottle
@@ -1710,8 +1711,10 @@ export function locateMachOBinary(
  *  - source !== 'native': a bottle install is a Windows depot — no Mach-O
  *    binary belongs to this game on that path (RESEARCH.md Anti-Patterns).
  *  - !isMac: host-gated, mirrors games.ts ensurePlatformsCaptured()'s guard.
- *  - mac_arch already '32', or mac_arch_verified already true: nothing to
- *    correct, or already resolved — never re-shells on every install/launch.
+ *  - mac_arch already '32' (from the Mach-O check; a curated 'known-fix' '32'
+ *    does NOT skip, the Mach-O check keeps the last word), or mac_arch_verified
+ *    already true: nothing to correct, or already resolved — never re-shells
+ *    on every install/launch.
  *
  * A definitive verdict ('32' or '64') is persisted with mac_arch_source:
  * 'macho' and mac_arch_verified:true, spreading the existing cache entry so
@@ -1735,9 +1738,14 @@ export async function verifyMacArchGroundTruth(
   if (!isMac) return
 
   const existing = steamMetadataStore.get(appId)
-  if (existing?.mac_arch === '32' || existing?.mac_arch_verified === true) {
+  if (
+    existing?.mac_arch_verified === true ||
+    (existing?.mac_arch === '32' && existing?.mac_arch_source !== 'known-fix')
+  ) {
     return
   }
+  const wasKnownFix32 =
+    existing?.mac_arch_source === 'known-fix' && existing?.mac_arch === '32'
 
   const binaryPath = locateMachOBinary(installPath)
   if (!binaryPath) {
@@ -1792,7 +1800,18 @@ export async function verifyMacArchGroundTruth(
     )
   }
 
+  if (wasKnownFix32 && verdict === '64') {
+    logWarning(
+      `Steam: curated known-fixes entry ${appId}-steam.json macArch "32" is contradicted by the Mach-O ground truth ('64') and should be removed`,
+      LogPrefix.Steam
+    )
+  }
+
   if (verdict === '32') {
+    logInfo(
+      formatMacArch32KnownFixEntry(appId, library.get(appId)?.title),
+      LogPrefix.Steam
+    )
     // MAC32-03/CONTEXT D-6: decoupled — never awaited here, so this check
     // never blocks the pollInstallOnce 'installed' badge-flip UX above.
     void promptI386Recovery(appId)

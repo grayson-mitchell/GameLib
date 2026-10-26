@@ -48,6 +48,7 @@ import {
   type SteamBridgeVerdict
 } from './electronStores'
 import { depotSignalCaptured } from './metadataCapture'
+import { knownFixSaysMac32, seedMacArchFromKnownFix } from './macArchKnownFix'
 import { resolvePlatformWrite } from './platformPrecedence'
 import {
   library,
@@ -899,11 +900,17 @@ export default class SteamGame implements Game {
       //     is_mac_native already routes correctly via the existing
       //     isBottleEligible() D-11 OR-branch, making this signal moot.
       const macArchVerified = existingMeta?.mac_arch_verified === true
+      const knownFix32 = knownFixSaysMac32(this.appId, existingMeta)
       const mac_arch: GameInfo['mac_arch'] = macArchVerified
         ? existingMeta.mac_arch
-        : effectiveIsMacNative
-          ? macArchFromMinOS(data.mac_requirements?.minimum)
-          : existingMeta?.mac_arch
+        : knownFix32
+          ? '32'
+          : effectiveIsMacNative
+            ? macArchFromMinOS(data.mac_requirements?.minimum)
+            : // A retracted known-fix seed must not leave an orphan '32'.
+              existingMeta?.mac_arch_source === 'known-fix'
+              ? undefined
+              : existingMeta?.mac_arch
 
       const updated: GameInfo = {
         ...current,
@@ -965,9 +972,15 @@ export default class SteamGame implements Game {
                 ? { mac_arch_source: existingMeta.mac_arch_source }
                 : {})
             }
-          : effectiveIsMacNative
-            ? { mac_arch_source: 'minos' as const }
-            : {}),
+          : // Fifth carry-forward on this enumerated write. Re-derived from the
+            // curated file rather than copied from existingMeta, so an
+            // in-flight fetch that read existingMeta before the seed landed
+            // cannot drop it (quick 261027-bqe). Never sets mac_arch_verified.
+            knownFix32
+            ? { mac_arch_source: 'known-fix' as const }
+            : effectiveIsMacNative
+              ? { mac_arch_source: 'minos' as const }
+              : {}),
         ...(existingMeta?.forcedWindowsViaBottle === true
           ? { forcedWindowsViaBottle: true as const }
           : {}),
@@ -2353,9 +2366,9 @@ export default class SteamGame implements Game {
     // is_mac_native/platformsCaptured — a confirmed-32 game reports
     // is_mac_native true (it DOES have a mac depot, just not a runnable one on
     // modern macOS). Pre-install the min-OS heuristic (games.ts macArchFromMinOS)
-    // NEVER yields '32', so this branch only ever fires from Plan 18-03's
-    // post-install Mach-O ground-truth check — but the wiring lands now so
-    // routing goes live the moment 18-03 caches a '32' verdict.
+    // NEVER yields '32', so this branch fires from Plan 18-03's post-install
+    // Mach-O ground-truth check, or from a curated known-fix macArch "32" seed
+    // on Apple silicon (macArchKnownFix.ts, quick 261027-bqe).
     if (meta?.mac_arch === '32') return true
     // Quick task 260816-hdg PIN — this gate deliberately keeps the raw read and
     // must NOT be routed through depotSignalCaptured. It asks the MAC question,
@@ -2537,6 +2550,10 @@ export default class SteamGame implements Game {
    */
   private async ensurePlatformsCaptured(): Promise<void> {
     if (!isMac) return
+
+    // quick 261027-bqe: seed a curated macArch "32" BEFORE any caller consults
+    // isBottleEligible(), above the alreadyCaptured early return below.
+    seedMacArchFromKnownFix(this.appId)
 
     // Quick task 260816-hdg PIN — the FOURTH read site, and the one that stays
     // RAW. Three reasons, all load-bearing:
