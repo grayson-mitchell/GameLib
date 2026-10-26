@@ -3179,6 +3179,110 @@ describe('callback delivery wiring (P55-6)', () => {
   })
 })
 
+describe('bridge transport serialization (WR-04)', () => {
+  const c = generateShimC(loadAllManifests())
+  // Comments mention g_bridge_sock / g_bridge_lock / bridge_ensure_connected()
+  // in prose, so every confinement check runs on comment-stripped text and all
+  // offsets are computed on that same text.
+  const code = c.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(?<!:)\/\/.*$/gm, '')
+  const spanOf = (sig: string): [number, number] => {
+    const start = code.indexOf(sig)
+    expect(start).toBeGreaterThan(-1)
+    return [start, code.indexOf('\n}', start) + 2]
+  }
+  const allIndices = (token: string): number[] => {
+    const out: number[] = []
+    for (let i = code.indexOf(token); i !== -1; i = code.indexOf(token, i + 1))
+      out.push(i)
+    return out
+  }
+  const within = (i: number, [s, e]: [number, number]): boolean =>
+    i >= s && i < e
+  const callsOutsideDefinition = (fn: string): number[] => {
+    const def = code.indexOf(`static int ${fn}(`) + 'static int '.length
+    return allIndices(`${fn}(`).filter((i) => i !== def)
+  }
+
+  it('declares exactly one static g_bridge_lock', () => {
+    expect(
+      c.split('static SRWLOCK g_bridge_lock = SRWLOCK_INIT;').length - 1
+    ).toBe(1)
+  })
+
+  it('bridge_transact holds the lock across bridge_transact_locked with no early return', () => {
+    const start = c.indexOf('static int bridge_transact(')
+    expect(start).toBeGreaterThan(-1)
+    const b = c.slice(start, c.indexOf('\n}', start) + 2)
+    const acq = b.indexOf('AcquireSRWLockExclusive(&g_bridge_lock);')
+    const call = b.indexOf('bridge_transact_locked(')
+    const rel = b.indexOf('ReleaseSRWLockExclusive(&g_bridge_lock);')
+    const ret = b.indexOf('return')
+    expect(acq).toBeGreaterThan(-1)
+    expect(call).toBeGreaterThan(acq)
+    expect(rel).toBeGreaterThan(call)
+    expect(ret).toBeGreaterThan(rel)
+    expect(b.split('return').length - 1).toBe(1)
+  })
+
+  it('transport functions are only reachable through the locked path', () => {
+    const transact = spanOf('static int bridge_transact(')
+    const locked = spanOf('static int bridge_transact_locked(')
+    const once = spanOf('static int bridge_transact_once(')
+
+    const lockedCalls = callsOutsideDefinition('bridge_transact_locked')
+    expect(lockedCalls).toHaveLength(1)
+    expect(within(lockedCalls[0], transact)).toBe(true)
+
+    const onceCalls = callsOutsideDefinition('bridge_transact_once')
+    expect(onceCalls.length).toBeGreaterThan(0)
+    for (const i of onceCalls) expect(within(i, locked)).toBe(true)
+
+    const connectCalls = callsOutsideDefinition('bridge_ensure_connected')
+    expect(connectCalls.length).toBeGreaterThan(0)
+    for (const i of connectCalls) expect(within(i, once)).toBe(true)
+  })
+
+  it('shared socket and request id are touched only inside transport or with the lock held', () => {
+    const transport = [
+      spanOf('static int bridge_ensure_connected(void) {'),
+      spanOf('static int bridge_transact_once('),
+      spanOf('static int bridge_transact_locked(')
+    ]
+    const outside = (token: string, decl: string): number[] => {
+      const declAt = code.indexOf(decl)
+      expect(declAt).toBeGreaterThan(-1)
+      return allIndices(token).filter(
+        (i) =>
+          !(i >= declAt && i < declAt + decl.length) &&
+          !transport.some((s) => within(i, s))
+      )
+    }
+    const lockHeld = (i: number): boolean => {
+      const acq = code.lastIndexOf(
+        'AcquireSRWLockExclusive(&g_bridge_lock);',
+        i
+      )
+      const rel = code.lastIndexOf(
+        'ReleaseSRWLockExclusive(&g_bridge_lock);',
+        i
+      )
+      return acq > -1 && acq > rel
+    }
+
+    const sockOutside = outside(
+      'g_bridge_sock',
+      'static SOCKET g_bridge_sock = INVALID_SOCKET;'
+    )
+    // Not vacuous: SteamAPI_Shutdown closes the socket outside the transport.
+    expect(sockOutside.length).toBeGreaterThan(0)
+    for (const i of sockOutside) expect(lockHeld(i)).toBe(true)
+
+    expect(
+      outside('g_next_request_id', 'static uint32_t g_next_request_id = 1;')
+    ).toHaveLength(0)
+  })
+})
+
 describe('55 WR-02: bridge_transact_once malformed and oversized responses', () => {
   const c = generateShimC(loadAllManifests())
   const start = c.indexOf('static int bridge_transact_once(')
