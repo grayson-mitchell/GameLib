@@ -39,7 +39,9 @@ Request blob (per method, params in manifest declaration order):
   - no kind, or kind 'value': paramWidth(type) raw bytes, host byte order.
   - kind 'in-string': [u32 len][len bytes, NOT NUL-terminated]. A NULL
     pointer packs len = 0xFFFFFFFF and no bytes. len is the real string's
-    byte length capped at WIRE_IN_STRING_MAX_BYTES.
+    byte length. A string longer than WIRE_IN_STRING_MAX_BYTES is never
+    truncated: it packs len = WIRE_IN_STRING_MAX_BYTES + 1 and no bytes,
+    which the helper refuses (status != 0), so the call fails (55 WR-04).
   - kind 'out-value': nothing -- an out-value param is NEVER sent.
   - kind 'out-buffer': [u32 capacity] -- the sibling param named by
     sizeParam, read at call time and capped at WIRE_OUT_BUFFER_MAX_BYTES

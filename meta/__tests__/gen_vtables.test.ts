@@ -838,6 +838,19 @@ describe('gen_vtables', () => {
       expect(body).toContain('strlen(pchName)')
     })
 
+    it('GetStatTest_TESTONLY: an over-long in-string is refused, never truncated (55 WR-04)', () => {
+      const c = generateShimC([abiExercise])
+      const stub = c.match(
+        /vt_AbiExercise001_GetStatTest_TESTONLY\(void \*self[^{]*\) \{[\s\S]*?\n\}/
+      )
+      expect(stub).not.toBeNull()
+      const body = stub![0]
+      expect(body).toContain('if (rawLen > WIRE_IN_STRING_MAX_BYTES) {')
+      expect(body).toContain('strLen = WIRE_IN_STRING_MAX_BYTES + 1u;')
+      expect(body).not.toMatch(/rawLen > WIRE_IN_STRING_MAX_BYTES \?/)
+      expect(c).not.toMatch(/rawLen > WIRE_IN_STRING_MAX_BYTES \?/)
+    })
+
     it('GetStatTest_TESTONLY: an out-value param is read from the response AFTER the return value, and skipped when the caller passes NULL', () => {
       const c = generateShimC([abiExercise])
       const stub = c.match(

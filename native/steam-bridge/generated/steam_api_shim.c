@@ -78,7 +78,9 @@ Request blob (per method, params in manifest declaration order):
   - no kind, or kind 'value': paramWidth(type) raw bytes, host byte order.
   - kind 'in-string': [u32 len][len bytes, NOT NUL-terminated]. A NULL
     pointer packs len = 0xFFFFFFFF and no bytes. len is the real string's
-    byte length capped at WIRE_IN_STRING_MAX_BYTES.
+    byte length. A string longer than WIRE_IN_STRING_MAX_BYTES is never
+    truncated: it packs len = WIRE_IN_STRING_MAX_BYTES + 1 and no bytes,
+    which the helper refuses (status != 0), so the call fails (55 WR-04).
   - kind 'out-value': nothing -- an out-value param is NEVER sent.
   - kind 'out-buffer': [u32 capacity] -- the sibling param named by
     sizeParam, read at call time and capped at WIRE_OUT_BUFFER_MAX_BYTES
@@ -1050,9 +1052,18 @@ static uint32_t THISCALL vt_SteamUser023_GetAuthTicketForWebApi(void *self, cons
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchIdentity);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchIdentity, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchIdentity, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -2791,9 +2802,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat_2(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -2823,9 +2843,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat(void *self, c
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -2855,9 +2884,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat_2(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &fData, 4); argOff += 4;
@@ -2879,9 +2917,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat(void *self, c
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &nData, 4); argOff += 4;
@@ -2903,9 +2950,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_UpdateAvgRateStat(voi
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &flCountThisSession, 4); argOff += 4;
@@ -2928,9 +2984,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievement(void *
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -2960,9 +3025,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_SetAchievement(void *
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -2983,9 +3057,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_ClearAchievement(void
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -3006,9 +3089,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementAndUnlo
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[12]; uint32_t retlen = 0;
@@ -3061,9 +3153,18 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchieveme
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   {
@@ -3073,9 +3174,18 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchieveme
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchKey);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
@@ -3100,9 +3210,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_IndicateAchievementPr
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &nCurProgress, 4); argOff += 4;
@@ -4021,9 +4140,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat_2(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -4053,9 +4181,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat(void *self, c
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -4085,9 +4222,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat_2(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &fData, 4); argOff += 4;
@@ -4109,9 +4255,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat(void *self, c
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &nData, 4); argOff += 4;
@@ -4133,9 +4288,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_UpdateAvgRateStat(voi
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &flCountThisSession, 4); argOff += 4;
@@ -4158,9 +4322,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievement(void *
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -4190,9 +4363,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_SetAchievement(void *
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -4213,9 +4395,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_ClearAchievement(void
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -4236,9 +4427,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementAndUnlo
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[12]; uint32_t retlen = 0;
@@ -4291,9 +4491,18 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchieveme
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   {
@@ -4303,9 +4512,18 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchieveme
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchKey);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
@@ -4330,9 +4548,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_IndicateAchievementPr
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &nCurProgress, 4); argOff += 4;
@@ -5835,9 +6062,18 @@ static void * THISCALL vt_SteamClient017_GetISteamUser(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -5867,9 +6103,18 @@ static void * THISCALL vt_SteamClient017_GetISteamGameServer(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -5904,9 +6149,18 @@ static void * THISCALL vt_SteamClient017_GetISteamFriends(void *self, int32_t hS
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -5935,9 +6189,18 @@ static void * THISCALL vt_SteamClient017_GetISteamUtils(void *self, int32_t hSte
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -5967,9 +6230,18 @@ static void * THISCALL vt_SteamClient017_GetISteamMatchmaking(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -5999,9 +6271,18 @@ static void * THISCALL vt_SteamClient017_GetISteamMatchmakingServers(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6031,9 +6312,18 @@ static void * THISCALL vt_SteamClient017_GetISteamGenericInterface(void *self, i
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6063,9 +6353,18 @@ static void * THISCALL vt_SteamClient017_GetISteamUserStats(void *self, int32_t 
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6095,9 +6394,18 @@ static void * THISCALL vt_SteamClient017_GetISteamGameServerStats(void *self, in
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6127,9 +6435,18 @@ static void * THISCALL vt_SteamClient017_GetISteamApps(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6159,9 +6476,18 @@ static void * THISCALL vt_SteamClient017_GetISteamNetworking(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6191,9 +6517,18 @@ static void * THISCALL vt_SteamClient017_GetISteamRemoteStorage(void *self, int3
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6223,9 +6558,18 @@ static void * THISCALL vt_SteamClient017_GetISteamScreenshots(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6297,9 +6641,18 @@ static void * THISCALL vt_SteamClient017_GetISteamHTTP(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6329,9 +6682,18 @@ static void * THISCALL vt_SteamClient017_DEPRECATED_GetISteamUnifiedMessages(voi
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6361,9 +6723,18 @@ static void * THISCALL vt_SteamClient017_GetISteamController(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6393,9 +6764,18 @@ static void * THISCALL vt_SteamClient017_GetISteamUGC(void *self, int32_t hSteam
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6425,9 +6805,18 @@ static void * THISCALL vt_SteamClient017_GetISteamAppList(void *self, int32_t hS
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6457,9 +6846,18 @@ static void * THISCALL vt_SteamClient017_GetISteamMusic(void *self, int32_t hSte
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6489,9 +6887,18 @@ static void * THISCALL vt_SteamClient017_GetISteamMusicRemote(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6521,9 +6928,18 @@ static void * THISCALL vt_SteamClient017_GetISteamHTMLSurface(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6568,9 +6984,18 @@ static void * THISCALL vt_SteamClient017_GetISteamInventory(void *self, int32_t 
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6600,9 +7025,18 @@ static void * THISCALL vt_SteamClient017_GetISteamVideo(void *self, int32_t hSte
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -6632,9 +7066,18 @@ static void * THISCALL vt_SteamClient017_GetISteamParentalSettings(void *self, i
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8494,9 +8937,18 @@ static void * THISCALL vt_SteamClient014_GetISteamUser(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8526,9 +8978,18 @@ static void * THISCALL vt_SteamClient014_GetISteamGameServer(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8563,9 +9024,18 @@ static void * THISCALL vt_SteamClient014_GetISteamFriends(void *self, int32_t hS
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8594,9 +9064,18 @@ static void * THISCALL vt_SteamClient014_GetISteamUtils(void *self, int32_t hSte
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8626,9 +9105,18 @@ static void * THISCALL vt_SteamClient014_GetISteamMatchmaking(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8658,9 +9146,18 @@ static void * THISCALL vt_SteamClient014_GetISteamMatchmakingServers(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8690,9 +9187,18 @@ static void * THISCALL vt_SteamClient014_GetISteamGenericInterface(void *self, i
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8722,9 +9228,18 @@ static void * THISCALL vt_SteamClient014_GetISteamUserStats(void *self, int32_t 
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8754,9 +9269,18 @@ static void * THISCALL vt_SteamClient014_GetISteamGameServerStats(void *self, in
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8786,9 +9310,18 @@ static void * THISCALL vt_SteamClient014_GetISteamApps(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8818,9 +9351,18 @@ static void * THISCALL vt_SteamClient014_GetISteamNetworking(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8850,9 +9392,18 @@ static void * THISCALL vt_SteamClient014_GetISteamRemoteStorage(void *self, int3
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8882,9 +9433,18 @@ static void * THISCALL vt_SteamClient014_GetISteamScreenshots(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8956,9 +9516,18 @@ static void * THISCALL vt_SteamClient014_GetISteamHTTP(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -8988,9 +9557,18 @@ static void * THISCALL vt_SteamClient014_GetISteamUnifiedMessages(void *self, in
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -9020,9 +9598,18 @@ static void * THISCALL vt_SteamClient014_GetISteamController(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -9052,9 +9639,18 @@ static void * THISCALL vt_SteamClient014_GetISteamUGC(void *self, int32_t hSteam
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -9084,9 +9680,18 @@ static void * THISCALL vt_SteamClient014_GetISteamAppList(void *self, int32_t hS
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -9116,9 +9721,18 @@ static void * THISCALL vt_SteamClient014_GetISteamMusic(void *self, int32_t hSte
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -9851,9 +10465,18 @@ static void * THISCALL vt_SteamClient020_GetISteamUser(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -9883,9 +10506,18 @@ static void * THISCALL vt_SteamClient020_GetISteamGameServer(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -9920,9 +10552,18 @@ static void * THISCALL vt_SteamClient020_GetISteamFriends(void *self, int32_t hS
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -9951,9 +10592,18 @@ static void * THISCALL vt_SteamClient020_GetISteamUtils(void *self, int32_t hSte
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -9983,9 +10633,18 @@ static void * THISCALL vt_SteamClient020_GetISteamMatchmaking(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10015,9 +10674,18 @@ static void * THISCALL vt_SteamClient020_GetISteamMatchmakingServers(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10047,9 +10715,18 @@ static void * THISCALL vt_SteamClient020_GetISteamGenericInterface(void *self, i
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10079,9 +10756,18 @@ static void * THISCALL vt_SteamClient020_GetISteamUserStats(void *self, int32_t 
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10111,9 +10797,18 @@ static void * THISCALL vt_SteamClient020_GetISteamGameServerStats(void *self, in
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10143,9 +10838,18 @@ static void * THISCALL vt_SteamClient020_GetISteamApps(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10175,9 +10879,18 @@ static void * THISCALL vt_SteamClient020_GetISteamNetworking(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10207,9 +10920,18 @@ static void * THISCALL vt_SteamClient020_GetISteamRemoteStorage(void *self, int3
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10239,9 +10961,18 @@ static void * THISCALL vt_SteamClient020_GetISteamScreenshots(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10327,9 +11058,18 @@ static void * THISCALL vt_SteamClient020_GetISteamHTTP(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10359,9 +11099,18 @@ static void * THISCALL vt_SteamClient020_DEPRECATED_GetISteamUnifiedMessages(voi
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10391,9 +11140,18 @@ static void * THISCALL vt_SteamClient020_GetISteamController(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10423,9 +11181,18 @@ static void * THISCALL vt_SteamClient020_GetISteamUGC(void *self, int32_t hSteam
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10455,9 +11222,18 @@ static void * THISCALL vt_SteamClient020_GetISteamAppList(void *self, int32_t hS
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10487,9 +11263,18 @@ static void * THISCALL vt_SteamClient020_GetISteamMusic(void *self, int32_t hSte
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10519,9 +11304,18 @@ static void * THISCALL vt_SteamClient020_GetISteamMusicRemote(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10551,9 +11345,18 @@ static void * THISCALL vt_SteamClient020_GetISteamHTMLSurface(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10598,9 +11401,18 @@ static void * THISCALL vt_SteamClient020_GetISteamInventory(void *self, int32_t 
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10630,9 +11442,18 @@ static void * THISCALL vt_SteamClient020_GetISteamVideo(void *self, int32_t hSte
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10662,9 +11483,18 @@ static void * THISCALL vt_SteamClient020_GetISteamParentalSettings(void *self, i
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10873,9 +11703,18 @@ static void * THISCALL vt_SteamClient021_GetISteamUser(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10905,9 +11744,18 @@ static void * THISCALL vt_SteamClient021_GetISteamGameServer(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10942,9 +11790,18 @@ static void * THISCALL vt_SteamClient021_GetISteamFriends(void *self, int32_t hS
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -10973,9 +11830,18 @@ static void * THISCALL vt_SteamClient021_GetISteamUtils(void *self, int32_t hSte
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11005,9 +11871,18 @@ static void * THISCALL vt_SteamClient021_GetISteamMatchmaking(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11037,9 +11912,18 @@ static void * THISCALL vt_SteamClient021_GetISteamMatchmakingServers(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11069,9 +11953,18 @@ static void * THISCALL vt_SteamClient021_GetISteamGenericInterface(void *self, i
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11101,9 +11994,18 @@ static void * THISCALL vt_SteamClient021_GetISteamUserStats(void *self, int32_t 
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11133,9 +12035,18 @@ static void * THISCALL vt_SteamClient021_GetISteamGameServerStats(void *self, in
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11165,9 +12076,18 @@ static void * THISCALL vt_SteamClient021_GetISteamApps(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11197,9 +12117,18 @@ static void * THISCALL vt_SteamClient021_GetISteamNetworking(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11229,9 +12158,18 @@ static void * THISCALL vt_SteamClient021_GetISteamRemoteStorage(void *self, int3
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11261,9 +12199,18 @@ static void * THISCALL vt_SteamClient021_GetISteamScreenshots(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11349,9 +12296,18 @@ static void * THISCALL vt_SteamClient021_GetISteamHTTP(void *self, int32_t hStea
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11381,9 +12337,18 @@ static void * THISCALL vt_SteamClient021_GetISteamController(void *self, int32_t
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11413,9 +12378,18 @@ static void * THISCALL vt_SteamClient021_GetISteamUGC(void *self, int32_t hSteam
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11445,9 +12419,18 @@ static void * THISCALL vt_SteamClient021_GetISteamMusic(void *self, int32_t hSte
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11477,9 +12460,18 @@ static void * THISCALL vt_SteamClient021_GetISteamMusicRemote(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11509,9 +12501,18 @@ static void * THISCALL vt_SteamClient021_GetISteamHTMLSurface(void *self, int32_
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11556,9 +12557,18 @@ static void * THISCALL vt_SteamClient021_GetISteamInventory(void *self, int32_t 
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11588,9 +12598,18 @@ static void * THISCALL vt_SteamClient021_GetISteamVideo(void *self, int32_t hSte
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -11620,9 +12639,18 @@ static void * THISCALL vt_SteamClient021_GetISteamParentalSettings(void *self, i
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchVersion);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
@@ -12927,9 +13955,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -12959,9 +13996,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat(void *self, c
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -12991,9 +14037,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &fData, 4); argOff += 4;
@@ -13015,9 +14070,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat(void *self, c
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &nData, 4); argOff += 4;
@@ -13039,9 +14103,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat(voi
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &flCountThisSession, 4); argOff += 4;
@@ -13064,9 +14137,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement(void *
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -13096,9 +14178,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement(void *
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -13119,9 +14210,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement(void
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -13142,9 +14242,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlo
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[12]; uint32_t retlen = 0;
@@ -13197,9 +14306,18 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchieveme
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   {
@@ -13209,9 +14327,18 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchieveme
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchKey);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
@@ -13236,9 +14363,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementPr
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &nCurProgress, 4); argOff += 4;
@@ -13522,9 +14658,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -13554,9 +14699,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat(void *self, c
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -13586,9 +14740,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2(void *self,
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &fData, 4); argOff += 4;
@@ -13610,9 +14773,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat(void *self, c
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &nData, 4); argOff += 4;
@@ -13634,9 +14806,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat(voi
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &flCountThisSession, 4); argOff += 4;
@@ -13659,9 +14840,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement(void *
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
@@ -13691,9 +14881,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement(void *
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -13714,9 +14913,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement(void
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -13737,9 +14945,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlo
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[12]; uint32_t retlen = 0;
@@ -13792,9 +15009,18 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchieveme
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   {
@@ -13804,9 +15030,18 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchieveme
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchKey);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      }
     }
   }
   uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
@@ -13831,9 +15066,18 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementPr
       memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
     } else {
       size_t rawLen = strlen(pchName);
-      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+      }
     }
   }
   memcpy(argbuf + argOff, &nCurProgress, 4); argOff += 4;
