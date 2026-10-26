@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-26 - Completed quick task 261026-lif: restore missing .gamelib-orig bridge originals
+Last activity: 2026-10-26 - Completed quick task 261026-mhg: revise bridge shim withhold rule for non-core interface gaps
 
 Progress: [██████████] 100%
 
@@ -391,6 +391,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261026-ku9 | bridgeScan `isContainedWithin` now rejects only `''`, `..`, `..`+`sep` prefix or absolute, so a `..foo` child is contained (53-REVIEW IN-03); tests for `..foo`, parent, `../x`, shared-prefix sibling. Todo closed. Same idiom remains in importScan/bridgeConfig/steamClientSetup/library.ts (out of scope). | 2026-10-26 | 8a155aabd | code-verified (jest 17/17, tsc clean) | [261026-ku9-bridgescan-iscontainedwithin-rejects-chi](./quick/261026-ku9-bridgescan-iscontainedwithin-rejects-chi/) |
 | 261026-kyv | WR-04 shim socket lock was already fixed in 082ff80db (static `SRWLOCK g_bridge_lock` around connect + transact + retry); 4 gen_vtables tests now pin it (lock order in `bridge_transact`, transport fns reachable only via the locked path, `g_bridge_sock` uses lock-held), each mutation-proven. Todo narrowed to its live multi-threaded Wine gate, severity minor. | 2026-10-26 | e88486bf4 | code-verified (233/233); live gate PASS (Abiotic: 2 bridge threads, 6 lock waits, 0 failures/mismatches, clean Shutdown); todo closed | [261026-kyv-pin-the-shim-bridge-srwlock-with-a-regre](./quick/261026-kyv-pin-the-shim-bridge-srwlock-with-a-regre/) |
 | 261026-lif | Restore missing `.gamelib-orig` bridge originals: filtered depot fetch (`downloadSelectedDepotFiles`) + `restoreBridgeSteamApiOriginals`, original fingerprints in the verdict with rescan on a new/changed backup (incl. already-placed), real `SteamGame.repair()` + Steam "Verify and Repair" menu item. Live backfill: all 11 bottles backed up. | 2026-10-26 | 39692c70a | live backfill done (11/11 backed up); fresh scans withhold 4 titles, ELEX regressed (follow-up: withhold rule); todo closed | [261026-lif-restore-missing-gamelib-orig-bridge-orig](./quick/261026-lif-restore-missing-gamelib-orig-bridge-orig/) |
+| 261026-mhg | Bridge shim withhold rule revised: `classifyUnservableInterfaceVersions` splits version gaps into blocking (SteamClient/User/Friends/Utils/Apps/UserStats, or NULL-answered) and non-core (null-object-answered); withhold only on a delay-import miss or a blocking gap, in both static and runtime-loaded branches. Fixes the 261026-lif ELEX regression. | 2026-10-26 | c300f9904 | live: ELEX, Mining Mechs, Overlooting, Age of Decadence placed + HELLO + launched fine; Grim Dawn placed + forwarder + HELLO but fails on the known SteamStub launch check | [261026-mhg-revise-bridge-shim-withhold-rule-for-non](./quick/261026-mhg-revise-bridge-shim-withhold-rule-for-non/) |
 
 ## Deferred Items
 
