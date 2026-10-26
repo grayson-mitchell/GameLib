@@ -27,12 +27,6 @@
   ],
   "knownBad": [
     {
-      "appId": "200510",
-      "title": "XCOM: Enemy Unknown",
-      "reason": "drm-wrapped",
-      "note": "51-UAT item 5 (2026-10-22): scan clean and the shim loads, but XComGame.exe reads PE resources STEAM_SPLIT_GUID/STEAM_GUIDD/STEAM_MINSTANCE, writes XComGame.exe.<pid>.STEAMSTART, idles ~30s and exits without ever calling SteamAPI_Init -- Steam CEG waiting for a Windows Steam client a bridge bottle cannot provide. Inferred from a CrossOver --cx-log trace; CEG diagnosis CONFIRMED by 51-UAT item 17 (2026-10-23): under the bottled Windows Steam client XCOM: Enemy Within reaches its main menu, so CEG needs a Windows Steam client. The base Enemy Unknown build then crashes after its shell starts loading, a Wine-level crash CrossOver rates 3 stars; reason stays drm-wrapped because the bridge cannot satisfy CEG."
-    },
-    {
       "appId": "411300",
       "title": "ELEX",
       "reason": "does-not-run",

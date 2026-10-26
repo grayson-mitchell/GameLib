@@ -4,6 +4,6 @@
   "drm": "ceg",
   "notes": {
     "macArch": "The macOS build is 32-bit only (i386); Apple silicon cannot run it, so GameLib installs the Windows build. Mach-O header read of the Mac depot's main binary in spike 045 (CEG census, macarch.json), recorded 2026-10-27 (quick 261027-gtd).",
-    "drm": "The Windows build's Binaries\\Win32\\XComGame.exe is a Steam CEG executable (EDepotFileFlag.CustomExecutable in the public depot manifest, spike 045). CEG needs a genuine Windows Steam client, so GameLib routes this title to bottled Steam before any download (quick 261027-gtd). Also on the bundled bridge allowlist as drm-wrapped; this file is additional."
+    "drm": "The Windows build's Binaries\\Win32\\XComGame.exe is a Steam CEG executable (EDepotFileFlag.CustomExecutable in the public depot manifest, spike 045). CEG needs a genuine Windows Steam client, so GameLib routes this title to bottled Steam before any download (quick 261027-gtd). Live evidence, moved from the bridge allowlist's former knownBad entry: 51-UAT item 5 (2026-10-22) traced XComGame.exe reading the CEG resources STEAM_SPLIT_GUID/STEAM_GUIDD/STEAM_MINSTANCE, writing XComGame.exe.<pid>.STEAMSTART, idling ~30s and exiting without SteamAPI_Init through the bridge; 51-UAT item 17 (2026-10-23) confirmed it, with XCOM: Enemy Within reaching its main menu under bottled Windows Steam."
   }
 }

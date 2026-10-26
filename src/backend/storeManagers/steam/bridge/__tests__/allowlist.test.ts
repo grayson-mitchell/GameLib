@@ -161,7 +161,7 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(() => bridgeAllowlistSchema.parse(JSON.parse(raw))).not.toThrow()
   })
 
-  test('the bundled bridge-allowlist.json is version 2 with XCOM and ELEX as its evidence-backed knownBad entries (51-19, 51-27)', () => {
+  test('the bundled bridge-allowlist.json is version 2 with ELEX as its evidence-backed knownBad entries (51-19, 51-27)', () => {
     const raw = readFileSync(
       join(__dirname, '..', 'bridge-allowlist.json'),
       'utf-8'
@@ -170,15 +170,12 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
 
     expect(parsed.version).toBe(2)
     expect(parsed.knownBad.map((e: { appId: string }) => e.appId)).toEqual([
-      '200510',
       '411300'
     ])
-    expect(bridgeAllowlist.knownBadReason('200510')).toBe('drm-wrapped')
   })
 
-  test('the real bundle: 411300 is does-not-run, 200510 is drm-wrapped (D-51-08 amendment)', () => {
+  test('the real bundle: 411300 is does-not-run (D-51-08 amendment)', () => {
     expect(bridgeAllowlist.knownBadReason('411300')).toBe('does-not-run')
-    expect(bridgeAllowlist.knownBadReason('200510')).toBe('drm-wrapped')
   })
 
   // Evidence: 261026-ng9 SUMMARY "Live retest: packaged debug build" (2026-10-26):
@@ -218,14 +215,29 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(bridgeAllowlist.knownBadReason('230070')).toBeNull()
   })
 
-  test('XCOM (200510) knownBad note cites 51-UAT item 17 as confirming the CEG diagnosis', () => {
-    const parsed = JSON.parse(
-      readFileSync(join(__dirname, '..', 'bridge-allowlist.json'), 'utf-8')
+  // XCOM's CEG routing now lives in its known-fix file (drm "ceg", quick
+  // 261027-gtd), so the allowlist no longer carries it and the evidence moved there.
+  test('XCOM (200510) is not an allowlist knownBad; its known-fix drm "ceg" carries the 51-UAT item 17 evidence', () => {
+    expect(bridgeAllowlist.knownBadReason('200510')).toBeNull()
+    const fix = JSON.parse(
+      readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          'public',
+          'fixes',
+          '200510-steam.json'
+        ),
+        'utf-8'
+      )
     )
-    const xcom = parsed.knownBad.find(
-      (e: { appId: string }) => e.appId === '200510'
-    )
-    expect(xcom.note).toMatch(/51-UAT item 17/)
+    expect(fix.drm).toBe('ceg')
+    expect(fix.notes.drm).toMatch(/51-UAT item 17/)
   })
 
   test('every seed playVerified record cites a UAT item; Avernum 6 has one, Avernum 5 does not', () => {
