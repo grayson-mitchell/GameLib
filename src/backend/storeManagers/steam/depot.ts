@@ -195,7 +195,7 @@ interface DepotModeCounters {
   modeCallsites: number
 }
 
-interface DownloadSteamDepotsOpts {
+export interface DownloadSteamDepotsOpts {
   targetSteamappsDir: string
   installdir: string
   /** Required — never defaulted to the host OS here (select.ts's own discipline). */
@@ -4085,6 +4085,112 @@ export function formatDownloadFailureSummary(
     `${describeDepotFailure(first.cause ?? first.error)}` +
     runFragment
   )
+}
+
+/**
+ * Normalised depot path used to select files: backslashes to slashes, leading
+ * slashes stripped, lowercased. Shared with bridge/originalRestore.ts so the
+ * selector and the caller agree on one form.
+ */
+export function normalizeDepotPath(p: string): string {
+  return p.replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase()
+}
+
+export interface DownloadSelectedDepotFilesOpts extends DownloadSteamDepotsOpts {
+  /** Receives the {@link normalizeDepotPath} form of each candidate file. */
+  select: (normalizedPath: string) => boolean
+  /** Test seam: defaults to {@link downloadDepotFiles}. */
+  downloadFiles?: typeof downloadDepotFiles
+}
+
+export interface DownloadSelectedDepotFilesResult {
+  status: 'done' | 'cancelled' | 'error'
+  /** The files fetched: manifest filename (Windows separators), size, lowercase hex sha1. */
+  files: Array<{ filename: string; size: number; sha1: string }>
+  error?: string
+  failures?: DepotDownloadFailure[]
+}
+
+/**
+ * Quick 261026-lif: fetch ONLY the manifest files `select` accepts into
+ * `<targetSteamappsDir>/common/<installdir>/`. A partial fetch into a staging
+ * tree: it never calls finalizeToSteam, so no appmanifest ACF is ever written.
+ * Directory and symlink entries are never selected. NEVER throws: every
+ * failure maps to a structured status.
+ */
+export async function downloadSelectedDepotFiles(
+  appId: string,
+  opts: DownloadSelectedDepotFilesOpts
+): Promise<DownloadSelectedDepotFilesResult> {
+  try {
+    const plan = await buildDepotPlan(appId, opts)
+    const picked: DownloadSelectedDepotFilesResult['files'] = []
+    let totalBytes = 0
+    const depots: DepotPlanEntry[] = []
+    for (const depot of plan.depots) {
+      const files = depot.files.filter((f) => {
+        const flags = f.flags ?? 0
+        if (flags & DIRECTORY_FLAG || flags & SYMLINK_FLAG) return false
+        return opts.select(normalizeDepotPath(f.filename))
+      })
+      if (!files.length) continue
+      for (const f of files) {
+        totalBytes += Number(f.size)
+        picked.push({
+          filename: f.filename,
+          size: Number(f.size),
+          sha1: (Buffer.isBuffer(f.sha_content)
+            ? f.sha_content.toString('hex')
+            : String(f.sha_content)
+          ).toLowerCase()
+        })
+      }
+      depots.push({ ...depot, files })
+    }
+    if (!depots.length) return { status: 'done', files: [] }
+
+    const filteredPlan: DepotPlan = { ...plan, depots, totalBytes }
+    const client = getDepotClient()
+    const {
+      hosts,
+      weightedLoads: hostWeightedLoads,
+      hostMeta
+    } = await getContentServerHosts(client, Number(appId))
+    throwIfAborted(opts.signal)
+    const cdnAuth = new CdnAuthTokenCache(client, Number(appId))
+    const result = await (opts.downloadFiles ?? downloadDepotFiles)(
+      filteredPlan,
+      {
+        targetSteamappsDir: opts.targetSteamappsDir,
+        installdir: opts.installdir,
+        hosts,
+        hostWeightedLoads,
+        cdnAuth,
+        hostMeta,
+        signal: opts.signal
+      }
+    )
+    if (result.outcome === 'cancelled' || opts.signal?.aborted === true) {
+      return { status: 'cancelled', files: picked }
+    }
+    if (result.failures.length) {
+      const first = selectPrimaryDepotFailure(result.failures)
+      return {
+        status: 'error',
+        files: picked,
+        error: classifyDepotError(first.cause ?? first.error).message,
+        failures: result.failures
+      }
+    }
+    return { status: 'done', files: picked }
+  } catch (err) {
+    if (opts.signal?.aborted === true) return { status: 'cancelled', files: [] }
+    return {
+      status: 'error',
+      files: [],
+      error: classifyDepotError(err).message
+    }
+  }
 }
 
 /**

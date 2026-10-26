@@ -571,7 +571,7 @@ function restoreOriginalIfBackedUp(
  * logs, so the withhold guard can decide BEFORE touching the disk whether
  * every GameLib shim in scope can really be put back (T-52-55).
  */
-function probeOriginalBackup(
+export function probeOriginalBackup(
   bottleDir: string,
   target: string
 ): 'restorable' | 'no-backup' | 'refused' {
