@@ -22,3 +22,7 @@ for legendary, gog, nile, zoom and sideload games.
 
 Done-when: a `<appName>-gog.profile.json` `registry` entry is written to that game's prefix on
 launch, with a test.
+
+## Resolution
+
+Resolved 2026-10-26 (quick 261026-j6x): registry validation/application lifted to src/backend/knownFixesRegistry.ts; prepareWineLaunch applies `<appName>-<store>.profile.json` `registry` on every launch for legendary/gog/nile/zoom/sideload; Steam bridge unchanged. Ledger/reversal still deferred (Decision 5).
