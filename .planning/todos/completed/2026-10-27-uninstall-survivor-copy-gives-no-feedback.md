@@ -40,3 +40,18 @@ i18n key under `public/locales/en/gamelib.json` (ignored by prettier, so hand-ma
 surrounding style). Extend the existing survivor-branch jest coverage to assert the notification.
 Optional: let the game page show that the title is installed in both roots before the uninstall
 starts.
+
+## Resolution (2026-10-27, `6de4cce9b`)
+
+The survivor branch of `pollUninstallOnce` (`library.ts`) now sends a `notify()` in place of the
+suppressed toast. The message is `gamelib:steam.uninstall.copySurvives`: "Removed the {{removed}}
+copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too". The two
+copies are named through `gamelib:steam.uninstall.copySource.{native,bottle,bridge}` (Mac Steam /
+Windows Steam (CrossOver) / Steam bridge). It points at the existing Remove all copies… action
+rather than showing a path. The three survivor-branch tests in `library.test.ts` now assert that
+exactly one notify fires, that it is not "Game Uninstalled", and that the labels are interpolated
+correctly; 242/242 pass, codecheck is green. The gamelib presence baseline was regenerated. It
+was already red at HEAD for the 261027-cux `cancelDialog` keys.
+
+Not live-gated: uninstalling a title that has both a native and a bottle copy and seeing the
+notice.
