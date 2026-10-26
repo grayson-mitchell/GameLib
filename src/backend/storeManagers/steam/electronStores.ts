@@ -212,6 +212,11 @@ export interface SteamBridgeScanVerdict {
   shimExportSetVersion: string
   /** ISO-8601 timestamp of when this scan ran. */
   scannedAt: string
+  /** quick 261026-lif (CONTEXT, "Stale verdict invalidation"): the size and
+   * sha1 of the game-original dll each interface-version read came from, or of
+   * its `.gamelib-orig`, keyed by the shim target's path relative to the
+   * bridge bottle dir (forward slashes). Absent means it was never recorded. */
+  originalFingerprints?: Record<string, { size: number; sha1: string }>
   /** Phase 52: set by placeShimForGame when the launch exe carries a `.bind`
    * section; gates SteamStub forwarder setup. Absent means none detected. */
   drmWrapper?: 'steamstub'

@@ -44,6 +44,7 @@ import {
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { createHash } from 'node:crypto'
 import { join, resolve } from 'node:path'
 
 // Phase 51 Plan 03: SHIM_EXPORTED_SYMBOLS (and its 24-CR-02 pin test) moved
@@ -684,9 +685,20 @@ describe('shimGenerate', () => {
         shimSourcePath: realShimSourcePath,
         shim64SourcePath: realShim64SourcePath
       }
-      await placeShimForGame('1234', gameExePath, opts)
+      const first = await placeShimForGame('1234', gameExePath, opts)
 
-      const second = await placeShimForGame('1234', gameExePath, opts)
+      // quick 261026-lif: the first placement backed the original up, so the
+      // caller must hand back the fingerprints the first verdict recorded
+      // for the relaunch to stay a no-op.
+      const persistedOriginalFingerprints =
+        first.status === 'placed-miss'
+          ? first.verdict.originalFingerprints
+          : undefined
+      expect(persistedOriginalFingerprints).toBeDefined()
+      const second = await placeShimForGame('1234', gameExePath, {
+        ...opts,
+        persistedOriginalFingerprints
+      })
 
       expect(second).toEqual({
         status: 'already-placed',
@@ -2505,5 +2517,194 @@ describe('shimGenerate', () => {
         expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
       }
     )
+  })
+  describe('quick 261026-lif: .gamelib-orig preferred, fingerprints, stale-verdict rescan', () => {
+    const BACKUP = '.gamelib-orig'
+    const SHIM_X86 = 'GameLibSteamBridgeShim x86 build'
+    const sha = (b: string) => createHash('sha1').update(b).digest('hex')
+    const fp = (b: string) => ({ size: Buffer.byteLength(b), sha1: sha(b) })
+    const KEY = 'drive_c/Program Files/Avernum 4/steam_api.dll'
+    const KEY64 = 'drive_c/Program Files/Avernum 4/steam_api64.dll'
+    const exeImports = (symbols: string[] = ['SteamUser']) =>
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x86',
+        symbols
+      })
+    const noImports = () =>
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'none',
+        symbols: []
+      })
+    const optsBase = () => ({
+      shimSourcePath: realShimSourcePath,
+      shim64SourcePath: realShim64SourcePath,
+      gameInstallRoot: gameDir
+    })
+
+    it('static: an older shim with a valid backup reads versions from the backup, not the persisted pool, and records its fingerprint', async () => {
+      const backupBody = 'orig-with-SteamUser023-embedded'
+      writeFileSync(shimDestPath(), 'older-GameLibSteamBridgeShim/1')
+      writeFileSync(shimDestPath() + BACKUP, backupBody)
+      exeImports()
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        ...optsBase(),
+        persistedInterfaceVersions: {}
+      })
+
+      expect(result.status).toBe('placed')
+      if (result.status === 'placed') {
+        expect(result.verdict?.interfaceVersions).toEqual({
+          SteamUser: 'SteamUser023'
+        })
+        expect(result.verdict?.originalFingerprints).toEqual({
+          [KEY]: fp(backupBody)
+        })
+      }
+    })
+
+    it('static: placing over a non-shim original records its fingerprint and the backup carries the same sha1', async () => {
+      const body = 'plain-original-SteamUser023'
+      writeFileSync(shimDestPath(), body)
+      exeImports()
+
+      const result = await placeShimForGame('1234', gameExePath, optsBase())
+
+      expect(result.status).toBe('placed')
+      if (result.status === 'placed') {
+        expect(result.verdict?.originalFingerprints).toEqual({
+          [KEY]: fp(body)
+        })
+      }
+      expect(sha(readFileSync(shimDestPath() + BACKUP, 'utf-8'))).toBe(
+        sha(body)
+      )
+    })
+
+    it('static, the 284100 case: identical shim + new backup + no persisted fingerprint is NOT already-placed', async () => {
+      writeFileSync(realShimSourcePath, SHIM_X86)
+      writeFileSync(shimDestPath(), SHIM_X86)
+      const backupBody = 'orig-with-SteamUser023-embedded'
+      writeFileSync(shimDestPath() + BACKUP, backupBody)
+      exeImports()
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        ...optsBase(),
+        persistedInterfaceVersions: {}
+      })
+
+      expect(['placed', 'placed-miss']).toContain(result.status)
+      if (result.status === 'placed') {
+        expect(result.verdict?.interfaceVersions).toEqual({
+          SteamUser: 'SteamUser023'
+        })
+        expect(result.verdict?.originalFingerprints?.[KEY]).toEqual(
+          fp(backupBody)
+        )
+      }
+    })
+
+    it('static: identical shim + backup + matching persisted fingerprint stays already-placed', async () => {
+      writeFileSync(realShimSourcePath, SHIM_X86)
+      writeFileSync(shimDestPath(), SHIM_X86)
+      writeFileSync(shimDestPath() + BACKUP, 'orig-bytes')
+      exeImports()
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        ...optsBase(),
+        persistedOriginalFingerprints: { [KEY]: fp('orig-bytes') }
+      })
+
+      expect(result.status).toBe('already-placed')
+      expect(result).not.toHaveProperty('verdict')
+    })
+
+    it('static: identical shim + backup whose sha1 differs from the persisted one rescans', async () => {
+      writeFileSync(realShimSourcePath, SHIM_X86)
+      writeFileSync(shimDestPath(), SHIM_X86)
+      writeFileSync(shimDestPath() + BACKUP, 'orig-bytes')
+      exeImports()
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        ...optsBase(),
+        persistedOriginalFingerprints: { [KEY]: fp('different-bytes') }
+      })
+
+      expect(result.status).not.toBe('already-placed')
+    })
+
+    it('static: identical shim and no backup stays already-placed', async () => {
+      writeFileSync(realShimSourcePath, SHIM_X86)
+      writeFileSync(shimDestPath(), SHIM_X86)
+      exeImports()
+
+      const result = await placeShimForGame('1234', gameExePath, optsBase())
+
+      expect(result.status).toBe('already-placed')
+    })
+
+    it('runtime-loaded: current shim + valid backup + no persisted fingerprint rescans with fingerprints; a matching one stays already-placed', async () => {
+      noImports()
+      writeFileSync(realShim64SourcePath, 'GameLibSteamBridgeShim x64 build')
+      const dll = join(gameDir, 'steam_api64.dll')
+      writeFileSync(dll, 'GameLibSteamBridgeShim x64 build')
+      writeFileSync(dll + BACKUP, 'orig-x64-bytes')
+
+      const rescan = await placeShimForGame('1234', gameExePath, optsBase())
+      expect(rescan.status).not.toBe('already-placed')
+      if (rescan.status === 'placed' || rescan.status === 'placed-miss') {
+        expect(rescan.verdict?.originalFingerprints).toEqual({
+          [KEY64]: fp('orig-x64-bytes')
+        })
+      }
+
+      const stay = await placeShimForGame('1234', gameExePath, {
+        ...optsBase(),
+        persistedOriginalFingerprints: { [KEY64]: fp('orig-x64-bytes') }
+      })
+      expect(stay.status).toBe('already-placed')
+    })
+
+    it('withhold-impossible warning points at GameLib Verify and Repair', async () => {
+      // exe-imports static, older shim, NO backup, delay-imported miss => cannot withhold.
+      writeFileSync(shimDestPath(), 'older-GameLibSteamBridgeShim/1')
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x86',
+        symbols: ['SteamAPI_Bogus'],
+        delaySymbols: ['SteamAPI_Bogus']
+      })
+      await placeShimForGame('1234', gameExePath, optsBase())
+      const warnings = (
+        jest.requireMock('backend/logger').logWarning as jest.Mock
+      ).mock.calls.map((c) =>
+        Array.isArray(c[0]) ? String(c[0][0]) : String(c[0])
+      )
+      const hint = warnings.find((w) => w.includes('cannot withhold'))
+      expect(hint).toContain('Verify and Repair')
+      expect(hint).not.toContain('Verify integrity of game files')
+    })
+
+    it('a withheld result carries originalFingerprints', async () => {
+      writeFileSync(shimDestPath(), 'older-GameLibSteamBridgeShim/1')
+      writeFileSync(shimDestPath() + BACKUP, 'orig-bytes')
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x86',
+        symbols: ['SteamAPI_Bogus'],
+        delaySymbols: ['SteamAPI_Bogus']
+      })
+
+      const result = await placeShimForGame('1234', gameExePath, optsBase())
+
+      expect(result.status).toBe('withheld')
+      if (result.status === 'withheld') {
+        expect(result.verdict.originalFingerprints).toEqual({
+          [KEY]: fp('orig-bytes')
+        })
+      }
+    })
   })
 })

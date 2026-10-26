@@ -38,7 +38,10 @@
  * withheld: the shim is not placed (a GameLib shim already on disk is
  * restored from `<dll>.gamelib-orig`) and the result is 'withheld' carrying
  * the persisted miss verdict. Every overwrite of a game-original dll keeps a
- * `.gamelib-orig` backup.
+ * `.gamelib-orig` backup. A missing backup can be restored from the Steam
+ * depot by `restoreBridgeSteamApiOriginals` (bridge/originalRestore.ts, quick
+ * 261026-lif); placement then prefers the backup over the persisted pool and
+ * rescans when a backup is new or its fingerprint changed.
  *
  * BLOCKER 2: the compiled x86 `.dll` is read from `builtBridgeShimPath`
  * (`backend/constants/paths.ts`, 24-01) -- the SAME shared location 24-07
@@ -70,7 +73,7 @@ import {
   statSync
 } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { basename, dirname, join, relative, resolve } from 'node:path'
+import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import {
   builtBridgeShim64Path,
@@ -211,6 +214,91 @@ type PlaceShimResult = PlaceShimResultBase & {
 // the shim overwrites it, so the guard can restore it. Both walks exclude the
 // backup by construction (exact-name dll match; .exe/.dll-only importer walk).
 const ORIGINAL_BACKUP_SUFFIX = '.gamelib-orig'
+
+type OriginalFingerprints = NonNullable<
+  SteamBridgeScanVerdict['originalFingerprints']
+>
+
+/** quick 261026-lif: size + sha1 of a small dll. Never throws. */
+function fingerprintFile(path: string): { size: number; sha1: string } | null {
+  try {
+    const bytes = readFileSync(path)
+    return {
+      size: bytes.length,
+      sha1: createHash('sha1').update(bytes).digest('hex')
+    }
+  } catch {
+    return null
+  }
+}
+
+/** Verdict key: the shim target's path relative to the bottle, `/`-separated. */
+function fingerprintKey(bottleDir: string, target: string): string {
+  return relative(bottleDir, resolve(target)).split(sep).join('/')
+}
+
+/**
+ * quick 261026-lif: fingerprint of the game-original behind `target` -- the
+ * target itself when it is a non-shim original, or its restorable
+ * `.gamelib-orig` when it is a GameLib shim. Null when no original is readable.
+ */
+function originalFingerprintFor(
+  bottleDir: string,
+  target: string
+): { size: number; sha1: string } | null {
+  try {
+    if (!isContainedWithin(bottleDir, resolve(target))) return null
+    if (!isGameLibShimBytes(readFileSync(target))) {
+      return fingerprintFile(target)
+    }
+  } catch {
+    return null
+  }
+  return probeOriginalBackup(bottleDir, target) === 'restorable'
+    ? fingerprintFile(target + ORIGINAL_BACKUP_SUFFIX)
+    : null
+}
+
+/** Fingerprints for every target whose original is readable; undefined when none. */
+function collectOriginalFingerprints(
+  bottleDir: string,
+  targets: string[]
+): OriginalFingerprints | undefined {
+  const out: OriginalFingerprints = {}
+  for (const t of targets) {
+    const fp = originalFingerprintFor(bottleDir, t)
+    if (fp) out[fingerprintKey(bottleDir, t)] = fp
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
+/**
+ * quick 261026-lif: true when any shim in scope has a restorable
+ * `.gamelib-orig` whose fingerprint is absent from, or differs from, the
+ * persisted verdict's -- the persisted verdict is then stale.
+ */
+function backupFingerprintChanged(
+  appId: string,
+  bottleDir: string,
+  shimPaths: string[],
+  persisted: OriginalFingerprints | undefined
+): boolean {
+  for (const t of shimPaths) {
+    if (probeOriginalBackup(bottleDir, resolve(t)) !== 'restorable') continue
+    const now = fingerprintFile(t + ORIGINAL_BACKUP_SUFFIX)
+    const key = fingerprintKey(bottleDir, t)
+    const was = persisted?.[key]
+    const reason = !was ? 'new .gamelib-orig' : 'fingerprint changed'
+    if (!now || !was || was.size !== now.size || was.sha1 !== now.sha1) {
+      logInfo(
+        `placeShimForGame: appId ${appId} ${key}: ${reason} -- discarding the persisted verdict and rescanning (quick 261026-lif)`,
+        LogPrefix.Steam
+      )
+      return true
+    }
+  }
+  return false
+}
 
 /**
  * quick 261024-j4l (T-j4l-03): keeps the game-original dll as
@@ -609,6 +697,7 @@ type WithholdInput = {
   delayMissing: string[]
   unservable: string[]
   scannedAt: string
+  originalFingerprints?: OriginalFingerprints
 }
 
 /**
@@ -625,7 +714,7 @@ function withholdIfRestorable(
   )
   if (probes.every((p) => p === 'restorable')) return withhold(input)
   logWarning(
-    `placeShimForGame: appId ${input.appId} cannot withhold the shim -- the original steam_api is gone (no ${ORIGINAL_BACKUP_SUFFIX} backup, or the backup was refused), so the game has no steam_api of its own; refreshing the GameLib shim to the current build and launching through the bridge despite the gaps (delay-imported missing: ${input.delayMissing.join(', ') || 'none'}; unservable interface versions: ${input.unservable.join(', ') || 'none'}). Use Steam's "Verify integrity of game files" to restore the original`,
+    `placeShimForGame: appId ${input.appId} cannot withhold the shim -- the original steam_api is gone (no ${ORIGINAL_BACKUP_SUFFIX} backup, or the backup was refused), so the game has no steam_api of its own; refreshing the GameLib shim to the current build and launching through the bridge despite the gaps (delay-imported missing: ${input.delayMissing.join(', ') || 'none'}; unservable interface versions: ${input.unservable.join(', ') || 'none'}). Use GameLib's "Verify and Repair" (game menu) to restore the original from the Steam depot`,
     LogPrefix.Steam
   )
   return null
@@ -666,7 +755,10 @@ function withhold(input: WithholdInput): PlaceShimResultBase {
       interfaceVersions: input.required,
       stubbedInterfaces: input.stubbedInterfaces,
       shimExportSetVersion: SHIM_EXPORT_SET_VERSION,
-      scannedAt: input.scannedAt
+      scannedAt: input.scannedAt,
+      ...(input.originalFingerprints
+        ? { originalFingerprints: input.originalFingerprints }
+        : {})
     }
   }
 }
@@ -688,6 +780,8 @@ async function placeShimForGameInner(
     shimSourcePath?: string
     shim64SourcePath?: string
     persistedInterfaceVersions?: Record<string, string>
+    /** quick 261026-lif: fingerprints the persisted verdict recorded per shim path. */
+    persistedOriginalFingerprints?: OriginalFingerprints
     /** CR-04: root of the game's install tree, walked when the exe imports nothing. */
     gameInstallRoot?: string
   }
@@ -788,7 +882,15 @@ async function placeShimForGameInner(
       // returns.
       const allShimPaths = runtimeDlls.map((d) => resolve(d.path))
 
-      if (toCopy.length === 0) {
+      const runtimeBackupChanged =
+        toCopy.length === 0 &&
+        backupFingerprintChanged(
+          appId,
+          bottleDir,
+          allShimPaths,
+          opts?.persistedOriginalFingerprints
+        )
+      if (toCopy.length === 0 && !runtimeBackupChanged) {
         // Every entry is a current GameLib shim: a prior placed-miss. Never
         // downgrade to 'no-steam-api' (that would overwrite the persisted
         // miss and its marker); no verdict, the caller keeps its own.
@@ -807,6 +909,11 @@ async function placeShimForGameInner(
       // original dlls' version strings must be read before they are
       // overwritten). Importers of the other arch than the launch exe never
       // load, so they are ignored; an unknown launch arch evaluates all.
+      // quick 261026-lif: fingerprint every original BEFORE any overwrite.
+      const originalFingerprints = collectOriginalFingerprints(
+        bottleDir,
+        runtimeDlls.map((d) => resolve(d.path))
+      )
       const launchArch = readFileEffectiveArch(resolvedExePath)
       const launchName: 'steam_api.dll' | 'steam_api64.dll' | null =
         launchArch === 'x64'
@@ -882,9 +989,24 @@ async function placeShimForGameInner(
         const original = runtimeDlls.find(
           (d) => d.name === name && !d.isGameLibShim
         )
+        const shimEntry = runtimeDlls.find(
+          (d) => d.name === name && d.isGameLibShim
+        )
+        const backedShim =
+          !original &&
+          shimEntry &&
+          probeOriginalBackup(bottleDir, resolve(shimEntry.path)) ===
+            'restorable'
+            ? shimEntry
+            : null
         const dllVersions = original
           ? await readVersionsOrEmpty(original.path, appId)
-          : Object.values(opts?.persistedInterfaceVersions ?? {})
+          : backedShim
+            ? await readVersionsOrEmpty(
+                backedShim.path + ORIGINAL_BACKUP_SUFFIX,
+                appId
+              )
+            : Object.values(opts?.persistedInterfaceVersions ?? {})
         const exeVersions = usesRuntimeInterfaceLookup(merged)
           ? (
               await Promise.all(
@@ -946,7 +1068,8 @@ async function placeShimForGameInner(
           allMissing: combinedMissing,
           delayMissing: [...new Set(delayMissingAll)],
           unservable: [...new Set(unservableAll)],
-          scannedAt
+          scannedAt,
+          originalFingerprints
         })
         if (withheld) return withheld
         // Refresh path: name every gap in the placed-miss verdict.
@@ -1019,6 +1142,7 @@ async function placeShimForGameInner(
             : undefined
       const verdictBase = {
         ...(managedScan ? { managedScan } : {}),
+        ...(originalFingerprints ? { originalFingerprints } : {}),
         arch:
           primaryName === 'steam_api64.dll'
             ? ('x64' as const)
@@ -1100,7 +1224,16 @@ async function placeShimForGameInner(
   // present at shimPath AND it is byte-identical to the built shim -- only
   // then is placement a true no-op, with no verdict (the caller keeps
   // whatever it already persisted).
-  if (existsSync(shimPath) && isByteIdentical(shimPath, shimSourcePath)) {
+  if (
+    existsSync(shimPath) &&
+    isByteIdentical(shimPath, shimSourcePath) &&
+    !backupFingerprintChanged(
+      appId,
+      bottleDir,
+      [shimPath],
+      opts?.persistedOriginalFingerprints
+    )
+  ) {
     logInfo(
       `placeShimForGame: shim already present and byte-identical at "${shimPath}" for appId ${appId} (idempotent, no-op)`,
       LogPrefix.Steam
@@ -1157,8 +1290,17 @@ async function placeShimForGameInner(
   // unless that file is already one of OUR shims (an older release, with
   // no "original" left to read), in which case the caller's own
   // previously-persisted verdict is the only source left.
+  const targetBackupRestorable =
+    targetIsGameLibShim &&
+    probeOriginalBackup(bottleDir, resolve(shimPath)) === 'restorable'
+  // quick 261026-lif: fingerprint the original BEFORE it is overwritten.
+  const originalFingerprints = targetExists
+    ? collectOriginalFingerprints(bottleDir, [shimPath])
+    : undefined
   const dllVersions = targetIsGameLibShim
-    ? Object.values(opts?.persistedInterfaceVersions ?? {})
+    ? targetBackupRestorable
+      ? await readVersionsOrEmpty(shimPath + ORIGINAL_BACKUP_SUFFIX, appId)
+      : Object.values(opts?.persistedInterfaceVersions ?? {})
     : targetExists
       ? await readVersionsOrEmpty(shimPath, appId)
       : []
@@ -1216,7 +1358,8 @@ async function placeShimForGameInner(
           allMissing: coverage.missingSymbols,
           delayMissing: [...new Set(delayMissing)],
           unservable,
-          scannedAt
+          scannedAt,
+          originalFingerprints
         })
       : null
     if (withheld) return withheld
@@ -1261,7 +1404,8 @@ async function placeShimForGameInner(
         interfaceVersions: required,
         stubbedInterfaces: coverage.stubbedInterfaces,
         shimExportSetVersion: SHIM_EXPORT_SET_VERSION,
-        scannedAt
+        scannedAt,
+        ...(originalFingerprints ? { originalFingerprints } : {})
       }
     }
   }
@@ -1280,7 +1424,8 @@ async function placeShimForGameInner(
       interfaceVersions: required,
       stubbedInterfaces: coverage.stubbedInterfaces,
       shimExportSetVersion: SHIM_EXPORT_SET_VERSION,
-      scannedAt
+      scannedAt,
+      ...(originalFingerprints ? { originalFingerprints } : {})
     }
   }
 }
