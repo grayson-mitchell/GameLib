@@ -82,7 +82,11 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
   'installWineVersion',
   'downloadRuntime',
   'syncSaves',
-  'syncGOGSaves'
+  'syncGOGSaves',
+  // Quick 261026-jmm / todo `2026-10-25-bridge-launch-invoke-times-out-during-first-launch-
+  // redist-install`: a game launch awaits the whole session for non-Steam runners, and a bridge
+  // first launch measured ~2 min installing redists, so no 60s bound is correct.
+  'launch'
 ]
 
 /**

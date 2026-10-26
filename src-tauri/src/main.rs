@@ -1467,10 +1467,11 @@ mod terminate_reply_tests {
 /// deliberately not deleted: a migration that stranded those entries would trade a slow-but-
 /// correct path for a dead menu item.
 ///
-/// `launch` is not on `LONG_RUNNING_CHANNELS`, so for the runners whose handler awaits the whole
-/// game session this call reports `sidecar invoke timed out` after `INVOKE_TIMEOUT` while the
-/// game keeps running. That is expected here and is why the outcome is logged rather than
-/// surfaced -- the tray has nothing to show the user either way.
+/// `launch` IS on `LONG_RUNNING_CHANNELS` (quick 261026-jmm), so this call waits for the real
+/// result. For the runners whose handler awaits the whole game session, that means the spawned
+/// worker thread blocks for the session, which is fine because it is this call's own thread and
+/// never the UI thread. The outcome is still only logged, not surfaced, because the tray has
+/// nothing to show the user either way.
 fn dispatch_tray_launch(app: &AppHandle, app_name: String, known_runner: Option<String>) {
     let Some(state) = app.try_state::<Arc<SidecarState>>() else {
         eprintln!("[shell] WARN: tray recent-game launch: no sidecar state -- skipping");
@@ -1634,6 +1635,22 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     "downloadRuntime",
     "syncSaves",
     "syncGOGSaves",
+    // Todo `2026-10-25-bridge-launch-invoke-times-out-during-first-launch-redist-install`
+    // (quick 261026-jmm). MEASURED in quick 261025-rkj, Manor Lords (1363080), first bridge
+    // launch 2026-10-25: the shared redist step (`installSteamBridgeSharedRedists`) downloaded
+    // the declared 228980 depots in about 50s and ran three installers in about 70s, click to
+    // game start about 2 min, and the renderer logged `[BLANKPROBE-MARK] unhandled-rejection
+    // sidecar invoke timed out: launch t=101402ms` while the sidecar carried on and the game
+    // started. Structurally this is broader than the bridge: `handleLaunch`
+    // (steamFlowRegistration.ts) routes every non-Steam runner through `launchEventCallback`,
+    // which awaits the whole game session, so every Epic/GOG/Amazon/sideload session longer
+    // than 60s also hit this bound and had its real late response dropped as an unknown id.
+    // There is no wall-clock value correct for a game session (same shape as openDialog). The
+    // trade: a wedged launch handler becomes a never-settling promise rather than a 60s
+    // rejection, as already accepted for install/repair/runWineCommand; a crashed sidecar still
+    // fails fast via `drain_pending_invokes`. Rejected alternatives (decoupling the bridge launch
+    // via status events; renderer treating the timeout as non-fatal) each fix only the bridge path.
+    "launch",
 ];
 
 /// Cap on `SidecarState::abandoned`, oldest-dropped past this bound.
@@ -14538,6 +14555,12 @@ mod tests {
         // The two channels gap cycle 1 added; REQ-34.2-12 depends on both staying exempt.
         assert_eq!(timeout_for("repair"), None);
         assert_eq!(timeout_for("readConfig"), None);
+    }
+
+    #[test]
+    fn launch_is_exempt() {
+        // quick 261026-jmm: a game launch awaits the whole session; no 60s bound is correct.
+        assert_eq!(timeout_for("launch"), None);
     }
 
     #[test]
