@@ -21,7 +21,7 @@ source:
   - 51-17-SUMMARY.md
   - 51-18-SUMMARY.md
 started: 2026-10-21T12:30:34Z
-updated: 2026-10-26T07:52:43Z
+updated: 2026-10-26T08:39:31Z
 ---
 
 ## Preconditions
@@ -128,7 +128,7 @@ result: issue — 2026-10-23, HEAD c8729c36a packaged debug bundle. Operator: "1
 ### 16. Re-gate of item 11 — Waiting for Steam names sign-in (Avernum 4, 206020)
 
 expected: With bottled Steam signed out (Steam > Sign out in the GameLibSteam client), Play on Avernum 4 shows "Waiting for Steam…" within roughly 20s naming the sign-in cause; `[bottle-waiting] appId=206020 cause=login` is logged within 35s of Play; after signing in the game starts and the waiting state clears. If bottled Steam has an update pending, `cause=self-update` is logged during its `Downloading update` phase; otherwise that half is fixture-proven only (51-24).
-result: blocked — 2026-10-23, HEAD c8729c36a packaged debug bundle. Precondition not reached, not a classifier failure. Operator: "did not see message saying waiting for steam, also after quite game game page still says 'launching'". Bottled Steam's steamui_login.txt shows both launches (17:22:59-17:23:11 and 17:24:39-17:24:51) going WaitingForNetwork, WaitingForServerResponse, WaitingForLibraryReady, Success with no WaitingForCredentials: Steam auto-signed-in with remembered credentials despite the sign-out, so `[bottle-waiting] appId=206020 cause=none` (line 171) is correct. The login half of 51-24 stays unproven live; to exercise cause=login the sign-out must also clear remembered credentials (untick remember me or remove the account). The self-update half was not exercised (no update pending). NEW ISSUE found during this item: after quitting Avernum 4 the game page stays on "Launching". The backend saw the stop both times (`matched process(es) gone after 65s of play — game stopped` line 200; `gone after 34s` line 218, each followed by refreshLibrary origin=game-status), but `SteamGame.stop: ... no-op` plus "Aborting not possible. Could not find a matching abort controller for 206020" (lines 196-199) and `raiseFrontmostBottledProcess [launch]: no matching process within ~18s` (lines 169, 212) precede it. Filed as todo 2026-10-23-game-page-stuck-on-launching-after-bottled-steam-game-exits.md.
+result: skipped — deferred 2026-10-26 by operator decision to todo `2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md` (ready: live-gate), which tracks the login-cause live check. The "stuck on Launching" issue found here is fixed (todo completed). Original result: blocked — 2026-10-23, HEAD c8729c36a packaged debug bundle. Precondition not reached, not a classifier failure. Operator: "did not see message saying waiting for steam, also after quite game game page still says 'launching'". Bottled Steam's steamui_login.txt shows both launches (17:22:59-17:23:11 and 17:24:39-17:24:51) going WaitingForNetwork, WaitingForServerResponse, WaitingForLibraryReady, Success with no WaitingForCredentials: Steam auto-signed-in with remembered credentials despite the sign-out, so `[bottle-waiting] appId=206020 cause=none` (line 171) is correct. The login half of 51-24 stays unproven live; to exercise cause=login the sign-out must also clear remembered credentials (untick remember me or remove the account). The self-update half was not exercised (no update pending). NEW ISSUE found during this item: after quitting Avernum 4 the game page stays on "Launching". The backend saw the stop both times (`matched process(es) gone after 65s of play — game stopped` line 200; `gone after 34s` line 218, each followed by refreshLibrary origin=game-status), but `SteamGame.stop: ... no-op` plus "Aborting not possible. Could not find a matching abort controller for 206020" (lines 196-199) and `raiseFrontmostBottledProcess [launch]: no matching process within ~18s` (lines 169, 212) precede it. Filed as todo 2026-10-23-game-page-stuck-on-launching-after-bottled-steam-game-exits.md.
 
 ### 17. XCOM: Enemy Unknown (200510) through bottled Steam (confirms the CEG diagnosis)
 
@@ -226,8 +226,8 @@ total: 24
 passed: 15
 issues: 6
 pending: 0
-skipped: 2
-blocked: 1
+skipped: 3
+blocked: 0
 
 Run 2026-10-22 on a fresh Apple-silicon Mac (no prior Steam, CrossOver or bottles). Items 1-4, 7 and 12 ran with the sidecar at 171b4cbf2; items 5, 6, 8-11 and 13 ran at c1a641a21+ (c1a641a21 fixed backslash launch-exe paths mid-gate; 541544990 grew the allowlist).
 
@@ -241,11 +241,15 @@ Re-gate 2026-10-23 (plan 51-27, packaged build at c8729c36a): item 14 passes and
 
 Items 21-24 added 2026-10-26 by quick 261026-rb4: one pending live check for each 51-REVIEW-FIX finding still marked "fixed: requires human verification" (WR-01 item 21, WR-08 item 22, WR-09 item 23, WR-11 item 24). Items 21 and 23 stage their precondition, with an undo step, because it does not occur naturally on this Mac. Sub-checks that cannot be produced live are named in each item as desk-covered or uncovered.
 
+
+Closeout 2026-10-26: items 21-24 (51-REVIEW-FIX human verification) all pass. Item 16 is deferred to its live-gate todo by operator decision (blocked → skipped). Each `## Gaps` entry now carries a resolution: 4 resolved by later items or completed todos, 2 accepted as knownBad (Hoard, ELEX), and 2 deferred with item 16. No item is pending or blocked.
+
 ## Gaps
 
 <!-- YAML format for plan-phase --gaps consumption -->
 - truth: "Quitting a bridge game frees its helper port on the game's first launch"
-  status: failed
+  status: resolved
+  resolution: "Re-gated by item 14 (pass, 2026-10-23); todo 2026-10-22-bridge-process-monitor-starts-after-game-exits completed."
   reason: "Avernum 5 first launch: helper still LISTENing 6m39s after the game was gone; no bottleProcessMonitor line for that launch"
   severity: major
   test: 2
@@ -254,7 +258,8 @@ Items 21-24 added 2026-10-26 by quick 261026-rb4: one pending live check for eac
   missing: ["start the monitor without awaiting the wine child"]
   debug_session: ".planning/todos/pending/2026-10-22-bridge-process-monitor-starts-after-game-exits.md"
 - truth: "Hoard (63000) reaches playable single-player through the bridge (D-51-14 anchor)"
-  status: failed
+  status: accepted
+  resolution: "Hoard crashes under Wine regardless of the bridge; on knownBad as does-not-run. The D-51-14 anchor was re-baselined to The Age of Decadence 230070 (item 18, pass)."
   reason: "User reported: crash dialog; Hoard crashed under CrossOver before the bridge existed, exact same behavior"
   severity: major
   test: 4
@@ -263,7 +268,8 @@ Items 21-24 added 2026-10-26 by quick 261026-rb4: one pending live check for eac
   missing: ["a wine-level fix or a decision to retire Hoard as the acceptance anchor"]
   debug_session: ""
 - truth: "XCOM (200510) reaches its main menu through the bridge"
-  status: failed
+  status: resolved
+  resolution: "CEG DRM confirmed (item 17, pass via bottled Steam); 200510 on knownBad drm-wrapped; CEG prescreen detection landed; todo 2026-10-22-detect-steam-ceg-drm-in-bridge-prescreen completed."
   reason: "User reported: pressed play, nothing launched"
   severity: major
   test: 5
@@ -272,7 +278,8 @@ Items 21-24 added 2026-10-26 by quick 261026-rb4: one pending live check for eac
   missing: ["CEG detection in prescreen/scan", "bottled-Steam confirmation run"]
   debug_session: ".planning/todos/pending/2026-10-22-detect-steam-ceg-drm-in-bridge-prescreen.md"
 - truth: "ELEX (411300) reaches its main menu through the Win64 bridge, and the prescreen logs it as x64"
-  status: failed
+  status: resolved
+  resolution: "Win64 core interfaces wired (item 15: no stubbed core interfaces, no subscription error) and the prescreen subfolder fix landed (live x64 on a subfolder DLL); todo 2026-10-22-wire-win64-core-steam-interfaces completed. The remaining hang is the item 15 gap."
   reason: "User reported: Steam error 'Your account is not subscribed to this application [AppID: 411300]'"
   severity: major
   test: 6
@@ -281,7 +288,8 @@ Items 21-24 added 2026-10-26 by quick 261026-rb4: one pending live check for eac
   missing: ["wire the x64 core interfaces after a live accessor probe", "normalise separators in screenDepotPlanForSteamApi"]
   debug_session: ".planning/todos/pending/2026-10-22-wire-win64-core-steam-interfaces.md"
 - truth: "Waiting for Steam names the detected cause for a signed-out bottled Steam"
-  status: failed
+  status: deferred
+  resolution: "Classifier extended in 51-24; the live check for the login cause is deferred with item 16 to todo 2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download (ready: live-gate)."
   reason: "cause=none for the whole wait while the operator sat at the sign-in prompt; self-update also unnamed during its download phase"
   severity: minor
   test: 11
@@ -290,7 +298,8 @@ Items 21-24 added 2026-10-26 by quick 261026-rb4: one pending live check for eac
   missing: ["sign-in prompt and update-download detection"]
   debug_session: ".planning/todos/pending/2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md"
 - truth: "ELEX (411300) reaches its main menu through the Win64 bridge"
-  status: failed
+  status: accepted
+  resolution: "Hang past the bridge handshake is undiagnosed; 411300 is on knownBad as does-not-run by operator decision."
   reason: "Re-gate item 15: wiring verified (no stubbed core interfaces, no subscription error) but ELEX hangs on its loading screen; operator rates it does-not-run"
   severity: major
   test: 15
@@ -299,7 +308,8 @@ Items 21-24 added 2026-10-26 by quick 261026-rb4: one pending live check for eac
   missing: ["none planned: 411300 is knownBad does-not-run"]
   debug_session: ".planning/todos/pending/2026-10-22-wire-win64-core-steam-interfaces.md"
 - truth: "Waiting for Steam names the sign-in cause for a signed-out bottled Steam"
-  status: unverified
+  status: deferred
+  resolution: "Deferred 2026-10-26 by operator decision to todo 2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download (ready: live-gate)."
   reason: "Re-gate item 16 blocked: bottled Steam auto-signed-in with remembered credentials, so the login state was never reached"
   severity: minor
   test: 16
@@ -308,7 +318,8 @@ Items 21-24 added 2026-10-26 by quick 261026-rb4: one pending live check for eac
   missing: ["re-run with remembered credentials cleared"]
   debug_session: ".planning/todos/pending/2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md"
 - truth: "A bottled-Steam game's page returns from Launching to Play after the game exits"
-  status: failed
+  status: resolved
+  resolution: "Todo 2026-10-23-game-page-stuck-on-launching-after-bottled-steam-game-exits completed."
   reason: "Item 16: backend logs game stopped twice, page stays on Launching"
   severity: major
   test: 16
