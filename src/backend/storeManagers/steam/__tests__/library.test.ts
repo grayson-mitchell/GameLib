@@ -5867,7 +5867,17 @@ describe('pollUninstallOnce()', () => {
       )
       // The success signal must not lie: no "uninstalled" toast while the
       // title is legitimately still installed via the surviving copy.
-      expect(notify).not.toHaveBeenCalled()
+      // ...but say what happened, so the click doesn't read as a failed
+      // uninstall (live 2026-10-27, XCOM 200510).
+      expect(notify).toHaveBeenCalledTimes(1)
+      expect(notify).not.toHaveBeenCalledWith(
+        expect.objectContaining({ body: 'Game Uninstalled' })
+      )
+      expect(i18next.t).toHaveBeenCalledWith(
+        'gamelib:steam.uninstall.copySurvives',
+        expect.any(String),
+        { removed: 'Windows Steam (CrossOver)', survivor: 'Mac Steam' }
+      )
     })
 
     it('native copy removed, BOTTLE copy survives: badge STAYS installed, install_path re-resolves to the bottle copy (platform Windows), no "Game Uninstalled" toast', async () => {
@@ -5912,7 +5922,17 @@ describe('pollUninstallOnce()', () => {
         'pushGameToLibrary',
         expect.objectContaining({ is_installed: false })
       )
-      expect(notify).not.toHaveBeenCalled()
+      // ...but say what happened, so the click doesn't read as a failed
+      // uninstall (live 2026-10-27, XCOM 200510).
+      expect(notify).toHaveBeenCalledTimes(1)
+      expect(notify).not.toHaveBeenCalledWith(
+        expect.objectContaining({ body: 'Game Uninstalled' })
+      )
+      expect(i18next.t).toHaveBeenCalledWith(
+        'gamelib:steam.uninstall.copySurvives',
+        expect.any(String),
+        { removed: 'Mac Steam', survivor: 'Windows Steam (CrossOver)' }
+      )
     })
 
     it('native copy removed, only a BRIDGE copy survives: badge STAYS installed, install_path re-resolves to the bridge copy, no "Game Uninstalled" toast', async () => {
@@ -5973,7 +5993,17 @@ describe('pollUninstallOnce()', () => {
       )
       // The success signal must not lie — this is the assertion the old
       // pairwise check failed.
-      expect(notify).not.toHaveBeenCalled()
+      // ...but say what happened, so the click doesn't read as a failed
+      // uninstall (live 2026-10-27, XCOM 200510).
+      expect(notify).toHaveBeenCalledTimes(1)
+      expect(notify).not.toHaveBeenCalledWith(
+        expect.objectContaining({ body: 'Game Uninstalled' })
+      )
+      expect(i18next.t).toHaveBeenCalledWith(
+        'gamelib:steam.uninstall.copySurvives',
+        expect.any(String),
+        { removed: 'Mac Steam', survivor: 'Steam bridge' }
+      )
     })
 
     it('NEITHER root has a surviving copy: falls through to the original full-uninstall behaviour (badge flips false, "Game Uninstalled" toast fires) — regression guard', async () => {

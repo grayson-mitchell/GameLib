@@ -509,6 +509,12 @@
             "resumeInstallHint": "Install incomplete — resume the download in GameLib"
         },
         "uninstall": {
+            "copySource": {
+                "bottle": "Windows Steam (CrossOver)",
+                "bridge": "Steam bridge",
+                "native": "Mac Steam"
+            },
+            "copySurvives": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
             "removeAllCopiesConfirmMessage": "This removes every installed copy of this game across all install locations. This cannot be undone.",
             "removeAllCopiesConfirmTitle": "Remove all copies?",
             "removeAllCopiesLabel": "Remove all copies…"

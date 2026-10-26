@@ -82,6 +82,20 @@ import {
  */
 export type AcfSource = 'native' | 'bottle' | 'bridge'
 
+const COPY_SOURCE_FALLBACK: Record<AcfSource, string> = {
+  native: 'Mac Steam',
+  bottle: 'Windows Steam (CrossOver)',
+  bridge: 'Steam bridge'
+}
+
+// User-facing name for an install root, for the surviving-copy uninstall notice.
+function copySourceLabel(source: AcfSource): string {
+  return i18next.t(
+    `gamelib:steam.uninstall.copySource.${source}`,
+    COPY_SOURCE_FALLBACK[source]
+  )
+}
+
 /** Shared options shape for both install/uninstall poller start functions.
  *  `isNativeHandoff` is install-poller-only (ignored by startUninstallPolling)
  *  — see activePolls' isNativeHandoff field docstring for its meaning.
@@ -3275,7 +3289,20 @@ export async function pollUninstallOnce(
       })
       // The success signal must not lie: the title is legitimately still
       // installed via the surviving copy, so no "Game Uninstalled" toast
-      // fires here — that would overstate what actually happened.
+      // fires here — that would overstate what actually happened. Say what
+      // did happen instead: with no toast at all the click read as a failed
+      // uninstall (live 2026-10-27, XCOM 200510 native + bottle).
+      notify({
+        title: existing.title,
+        body: i18next.t(
+          'gamelib:steam.uninstall.copySurvives',
+          'Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.',
+          {
+            removed: copySourceLabel(source),
+            survivor: copySourceLabel(survivorSource)
+          }
+        )
+      })
       stopUninstallPolling(appId)
       logInfo(
         `Steam: uninstall polling complete for appId ${appId} — removed the ${source} copy; a ${survivorSource} copy survives at "${survivor.installPath}", badge stays installed and install_path re-resolved to it`,
