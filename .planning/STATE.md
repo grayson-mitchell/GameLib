@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-26 - Completed quick task 261026-uhi: paused depot download no longer logs the chmodAttempts=0 fail-close warning
+Last activity: 2026-10-27 - Completed quick task 261027-9vr: bridge HELLO authenticated by a per-spawn launch secret (Phase 55 WR-03)
 
 Progress: [██████████] 100%
 
@@ -410,6 +410,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261026-uhi | The `chmodAttempts=0 — failing closed to StateFlags=1026` warning in `downloadDepotFiles` is now gated on `!opts.signal?.aborted`, so a user pause no longer reads as an integrity fail-close; `allModesApplied` (T-23-27) unchanged, so a paused install still writes 1026. New cancelled-run test (RED before, GREEN after); the Directory\|Executable test now asserts a non-cancelled zero-chmod run still warns. Not re-run live | 2026-10-26 | `8d75de35c`, `84d4231c7` | code-verified: depot.test.ts 208 jest, tsc, prettier | [261026-uhi-pausing-a-native-depot-download-logs-the](./quick/261026-uhi-pausing-a-native-depot-download-logs-the/) |
 | fast | Retired the Overlooting (3410180) override in 53-VERIFICATION: verified live 2026-10-26 (53-UAT item 36, rqb); score now 11 of 18 derived, not re-measured (session logs rotated out) | 2026-10-26 | (this commit: docs(phase-53) retire the Overlooting override) | ✅ | — |
 | fast | Wrote 53-REVIEW-FIX, 53-GAP-REVIEW-FIX, 53-GAP2-REVIEW-FIX ledgers: every CR/WR finding mapped to its fixing commit (plans 53-10/11/13/17/18, quick kon); all three all_fixed | 2026-10-26 | (this commit: docs(phase-53) add review-fix ledgers) | ✅ | — |
+| 261027-9vr | Bridge HELLO authenticated by a per-spawn launch secret (Phase 55 WR-03): backend `randomBytes(32)` per helper spawn, passed as `GAMELIB_BRIDGE_SECRET` env (never argv) and written as `secret=` into a 0600 `gamelib_bridge.cfg`; helper refuses every slot but HEALTH/HELLO (incl. DRAIN) on a connection until a constant-time HELLO match, fails closed without an env secret; shim re-handshakes every new socket so idle/WR-02 reconnects keep the ring; backend probe sends a role byte so it never logs `shim attached`. | 2026-10-27 | `bad35fc50`, `36f015607`, `26d37a064`, `50c3024cc` | code-verified: 24 bridge/meta suites, 1024 jest (incl. 17 real-helper integration), codecheck, build-steam-bridge. Live gate pending, filed as todo. | [261027-9vr-authenticate-bridge-hello-with-a-per-lau](./quick/261027-9vr-authenticate-bridge-hello-with-a-per-lau/) |
 
 ## Deferred Items
 

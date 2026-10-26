@@ -60,3 +60,16 @@ Decisions for the operator before code:
 Verifying it needs a live run on this Mac with a game that calls GetAuthTicketForWebApi
 (Phase 55's live-gate titles). It must show the ticket still arrives across an idle reconnect, and
 that a second, unauthenticated client gets nothing.
+
+## Resolution
+
+Closed by quick `261027-9vr` (2026-10-27), on the operator's decisions: harden now; the threat model is
+other OS users and processes that cannot read the user's files (a same-user attacker can read the cfg
+and the stored Steam refresh token, and is out of reach). The secret travels as `GAMELIB_BRIDGE_SECRET`
+in the helper's env (never argv) and as `secret=` in a 0600 `gamelib_bridge.cfg` for the shim. HELLO
+carries it; the helper answers only HEALTH and HELLO until a constant-time match, so DRAIN never sees
+the ring unauthenticated. The ring is not cleared on accept or close, and a re-authenticated reconnect
+keeps it. Commits `bad35fc50`, `36f015607`, `26d37a064`, `50c3024cc`.
+
+The live check is not done yet. It is filed as
+`2026-10-27-bridge-hello-secret-live-gate-on-a-phase-55-ticket-title.md`.
