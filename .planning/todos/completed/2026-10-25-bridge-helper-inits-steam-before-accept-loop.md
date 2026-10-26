@@ -22,3 +22,9 @@ duration. Each needs a live Mac Steam session to verify.
 
 When fixed, also correct the `helperProcess.ts` module doc, which claims HEALTH answers
 "immediately at process start, BEFORE `SteamAPI_InitFlat` completes" — false today.
+
+## Resolution
+
+Resolved 2026-10-26 by quick 261026-k6o (`977f6d2db`, `18a9d0bc3`). The helper now prints `READY  init=<ok|failed|dylib-missing> appid=<id>` just before `accept()`. The backend waits for it (bounded at 20 s; exit before READY means `unreachable` at once) before the HEALTH/WHOAMI poll. The false `helperProcess.ts` and `bridge_helper.c` comments are corrected.
+
+Live gate: InitFlat returned in under 1 s in every Steam state tested (quit, still signing in, signed in), failing fast rather than blocking, so the slow path was never observed; a pending Steam update was not exercised. The wait is kept as a safeguard. See the quick task SUMMARY.
