@@ -7,7 +7,7 @@
  */
 import type { GamelibFixStatus } from 'common/types'
 
-export interface GamelibFixDisplay {
+interface GamelibFixDisplay {
   visible: boolean
   launchNotice: string | null
 }

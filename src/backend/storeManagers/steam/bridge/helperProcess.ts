@@ -101,7 +101,7 @@ const READY_LINE = /READY {2}init=(ok|failed|dylib-missing) appid=(\d+)/
 const INIT_FAILED_LINE =
   /InitFlat failed r=-?\d+ err=(.*?) appid=(\d+) \(is Steam running/
 
-export type InitFlatErrorCause = 'steam-not-running' | 'steam-not-signed-in'
+type InitFlatErrorCause = 'steam-not-running' | 'steam-not-signed-in'
 
 /**
  * 261027-aue: maps the helper's InitFlat err text to a Steam-state cause.
