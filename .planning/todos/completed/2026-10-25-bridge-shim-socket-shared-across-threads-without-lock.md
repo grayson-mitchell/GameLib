@@ -33,3 +33,7 @@ it is single-threaded on the bridge, so they cannot exercise contention. Pass cr
 and no hang (the game reaches gameplay and quits cleanly, `SteamAPI_Shutdown` returns), and the
 helper log shows no request-id-mismatch connection closes. Close this todo once a qualifying run is
 recorded.
+
+## Resolution
+
+Resolved 2026-10-26 by the live gate recorded in quick 261026-kyv (SUMMARY, "Live gate"). The statement above that Abiotic runs do not count was stale: since `62d86ac0c` (Phase 55) its OSS Steam thread drains callbacks through `bridge_transact` while the game thread makes its own calls. A traced-shim run (124 s, quit from menu) showed two bridge threads (224: 340 calls, 448: 2,856), 6 real lock waits, 0 failed calls, 0 request-id mismatches, max 15 ms per call, and a clean `SteamAPI_Shutdown` / `LogExit`. The diagnostic trace was not committed.
