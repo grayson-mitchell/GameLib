@@ -3111,7 +3111,28 @@ export default class SteamGame implements Game {
       return this.fireBridgeWineLaunch(exePath, bridgeBottleSettings)
     }
 
-    const helperReady = await ensureBridgeHelperReady(this.appId)
+    // 261027-aue: InitFlat fails fast while Steam is quit or signing in, so the
+    // helper layer waits (bounded) for it -- tell the user, who would
+    // otherwise see up to a minute of silence after pressing Play.
+    const helperReady = await ensureBridgeHelperReady(this.appId, {
+      onWaitingForSteam: (cause) =>
+        notify({
+          title: i18next.t(
+            'gamelib:steam.bridge.waiting.title',
+            'Waiting for Steam'
+          ),
+          body:
+            cause === 'steam-not-running'
+              ? i18next.t(
+                  'gamelib:steam.bridge.waiting.notRunning',
+                  'Starting Steam. The game will launch once Steam has signed in.'
+                )
+              : i18next.t(
+                  'gamelib:steam.bridge.waiting.signingIn',
+                  'Waiting for Steam to finish signing in. The game will launch once it has.'
+                )
+        })
+    })
     if (
       !helperReady.ready ||
       helperReady.port === undefined ||
@@ -3121,11 +3142,20 @@ export default class SteamGame implements Game {
         `SteamGame: bridge helper not ready for appId ${this.appId} (status=${helperReady.status}) — not launching (no no-identity launch, D-05/D-06)`,
         LogPrefix.Steam
       )
-      markBridgeFailedThisSession(this.appId)
+      // 261027-aue: a Steam-state cause is about Steam, not this game's bridge:
+      // do not poison the session (the next Play retries the bridge) and do
+      // not offer the bottled-Steam fallback. The setup message itself was
+      // already sent by ensureBridgeHelperReady for these statuses.
+      const steamStateCause =
+        helperReady.status === 'steam-not-running' ||
+        helperReady.status === 'steam-not-signed-in'
+      if (!steamStateCause) {
+        markBridgeFailedThisSession(this.appId)
+      }
       sendFrontendMessage('steamBridgeSetupRequired', {
         appName: this.appId,
         reason: helperReady.status,
-        fallbackAvailable: true
+        fallbackAvailable: !steamStateCause
       })
       return false
     }

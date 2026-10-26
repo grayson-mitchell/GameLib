@@ -2008,7 +2008,10 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       RESOLVED_EXE_PATH,
       expect.objectContaining({ bottleName: 'GameLibSteamBridge' })
     )
-    expect(ensureBridgeHelperReady).toHaveBeenCalledWith(APP_ID)
+    expect(ensureBridgeHelperReady).toHaveBeenCalledWith(
+      APP_ID,
+      expect.any(Object)
+    )
     expect(writeBridgeConfig).toHaveBeenCalledWith({
       exePath: RESOLVED_EXE_PATH,
       bottleName: 'GameLibSteamBridge',
@@ -2297,7 +2300,10 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       const result = await game.launch({} as any)
 
       expect(result).toBe(true)
-      expect(ensureBridgeHelperReady).toHaveBeenCalledWith(CEG_APP_ID)
+      expect(ensureBridgeHelperReady).toHaveBeenCalledWith(
+        CEG_APP_ID,
+        expect.any(Object)
+      )
       expect(runWineCommand).toHaveBeenCalled()
       expect(sendFrontendMessage).not.toHaveBeenCalledWith(
         'steamBridgeSetupRequired',
@@ -2339,7 +2345,10 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       const result = await new SteamGame(MISS_APP_ID).launch({} as any)
 
       expect(result).toBe(true)
-      expect(ensureBridgeHelperReady).toHaveBeenCalledWith(MISS_APP_ID)
+      expect(ensureBridgeHelperReady).toHaveBeenCalledWith(
+        MISS_APP_ID,
+        expect.any(Object)
+      )
       expect(writeBridgeConfig).toHaveBeenCalledWith(
         expect.objectContaining({
           interfaceVersions: { SteamUser: 'SteamUser023' }
@@ -2433,6 +2442,64 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
           reason: 'not-inited'
         })
       )
+    })
+
+    it.each(['steam-not-running', 'steam-not-signed-in'] as const)(
+      'quick 261027-aue: helper status %s -> no launch, session NOT poisoned, setup message without the bottled fallback',
+      async (status) => {
+        ;(placeShimForGame as jest.Mock).mockResolvedValue({
+          status: 'already-placed',
+          shimPath: RESOLVED_EXE_PATH
+        })
+        ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValueOnce({
+          status,
+          ready: false
+        })
+
+        const first = await new SteamGame(MISS_APP_ID).launch({} as any)
+
+        expect(first).toBe(false)
+        expect(runWineCommand).not.toHaveBeenCalled()
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'steamBridgeSetupRequired',
+          {
+            appName: MISS_APP_ID,
+            reason: status,
+            fallbackAvailable: false
+          }
+        )
+
+        // Not poisoned: the next Play goes down the bridge path again.
+        ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+          status: 'ready',
+          ready: true,
+          port: 55001,
+          secret: 'a'.repeat(64)
+        })
+        const second = await new SteamGame(MISS_APP_ID).launch({} as any)
+        expect(second).toBe(true)
+        expect(ensureBridgeHelperReady).toHaveBeenCalledTimes(2)
+        expect(runWineCommand).toHaveBeenCalled()
+      }
+    )
+
+    it('quick 261027-aue: launch passes onWaitingForSteam, which fires notify() with the waiting strings', async () => {
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'already-placed',
+        shimPath: RESOLVED_EXE_PATH
+      })
+      ;(notify as jest.Mock).mockClear()
+
+      await new SteamGame(MISS_APP_ID).launch({} as any)
+
+      const options = (ensureBridgeHelperReady as jest.Mock).mock.calls[0][1]
+      expect(options.onWaitingForSteam).toEqual(expect.any(Function))
+      options.onWaitingForSteam('steam-not-running')
+      expect(notify).toHaveBeenCalledTimes(1)
+      expect(notify).toHaveBeenCalledWith({
+        title: 'gamelib:steam.bridge.waiting.title',
+        body: 'gamelib:steam.bridge.waiting.notRunning'
+      })
     })
   })
 

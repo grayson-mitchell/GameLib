@@ -129,12 +129,36 @@ const SteamBridgeSetup = () => {
         {t('bridge.setup.title', 'Steam bridge unavailable')}
       </DialogHeader>
       <DialogContent>
-        <p>
-          {t(
-            'bridge.setup.message',
-            'GameLib could not use the native Steam bridge for this game. You can fall back to the proven bottled-Steam path (a full Windows Steam client running in a dedicated CrossOver/Wine bottle) instead.'
-          )}
-        </p>
+        {reason === 'steam-not-running' || reason === 'steam-not-signed-in' ? (
+          // quick 261027-aue: a Steam-state failure, not a bridge failure --
+          // the generic message below recommends bottled Steam, which is wrong.
+          <p>
+            {reason === 'steam-not-running'
+              ? tGamelib(
+                  'steam.bridge.setup.steamNotRunning',
+                  'Steam did not start. GameLib tried to open it and waited a minute. Open Steam, sign in, then press Play again.'
+                )
+              : tGamelib(
+                  'steam.bridge.setup.steamNotSignedIn',
+                  'Steam is open but not signed in. GameLib waited a minute for it to finish signing in. Sign in to Steam, then press Play again.'
+                )}
+          </p>
+        ) : (
+          <p>
+            {t(
+              'bridge.setup.message',
+              'GameLib could not use the native Steam bridge for this game. You can fall back to the proven bottled-Steam path (a full Windows Steam client running in a dedicated CrossOver/Wine bottle) instead.'
+            )}
+          </p>
+        )}
+        {reason === 'not-inited' ? (
+          <p className="steamBridgeSetupReason">
+            {tGamelib(
+              'steam.bridge.setup.notInited',
+              'Steam is running but refused to start a session for this game. Check that Steam is signed in to the account that owns it.'
+            )}
+          </p>
+        ) : null}
         {reason ? (
           <p className="steamBridgeSetupReason">
             {t('bridge.setup.reason', {
