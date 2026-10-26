@@ -2,7 +2,7 @@
  * Curated enrichment-channel registration (Phase 34.2 Plan 06, D-04/D-07/
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
- * Registers the 14 enrichment channels the game-details page and store
+ * Registers the 15 enrichment channels the game-details page and store
  * search container depend on, onto electronStub's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
@@ -20,6 +20,9 @@
  *     - `getKnownFixes` -> `backend/knownFixes.ts`'s
  *       `readKnownFixes(appName, runner)` (Plan 34.2-03 extraction;
  *       registered at `main.ts:1615` today)
+ *     - `getGamelibFixStatus` -> `backend/knownFixes.ts`'s
+ *       `readGamelibFixStatus(appName, runner)` (quick 261027-ch9; brand new,
+ *       local + bundled layers only)
  *     - `getCrossoverIndex` -> `crossover_index/crossoverRatingMap.ts`'s
  *       `buildCrossoverRatingMap()` (Plan 34.2-03 extraction; registered at
  *       `crossover_index/ipc_handler.ts:47` today)
@@ -158,7 +161,7 @@ import { ipcMain } from '../platform'
 import { getGame } from '../utils'
 import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
 import { gameAnticheatInfo } from '../anticheat/utils'
-import { readKnownFixes } from '../knownFixes'
+import { readGamelibFixStatus, readKnownFixes } from '../knownFixes'
 import { buildCrossoverRatingMap } from '../crossover_index/crossoverRatingMap'
 import {
   handleSearchStores,
@@ -174,7 +177,7 @@ import type { Runner } from 'common/types'
 import type { CatalogLocaleSettings } from 'common/types/discounts'
 
 /**
- * Registers the 14 enrichment channels. Called once from `handlers.ts`
+ * Registers the 15 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -207,6 +210,13 @@ export function registerEnrichmentFlows(): void {
 
   ipcMain.handle('getKnownFixes', async (_event: unknown, ...args: unknown[]) =>
     readKnownFixes(args[0] as string, args[1] as Runner)
+  )
+
+  // Quick 261027-ch9: GameLib row on the game page. Local + bundled only.
+  ipcMain.handle(
+    'getGamelibFixStatus',
+    async (_event: unknown, ...args: unknown[]) =>
+      readGamelibFixStatus(args[0] as string, args[1] as Runner)
   )
 
   // D-10: exempted from the 60s invoke bound in main.rs's

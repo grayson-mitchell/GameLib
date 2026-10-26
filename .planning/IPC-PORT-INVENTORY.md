@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 226 |
-| Ported to sidecar | 71 |
+| Unique channels | 227 |
+| Ported to sidecar | 72 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -594,6 +594,18 @@ section above.
 both numbers moved together by +1 and `Unported` (159) is unchanged.
 
 `steamFinishBottledInstall`
+
+## Quick 261027-ch9 — GameLib fix status (1 channel) — **PORTED**
+
+Added 2026-10-27 by quick task `261027-ch9`. The channel is BRAND NEW, invoke-kind
+(`makeHandlerInvoker`, `src/preload/api/misc.ts`), and registered only in the sidecar, in
+`enrichmentFlowRegistration.ts` (body: `readGamelibFixStatus`, `knownFixes.ts`). There is no
+Electron leg, so `Ported to sidecar` rises along with `Unique channels`.
+
+**Unique channels raised 226 → 227, Ported to sidecar raised 71 → 72 (quick 261027-ch9, 2026-10-27):**
+both numbers moved together by +1 and `Unported` (159) is unchanged.
+
+`getGamelibFixStatus`
 
 ## Not an IPC channel, but blocks Phase 35
 

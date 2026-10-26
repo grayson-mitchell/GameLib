@@ -28,6 +28,9 @@
  *   through the TIER1_KNOWN_FIX_KEYS allow-list.
  * - Tier 2, `readKnownFixProfile`: `<id>-<store>.profile.json`. local >
  *   bundled only; the remote directory is never read.
+ * - `readGamelibFixStatus` (quick 261027-ch9): does a local or bundled fix of
+ *   either tier exist? Drives the game page GameLib row. The remote layer
+ *   never counts.
  *
  * MUST NOT import `electron` (or anything that transitively reaches it) --
  * including `backend/ipc` -- the Node sidecar imports this module directly.
@@ -37,7 +40,12 @@ import { isAbsolute, relative, resolve } from 'path'
 import { existsSync } from 'graceful-fs'
 import { readFileSync } from 'fs'
 
-import { KnowFixesInfo, KnownFixProfile, Runner } from 'common/types'
+import {
+  GamelibFixStatus,
+  KnowFixesInfo,
+  KnownFixProfile,
+  Runner
+} from 'common/types'
 import { storeMap } from 'common/utils'
 import { bundledFixesPath, fixesPath, localFixesPath } from './constants/paths'
 import { logWarning } from './logger'
@@ -255,6 +263,51 @@ export function readKnownFixProfile(
     if (parsed === null) continue
     const filtered = filterTier2Profile(appName, label, parsed)
     if (filtered !== null) return filtered
+  }
+  return null
+}
+
+/**
+ * Quick 261027-ch9: local + bundled only, tier 1 then tier 2. Never reads the
+ * remote directory. The launchNotice comes from the winning tier-1 file only.
+ */
+export function readGamelibFixStatus(
+  appName: string,
+  runner: Runner
+): GamelibFixStatus | null {
+  if (storeMap[runner] === undefined) return null
+  const layers: ['local' | 'bundled', string][] = [
+    ['local', localFixesPath],
+    ['bundled', bundledFixesPath]
+  ]
+  for (const [label, dir] of layers) {
+    const parsed = readFixesFileWithin(
+      dir,
+      appName,
+      runner,
+      TIER1_FILE_SUFFIX,
+      label
+    )
+    if (parsed === null) continue
+    const filtered = filterTier1KnownFixes(appName, label, parsed)
+    if (filtered === null) continue
+    const notice = filtered.launchNotice
+    const trimmed = typeof notice === 'string' ? notice.trim() : ''
+    return trimmed
+      ? { origin: label, launchNotice: trimmed }
+      : { origin: label }
+  }
+  for (const [label, dir] of layers) {
+    const parsed = readFixesFileWithin(
+      dir,
+      appName,
+      runner,
+      TIER2_FILE_SUFFIX,
+      label
+    )
+    if (parsed === null) continue
+    if (filterTier2Profile(appName, label, parsed) !== null)
+      return { origin: label }
   }
   return null
 }

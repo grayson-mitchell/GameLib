@@ -67,7 +67,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
   'dialogFlowRegistration.ts': { invoke: 1, send: 0 },
   'downloadQueueFlowRegistration.ts': { invoke: 1, send: 4 },
-  'enrichmentFlowRegistration.ts': { invoke: 14, send: 0 },
+  // Quick 261027-ch9 (2026-10-27): invoke 14 -> 15 -- getGamelibFixStatus
+  'enrichmentFlowRegistration.ts': { invoke: 15, send: 0 },
   // Phase 34.6 Plan 08 (2026-08-24): new module — the 8 EOS overlay channels ported
   // byte-equivalently from eos_overlay/ipc_handler.ts (all invoke-kind, D-09).
   'eosOverlayFlowRegistration.ts': { invoke: 8, send: 0 },

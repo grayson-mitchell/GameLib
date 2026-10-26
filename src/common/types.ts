@@ -1147,11 +1147,21 @@ export interface KnowFixesInfo {
   runInPrefix?: string[]
   envVariables?: Record<string, string>
   wikiLink?: string
-  /** UI text only. Nothing renders it yet. */
+  /** UI text. Appended to the game page GameLib row's tooltip when the file
+   * comes from the local or bundled layer (quick 261027-ch9), never remote. */
   launchNotice?: string
   /** Tier 1, only "32" is accepted. The macOS build is 32-bit (i386); honoured
    * only on Apple silicon (quick 261027-bqe). */
   macArch?: '32'
+}
+
+/**
+ * Quick 261027-ch9: drives the game page GameLib row. Reports a local or
+ * bundled known fix (tier 1 or tier 2); the remote layer never counts.
+ */
+export interface GamelibFixStatus {
+  origin: 'local' | 'bundled'
+  launchNotice?: string
 }
 
 /**

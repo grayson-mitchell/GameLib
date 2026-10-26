@@ -777,6 +777,44 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     })
   })
 
+  // ── quick 261027-ch9: getGamelibFixStatus ──────────────────────────────────
+  describe('quick 261027-ch9 getGamelibFixStatus (invoke)', () => {
+    it('returns null for a fix present only in the remote fixesPath', async () => {
+      writeFileSync(
+        join(fixesPath, 'gfs-remote-app-gog.json'),
+        JSON.stringify({ title: 'x', launchNotice: 'remote text' })
+      )
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'gfs-1', 'getGamelibFixStatus', [
+        'gfs-remote-app',
+        'gog'
+      ])
+      await flush()
+
+      const response = findResponse(frames, 'gfs-1')
+      expect(response?.ok).toBe(true)
+      expect(response?.result).toBeNull()
+    })
+
+    it('returns origin local for a fix under the local layer', async () => {
+      mkdirSync(join(fixesPath, 'local'), { recursive: true })
+      writeFileSync(
+        join(fixesPath, 'local', 'gfs-local-app-gog.json'),
+        JSON.stringify({ title: 'x' })
+      )
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'gfs-2', 'getGamelibFixStatus', [
+        'gfs-local-app',
+        'gog'
+      ])
+      await flush()
+
+      const response = findResponse(frames, 'gfs-2')
+      expect(response?.ok).toBe(true)
+      expect(response?.result).toEqual({ origin: 'local' })
+    })
+  })
+
   // ── REQ-34.2-11/D-16: getCrossoverIndex three-state map ───────────────────
   describe('REQ-34.2-11/D-16 getCrossoverIndex (invoke)', () => {
     it('REQ-34.2-11/D-16 resolves the three-state map: ineligible key-absent, eligible-unmatched null, eligible-matched number', async () => {
