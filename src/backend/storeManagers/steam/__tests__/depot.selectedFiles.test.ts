@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 /**
  * Quick 261026-lif: downloadSelectedDepotFiles. No real network: a fake
  * steam-user client, a mocked raw-manifest parser and an injected

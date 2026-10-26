@@ -46,13 +46,13 @@ jest.mock('../../depot', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { readFileSync: rf } = require('node:fs') as typeof import('fs')
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { resolve: rs } = require('node:path') as typeof import('path')
+  const path = require('node:path') as typeof import('path')
   return {
     downloadSelectedDepotFiles: jest.fn(),
     normalizeDepotPath: (p: string) =>
       p.replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase(),
     resolveContainedPath: (root: string, f: string) =>
-      rs(root, f.replace(/\\/g, '/')),
+      path.resolve(root, f.replace(/\\/g, '/')),
     sha1File: (p: string) =>
       Promise.resolve(ch('sha1').update(rf(p)).digest('hex'))
   }
@@ -95,9 +95,9 @@ function fakeDownload(
   files: Record<string, Buffer>,
   over: { status?: 'error' | 'cancelled'; sha1Override?: string } = {}
 ) {
-  return jest.fn(async (_appId: string, o: DlOpts) => {
+  return jest.fn((_appId: string, o: DlOpts) => {
     if (over.status) {
-      return { status: over.status, files: [], error: 'boom' }
+      return Promise.resolve({ status: over.status, files: [], error: 'boom' })
     }
     const out: Array<{ filename: string; size: number; sha1: string }> = []
     for (const [rel, bytes] of Object.entries(files)) {
@@ -111,7 +111,7 @@ function fakeDownload(
         sha1: over.sha1Override ?? sha1(bytes)
       })
     }
-    return { status: 'done' as const, files: out }
+    return Promise.resolve({ status: 'done' as const, files: out })
   })
 }
 
