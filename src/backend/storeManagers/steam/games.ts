@@ -49,6 +49,7 @@ import {
 } from './electronStores'
 import { depotSignalCaptured } from './metadataCapture'
 import { knownFixSaysMac32, seedMacArchFromKnownFix } from './macArchKnownFix'
+import { knownFixSaysCeg } from './drmKnownFix'
 import { resolvePlatformWrite } from './platformPrecedence'
 import {
   library,
@@ -2436,6 +2437,8 @@ export default class SteamGame implements Game {
       // read (e.g. a test double that returns undefined) to the same
       // not-known-bad default resolveBridgeRoute's `!== null` check needs.
       knownBadReason: bridgeAllowlist.knownBadReason(this.appId) ?? null,
+      // quick 261027-gtd: curated known-fix drm "ceg" is a pre-download drm-wrapped signal.
+      knownFixDrm: knownFixSaysCeg(this.appId) ? 'ceg' : null,
       verdict: readBridgeVerdict(this.appId),
       failedThisSession: bridgeFailedThisSession.has(this.appId),
       win64ShimPresent: existsSync(builtBridgeShim64Path)

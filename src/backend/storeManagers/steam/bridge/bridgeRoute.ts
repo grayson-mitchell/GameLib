@@ -1,7 +1,7 @@
 /**
  * Phase 51 Plan 07 -- ROADMAP sub-decision 2 / D-51-07: the single routing
  * brain. `resolveBridgeRoute` is a PURE function from (platform eligibility,
- * seed membership, known-bad reason, persisted verdict, session failure,
+ * seed membership, known-bad reason, known-fix DRM, persisted verdict, session failure,
  * Win64-shim presence) to a `SteamBridgeRouteVerdict` -- the composed
  * eligibility is "seed UNION persisted scan verdict MINUS DRM-wrapped
  * known-bad MINUS forced-bottle MINUS failed-this-session", computed here and ONLY here.
@@ -59,6 +59,11 @@ export interface BridgeRouteInput {
   /** D-51-08: the bundled known-bad list's reason for this title, or `null`
    * when it does not match. */
   knownBadReason: SteamBridgeKnownBadReason | null
+  /** Quick 261027-gtd: the tier-1 known-fix `drm` value for this title
+   * (games.ts reads it via `knownFixSaysCeg`), or null. 'ceg' makes the title
+   * a 'drm-wrapped' known-bad exactly like a bundled match or
+   * `verdict.drm === 'ceg'`, so it reaches bottled Steam before any download. */
+  knownFixDrm: 'ceg' | null
   /** The persisted `SteamBridgeVerdict` for this title (51-03's
    * `electronStores.ts` shape), or `undefined` when never persisted. */
   verdict: SteamBridgeVerdict | undefined
@@ -85,7 +90,8 @@ function isAcknowledged(
  *  2. `failedThisSession` -> bottle / 'failed-this-session'.
  *  3. `verdict.userRoute === 'bottle'` -> bottle / 'user-forced-bottle'
  *     (D-51-10).
- *  4. A 'drm-wrapped' known-bad match, bundled OR detected CEG
+ *  4. A 'drm-wrapped' known-bad match, bundled, curated known-fix `drm: "ceg"`
+ *     (quick 261027-gtd), OR detected CEG
  *     (`verdict.drm === 'ceg'`, quick 261024-br4), and the user has not
  *     overridden to 'bridge' -> bottle / 'known-bad', notice required unless already
  *     acknowledged for 'known-bad' (D-51-08). Amended 2026-10-23: ONLY
@@ -136,6 +142,7 @@ export function resolveBridgeRoute(
     platformsBottleEligible,
     isSeed,
     knownBadReason: bundledKnownBadReason,
+    knownFixDrm,
     verdict,
     failedThisSession,
     win64ShimPresent
@@ -144,9 +151,13 @@ export function resolveBridgeRoute(
   // Quick 261024-br4: a detected Steam CEG exe (persisted outside `scan`, so
   // it survives a shim export-set bump) IS a 'drm-wrapped' known-bad title.
   // CEG beats a bundled non-DRM reason: a title bundled as 'does-not-run'
-  // must not hide a detected CEG and fall through to the bridge.
+  // must not hide a detected CEG and fall through to the bridge. A curated
+  // known-fix `drm: "ceg"` is the pre-download form of the same signal
+  // (quick 261027-gtd).
   const knownBadReason: SteamBridgeKnownBadReason | null =
-    verdict?.drm === 'ceg' ? 'drm-wrapped' : bundledKnownBadReason
+    verdict?.drm === 'ceg' || knownFixDrm === 'ceg'
+      ? 'drm-wrapped'
+      : bundledKnownBadReason
 
   const shared = {
     // D-51-02: stubbedInterfaces lives on the persisted SCAN sub-object

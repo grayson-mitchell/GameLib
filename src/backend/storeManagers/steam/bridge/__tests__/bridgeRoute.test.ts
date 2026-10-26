@@ -18,6 +18,7 @@ const baseInput: BridgeRouteInput = {
   platformsBottleEligible: true,
   isSeed: false,
   knownBadReason: null,
+  knownFixDrm: null,
   verdict: undefined,
   failedThisSession: false,
   win64ShimPresent: false
@@ -518,6 +519,7 @@ describe('resolveBridgeRoute', () => {
       platformsBottleEligible: true,
       isSeed: true,
       knownBadReason: 'drm-wrapped',
+      knownFixDrm: 'ceg',
       verdict: {
         userRoute: 'bridge',
         steamApi: 'x64',
@@ -639,5 +641,66 @@ describe('quick 261024-br4: detected CEG (verdict.drm)', () => {
         verdict: { drm: 'ceg', userRoute: 'bottle' }
       }).reason
     ).toBe('user-forced-bottle')
+  })
+})
+
+describe('quick 261027-gtd: known-fix drm "ceg" (knownFixDrm)', () => {
+  const ceg: BridgeRouteInput = { ...baseInput, knownFixDrm: 'ceg' }
+
+  it('no other signal -> bottle / known-bad / drm-wrapped, notice required', () => {
+    const result = resolveBridgeRoute(ceg)
+    expect(result.route).toBe('bottle')
+    expect(result.reason).toBe('known-bad')
+    expect(result.knownBadReason).toBe('drm-wrapped')
+    expect(result.noticeRequired).toBe(true)
+  })
+
+  it('acknowledged for known-bad -> notice not required', () => {
+    const result = resolveBridgeRoute({
+      ...ceg,
+      verdict: { noticeAcknowledgedFor: 'known-bad' }
+    })
+    expect(result.route).toBe('bottle')
+    expect(result.reason).toBe('known-bad')
+    expect(result.noticeRequired).toBe(false)
+  })
+
+  it("userRoute 'bridge' still wins (row 6)", () => {
+    const result = resolveBridgeRoute({
+      ...ceg,
+      verdict: { userRoute: 'bridge' }
+    })
+    expect(result.route).toBe('bridge')
+    expect(result.reason).toBe('user-forced-bridge')
+    expect(result.knownBadReason).toBe('drm-wrapped')
+    expect(result.noticeRequired).toBe(false)
+  })
+
+  it("userRoute 'bottle' still wins earlier (row 3)", () => {
+    expect(
+      resolveBridgeRoute({ ...ceg, verdict: { userRoute: 'bottle' } }).reason
+    ).toBe('user-forced-bottle')
+  })
+
+  it("beats a bundled non-DRM reason ('does-not-run')", () => {
+    const result = resolveBridgeRoute({
+      ...ceg,
+      knownBadReason: 'does-not-run'
+    })
+    expect(result.route).toBe('bottle')
+    expect(result.reason).toBe('known-bad')
+    expect(result.knownBadReason).toBe('drm-wrapped')
+  })
+
+  it('row 4 precedes the seed row', () => {
+    const result = resolveBridgeRoute({ ...ceg, isSeed: true })
+    expect(result.route).toBe('bottle')
+    expect(result.reason).toBe('known-bad')
+  })
+
+  it('knownFixDrm null is a no-op', () => {
+    const result = resolveBridgeRoute({ ...baseInput, knownFixDrm: null })
+    expect(result.route).toBe('bridge')
+    expect(result.reason).toBe('pending-scan')
   })
 })

@@ -68,6 +68,7 @@ import {
 } from '../installLocation'
 import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { bridgeAllowlist } from '../bridge/allowlist'
+import { knownFixSaysCeg } from '../drmKnownFix'
 import { placeShimForGame } from '../bridge/shimGenerate'
 import { restoreBridgeSteamApiOriginals } from '../bridge/originalRestore'
 import { resolveBridgeLaunchExe } from '../bridge/launchTarget'
@@ -341,6 +342,11 @@ jest.mock('../bottle', () => {
 jest.mock('../bridge/allowlist', () => ({
   bridgeAllowlist: { has: jest.fn(), knownBadReason: jest.fn() }
 }))
+
+// quick 261027-gtd: resetMocks returns undefined, which
+// assembleBridgeRouteInput maps to null, so every pre-existing test is
+// unaffected.
+jest.mock('../drmKnownFix', () => ({ knownFixSaysCeg: jest.fn() }))
 
 // ── bridge/shimGenerate.ts mock (24-05) — installBridgeGame()'s post-download
 // shim-placement hook.
@@ -5517,6 +5523,33 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     // D-51-08: no silent heavy Windows Steam client -- the bottled dispatch
     // never runs while the notice is unacknowledged.
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith('steamBridgeRouteNotice', {
+      appName: APP_ID,
+      reason: 'known-bad',
+      knownBadReason: 'drm-wrapped',
+      missingSymbols: [],
+      route: 'bottle',
+      userRoute: null
+    })
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+  })
+
+  it("quick 261027-gtd: known-fix drm 'ceg' with no allowlist entry -- install() fires the drm-wrapped steamBridgeRouteNotice before any download", async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+    ;(knownFixSaysCeg as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(knownFixSaysCeg).toHaveBeenCalledWith(APP_ID)
+    expect(placeShimForGame).not.toHaveBeenCalled()
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
     expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith('steamBridgeRouteNotice', {
       appName: APP_ID,
