@@ -1,0 +1,4 @@
+.cache.json
+# per-title rows for the whole owned library: personal data, public repo
+results.json
+run-*.log

@@ -1,0 +1,144 @@
+[
+ {
+  "appId": 8930,
+  "name": "Sid Meier's Civilization V",
+  "depots": [
+   {
+    "depotId": "34481",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   },
+   {
+    "depotId": "34482",
+    "binary": "Civilization V.app\\Contents\\MacOS\\Civilization V",
+    "archs": [
+     "x86_64"
+    ]
+   },
+   {
+    "depotId": "34483",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   }
+  ]
+ },
+ {
+  "appId": 49520,
+  "name": "Borderlands 2",
+  "depots": [
+   {
+    "depotId": "221701",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   },
+   {
+    "depotId": "221702",
+    "binary": "Borderlands2.app\\Contents\\MacOS\\BL2",
+    "archs": [
+     "x86_64"
+    ]
+   },
+   {
+    "depotId": "221703",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   },
+   {
+    "depotId": "224146",
+    "error": "AccessDenied"
+   },
+   {
+    "depotId": "224169",
+    "error": "AccessDenied"
+   },
+   {
+    "depotId": "225835",
+    "error": "AccessDenied"
+   }
+  ]
+ },
+ {
+  "appId": 200510,
+  "name": "XCOM: Enemy Unknown",
+  "depots": [
+   {
+    "depotId": "239611",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   },
+   {
+    "depotId": "239612",
+    "error": "AccessDenied"
+   },
+   {
+    "depotId": "239613",
+    "binary": "XCOM Enemy Unknown.app\\Contents\\MacOS\\XCOM Enemy Within",
+    "archs": [
+     "i386"
+    ]
+   },
+   {
+    "depotId": "239616",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   }
+  ]
+ },
+ {
+  "appId": 203140,
+  "name": "Hitman: Absolution",
+  "depots": [
+   {
+    "depotId": "203157",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   },
+   {
+    "depotId": "203158",
+    "binary": "Hitman Absolution.app\\Contents\\MacOS\\Hitman Sniper Challenge",
+    "archs": [
+     "i386"
+    ]
+   },
+   {
+    "depotId": "203159",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   },
+   {
+    "depotId": "267011",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   }
+  ]
+ },
+ {
+  "appId": 205930,
+  "name": "Hitman: Sniper Challenge",
+  "depots": [
+   {
+    "depotId": "205942",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   },
+   {
+    "depotId": "205943",
+    "binary": "Hitman Sniper Challenge.app\\Contents\\MacOS\\Hitman Sniper Challenge",
+    "archs": [
+     "i386"
+    ]
+   },
+   {
+    "depotId": "205944",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   }
+  ]
+ },
+ {
+  "appId": 65980,
+  "name": "Sid Meier's Civilization: Beyond Earth",
+  "depots": [
+   {
+    "depotId": "328320",
+    "note": "no .app/Contents/MacOS binary in this depot"
+   },
+   {
+    "depotId": "328321",
+    "binary": "Civilization Beyond Earth.app\\Contents\\MacOS\\CivBE_Exe",
+    "archs": [
+     "x86_64"
+    ]
+   }
+  ]
+ }
+]

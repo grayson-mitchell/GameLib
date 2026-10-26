@@ -160,7 +160,8 @@ have it yet. For CEG titles the exception stands until the request-servicing ste
 
 ## Next
 
-- **Spike 045 (proposed):** what genuine Windows Steam writes when it answers `STEAMSTART`. Diff
+- **Spike 045 (proposed, superseded):** 045 became a CEG census instead (6 of 389 owned games are
+  CEG and only 3 reach the wall on Apple silicon), which closes this line. The original proposal: what genuine Windows Steam writes when it answers `STEAMSTART`. Diff
   036's oracle dumps of `STEAM_DRM_IPC` / `STEAM_DATA.<pid>` before and after the ACK against what
   the game reads after its wait returns. That decides whether the step is a protocol a responder
   can answer from Mac Steam's own state, or a Windows-client-only service.
