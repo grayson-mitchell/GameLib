@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-27 - Completed quick task 261027-9vr: bridge HELLO authenticated by a per-spawn launch secret (Phase 55 WR-03)
+Last activity: 2026-10-27 - Completed quick task 261027-bqe: known-fix `macArch: "32"` routes 32-bit-Mac Steam titles straight to the Windows install on Apple silicon
 
 Progress: [██████████] 100%
 
@@ -411,6 +411,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast | Retired the Overlooting (3410180) override in 53-VERIFICATION: verified live 2026-10-26 (53-UAT item 36, rqb); score now 11 of 18 derived, not re-measured (session logs rotated out) | 2026-10-26 | (this commit: docs(phase-53) retire the Overlooting override) | ✅ | — |
 | fast | Wrote 53-REVIEW-FIX, 53-GAP-REVIEW-FIX, 53-GAP2-REVIEW-FIX ledgers: every CR/WR finding mapped to its fixing commit (plans 53-10/11/13/17/18, quick kon); all three all_fixed | 2026-10-26 | (this commit: docs(phase-53) add review-fix ledgers) | ✅ | — |
 | 261027-9vr | Bridge HELLO authenticated by a per-spawn launch secret (Phase 55 WR-03): backend `randomBytes(32)` per helper spawn, passed as `GAMELIB_BRIDGE_SECRET` env (never argv) and written as `secret=` into a 0600 `gamelib_bridge.cfg`; helper refuses every slot but HEALTH/HELLO (incl. DRAIN) on a connection until a constant-time HELLO match, fails closed without an env secret; shim re-handshakes every new socket so idle/WR-02 reconnects keep the ring; backend probe sends a role byte so it never logs `shim attached`. | 2026-10-27 | `bad35fc50`, `36f015607`, `26d37a064`, `50c3024cc` | code-verified: 24 bridge/meta suites, 1024 jest (incl. 17 real-helper integration), codecheck, build-steam-bridge. Live gate pending, filed as todo. | [261027-9vr-authenticate-bridge-hello-with-a-per-lau](./quick/261027-9vr-authenticate-bridge-hello-with-a-per-lau/) |
+| 261027-bqe | Tier-1 known-fix key `macArch: "32"`: on Apple silicon (`isAppleSiliconMac`) a curated 32-bit-Mac Steam title seeds `mac_arch '32'` / `mac_arch_source 'known-fix'` (never verified) in `ensurePlatformsCaptured`, so `install()` takes the existing bottle route with no Mac download; metadata refresh re-derives the seed; the Mach-O check still runs for seeded titles, warns on contradiction and logs a paste-ready `<appId>-steam.json` entry on any `'32'`. Bundled seeds 57300/63000/402060. Spec todo closed into `completed/`. | 2026-10-27 | `a029f1f15`, `b4e8c11e0`, `6a158a41b` | 71 suites / 2754 tests green, tsc clean, prettier clean, planning-gates 12/12. **Unverified:** live Apple-silicon install (unit routing test only); seeds not yet copied to the remote known-fixes repo. | [261027-bqe-known-fix-macarch-32-key-routes-32-bit-m](./quick/261027-bqe-known-fix-macarch-32-key-routes-32-bit-m/) |
 
 ## Deferred Items
 
