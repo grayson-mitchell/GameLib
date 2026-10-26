@@ -147,6 +147,12 @@ jest.mock('backend/storeManagers/steam/games', () => ({
   getSteamInstallSize: jest.fn().mockResolvedValue('20 GB')
 }))
 
+jest.mock('backend/storeManagers/steam/cancelDelete', () => ({
+  deleteCancelledSteamInstall: jest.fn(() =>
+    Promise.resolve({ status: 'deleted' })
+  )
+}))
+
 jest.mock('fs', () => ({
   existsSync: jest.fn().mockReturnValue(true)
 }))
@@ -683,5 +689,57 @@ describe('downloadqueue.ts — quick 261024-cjq: deferred-to-setup installs are 
     const lines = await runOne({ status: 'done' })
     expect(lines).toContain('Finished Installation of 555')
     expect((__store.finished as unknown[]).length).toBe(1)
+  })
+})
+
+describe('downloadqueue.ts — quick-261027-cux: Steam Delete Files routing', () => {
+  beforeEach(() => {
+    jest.resetModules()
+    jest.clearAllMocks()
+    for (const key of Object.keys(__store)) delete __store[key]
+  })
+
+  it('steam head with removeDownloaded calls deleteCancelledSteamInstall once and never removeFolder', async () => {
+    __store.queue = [makeQueueElement('1091500')]
+    __store.finished = []
+    const { deleteCancelledSteamInstall } =
+      await import('backend/storeManagers/steam/cancelDelete')
+    const { removeFolder } = await import('../../utils')
+    const { cancelCurrentDownload } = await import('../downloadqueue')
+
+    cancelCurrentDownload({ removeDownloaded: true })
+
+    expect(deleteCancelledSteamInstall).toHaveBeenCalledTimes(1)
+    expect(deleteCancelledSteamInstall).toHaveBeenCalledWith('1091500')
+    expect(removeFolder).not.toHaveBeenCalled()
+  })
+
+  it('steam head without removeDownloaded never calls deleteCancelledSteamInstall', async () => {
+    __store.queue = [makeQueueElement('1091500')]
+    __store.finished = []
+    const { deleteCancelledSteamInstall } =
+      await import('backend/storeManagers/steam/cancelDelete')
+    const { cancelCurrentDownload } = await import('../downloadqueue')
+
+    cancelCurrentDownload({ removeDownloaded: false })
+
+    expect(deleteCancelledSteamInstall).not.toHaveBeenCalled()
+  })
+
+  it('non-steam head with removeDownloaded keeps the folder_name/removeFolder path', async () => {
+    const gogElement = makeQueueElement('gog-game')
+    gogElement.params.runner = 'gog'
+    __store.queue = [gogElement]
+    __store.finished = []
+    gameGetGameInfoMock.mockReturnValue({ folder_name: 'GogFolder' })
+    const { deleteCancelledSteamInstall } =
+      await import('backend/storeManagers/steam/cancelDelete')
+    const { removeFolder } = await import('../../utils')
+    const { cancelCurrentDownload } = await import('../downloadqueue')
+
+    cancelCurrentDownload({ removeDownloaded: true })
+
+    expect(removeFolder).toHaveBeenCalledWith('/mock/install/path', 'GogFolder')
+    expect(deleteCancelledSteamInstall).not.toHaveBeenCalled()
   })
 })

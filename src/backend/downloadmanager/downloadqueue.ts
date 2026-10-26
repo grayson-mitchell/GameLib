@@ -12,6 +12,7 @@ import { notify } from '../dialog/dialog'
 import i18next from 'i18next'
 import { createRedistDMQueueElement } from 'backend/storeManagers/gog/redist'
 import { getSteamInstallSize } from 'backend/storeManagers/steam/games'
+import { deleteCancelledSteamInstall } from 'backend/storeManagers/steam/cancelDelete'
 import { existsSync } from 'fs'
 import { gogRedistPath } from 'backend/storeManagers/gog/constants'
 import { onConnectivityChange } from 'backend/online_monitor'
@@ -352,11 +353,20 @@ function cancelCurrentDownload({ removeDownloaded = false }) {
 
     if (removeDownloaded) {
       const { appName, runner } = currentElement.params
-      const { folder_name } = libraryManagerMap[runner]
-        .getGame(appName)
-        .getGameInfo()
-      if (folder_name) {
-        removeFolder(currentElement.params.path, folder_name)
+      if (runner === 'steam') {
+        // Steam never sets folder_name, so the generic delete below is a
+        // no-op for it. deleteCancelledSteamInstall waits for the aborted
+        // native run to settle itself (this function is synchronous), never
+        // throws and logs every outcome. See todo
+        // 2026-10-26-steam-cancel-delete-files-is-a-backend-no-op.
+        void deleteCancelledSteamInstall(appName)
+      } else {
+        const { folder_name } = libraryManagerMap[runner]
+          .getGame(appName)
+          .getGameInfo()
+        if (folder_name) {
+          removeFolder(currentElement.params.path, folder_name)
+        }
       }
     }
     currentElement = null
