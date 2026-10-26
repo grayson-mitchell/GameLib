@@ -31,7 +31,8 @@ import {
   isAbsolute,
   join,
   relative,
-  resolve
+  resolve,
+  sep
 } from 'node:path'
 import {
   readManagedSteamApiImports,
@@ -67,14 +68,22 @@ export interface BridgeScanDeps {
  * True iff `candidateAbsPath` resolves to a location strictly inside
  * `rootAbsPath` (steam-two-install-paths-acf-location / MAC32 lesson:
  * `path.join`/string-prefix checks are NOT containment -- use
- * `path.resolve` + `path.relative` and reject `..`/absolute results).
+ * `path.resolve` + `path.relative` and reject an empty result, a result of
+ * exactly `..`, one starting with `..` plus the path separator, or an
+ * absolute result). A child named like `..foo` is still contained
+ * (53-REVIEW IN-03).
  */
 export function isContainedWithin(
   rootAbsPath: string,
   candidateAbsPath: string
 ): boolean {
   const rel = relative(rootAbsPath, candidateAbsPath)
-  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
+  return (
+    rel !== '' &&
+    rel !== '..' &&
+    !rel.startsWith('..' + sep) &&
+    !isAbsolute(rel)
+  )
 }
 
 const RUNTIME_WALK_MAX_DEPTH = 4

@@ -68,6 +68,16 @@ describe('D-53-12 import boundary', () => {
 })
 
 describe('lifted walks (smoke)', () => {
+  it('isContainedWithin accepts children whose names start with two dots', () => {
+    expect(isContainedWithin(root, join(root, '..foo'))).toBe(true)
+    expect(isContainedWithin(root, join(root, '..foo', 'bar'))).toBe(true)
+    expect(isContainedWithin(root, join(root, 'a'))).toBe(true)
+    expect(isContainedWithin(root, root)).toBe(false)
+    expect(isContainedWithin(root, join(root, '..'))).toBe(false)
+    expect(isContainedWithin(root, join(root, '..', 'x'))).toBe(false)
+    expect(isContainedWithin(root, `${root}x`)).toBe(false)
+  })
+
   it('isContainedWithin and resolveWalkRoot', () => {
     expect(isContainedWithin(root, join(root, 'a'))).toBe(true)
     expect(isContainedWithin(root, root)).toBe(false)
