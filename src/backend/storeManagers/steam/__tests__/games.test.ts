@@ -3110,7 +3110,6 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
   it('quick 261026-u1a: with the scan auto-cleared, the top-level retained originalFingerprints are threaded as persistedOriginalFingerprints', async () => {
     const FP_APP_ID = '555562'
     library.set(FP_APP_ID, makeEntry({ title: 'Fingerprint Fallback' }))
-    const scanFps = { 'a.dll': { size: 1, sha1: 'scan' } }
     const staleFps = { 'a.dll': { size: 2, sha1: 'stale' } }
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,

@@ -45,6 +45,7 @@ import {
 import { steamMetadataStore } from '../electronStores'
 
 const readFixes = readKnownFixes as jest.Mock
+// eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
 const setMock = steamMetadataStore.set as jest.Mock
 
 const baseEntry = () => ({

@@ -6767,6 +6767,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     it("a known-fix '32' seed does not skip: Mach-O '32' is persisted as macho/verified", async () => {
       arrange('i386\n', { mac_arch: '32', mac_arch_source: 'known-fix' })
       await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
       expect(steamMetadataStore.set).toHaveBeenCalledWith(
         APP_ID,
         expect.objectContaining({
@@ -6780,6 +6781,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     it("a known-fix '32' seed contradicted by Mach-O '64' persists '64' and warns", async () => {
       arrange('x86_64\n', { mac_arch: '32', mac_arch_source: 'known-fix' })
       await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
       expect(steamMetadataStore.set).toHaveBeenCalledWith(
         APP_ID,
         expect.objectContaining({
@@ -6811,6 +6813,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       arrange('i386\n', { mac_arch: '32', mac_arch_source: 'macho' })
       await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
       expect(execFileSync).not.toHaveBeenCalled()
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
       expect(steamMetadataStore.set).not.toHaveBeenCalled()
     })
   })

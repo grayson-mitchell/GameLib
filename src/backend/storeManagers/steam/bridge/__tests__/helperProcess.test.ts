@@ -1025,7 +1025,7 @@ function emitInitFailedLine(
 /** Queues a spawn implementation that returns one fresh FakeChildProcess per
  * call; `script[i]` says what attempt i's helper reports (an InitFlat err text,
  * or 'ok'). Sockets answer HEALTH/HELLO/WHOAMI ok. */
-function scriptSpawns(script: Array<string | 'ok'>, appId = APP_ID_A) {
+function scriptSpawns(script: string[], appId = APP_ID_A) {
   const children: FakeChildProcess[] = []
   mockedSpawn.mockImplementation(() => {
     const child = new FakeChildProcess()

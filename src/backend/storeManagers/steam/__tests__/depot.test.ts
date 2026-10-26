@@ -4085,7 +4085,7 @@ describe('downloadDepotFiles', () => {
       chunks: [{ sha, cb_original: buf.length, offset: 0 }]
     })
 
-    jest.mocked(fetchChunk).mockImplementation(async (...args: unknown[]) => {
+    jest.mocked(fetchChunk).mockImplementation((...args: unknown[]) => {
       const depotId = args[1] as string
       const onAttempt = args[8] as (ev: {
         host: string
@@ -4108,7 +4108,7 @@ describe('downloadDepotFiles', () => {
           ms: 10,
           netMs: 5
         })
-        return bufB
+        return Promise.resolve(bufB)
       }
       onAttempt({
         host: 'cdn1.example.com',
@@ -4117,7 +4117,7 @@ describe('downloadDepotFiles', () => {
         ms: 10,
         netMs: 5
       })
-      return bufA
+      return Promise.resolve(bufA)
     })
 
     const plan = makePlan(
@@ -6338,9 +6338,9 @@ describe('downloadDepotFiles', () => {
         3
       )
       const controller = new AbortController()
-      jest.mocked(fetchChunk).mockImplementation(async () => {
+      jest.mocked(fetchChunk).mockImplementation(() => {
         controller.abort()
-        return Buffer.from('x')
+        return Promise.resolve(Buffer.from('x'))
       })
 
       const result = await downloadDepotFiles(plan, {
