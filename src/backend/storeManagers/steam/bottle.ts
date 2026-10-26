@@ -1039,16 +1039,20 @@ async function dispatchToBottledSteam(
     DEFAULT_STEAM_BOTTLE_NAME
   const steamExePath = getBottleSteamExePath(bottleName)
 
+  // -silent: if this call is what starts the bottled client, it comes up in
+  // the tray with no main window and no Special Offers popup. Login still
+  // prompts when no session is cached, and the steam:// install/uninstall
+  // dialogs still show. Ignored when the client is already running.
   let commandParts: string[]
   switch (verb) {
     case 'launch':
-      commandParts = [steamExePath, '-applaunch', appId]
+      commandParts = [steamExePath, '-silent', '-applaunch', appId]
       break
     case 'install':
-      commandParts = [steamExePath, `steam://install/${appId}`]
+      commandParts = [steamExePath, '-silent', `steam://install/${appId}`]
       break
     case 'uninstall':
-      commandParts = [steamExePath, `steam://uninstall/${appId}`]
+      commandParts = [steamExePath, '-silent', `steam://uninstall/${appId}`]
       break
   }
 

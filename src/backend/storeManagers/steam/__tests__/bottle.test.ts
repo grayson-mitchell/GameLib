@@ -1391,6 +1391,23 @@ describe('bottle.ts', () => {
         true
       )
     })
+
+    test.each([
+      ['launch', tellBottledSteamToLaunch],
+      ['install', tellBottledSteamToInstall],
+      ['uninstall', tellBottledSteamToUninstall]
+    ])(
+      '%s passes -silent right after Steam.exe so a cold start skips the main window and offers popup',
+      async (_verb, dispatch) => {
+        mockedExistsSync.mockReturnValue(true)
+        mockedGetNodefault.mockReturnValue(undefined)
+
+        await dispatch(GOOD_APP_ID)
+
+        const { commandParts } = mockedRunWineCommand.mock.calls[0][0]
+        expect(commandParts[1]).toBe('-silent')
+      }
+    )
   })
 
   // ── GAP C (17-16): leak-safe raise loop ────────────────────────────────────
