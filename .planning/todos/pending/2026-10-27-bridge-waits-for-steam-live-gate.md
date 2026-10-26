@@ -25,3 +25,13 @@ Restart `tauri dev` first, because it does not rebuild the sidecar (check the `s
 3. Leave Steam at its login window for over a minute and press Play. The dialog shows the not-signed-in copy with no bottled-Steam button, and a second Play still goes through the bridge.
 
 Record the measured seconds from cold start to `READY init=ok`, to confirm or retune `STEAM_WAIT_BUDGET_MS`.
+
+## Live result, 2026-10-27 (appId 1363080)
+
+- Check 1 **passed**. With Steam quit, Play opened Steam and the game launched. `gamelib.log` shows `Could not determine Steam client install directory` at 12:30:42, `ConnectToGlobalUser failed` at 12:30:45 and `READY init=ok` at 12:30:48. A cold start took **~7 s** from Play to ready, well inside the 60 s `STEAM_WAIT_BUDGET_MS`, so the budget stays as it is.
+- Check 2 **passed**. The Play button greyed out, then the game launched once Steam was up. The log shows one `ConnectToGlobalUser failed` at 12:33:55, then `init=ok` 3 s later.
+- Check 3 **not exercised**. Steam signed the saved account in by itself, so the game launched and the timeout branch never ran.
+
+## Remaining
+
+Only check 3 is left. In Steam, sign out (Steam menu → Sign out) so it sits at the login window, then press Play and wait more than 60 s. The dialog should show the not-signed-in copy with no bottled-Steam button. `gamelib.log` should show a run of `ConnectToGlobalUser failed` attempts about 3 s apart, then the budget-exhausted warning. After signing in, a second Play should still go through the bridge.
