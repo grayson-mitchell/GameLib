@@ -1,0 +1,1 @@
+attach: 0 wgl.hideExtensions pattern(s)

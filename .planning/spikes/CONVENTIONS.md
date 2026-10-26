@@ -126,6 +126,13 @@ question requires otherwise.
   --debugmsg +sync,+reg,+file`. When a question is "what does genuine Steam do", boot the bottled Windows
   client as an **oracle** and diff traces; to read a launched process's env, dump its PEB from a tiny PE
   (Wine's `+process` doesn't trace CRT `getenv`).
+- **Shim-side game fixes: prove them on a positive-control probe PE first (034).** A tiny `zig cc` x86 program
+  that imports `steam_api.dll` (one import, never called, so the shim loads at process start) and the API the
+  fix hooks, run in an APFS-cloned bridge bottle (035's clone pattern), gives a self-verifiable cfg matrix
+  before any live game run. Build the shim exactly as `buildShimCompileArgv` + `SHIM_RELEASE_CFLAGS` does.
+  Make an import lib with `zig dlltool -m i386 -d <def> -l lib.a`: `zig cc -shared` names its own import lib
+  after the first source file and drops it in the cwd. macOS has no `timeout`; use
+  `perl -e 'alarm shift; exec @ARGV' <secs> <cmd>`.
 - **Login-UX spikes (019–022):** the shared fixture is spike 019's DummyStore
   (`019-dummy-oauth-store/store-server.mjs`, zero-dep Node ESM, port 17940) — an OAuth 2.0
   auth-code-grant provider with a hot-editable login form. Scripted flows against it MUST run

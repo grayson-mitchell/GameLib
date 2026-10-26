@@ -1,0 +1,2 @@
+cfg: C:\spike034\gamelib_bridge.cfg not found, no fixes
+attach: 0 wgl.hideExtensions pattern(s)

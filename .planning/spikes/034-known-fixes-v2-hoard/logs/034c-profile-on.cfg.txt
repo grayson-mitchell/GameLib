@@ -1,0 +1,11 @@
+port=<ephemeral>
+appid=63000
+iface.SteamUtils=SteamUtils005
+iface.SteamUser=SteamUser016
+iface.SteamFriends=SteamFriends013
+iface.SteamMatchMaking=SteamMatchMaking009
+iface.SteamUserStats=STEAMUSERSTATS_INTERFACE_VERSION011
+iface.SteamNetworking=SteamNetworking005
+iface.SteamApps=STEAMAPPS_INTERFACE_VERSION005
+iface.SteamRemoteStorage=STEAMREMOTESTORAGE_INTERFACE_VERSION010
+fix.wgl.hideExtensions=WGL_ARB_create_context*

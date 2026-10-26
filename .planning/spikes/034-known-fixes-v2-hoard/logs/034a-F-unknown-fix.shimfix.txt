@@ -1,0 +1,2 @@
+cfg: unknown fix line ignored: fix.gl.nope=1
+attach: 0 wgl.hideExtensions pattern(s)

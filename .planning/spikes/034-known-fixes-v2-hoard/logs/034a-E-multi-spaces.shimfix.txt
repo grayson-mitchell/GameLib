@@ -1,0 +1,7 @@
+attach: 2 wgl.hideExtensions pattern(s)
+  pattern[0]=WGL_ARB_create_context_profile
+  pattern[1]=WGL_EXT_swap_control
+hook OPENGL32.dll!wglGetProcAddress: ok
+wgl: ARB hid WGL_ARB_create_context_profile
+wgl: ARB hid WGL_EXT_swap_control
+wgl: ARB dropped 2 token(s)

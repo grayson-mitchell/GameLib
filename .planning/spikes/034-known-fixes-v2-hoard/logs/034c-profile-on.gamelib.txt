@@ -1,0 +1,45 @@
+(16:39:04) [INFO]:    [Steam]:           placeShimForGame: overwrote steam_api.dll for appId 63000 at "~/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-63000/drive_c/Program Files (x86)/Steam/steamapps/common/Hoard/win32/steam_api.dll" (15 imported symbol(s) covered)
+(16:39:04) [INFO]:    [Steam]:           ensureHelperSpawned: spawning a bridge helper for appId 63000 from ~/Projects/GameLib/public/bin/arm64/darwin/steam-bridge-helper (D-51-01)
+(16:39:04) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:39:04Z] LISTEN 127.0.0.1:57906 appid=63000 mode=full
+(16:39:04) [WARNING]: [Steam]:           bridge helper [63000]: [S_API] SteamAPI_Init(): Loaded '~/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamclient.dylib' OK.
+(16:39:04) [WARNING]: [Steam]:           bridge helper [63000]: Setting breakpad minidump AppID = 63000
+(16:39:04) [WARNING]: [Steam]:           bridge helper [63000]: SteamInternal_SetMinidumpSteamID:  Caching Steam ID: <redacted> [API loaded no]
+(16:39:04) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:39:04Z] INIT   manual dispatch ready
+(16:39:04) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:39:04Z] READY  init=ok appid=63000
+(16:39:04) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:39:04Z] INIT   SteamAPI ready (single InitFlat call, real appid=63000)
+(16:39:04) [INFO]:    [Steam]:           SteamGame: launching appId 63000 via the Steam bridge (~/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-63000/drive_c/Program Files (x86)/Steam/steamapps/common/Hoard/win32/Reuben.exe, helper port=57906, cfg copies=1)
+(16:39:04) [INFO]:    [Steam]:           [bridge-notice] appId=63000 reason=stubbed:SteamMatchMaking,SteamNetworking,SteamRemoteStorage
+(16:39:05) [INFO]:    [Steam]:           [Timing] buildDepotPlan/sharedRedist game appinfo 63000: attempt 1 succeeded in 196ms (total 196ms)
+(16:39:22) [INFO]:    [Steam]:           Steam 63000: installed vcredist 2017 (x86 14.10.25008.0, depot 228987)
+(16:39:37) [INFO]:    [Steam]:           Steam 63000: installed vcredist 2017 (x64 14.10.25008.0, depot 228987)
+(16:40:13) [INFO]:    [Steam]:           Steam 63000: installed DirectX Jun2010 (dxsetup, depot 228990)
+(16:40:13) [DEBUG]:   [Backend]:         Running Wine command: ~/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-63000/drive_c/Program Files (x86)/Steam/steamapps/common/Hoard/win32/Reuben.exe
+(16:40:15) [INFO]:    [Steam]:           bottleProcessMonitor [63000]: matched process(es) — game started 27945 C:\Program Files (x86)\Steam\steamapps\common\Hoard\win32\Reuben.exe
+(16:40:15) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:40:15Z] HELLO  shim attached appid=63000
+(16:40:15) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:40:15Z] GINIT  fn=SteamAPI_Init ret=1 ok=1 session=1
+(16:40:17) [INFO]:    [Steam]:           raiseWineGameWindow [bridge:63000]: raised (Reuben.exe pid=27945)
+(16:44:43) [INFO]:    [Steam]:           bottleProcessMonitor [63000]: matched process(es) gone after 269s of play — game stopped
+(16:44:43) [INFO]:    [Steam]:           stopBridgeHelper: terminating the bridge helper for appId 63000
+(16:44:43) [WARNING]: [Steam]:           bridge helper [63000] exited (code=null signal=SIGTERM) -- a future ensureBridgeHelperReady() call will respawn it
+(16:45:21) [INFO]:    [Steam]:           placeShimForGame: appId 63000 drive_c/Program Files (x86)/Steam/steamapps/common/Hoard/win32/steam_api.dll: new .gamelib-orig -- discarding the persisted verdict and rescanning (quick 261026-lif)
+(16:45:21) [INFO]:    [Steam]:           placeShimForGame: overwrote steam_api.dll for appId 63000 at "~/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-63000/drive_c/Program Files (x86)/Steam/steamapps/common/Hoard/win32/steam_api.dll" (15 imported symbol(s) covered)
+(16:45:21) [INFO]:    [Steam]:           ensureHelperSpawned: spawning a bridge helper for appId 63000 from ~/Projects/GameLib/public/bin/arm64/darwin/steam-bridge-helper (D-51-01)
+(16:45:21) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:45:21Z] LISTEN 127.0.0.1:57931 appid=63000 mode=full
+(16:45:21) [WARNING]: [Steam]:           bridge helper [63000]: [S_API] SteamAPI_Init(): Loaded '~/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamclient.dylib' OK.
+(16:45:21) [WARNING]: [Steam]:           bridge helper [63000]: Setting breakpad minidump AppID = 63000
+(16:45:21) [WARNING]: [Steam]:           bridge helper [63000]: SteamInternal_SetMinidumpSteamID:  Caching Steam ID: <redacted> [API loaded no]
+(16:45:21) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:45:21Z] INIT   manual dispatch ready
+(16:45:21) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:45:21Z] INIT   SteamAPI ready (single InitFlat call, real appid=63000)
+(16:45:21) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:45:21Z] READY  init=ok appid=63000
+(16:45:21) [INFO]:    [Steam]:           [bridge-notice] appId=63000 reason=stubbed:SteamMatchMaking,SteamNetworking,SteamRemoteStorage
+(16:45:21) [INFO]:    [Steam]:           SteamGame: launching appId 63000 via the Steam bridge (~/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-63000/drive_c/Program Files (x86)/Steam/steamapps/common/Hoard/win32/Reuben.exe, helper port=57931, cfg copies=1)
+(16:45:21) [INFO]:    [Steam]:           Steam 63000: shared redists already settled, nothing to do
+(16:45:21) [DEBUG]:   [Backend]:         Running Wine command: ~/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-63000/drive_c/Program Files (x86)/Steam/steamapps/common/Hoard/win32/Reuben.exe
+(16:45:23) [INFO]:    [Steam]:           bottleProcessMonitor [63000]: matched process(es) — game started 30181 C:\Program Files (x86)\Steam\steamapps\common\Hoard\win32\Reuben.exe
+(16:45:23) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:45:23Z] HELLO  shim attached appid=63000
+(16:45:23) [WARNING]: [Steam]:           bridge helper [63000]: [2026-10-26T03:45:23Z] GINIT  fn=SteamAPI_Init ret=1 ok=1 session=1
+(16:45:25) [INFO]:    [Steam]:           raiseWineGameWindow [bridge:63000]: raised (Reuben.exe pid=30181)
+(16:47:38) [INFO]:    [Steam]:           bottleProcessMonitor [63000]: matched process(es) gone after 135s of play — game stopped
+(16:47:38) [INFO]:    [Steam]:           stopBridgeHelper: terminating the bridge helper for appId 63000
+(16:47:38) [WARNING]: [Steam]:           bridge helper [63000] exited (code=null signal=SIGTERM) -- a future ensureBridgeHelperReady() call will respawn it
+(16:47:38) [INFO]:    [Backend]:         Achievement cache was cleared for game: 63000
