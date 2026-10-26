@@ -77,7 +77,10 @@ import {
   reconcilePartialState,
   verifyStructuralIntegrity
 } from './depot/reconcile'
-import { resolveDepotPathCollisions } from './depot/pathCollisions'
+import {
+  probeCaseInsensitiveVolume,
+  resolveDepotPathCollisions
+} from './depot/pathCollisions'
 import {
   getAppInfoDepotOrder,
   withAppInfoOrderCapture
@@ -278,6 +281,14 @@ export interface DepotPlan {
    *  downstream via `DepotDownloadOutcome.skippedDepots`; never used to drive
    *  any retry/repair path (D-05 — no recovery). */
   skippedDepots: string[]
+  /** quick 261026-nhy: whether buildDepotPlan judged the destination volume
+   *  case-insensitive. resolveDepotPathCollisions and
+   *  verifyStructuralIntegrity's collision fallback must key paths the same
+   *  way, so the decision rides on the plan. Optional (absent = case-sensitive)
+   *  so existing fixtures compile. Recomputed by every buildDepotPlan, so a
+   *  resume never carries a stale value; the plan is handed in-process to
+   *  downloadDepotFiles and crosses no serialization boundary. */
+  caseInsensitivePaths?: boolean
 }
 
 /** Narrow, ADDITIONAL view of PICS appinfo's `common.name` field — not part of
@@ -935,9 +946,22 @@ export async function buildDepotPlan(
   // claim the SAME path with incompatible types (Fallout 2 ships `master.dat`
   // as a Directory marker in depot 38414 and as a 333MB file in 38415). Both
   // depots are correctly selected, so this must be resolved on the plan before
-  // the write loop can race on it. Every dropped entry is size 0, so
-  // `totalBytes` — already summed above — needs no compensating arithmetic.
-  totalBytes -= resolveDepotPathCollisions({ appId, depots }).droppedBytes
+  // the write loop can race on it. Directory-marker drops are size 0; dropped
+  // real files (appinfo-rank rule) are subtracted from `totalBytes` below.
+  // quick 261026-nhy: on a case-insensitive destination volume, paths that
+  // differ only in letter case are ONE file, so collisions are bucketed on
+  // the case-folded path (probed once, read-only, and carried on the plan).
+  const caseInsensitivePaths = await probeCaseInsensitiveVolume(
+    opts.targetSteamappsDir
+  )
+  logInfo(
+    `buildDepotPlan: appId=${appId} destination volume case-insensitive=${caseInsensitivePaths} (probed ${opts.targetSteamappsDir})`,
+    LogPrefix.Steam
+  )
+  totalBytes -= resolveDepotPathCollisions(
+    { appId, depots },
+    { caseInsensitive: caseInsensitivePaths }
+  ).droppedBytes
 
   logInfo(
     `[Timing] buildDepotPlan: total ${Date.now() - planStart}ms for appId ${appId} (${depots.length} depot(s))`,
@@ -950,7 +974,8 @@ export async function buildDepotPlan(
     totalBytes,
     name: displayName,
     buildid,
-    skippedDepots
+    skippedDepots,
+    caseInsensitivePaths
   }
   // 23-06: census logged on the returned plan before it leaves plan-build —
   // paired with downloadDepotFiles' stage=download-entry census so a

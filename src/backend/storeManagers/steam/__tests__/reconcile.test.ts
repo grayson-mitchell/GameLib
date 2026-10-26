@@ -14,6 +14,7 @@
  * exercised by reconcilePartialState itself.
  */
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -461,6 +462,52 @@ describe('verifyStructuralIntegrity (quick 260908-nbd)', () => {
       // same size as claim a only passes the size gate for claim b's check
       const result = await verifyStructuralIntegrity(twoDepotPlan(), dir)
       expect(result.ok).toBe(false)
+    })
+
+    describe('case-only collisions (quick 261026-nhy)', () => {
+      const ca = Buffer.from('upper-case-spelling-claim')
+      const cb = Buffer.from('lower-claim')
+      const foldedPlan = (flag: boolean | undefined) => ({
+        ...makePlan([
+          {
+            depotId: '1',
+            gid: 'g1',
+            key: Buffer.from('k'),
+            files: [{ ...claim(ca), filename: 'Data\\Level2' }]
+          },
+          {
+            depotId: '2',
+            gid: 'g2',
+            key: Buffer.from('k'),
+            files: [{ ...claim(cb), filename: 'data\\level2' }]
+          }
+        ]),
+        caseInsensitivePaths: flag
+      })
+      const volumeFolds = (): boolean => {
+        writeFileSync(join(dir, 'CaseProbe'), '')
+        return existsSync(join(dir, 'caseprobe'))
+      }
+
+      it('passes via the sha1 fallback when the plan says the volume folds case', async () => {
+        // a case-sensitive fs cannot host a case-only collision
+        if (!volumeFolds()) return
+        mkdirSync(join(dir, 'Data'), { recursive: true })
+        writeFileSync(join(dir, 'Data/Level2'), cb)
+        const result = await verifyStructuralIntegrity(foldedPlan(true), dir)
+        expect(result.ok).toBe(true)
+      })
+
+      it('fails when caseInsensitivePaths is unset (proves the flag drives it)', async () => {
+        if (!volumeFolds()) return
+        mkdirSync(join(dir, 'Data'), { recursive: true })
+        writeFileSync(join(dir, 'Data/Level2'), cb)
+        const result = await verifyStructuralIntegrity(
+          foldedPlan(undefined),
+          dir
+        )
+        expect(result.ok).toBe(false)
+      })
     })
 
     it('a NON-collided wrong-size file is still a mismatch', async () => {

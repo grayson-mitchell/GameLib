@@ -18,6 +18,7 @@
 import { lstat, readlink, stat } from 'node:fs/promises'
 import { sha1File, resolveContainedPath } from '../depot'
 import type { DepotPlan, DepotPlanFile } from '../depot'
+import { pathCollisionKey } from './pathCollisions'
 
 // EDepotFileFlag bit values, per steam-user's own authoritative enum
 // (node_modules/steam-user/enums/EDepotFileFlag.js) — Directory = 64,
@@ -278,7 +279,8 @@ interface StructuralVerifyResult {
  * it cannot be satisfied by BOTH. A collided regular-file path therefore
  * passes iff the file on disk is whole-file sha1-identical to one of the
  * claims (the content actually written); anything else still mismatches and
- * forces the safe 1026 fallback. (debug/cross-depot-collision-1026: Steam's
+ * forces the safe 1026 fallback. Claims are keyed case-folded when
+ * `plan.caseInsensitivePaths` is set. (debug/cross-depot-collision-1026: Steam's
  * own winner rule is only established for one depot pair, see that session.)
  *
  * Fails CLOSED like every other function in this file: a thrown
@@ -313,6 +315,9 @@ export async function verifyStructuralIntegrity(
   // arbitrary. For such a path the file on disk passes iff it is byte-for-byte
   // (whole-file sha1) one of the claims -- the content actually written. A
   // truncated, partial or foreign file matches no claim and still fails.
+  // The claim key is case-folded when the plan says the destination volume is
+  // case-insensitive (quick 261026-nhy): Wasteland 3's 719042 vs 1522651 are
+  // cross-owner, so they stay UNRESOLVED, differ only in case, and land here.
   const contentClaims = new Map<string, DepotPlanFile[]>()
   for (const depot of plan.depots) {
     for (const file of depot.files) {
@@ -322,7 +327,7 @@ export async function verifyStructuralIntegrity(
         Number(file.size) === 0
       )
         continue
-      const key = file.filename.replace(/\\/g, '/')
+      const key = pathCollisionKey(file.filename, !!plan.caseInsensitivePaths)
       const bucket = contentClaims.get(key)
       if (bucket) bucket.push(file)
       else contentClaims.set(key, [file])
@@ -357,7 +362,9 @@ export async function verifyStructuralIntegrity(
 
       const shape = await regularFileShape(dest, file)
       if (!shape.ok) {
-        const rivals = contentClaims.get(file.filename.replace(/\\/g, '/'))
+        const rivals = contentClaims.get(
+          pathCollisionKey(file.filename, !!plan.caseInsensitivePaths)
+        )
         if (
           shape.reason === 'wrong-size' &&
           rivals &&
