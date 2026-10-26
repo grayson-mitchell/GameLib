@@ -217,6 +217,32 @@ describe('protocol -- CONTROL_SLOT.drainCallbacks (Phase 55)', () => {
   })
 })
 
+describe('protocol -- WR-03 secret/role constants match the shim and helper', () => {
+  const root = join(__dirname, '..', '..', '..', '..', '..', '..')
+  const shim = readFileSync(
+    join(root, 'native/steam-bridge/generated/steam_api_shim.c'),
+    'utf-8'
+  )
+  const helper = readFileSync(
+    join(root, 'native/steam-bridge/helper/bridge_helper.c'),
+    'utf-8'
+  )
+
+  it('BRIDGE_SECRET_HEX_LEN equals the shim and helper #define values', () => {
+    const shimValue = /#define BRIDGE_SECRET_HEX_LEN (\d+)/.exec(shim)
+    const helperValue = /#define BRIDGE_SECRET_HEX_LEN (\d+)/.exec(helper)
+    expect(Number(shimValue![1])).toBe(BRIDGE_SECRET_HEX_LEN)
+    expect(Number(helperValue![1])).toBe(BRIDGE_SECRET_HEX_LEN)
+  })
+
+  it('HELLO_ROLE_PROBE and the env var name equal the helper values', () => {
+    const role = /#define HELLO_ROLE_PROBE (0x[0-9a-fA-F]+)/.exec(helper)
+    expect(Number(role![1])).toBe(HELLO_ROLE_PROBE)
+    const env = /#define BRIDGE_SECRET_ENV "([^"]+)"/.exec(helper)
+    expect(env![1]).toBe(BRIDGE_SECRET_ENV)
+  })
+})
+
 describe('protocol -- CONTROL HEALTH/WHOAMI round-trip (review finding #7)', () => {
   it('encodeControl(HEALTH) produces a request frame on CONTROL_ORDINAL/health slot', () => {
     const frame = encodeControl(1, 'health')

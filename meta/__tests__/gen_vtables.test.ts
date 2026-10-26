@@ -3350,6 +3350,9 @@ describe('bridge transport serialization (WR-04)', () => {
 
   it('shared socket and request id are touched only inside transport or with the lock held', () => {
     const transport = [
+      // WR-03: the per-socket handshake draws a request id; it runs only from
+      // bridge_ensure_connected, i.e. already under the lock.
+      spanOf('static int bridge_handshake('),
       spanOf('static int bridge_ensure_connected(void) {'),
       spanOf('static int bridge_transact_once('),
       spanOf('static int bridge_transact_locked(')
@@ -3471,4 +3474,81 @@ describe('55 WR-02: bridge_transact_once malformed and oversized responses', () 
       }
     })
   })
+})
+
+describe('WR-03: shim authenticates every socket with the per-launch secret', () => {
+  const committedShim = readFileSync(
+    join(
+      __dirname,
+      '..',
+      '..',
+      'native',
+      'steam-bridge',
+      'generated',
+      'steam_api_shim.c'
+    ),
+    'utf-8'
+  )
+
+  const fnBodyOf = (src: string, signature: string): string => {
+    const at = src.indexOf(signature)
+    expect(at).toBeGreaterThan(-1)
+    return src.slice(at, src.indexOf('\n}\n', at) + 3)
+  }
+
+  it.each<[string, () => string]>([
+    ['generateShimC output', () => generateShimC(loadAllManifests())],
+    ['committed shim', () => committedShim]
+  ])(
+    '(%s) parses secret=, handshakes every new socket, fails closed',
+    (_l, get) => {
+      const src = get()
+      expect(src).toMatch(/#define BRIDGE_SECRET_HEX_LEN 64\b/)
+      expect(src).toContain(
+        'static char g_bridge_secret[BRIDGE_SECRET_HEX_LEN]'
+      )
+      expect(src).toContain('static int g_bridge_secret_loaded = 0;')
+
+      // Parser: exact length and lowercase hex only.
+      const parser = fnBodyOf(src, 'static void parse_bridge_port_from_buffer')
+      expect(parser).toContain('lineLen == 7 + BRIDGE_SECRET_HEX_LEN')
+      expect(parser).toContain('"secret="')
+      expect(parser).toContain("ch >= 'a' && ch <= 'f'")
+      expect(parser).not.toMatch(/ch >= 'A'/)
+
+      // Connect path: no secret -> no connect; handshake before publishing.
+      const connect = fnBodyOf(src, 'static int bridge_ensure_connected')
+      const noSecretAt = connect.indexOf(
+        'if (!g_bridge_secret_loaded) return 0;'
+      )
+      const connectAt = connect.indexOf('connect(s,')
+      const handshakeAt = connect.indexOf('bridge_handshake(s)')
+      const publishAt = connect.indexOf('g_bridge_sock = s;')
+      expect(noSecretAt).toBeGreaterThan(-1)
+      expect(connectAt).toBeGreaterThan(noSecretAt)
+      expect(handshakeAt).toBeGreaterThan(connectAt)
+      expect(publishAt).toBeGreaterThan(handshakeAt)
+      expect(connect).toMatch(
+        /!bridge_handshake\(s\)\) \{ closesocket\(s\); return 0; \}/
+      )
+
+      // The handshake is a HELLO that does not recurse into bridge_transact.
+      const hs = fnBodyOf(src, 'static int bridge_handshake')
+      expect(hs).toContain('BRIDGE_CONTROL_SLOT_HELLO')
+      expect(hs).toContain('g_bridge_secret')
+      expect(hs).not.toContain('bridge_transact')
+
+      // Both explicit HELLO senders carry the secret; none sends NULL, 0.
+      expect(src).not.toContain('BRIDGE_CONTROL_SLOT_HELLO, NULL, 0')
+      const helloCalls = src.match(
+        /bridge_transact\(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, [^;]*;/g
+      )
+      expect(helloCalls).toHaveLength(2)
+      for (const c of helloCalls!) {
+        expect(c).toContain(
+          '(const uint8_t *)g_bridge_secret, BRIDGE_SECRET_HEX_LEN'
+        )
+      }
+    }
+  )
 })

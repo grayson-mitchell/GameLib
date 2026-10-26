@@ -1333,7 +1333,7 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
     '  if (n > 4096) return NULL;\n' +
     '  if (!s_hello_sent) {\n' +
     '    uint8_t hb[1]; uint32_t hl = 0;\n' +
-    '    if (bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, NULL, 0, hb, sizeof(hb), &hl)) s_hello_sent = 1;\n' +
+    '    if (bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, (const uint8_t *)g_bridge_secret, BRIDGE_SECRET_HEX_LEN, hb, sizeof(hb), &hl)) s_hello_sent = 1;\n' +
     '  }\n' +
     '  s_req[0] = (uint8_t)(n & 0xff); s_req[1] = (uint8_t)((n >> 8) & 0xff); s_req[2] = (uint8_t)((n >> 16) & 0xff); s_req[3] = (uint8_t)((n >> 24) & 0xff);\n' +
     '  memcpy(s_req + 4, pszName, n);\n' +
@@ -2669,6 +2669,11 @@ export function generateShimC(
 #define BRIDGE_CONFIG_FILENAME "gamelib_bridge.cfg"
 #define BRIDGE_CFG_READ_MAX 4096
 
+// WR-03: length in ASCII hex chars of the per-launch secret the backend
+// writes as a \`secret=\` line in gamelib_bridge.cfg. Matches protocol.ts's
+// BRIDGE_SECRET_HEX_LEN and bridge_helper.c's define byte-for-byte.
+#define BRIDGE_SECRET_HEX_LEN 64
+
 // Matches protocol.ts's CONTROL_ORDINAL / CONTROL_SLOT.hello exactly --
 // the connect-time handshake bridge_helper.c answers unconditionally
 // (independent of whether Steam itself is signed in), proving this really
@@ -2768,6 +2773,16 @@ static SRWLOCK g_bridge_lock = SRWLOCK_INIT;
 static int g_bridge_port = 0;
 static int g_bridge_port_load_attempted = 0;
 
+// WR-03: the per-launch secret from gamelib_bridge.cfg's \`secret=\` line.
+// The helper's loopback listener is reachable by any local user and its
+// callback ring can hold a web-API auth ticket, so every new socket
+// authenticates with HELLO(secret) before it is used. Threat model: other OS
+// users / processes that cannot read this user's files; a same-user attacker
+// can read the cfg and is out of scope. 0 until a valid line is parsed --
+// bridge_ensure_connected() refuses to connect while it is 0 (fail closed).
+static char g_bridge_secret[BRIDGE_SECRET_HEX_LEN];
+static int g_bridge_secret_loaded = 0;
+
 // 51-07: an identity marker the version-capture pass can grep the shipped
 // DLL for, so it never mistakes a GameLib shim for a game's own original
 // steam_api.dll. Referenced from SteamAPI_Init() through a store to a
@@ -2777,9 +2792,11 @@ static const char g_gamelib_shim_marker[] = "GameLibSteamBridgeShim/2";
 /*
  * Scans \`buf\` (the raw bytes read from gamelib_bridge.cfg) line-by-line
  * for a \`port=<digits>\` line and, if its value parses as a valid
- * ephemeral/registered port (1024-65535), assigns g_bridge_port. Any other
- * line (appid=, iface.*=, a trailing blank line) is silently skipped --
- * this parser only ever looks for the one field it needs.
+ * ephemeral/registered port (1024-65535), assigns g_bridge_port; and for a
+ * \`secret=<64 lowercase hex>\` line (WR-03), which is accepted only when its
+ * value is exactly BRIDGE_SECRET_HEX_LEN chars of [0-9a-f]. iface.* lines are
+ * collected for the interface-version pool. Any other line (appid=, a
+ * trailing blank line) is silently skipped.
  */
 static void parse_bridge_port_from_buffer(const char *buf, uint32_t len) {
   uint32_t i = 0;
@@ -2787,7 +2804,17 @@ static void parse_bridge_port_from_buffer(const char *buf, uint32_t len) {
     uint32_t lineStart = i;
     while (i < len && buf[i] != '\\n' && buf[i] != '\\r') i++;
     uint32_t lineLen = i - lineStart;
-    if (lineLen > 5 && strncmp(buf + lineStart, "port=", 5) == 0) {
+    if (lineLen == 7 + BRIDGE_SECRET_HEX_LEN && strncmp(buf + lineStart, "secret=", 7) == 0) {
+      int hexOk = 1;
+      for (uint32_t k = 0; k < BRIDGE_SECRET_HEX_LEN; k++) {
+        char ch = buf[lineStart + 7 + k];
+        if (!((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f'))) { hexOk = 0; break; }
+      }
+      if (hexOk) {
+        memcpy(g_bridge_secret, buf + lineStart + 7, BRIDGE_SECRET_HEX_LEN);
+        g_bridge_secret_loaded = 1;
+      }
+    } else if (lineLen > 5 && strncmp(buf + lineStart, "port=", 5) == 0) {
       char numBuf[16];
       uint32_t numLen = lineLen - 5;
       if (numLen >= sizeof(numBuf)) numLen = sizeof(numBuf) - 1;
@@ -2876,11 +2903,40 @@ static void load_bridge_port_once(void) {
   parse_bridge_port_from_buffer(buf, (uint32_t)readLen);
 }
 
+/*
+ * WR-03: authenticates a freshly connected socket -- one HELLO carrying the
+ * launch secret, success only on an OK reply with an empty return blob.
+ * Written directly against \`s\` (never through bridge_transact*, which would
+ * recurse into bridge_ensure_connected); callers already hold g_bridge_lock.
+ */
+static int bridge_handshake(SOCKET s) {
+  uint32_t requestId = g_next_request_id++;
+  uint16_t ordinal = BRIDGE_CONTROL_ORDINAL;
+  uint16_t slot = BRIDGE_CONTROL_SLOT_HELLO;
+  uint32_t frameLen = 4 + 2 + 2 + BRIDGE_SECRET_HEX_LEN;
+  uint8_t header[12];
+  memcpy(header + 0, &frameLen, 4);
+  memcpy(header + 4, &requestId, 4);
+  memcpy(header + 8, &ordinal, 2);
+  memcpy(header + 10, &slot, 2);
+  if (send(s, (const char *)header, sizeof(header), 0) != (int)sizeof(header)) return 0;
+  if (send(s, g_bridge_secret, BRIDGE_SECRET_HEX_LEN, 0) != (int)BRIDGE_SECRET_HEX_LEN) return 0;
+  uint8_t respHeader[9];
+  if (recv(s, (char *)respHeader, sizeof(respHeader), MSG_WAITALL) != (int)sizeof(respHeader)) return 0;
+  uint32_t respLen, respRequestId;
+  memcpy(&respLen, respHeader + 0, 4);
+  memcpy(&respRequestId, respHeader + 4, 4);
+  return respRequestId == requestId && respLen == 5 && respHeader[8] == 0;
+}
+
 static int bridge_ensure_connected(void) {
   if (g_bridge_sock != INVALID_SOCKET) return 1;
   load_bridge_port_once();
   // D-51-01: fail closed -- never falls back to a fixed/guessed port.
   if (g_bridge_port == 0) return 0;
+  // WR-03: fail closed on a missing/invalid secret= line too -- the helper
+  // would refuse every authenticated slot anyway.
+  if (!g_bridge_secret_loaded) return 0;
   WSADATA w;
   if (WSAStartup(MAKEWORD(2, 2), &w) != 0) return 0;
   SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
@@ -2889,6 +2945,12 @@ static int bridge_ensure_connected(void) {
   a.sin_port = htons((uint16_t)g_bridge_port);
   a.sin_addr.s_addr = inet_addr("127.0.0.1"); // loopback-only, never a routable interface
   if (connect(s, (struct sockaddr *)&a, sizeof a) != 0) { closesocket(s); return 0; }
+  // WR-03: EVERY new socket authenticates before it is published as
+  // g_bridge_sock. This is what keeps the helper's 5 s SO_RCVTIMEO idle close
+  // and the WR-02 oversize-reply drop harmless: the reconnect re-authenticates
+  // and still reaches the ring. The ring is bound to the launch secret, not
+  // to a socket, so the helper never clears it on accept or close.
+  if (!bridge_handshake(s)) { closesocket(s); return 0; }
   g_bridge_sock = s;
   return 1;
 }
@@ -2986,7 +3048,7 @@ static int bridge_transact(uint16_t ordinal, uint16_t slot,
  * SteamInternal_SteamAPI_Init. Returns 1 on success, 0 on transport failure. */
 static int gamelib_bridge_hello(void) {
   uint8_t retbuf[1]; uint32_t retlen = 0;
-  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, NULL, 0, retbuf, sizeof(retbuf), &retlen)) return 0;
+  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, (const uint8_t *)g_bridge_secret, BRIDGE_SECRET_HEX_LEN, retbuf, sizeof(retbuf), &retlen)) return 0;
   return 1;
 }
 
