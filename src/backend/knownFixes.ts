@@ -63,7 +63,10 @@ const TIER2_FILE_SUFFIX = '.profile.json'
  * `macArch` is plain routing data that never touches a running game, so it is
  * tier 1 and reaches users from the remote repo without a release (quick
  * 261027-bqe). It is deliberately not called `platforms`, a reserved tier-2
- * name.
+ * name. `drm` is likewise routing data (it only sends a title to bottled
+ * Steam as a 'drm-wrapped' known-bad, before any download) and never touches
+ * a running game, so it is tier 1 and may arrive from the remote layer (quick
+ * 261027-gtd); only "ceg" is accepted.
  */
 export const TIER1_KNOWN_FIX_KEYS = [
   'title',
@@ -73,7 +76,8 @@ export const TIER1_KNOWN_FIX_KEYS = [
   'envVariables',
   'wikiLink',
   'launchNotice',
-  'macArch'
+  'macArch',
+  'drm'
 ] as const
 
 // `dllOverrides`, `overlays`, `platforms` join this list when implemented.
@@ -168,6 +172,14 @@ export function filterTier1KnownFixes(
       if (key === 'macArch' && value !== '32') {
         logWarning(
           `Known fixes for '${appName}' (${layerLabel} layer): 'macArch' accepts only "32", ignoring ${JSON.stringify(value)}.`
+        )
+        continue
+      }
+      // "ceg" is the only Steam DRM that needs a genuine Windows Steam client
+      // (spikes 035-037/044); SteamStub is not routing data (quick 261027-gtd).
+      if (key === 'drm' && value !== 'ceg') {
+        logWarning(
+          `Known fixes for '${appName}' (${layerLabel} layer): 'drm' accepts only "ceg", ignoring ${JSON.stringify(value)}.`
         )
         continue
       }

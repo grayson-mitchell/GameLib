@@ -1153,6 +1153,13 @@ export interface KnowFixesInfo {
   /** Tier 1, only "32" is accepted. The macOS build is 32-bit (i386); honoured
    * only on Apple silicon (quick 261027-bqe). */
   macArch?: '32'
+  /**
+   * Tier 1, only "ceg" is accepted. The title's Windows exe carries Steam CEG,
+   * so the bridge router treats it as a 'drm-wrapped' known-bad and routes it
+   * to bottled Steam before any download, the same as a bundled allowlist
+   * entry or a detected CEG verdict (quick 261027-gtd).
+   */
+  drm?: 'ceg'
 }
 
 /**
