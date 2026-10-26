@@ -562,8 +562,14 @@ export default function ConsoleMode() {
           title={CANCEL_DOWNLOAD_COPY[cancelDownloadGame.kind].title(t)}
           message={CANCEL_DOWNLOAD_COPY[cancelDownloadGame.kind].message(t)}
           gameTitle={cancelDownloadGame.game.title}
-          confirmLabel={t('gamepage:box.yes')}
-          cancelLabel={t('gamepage:box.no')}
+          confirmLabel={t(
+            'gamelib:downloadManager.cancelDialog.stopDownload',
+            'Stop Download'
+          )}
+          cancelLabel={t(
+            'gamelib:downloadManager.cancelDialog.keepDownloading',
+            'Keep Downloading'
+          )}
           onConfirm={handleCancelDownload}
           onCancel={dismissCancelDownload}
           gamepadConnected={gamepadConnected}
