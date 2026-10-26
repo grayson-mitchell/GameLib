@@ -489,6 +489,8 @@ function cType(type: string): string {
       return 'uint32_t'
     case 'const char*':
       return 'const char *'
+    case 'char*':
+      return 'char *'
     case 'void':
       return 'void'
     // 51-06 Task 3: pointer-to-scalar out-value param types -- exactly the
@@ -1458,10 +1460,40 @@ function emitStubBody(
   const sretParam = sret ? 'void *sretOut' : ''
   const dummyBytes = method.stackBytes - (sret ? 4 : 0)
   const dummyCount = dummyBytes / 4
-  const dummyParams = Array.from(
-    { length: dummyCount },
-    (_, i) => `uint32_t dummy${i}`
-  ).join(', ')
+  // A stub with a caller-owned `char*` text out-buffer (immediately followed
+  // by its integer capacity) must NUL-terminate it: the buffer arrives
+  // uninitialized (Steamworks.NET's GetLaunchCommandLine AllocHGlobal's it and
+  // reads it back unless the return is -1), and an unwritten buffer reaches the
+  // game as garbage text (Planet Crafter 1284190: SteamRichPresence.JoinFriend
+  // parsed it as a connect string and threw). Declare the REAL param types for
+  // such a stub -- a `uint32_t dummy` would truncate the pointer on Win64 --
+  // which the i386 stackBytes already account for (pointer = 4 bytes there).
+  const textOutIdx = method.params.findIndex(
+    (p, i) =>
+      p.type === 'char*' &&
+      i + 1 < method.params.length &&
+      (method.params[i + 1].type === 'int32' ||
+        method.params[i + 1].type === 'uint32')
+  )
+  const useRealParams =
+    !sret &&
+    textOutIdx >= 0 &&
+    method.params.every((p) => {
+      try {
+        cType(p.type)
+        return true
+      } catch {
+        return false
+      }
+    })
+  const dummyParams = useRealParams
+    ? method.params.map((p) => `${cType(p.type)} ${p.name}`).join(', ')
+    : Array.from({ length: dummyCount }, (_, i) => `uint32_t dummy${i}`).join(
+        ', '
+      )
+  const textOutPrelude = useRealParams
+    ? `  if (${method.params[textOutIdx].name} != NULL && ${method.params[textOutIdx + 1].name} > 0) ${method.params[textOutIdx].name}[0] = '\\0';\n`
+    : ''
   const paramParts = [sretParam, dummyParams].filter(Boolean).join(', ')
   const signatureParams = paramParts
     ? `void *self, ${paramParts}`
@@ -1494,6 +1526,7 @@ function emitStubBody(
       header +
       `static void THISCALL ${funcName}(${signatureParams}) {\n` +
       `  (void)self;\n` +
+      textOutPrelude +
       `}\n`
     )
   }
@@ -1513,6 +1546,7 @@ function emitStubBody(
     header +
     `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
     `  (void)self;\n` +
+    textOutPrelude +
     `  return ${zeroLiteral};\n` +
     `}\n`
   )

@@ -978,8 +978,9 @@ static void THISCALL vt_SteamUser023_TrackAppUsageEvent(void *self, uint32_t dum
 }
 
 // slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamUser023_GetUserDataFolder(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_SteamUser023_GetUserDataFolder(void *self, char * pchBuffer, int32_t cubBuffer) {
   (void)self;
+  if (pchBuffer != NULL && cubBuffer > 0) pchBuffer[0] = '\0';
   return 0;
 }
 
@@ -1865,8 +1866,9 @@ static void THISCALL vt_SteamUser016_TrackAppUsageEvent(void *self, uint32_t dum
 }
 
 // slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamUser016_GetUserDataFolder(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_SteamUser016_GetUserDataFolder(void *self, char * pchBuffer, int32_t cubBuffer) {
   (void)self;
+  if (pchBuffer != NULL && cubBuffer > 0) pchBuffer[0] = '\0';
   return 0;
 }
 
@@ -2636,8 +2638,9 @@ static uint32_t THISCALL vt_SteamUtils005_GetEnteredGamepadTextLength(void *self
 }
 
 // slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamUtils005_GetEnteredGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_SteamUtils005_GetEnteredGamepadTextInput(void *self, char * pchText, uint32_t cchText) {
   (void)self;
+  if (pchText != NULL && cchText > 0) pchText[0] = '\0';
   return 0;
 }
 
@@ -2808,8 +2811,9 @@ static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION004_GetDLCCount(void *self
 }
 
 // slot 11: BGetDLCDataByIndex(int32 iDLC, uint32* pAppID, bool* pbAvailable, char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION004_BGetDLCDataByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION004_BGetDLCDataByIndex(void *self, int32_t iDLC, uint32_t * pAppID, int * pbAvailable, char * pchName, int32_t cchNameBufferSize) {
   (void)self;
+  if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
   return 0;
 }
 
@@ -3419,14 +3423,16 @@ static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_RequestGlobalAch
 }
 
 // slot 33: GetMostAchievedAchievementInfo(char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 16 (STUB)
-static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetMostAchievedAchievementInfo(void *self, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
   (void)self;
+  if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
   return 0;
 }
 
 // slot 34: GetNextMostAchievedAchievementInfo(int32 iIteratorPrevious, char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 20 (STUB)
-static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetNextMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetNextMostAchievedAchievementInfo(void *self, int32_t iIteratorPrevious, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
   (void)self;
+  if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
   return 0;
 }
 
@@ -4131,8 +4137,9 @@ static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetDLCCount(void *self
 }
 
 // slot 11: BGetDLCDataByIndex(int32 iDLC, uint32* pAppID, bool* pbAvailable, char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_BGetDLCDataByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_BGetDLCDataByIndex(void *self, int32_t iDLC, uint32_t * pAppID, int * pbAvailable, char * pchName, int32_t cchNameBufferSize) {
   (void)self;
+  if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
   return 0;
 }
 
@@ -4152,8 +4159,9 @@ static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_RequestAppProofOfPurchase
 }
 
 // slot 15: GetCurrentBetaName(char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentBetaName(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentBetaName(void *self, char * pchName, int32_t cchNameBufferSize) {
   (void)self;
+  if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
   return 0;
 }
 
@@ -4170,8 +4178,9 @@ static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetInstalledDepots(vo
 }
 
 // slot 18: GetAppInstallDir(uint32 appID, char* pchFolder, uint32 cchFolderBufferSize) -> uint32 | __thiscall ret 12 (STUB)
-static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetAppInstallDir(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetAppInstallDir(void *self, uint32_t appID, char * pchFolder, uint32_t cchFolderBufferSize) {
   (void)self;
+  if (pchFolder != NULL && cchFolderBufferSize > 0) pchFolder[0] = '\0';
   return 0;
 }
 
@@ -4819,14 +4828,16 @@ static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_RequestGlobalAch
 }
 
 // slot 35: GetMostAchievedAchievementInfo(char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 16 (STUB)
-static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetMostAchievedAchievementInfo(void *self, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
   (void)self;
+  if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
   return 0;
 }
 
 // slot 36: GetNextMostAchievedAchievementInfo(int32 iIteratorPrevious, char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 20 (STUB)
-static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetNextMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetNextMostAchievedAchievementInfo(void *self, int32_t iIteratorPrevious, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
   (void)self;
+  if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
   return 0;
 }
 
@@ -5268,8 +5279,9 @@ static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyDataCount(void *self, uin
 }
 
 // slot 22: GetLobbyDataByIndex(CSteamID steamIDLobby, int32 iLobbyData, char* pchKey, int32 cchKeyBufferSize, char* pchValue, int32 cchValueBufferSize) -> bool | __thiscall ret 28 (STUB)
-static int THISCALL vt_SteamMatchMaking009_GetLobbyDataByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+static int THISCALL vt_SteamMatchMaking009_GetLobbyDataByIndex(void *self, uint64_t steamIDLobby, int32_t iLobbyData, char * pchKey, int32_t cchKeyBufferSize, char * pchValue, int32_t cchValueBufferSize) {
   (void)self;
+  if (pchKey != NULL && cchKeyBufferSize > 0) pchKey[0] = '\0';
   return 0;
 }
 
@@ -7284,8 +7296,9 @@ static void THISCALL vt_SteamUser019_TrackAppUsageEvent(void *self, uint32_t dum
 }
 
 // slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamUser019_GetUserDataFolder(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_SteamUser019_GetUserDataFolder(void *self, char * pchBuffer, int32_t cubBuffer) {
   (void)self;
+  if (pchBuffer != NULL && cubBuffer > 0) pchBuffer[0] = '\0';
   return 0;
 }
 
@@ -8167,8 +8180,9 @@ static uint32_t THISCALL vt_SteamUtils008_GetEnteredGamepadTextLength(void *self
 }
 
 // slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamUtils008_GetEnteredGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_SteamUtils008_GetEnteredGamepadTextInput(void *self, char * pchText, uint32_t cchText) {
   (void)self;
+  if (pchText != NULL && cchText > 0) pchText[0] = '\0';
   return 0;
 }
 
@@ -8393,8 +8407,9 @@ static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetDLCCount(void *self
 }
 
 // slot 11: BGetDLCDataByIndex(int32 iDLC, uint32* pAppID, bool* pbAvailable, char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BGetDLCDataByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BGetDLCDataByIndex(void *self, int32_t iDLC, uint32_t * pAppID, int * pbAvailable, char * pchName, int32_t cchNameBufferSize) {
   (void)self;
+  if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
   return 0;
 }
 
@@ -8414,8 +8429,9 @@ static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_RequestAppProofOfPurchase
 }
 
 // slot 15: GetCurrentBetaName(char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentBetaName(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentBetaName(void *self, char * pchName, int32_t cchNameBufferSize) {
   (void)self;
+  if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
   return 0;
 }
 
@@ -8432,8 +8448,9 @@ static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetInstalledDepots(vo
 }
 
 // slot 18: GetAppInstallDir(uint32 appID, char* pchFolder, uint32 cchFolderBufferSize) -> uint32 | __thiscall ret 12 (STUB)
-static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetAppInstallDir(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetAppInstallDir(void *self, uint32_t appID, char * pchFolder, uint32_t cchFolderBufferSize) {
   (void)self;
+  if (pchFolder != NULL && cchFolderBufferSize > 0) pchFolder[0] = '\0';
   return 0;
 }
 
@@ -8496,8 +8513,9 @@ static uint64_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetFileDetails(void *
 }
 
 // slot 26: GetLaunchCommandLine(char* pszCommandLine, int32 cubCommandLine) -> int32 | __thiscall ret 8 (STUB)
-static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetLaunchCommandLine(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetLaunchCommandLine(void *self, char * pszCommandLine, int32_t cubCommandLine) {
   (void)self;
+  if (pszCommandLine != NULL && cubCommandLine > 0) pszCommandLine[0] = '\0';
   return 0;
 }
 
@@ -8526,8 +8544,9 @@ static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetNumBetas(void *self
 }
 
 // slot 31: GetBetaInfo(int32 iBetaIndex, uint32* punFlags, uint32* punBuildID, char* pchBetaName, int32 cchBetaName, char* pchDescription, int32 cchDescription) -> bool | __thiscall ret 28 (STUB)
-static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetBetaInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetBetaInfo(void *self, int32_t iBetaIndex, uint32_t * punFlags, uint32_t * punBuildID, char * pchBetaName, int32_t cchBetaName, char * pchDescription, int32_t cchDescription) {
   (void)self;
+  if (pchBetaName != NULL && cchBetaName > 0) pchBetaName[0] = '\0';
   return 0;
 }
 
@@ -12942,8 +12961,9 @@ static void THISCALL vt_SteamUser021_TrackAppUsageEvent(void *self, uint32_t dum
 }
 
 // slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamUser021_GetUserDataFolder(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_SteamUser021_GetUserDataFolder(void *self, char * pchBuffer, int32_t cubBuffer) {
   (void)self;
+  if (pchBuffer != NULL && cubBuffer > 0) pchBuffer[0] = '\0';
   return 0;
 }
 
@@ -13934,8 +13954,9 @@ static uint32_t THISCALL vt_SteamUtils010_GetEnteredGamepadTextLength(void *self
 }
 
 // slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamUtils010_GetEnteredGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_SteamUtils010_GetEnteredGamepadTextInput(void *self, char * pchText, uint32_t cchText) {
   (void)self;
+  if (pchText != NULL && cchText > 0) pchText[0] = '\0';
   return 0;
 }
 
@@ -14012,8 +14033,9 @@ static int THISCALL vt_SteamUtils010_InitFilterText(void *self, uint32_t dummy0)
 }
 
 // slot 32: FilterText(uint32 eContext, CSteamID sourceSteamID, const char* pchInputMessage, char* pchOutFilteredText, uint32 nByteSizeOutFilteredText) -> int32 | __thiscall ret 24 (STUB)
-static int32_t THISCALL vt_SteamUtils010_FilterText(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int32_t THISCALL vt_SteamUtils010_FilterText(void *self, uint32_t eContext, uint64_t sourceSteamID, const char * pchInputMessage, char * pchOutFilteredText, uint32_t nByteSizeOutFilteredText) {
   (void)self;
+  if (pchOutFilteredText != NULL && nByteSizeOutFilteredText > 0) pchOutFilteredText[0] = '\0';
   return 0;
 }
 
@@ -14704,14 +14726,16 @@ static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestGlobalAch
 }
 
 // slot 35: GetMostAchievedAchievementInfo(char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 16 (STUB)
-static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetMostAchievedAchievementInfo(void *self, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
   (void)self;
+  if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
   return 0;
 }
 
 // slot 36: GetNextMostAchievedAchievementInfo(int32 iIteratorPrevious, char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 20 (STUB)
-static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetNextMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetNextMostAchievedAchievementInfo(void *self, int32_t iIteratorPrevious, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
   (void)self;
+  if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
   return 0;
 }
 
@@ -15415,14 +15439,16 @@ static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_RequestGlobalAch
 }
 
 // slot 34: GetMostAchievedAchievementInfo(char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 16 (STUB)
-static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetMostAchievedAchievementInfo(void *self, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
   (void)self;
+  if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
   return 0;
 }
 
 // slot 35: GetNextMostAchievedAchievementInfo(int32 iIteratorPrevious, char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 20 (STUB)
-static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetNextMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetNextMostAchievedAchievementInfo(void *self, int32_t iIteratorPrevious, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
   (void)self;
+  if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
   return 0;
 }
 
@@ -16624,8 +16650,9 @@ static uint32_t THISCALL vt_SteamMatchGameSearch001_DeclineGame(void *self) {
 }
 
 // slot 5: RetrieveConnectionDetails(CSteamID steamIDHost, char* pchConnectionDetails, int32 cubConnectionDetails) -> uint32 | __thiscall ret 16 (STUB)
-static uint32_t THISCALL vt_SteamMatchGameSearch001_RetrieveConnectionDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+static uint32_t THISCALL vt_SteamMatchGameSearch001_RetrieveConnectionDetails(void *self, uint64_t steamIDHost, char * pchConnectionDetails, int32_t cubConnectionDetails) {
   (void)self;
+  if (pchConnectionDetails != NULL && cubConnectionDetails > 0) pchConnectionDetails[0] = '\0';
   return 0;
 }
 
@@ -16713,14 +16740,16 @@ static uint32_t THISCALL vt_STEAMAPPLIST_INTERFACE_VERSION001_GetInstalledApps(v
 }
 
 // slot 2: GetAppName(uint32 nAppID, char* pchName, int32 cchNameMax) -> int32 | __thiscall ret 12 (STUB)
-static int32_t THISCALL vt_STEAMAPPLIST_INTERFACE_VERSION001_GetAppName(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+static int32_t THISCALL vt_STEAMAPPLIST_INTERFACE_VERSION001_GetAppName(void *self, uint32_t nAppID, char * pchName, int32_t cchNameMax) {
   (void)self;
+  if (pchName != NULL && cchNameMax > 0) pchName[0] = '\0';
   return 0;
 }
 
 // slot 3: GetAppInstallDir(uint32 nAppID, char* pchDirectory, int32 cchNameMax) -> int32 | __thiscall ret 12 (STUB)
-static int32_t THISCALL vt_STEAMAPPLIST_INTERFACE_VERSION001_GetAppInstallDir(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+static int32_t THISCALL vt_STEAMAPPLIST_INTERFACE_VERSION001_GetAppInstallDir(void *self, uint32_t nAppID, char * pchDirectory, int32_t cchNameMax) {
   (void)self;
+  if (pchDirectory != NULL && cchNameMax > 0) pchDirectory[0] = '\0';
   return 0;
 }
 
@@ -17108,8 +17137,9 @@ static uint64_t THISCALL vt_SteamParties002_GetBeaconByIndex(void *self, uint32_
 }
 
 // slot 2: GetBeaconDetails(uint64 ulBeaconID, CSteamID* pSteamIDBeaconOwner, w_SteamPartyBeaconLocation_t* pLocation, char* pchMetadata, int32 cchMetadata) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_SteamParties002_GetBeaconDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_SteamParties002_GetBeaconDetails(void *self, uint64_t ulBeaconID, void * pSteamIDBeaconOwner, void * pLocation, char * pchMetadata, int32_t cchMetadata) {
   (void)self;
+  if (pchMetadata != NULL && cchMetadata > 0) pchMetadata[0] = '\0';
   return 0;
 }
 
@@ -17160,8 +17190,9 @@ static int THISCALL vt_SteamParties002_DestroyBeacon(void *self, uint32_t dummy0
 }
 
 // slot 11: GetBeaconLocationData(w_SteamPartyBeaconLocation_t BeaconLocation, uint32 eData, char* pchDataStringOut, int32 cchDataStringOut) -> bool | __thiscall ret 16 (STUB)
-static int THISCALL vt_SteamParties002_GetBeaconLocationData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_SteamParties002_GetBeaconLocationData(void *self, uint32_t BeaconLocation, uint32_t eData, char * pchDataStringOut, int32_t cchDataStringOut) {
   (void)self;
+  if (pchDataStringOut != NULL && cchDataStringOut > 0) pchDataStringOut[0] = '\0';
   return 0;
 }
 
@@ -17641,26 +17672,30 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCNumTags(voi
 }
 
 // slot 7: GetQueryUGCTag(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCTag(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
   return 0;
 }
 
 // slot 8: GetQueryUGCTagDisplayName(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCTagDisplayName(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCTagDisplayName(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
   return 0;
 }
 
 // slot 9: GetQueryUGCPreviewURL(uint64 handle, uint32 index, char* pchURL, uint32 cchURLSize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCPreviewURL(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCPreviewURL(void *self, uint64_t handle, uint32_t index, char * pchURL, uint32_t cchURLSize) {
   (void)self;
+  if (pchURL != NULL && cchURLSize > 0) pchURL[0] = '\0';
   return 0;
 }
 
 // slot 10: GetQueryUGCMetadata(uint64 handle, uint32 index, char* pchMetadata, uint32 cchMetadatasize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCMetadata(void *self, uint64_t handle, uint32_t index, char * pchMetadata, uint32_t cchMetadatasize) {
   (void)self;
+  if (pchMetadata != NULL && cchMetadatasize > 0) pchMetadata[0] = '\0';
   return 0;
 }
 
@@ -17683,8 +17718,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCNumAddition
 }
 
 // slot 14: GetQueryUGCAdditionalPreview(uint64 handle, uint32 index, uint32 previewIndex, char* pchURLOrVideoID, uint32 cchURLSize, char* pchOriginalFileName, uint32 cchOriginalFileNameSize, uint32* pPreviewType) -> bool | __thiscall ret 36 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCAdditionalPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCAdditionalPreview(void *self, uint64_t handle, uint32_t index, uint32_t previewIndex, char * pchURLOrVideoID, uint32_t cchURLSize, char * pchOriginalFileName, uint32_t cchOriginalFileNameSize, uint32_t * pPreviewType) {
   (void)self;
+  if (pchURLOrVideoID != NULL && cchURLSize > 0) pchURLOrVideoID[0] = '\0';
   return 0;
 }
 
@@ -17695,14 +17731,16 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCNumKeyValue
 }
 
 // slot 16: GetQueryUGCKeyValueTag_2(uint64 handle, uint32 index, const char* pchKey, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCKeyValueTag_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCKeyValueTag_2(void *self, uint64_t handle, uint32_t index, const char * pchKey, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
   return 0;
 }
 
 // slot 17: GetQueryUGCKeyValueTag(uint64 handle, uint32 index, uint32 keyValueTagIndex, char* pchKey, uint32 cchKeySize, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 32 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCKeyValueTag(void *self, uint64_t handle, uint32_t index, uint32_t keyValueTagIndex, char * pchKey, uint32_t cchKeySize, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchKey != NULL && cchKeySize > 0) pchKey[0] = '\0';
   return 0;
 }
 
@@ -18019,8 +18057,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetItemState(void *sel
 }
 
 // slot 70: GetItemInstallInfo(uint64 nPublishedFileID, uint64* punSizeOnDisk, char* pchFolder, uint32 cchFolderSize, uint32* punTimeStamp) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetItemInstallInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetItemInstallInfo(void *self, uint64_t nPublishedFileID, uint64_t * punSizeOnDisk, char * pchFolder, uint32_t cchFolderSize, uint32_t * punTimeStamp) {
   (void)self;
+  if (pchFolder != NULL && cchFolderSize > 0) pchFolder[0] = '\0';
   return 0;
 }
 
@@ -18251,26 +18290,30 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCNumTags(voi
 }
 
 // slot 7: GetQueryUGCTag(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCTag(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
   return 0;
 }
 
 // slot 8: GetQueryUGCTagDisplayName(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCTagDisplayName(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCTagDisplayName(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
   return 0;
 }
 
 // slot 9: GetQueryUGCPreviewURL(uint64 handle, uint32 index, char* pchURL, uint32 cchURLSize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCPreviewURL(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCPreviewURL(void *self, uint64_t handle, uint32_t index, char * pchURL, uint32_t cchURLSize) {
   (void)self;
+  if (pchURL != NULL && cchURLSize > 0) pchURL[0] = '\0';
   return 0;
 }
 
 // slot 10: GetQueryUGCMetadata(uint64 handle, uint32 index, char* pchMetadata, uint32 cchMetadatasize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCMetadata(void *self, uint64_t handle, uint32_t index, char * pchMetadata, uint32_t cchMetadatasize) {
   (void)self;
+  if (pchMetadata != NULL && cchMetadatasize > 0) pchMetadata[0] = '\0';
   return 0;
 }
 
@@ -18293,8 +18336,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCNumAddition
 }
 
 // slot 14: GetQueryUGCAdditionalPreview(uint64 handle, uint32 index, uint32 previewIndex, char* pchURLOrVideoID, uint32 cchURLSize, char* pchOriginalFileName, uint32 cchOriginalFileNameSize, uint32* pPreviewType) -> bool | __thiscall ret 36 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCAdditionalPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCAdditionalPreview(void *self, uint64_t handle, uint32_t index, uint32_t previewIndex, char * pchURLOrVideoID, uint32_t cchURLSize, char * pchOriginalFileName, uint32_t cchOriginalFileNameSize, uint32_t * pPreviewType) {
   (void)self;
+  if (pchURLOrVideoID != NULL && cchURLSize > 0) pchURLOrVideoID[0] = '\0';
   return 0;
 }
 
@@ -18305,14 +18349,16 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCNumKeyValue
 }
 
 // slot 16: GetQueryUGCKeyValueTag_2(uint64 handle, uint32 index, const char* pchKey, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCKeyValueTag_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCKeyValueTag_2(void *self, uint64_t handle, uint32_t index, const char * pchKey, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
   return 0;
 }
 
 // slot 17: GetQueryUGCKeyValueTag(uint64 handle, uint32 index, uint32 keyValueTagIndex, char* pchKey, uint32 cchKeySize, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 32 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCKeyValueTag(void *self, uint64_t handle, uint32_t index, uint32_t keyValueTagIndex, char * pchKey, uint32_t cchKeySize, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchKey != NULL && cchKeySize > 0) pchKey[0] = '\0';
   return 0;
 }
 
@@ -18647,8 +18693,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetItemState(void *sel
 }
 
 // slot 73: GetItemInstallInfo(uint64 nPublishedFileID, uint64* punSizeOnDisk, char* pchFolder, uint32 cchFolderSize, uint32* punTimeStamp) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetItemInstallInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetItemInstallInfo(void *self, uint64_t nPublishedFileID, uint64_t * punSizeOnDisk, char * pchFolder, uint32_t cchFolderSize, uint32_t * punTimeStamp) {
   (void)self;
+  if (pchFolder != NULL && cchFolderSize > 0) pchFolder[0] = '\0';
   return 0;
 }
 
@@ -18882,26 +18929,30 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCNumTags(voi
 }
 
 // slot 7: GetQueryUGCTag(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCTag(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
   return 0;
 }
 
 // slot 8: GetQueryUGCTagDisplayName(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCTagDisplayName(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCTagDisplayName(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
   return 0;
 }
 
 // slot 9: GetQueryUGCPreviewURL(uint64 handle, uint32 index, char* pchURL, uint32 cchURLSize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCPreviewURL(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCPreviewURL(void *self, uint64_t handle, uint32_t index, char * pchURL, uint32_t cchURLSize) {
   (void)self;
+  if (pchURL != NULL && cchURLSize > 0) pchURL[0] = '\0';
   return 0;
 }
 
 // slot 10: GetQueryUGCMetadata(uint64 handle, uint32 index, char* pchMetadata, uint32 cchMetadatasize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCMetadata(void *self, uint64_t handle, uint32_t index, char * pchMetadata, uint32_t cchMetadatasize) {
   (void)self;
+  if (pchMetadata != NULL && cchMetadatasize > 0) pchMetadata[0] = '\0';
   return 0;
 }
 
@@ -18924,8 +18975,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCNumAddition
 }
 
 // slot 14: GetQueryUGCAdditionalPreview(uint64 handle, uint32 index, uint32 previewIndex, char* pchURLOrVideoID, uint32 cchURLSize, char* pchOriginalFileName, uint32 cchOriginalFileNameSize, uint32* pPreviewType) -> bool | __thiscall ret 36 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCAdditionalPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCAdditionalPreview(void *self, uint64_t handle, uint32_t index, uint32_t previewIndex, char * pchURLOrVideoID, uint32_t cchURLSize, char * pchOriginalFileName, uint32_t cchOriginalFileNameSize, uint32_t * pPreviewType) {
   (void)self;
+  if (pchURLOrVideoID != NULL && cchURLSize > 0) pchURLOrVideoID[0] = '\0';
   return 0;
 }
 
@@ -18936,14 +18988,16 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCNumKeyValue
 }
 
 // slot 16: GetQueryUGCKeyValueTag_2(uint64 handle, uint32 index, const char* pchKey, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCKeyValueTag_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCKeyValueTag_2(void *self, uint64_t handle, uint32_t index, const char * pchKey, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
   return 0;
 }
 
 // slot 17: GetQueryUGCKeyValueTag(uint64 handle, uint32 index, uint32 keyValueTagIndex, char* pchKey, uint32 cchKeySize, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 32 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCKeyValueTag(void *self, uint64_t handle, uint32_t index, uint32_t keyValueTagIndex, char * pchKey, uint32_t cchKeySize, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchKey != NULL && cchKeySize > 0) pchKey[0] = '\0';
   return 0;
 }
 
@@ -18954,8 +19008,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetNumSupportedGameVer
 }
 
 // slot 19: GetSupportedGameVersionData(uint64 handle, uint32 index, uint32 versionIndex, char* pchGameBranchMin, char* pchGameBranchMax, uint32 cchGameBranchSize) -> bool | __thiscall ret 28 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetSupportedGameVersionData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetSupportedGameVersionData(void *self, uint64_t handle, uint32_t index, uint32_t versionIndex, char * pchGameBranchMin, char * pchGameBranchMax, uint32_t cchGameBranchSize) {
   (void)self;
+  if (pchGameBranchMax != NULL && cchGameBranchSize > 0) pchGameBranchMax[0] = '\0';
   return 0;
 }
 
@@ -19302,8 +19357,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetItemState(void *sel
 }
 
 // slot 77: GetItemInstallInfo(uint64 nPublishedFileID, uint64* punSizeOnDisk, char* pchFolder, uint32 cchFolderSize, uint32* punTimeStamp) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetItemInstallInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetItemInstallInfo(void *self, uint64_t nPublishedFileID, uint64_t * punSizeOnDisk, char * pchFolder, uint32_t cchFolderSize, uint32_t * punTimeStamp) {
   (void)self;
+  if (pchFolder != NULL && cchFolderSize > 0) pchFolder[0] = '\0';
   return 0;
 }
 
@@ -20189,8 +20245,9 @@ static uint32_t THISCALL vt_SteamUtils009_GetEnteredGamepadTextLength(void *self
 }
 
 // slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamUtils009_GetEnteredGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_SteamUtils009_GetEnteredGamepadTextInput(void *self, char * pchText, uint32_t cchText) {
   (void)self;
+  if (pchText != NULL && cchText > 0) pchText[0] = '\0';
   return 0;
 }
 
@@ -20267,8 +20324,9 @@ static int THISCALL vt_SteamUtils009_InitFilterText(void *self) {
 }
 
 // slot 32: FilterText(char* pchOutFilteredText, uint32 nByteSizeOutFilteredText, const char* pchInputMessage, bool bLegalOnly) -> int32 | __thiscall ret 16 (STUB)
-static int32_t THISCALL vt_SteamUtils009_FilterText(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+static int32_t THISCALL vt_SteamUtils009_FilterText(void *self, char * pchOutFilteredText, uint32_t nByteSizeOutFilteredText, const char * pchInputMessage, int bLegalOnly) {
   (void)self;
+  if (pchOutFilteredText != NULL && nByteSizeOutFilteredText > 0) pchOutFilteredText[0] = '\0';
   return 0;
 }
 
@@ -21101,14 +21159,16 @@ static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCResult(void *sel
 }
 
 // slot 5: GetQueryUGCPreviewURL(uint64 handle, uint32 index, char* pchURL, uint32 cchURLSize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCPreviewURL(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCPreviewURL(void *self, uint64_t handle, uint32_t index, char * pchURL, uint32_t cchURLSize) {
   (void)self;
+  if (pchURL != NULL && cchURLSize > 0) pchURL[0] = '\0';
   return 0;
 }
 
 // slot 6: GetQueryUGCMetadata(uint64 handle, uint32 index, char* pchMetadata, uint32 cchMetadatasize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCMetadata(void *self, uint64_t handle, uint32_t index, char * pchMetadata, uint32_t cchMetadatasize) {
   (void)self;
+  if (pchMetadata != NULL && cchMetadatasize > 0) pchMetadata[0] = '\0';
   return 0;
 }
 
@@ -21131,8 +21191,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCNumAddition
 }
 
 // slot 10: GetQueryUGCAdditionalPreview(uint64 handle, uint32 index, uint32 previewIndex, char* pchURLOrVideoID, uint32 cchURLSize, char* pchOriginalFileName, uint32 cchOriginalFileNameSize, uint32* pPreviewType) -> bool | __thiscall ret 36 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCAdditionalPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCAdditionalPreview(void *self, uint64_t handle, uint32_t index, uint32_t previewIndex, char * pchURLOrVideoID, uint32_t cchURLSize, char * pchOriginalFileName, uint32_t cchOriginalFileNameSize, uint32_t * pPreviewType) {
   (void)self;
+  if (pchURLOrVideoID != NULL && cchURLSize > 0) pchURLOrVideoID[0] = '\0';
   return 0;
 }
 
@@ -21143,8 +21204,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCNumKeyValue
 }
 
 // slot 12: GetQueryUGCKeyValueTag(uint64 handle, uint32 index, uint32 keyValueTagIndex, char* pchKey, uint32 cchKeySize, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 32 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCKeyValueTag(void *self, uint64_t handle, uint32_t index, uint32_t keyValueTagIndex, char * pchKey, uint32_t cchKeySize, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchKey != NULL && cchKeySize > 0) pchKey[0] = '\0';
   return 0;
 }
 
@@ -21431,8 +21493,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetItemState(void *sel
 }
 
 // slot 60: GetItemInstallInfo(uint64 nPublishedFileID, uint64* punSizeOnDisk, char* pchFolder, uint32 cchFolderSize, uint32* punTimeStamp) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetItemInstallInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetItemInstallInfo(void *self, uint64_t nPublishedFileID, uint64_t * punSizeOnDisk, char * pchFolder, uint32_t cchFolderSize, uint32_t * punTimeStamp) {
   (void)self;
+  if (pchFolder != NULL && cchFolderSize > 0) pchFolder[0] = '\0';
   return 0;
 }
 
@@ -21646,8 +21709,9 @@ static void THISCALL vt_SteamUser018_TrackAppUsageEvent(void *self, uint32_t dum
 }
 
 // slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamUser018_GetUserDataFolder(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_SteamUser018_GetUserDataFolder(void *self, char * pchBuffer, int32_t cubBuffer) {
   (void)self;
+  if (pchBuffer != NULL && cubBuffer > 0) pchBuffer[0] = '\0';
   return 0;
 }
 
@@ -21993,8 +22057,9 @@ static uint32_t THISCALL vt_SteamUtils007_GetEnteredGamepadTextLength(void *self
 }
 
 // slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamUtils007_GetEnteredGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_SteamUtils007_GetEnteredGamepadTextInput(void *self, char * pchText, uint32_t cchText) {
   (void)self;
+  if (pchText != NULL && cchText > 0) pchText[0] = '\0';
   return 0;
 }
 
@@ -22202,8 +22267,9 @@ static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetDLCCount(void *self
 }
 
 // slot 11: BGetDLCDataByIndex(int32 iDLC, uint32* pAppID, bool* pbAvailable, char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BGetDLCDataByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BGetDLCDataByIndex(void *self, int32_t iDLC, uint32_t * pAppID, int * pbAvailable, char * pchName, int32_t cchNameBufferSize) {
   (void)self;
+  if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
   return 0;
 }
 
@@ -22223,8 +22289,9 @@ static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_RequestAppProofOfPurchase
 }
 
 // slot 15: GetCurrentBetaName(char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentBetaName(void *self, uint32_t dummy0, uint32_t dummy1) {
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentBetaName(void *self, char * pchName, int32_t cchNameBufferSize) {
   (void)self;
+  if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
   return 0;
 }
 
@@ -22241,8 +22308,9 @@ static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetInstalledDepots(vo
 }
 
 // slot 18: GetAppInstallDir(uint32 appID, char* pchFolder, uint32 cchFolderBufferSize) -> uint32 | __thiscall ret 12 (STUB)
-static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetAppInstallDir(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetAppInstallDir(void *self, uint32_t appID, char * pchFolder, uint32_t cchFolderBufferSize) {
   (void)self;
+  if (pchFolder != NULL && cchFolderBufferSize > 0) pchFolder[0] = '\0';
   return 0;
 }
 
@@ -22729,14 +22797,16 @@ static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCResult(void *sel
 }
 
 // slot 5: GetQueryUGCPreviewURL(uint64 handle, uint32 index, char* pchURL, uint32 cchURLSize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCPreviewURL(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCPreviewURL(void *self, uint64_t handle, uint32_t index, char * pchURL, uint32_t cchURLSize) {
   (void)self;
+  if (pchURL != NULL && cchURLSize > 0) pchURL[0] = '\0';
   return 0;
 }
 
 // slot 6: GetQueryUGCMetadata(uint64 handle, uint32 index, char* pchMetadata, uint32 cchMetadatasize) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCMetadata(void *self, uint64_t handle, uint32_t index, char * pchMetadata, uint32_t cchMetadatasize) {
   (void)self;
+  if (pchMetadata != NULL && cchMetadatasize > 0) pchMetadata[0] = '\0';
   return 0;
 }
 
@@ -22759,8 +22829,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCNumAddition
 }
 
 // slot 10: GetQueryUGCAdditionalPreview(uint64 handle, uint32 index, uint32 previewIndex, char* pchURLOrVideoID, uint32 cchURLSize, bool* pbIsImage) -> bool | __thiscall ret 28 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCAdditionalPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCAdditionalPreview(void *self, uint64_t handle, uint32_t index, uint32_t previewIndex, char * pchURLOrVideoID, uint32_t cchURLSize, int * pbIsImage) {
   (void)self;
+  if (pchURLOrVideoID != NULL && cchURLSize > 0) pchURLOrVideoID[0] = '\0';
   return 0;
 }
 
@@ -22771,8 +22842,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCNumKeyValue
 }
 
 // slot 12: GetQueryUGCKeyValueTag(uint64 handle, uint32 index, uint32 keyValueTagIndex, char* pchKey, uint32 cchKeySize, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 32 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCKeyValueTag(void *self, uint64_t handle, uint32_t index, uint32_t keyValueTagIndex, char * pchKey, uint32_t cchKeySize, char * pchValue, uint32_t cchValueSize) {
   (void)self;
+  if (pchKey != NULL && cchKeySize > 0) pchKey[0] = '\0';
   return 0;
 }
 
@@ -23017,8 +23089,9 @@ static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetItemState(void *sel
 }
 
 // slot 53: GetItemInstallInfo(uint64 nPublishedFileID, uint64* punSizeOnDisk, char* pchFolder, uint32 cchFolderSize, uint32* punTimeStamp) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetItemInstallInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetItemInstallInfo(void *self, uint64_t nPublishedFileID, uint64_t * punSizeOnDisk, char * pchFolder, uint32_t cchFolderSize, uint32_t * punTimeStamp) {
   (void)self;
+  if (pchFolder != NULL && cchFolderSize > 0) pchFolder[0] = '\0';
   return 0;
 }
 
@@ -24246,18 +24319,18 @@ int32_t SteamAPI_ISteamAppList_GetAppBuildId(void *self, uint32_t a1) {
   return 0;
 }
 
-int32_t SteamAPI_ISteamAppList_GetAppInstallDir(void *self, uint32_t a1, void * a2, int32_t a3) {
+int32_t SteamAPI_ISteamAppList_GetAppInstallDir(void *self, uint32_t a1, char * a2, int32_t a3) {
   if (self == (void *)&g_steamapplist_interface_version001_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, uint32_t, void *, int32_t))vt[3])(self, (uint32_t)a1, (void *)a2, (int32_t)a3);
+    return (int32_t)((int32_t (*)(void *, uint32_t, char *, int32_t))vt[3])(self, (uint32_t)a1, (char *)a2, (int32_t)a3);
   }
   return 0;
 }
 
-int32_t SteamAPI_ISteamAppList_GetAppName(void *self, uint32_t a1, void * a2, int32_t a3) {
+int32_t SteamAPI_ISteamAppList_GetAppName(void *self, uint32_t a1, char * a2, int32_t a3) {
   if (self == (void *)&g_steamapplist_interface_version001_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, uint32_t, void *, int32_t))vt[2])(self, (uint32_t)a1, (void *)a2, (int32_t)a3);
+    return (int32_t)((int32_t (*)(void *, uint32_t, char *, int32_t))vt[2])(self, (uint32_t)a1, (char *)a2, (int32_t)a3);
   }
   return 0;
 }
@@ -24278,14 +24351,14 @@ uint32_t SteamAPI_ISteamAppList_GetNumInstalledApps(void *self) {
   return 0;
 }
 
-bool SteamAPI_ISteamApps_BGetDLCDataByIndex(void *self, int32_t a1, uint32_t * a2, int * a3, void * a4, int32_t a5) {
+bool SteamAPI_ISteamApps_BGetDLCDataByIndex(void *self, int32_t a1, uint32_t * a2, int * a3, char * a4, int32_t a5) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, int32_t, uint32_t *, int *, void *, int32_t))vt[11])(self, (int32_t)a1, (uint32_t *)a2, (int *)a3, (void *)a4, (int32_t)a5);
+    return (bool)((int (*)(void *, int32_t, uint32_t *, int *, char *, int32_t))vt[11])(self, (int32_t)a1, (uint32_t *)a2, (int *)a3, (char *)a4, (int32_t)a5);
   }
   if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, int32_t, uint32_t *, int *, void *, int32_t))vt[11])(self, (int32_t)a1, (uint32_t *)a2, (int *)a3, (void *)a4, (int32_t)a5);
+    return (bool)((int (*)(void *, int32_t, uint32_t *, int *, char *, int32_t))vt[11])(self, (int32_t)a1, (uint32_t *)a2, (int *)a3, (char *)a4, (int32_t)a5);
   }
   return 0;
 }
@@ -24414,14 +24487,14 @@ int32_t SteamAPI_ISteamApps_GetAppBuildId(void *self) {
   return 0;
 }
 
-uint32_t SteamAPI_ISteamApps_GetAppInstallDir(void *self, uint32_t a1, void * a2, uint32_t a3) {
+uint32_t SteamAPI_ISteamApps_GetAppInstallDir(void *self, uint32_t a1, char * a2, uint32_t a3) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
     vfn *vt = *(vfn **)self;
-    return (uint32_t)((uint32_t (*)(void *, uint32_t, void *, uint32_t))vt[18])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3);
+    return (uint32_t)((uint32_t (*)(void *, uint32_t, char *, uint32_t))vt[18])(self, (uint32_t)a1, (char *)a2, (uint32_t)a3);
   }
   if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
-    return (uint32_t)((uint32_t (*)(void *, uint32_t, void *, uint32_t))vt[18])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3);
+    return (uint32_t)((uint32_t (*)(void *, uint32_t, char *, uint32_t))vt[18])(self, (uint32_t)a1, (char *)a2, (uint32_t)a3);
   }
   return 0;
 }
@@ -24454,22 +24527,22 @@ const char * SteamAPI_ISteamApps_GetAvailableGameLanguages(void *self) {
   return 0;
 }
 
-bool SteamAPI_ISteamApps_GetBetaInfo(void *self, int32_t a1, uint32_t * a2, uint32_t * a3, void * a4, int32_t a5, void * a6, int32_t a7) {
+bool SteamAPI_ISteamApps_GetBetaInfo(void *self, int32_t a1, uint32_t * a2, uint32_t * a3, char * a4, int32_t a5, char * a6, int32_t a7) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, int32_t, uint32_t *, uint32_t *, void *, int32_t, void *, int32_t))vt[31])(self, (int32_t)a1, (uint32_t *)a2, (uint32_t *)a3, (void *)a4, (int32_t)a5, (void *)a6, (int32_t)a7);
+    return (bool)((int (*)(void *, int32_t, uint32_t *, uint32_t *, char *, int32_t, char *, int32_t))vt[31])(self, (int32_t)a1, (uint32_t *)a2, (uint32_t *)a3, (char *)a4, (int32_t)a5, (char *)a6, (int32_t)a7);
   }
   return 0;
 }
 
-bool SteamAPI_ISteamApps_GetCurrentBetaName(void *self, void * a1, int32_t a2) {
+bool SteamAPI_ISteamApps_GetCurrentBetaName(void *self, char * a1, int32_t a2) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, int32_t))vt[15])(self, (void *)a1, (int32_t)a2);
+    return (bool)((int (*)(void *, char *, int32_t))vt[15])(self, (char *)a1, (int32_t)a2);
   }
   if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, int32_t))vt[15])(self, (void *)a1, (int32_t)a2);
+    return (bool)((int (*)(void *, char *, int32_t))vt[15])(self, (char *)a1, (int32_t)a2);
   }
   return 0;
 }
@@ -24542,10 +24615,10 @@ uint32_t SteamAPI_ISteamApps_GetInstalledDepots(void *self, uint32_t a1, uint32_
   return 0;
 }
 
-int32_t SteamAPI_ISteamApps_GetLaunchCommandLine(void *self, void * a1, int32_t a2) {
+int32_t SteamAPI_ISteamApps_GetLaunchCommandLine(void *self, char * a1, int32_t a2) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, void *, int32_t))vt[26])(self, (void *)a1, (int32_t)a2);
+    return (int32_t)((int32_t (*)(void *, char *, int32_t))vt[26])(self, (char *)a1, (int32_t)a2);
   }
   return 0;
 }
@@ -27163,10 +27236,10 @@ uint32_t SteamAPI_ISteamGameSearch_RequestPlayersForGame(void *self, int32_t a1,
   return 0;
 }
 
-uint32_t SteamAPI_ISteamGameSearch_RetrieveConnectionDetails(void *self, uint64_t a1, void * a2, int32_t a3) {
+uint32_t SteamAPI_ISteamGameSearch_RetrieveConnectionDetails(void *self, uint64_t a1, char * a2, int32_t a3) {
   if (self == (void *)&g_steammatchgamesearch001_instance) {
     vfn *vt = *(vfn **)self;
-    return (uint32_t)((uint32_t (*)(void *, uint64_t, void *, int32_t))vt[5])(self, (uint64_t)a1, (void *)a2, (int32_t)a3);
+    return (uint32_t)((uint32_t (*)(void *, uint64_t, char *, int32_t))vt[5])(self, (uint64_t)a1, (char *)a2, (int32_t)a3);
   }
   return 0;
 }
@@ -29475,14 +29548,14 @@ bool SteamAPI_ISteamInventory_GetItemDefinitionIDs(void *self, int32_t * a1, uin
   return 0;
 }
 
-bool SteamAPI_ISteamInventory_GetItemDefinitionProperty(void *self, int32_t a1, const char * a2, void * a3, uint32_t * a4) {
+bool SteamAPI_ISteamInventory_GetItemDefinitionProperty(void *self, int32_t a1, const char * a2, char * a3, uint32_t * a4) {
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, int32_t, const char *, void *, uint32_t *))vt[22])(self, (int32_t)a1, (const char *)a2, (void *)a3, (uint32_t *)a4);
+    return (bool)((int (*)(void *, int32_t, const char *, char *, uint32_t *))vt[22])(self, (int32_t)a1, (const char *)a2, (char *)a3, (uint32_t *)a4);
   }
   if (self == (void *)&g_steaminventory_interface_v001_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, int32_t, const char *, void *, uint32_t *))vt[21])(self, (int32_t)a1, (const char *)a2, (void *)a3, (uint32_t *)a4);
+    return (bool)((int (*)(void *, int32_t, const char *, char *, uint32_t *))vt[21])(self, (int32_t)a1, (const char *)a2, (char *)a3, (uint32_t *)a4);
   }
   return 0;
 }
@@ -29523,10 +29596,10 @@ uint32_t SteamAPI_ISteamInventory_GetNumItemsWithPrices(void *self) {
   return 0;
 }
 
-bool SteamAPI_ISteamInventory_GetResultItemProperty(void *self, int32_t a1, uint32_t a2, const char * a3, void * a4, uint32_t * a5) {
+bool SteamAPI_ISteamInventory_GetResultItemProperty(void *self, int32_t a1, uint32_t a2, const char * a3, char * a4, uint32_t * a5) {
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, int32_t, uint32_t, const char *, void *, uint32_t *))vt[2])(self, (int32_t)a1, (uint32_t)a2, (const char *)a3, (void *)a4, (uint32_t *)a5);
+    return (bool)((int (*)(void *, int32_t, uint32_t, const char *, char *, uint32_t *))vt[2])(self, (int32_t)a1, (uint32_t)a2, (const char *)a3, (char *)a4, (uint32_t *)a5);
   }
   return 0;
 }
@@ -30015,10 +30088,10 @@ const char * SteamAPI_ISteamMatchmaking_GetLobbyData(void *self, uint64_t a1, co
   return 0;
 }
 
-bool SteamAPI_ISteamMatchmaking_GetLobbyDataByIndex(void *self, uint64_t a1, int32_t a2, void * a3, int32_t a4, void * a5, int32_t a6) {
+bool SteamAPI_ISteamMatchmaking_GetLobbyDataByIndex(void *self, uint64_t a1, int32_t a2, char * a3, int32_t a4, char * a5, int32_t a6) {
   if (self == (void *)&g_steammatchmaking009_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, int32_t, void *, int32_t, void *, int32_t))vt[22])(self, (uint64_t)a1, (int32_t)a2, (void *)a3, (int32_t)a4, (void *)a5, (int32_t)a6);
+    return (bool)((int (*)(void *, uint64_t, int32_t, char *, int32_t, char *, int32_t))vt[22])(self, (uint64_t)a1, (int32_t)a2, (char *)a3, (int32_t)a4, (char *)a5, (int32_t)a6);
   }
   return 0;
 }
@@ -30900,18 +30973,18 @@ uint64_t SteamAPI_ISteamParties_GetBeaconByIndex(void *self, uint32_t a1) {
   return 0;
 }
 
-bool SteamAPI_ISteamParties_GetBeaconDetails(void *self, uint64_t a1, void * a2, void * a3, void * a4, int32_t a5) {
+bool SteamAPI_ISteamParties_GetBeaconDetails(void *self, uint64_t a1, void * a2, void * a3, char * a4, int32_t a5) {
   if (self == (void *)&g_steamparties002_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, void *, void *, void *, int32_t))vt[2])(self, (uint64_t)a1, (void *)a2, (void *)a3, (void *)a4, (int32_t)a5);
+    return (bool)((int (*)(void *, uint64_t, void *, void *, char *, int32_t))vt[2])(self, (uint64_t)a1, (void *)a2, (void *)a3, (char *)a4, (int32_t)a5);
   }
   return 0;
 }
 
-bool SteamAPI_ISteamParties_GetBeaconLocationData(void *self, uint64_t a1, uint32_t a2, void * a3, int32_t a4) {
+bool SteamAPI_ISteamParties_GetBeaconLocationData(void *self, uint64_t a1, uint32_t a2, char * a3, int32_t a4) {
   if (self == (void *)&g_steamparties002_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, int32_t))vt[11])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (int32_t)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, char *, int32_t))vt[11])(self, (uint64_t)a1, (uint32_t)a2, (char *)a3, (int32_t)a4);
   }
   return 0;
 }
@@ -32540,26 +32613,26 @@ bool SteamAPI_ISteamUGC_GetItemDownloadInfo(void *self, uint64_t a1, uint64_t * 
   return 0;
 }
 
-bool SteamAPI_ISteamUGC_GetItemInstallInfo(void *self, uint64_t a1, uint64_t * a2, void * a3, uint32_t a4, uint32_t * a5) {
+bool SteamAPI_ISteamUGC_GetItemInstallInfo(void *self, uint64_t a1, uint64_t * a2, char * a3, uint32_t a4, uint32_t * a5) {
   if (self == (void *)&g_steamugc_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint64_t *, void *, uint32_t, uint32_t *))vt[70])(self, (uint64_t)a1, (uint64_t *)a2, (void *)a3, (uint32_t)a4, (uint32_t *)a5);
+    return (bool)((int (*)(void *, uint64_t, uint64_t *, char *, uint32_t, uint32_t *))vt[70])(self, (uint64_t)a1, (uint64_t *)a2, (char *)a3, (uint32_t)a4, (uint32_t *)a5);
   }
   if (self == (void *)&g_steamugc_interface_version017_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint64_t *, void *, uint32_t, uint32_t *))vt[73])(self, (uint64_t)a1, (uint64_t *)a2, (void *)a3, (uint32_t)a4, (uint32_t *)a5);
+    return (bool)((int (*)(void *, uint64_t, uint64_t *, char *, uint32_t, uint32_t *))vt[73])(self, (uint64_t)a1, (uint64_t *)a2, (char *)a3, (uint32_t)a4, (uint32_t *)a5);
   }
   if (self == (void *)&g_steamugc_interface_version020_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint64_t *, void *, uint32_t, uint32_t *))vt[77])(self, (uint64_t)a1, (uint64_t *)a2, (void *)a3, (uint32_t)a4, (uint32_t *)a5);
+    return (bool)((int (*)(void *, uint64_t, uint64_t *, char *, uint32_t, uint32_t *))vt[77])(self, (uint64_t)a1, (uint64_t *)a2, (char *)a3, (uint32_t)a4, (uint32_t *)a5);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint64_t *, void *, uint32_t, uint32_t *))vt[60])(self, (uint64_t)a1, (uint64_t *)a2, (void *)a3, (uint32_t)a4, (uint32_t *)a5);
+    return (bool)((int (*)(void *, uint64_t, uint64_t *, char *, uint32_t, uint32_t *))vt[60])(self, (uint64_t)a1, (uint64_t *)a2, (char *)a3, (uint32_t)a4, (uint32_t *)a5);
   }
   if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint64_t *, void *, uint32_t, uint32_t *))vt[53])(self, (uint64_t)a1, (uint64_t *)a2, (void *)a3, (uint32_t)a4, (uint32_t *)a5);
+    return (bool)((int (*)(void *, uint64_t, uint64_t *, char *, uint32_t, uint32_t *))vt[53])(self, (uint64_t)a1, (uint64_t *)a2, (char *)a3, (uint32_t)a4, (uint32_t *)a5);
   }
   return 0;
 }
@@ -32644,42 +32717,42 @@ uint32_t SteamAPI_ISteamUGC_GetNumSupportedGameVersions(void *self, uint64_t a1,
   return 0;
 }
 
-bool SteamAPI_ISteamUGC_GetQueryFirstUGCKeyValueTag(void *self, uint64_t a1, uint32_t a2, const char * a3, void * a4, uint32_t a5) {
+bool SteamAPI_ISteamUGC_GetQueryFirstUGCKeyValueTag(void *self, uint64_t a1, uint32_t a2, const char * a3, char * a4, uint32_t a5) {
   if (self == (void *)&g_steamugc_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, const char *, void *, uint32_t))vt[16])(self, (uint64_t)a1, (uint32_t)a2, (const char *)a3, (void *)a4, (uint32_t)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, const char *, char *, uint32_t))vt[16])(self, (uint64_t)a1, (uint32_t)a2, (const char *)a3, (char *)a4, (uint32_t)a5);
   }
   if (self == (void *)&g_steamugc_interface_version017_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, const char *, void *, uint32_t))vt[16])(self, (uint64_t)a1, (uint32_t)a2, (const char *)a3, (void *)a4, (uint32_t)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, const char *, char *, uint32_t))vt[16])(self, (uint64_t)a1, (uint32_t)a2, (const char *)a3, (char *)a4, (uint32_t)a5);
   }
   if (self == (void *)&g_steamugc_interface_version020_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, const char *, void *, uint32_t))vt[16])(self, (uint64_t)a1, (uint32_t)a2, (const char *)a3, (void *)a4, (uint32_t)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, const char *, char *, uint32_t))vt[16])(self, (uint64_t)a1, (uint32_t)a2, (const char *)a3, (char *)a4, (uint32_t)a5);
   }
   return 0;
 }
 
-bool SteamAPI_ISteamUGC_GetQueryUGCAdditionalPreview(void *self, uint64_t a1, uint32_t a2, uint32_t a3, void * a4, uint32_t a5, uint64_t a6, uint32_t a7, uint32_t * a8) {
+bool SteamAPI_ISteamUGC_GetQueryUGCAdditionalPreview(void *self, uint64_t a1, uint32_t a2, uint32_t a3, char * a4, uint32_t a5, uint64_t a6, uint32_t a7, uint32_t * a8) {
   if (self == (void *)&g_steamugc_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t, uint32_t *))vt[14])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7, (uint32_t *)a8);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t, char *, uint32_t, uint32_t *))vt[14])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5, (char *)a6, (uint32_t)a7, (uint32_t *)a8);
   }
   if (self == (void *)&g_steamugc_interface_version017_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t, uint32_t *))vt[14])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7, (uint32_t *)a8);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t, char *, uint32_t, uint32_t *))vt[14])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5, (char *)a6, (uint32_t)a7, (uint32_t *)a8);
   }
   if (self == (void *)&g_steamugc_interface_version020_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t, uint32_t *))vt[14])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7, (uint32_t *)a8);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t, char *, uint32_t, uint32_t *))vt[14])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5, (char *)a6, (uint32_t)a7, (uint32_t *)a8);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t, uint32_t *))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7, (uint32_t *)a8);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t, char *, uint32_t, uint32_t *))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5, (char *)a6, (uint32_t)a7, (uint32_t *)a8);
   }
   if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, int *))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (int *)a6);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t, int *))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5, (int *)a6);
   }
   return 0;
 }
@@ -32720,50 +32793,50 @@ uint32_t SteamAPI_ISteamUGC_GetQueryUGCContentDescriptors(void *self, uint64_t a
   return 0;
 }
 
-bool SteamAPI_ISteamUGC_GetQueryUGCKeyValueTag(void *self, uint64_t a1, uint32_t a2, uint32_t a3, void * a4, uint32_t a5, void * a6, uint32_t a7) {
+bool SteamAPI_ISteamUGC_GetQueryUGCKeyValueTag(void *self, uint64_t a1, uint32_t a2, uint32_t a3, char * a4, uint32_t a5, char * a6, uint32_t a7) {
   if (self == (void *)&g_steamugc_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t))vt[17])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t, char *, uint32_t))vt[17])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5, (char *)a6, (uint32_t)a7);
   }
   if (self == (void *)&g_steamugc_interface_version017_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t))vt[17])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t, char *, uint32_t))vt[17])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5, (char *)a6, (uint32_t)a7);
   }
   if (self == (void *)&g_steamugc_interface_version020_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t))vt[17])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t, char *, uint32_t))vt[17])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5, (char *)a6, (uint32_t)a7);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t))vt[12])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t, char *, uint32_t))vt[12])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5, (char *)a6, (uint32_t)a7);
   }
   if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t))vt[12])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t, char *, uint32_t))vt[12])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5, (char *)a6, (uint32_t)a7);
   }
   return 0;
 }
 
-bool SteamAPI_ISteamUGC_GetQueryUGCMetadata(void *self, uint64_t a1, uint32_t a2, void * a3, uint32_t a4) {
+bool SteamAPI_ISteamUGC_GetQueryUGCMetadata(void *self, uint64_t a1, uint32_t a2, char * a3, uint32_t a4) {
   if (self == (void *)&g_steamugc_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, char *, uint32_t))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (char *)a3, (uint32_t)a4);
   }
   if (self == (void *)&g_steamugc_interface_version017_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, char *, uint32_t))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (char *)a3, (uint32_t)a4);
   }
   if (self == (void *)&g_steamugc_interface_version020_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, char *, uint32_t))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (char *)a3, (uint32_t)a4);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[6])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, char *, uint32_t))vt[6])(self, (uint64_t)a1, (uint32_t)a2, (char *)a3, (uint32_t)a4);
   }
   if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[6])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, char *, uint32_t))vt[6])(self, (uint64_t)a1, (uint32_t)a2, (char *)a3, (uint32_t)a4);
   }
   return 0;
 }
@@ -32832,26 +32905,26 @@ uint32_t SteamAPI_ISteamUGC_GetQueryUGCNumTags(void *self, uint64_t a1, uint32_t
   return 0;
 }
 
-bool SteamAPI_ISteamUGC_GetQueryUGCPreviewURL(void *self, uint64_t a1, uint32_t a2, void * a3, uint32_t a4) {
+bool SteamAPI_ISteamUGC_GetQueryUGCPreviewURL(void *self, uint64_t a1, uint32_t a2, char * a3, uint32_t a4) {
   if (self == (void *)&g_steamugc_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[9])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, char *, uint32_t))vt[9])(self, (uint64_t)a1, (uint32_t)a2, (char *)a3, (uint32_t)a4);
   }
   if (self == (void *)&g_steamugc_interface_version017_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[9])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, char *, uint32_t))vt[9])(self, (uint64_t)a1, (uint32_t)a2, (char *)a3, (uint32_t)a4);
   }
   if (self == (void *)&g_steamugc_interface_version020_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[9])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, char *, uint32_t))vt[9])(self, (uint64_t)a1, (uint32_t)a2, (char *)a3, (uint32_t)a4);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[5])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, char *, uint32_t))vt[5])(self, (uint64_t)a1, (uint32_t)a2, (char *)a3, (uint32_t)a4);
   }
   if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[5])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, char *, uint32_t))vt[5])(self, (uint64_t)a1, (uint32_t)a2, (char *)a3, (uint32_t)a4);
   }
   return 0;
 }
@@ -32904,34 +32977,34 @@ bool SteamAPI_ISteamUGC_GetQueryUGCStatistic(void *self, uint64_t a1, uint32_t a
   return 0;
 }
 
-bool SteamAPI_ISteamUGC_GetQueryUGCTag(void *self, uint64_t a1, uint32_t a2, uint32_t a3, void * a4, uint32_t a5) {
+bool SteamAPI_ISteamUGC_GetQueryUGCTag(void *self, uint64_t a1, uint32_t a2, uint32_t a3, char * a4, uint32_t a5) {
   if (self == (void *)&g_steamugc_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t))vt[7])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t))vt[7])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5);
   }
   if (self == (void *)&g_steamugc_interface_version017_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t))vt[7])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t))vt[7])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5);
   }
   if (self == (void *)&g_steamugc_interface_version020_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t))vt[7])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t))vt[7])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5);
   }
   return 0;
 }
 
-bool SteamAPI_ISteamUGC_GetQueryUGCTagDisplayName(void *self, uint64_t a1, uint32_t a2, uint32_t a3, void * a4, uint32_t a5) {
+bool SteamAPI_ISteamUGC_GetQueryUGCTagDisplayName(void *self, uint64_t a1, uint32_t a2, uint32_t a3, char * a4, uint32_t a5) {
   if (self == (void *)&g_steamugc_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t))vt[8])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t))vt[8])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5);
   }
   if (self == (void *)&g_steamugc_interface_version017_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t))vt[8])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t))vt[8])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5);
   }
   if (self == (void *)&g_steamugc_interface_version020_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t))vt[8])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, uint32_t))vt[8])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (uint32_t)a5);
   }
   return 0;
 }
@@ -32960,10 +33033,10 @@ uint32_t SteamAPI_ISteamUGC_GetSubscribedItems(void *self, uint64_t * a1, uint32
   return 0;
 }
 
-bool SteamAPI_ISteamUGC_GetSupportedGameVersionData(void *self, uint64_t a1, uint32_t a2, uint32_t a3, void * a4, void * a5, uint32_t a6) {
+bool SteamAPI_ISteamUGC_GetSupportedGameVersionData(void *self, uint64_t a1, uint32_t a2, uint32_t a3, char * a4, char * a5, uint32_t a6) {
   if (self == (void *)&g_steamugc_interface_version020_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, void *, uint32_t))vt[19])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (void *)a5, (uint32_t)a6);
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, char *, char *, uint32_t))vt[19])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (char *)a4, (char *)a5, (uint32_t)a6);
   }
   return 0;
 }
@@ -34433,34 +34506,34 @@ uint32_t SteamAPI_ISteamUserStats_GetLeaderboardSortMethod(void *self, uint64_t 
   return 0;
 }
 
-int32_t SteamAPI_ISteamUserStats_GetMostAchievedAchievementInfo(void *self, void * a1, uint32_t a2, float * a3, int * a4) {
+int32_t SteamAPI_ISteamUserStats_GetMostAchievedAchievementInfo(void *self, char * a1, uint32_t a2, float * a3, int * a4) {
   if (self == (void *)&g_steamuserstats_interface_version011_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, void *, uint32_t, float *, int *))vt[35])(self, (void *)a1, (uint32_t)a2, (float *)a3, (int *)a4);
+    return (int32_t)((int32_t (*)(void *, char *, uint32_t, float *, int *))vt[35])(self, (char *)a1, (uint32_t)a2, (float *)a3, (int *)a4);
   }
   if (self == (void *)&g_steamuserstats_interface_version012_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, void *, uint32_t, float *, int *))vt[35])(self, (void *)a1, (uint32_t)a2, (float *)a3, (int *)a4);
+    return (int32_t)((int32_t (*)(void *, char *, uint32_t, float *, int *))vt[35])(self, (char *)a1, (uint32_t)a2, (float *)a3, (int *)a4);
   }
   if (self == (void *)&g_steamuserstats_interface_version013_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, void *, uint32_t, float *, int *))vt[34])(self, (void *)a1, (uint32_t)a2, (float *)a3, (int *)a4);
+    return (int32_t)((int32_t (*)(void *, char *, uint32_t, float *, int *))vt[34])(self, (char *)a1, (uint32_t)a2, (float *)a3, (int *)a4);
   }
   return 0;
 }
 
-int32_t SteamAPI_ISteamUserStats_GetNextMostAchievedAchievementInfo(void *self, int32_t a1, void * a2, uint32_t a3, float * a4, int * a5) {
+int32_t SteamAPI_ISteamUserStats_GetNextMostAchievedAchievementInfo(void *self, int32_t a1, char * a2, uint32_t a3, float * a4, int * a5) {
   if (self == (void *)&g_steamuserstats_interface_version011_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, int32_t, void *, uint32_t, float *, int *))vt[36])(self, (int32_t)a1, (void *)a2, (uint32_t)a3, (float *)a4, (int *)a5);
+    return (int32_t)((int32_t (*)(void *, int32_t, char *, uint32_t, float *, int *))vt[36])(self, (int32_t)a1, (char *)a2, (uint32_t)a3, (float *)a4, (int *)a5);
   }
   if (self == (void *)&g_steamuserstats_interface_version012_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, int32_t, void *, uint32_t, float *, int *))vt[36])(self, (int32_t)a1, (void *)a2, (uint32_t)a3, (float *)a4, (int *)a5);
+    return (int32_t)((int32_t (*)(void *, int32_t, char *, uint32_t, float *, int *))vt[36])(self, (int32_t)a1, (char *)a2, (uint32_t)a3, (float *)a4, (int *)a5);
   }
   if (self == (void *)&g_steamuserstats_interface_version013_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, int32_t, void *, uint32_t, float *, int *))vt[35])(self, (int32_t)a1, (void *)a2, (uint32_t)a3, (float *)a4, (int *)a5);
+    return (int32_t)((int32_t (*)(void *, int32_t, char *, uint32_t, float *, int *))vt[35])(self, (int32_t)a1, (char *)a2, (uint32_t)a3, (float *)a4, (int *)a5);
   }
   return 0;
 }
@@ -35189,22 +35262,22 @@ uint64_t SteamAPI_ISteamUser_GetSteamID(void *self) {
   return 0;
 }
 
-bool SteamAPI_ISteamUser_GetUserDataFolder(void *self, void * a1, int32_t a2) {
+bool SteamAPI_ISteamUser_GetUserDataFolder(void *self, char * a1, int32_t a2) {
   if (self == (void *)&g_steamuser023_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, int32_t))vt[6])(self, (void *)a1, (int32_t)a2);
+    return (bool)((int (*)(void *, char *, int32_t))vt[6])(self, (char *)a1, (int32_t)a2);
   }
   if (self == (void *)&g_steamuser019_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, int32_t))vt[6])(self, (void *)a1, (int32_t)a2);
+    return (bool)((int (*)(void *, char *, int32_t))vt[6])(self, (char *)a1, (int32_t)a2);
   }
   if (self == (void *)&g_steamuser021_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, int32_t))vt[6])(self, (void *)a1, (int32_t)a2);
+    return (bool)((int (*)(void *, char *, int32_t))vt[6])(self, (char *)a1, (int32_t)a2);
   }
   if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, int32_t))vt[6])(self, (void *)a1, (int32_t)a2);
+    return (bool)((int (*)(void *, char *, int32_t))vt[6])(self, (char *)a1, (int32_t)a2);
   }
   return 0;
 }
@@ -35492,11 +35565,11 @@ bool SteamAPI_ISteamUtils_DismissGamepadTextInput(void *self) {
 int32_t SteamAPI_ISteamUtils_FilterText(void *self, uint64_t a1, uint64_t a2, const char * a3, uint64_t a4, uint32_t a5) {
   if (self == (void *)&g_steamutils010_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, uint32_t, uint64_t, const char *, void *, uint32_t))vt[32])(self, (uint32_t)(uint32_t)a1, (uint64_t)a2, (const char *)a3, (void *)a4, (uint32_t)a5);
+    return (int32_t)((int32_t (*)(void *, uint32_t, uint64_t, const char *, char *, uint32_t))vt[32])(self, (uint32_t)(uint32_t)a1, (uint64_t)a2, (const char *)a3, (char *)a4, (uint32_t)a5);
   }
   if (self == (void *)&g_steamutils009_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, void *, uint32_t, const char *, bool))vt[32])(self, (void *)a1, (uint32_t)(uint32_t)a2, (const char *)a3, (bool)(uint8_t)a4);
+    return (int32_t)((int32_t (*)(void *, char *, uint32_t, const char *, bool))vt[32])(self, (char *)a1, (uint32_t)(uint32_t)a2, (const char *)a3, (bool)(uint8_t)a4);
   }
   return 0;
 }
@@ -35621,22 +35694,22 @@ uint32_t SteamAPI_ISteamUtils_GetCurrentBatteryPower(void *self) {
   return 0;
 }
 
-bool SteamAPI_ISteamUtils_GetEnteredGamepadTextInput(void *self, void * a1, uint32_t a2) {
+bool SteamAPI_ISteamUtils_GetEnteredGamepadTextInput(void *self, char * a1, uint32_t a2) {
   if (self == (void *)&g_steamutils008_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, uint32_t))vt[22])(self, (void *)a1, (uint32_t)a2);
+    return (bool)((int (*)(void *, char *, uint32_t))vt[22])(self, (char *)a1, (uint32_t)a2);
   }
   if (self == (void *)&g_steamutils010_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, uint32_t))vt[22])(self, (void *)a1, (uint32_t)a2);
+    return (bool)((int (*)(void *, char *, uint32_t))vt[22])(self, (char *)a1, (uint32_t)a2);
   }
   if (self == (void *)&g_steamutils009_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, uint32_t))vt[22])(self, (void *)a1, (uint32_t)a2);
+    return (bool)((int (*)(void *, char *, uint32_t))vt[22])(self, (char *)a1, (uint32_t)a2);
   }
   if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, uint32_t))vt[22])(self, (void *)a1, (uint32_t)a2);
+    return (bool)((int (*)(void *, char *, uint32_t))vt[22])(self, (char *)a1, (uint32_t)a2);
   }
   return 0;
 }
@@ -36133,14 +36206,14 @@ void SteamAPI_ISteamVideo_GetOPFSettings(void *self, uint32_t a1) {
   return;
 }
 
-bool SteamAPI_ISteamVideo_GetOPFStringForApp(void *self, uint32_t a1, void * a2, int32_t * a3) {
+bool SteamAPI_ISteamVideo_GetOPFStringForApp(void *self, uint32_t a1, char * a2, int32_t * a3) {
   if (self == (void *)&g_steamvideo_interface_v002_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t, void *, int32_t *))vt[3])(self, (uint32_t)a1, (void *)a2, (int32_t *)a3);
+    return (bool)((int (*)(void *, uint32_t, char *, int32_t *))vt[3])(self, (uint32_t)a1, (char *)a2, (int32_t *)a3);
   }
   if (self == (void *)&g_steamvideo_interface_v007_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t, void *, int32_t *))vt[3])(self, (uint32_t)a1, (void *)a2, (int32_t *)a3);
+    return (bool)((int (*)(void *, uint32_t, char *, int32_t *))vt[3])(self, (uint32_t)a1, (char *)a2, (int32_t *)a3);
   }
   return 0;
 }
