@@ -1903,6 +1903,13 @@ const activePolls = new Map<
     timer: NodeJS.Timeout
     ticks: number
     seenDownloading: boolean
+    /** quick 261027-g9o: the ACF root this poll reads (see readAcfState),
+     *  read per tick. Mutable for one reason only: the finalize-time native
+     *  handoff (isNativeHandoff:true) may land after
+     *  resumeInterruptedSteamInstall's bare native poll, and GameLib's
+     *  finalize knows which root it actually wrote the manifest into, so it
+     *  is authoritative. */
+    source: AcfSource
     /** Fire-once guard (T-21-16-03) — the "restart Steam" notification must
      *  fire exactly once per install, not on every poll tick. */
     notifiedWaiting: boolean
@@ -2856,7 +2863,9 @@ export function startInstallPolling(
   // completion notice would all stop firing. A bare call (no
   // isNativeHandoff:true) against an existing entry stays a pure no-op, as
   // before — this never downgrades an already-true isNativeHandoff back to
-  // false.
+  // false. quick 261027-g9o: the isNativeHandoff:true upgrade also adopts an
+  // explicit differing `source` and resets per-root progress baselines; a
+  // call without isNativeHandoff:true, or without a source, never retargets.
   const existingEntry = activePolls.get(appId)
   if (existingEntry) {
     if (
@@ -2870,6 +2879,28 @@ export function startInstallPolling(
         intervalMsOrOptions.skippedDepots?.length
       ) {
         existingEntry.skippedDepots = intervalMsOrOptions.skippedDepots
+      }
+      // quick 261027-g9o: adopt an explicit, differing source ONLY here. The
+      // isNativeHandoff:true call is GameLib's finalize, which just wrote the
+      // manifest and knows its root, so it is the sole authoritative retarget
+      // signal. Other call sites (bare resume, OFF-path steam://install,
+      // delegated dispatches) know nothing about where a manifest landed, and
+      // an absent source must never reset the entry to the 'native' default.
+      if (
+        intervalMsOrOptions.source !== undefined &&
+        intervalMsOrOptions.source !== existingEntry.source
+      ) {
+        logInfo(
+          `Steam: switching in-flight install poll for appId ${appId} from source ${existingEntry.source} to ${intervalMsOrOptions.source} (quick 261027-g9o)`,
+          LogPrefix.Steam
+        )
+        existingEntry.source = intervalMsOrOptions.source
+        // Byte counts from one root's ACF are not comparable with another's.
+        existingEntry.lastBytesDownloaded = undefined
+        existingEntry.lastTickMs = undefined
+        existingEntry.stalledTicks = 0
+        existingEntry.absentTicksSinceSeen = 0
+        // `ticks` is deliberately kept: MAX_TICKS stays an absolute cap.
       }
       logInfo(
         `Steam: upgrading in-flight install poll for appId ${appId} to isNativeHandoff (260822-dkf D-02)`,
@@ -2929,6 +2960,7 @@ export function startInstallPolling(
     timer: null as unknown as NodeJS.Timeout,
     ticks: 0,
     seenDownloading: false,
+    source,
     notifiedWaiting: false,
     stalledTicks: 0,
     isNativeHandoff,
@@ -2964,7 +2996,7 @@ export function startInstallPolling(
     // expects this branch — it's a defensive, log-only catch; the next tick
     // retries normally.
     try {
-      await pollInstallOnce(appId, source)
+      await pollInstallOnce(appId, entry.source)
     } catch (error) {
       logError(
         [`Steam: install polling tick for appId ${appId} threw`, error],
