@@ -37,6 +37,7 @@ import Backend from 'i18next-fs-backend'
 import i18next from 'i18next'
 import * as electronStub from '../platform'
 import { startInstalledJsonWatcher } from './installedJsonWatcher'
+import { releaseOnStdinEof } from './stdinEofRelease'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
 import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 
@@ -1088,6 +1089,7 @@ export function init(
     }
   }
   startRpcServer(input, output)
+  releaseOnStdinEof(input)
   // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): registered immediately after
   // startRpcServer() and BEFORE the READY_SENTINEL write below, so the shell can never send a
   // handleProtocolUrl frame for an unregistered channel.

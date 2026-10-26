@@ -130,7 +130,17 @@ The sidecar has **no explicit shutdown path, and does not need one.** Its lifeti
 stdin — the RPC frame stream — and it exits by **event-loop drain** when the shell closes that
 stream. `startRpcServer()` therefore has no `'end'`/`'close'` handler _by design_: there is
 nothing to hang a teardown on, and adding one misunderstands the mechanism rather than hardening
-it. The Rust shell reaps the child separately — `shutdown_child()` (`src-tauri/src/main.rs:1182`,
+it. **One narrow, measured amendment (debug/sidecar-survives-force-quit, 2026-10-26):**
+`releaseOnStdinEof()` (`src/backend/sidecar/stdinEofRelease.ts`, wired from `bootstrap.init()`)
+listens for stdin EOF to drop references the sidecar cannot `unref()` — it never calls
+`process.exit`, so exit is still by drain. It (1) calls `SteamUser.releaseForShutdown()`, because a
+logged-on `steam-user` client owns a library-internal CM socket and heartbeat timer (measured: an
+anonymous-logged-on client keeps a bare node process alive past 60s; `logOff()` drains it in
+~100ms, and an empty-profile sidecar already exits ~0.7s after EOF), and (2) runs
+`callAllAbortControllers()` so in-flight depot downloads stop (half 2 below). Without it a
+Force Quit (SIGKILL, which skips `shutdown_child()`) left a signed-in sidecar running as an
+orphan. Any NEW library-owned handle that cannot be unref'd belongs in that function, not in
+`startRpcServer()`. The Rust shell reaps the child separately — `shutdown_child()` (`src-tauri/src/main.rs:1182`,
 called at `:9631` from the `RunEvent::Exit` arm) SIGTERMs the whole process group, polls
 `try_wait()` through a bounded grace period, then SIGKILLs. That is the **backstop for a sidecar
 that will not leave, not the normal path**; anything that ever misses that kill leaves an orphan

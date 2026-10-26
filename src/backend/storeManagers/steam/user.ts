@@ -79,6 +79,10 @@ export class SteamUser {
   private static client: InstanceType<typeof SteamUserLib> | null = null
   private static session: InstanceType<typeof LoginSession> | null = null
   private static connectingPromise: Promise<string> | null = null
+  // True once releaseForShutdown() has run (stdin EOF: the shell is gone). A reconnect path
+  // (ensureConnected's relog, a late login) must not open a NEW CM socket after that, or the
+  // sidecar would hold the loop again.
+  private static shuttingDown = false
   // steam-sync-false-failed-banner: the terminal 'error' the CM ended the most
   // recent logon attempt with (e.g. AccessDenied for a refresh token Steam no
   // longer accepts). Tagged with the client it belongs to so an error from a
@@ -577,7 +581,29 @@ export class SteamUser {
     return personaName
   }
 
+  /**
+   * Sidecar exit contract, half 1 for a handle we cannot unref(): a logged-on steam-user client
+   * owns the CM TCP socket and its heartbeat timer inside the library, and both are referenced.
+   * Measured (debug/sidecar-survives-force-quit): an anonymous-logged-on client keeps a bare
+   * node process alive indefinitely; `logOff()` lets it drain in ~100ms. Called on stdin EOF.
+   * Unlike logout() this clears no token and no stored session -- the user stays signed in.
+   */
+  static releaseForShutdown(): void {
+    this.shuttingDown = true
+    const client = this.client
+    if (!client) return
+    try {
+      client.logOff()
+    } catch (err) {
+      logWarning(
+        ['Steam client logOff error during shutdown release:', err],
+        LogPrefix.Steam
+      )
+    }
+  }
+
   private static connectSteamUserClient(refreshToken: string): Promise<string> {
+    if (this.shuttingDown) return Promise.resolve('Steam User')
     if (this.client) {
       try {
         this.client.logOff()
