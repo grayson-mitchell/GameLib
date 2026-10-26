@@ -52,7 +52,9 @@ Request blob (per method, params in manifest declaration order):
 Response blob (per method):
   - the return value: 0 bytes (returnKind 'void'), 4 bytes (int32/pointer/
     float), 8 bytes (int64/double), [u32 len][bytes] (returnKind 'string',
-    decoded by the dedicated string-return branch), or structSize bytes
+    decoded by the dedicated string-return branch: accepted only when
+    retlen >= 4, len <= retlen - 4 and len < STRING_RETURN_BUF_BYTES,
+    otherwise the empty string), or structSize bytes
     (returnKind 'class', the sret branch).
   - then, for every 'out-value' param in declaration order: valueType's
     width (int32/uint32/float/bool = 4 bytes, uint64 = 8 bytes).
