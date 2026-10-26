@@ -101,19 +101,42 @@ class FakeChildProcess extends EventEmitter {
   })
 }
 
+type InitOutcome = 'ok' | 'failed' | 'dylib-missing'
+
 /** Emits a real `LISTEN 127.0.0.1:<port> appid=<id> mode=full` line on
  * `child`'s stderr -- EXACTLY the shape bridge_helper.c's own `logts()`
- * produces, so the regex this test exercises is the real one. */
+ * produces, so the regex this test exercises is the real one. By default a
+ * matching READY line follows in the same chunk (the helper's terminal
+ * "now serving" marker); pass `ready = null` to emit LISTEN only. */
 function emitListenLine(
   child: FakeChildProcess,
   port: number,
-  appId: string
+  appId: string,
+  ready: InitOutcome | null = 'ok'
 ): void {
+  const readyLine =
+    ready === null
+      ? ''
+      : `[2026-10-17T00:00:00Z] READY  init=${ready} appid=${appId}\n`
   child.stderr.emit(
     'data',
     Buffer.from(
-      `[2026-10-17T00:00:00Z] LISTEN 127.0.0.1:${port} appid=${appId} mode=full\n`
+      `[2026-10-17T00:00:00Z] LISTEN 127.0.0.1:${port} appid=${appId} mode=full\n${readyLine}`
     )
+  )
+}
+
+/** Emits the helper's READY line: bridge_helper.c's
+ * `logts_f("READY", "init=%s appid=%s", ...)`. logts pads the category with
+ * `%-6s`, so the 5-character `READY` is followed by TWO spaces. */
+function emitReadyLine(
+  child: FakeChildProcess,
+  appId: string,
+  init: InitOutcome = 'ok'
+): void {
+  child.stderr.emit(
+    'data',
+    Buffer.from(`[2026-10-17T00:00:00Z] READY  init=${init} appid=${appId}\n`)
   )
 }
 
@@ -296,6 +319,100 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
 
     expect(result).toEqual({ status: 'ready', ready: true, port: 55001 })
     expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  // ── 51-REVIEW WR-02: the backend waits for the helper's READY line ────────
+
+  test('WR-02: slow init -- no probe before READY (past the old ~3 s budget), then ready', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    MockedSocket.mockReset()
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A, null)
+
+    await new Promise((resolve) => setTimeout(resolve, 3500))
+    expect(MockedSocket).not.toHaveBeenCalled()
+
+    emitReadyLine(child, APP_ID_A)
+    const result = await pending
+
+    expect(result).toEqual({ status: 'ready', ready: true, port: 55001 })
+  }, 10000)
+
+  test('WR-02: exit before READY -> unreachable promptly', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    MockedSocket.mockReset()
+
+    const start = Date.now()
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A, null)
+    child.emit('exit', 1, null)
+    const result = await pending
+
+    expect(result.status).toBe('unreachable')
+    expect(result.ready).toBe(false)
+    expect(Date.now() - start).toBeLessThan(1000)
+    expect(MockedSocket).not.toHaveBeenCalled()
+  })
+
+  test('WR-02: error before READY -> unreachable promptly', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    MockedSocket.mockReset()
+
+    const start = Date.now()
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A, null)
+    child.emit('error', new Error('x'))
+    const result = await pending
+
+    expect(result.status).toBe('unreachable')
+    expect(result.ready).toBe(false)
+    expect(Date.now() - start).toBeLessThan(1000)
+  })
+
+  test('WR-02: a reused entry that already reported READY is probed with no extra wait', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+
+    const first = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A)
+    expect((await first).status).toBe('ready')
+
+    const start = Date.now()
+    const second = await ensureBridgeHelperReady(APP_ID_A)
+
+    expect(second).toEqual({ status: 'ready', ready: true, port: 55001 })
+    expect(Date.now() - start).toBeLessThan(1000)
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+  })
+
+  test('WR-02 / T-k6o-01: a READY line whose appid differs from the spawned appId is ignored -- no probe starts', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    MockedSocket.mockReset()
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A, null)
+    emitReadyLine(child, '999999')
+
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    expect(MockedSocket).not.toHaveBeenCalled()
+
+    // Let the call finish cleanly.
+    child.emit('exit', 1, null)
+    await pending
   })
 
   // ── Phase 51 Plan 12 (D-51-04): identity-only (480) fallback ───────────────
@@ -723,6 +840,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       const line = `[2026-10-17T00:00:00Z] LISTEN 127.0.0.1:55001 appid=${APP_ID_A} mode=full\n`
       child.stderr.emit('data', Buffer.from(line.slice(0, 30)))
       child.stderr.emit('data', Buffer.from(line.slice(30)))
+      emitReadyLine(child, APP_ID_A)
       const result = await pending
       expect(result.ready).toBe(true)
     })

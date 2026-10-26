@@ -912,11 +912,21 @@ int main(int argc, char **argv) {
   // fatal -- the helper keeps serving CONTROL HEALTH/HELLO so the backend's
   // readiness probe gets a meaningful "not-inited" rather than the process
   // simply never existing.
+  const char *initOutcome;
   if (load_steam_api()) {
     init_steam_api_once(g_appid);
+    initOutcome = g_inited ? "ok" : "failed";
   } else {
     logts("INIT", "dylib-missing -- g_inited stays 0, serving HEALTH/HELLO only");
+    initOutcome = "dylib-missing";
   }
+
+  // WR-02 fix: the ONE terminal "now serving" marker. Printed exactly once, on
+  // every path that reaches accept() (this helper is single-threaded, so a
+  // connection made during init sits unanswered in the listen backlog).
+  // helperProcess.ts's READY_LINE parses it byte-for-byte, and nothing but the
+  // accept loop follows it.
+  logts_f("READY", "init=%s appid=%s", initOutcome, g_appid);
 
   for (;;) {
     int c = accept(s, NULL, NULL);

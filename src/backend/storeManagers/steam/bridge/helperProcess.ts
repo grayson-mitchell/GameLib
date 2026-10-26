@@ -66,6 +66,12 @@ const BRIDGE_HELPER_HOST = '127.0.0.1'
 // bridge_helper.c's `logts("LISTEN", ...)` format byte-for-byte.
 const LISTEN_LINE = /LISTEN 127\.0\.0\.1:(\d+) appid=(\d+)/
 
+// Parses the helper's terminal "now serving" marker, e.g.
+// `READY  init=ok appid=206060` -- MUST match bridge_helper.c's
+// `logts_f("READY", "init=%s appid=%s", ...)` byte-for-byte. The TWO spaces
+// come from logts's `%-6s` padding of the 5-character category.
+const READY_LINE = /READY {2}init=(ok|failed|dylib-missing) appid=(\d+)/
+
 const MIN_EPHEMERAL_PORT = 1024
 const MAX_PORT = 65535
 
@@ -77,6 +83,13 @@ const POLL_ATTEMPTS = 6
 const POLL_INTERVAL_MS = 250
 const PROBE_TIMEOUT_MS = 250
 const PORT_WAIT_BUDGET_MS = POLL_ATTEMPTS * POLL_INTERVAL_MS
+
+// How long to wait for the helper's READY line after LISTEN (51-REVIEW WR-02).
+// Sized generously for a cold Steam IPC connect or Steam mid-update, NOT
+// measured; warm samples in the operator's logs show LISTEN->INIT within 1 s.
+// Bounded so a wedged init is still an observable outcome and never a hang
+// (D-06, T-24-10).
+const INIT_WAIT_BUDGET_MS = 20_000
 
 // Fixed request id -- each probe opens its own short-lived connection (no
 // request multiplexing across probes), so there is only ever one
@@ -117,6 +130,11 @@ interface BridgeHelperEntry {
   /** Resolves to the real port once known, or `null` if the process exited
    * (or errored) before ever reporting one. Settles exactly once. */
   portReady: Promise<number | null>
+  /** Init outcome parsed from the helper's READY line; null until seen. */
+  initOutcome: 'ok' | 'failed' | 'dylib-missing' | null
+  /** Resolves true once the READY line is seen, false if the process exits
+   * or errors first. Settles exactly once. */
+  initReady: Promise<boolean>
   unregister: () => void
   /** Phase 51 Plan 12 (D-51-04): true when this entry is the identity-only
    * 480 fallback helper (spawned after the full-AppID helper's own WHOAMI
@@ -295,7 +313,37 @@ function ensureHelperSpawned(
     settlePortReady(port)
   }
 
+  let settleInitReady: (ok: boolean) => void = () => {}
+  let initSettled = false
+  const initReady = new Promise<boolean>((resolve) => {
+    settleInitReady = resolve
+  })
+  const settleInitOnce = (ok: boolean) => {
+    if (initSettled) return
+    initSettled = true
+    settleInitReady(ok)
+  }
+
   const handleStderrLine = (line: string) => {
+    handleListenLine(line)
+    handleReadyLine(line)
+  }
+
+  // T-k6o-01: same appid rule as the LISTEN line (T-51-05), and only from this
+  // child's own stream.
+  const handleReadyLine = (line: string) => {
+    const match = READY_LINE.exec(line)
+    if (!match) return
+    const [, outcome, matchedAppId] = match
+    if (matchedAppId !== expectedListenAppId) return
+    const entry = helpers.get(appId)
+    if (entry && entry.child === child) {
+      entry.initOutcome = outcome as BridgeHelperEntry['initOutcome']
+    }
+    settleInitOnce(true)
+  }
+
+  const handleListenLine = (line: string) => {
     const match = LISTEN_LINE.exec(line)
     if (!match) return
     const [, portStr, matchedAppId] = match
@@ -369,6 +417,7 @@ function ensureHelperSpawned(
       LogPrefix.Steam
     )
     settlePortOnce(null)
+    settleInitOnce(false)
     if (helpers.get(appId)?.child === child) {
       helpers.delete(appId)
     }
@@ -376,6 +425,7 @@ function ensureHelperSpawned(
   child.on('error', (error) => {
     logError([`bridge helper [${appId}] process error`, error], LogPrefix.Steam)
     settlePortOnce(null)
+    settleInitOnce(false)
     if (helpers.get(appId)?.child === child) {
       helpers.delete(appId)
     }
@@ -391,6 +441,8 @@ function ensureHelperSpawned(
     child,
     port: null,
     portReady,
+    initOutcome: null,
+    initReady,
     unregister,
     identityOnly
   }
@@ -500,6 +552,27 @@ function waitForPort(entry: BridgeHelperEntry): Promise<number | null> {
   })
 }
 
+/**
+ * Waits up to `INIT_WAIT_BUDGET_MS` (unref'd, cleared on early settle) for
+ * `entry`'s READY line. A reused entry that already reported READY resolves
+ * immediately; a process that exits/errors first resolves `'exited'`.
+ */
+function waitForInit(
+  entry: BridgeHelperEntry
+): Promise<'seen' | 'exited' | 'timeout'> {
+  if (entry.initOutcome !== null) {
+    return Promise.resolve('seen')
+  }
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve('timeout'), INIT_WAIT_BUDGET_MS)
+    timeout.unref?.()
+    void entry.initReady.then((seen) => {
+      clearTimeout(timeout)
+      resolve(seen ? 'seen' : 'exited')
+    })
+  })
+}
+
 interface HelperReadinessProbe {
   outcome: 'ready' | 'not-inited' | 'unreachable'
   port?: number
@@ -509,7 +582,8 @@ interface HelperReadinessProbe {
  * Waits (bounded) for `entry`'s own LISTEN port, then bounded-polls its
  * CONTROL HEALTH/WHOAMI readiness against that port -- the shared probe
  * shape reused for BOTH a full-AppID helper and the D-51-04 identity-only
- * fallback helper. Never fires `steamBridgeSetupRequired` or logs itself --
+ * fallback helper. Never fires `steamBridgeSetupRequired`; its only log is the
+ * init-wait-timeout diagnostic --
  * the caller (`ensureBridgeHelperReady`) owns every observable side effect,
  * since the SAME outcome means something different depending on which
  * stage (full vs. fallback) produced it.
@@ -520,6 +594,17 @@ async function probeHelperReadiness(
   const port = await waitForPort(entry)
   if (port === null) {
     return { outcome: 'unreachable' }
+  }
+
+  const init = await waitForInit(entry)
+  if (init === 'exited') {
+    return { outcome: 'unreachable', port }
+  }
+  if (init === 'timeout') {
+    logWarning(
+      `bridge helper [${entry.appId}] never reported READY within ${INIT_WAIT_BUDGET_MS}ms -- probing anyway`,
+      LogPrefix.Steam
+    )
   }
 
   for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
