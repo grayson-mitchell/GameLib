@@ -6,7 +6,9 @@
 // KEY INSIGHT (spike 001): depot ownership is granted at the PACKAGE level.
 // Every owned package's `packageinfo.depotids` lists the depots it grants. That
 // set — not any combination of `dlcappid` / `optional` / `systemdefined` flags —
-// is what decides whether Steam installs a depot.
+// is what decides whether Steam installs a depot. (`config.realm` and
+// `config.steamdeck` ARE filtered below as per-depot config properties, like
+// oslist/osarch/language - distinct from the ownership flags named above.)
 //
 // This subsumes the DLC heuristic: a DLC's depots are granted by the DLC's
 // package, so owning the DLC puts its depots in the owned set automatically.
@@ -19,11 +21,14 @@
 // this with a Windows OS filter; the native path calls it with the host OS).
 //
 // T-21-16-01 (mitigated): observability logging added below logs ONLY
-// app/depot ids, manifest gids, sizes, and the os/arch/oslist/language
+// app/depot ids, manifest gids, sizes, and the os/arch/oslist/language/realm/steamdeck
 // strings used for the selection decision — never a decryption key, token,
 // or SteamID64/LastOwner (none of those are in scope of this module).
 
 import { logInfo, LogPrefix } from 'backend/logger'
+
+/** GameLib is always a global-realm desktop client; steamchina depots are not ours. */
+const CLIENT_REALM = 'steamglobal'
 
 export interface OwnedSets {
   /** Owned appIds (used for the DLC-ownership channel). */
@@ -68,6 +73,8 @@ interface DepotConfig {
   oslist?: string
   osarch?: string
   language?: string
+  realm?: string
+  steamdeck?: string | number
 }
 
 interface DepotEntry {
@@ -144,6 +151,8 @@ export function selectAllDepots(
  *   - its oslist matches the host OS, or it has none (platform-agnostic content)
  *   - its osarch matches, or it has none
  *   - its language matches the user's selection, or it has none
+ *   - its realm is absent or includes steamglobal (never steamchina-only)
+ *   - its steamdeck flag is not set (GameLib never installs as a Steam Deck)
  *
  * @param ownerAppId the appId `appinfo` itself belongs to (base game or a
  *                   DLC/sub-app) — stamped onto every emitted DepotDescriptor
@@ -205,6 +214,24 @@ export function selectDepots(
     if (depotLang && String(depotLang) !== language) {
       logInfo(
         `Steam depot selection: skipped depot ${id} (language=${depotLang} != ${language})`,
+        LogPrefix.Steam
+      )
+      continue
+    }
+
+    const realm = cfg.realm
+    if (realm && !String(realm).split(',').includes(CLIENT_REALM)) {
+      logInfo(
+        `Steam depot selection: skipped depot ${id} (realm=${realm} != ${CLIENT_REALM})`,
+        LogPrefix.Steam
+      )
+      continue
+    }
+
+    const steamdeck = cfg.steamdeck
+    if (String(steamdeck) === '1') {
+      logInfo(
+        `Steam depot selection: skipped depot ${id} (steamdeck=${steamdeck}, not a Steam Deck install)`,
         LogPrefix.Steam
       )
       continue

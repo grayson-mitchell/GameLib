@@ -2944,4 +2944,114 @@ describe('select', () => {
     expect(unionLog).toBeDefined()
     expect(String(unionLog![0])).toContain('1 depot(s)')
   })
+
+  describe('realm / steamdeck config (quick 261026-p02)', () => {
+    const onceHuman = {
+      depots: {
+        '2139461': {
+          manifests: { public: { gid: '111111111111111111', size: 10 } },
+          config: { oslist: 'windows', realm: 'steamglobal' }
+        },
+        '2139463': {
+          manifests: { public: { gid: '222222222222222222', size: 10 } },
+          config: { oslist: 'windows', realm: 'steamchina' }
+        }
+      }
+    }
+    const skipMsg = (id: string): string | undefined =>
+      (logInfo as jest.Mock).mock.calls
+        .map(([m]) => String(m))
+        .find((m) => m.includes(`skipped depot ${id}`))
+
+    it('Once Human: skips the steamchina depot, keeps the steamglobal depot', () => {
+      const owned = makeOwned([], [2139461, 2139463])
+      const result = selectDepots(
+        onceHuman,
+        owned,
+        { os: 'windows' },
+        '2139460'
+      )
+      expect(result.map((d) => d.id)).toEqual(['2139461'])
+      expect(skipMsg('2139463')).toContain('realm=steamchina')
+    })
+
+    it('Once Human: filter applies through selectAllDepots', () => {
+      const owned = makeOwned([], [2139461, 2139463])
+      const result = selectAllDepots(
+        onceHuman,
+        undefined,
+        owned,
+        { os: 'windows' },
+        '2139460'
+      )
+      expect(result.map((d) => d.id)).toEqual(['2139461'])
+    })
+
+    it('a comma-separated realm that includes steamglobal is selected', () => {
+      const appinfo = {
+        depots: {
+          '10': {
+            manifests: { public: { gid: '333333333333333333', size: 1 } },
+            config: { realm: 'steamglobal,steamchina' }
+          }
+        }
+      }
+      const result = selectDepots(
+        appinfo,
+        makeOwned([], [10]),
+        { os: 'windows' },
+        '1'
+      )
+      expect(result.map((d) => d.id)).toEqual(['10'])
+    })
+
+    it('ASKA: skips the steamdeck depot (string "1"), keeps its sibling', () => {
+      const aska = {
+        depots: {
+          '1898301': {
+            manifests: { public: { gid: '444444444444444444', size: 5 } },
+            config: { oslist: 'windows' }
+          },
+          '1898302': {
+            manifests: { public: { gid: '555555555555555555', size: 5 } },
+            config: { oslist: 'windows,linux', steamdeck: '1' }
+          }
+        }
+      }
+      const result = selectDepots(
+        aska,
+        makeOwned([], [1898301, 1898302]),
+        { os: 'windows' },
+        '1898300'
+      )
+      expect(result.map((d) => d.id)).toEqual(['1898301'])
+      expect(skipMsg('1898302')).toContain('steamdeck=1')
+    })
+
+    it('a numeric steamdeck 1 is skipped; steamdeck 0 and config-less depots are kept', () => {
+      const appinfo = {
+        depots: {
+          '20': {
+            manifests: { public: { gid: '666666666666666666', size: 1 } },
+            config: { steamdeck: 1 }
+          },
+          '21': {
+            manifests: { public: { gid: '777777777777777777', size: 1 } },
+            config: { steamdeck: 0 }
+          },
+          '22': {
+            manifests: { public: { gid: '888888888888888888', size: 1 } },
+            config: {}
+          }
+        }
+      }
+      const result = selectDepots(
+        appinfo,
+        makeOwned([], [20, 21, 22]),
+        { os: 'windows' },
+        '1'
+      )
+      expect(result.map((d) => d.id)).toEqual(['21', '22'])
+    })
+  })
 })
