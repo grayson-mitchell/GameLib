@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-26 - Completed quick task 261026-ng9: productionise spike 034 (shimFeatures known-fix profiles; Hoard profile bundled)
+Last activity: 2026-10-26 - Completed quick task 261026-nhy: case-only cross-depot path collisions detected on case-insensitive volumes
 
 Progress: [██████████] 100%
 
@@ -393,6 +393,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261026-lif | Restore missing `.gamelib-orig` bridge originals: filtered depot fetch (`downloadSelectedDepotFiles`) + `restoreBridgeSteamApiOriginals`, original fingerprints in the verdict with rescan on a new/changed backup (incl. already-placed), real `SteamGame.repair()` + Steam "Verify and Repair" menu item. Live backfill: all 11 bottles backed up. | 2026-10-26 | 39692c70a | live backfill done (11/11 backed up); fresh scans withhold 4 titles, ELEX regressed (follow-up: withhold rule); todo closed | [261026-lif-restore-missing-gamelib-orig-bridge-orig](./quick/261026-lif-restore-missing-gamelib-orig-bridge-orig/) |
 | 261026-mhg | Bridge shim withhold rule revised: `classifyUnservableInterfaceVersions` splits version gaps into blocking (SteamClient/User/Friends/Utils/Apps/UserStats, or NULL-answered) and non-core (null-object-answered); withhold only on a delay-import miss or a blocking gap, in both static and runtime-loaded branches. Fixes the 261026-lif ELEX regression. | 2026-10-26 | c300f9904 | live: ELEX, Mining Mechs, Overlooting, Age of Decadence placed + HELLO + launched fine; Grim Dawn placed + forwarder + HELLO but fails on the known SteamStub launch check | [261026-mhg-revise-bridge-shim-withhold-rule-for-non](./quick/261026-mhg-revise-bridge-shim-withhold-rule-for-non/) |
 | 261026-ng9 | Spike 034 productionised: tier-2 `shimFeatures` (`wgl.hideExtensions`) → `gamelib_bridge.cfg` `fix.` lines via `steamShimFeatureCfgLines`/`writeBridgeConfig`; hand-written `native/steam-bridge/shim/shim_features.c` (the shim's only DllMain, IAT hook only when a pattern parses, `OutputDebugStringA` logging) compiled into both x86 and x64 shims; Hoard profile bundled at `public/fixes/63000-steam.profile.json`. Allowlist untouched. | 2026-10-26 | 9b9f2b5ef | built + tested (both DLLs carry the feature, 0 UBSan strings); packaged-build Hoard retest pending before lifting its `does-not-run` entry | [261026-ng9-productionise-spike-034-shimfeatures-kno](./quick/261026-ng9-productionise-spike-034-shimfeatures-kno/) |
+| 261026-nhy | Case-only cross-depot path collisions detected: `resolveDepotPathCollisions` keys on a case-folded path when `probeCaseInsensitiveVolume(targetSteamappsDir)` says the volume folds case (read-only dev+ino probe; fallback `platform !== 'linux'`); `DepotPlan.caseInsensitivePaths` carries it to `verifyStructuralIntegrity`'s claim key. Bare-dir-marker-only buckets now silent. | 2026-10-26 | b67e26e3b | live gate pending (Californium/Civ V reinstall, expect no 1026) | [261026-nhy-detect-case-only-cross-depot-path-collis](./quick/261026-nhy-detect-case-only-cross-depot-path-collis/) |
 
 ## Deferred Items
 
