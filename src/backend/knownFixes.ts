@@ -30,7 +30,8 @@
  *   bundled only; the remote directory is never read.
  * - `readGamelibFixStatus` (quick 261027-ch9): does a local or bundled fix of
  *   either tier exist? Drives the game page GameLib row. The remote layer
- *   never counts.
+ *   never counts, and a tier-1 file carrying only routing keys (`macArch`,
+ *   `drm`) does not count (quick 261027-gtd).
  *
  * MUST NOT import `electron` (or anything that transitively reaches it) --
  * including `backend/ipc` -- the Node sidecar imports this module directly.
@@ -80,6 +81,12 @@ export const TIER1_KNOWN_FIX_KEYS = [
   'drm'
 ] as const
 
+/**
+ * Keys that only change where a title is installed or launched from; they are
+ * not a fix and never make the GameLib row claim one (quick 261027-gtd).
+ */
+export const TIER1_ROUTING_KEYS = ['macArch', 'drm'] as const
+
 // `dllOverrides`, `overlays`, `platforms` join this list when implemented.
 // `title` and `notes` are descriptive and allowed in both tiers.
 const TIER2_PROFILE_KEYS = [
@@ -92,6 +99,20 @@ const TIER2_PROFILE_KEYS = [
 ] as const
 
 const DESCRIPTIVE_KEYS: readonly string[] = ['title', 'notes']
+
+/**
+ * True when a tier-1 fix carries at least one routing key and nothing but
+ * routing and descriptive keys. A title-only object is false (ch9: a
+ * descriptive-only bundled file still shows the GameLib row).
+ */
+export function isRoutingOnlyTier1Fix(fix: KnowFixesInfo): boolean {
+  const keys = Object.keys(fix)
+  const routing: readonly string[] = TIER1_ROUTING_KEYS
+  return (
+    keys.some((k) => routing.includes(k)) &&
+    keys.every((k) => routing.includes(k) || DESCRIPTIVE_KEYS.includes(k))
+  )
+}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -282,6 +303,8 @@ export function readKnownFixProfile(
 /**
  * Quick 261027-ch9: local + bundled only, tier 1 then tier 2. Never reads the
  * remote directory. The launchNotice comes from the winning tier-1 file only.
+ * A tier-1 file carrying only routing keys (`macArch`, `drm`) does not count
+ * (quick 261027-gtd).
  */
 export function readGamelibFixStatus(
   appName: string,
@@ -303,6 +326,11 @@ export function readGamelibFixStatus(
     if (parsed === null) continue
     const filtered = filterTier1KnownFixes(appName, label, parsed)
     if (filtered === null) continue
+    // The winning tier-1 file (first parsed layer, as readKnownFixes resolves
+    // it) is routing data only, so no tier-1 fix applies; fall through to the
+    // tier-2 profile check. break, not continue: a lower layer's tier-1 file
+    // is shadowed whole-file and is not applied either.
+    if (isRoutingOnlyTier1Fix(filtered)) break
     const notice = filtered.launchNotice
     const trimmed = typeof notice === 'string' ? notice.trim() : ''
     return trimmed

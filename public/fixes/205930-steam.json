@@ -1,0 +1,9 @@
+{
+  "title": "Hitman: Sniper Challenge",
+  "macArch": "32",
+  "drm": "ceg",
+  "notes": {
+    "macArch": "The macOS build is 32-bit only (i386); Apple silicon cannot run it, so GameLib installs the Windows build. Mach-O header read of the Mac depot's main binary in spike 045 (CEG census, macarch.json), recorded 2026-10-27 (quick 261027-gtd).",
+    "drm": "The Windows build's HMSC.exe is a Steam CEG executable (EDepotFileFlag.CustomExecutable in the public depot manifest, spike 045). CEG needs a genuine Windows Steam client, so GameLib routes this title to bottled Steam before any download (quick 261027-gtd)."
+  }
+}

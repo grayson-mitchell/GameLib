@@ -121,4 +121,71 @@ describe('readGamelibFixStatus', () => {
     write(bundledFixesPath, 'app-steam.profile.json', { title: 't' })
     expect(readGamelibFixStatus('app', 'steam')).toEqual({ origin: 'bundled' })
   })
+
+  describe('quick 261027-gtd: routing-only tier-1 files are not a fix', () => {
+    it('macArch-only -> null', () => {
+      write(bundledFixesPath, 'app-steam.json', { title: 't', macArch: '32' })
+      expect(readGamelibFixStatus('app', 'steam')).toBeNull()
+    })
+
+    it('macArch + drm + notes -> null', () => {
+      write(bundledFixesPath, 'app-steam.json', {
+        title: 't',
+        notes: { drm: 'x' },
+        macArch: '32',
+        drm: 'ceg'
+      })
+      expect(readGamelibFixStatus('app', 'steam')).toBeNull()
+    })
+
+    it('drm + envVariables -> bundled', () => {
+      write(bundledFixesPath, 'app-steam.json', {
+        title: 't',
+        drm: 'ceg',
+        envVariables: { A: 'b' }
+      })
+      expect(readGamelibFixStatus('app', 'steam')).toEqual({
+        origin: 'bundled'
+      })
+    })
+
+    it('drm + launchNotice -> bundled with the notice', () => {
+      write(bundledFixesPath, 'app-steam.json', {
+        title: 't',
+        drm: 'ceg',
+        launchNotice: 'hi'
+      })
+      expect(readGamelibFixStatus('app', 'steam')).toEqual({
+        origin: 'bundled',
+        launchNotice: 'hi'
+      })
+    })
+
+    it('routing-only tier-1 + tier-2 profile -> the profile still counts', () => {
+      write(bundledFixesPath, 'app-steam.json', { title: 't', drm: 'ceg' })
+      write(bundledFixesPath, 'app-steam.profile.json', { title: 't' })
+      expect(readGamelibFixStatus('app', 'steam')).toEqual({
+        origin: 'bundled'
+      })
+    })
+
+    it('local routing-only shadows a bundled real fix -> null', () => {
+      write(localFixesPath, 'app-steam.json', { title: 'l', macArch: '32' })
+      write(bundledFixesPath, 'app-steam.json', {
+        title: 'b',
+        envVariables: { A: 'b' }
+      })
+      expect(readGamelibFixStatus('app', 'steam')).toBeNull()
+    })
+
+    it('a rejected drm value filters to title-only -> bundled', () => {
+      write(bundledFixesPath, 'app-steam.json', {
+        title: 't',
+        drm: 'steamstub'
+      })
+      expect(readGamelibFixStatus('app', 'steam')).toEqual({
+        origin: 'bundled'
+      })
+    })
+  })
 })
