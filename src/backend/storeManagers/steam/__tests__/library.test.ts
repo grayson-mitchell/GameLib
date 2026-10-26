@@ -5344,6 +5344,119 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     setIntervalSpy.mockRestore()
   })
 
+  // ── 261027-g9o: handoff call adopts its explicit source ────────────────────
+  //
+  // Root cause: resumeInterruptedSteamInstall starts a bare (source 'native')
+  // poll; games.ts's finalize handoff then arrives with source 'bottle' +
+  // isNativeHandoff:true, but the upgrade branch never adopted `source`, so the
+  // poll kept reading native roots and hit the false grace-window cancel
+  // warning. Test E is RED at HEAD; Tests F and G are interaction pins (GREEN
+  // at HEAD, must stay green): non-handoff / source-less calls never retarget.
+
+  const g9oAcf = {
+    AppState: {
+      appid: '730',
+      StateFlags: '4',
+      installdir: 'csgo',
+      SizeOnDisk: '50000'
+    }
+  }
+  const g9oLogger = () =>
+    jest.requireMock<{ logInfo: jest.Mock; logWarning: jest.Mock }>(
+      'backend/logger'
+    )
+
+  /** Manifest exists ONLY under the bottle root, never under /steam. */
+  const arrangeBottleOnlyManifest = () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+    ;(existsSync as jest.Mock).mockImplementation((p: unknown) =>
+      String(p).startsWith(BOTTLE_STEAMAPPS_ROOT)
+    )
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue(g9oAcf)
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(false)
+    jest.mocked(sendFrontendMessage).mockClear()
+    g9oLogger().logInfo.mockClear()
+    g9oLogger().logWarning.mockClear()
+  }
+  const graceWarnings = () =>
+    g9oLogger().logWarning.mock.calls.filter(([m]) =>
+      String(m).includes('stopped after grace window')
+    )
+  const installedPushes = () =>
+    (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel, payload]) =>
+        channel === 'pushGameToLibrary' &&
+        payload?.app_name === '730' &&
+        payload?.is_installed === true
+    )
+
+  it('Test E (261027-g9o): a bare native poll upgraded by the bottle handoff reads the bottle root and reaches installed', async () => {
+    try {
+      arrangeBottleOnlyManifest()
+      startInstallPolling('730', 10) // resume-shaped bare native poll
+      startInstallPolling('730', {
+        intervalMs: 10,
+        source: 'bottle',
+        isNativeHandoff: true,
+        skippedDepots: []
+      }) // finalize-shaped handoff
+      await jest.advanceTimersByTimeAsync(10 * 21)
+
+      expect(installedPushes().length).toBeGreaterThan(0)
+      expect(graceWarnings()).toHaveLength(0)
+      expect(
+        g9oLogger().logInfo.mock.calls.some(([m]) =>
+          String(m).includes('from source native to bottle')
+        )
+      ).toBe(true)
+    } finally {
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+    }
+  })
+
+  it('Test F (261027-g9o, interaction pin): an options call with source but no isNativeHandoff never retargets the poll', async () => {
+    try {
+      arrangeBottleOnlyManifest()
+      startInstallPolling('730', { intervalMs: 10, source: 'bottle' })
+      startInstallPolling('730', { intervalMs: 10, source: 'native' })
+      await jest.advanceTimersByTimeAsync(10 * 21)
+
+      expect(installedPushes().length).toBeGreaterThan(0)
+      expect(
+        g9oLogger().logInfo.mock.calls.some(([m]) =>
+          String(m).includes('switching in-flight install poll')
+        )
+      ).toBe(false)
+    } finally {
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+    }
+  })
+
+  it('Test G (261027-g9o, interaction pin): a handoff call with no source key never resets a bottle poll to native', async () => {
+    try {
+      arrangeBottleOnlyManifest()
+      startInstallPolling('730', { intervalMs: 10, source: 'bottle' })
+      startInstallPolling('730', {
+        intervalMs: 10,
+        isNativeHandoff: true,
+        skippedDepots: []
+      })
+      await jest.advanceTimersByTimeAsync(10 * 21)
+
+      expect(installedPushes().length).toBeGreaterThan(0)
+      expect(graceWarnings()).toHaveLength(0)
+    } finally {
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+    }
+  })
+
   // ── quick 261024-exo: delegatedToSteamClient poll lifecycle ────────────────
 
   const delegatedAcf = (flags: string) => ({
