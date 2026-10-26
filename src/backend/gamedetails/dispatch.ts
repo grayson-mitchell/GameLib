@@ -152,9 +152,9 @@ export async function kill(appName: string, runner: Runner): Promise<void> {
   return libraryManagerMap[runner].getGame(appName).stop()
 }
 
-// D-01 declaration rider: SteamGame.repair() logs "SteamGame.repair not
-// implemented until Phase 2" (storeManagers/steam/games.ts:1610) -- this is
-// an upstream Electron-side stub, not a regression introduced here.
+// SteamGame.repair() (storeManagers/steam/games.ts) restores a bridge title's
+// steam_api originals (quick 261026-lif); a throw from it surfaces below as
+// "Error Repairing".
 //
 // The two `i18next.t(...)` calls below are the sites plan 34.2-01's D-02
 // bootstrap init exists to make return real strings under the sidecar.

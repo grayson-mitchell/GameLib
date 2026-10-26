@@ -3,7 +3,15 @@ import i18next from 'i18next'
 import { shell } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep
+} from 'node:path'
 import {
   ExtraInfo,
   GameInfo,
@@ -98,6 +106,7 @@ import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 // Phase 24 Plan 08 (R4/R7): allowlist-based bridge-vs-fallback routing.
 import { bridgeAllowlist } from './bridge/allowlist'
 import { placeShimForGame } from './bridge/shimGenerate'
+import { restoreBridgeSteamApiOriginals } from './bridge/originalRestore'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import {
   ensureBridgeHelperReady,
@@ -2928,7 +2937,9 @@ export default class SteamGame implements Game {
 
     // D-51-01: byte-identity no-op on every normal launch — only does real
     // work when the placed shim has gone stale (e.g. a shim-version bump
-    // shipped after this game was installed).
+    // shipped after this game was installed). quick 261026-lif: an
+    // `already-placed` result is no longer guaranteed when a `.gamelib-orig`
+    // is new or its fingerprint changed; placement then rescans.
     // D-51-09 (Task 2): the previously-persisted scan verdict's own
     // interfaceVersions pool is threaded through as persistedInterfaceVersions
     // -- per placeShimForGame's own header, this is the ONLY source left for
@@ -2951,7 +2962,12 @@ export default class SteamGame implements Game {
           exePath,
           bridgeBottleSettings.wineCrossoverBottle
         ) ?? undefined,
-      ...(persistedInterfaceVersions ? { persistedInterfaceVersions } : {})
+      ...(persistedInterfaceVersions ? { persistedInterfaceVersions } : {}),
+      // quick 261026-lif: lets placement notice a new or changed
+      // `.gamelib-orig` and rescan instead of trusting this verdict.
+      ...(persistedScan?.originalFingerprints
+        ? { persistedOriginalFingerprints: persistedScan.originalFingerprints }
+        : {})
     })
 
     if (
@@ -3359,12 +3375,52 @@ export default class SteamGame implements Game {
     }
   }
 
+  /**
+   * quick 261026-lif: restores the game-original steam_api(64).dll behind every
+   * placed bridge shim as `<shim>.gamelib-orig`, from the Steam depot. Scope is
+   * bridge titles' steam_api originals only; a full-depot verify is out of
+   * scope. The next launch sees the new backup and rescans (shimGenerate.ts).
+   */
   async repair(): Promise<ExecResult> {
-    logWarning(
-      `SteamGame.repair not implemented until Phase 2 (appId: ${this.appId})`,
-      LogPrefix.Steam
-    )
-    return { stdout: '', stderr: 'Steam library not implemented until Phase 2' }
+    const scoped = (): Error =>
+      new Error(
+        `Repair restores bridge steam_api originals; appId ${this.appId} has no bridge install (a full depot verify is not supported)`
+      )
+    const exePath = await resolveBridgeLaunchExe(this.appId)
+    const bottle = getBridgeBottleSettings(this.appId).wineCrossoverBottle
+    if (!exePath || !isBridgeBottleReady(bottle) || !existsSync(exePath)) {
+      throw scoped()
+    }
+    const installRoot = this.resolveBridgeGameInstallRoot(exePath, bottle)
+    if (!installRoot) throw scoped()
+
+    const result = await restoreBridgeSteamApiOriginals({
+      appId: this.appId,
+      bottleDir: resolve(getBottleDir(bottle)),
+      installRoot,
+      installdir: basename(installRoot)
+    })
+    const lines = result.outcomes.map((o) => {
+      const rel = relative(installRoot, o.path)
+      return `${rel}: ${o.outcome}${o.detail ? ` (${o.detail})` : ''}`
+    })
+    for (const line of lines) {
+      logInfo(`SteamGame.repair appId ${this.appId}: ${line}`, LogPrefix.Steam)
+    }
+    if (result.status !== 'ok') {
+      const failed = result.outcomes
+        .filter(
+          (o) => o.outcome === 'download-failed' || o.outcome === 'refused'
+        )
+        .map(
+          (o) =>
+            `${relative(installRoot, o.path)}: ${o.outcome}${o.detail ? ` (${o.detail})` : ''}`
+        )
+      throw new Error(
+        `Could not restore steam_api originals for appId ${this.appId}${failed.length ? `: ${failed.join('; ')}` : ' (restore failed)'}`
+      )
+    }
+    return { stdout: lines.join('\n'), stderr: '' }
   }
 
   async syncSaves(

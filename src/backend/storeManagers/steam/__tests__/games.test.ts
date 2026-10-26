@@ -69,6 +69,7 @@ import {
 import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { placeShimForGame } from '../bridge/shimGenerate'
+import { restoreBridgeSteamApiOriginals } from '../bridge/originalRestore'
 import { resolveBridgeLaunchExe } from '../bridge/launchTarget'
 import {
   ensureBridgeHelperReady,
@@ -345,6 +346,11 @@ jest.mock('../bridge/allowlist', () => ({
 // shim-placement hook.
 jest.mock('../bridge/shimGenerate', () => ({
   placeShimForGame: jest.fn()
+}))
+
+// quick 261026-lif: SteamGame.repair() delegates to the restore helper.
+jest.mock('../bridge/originalRestore', () => ({
+  restoreBridgeSteamApiOriginals: jest.fn()
 }))
 
 // ── bridge/launchTarget.ts mock (24-08 Task 1) — resolveBridgeLaunchExe used
@@ -1869,6 +1875,117 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
       expect(stopPerGameBridgeBottle).not.toHaveBeenCalled()
       expect(stopBottleProcessMonitor).toHaveBeenCalledWith(APP_ID)
+    })
+  })
+
+  describe('quick 261026-lif: SteamGame.repair() and persisted fingerprints', () => {
+    const INSTALL_ROOT = `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`
+
+    it('bridge title: restores originals with the resolved bottle and install root, stdout lists each outcome', async () => {
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+        RESOLVED_EXE_PATH
+      )
+      ;(restoreBridgeSteamApiOriginals as jest.Mock).mockResolvedValue({
+        status: 'ok',
+        outcomes: [
+          { path: `${INSTALL_ROOT}/bin/steam_api64.dll`, outcome: 'restored' },
+          { path: `${INSTALL_ROOT}/steam_api.dll`, outcome: 'not-in-depot' }
+        ]
+      })
+
+      const result = await new SteamGame(APP_ID).repair()
+
+      expect(restoreBridgeSteamApiOriginals).toHaveBeenCalledTimes(1)
+      expect(restoreBridgeSteamApiOriginals).toHaveBeenCalledWith({
+        appId: APP_ID,
+        bottleDir: '/mock/bridge/bottle',
+        installRoot: INSTALL_ROOT,
+        installdir: 'Avernum 4'
+      })
+      expect(result.stderr).toBe('')
+      expect(result.stdout.split('\n')).toEqual([
+        'bin/steam_api64.dll: restored',
+        'steam_api.dll: not-in-depot'
+      ])
+    })
+
+    it('a partial restore throws naming the failed paths', async () => {
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+        RESOLVED_EXE_PATH
+      )
+      ;(restoreBridgeSteamApiOriginals as jest.Mock).mockResolvedValue({
+        status: 'partial',
+        outcomes: [
+          {
+            path: `${INSTALL_ROOT}/bin/steam_api64.dll`,
+            outcome: 'download-failed',
+            detail: 'cdn down'
+          }
+        ]
+      })
+
+      await expect(new SteamGame(APP_ID).repair()).rejects.toThrow(
+        /bin\/steam_api64\.dll: download-failed \(cdn down\)/
+      )
+    })
+
+    it.each([
+      [
+        'no resolvable exe',
+        () => (resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(undefined)
+      ],
+      [
+        'bottle not ready',
+        () => (isBridgeBottleReady as jest.Mock).mockReturnValue(false)
+      ],
+      [
+        'exe absent on disk',
+        () => (existsSync as jest.Mock).mockReturnValue(false)
+      ]
+    ])(
+      'non-bridge title (%s): scoped error, restore never called',
+      async (_n, arrange) => {
+        ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+          RESOLVED_EXE_PATH
+        )
+        arrange()
+
+        const err = await new SteamGame(APP_ID).repair().catch((e: Error) => e)
+
+        expect(err).toBeInstanceOf(Error)
+        expect((err as Error).message).toContain(
+          'Repair restores bridge steam_api originals'
+        )
+        expect((err as Error).message).not.toContain('Phase 2')
+        expect(restoreBridgeSteamApiOriginals).not.toHaveBeenCalled()
+      }
+    )
+
+    it('launch threads persistedOriginalFingerprints from the persisted scan, and omits the key when absent', async () => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+        RESOLVED_EXE_PATH
+      )
+      const fps = { 'drive_c/x/steam_api.dll': { size: 3, sha1: 'ab' } }
+      const spy = jest.spyOn(bridgeVerdictModule, 'readBridgeVerdict')
+      try {
+        spy.mockReturnValue({
+          scan: { interfaceVersions: {}, originalFingerprints: fps }
+        } as never)
+        await new SteamGame(APP_ID).launch({} as any)
+        expect(placeShimForGame).toHaveBeenLastCalledWith(
+          APP_ID,
+          RESOLVED_EXE_PATH,
+          expect.objectContaining({ persistedOriginalFingerprints: fps })
+        )
+
+        spy.mockReturnValue({ scan: { interfaceVersions: {} } } as never)
+        await new SteamGame(APP_ID).launch({} as any)
+        const opts = (placeShimForGame as jest.Mock).mock.calls.at(-1)[2]
+        expect(opts).not.toHaveProperty('persistedOriginalFingerprints')
+      } finally {
+        jest.restoreAllMocks()
+      }
     })
   })
 

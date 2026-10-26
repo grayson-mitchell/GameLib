@@ -591,10 +591,11 @@ export default function GamesSubmenu({
                   {t('submenu.change', 'Change Install Location')}
                 </button>
               )}{' '}
-              {!isSideloaded && !isSteam && !isThirdPartyManaged && (
+              {!isSideloaded && !isThirdPartyManaged && (
                 <button
                   onClick={async () => handleRepair(appName)}
                   className="link button is-text is-link buttonWithIcon"
+                  disabled={isSteam && is.playing}
                 >
                   <CheckCircleIcon />
                   {t('submenu.verify', 'Verify and Repair')}
