@@ -45,6 +45,10 @@
  * `steam_api_shim.lib`, todo item 6 / quick-260901-kl2) are unlinked
  * immediately after it passes -- see `pruneShimBuildByproducts()` below.
  *
+ * Both shims also compile native/steam-bridge/shim/shim_features.c (quick
+ * 261026-ng9, spike 034): the hand-written `fix.` cfg feature catalogue,
+ * placed right after steam_api_shim.c in the argv.
+ *
  * Also stages `steam_appid.txt`=480 next to the built helper (finding #4) --
  * the helper's runtime cwd (set by Plan 24-06 to that directory) resolves
  * the D-04 identity-only AppID from this file.
@@ -81,6 +85,19 @@ const SHIM_SOURCE_PATH = join(
   'steam-bridge',
   'generated',
   'steam_api_shim.c'
+)
+/**
+ * Quick 261026-ng9 (spike 034): the hand-written shim feature catalogue (its own DllMain, reads `fix.`
+ * lines from gamelib_bridge.cfg). Compiled into BOTH shims right AFTER steam_api_shim.c: zig names the
+ * import `.lib` after the FIRST source file, so steam_api_shim.c must stay first to keep the byproduct
+ * names (and the prune lists) unchanged. Lives outside generated/ so `pnpm gen-vtables` never touches it.
+ */
+// ts-prune-ignore-next
+export const SHIM_FEATURES_SOURCE_PATH = join(
+  'native',
+  'steam-bridge',
+  'shim',
+  'shim_features.c'
 )
 const SHIM_DEF_PATH = join(
   'native',
@@ -463,7 +480,8 @@ export const SHIM_RELEASE_CFLAGS = ['-O2', '-fno-sanitize=undefined'] as const
 /**
  * Argv-form (never a shell string, T-24-06) command for cross-compiling the
  * PE shim (a release build, see SHIM_RELEASE_CFLAGS) with the pinned zig toolchain. Exported so tests can assert the
- * `-target x86-windows-gnu` flag, the 24-01 generated source as input, and
+ * `-target x86-windows-gnu` flag, the 24-01 generated source (plus the hand-written
+ * shim_features.c right after it) as input, and
  * the single shared output location (BLOCKER 2) without invoking real zig.
  */
 // Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
@@ -484,6 +502,7 @@ export function buildShimCompileArgv(
       '-o',
       shimOutputPath(arch),
       SHIM_SOURCE_PATH,
+      SHIM_FEATURES_SOURCE_PATH,
       SHIM_DEF_PATH,
       '-lws2_32'
     ]
@@ -497,7 +516,7 @@ export function buildShimCompileArgv(
  * targets with no forked generator), cross-compiled a SECOND time with
  * `-target x86_64-windows-gnu` against the x64 export table 51-15 Task 1
  * generated (`steam_api64.def`), to the Win64 shim's own bundled location.
- * Also a release build (SHIM_RELEASE_CFLAGS).
+ * Also a release build (SHIM_RELEASE_CFLAGS), and also carries shim_features.c.
  */
 // Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
 // this gate's tsconfig.json scope -- see resolveBridgeArch above).
@@ -517,6 +536,7 @@ export function buildShim64CompileArgv(
       '-o',
       shim64OutputPath(arch),
       SHIM_SOURCE_PATH,
+      SHIM_FEATURES_SOURCE_PATH,
       SHIM_DEF64_PATH,
       '-lws2_32'
     ]
@@ -584,9 +604,13 @@ async function stageSteamAppId(): Promise<void> {
  * toolchain, far before Plan 24-10's human hardware gate.
  */
 async function compileShim(): Promise<void> {
-  if (!existsSync(SHIM_SOURCE_PATH) || !existsSync(SHIM_DEF_PATH)) {
+  if (
+    !existsSync(SHIM_SOURCE_PATH) ||
+    !existsSync(SHIM_FEATURES_SOURCE_PATH) ||
+    !existsSync(SHIM_DEF_PATH)
+  ) {
     throw new Error(
-      `Missing generated shim source (${SHIM_SOURCE_PATH} / ${SHIM_DEF_PATH}) -- run \`pnpm gen-vtables\` first (Plan 24-01)`
+      `Missing generated shim source (${SHIM_SOURCE_PATH} / ${SHIM_FEATURES_SOURCE_PATH} / ${SHIM_DEF_PATH}) -- run \`pnpm gen-vtables\` first (Plan 24-01)`
     )
   }
 
@@ -623,9 +647,13 @@ async function compileShim(): Promise<void> {
  * own prune must already have run before this one starts.
  */
 async function compileShim64(): Promise<void> {
-  if (!existsSync(SHIM_SOURCE_PATH) || !existsSync(SHIM_DEF64_PATH)) {
+  if (
+    !existsSync(SHIM_SOURCE_PATH) ||
+    !existsSync(SHIM_FEATURES_SOURCE_PATH) ||
+    !existsSync(SHIM_DEF64_PATH)
+  ) {
     throw new Error(
-      `Missing generated x64 shim source (${SHIM_SOURCE_PATH} / ${SHIM_DEF64_PATH}) -- run \`pnpm gen-vtables\` first (51-15 Task 1)`
+      `Missing generated x64 shim source (${SHIM_SOURCE_PATH} / ${SHIM_FEATURES_SOURCE_PATH} / ${SHIM_DEF64_PATH}) -- run \`pnpm gen-vtables\` first (51-15 Task 1)`
     )
   }
 

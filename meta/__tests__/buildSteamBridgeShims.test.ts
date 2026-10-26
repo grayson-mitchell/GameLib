@@ -27,6 +27,7 @@ import {
   steamClient64OutputPath,
   resolveBridgeArch,
   SHIM64_BUILD_BYPRODUCTS,
+  SHIM_FEATURES_SOURCE_PATH,
   SHIM_RELEASE_CFLAGS,
   SHIM_BUILD_BYPRODUCTS,
   shim64ByproductPaths,
@@ -163,6 +164,19 @@ describe('buildSteamBridgeShims', () => {
         args.indexOf('-o')
       )
     })
+
+    it('compiles shim_features.c right after steam_api_shim.c, which stays the first .c (quick 261026-ng9)', () => {
+      const { args } = buildShimCompileArgv('/path/to/zig', 'arm64')
+      expect(SHIM_FEATURES_SOURCE_PATH).toBe(
+        join('native', 'steam-bridge', 'shim', 'shim_features.c')
+      )
+      expect(args).toContain(SHIM_FEATURES_SOURCE_PATH)
+      const shimIdx = args.indexOf(
+        join('native', 'steam-bridge', 'generated', 'steam_api_shim.c')
+      )
+      expect(args.indexOf(SHIM_FEATURES_SOURCE_PATH)).toBe(shimIdx + 1)
+      expect(args.findIndex((a) => a.endsWith('.c'))).toBe(shimIdx)
+    })
   })
 
   describe('buildShim64CompileArgv (51-15 Task 2: second compile target -- steam_api64.dll)', () => {
@@ -206,6 +220,32 @@ describe('buildSteamBridgeShims', () => {
       expect(args.indexOf('-fno-sanitize=undefined')).toBeLessThan(
         args.indexOf('-o')
       )
+    })
+
+    it('compiles shim_features.c right after steam_api_shim.c, which stays the first .c (quick 261026-ng9)', () => {
+      const { args } = buildShim64CompileArgv('/path/to/zig', 'arm64')
+      expect(SHIM_FEATURES_SOURCE_PATH).toBe(
+        join('native', 'steam-bridge', 'shim', 'shim_features.c')
+      )
+      expect(args).toContain(SHIM_FEATURES_SOURCE_PATH)
+      const shimIdx = args.indexOf(
+        join('native', 'steam-bridge', 'generated', 'steam_api_shim.c')
+      )
+      expect(args.indexOf(SHIM_FEATURES_SOURCE_PATH)).toBe(shimIdx + 1)
+      expect(args.findIndex((a) => a.endsWith('.c'))).toBe(shimIdx)
+    })
+
+    it('shim_features.c exists, owns the only DllMain, and the generated shim has none', () => {
+      expect(existsSync(SHIM_FEATURES_SOURCE_PATH)).toBe(true)
+      expect(readFileSync(SHIM_FEATURES_SOURCE_PATH, 'utf8')).toContain(
+        'DllMain'
+      )
+      expect(
+        readFileSync(
+          join('native', 'steam-bridge', 'generated', 'steam_api_shim.c'),
+          'utf8'
+        )
+      ).not.toContain('DllMain')
     })
   })
 
