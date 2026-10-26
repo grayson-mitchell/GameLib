@@ -21,3 +21,14 @@ InitFlat fails fast rather than waiting for Steam, so GameLib has to do the wait
 Any retry must respawn the helper, since InitFlat is called exactly once per helper process.
 
 Verify on a live Mac: quit Steam and launch; start Steam and launch immediately. Both should end in the game launching, or in an accurate message.
+
+## Resolution
+
+Closed by quick `261027-aue` (2026-10-27): commits `00533026d` (helper), `4f3208b14` (launch wiring and dialog copy) and `014357b72` (presence baseline).
+
+- `helperProcess.ts` reads the helper's `INIT ... InitFlat failed ... err=<text> appid=<id>` line, checking the appid. `Could not determine Steam client install directory` maps to `steam-not-running`, and `ConnectToGlobalUser failed` maps to `steam-not-signed-in`. Any other text takes the unchanged D-51-04 path, which tries the 480 fallback and then reports `not-inited`.
+- On a Steam-state cause, the helper starts Steam once via `steam://open/main` through the shell opener (`activate: false`). It then stops the helper and spawns a fresh one every 3 s (`STEAM_RETRY_INTERVAL_MS`) within a 60 s budget (`STEAM_WAIT_BUDGET_MS`), checked before each spawn. The sleeps are unref'd. A helper whose InitFlat failed is never reused.
+- A Steam-state cause never enters the 480 fallback, and it does not poison the session, so the next Play retries the bridge. Its setup message has `fallbackAvailable: false`.
+- `launch()` shows a "Waiting for Steam" toast when the wait starts. The setup dialog explains each cause (not running, not signed in, refused a session) instead of recommending bottled Steam.
+
+The live Mac check is filed as `2026-10-27-bridge-waits-for-steam-live-gate.md`.
