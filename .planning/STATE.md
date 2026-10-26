@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-26 - Completed quick task 261026-ous: lift Hoard (63000) from the bridge knownBad list
+Last activity: 2026-10-26 - Completed quick task 261026-p02: depot selection honours config.realm and config.steamdeck
 
 Progress: [██████████] 100%
 
@@ -395,6 +395,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261026-ng9 | Spike 034 productionised: tier-2 `shimFeatures` (`wgl.hideExtensions`) → `gamelib_bridge.cfg` `fix.` lines via `steamShimFeatureCfgLines`/`writeBridgeConfig`; hand-written `native/steam-bridge/shim/shim_features.c` (the shim's only DllMain, IAT hook only when a pattern parses, `OutputDebugStringA` logging) compiled into both x86 and x64 shims; Hoard profile bundled at `public/fixes/63000-steam.profile.json`. Allowlist untouched. | 2026-10-26 | 9b9f2b5ef | built + tested (both DLLs carry the feature, 0 UBSan strings); packaged-build Hoard retest pending before lifting its `does-not-run` entry | [261026-ng9-productionise-spike-034-shimfeatures-kno](./quick/261026-ng9-productionise-spike-034-shimfeatures-kno/) |
 | 261026-ous | Hoard (63000) lifted from bridge `knownBad`: its `does-not-run` entry removed from `bridge-allowlist.json` now that the bundled `63000-steam.profile.json` (261026-ng9) makes it run; allowlist.ts doc + real-bundle tests updated (positive `knownBadReason('63000') === null`), census fixtures moved to ELEX 411300. XCOM/ELEX entries kept. | 2026-10-26 | 90ebe6db7 | done; evidence = 261026-ng9 packaged-build retest (fresh install, bundled profile only, reached menu) | [261026-ous-lift-hoard-63000-from-the-bridge-allowli](./quick/261026-ous-lift-hoard-63000-from-the-bridge-allowli/) |
 | 261026-nhy | Case-only cross-depot path collisions detected: `resolveDepotPathCollisions` keys on a case-folded path when `probeCaseInsensitiveVolume(targetSteamappsDir)` says the volume folds case (read-only dev+ino probe; fallback `platform !== 'linux'`); `DepotPlan.caseInsensitivePaths` carries it to `verifyStructuralIntegrity`'s claim key. Bare-dir-marker-only buckets now silent. | 2026-10-26 | b67e26e3b | live: Californium 109 case-only collisions resolved, StateFlags=4; macOS Civ V clean, StateFlags=4 | [261026-nhy-detect-case-only-cross-depot-path-collis](./quick/261026-nhy-detect-case-only-cross-depot-path-collis/) |
+| 261026-p02 | Depot selection now honours `config.realm` (drops depots whose realm excludes `steamglobal` — Once Human 2139463, ~129 GB) and `config.steamdeck` (drops Deck-only depots — ASKA 1898302) in `selectDepots`, logged like the oslist/osarch/language skips. `optional` deliberately untouched; source todo narrowed to that question (`minor`/`any`/`blocked` — needs a native Steam install of Witcher EE or Oblivion GOTY). | 2026-10-26 | 47427f991 | depotPrimitives 83/83 (5 new), tsc clean, prettier clean on 2 source paths, planning-gates 12/12. Not live-tested against a real Once Human/ASKA install. | [261026-p02-depot-selection-honour-config-realm-conf](./quick/261026-p02-depot-selection-honour-config-realm-conf/) |
 
 ## Deferred Items
 
