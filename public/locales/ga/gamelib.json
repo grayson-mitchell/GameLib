@@ -188,6 +188,10 @@
         "urgencyHoursLeft_other": "{{count}} uair fágtha"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "Tá deisiú ag GameLib don chluiche seo, mar sin ba cheart go n-oibreodh sé"
+        },
         "refresh-rating": "Athnuaigh an rátáil"
     },
     "installFlows": {

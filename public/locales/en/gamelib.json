@@ -200,6 +200,10 @@
         "urgencyHoursLeft_other": "{{count}} hours left"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib has a fix for this game, so it should run"
+        },
         "refresh-rating": "Refresh rating"
     },
     "installFlows": {

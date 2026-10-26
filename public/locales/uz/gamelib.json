@@ -170,6 +170,10 @@
         "urgencyHoursLeft_other": "{{count}} soat qoldi"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib bu o'yin uchun tuzatishga ega, shuning uchun u ishlashi kerak"
+        },
         "refresh-rating": "Reytingni yangilash"
     },
     "installFlows": {

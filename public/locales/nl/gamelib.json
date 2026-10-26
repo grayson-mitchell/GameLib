@@ -170,6 +170,10 @@
         "urgencyHoursLeft_other": "Nog {{count}} uur over"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib heeft een fix voor deze game, dus hij zou moeten werken"
+        },
         "refresh-rating": "Beoordeling vernieuwen"
     },
     "installFlows": {

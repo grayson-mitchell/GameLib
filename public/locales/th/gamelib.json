@@ -170,6 +170,10 @@
         "urgencyHoursLeft_other": "เหลือ {{count}} ชั่วโมง"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib มีการแก้ไขสำหรับเกมนี้ จึงควรเล่นได้"
+        },
         "refresh-rating": "รีเฟรชคะแนน"
     },
     "installFlows": {

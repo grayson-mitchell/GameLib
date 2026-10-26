@@ -61,3 +61,15 @@ says what the fix does.
 
 First candidate to try it on: Mining Mechs (`public/fixes/1603180-steam.json`). It passed its
 live gate on 2026-10-26.
+
+## Closed 2026-10-27 (quick 261027-ch9)
+
+The operator revision of 2026-10-27 replaced the 1-5 rating with a tick: there is no `rating` key in any fix file, no `<Rating>` in the new row and no default of 4, so this todo's "with a rating that defaults to 4" was superseded.
+
+What shipped:
+
+- `readGamelibFixStatus` in `src/backend/knownFixes.ts`: local + bundled layers only, tier 1 (`<id>-<store>.json`) then tier 2 (`<id>-<store>.profile.json`). A fix present only in the remote `fixes/` layer never counts. The tier-1 `launchNotice` (local/bundled only) is carried along.
+- A new sidecar invoke channel `getGamelibFixStatus` (registration, `ipc.ts` type, preload, census, IPC-PORT-INVENTORY).
+- `resolveGamelibFixDisplay`, a pure jsdom-free helper, and a "GameLib" row in `AppleWikiInfo.tsx` after the Wine row with a `CheckCircle` tick, shown even when wikiInfo is absent. The `launchNotice` is appended to the row's tooltip. CrossOver/Proton/Wine rows are untouched.
+- `info.gamelibFix.label` and `info.gamelibFix.title` in all 49 gamelib catalogs (mt.json provenance in the 48 non-English ones).
+- Tests: `knownFixesGamelibStatus.test.ts`, `gamelibFixDisplay.test.ts`, and a `getGamelibFixStatus` case pair in `enrichmentFlows.test.ts`.

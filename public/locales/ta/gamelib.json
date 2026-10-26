@@ -170,6 +170,10 @@
         "urgencyHoursLeft_other": "{{count}} மணிநேரங்கள் மீதம்"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "இந்த விளையாட்டுக்கு GameLib-இல் ஒரு திருத்தம் உள்ளது, எனவே இது இயங்க வேண்டும்"
+        },
         "refresh-rating": "மதிப்பீட்டை புதுப்பிக்கவும்"
     },
     "installFlows": {

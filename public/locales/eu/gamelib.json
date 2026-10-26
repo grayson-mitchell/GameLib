@@ -170,6 +170,10 @@
         "urgencyHoursLeft_other": "{{count}} ordu geratzen dira"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib-ek zuzenketa bat dauka joko honetarako, beraz funtzionatu beharko luke"
+        },
         "refresh-rating": "Freskatu balorazioa"
     },
     "installFlows": {

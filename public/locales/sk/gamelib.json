@@ -182,6 +182,10 @@
         "urgencyHoursLeft_other": "Zostáva {{count}} hodín"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib má pre túto hru opravu, takže by mala fungovať"
+        },
         "refresh-rating": "Obnoviť hodnotenie"
     },
     "installFlows": {

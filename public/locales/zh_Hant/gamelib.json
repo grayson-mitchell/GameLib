@@ -170,6 +170,10 @@
         "urgencyHoursLeft_other": "剩餘 {{count}} 小時"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib 已為這款遊戲提供修復，因此它應該可以執行"
+        },
         "refresh-rating": "重新整理評分"
     },
     "installFlows": {

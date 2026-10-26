@@ -182,6 +182,10 @@
         "urgencyHoursLeft_other": "Pozostało {{count}} godziny"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib ma poprawkę do tej gry, więc powinna działać"
+        },
         "refresh-rating": "Odśwież ocenę"
     },
     "installFlows": {

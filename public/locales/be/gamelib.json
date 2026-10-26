@@ -182,6 +182,10 @@
         "urgencyHoursLeft_other": "Засталося {{count}} гадзіны"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib мае выпраўленне для гэтай гульні, таму яна павінна запускацца"
+        },
         "refresh-rating": "Абнавіць рэйтынг"
     },
     "installFlows": {

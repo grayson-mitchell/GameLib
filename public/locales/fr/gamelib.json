@@ -435,6 +435,10 @@
         }
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib dispose d'un correctif pour ce jeu, il devrait donc fonctionner"
+        },
         "refresh-rating": "Actualiser la note"
     },
     "installFlows": {

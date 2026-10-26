@@ -170,6 +170,10 @@
         "urgencyHoursLeft_other": "残り {{count}} 時間"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "このゲームには GameLib の修正があるため、動作するはずです"
+        },
         "refresh-rating": "評価を更新"
     },
     "installFlows": {

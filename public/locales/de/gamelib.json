@@ -428,6 +428,10 @@
         }
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib hat einen Fix für dieses Spiel, es sollte also laufen"
+        },
         "refresh-rating": "Bewertung aktualisieren"
     },
     "installFlows": {

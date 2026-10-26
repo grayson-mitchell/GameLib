@@ -194,6 +194,10 @@
         "urgencyHoursLeft_other": "تتبقى {{count}} ساعة"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "لدى GameLib إصلاح لهذه اللعبة، لذا يجب أن تعمل"
+        },
         "refresh-rating": "تحديث التقييم"
     },
     "installFlows": {

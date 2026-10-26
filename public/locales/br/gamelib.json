@@ -188,6 +188,10 @@
         "urgencyHoursLeft_other": "{{count}} eur a chom"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "Ur reizhadenn zo gant GameLib evit ar c'hoari-mañ, setu e tlefe mont en-dro"
+        },
         "refresh-rating": "Freskaat ar priziadur"
     },
     "installFlows": {

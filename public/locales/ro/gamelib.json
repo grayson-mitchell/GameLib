@@ -176,6 +176,10 @@
         "urgencyHoursLeft_other": "{{count}} de ore rămase"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib are o corecție pentru acest joc, deci ar trebui să ruleze"
+        },
         "refresh-rating": "Reîmprospătează evaluarea"
     },
     "installFlows": {

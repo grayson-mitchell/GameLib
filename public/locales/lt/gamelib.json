@@ -182,6 +182,10 @@
         "urgencyHoursLeft_other": "Liko {{count}} valandų"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib turi šio žaidimo pataisą, todėl jis turėtų veikti"
+        },
         "refresh-rating": "Atnaujinti įvertinimą"
     },
     "installFlows": {

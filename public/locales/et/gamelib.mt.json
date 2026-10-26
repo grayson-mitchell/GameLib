@@ -118,6 +118,8 @@
     "humbleKeys.urgencyDaysLeft_other",
     "humbleKeys.urgencyHoursLeft_one",
     "humbleKeys.urgencyHoursLeft_other",
+    "info.gamelibFix.label",
+    "info.gamelibFix.title",
     "info.refresh-rating",
     "installFlows.diskSpaceFreeOfTotal",
     "installFlows.pathRejectedBodyImport",

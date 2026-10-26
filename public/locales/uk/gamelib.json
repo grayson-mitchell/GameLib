@@ -182,6 +182,10 @@
         "urgencyHoursLeft_other": "Залишилось {{count}} годин"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "У GameLib є виправлення для цієї гри, тому вона має запускатися"
+        },
         "refresh-rating": "Оновити рейтинг"
     },
     "installFlows": {

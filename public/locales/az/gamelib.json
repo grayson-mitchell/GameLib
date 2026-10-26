@@ -170,6 +170,10 @@
         "urgencyHoursLeft_other": "{{count}} saat qalıb"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib bu oyun üçün düzəliş təqdim edir, ona görə də işləməlidir"
+        },
         "refresh-rating": "Reytinqi yenilə"
     },
     "installFlows": {

@@ -176,6 +176,10 @@
         "urgencyHoursLeft_other": "Преостало {{count}} сати"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib има исправку за ову игру, па би требало да ради"
+        },
         "refresh-rating": "Освежи оцену"
     },
     "installFlows": {

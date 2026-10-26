@@ -170,6 +170,10 @@
         "urgencyHoursLeft_other": "{{count}} tundi jäänud"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "GameLib'il on sellele mängule parandus, seega peaks see käivituma"
+        },
         "refresh-rating": "Värskenda hinnangut"
     },
     "installFlows": {

@@ -176,6 +176,10 @@
         "urgencyHoursLeft_other": "נותרו {{count}} שעות"
     },
     "info": {
+        "gamelibFix": {
+            "label": "GameLib",
+            "title": "ל-GameLib יש תיקון למשחק הזה, ולכן הוא אמור לפעול"
+        },
         "refresh-rating": "רענון דירוג"
     },
     "installFlows": {
