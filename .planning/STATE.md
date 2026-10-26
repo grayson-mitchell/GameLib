@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-26 - Completed quick task 261026-u1a: bridge auto-clear retains originalFingerprints
+Last activity: 2026-10-26 - Completed quick task 261026-uhi: paused depot download no longer logs the chmodAttempts=0 fail-close warning
 
 Progress: [██████████] 100%
 
@@ -407,6 +407,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261026-rqb | **Fixed the generated shim's string-return decode**: it copied the helper's `[u32 len][bytes]` reply raw, so every wired `const char*` return (68 sites: GetPersonaName, GetFriendPersonaName, GetCurrentGameLanguage, …) reached games as a single length byte. Single-sourced encode/decode emitters in `gen_vtables.ts`, bounds-checked decode, retbuf 259 (also closes the 252..255-byte drop). Clang ASan/UBSan encode→decode round-trip test. steam_api.dll 290816, steam_api64.dll 506368. | 2026-10-26 | `6d8a4c94c`, `79d6cd28f`, `e7e0eff4a`, `3b016c1ea` | Verified live: Overlooting 3410180 godot.log `Usernam: Grayson`, 2 CALLs incl. identity, census verified; todo closed, 53-UAT item 36 pass. 26 suites / 1048 tests, planning-gates 12/12. | [261026-rqb-fix-shim-string-return-decoding-of-the-h](./quick/261026-rqb-fix-shim-string-return-decoding-of-the-h/) |
 | 261026-t7b | Cancel-download dialog redesigned: "Cancel download?" with verb buttons [Delete Files (danger, left)] [Keep Downloading] [Stop & Keep Files (primary)]; Steam hides Delete (backend delete is a no-op, todo filed); opt-in `ButtonOptions.variant`; ConsoleMode Yes/No → verbs. Not rendered live | 2026-10-26 | 78fd7aef2 | code-verified | [261026-t7b-redesign-cancel-download-dialog-with-sta](./quick/261026-t7b-redesign-cancel-download-dialog-with-sta/) |
 | 261026-u1a | Bridge auto-clear now retains `scan.originalFingerprints` as top-level `bridge.originalFingerprints` (mirrors WR-01); launch falls back to it (scan copy wins). Also declared `originalFingerprints` in both bridge read schemas -- zod stripped it on every `readBridgeVerdict`, so the lif guard never saw persisted fingerprints in production. Not re-run live (51-UAT item 21) | 2026-10-26 | `fa466406e`, `8ff448e5f` | code-verified: 540 jest tests, tsc, prettier | [261026-u1a-bridge-auto-clear-retains-scan-originalf](./quick/261026-u1a-bridge-auto-clear-retains-scan-originalf/) |
+| 261026-uhi | The `chmodAttempts=0 — failing closed to StateFlags=1026` warning in `downloadDepotFiles` is now gated on `!opts.signal?.aborted`, so a user pause no longer reads as an integrity fail-close; `allModesApplied` (T-23-27) unchanged, so a paused install still writes 1026. New cancelled-run test (RED before, GREEN after); the Directory\|Executable test now asserts a non-cancelled zero-chmod run still warns. Not re-run live | 2026-10-26 | `8d75de35c`, `84d4231c7` | code-verified: depot.test.ts 208 jest, tsc, prettier | [261026-uhi-pausing-a-native-depot-download-logs-the](./quick/261026-uhi-pausing-a-native-depot-download-logs-the/) |
 
 ## Deferred Items
 
