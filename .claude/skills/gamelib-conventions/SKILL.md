@@ -136,8 +136,10 @@ listens for stdin EOF to drop references the sidecar cannot `unref()` — it nev
 `process.exit`, so exit is still by drain. It (1) calls `SteamUser.releaseForShutdown()`, because a
 logged-on `steam-user` client owns a library-internal CM socket and heartbeat timer (measured: an
 anonymous-logged-on client keeps a bare node process alive past 60s; `logOff()` drains it in
-~100ms, and an empty-profile sidecar already exits ~0.7s after EOF), and (2) runs
-`callAllAbortControllers()` so in-flight depot downloads stop (half 2 below). Without it a
+~100ms, and an empty-profile sidecar already exits ~0.7s after EOF), and (2) pauses the download
+queue (`pauseCurrentDownload()`) and then runs `callAllAbortControllers()` so in-flight depot
+downloads stop (half 2 below). The pause comes first on purpose: a bare abort made the queue record
+the download as finished and drop it, so it was not resumable (live gate 2026-10-26). Without it a
 Force Quit (SIGKILL, which skips `shutdown_child()`) left a signed-in sidecar running as an
 orphan. Any NEW library-owned handle that cannot be unref'd belongs in that function, not in
 `startRpcServer()`. The Rust shell reaps the child separately — `shutdown_child()` (`src-tauri/src/main.rs:1182`,
