@@ -5,7 +5,12 @@ import {
   isAddedToSteam,
   removeNonSteamGame
 } from './nonesteamgame/nonesteamgame'
-import { shortcutFiles, shortcutPathPresent } from './shortcuts/shortcuts'
+import {
+  macDesktopShortcutPresent,
+  macDesktopShortcutWanted,
+  shortcutFiles,
+  shortcutPathPresent
+} from './shortcuts/shortcuts'
 import { notify } from 'backend/dialog/dialog'
 import { isMac } from 'backend/constants/environment'
 import { getGame } from '../utils'
@@ -59,10 +64,16 @@ addHandler('addShortcut', async (event, appName, runner, fromMenu) => {
     'Shortcuts were created on Desktop and Start Menu'
   )
 
-  const bodyMac = i18next.t(
-    'box.shortcuts.message-mac',
-    'Shortcuts were created on the Applications folder'
-  )
+  // 261027-c4g: on macOS the toast names the Desktop when the Desktop link was also made.
+  const bodyMac = macDesktopShortcutWanted()
+    ? i18next.t(
+        'gamelib:box.shortcuts.messageMacDesktop',
+        'Shortcuts were created in the Applications folder and on the Desktop'
+      )
+    : i18next.t(
+        'box.shortcuts.message-mac',
+        'Shortcuts were created on the Applications folder'
+      )
 
   notify({
     body: isMac ? bodyMac : body,
@@ -77,6 +88,10 @@ addHandler('shortcutsExists', (event, appName, runner) =>
 )
 
 addHandler('removeShortcut', async (event, appName, runner) => {
+  // 261027-c4g: snapshot BEFORE removal; the toast follows what was on disk, not the setting.
+  const hadDesktopItem = macDesktopShortcutPresent(
+    getGame(appName, runner).getGameInfo().title
+  )
   try {
     await getGame(appName, runner).removeShortcuts()
   } catch (error) {
@@ -92,10 +107,15 @@ addHandler('removeShortcut', async (event, appName, runner) => {
     'Shortcuts were removed from Desktop and Start Menu'
   )
 
-  const bodyMac = i18next.t(
-    'box.shortcuts.message-remove-mac',
-    'Shortcuts were removed from the Applications folder'
-  )
+  const bodyMac = hadDesktopItem
+    ? i18next.t(
+        'gamelib:box.shortcuts.messageRemoveMacDesktop',
+        'Shortcuts were removed from the Applications folder and the Desktop'
+      )
+    : i18next.t(
+        'box.shortcuts.message-remove-mac',
+        'Shortcuts were removed from the Applications folder'
+      )
 
   notify({
     body: isMac ? bodyMac : body,

@@ -85,6 +85,8 @@ import i18next, { t } from 'i18next'
 import { ipcMain } from '../platform'
 import { getGame, handleExit } from '../utils'
 import {
+  macDesktopShortcutPresent,
+  macDesktopShortcutWanted,
   shortcutFiles,
   shortcutPathPresent
 } from '../shortcuts/shortcuts/shortcuts'
@@ -225,10 +227,16 @@ export function registerShortcutsFlows(): void {
         'box.shortcuts.message',
         'Shortcuts were created on Desktop and Start Menu'
       )
-      const bodyMac = i18next.t(
-        'box.shortcuts.message-mac',
-        'Shortcuts were created on the Applications folder'
-      )
+      // 261027-c4g: name the Desktop when the Desktop link was also made.
+      const bodyMac = macDesktopShortcutWanted()
+        ? i18next.t(
+            'gamelib:box.shortcuts.messageMacDesktop',
+            'Shortcuts were created in the Applications folder and on the Desktop'
+          )
+        : i18next.t(
+            'box.shortcuts.message-mac',
+            'Shortcuts were created on the Applications folder'
+          )
       notify({
         body: isMac ? bodyMac : body,
         title: i18next.t('box.shortcuts.title', 'Shortcuts')
@@ -258,6 +266,11 @@ export function registerShortcutsFlows(): void {
       const appName = args[0] as string
       const runner = args[1] as Runner
 
+      // 261027-c4g: snapshot BEFORE removal; the toast follows what was on disk, not the setting.
+      const hadDesktopItem = macDesktopShortcutPresent(
+        getGame(appName, runner).getGameInfo().title
+      )
+
       try {
         await getGame(appName, runner).removeShortcuts()
       } catch (error) {
@@ -278,10 +291,15 @@ export function registerShortcutsFlows(): void {
           'box.shortcuts.message-remove',
           'Shortcuts were removed from Desktop and Start Menu'
         )
-        const bodyMac = i18next.t(
-          'box.shortcuts.message-remove-mac',
-          'Shortcuts were removed from the Applications folder'
-        )
+        const bodyMac = hadDesktopItem
+          ? i18next.t(
+              'gamelib:box.shortcuts.messageRemoveMacDesktop',
+              'Shortcuts were removed from the Applications folder and the Desktop'
+            )
+          : i18next.t(
+              'box.shortcuts.message-remove-mac',
+              'Shortcuts were removed from the Applications folder'
+            )
 
         notify({
           body: isMac ? bodyMac : body,

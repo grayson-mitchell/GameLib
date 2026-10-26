@@ -294,6 +294,20 @@ function shortcutPathPresent(file: string): boolean {
   }
 }
 
+/** 261027-c4g: the macOS add toast names the Desktop iff the Desktop-link setting is on. */
+function macDesktopShortcutWanted(): boolean {
+  return isMac && GlobalConfig.get().getSettings().addDesktopShortcuts === true
+}
+
+/**
+ * 261027-c4g: a macOS Desktop item (link, dangling link, or legacy bundle) is on disk right now.
+ * False without a title rather than a fabricated path (260905-mv5 reasoning).
+ */
+function macDesktopShortcutPresent(title: string | undefined): boolean {
+  if (!isMac || !title) return false
+  return shortcutPathPresent(shortcutFiles(title)[0] ?? '')
+}
+
 // Generated once, into ~/Applications only; the Desktop item links to it.
 async function generateMacOsApp(gameInfo: GameInfo, appShortcut: string) {
   const { app_name, runner } = gameInfo
@@ -417,4 +431,11 @@ async function convertPngToICNS(
   }
 }
 
-export { removeShortcuts, addShortcuts, shortcutFiles, shortcutPathPresent }
+export {
+  removeShortcuts,
+  addShortcuts,
+  shortcutFiles,
+  shortcutPathPresent,
+  macDesktopShortcutWanted,
+  macDesktopShortcutPresent
+}

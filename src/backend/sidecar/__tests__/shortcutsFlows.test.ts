@@ -41,6 +41,19 @@
  * before this change and still is.
  */
 
+// ── 261027-c4g: backend/constants/environment `isMac` as a controllable getter. The default is the
+// real host value, so every other describe in this file behaves exactly as before; the c4g describe
+// flips it and an afterEach restores it.
+const HOST_IS_MAC = process.platform === 'darwin'
+const mockEnv = { isMac: HOST_IS_MAC }
+jest.mock('backend/constants/environment', () =>
+  Object.defineProperty(
+    { ...jest.requireActual('backend/constants/environment') },
+    'isMac',
+    { get: () => mockEnv.isMac, enumerable: true, configurable: true }
+  )
+)
+
 // ── backend/config — avoid a real on-disk config.json read while driving the real addShortcuts
 jest.mock('backend/config', () => ({
   GlobalConfig: {
@@ -129,10 +142,11 @@ import {
   readdirSync,
   mkdirSync,
   rmSync,
-  statSync
+  statSync,
+  symlinkSync
 } from 'fs'
 import { homedir, tmpdir } from 'os'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { dirSync, type DirResult } from 'tmp'
 import { realHomeAtSetup } from 'backend/jest.setupContainment'
 import { registerShortcutsFlows } from '../shortcutsFlowRegistration'
@@ -538,7 +552,10 @@ describe('261012-ca6 add/remove resolve whether shortcuts exist once the work ha
     expect(mockNotify).toHaveBeenCalledTimes(1)
     expect([
       'box.shortcuts.message-remove',
-      'box.shortcuts.message-remove-mac'
+      'box.shortcuts.message-remove-mac',
+      // 261027-c4g: containedApp's first path is the Desktop item on darwin, so on a mac host
+      // the pre-removal snapshot sees a Desktop item.
+      'gamelib:box.shortcuts.messageRemoveMacDesktop'
     ]).toContain(mockNotify.mock.calls[0][0].body)
   })
 
@@ -577,6 +594,139 @@ describe('261012-ca6 add/remove resolve whether shortcuts exist once the work ha
     ).toBe(true)
     expect(mockNotify).toHaveBeenCalledTimes(1)
     expect(mockNotify.mock.calls[0][0].body).toBe('box.shortcuts.error-remove')
+  })
+})
+
+// ── 261027-c4g: the macOS toast names the Desktop. On darwin `shortcutFiles(title)` is
+// `[<home>/Desktop/<title>.app, <home>/Applications/<title>.app]` under the containment home; every
+// test asserts both before writing. The remove cases decide from the disk BEFORE removal, so the
+// Desktop link is created as a real symlink and the setting is varied independently of it.
+describe('261027-c4g mac toast names the Desktop', () => {
+  let originalPlatform: string
+  const created: string[] = []
+  const DESKTOP_ADD = 'gamelib:box.shortcuts.messageMacDesktop'
+  const DESKTOP_REMOVE = 'gamelib:box.shortcuts.messageRemoveMacDesktop'
+
+  beforeEach(() => {
+    originalPlatform = overrideProcessPlatform('darwin')
+    mockEnv.isMac = true
+  })
+
+  afterEach(() => {
+    overrideProcessPlatform(originalPlatform)
+    mockEnv.isMac = HOST_IS_MAC
+    for (const path of created.splice(0)) {
+      rmSync(path, { recursive: true, force: true })
+    }
+  })
+
+  function setDesktopSetting(addDesktopShortcuts: boolean) {
+    mockGlobalConfigGet.mockReturnValue({
+      getSettings: () =>
+        ({
+          addDesktopShortcuts,
+          addStartMenuShortcuts: true,
+          addSteamShortcuts: false
+        }) as Partial<AppSettings>
+    })
+  }
+
+  function contained(title: string): { desktop: string; menu: string } {
+    const [desktop, menu] = shortcutFiles(title)
+    expect(desktop.startsWith(homedir())).toBe(true)
+    expect(menu.startsWith(homedir())).toBe(true)
+    created.push(desktop, menu)
+    return { desktop, menu }
+  }
+
+  function fakeGame(
+    title: string,
+    work: { add?: () => Promise<void>; remove?: () => Promise<void> }
+  ) {
+    return {
+      getGameInfo: () => makeGameInfo({ title }),
+      addShortcuts: jest.fn(work.add ?? (() => Promise.resolve())),
+      removeShortcuts: jest.fn(work.remove ?? (() => Promise.resolve()))
+    }
+  }
+
+  async function runAdd(title: string, toggle: boolean) {
+    const { menu } = contained(title)
+    setDesktopSetting(toggle)
+    mockGetGame.mockReturnValue(
+      fakeGame(title, {
+        add: () => {
+          mkdirSync(menu, { recursive: true })
+          return Promise.resolve()
+        }
+      })
+    )
+    await expect(
+      handlerRegistry.get('addShortcut')?.(null, 'app', 'legendary', true)
+    ).resolves.toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    return mockNotify.mock.calls[0][0].body
+  }
+
+  async function runRemove(
+    title: string,
+    toggle: boolean,
+    desktopLink: boolean
+  ) {
+    const { desktop, menu } = contained(title)
+    setDesktopSetting(toggle)
+    mkdirSync(menu, { recursive: true })
+    if (desktopLink) {
+      mkdirSync(dirname(desktop), { recursive: true })
+      symlinkSync(menu, desktop)
+    }
+    mockGetGame.mockReturnValue(
+      fakeGame(title, {
+        remove: () => {
+          rmSync(desktop, { recursive: true, force: true })
+          rmSync(menu, { recursive: true, force: true })
+          return Promise.resolve()
+        }
+      })
+    )
+    await expect(
+      handlerRegistry.get('removeShortcut')?.(null, 'app', 'legendary')
+    ).resolves.toBe(false)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    return mockNotify.mock.calls[0][0].body
+  }
+
+  it('add, Desktop setting on -> the Applications-and-Desktop key', async () => {
+    expect(await runAdd('261027-c4g Add On', true)).toBe(DESKTOP_ADD)
+  })
+
+  it('add, Desktop setting off -> the unchanged message-mac key', async () => {
+    expect(await runAdd('261027-c4g Add Off', false)).toBe(
+      'box.shortcuts.message-mac'
+    )
+  })
+
+  it('remove, Desktop link on disk and setting now OFF -> the Desktop key (disk decides)', async () => {
+    expect(await runRemove('261027-c4g Remove Link Off', false, true)).toBe(
+      DESKTOP_REMOVE
+    )
+  })
+
+  it('remove, no Desktop item and setting ON -> the unchanged message-remove-mac key', async () => {
+    expect(await runRemove('261027-c4g Remove NoLink On', true, false)).toBe(
+      'box.shortcuts.message-remove-mac'
+    )
+  })
+
+  it('not macOS -> the generic keys whatever the setting', async () => {
+    mockEnv.isMac = false
+    expect(await runAdd('261027-c4g Generic Add', true)).toBe(
+      'box.shortcuts.message'
+    )
+    mockNotify.mockClear()
+    expect(await runRemove('261027-c4g Generic Remove', true, true)).toBe(
+      'box.shortcuts.message-remove'
+    )
   })
 })
 
