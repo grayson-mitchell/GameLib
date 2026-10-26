@@ -29,6 +29,14 @@ import {
 // redefine a divergent one.
 const NUMERIC_APP_ID = /^\d+$/
 
+// quick 261026-u1a: the non-strict objects below strip undeclared keys on
+// read (Pitfall 2), so the lif backup fingerprints must be declared in both
+// the scan and the retained top-level copy.
+const originalFingerprintsSchema = z.record(
+  z.string(),
+  z.object({ size: z.number(), sha1: z.string() })
+)
+
 const bridgeScanVerdictSchema = z.object({
   status: z.enum(['clean', 'miss']),
   arch: z.enum(['x86', 'x64']),
@@ -54,7 +62,8 @@ const bridgeScanVerdictSchema = z.object({
         reason: z.literal('il2cpp: not scanned')
       })
     ])
-    .optional()
+    .optional(),
+  originalFingerprints: originalFingerprintsSchema.optional()
 })
 
 const bridgeVerdictSchema = z.object({
@@ -69,7 +78,9 @@ const bridgeVerdictSchema = z.object({
   drm: z.enum(['ceg']).optional(),
   // 51-REVIEW WR-01: same Pitfall-2 reasoning -- the version pool retained
   // by clearBridgeScanVerdict would otherwise be stripped on read.
-  interfaceVersions: z.record(z.string(), z.string()).optional()
+  interfaceVersions: z.record(z.string(), z.string()).optional(),
+  // quick 261026-u1a: same reasoning for the retained fingerprints.
+  originalFingerprints: originalFingerprintsSchema.optional()
 })
 
 /**
@@ -172,6 +183,12 @@ export function writeBridgeScanVerdict(
  * already-shimmed target it is the only version source left, and losing it
  * would leave the title a permanent `@unknown-version` miss. An empty pool
  * leaves any previously retained one in place.
+ *
+ * quick 261026-u1a: likewise the scan's non-empty `originalFingerprints` are
+ * retained as the top-level `bridge.originalFingerprints`. The lif guard
+ * (`backupFingerprintChanged`) reads an absent fingerprint as changed, which
+ * cost one rescan and shim re-place per auto-clear (51-UAT item 21). An
+ * empty or absent map leaves any previously retained one in place.
  */
 export function clearBridgeScanVerdict(appId: string): void {
   if (rejectNonNumeric('clearBridgeScanVerdict', appId)) return
@@ -180,10 +197,14 @@ export function clearBridgeScanVerdict(appId: string): void {
   if (!existing?.bridge?.scan) return
 
   const { scan, ...restBridge } = existing.bridge
-  const retained =
-    Object.keys(scan.interfaceVersions ?? {}).length > 0
+  const retained = {
+    ...(Object.keys(scan.interfaceVersions ?? {}).length > 0
       ? { interfaceVersions: scan.interfaceVersions }
-      : {}
+      : {}),
+    ...(Object.keys(scan.originalFingerprints ?? {}).length > 0
+      ? { originalFingerprints: scan.originalFingerprints }
+      : {})
+  }
   steamMetadataStore.set(appId, {
     ...existing,
     bridge: { ...restBridge, ...retained }

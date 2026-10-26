@@ -280,6 +280,13 @@ export interface SteamBridgeVerdict {
    * launch. `launchBridgeGame` falls back to this when `scan` is absent.
    * Kept at the top level for the same reason as `drm`. */
   interfaceVersions?: Record<string, string>
+  /** quick 261026-u1a: the cleared scan's non-empty `originalFingerprints`,
+   * retained by `clearBridgeScanVerdict` so the next launch's lif backup
+   * check does not take an unchanged `.gamelib-orig` for a new one (a missing
+   * persisted fingerprint reads as changed, costing a rescan and shim
+   * re-place per auto-clear). A fresher `scan.originalFingerprints` always
+   * takes precedence. */
+  originalFingerprints?: SteamBridgeScanVerdict['originalFingerprints']
 }
 
 // The `import type { SteamBottleConfig }` and its `export type { ... }`

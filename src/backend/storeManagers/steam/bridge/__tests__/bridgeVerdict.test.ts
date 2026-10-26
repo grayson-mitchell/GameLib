@@ -226,6 +226,58 @@ describe('clearBridgeScanVerdict', () => {
     })
   })
 
+  it('quick 261026-u1a: retains the cleared scan originalFingerprints (and interfaceVersions) at the top level', () => {
+    const fps = { 'drive_c/game/steam_api64.dll': { size: 1, sha1: 'aa' } }
+    writeBridgeScanVerdict(
+      APP_ID,
+      makeScanVerdict({ originalFingerprints: fps })
+    )
+
+    clearBridgeScanVerdict(APP_ID)
+
+    const verdict = readBridgeVerdict(APP_ID)
+    expect(verdict?.scan).toBeUndefined()
+    expect(verdict?.originalFingerprints).toEqual(fps)
+    expect(verdict?.interfaceVersions).toEqual({ SteamUtils: 'SteamUtils005' })
+  })
+
+  it('quick 261026-u1a: scan.originalFingerprints survives a read (not stripped by the schema)', () => {
+    const fps = { 'drive_c/game/steam_api64.dll': { size: 1, sha1: 'aa' } }
+    writeBridgeScanVerdict(
+      APP_ID,
+      makeScanVerdict({ originalFingerprints: fps })
+    )
+
+    expect(readBridgeVerdict(APP_ID)?.scan?.originalFingerprints).toEqual(fps)
+  })
+
+  it('quick 261026-u1a: an absent or empty cleared fingerprint map does not overwrite a retained one', () => {
+    const fps = { 'drive_c/game/steam_api64.dll': { size: 1, sha1: 'aa' } }
+    writeBridgeScanVerdict(
+      APP_ID,
+      makeScanVerdict({ originalFingerprints: fps })
+    )
+    clearBridgeScanVerdict(APP_ID)
+    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
+    clearBridgeScanVerdict(APP_ID)
+    writeBridgeScanVerdict(
+      APP_ID,
+      makeScanVerdict({ originalFingerprints: {} })
+    )
+
+    clearBridgeScanVerdict(APP_ID)
+
+    expect(readBridgeVerdict(APP_ID)?.originalFingerprints).toEqual(fps)
+  })
+
+  it('quick 261026-u1a: clearing a scan with no fingerprints fabricates no originalFingerprints key', () => {
+    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
+
+    clearBridgeScanVerdict(APP_ID)
+
+    expect(readBridgeVerdict(APP_ID)).not.toHaveProperty('originalFingerprints')
+  })
+
   it('is a no-op when no entry exists at all', () => {
     clearBridgeScanVerdict(APP_ID)
 
