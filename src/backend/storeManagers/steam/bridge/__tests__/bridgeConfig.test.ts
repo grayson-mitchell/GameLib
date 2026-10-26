@@ -298,4 +298,23 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       false
     )
   })
+
+  // Spike 034: tier-2 shimFeatures ride in the same cfg as `fix.` lines.
+  it('appends fix lines after the port/appid/iface lines, dropping malformed ones', () => {
+    const result = writeBridgeConfig({
+      exePath: gameExePath,
+      bottleName: 'GameLibSteamBridge-206060',
+      appId: APP_ID,
+      port: PORT,
+      fixLines: [
+        'fix.wgl.hideExtensions=WGL_ARB_create_context*',
+        'port=1',
+        'fix.x=1\nport=2'
+      ]
+    })
+    expect(result.status).toBe('written')
+    expect(readFileSync(join(gameDir, BRIDGE_CONFIG_FILENAME), 'utf-8')).toBe(
+      `port=${PORT}\nappid=${APP_ID}\nfix.wgl.hideExtensions=WGL_ARB_create_context*\n`
+    )
+  })
 })

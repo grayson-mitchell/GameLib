@@ -1,0 +1,10 @@
+{
+  "title": "HOARD",
+  "evidence": ".planning/spikes/034-known-fixes-v2-hoard/README.md",
+  "notes": {
+    "wgl": "Hoard asks for an OpenGL 3.3 compatibility context, which macOS cannot give. Hiding WGL_ARB_create_context* makes its GLEW path fall back to a legacy context (spikes 030, 033); spike 034 validated it through GameLib's real bridge launch."
+  },
+  "shimFeatures": {
+    "wgl.hideExtensions": ["WGL_ARB_create_context*"]
+  }
+}

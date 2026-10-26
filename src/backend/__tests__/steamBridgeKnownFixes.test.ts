@@ -66,6 +66,7 @@ import { bundledFixesPath, fixesPath, localFixesPath } from '../constants/paths'
 import {
   applySteamBridgeKnownFixes,
   buildRegistryFixCommandParts,
+  steamShimFeatureCfgLines,
   validateRegistryFixes
 } from '../storeManagers/steam/bridgeKnownFixes'
 
@@ -525,5 +526,79 @@ describe('bundled 284100 profile', () => {
         )
       )
     ).toBe(false)
+  })
+})
+
+describe('bundled 63000 profile', () => {
+  it('yields the Hoard WGL fix line and cites spike 034', () => {
+    const path = jest.requireActual('path')
+    const fs = jest.requireActual('fs')
+    const fixesDir = path.join(__dirname, '..', '..', '..', 'public', 'fixes')
+    const parsed = JSON.parse(
+      fs.readFileSync(path.join(fixesDir, '63000-steam.profile.json'), 'utf8')
+    )
+    writeBundled(parsed)
+    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([
+      'fix.wgl.hideExtensions=WGL_ARB_create_context*'
+    ])
+    expect(parsed.evidence).toContain('034-known-fixes-v2-hoard')
+    expect(fs.existsSync(path.join(fixesDir, '63000-steam.json'))).toBe(false)
+  })
+})
+
+// Spike 034: tier-2 shimFeatures -> gamelib_bridge.cfg `fix.` lines.
+describe('steamShimFeatureCfgLines', () => {
+  const HIDE = { 'wgl.hideExtensions': ['WGL_ARB_create_context*'] }
+
+  it('turns a local profile into one fix line', () => {
+    writeLocal({ shimFeatures: HIDE })
+    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([
+      'fix.wgl.hideExtensions=WGL_ARB_create_context*'
+    ])
+  })
+
+  it('reads a bundled profile and joins several patterns', () => {
+    writeBundled({
+      shimFeatures: {
+        'wgl.hideExtensions': ['WGL_ARB_create_context', 'WGL_EXT_swap*']
+      }
+    })
+    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([
+      'fix.wgl.hideExtensions=WGL_ARB_create_context,WGL_EXT_swap*'
+    ])
+  })
+
+  it('never takes shimFeatures from the remote layer or a tier-1 file', () => {
+    writeFileSync(
+      join(fixesPath, `${APP_ID}-steam.profile.json`),
+      JSON.stringify({ shimFeatures: HIDE })
+    )
+    writeIn(localFixesPath, { shimFeatures: HIDE })
+    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([])
+  })
+
+  it.each([
+    [['WGL_ARB*\nport=1']],
+    [['WGL ARB']],
+    [['a,b']],
+    [['*']],
+    [[]],
+    ['WGL_ARB_create_context*'],
+    [Array.from({ length: 17 }, (_, i) => `WGL_${i}`)]
+  ])('drops the feature for invalid patterns %j', (patterns) => {
+    writeLocal({ shimFeatures: { 'wgl.hideExtensions': patterns } })
+    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([])
+    expect(mockLogWarning).toHaveBeenCalled()
+  })
+
+  it('drops an unknown feature and keeps the known one', () => {
+    writeLocal({ shimFeatures: { ...HIDE, 'gl.nope': true } })
+    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([
+      'fix.wgl.hideExtensions=WGL_ARB_create_context*'
+    ])
+    expect(mockLogWarning).toHaveBeenCalledWith(
+      expect.stringContaining("unknown shim feature 'gl.nope'"),
+      'Steam'
+    )
   })
 })

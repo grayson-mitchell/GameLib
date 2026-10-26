@@ -1171,6 +1171,20 @@ export interface KnownFixProfile {
    * only for depots the game itself declares (quick 261025-rkj).
    */
   steamSharedRedists?: string[]
+  /**
+   * Generic capabilities of GameLib's steam_api shim, keyed by feature name,
+   * handed to the shim as `fix.<name>=` lines in `gamelib_bridge.cfg` (spike
+   * 034). Steam bridge launches only.
+   */
+  shimFeatures?: KnownFixShimFeatures
+}
+
+export interface KnownFixShimFeatures {
+  /**
+   * WGL extension tokens to hide from `wglGetExtensionsString{ARB,EXT}`. Each
+   * entry is an exact token or a prefix ending in `*`.
+   */
+  'wgl.hideExtensions'?: string[]
 }
 
 export interface UploadedLogData {

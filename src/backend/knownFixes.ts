@@ -48,8 +48,10 @@ const TIER2_FILE_SUFFIX = '.profile.json'
 /**
  * Keys a tier-1 file may carry, at any layer. An allow-list, so a newly added
  * tier-2 key cannot reach the remote layer by being forgotten.
- * `dllOverrides`, `overlays`, `shimFeatures` and `platforms` belong in
- * TIER2_PROFILE_KEYS when implemented and must never be added here.
+ * `shimFeatures` is already a tier-2 key (spike 034 / quick 261026-ng9) and
+ * must never be added here. `dllOverrides`, `overlays` and `platforms` are
+ * not implemented yet; they belong in TIER2_PROFILE_KEYS when they are, and
+ * must never be added here either.
  */
 export const TIER1_KNOWN_FIX_KEYS = [
   'title',
@@ -61,14 +63,15 @@ export const TIER1_KNOWN_FIX_KEYS = [
   'launchNotice'
 ] as const
 
-// `dllOverrides`, `overlays`, `shimFeatures`, `platforms` join this list when
-// implemented. `title` and `notes` are descriptive and allowed in both tiers.
+// `dllOverrides`, `overlays`, `platforms` join this list when implemented.
+// `title` and `notes` are descriptive and allowed in both tiers.
 const TIER2_PROFILE_KEYS = [
   'title',
   'notes',
   'evidence',
   'registry',
-  'steamSharedRedists'
+  'steamSharedRedists',
+  'shimFeatures'
 ] as const
 
 const DESCRIPTIVE_KEYS: readonly string[] = ['title', 'notes']

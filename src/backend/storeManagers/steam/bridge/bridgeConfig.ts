@@ -60,6 +60,9 @@ interface WriteBridgeConfigArgs {
    * resolves the cfg beside its own module (`load_bridge_port_once`), so a
    * copy must sit in each of their directories (quick 261023-ue0). */
   shimPaths?: string[]
+  /** `fix.<feature>=<value>` lines from the game's tier-2 known-fix profile
+   * (`steamShimFeatureCfgLines`), read by the shim at DLL load (spike 034). */
+  fixLines?: string[]
 }
 
 type WriteBridgeConfigResult =
@@ -114,8 +117,15 @@ function isContainedWithin(
 export function writeBridgeConfig(
   args: WriteBridgeConfigArgs
 ): WriteBridgeConfigResult {
-  const { exePath, bottleName, appId, port, interfaceVersions, shimPaths } =
-    args
+  const {
+    exePath,
+    bottleName,
+    appId,
+    port,
+    interfaceVersions,
+    shimPaths,
+    fixLines
+  } = args
 
   if (!NUMERIC_APP_ID.test(appId)) {
     logWarning(
@@ -179,6 +189,16 @@ export function writeBridgeConfig(
     for (const [family, version] of Object.entries(interfaceVersions)) {
       lines.push(`iface.${family}=${version}`)
     }
+  }
+  for (const line of fixLines ?? []) {
+    if (!line.startsWith('fix.') || /[\r\n]/.test(line)) {
+      logWarning(
+        `writeBridgeConfig: dropped malformed fix line ${JSON.stringify(line)} for appId ${appId}`,
+        LogPrefix.Steam
+      )
+      continue
+    }
+    lines.push(line)
   }
   const content = lines.join('\n') + '\n'
 

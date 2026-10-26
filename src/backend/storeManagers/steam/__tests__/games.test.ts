@@ -397,7 +397,9 @@ jest.mock('../bottleProcessMonitor', () => ({
 // lazily imported by fireBridgeWineLaunch. resetMocks wipes implementations
 // before EACH test, so a file-scope beforeEach below re-applies a passthrough.
 jest.mock('../bridgeKnownFixes', () => ({
-  applySteamBridgeKnownFixes: jest.fn()
+  applySteamBridgeKnownFixes: jest.fn(),
+  // Spike 034: undefined under resetMocks, so no fix lines reach the cfg.
+  steamShimFeatureCfgLines: jest.fn()
 }))
 
 // quick 261025-rkj: the bridge first-launch shared redist step.

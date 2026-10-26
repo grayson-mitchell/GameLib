@@ -56,6 +56,59 @@ export function validateRegistryFixes(
   })
 }
 
+// The shim's feature catalogue (spike 034). Every entry is generic: a feature
+// name the shim implements and a validator for its parameters. The shim reads
+// at most 16 patterns of under 64 bytes each.
+const WGL_EXTENSION_PATTERN = /^[A-Za-z0-9_]{1,62}\*?$/
+const MAX_WGL_PATTERNS = 16
+
+/**
+ * `fix.<feature>=<value>` lines for `gamelib_bridge.cfg` from the tier-2
+ * profile's `shimFeatures`. An unknown feature or invalid parameter is dropped
+ * with a warning, never passed to the shim.
+ */
+export function steamShimFeatureCfgLines(appId: string): string[] {
+  const features: unknown = readKnownFixProfile(appId, 'steam')?.shimFeatures
+  if (features === undefined) return []
+  if (typeof features !== 'object' || features === null) {
+    logWarning(
+      `Steam ${appId}: shimFeatures is not an object, ignoring it`,
+      LogPrefix.Steam
+    )
+    return []
+  }
+  const lines: string[] = []
+  for (const [name, value] of Object.entries(features)) {
+    if (name !== 'wgl.hideExtensions') {
+      logWarning(
+        `Steam ${appId}: unknown shim feature '${name}', ignoring it`,
+        LogPrefix.Steam
+      )
+      continue
+    }
+    const patterns = Array.isArray(value)
+      ? value.filter(
+          (p): p is string =>
+            typeof p === 'string' && WGL_EXTENSION_PATTERN.test(p)
+        )
+      : []
+    if (
+      !Array.isArray(value) ||
+      patterns.length !== value.length ||
+      patterns.length === 0 ||
+      patterns.length > MAX_WGL_PATTERNS
+    ) {
+      logWarning(
+        `Steam ${appId}: invalid ${name} patterns ${JSON.stringify(value)}, ignoring the feature`,
+        LogPrefix.Steam
+      )
+      continue
+    }
+    lines.push(`fix.${name}=${patterns.join(',')}`)
+  }
+  return lines
+}
+
 export async function applySteamBridgeKnownFixes(
   appId: string,
   bridgeBottleSettings: GameSettings,

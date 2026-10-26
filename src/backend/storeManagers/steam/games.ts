@@ -3127,12 +3127,15 @@ export default class SteamGame implements Game {
       shimResult.status === 'placed-miss'
         ? shimResult.shimPaths
         : (shimResult.shimPaths ?? [shimResult.shimPath])
+    // Spike 034: the tier-2 profile's shimFeatures ride in the same cfg.
+    const { steamShimFeatureCfgLines } = await import('./bridgeKnownFixes')
     const configResult = writeBridgeConfig({
       exePath,
       bottleName: bridgeBottleSettings.wineCrossoverBottle,
       appId: this.appId,
       port: helperReady.port,
       shimPaths,
+      fixLines: steamShimFeatureCfgLines(this.appId),
       ...(interfaceVersionsForConfig
         ? { interfaceVersions: interfaceVersionsForConfig }
         : {})
