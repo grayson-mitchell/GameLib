@@ -6210,6 +6210,67 @@ describe('downloadDepotFiles', () => {
 
       expect(result.failures).toEqual([])
       expect(result.allModesApplied).toBe(false)
+      // quick-261026-uhi: a NON-cancelled zero-chmod run keeps the warning.
+      const warnings = jest
+        .mocked(logWarning)
+        .mock.calls.map((c) => String(c[0]))
+      expect(
+        warnings.some(
+          (m) =>
+            /chmodAttempts=0/.test(m) &&
+            /failing closed to StateFlags=1026/.test(m)
+        )
+      ).toBe(true)
+    })
+
+    it('quick-261026-uhi: a cancelled run against an executable-claiming plan still returns allModesApplied: false but does NOT log the chmodAttempts=0 fail-close warning', async () => {
+      // A user pause aborts the job loop before executable files reach chmod,
+      // so chmodAttempts=0 by construction. That is not an integrity signal.
+      const mkFile = (name: string): DepotPlanFile => ({
+        filename: name,
+        size: 1,
+        sha_content: sha1Hex(Buffer.from('x')),
+        chunks: [
+          {
+            sha: 'aa',
+            gid: 'aa',
+            cb_original: 1,
+            cb_compressed: 1,
+            offset: 0
+          } as unknown as DepotPlanFile['chunks'][number]
+        ],
+        flags: EXECUTABLE_FLAG
+      })
+      const plan = makePlan(
+        [
+          {
+            depotId: '67a',
+            gid: 'g79',
+            key: Buffer.from('key'),
+            files: [mkFile('bin1'), mkFile('bin2'), mkFile('bin3')]
+          }
+        ],
+        3
+      )
+      const controller = new AbortController()
+      jest.mocked(fetchChunk).mockImplementation(async () => {
+        controller.abort()
+        return Buffer.from('x')
+      })
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS,
+        signal: controller.signal
+      })
+
+      expect(result.outcome).toBe('cancelled')
+      expect(result.allModesApplied).toBe(false)
+      const warnings = jest
+        .mocked(logWarning)
+        .mock.calls.map((c) => String(c[0]))
+      expect(warnings.some((m) => /chmodAttempts=0/.test(m))).toBe(false)
     })
 
     it('Task 2a: a plan with NO executable-flagged entries at all still returns allModesApplied: true (no false-positive downgrade, T-23-28)', async () => {

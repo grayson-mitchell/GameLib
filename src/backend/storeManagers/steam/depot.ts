@@ -3605,7 +3605,20 @@ export async function downloadDepotFiles(
       failures.length === 0 &&
       (!executableClaimedByManifest || modesActuallyAppliedThisRun)
 
-    if (executableClaimedByManifest && !modesActuallyAppliedThisRun) {
+    // quick-261026-uhi (todo 2026-10-25, observed in the XCOM 200510 pause
+    // logs): a user pause/cancel aborts the job loop before executable files
+    // reach chmod, so chmodAttempts=0 is EXPECTED there and is not an
+    // integrity finding. Suppress only the log line: allModesApplied above is
+    // deliberately still false, so the 1026 outcome is unchanged, and the
+    // cancelled run also fails allFilesVerifiedThisRun via allJobsAttempted.
+    // The gate is abort-only (not runLooksComplete) so a non-cancelled run
+    // that applied zero chmods against an executable-claiming manifest, with
+    // or without failures, still warns.
+    if (
+      executableClaimedByManifest &&
+      !modesActuallyAppliedThisRun &&
+      !opts.signal?.aborted
+    ) {
       logWarning(
         `downloadDepotFiles: appId=${plan.appId} manifest claims ` +
           `executableFlagged=${finalCensus.executableFlagged} but this ` +
