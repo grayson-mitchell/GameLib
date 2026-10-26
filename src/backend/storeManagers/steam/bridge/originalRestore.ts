@@ -25,7 +25,7 @@ import { isGameLibShimBytes, probeOriginalBackup } from './shimGenerate'
 
 const BACKUP_SUFFIX = '.gamelib-orig'
 
-export type RestoreOutcomeName =
+type RestoreOutcomeName =
   | 'restored'
   | 'already-backed-up'
   | 'original-in-place'
@@ -34,13 +34,13 @@ export type RestoreOutcomeName =
   | 'backup-refused'
   | 'download-failed'
 
-export interface RestoreOutcome {
+interface RestoreOutcome {
   path: string
   outcome: RestoreOutcomeName
   detail?: string
 }
 
-export interface RestoreInput {
+interface RestoreInput {
   appId: string
   bottleDir: string
   installRoot: string
@@ -48,12 +48,12 @@ export interface RestoreInput {
   signal?: AbortSignal
 }
 
-export interface RestoreResult {
+interface RestoreResult {
   status: 'ok' | 'partial' | 'error'
   outcomes: RestoreOutcome[]
 }
 
-export interface RestoreDeps {
+interface RestoreDeps {
   downloadSelected?: typeof downloadSelectedDepotFiles
   findDlls?: typeof findRuntimeLoadedSteamApiDlls
 }

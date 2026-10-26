@@ -1179,7 +1179,7 @@ export interface KnownFixProfile {
   shimFeatures?: KnownFixShimFeatures
 }
 
-export interface KnownFixShimFeatures {
+interface KnownFixShimFeatures {
   /**
    * WGL extension tokens to hide from `wglGetExtensionsString{ARB,EXT}`. Each
    * entry is an exact token or a prefix ending in `*`.
