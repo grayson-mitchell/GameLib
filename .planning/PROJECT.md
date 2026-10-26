@@ -16,6 +16,8 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 
 **Phase 52 (bridge-backed steamclient.dll for SteamStub titles) complete 2026-10-25 against an amended done-when.** The forwarder reaches the native bridge (HELLO), and GameLib shows an honest in-app notice when the stub rejects the launch, with no `steam://run` fallback. Verification passed 7/7. The original goal, Grim Dawn reaching its main menu, was not met; it is deferred to the static-RE decision todo. Bridge-verified is not claimed.
 
+**Phase 55 (Steam bridge callback delivery for the web-API auth ticket) complete 2026-10-26.** `GetAuthTicketForWebApi` is forwarded to Mac Steam; the helper queues callback 168 via manual dispatch and serves it on CONTROL slot 6; the shim records `RegisterCallback` registrations and dispatches from `RunCallbacks` using the measured MSVC `Run(void*)` slot (x64 + x86 measured; x86 dispatch not yet executed live). Live gate PASS: Abiotic Factor (427410) reaches an interactive main menu with an EOS Connect login (item-4 literal pinned by operator decision post-run). Verification passed; code review 0 critical / 5 warning.
+
 **Earlier milestones:** v0.1 Steam Platform (shipped 2026-06-29, archived), v0.2 Polish, v0.3 Humble Bundle, v0.4 Compatibility Data, v0.5 macOS Compat Runtime, v0.6 Store Search (all recorded shipped in `MILESTONES.md`, never archived — their phase directories 5–26 stay under `.planning/phases/`), and v0.7 Steam Native Install (never formally closed — Phase 23 gaps G-23-01/G-23-02 open).
 
 ## Next Milestone Goals
@@ -142,4 +144,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-25 after Phase 52 (bridge-backed steamclient.dll for SteamStub titles), complete against the amended done-when. Previous footer, 2026-10-16: after the v0.8 Tauri Shell milestone (override closeout). Earlier footer, 2026-10-09: after Phase 49 (Cross-store signed-out / offline mode) COMPLETE: 12/12 plans, macOS live gate run once (10/11 pass, item 5 deferred), verification passed 9/9, code review 0 critical / 4 warning, 46 threats closed, Nyquist validated.*
+*Last updated: 2026-10-26 after Phase 55 (Steam bridge callback delivery for the web-API auth ticket), live gate PASS. Previous footer, 2026-10-25: after Phase 52 (bridge-backed steamclient.dll for SteamStub titles), complete against the amended done-when. Previous footer, 2026-10-16: after the v0.8 Tauri Shell milestone (override closeout). Earlier footer, 2026-10-09: after Phase 49 (Cross-store signed-out / offline mode) COMPLETE: 12/12 plans, macOS live gate run once (10/11 pass, item 5 deferred), verification passed 9/9, code review 0 critical / 4 warning, 46 threats closed, Nyquist validated.*
