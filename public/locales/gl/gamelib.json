@@ -25,6 +25,10 @@
                 "title": "Non se puido abrir o selector de ficheiros"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Creáronse accesos directos no cartafol de Aplicacións e no escritorio",
+            "messageRemoveMacDesktop": "Elimináronse os accesos directos do cartafol de Aplicacións e do escritorio"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Reinstalar mediante CrossOver",

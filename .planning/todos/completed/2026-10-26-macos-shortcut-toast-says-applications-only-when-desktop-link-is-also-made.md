@@ -38,3 +38,19 @@ Implement:
 
 Verify: jest for both send sites, i18n gates, scoped `npx prettier --check` on the `.ts` paths
 (locale JSON is prettier-ignored). Optional live glance on this Mac.
+
+## Closed 2026-10-27 (quick 261027-c4g)
+
+- `shortcuts.ts` gained `macDesktopShortcutWanted()` (macOS and `addDesktopShortcuts` on) and
+  `macDesktopShortcutPresent(title)` (a Desktop link, dangling link or legacy bundle is on disk).
+- Add: on macOS the toast follows the setting. On, it uses the new
+  `gamelib:box.shortcuts.messageMacDesktop`; off, the unchanged `box.shortcuts.message-mac`.
+- Remove: the toast follows a disk snapshot taken BEFORE removal, so a Desktop link left behind
+  with the toggle now off is still named (`gamelib:box.shortcuts.messageRemoveMacDesktop`);
+  otherwise `box.shortcuts.message-remove-mac`. linux/win32 keys are unchanged.
+- Both send sites (`ipc_handler.ts` and the shipped `sidecar/shortcutsFlowRegistration.ts`)
+  choose keys identically.
+- The two keys exist in all 49 `gamelib.json` catalogs (48 hand-authored, validated with
+  `validateTranslation()`), with `gamelib.mt.json` provenance in the 48 non-English locales.
+- Tests at both send sites: `shortcuts/__tests__/macShortcutToast.test.ts` and the
+  `261027-c4g` describe in `sidecar/__tests__/shortcutsFlows.test.ts`.

@@ -413,6 +413,10 @@
                 "title": "Impossible d'ouvrir le sélecteur de fichiers"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Des raccourcis ont été créés dans le dossier « Applications » et sur le Bureau",
+            "messageRemoveMacDesktop": "Des raccourcis ont été supprimés du dossier « Applications » et du Bureau"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Réinstaller via CrossOver",

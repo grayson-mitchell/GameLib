@@ -26,6 +26,10 @@
                 "title": "No se pudo abrir el selector de archivos"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Se han creado accesos directos en la carpeta Aplicaciones y en el Escritorio",
+            "messageRemoveMacDesktop": "Se han eliminado los accesos directos de la carpeta Aplicaciones y del Escritorio"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Reinstalar mediante CrossOver",

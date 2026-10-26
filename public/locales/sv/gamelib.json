@@ -25,6 +25,10 @@
                 "title": "Kunde inte öppna filväljaren"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Genvägar skapades i mappen Program och på skrivbordet",
+            "messageRemoveMacDesktop": "Genvägar togs bort från mappen Program och från skrivbordet"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Installera om via CrossOver",

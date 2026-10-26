@@ -406,6 +406,10 @@
                 "title": "Dateiauswahl konnte nicht geöffnet werden"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Verknüpfungen wurden im Anwendungsordner und auf dem Desktop erstellt",
+            "messageRemoveMacDesktop": "Verknüpfungen wurden aus dem Anwendungsordner und vom Desktop entfernt"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Über CrossOver neu installieren",

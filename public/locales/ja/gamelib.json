@@ -25,6 +25,10 @@
                 "title": "ファイル選択ダイアログを開けませんでした"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "アプリケーションフォルダとデスクトップにショートカットが作成されました",
+            "messageRemoveMacDesktop": "アプリケーションフォルダとデスクトップからショートカットが削除されました"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "CrossOver 経由で再インストール",

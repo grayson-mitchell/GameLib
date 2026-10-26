@@ -28,6 +28,10 @@
                 "title": "N'haller ket digeriñ an diuzer restroù"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Krouet eo bet berradennoù e teuliad an Arloadoù hag war ar Burev",
+            "messageRemoveMacDesktop": "Lamet eo bet ar berradennoù eus teuliad an Arloadoù hag eus ar Burev"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Adstaliañ dre CrossOver",

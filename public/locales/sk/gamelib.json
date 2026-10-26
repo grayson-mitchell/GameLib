@@ -26,6 +26,10 @@
                 "title": "Nepodarilo sa otvoriť výber súborov"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Zástupcovia boli vytvorení v priečinku Aplikácie a na ploche",
+            "messageRemoveMacDesktop": "Zástupcovia boli odstránení z priečinka Aplikácie a z plochy"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Preinštalovať cez CrossOver",

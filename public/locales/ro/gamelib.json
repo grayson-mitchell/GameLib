@@ -26,6 +26,10 @@
                 "title": "Nu s-a putut deschide selectorul de fișiere"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Scurtăturile au fost create în folderul Aplicații și pe Desktop",
+            "messageRemoveMacDesktop": "Scurtăturile au fost eliminate din folderul Aplicații și de pe Desktop"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Reinstalează prin CrossOver",

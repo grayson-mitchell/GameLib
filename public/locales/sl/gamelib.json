@@ -27,6 +27,10 @@
                 "title": "Izbirnika datotek ni bilo mogoče odpreti"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Bližnjice so bile ustvarjene v mapi Aplikacije in na namizju",
+            "messageRemoveMacDesktop": "Bližnjice so bile odstranjene iz mape Aplikacije in z namizja"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Znova namesti prek CrossOver",

@@ -26,6 +26,10 @@
                 "title": "לא ניתן היה לפתוח את בורר הקבצים"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "קיצורי דרך נוצרו בתיקיית האפליקציות ובשולחן העבודה",
+            "messageRemoveMacDesktop": "קיצורי דרך הוסרו מתיקיית האפליקציות ומשולחן העבודה"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "התקן מחדש דרך CrossOver",

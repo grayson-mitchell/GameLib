@@ -28,6 +28,10 @@
                 "title": "Níorbh fhéidir an roghnóir comhad a oscailt"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Cruthaíodh aicearraí san fhillteán Feidhmchláir agus ar an Deasc",
+            "messageRemoveMacDesktop": "Baineadh aicearraí as an bhfillteán Feidhmchláir agus as an Deasc"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Athshuiteáil trí CrossOver",

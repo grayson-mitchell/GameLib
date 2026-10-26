@@ -25,6 +25,10 @@
                 "title": "Ezin izan da fitxategi hautatzailea ireki"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Lasterbideak sortu dira Aplikazioak karpetan eta Mahaigainean",
+            "messageRemoveMacDesktop": "Lasterbideak kendu dira Aplikazioak karpetatik eta Mahaigainetik"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Berrinstalatu CrossOver bidez",

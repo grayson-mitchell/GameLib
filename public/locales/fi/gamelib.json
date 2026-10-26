@@ -25,6 +25,10 @@
                 "title": "Tiedostonvalitsinta ei voitu avata"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Oikopolut luotiin Ohjelmistot-kansioon ja työpöydälle",
+            "messageRemoveMacDesktop": "Oikopolut poistettiin Ohjelmistot-kansiosta ja työpöydältä"
+        },
         "steam": {
             "mac32Detected": {
                 "title": "32-bittinen macOS-versio havaittu",

@@ -25,6 +25,10 @@
                 "title": "Dosya seçici açılamadı"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Kısayollar Uygulamalar klasöründe ve Masaüstünde oluşturuldu",
+            "messageRemoveMacDesktop": "Kısayollar Uygulamalar klasöründen ve Masaüstünden kaldırıldı"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "CrossOver ile yeniden yükle",

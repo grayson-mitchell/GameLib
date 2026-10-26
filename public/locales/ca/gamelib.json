@@ -26,6 +26,10 @@
                 "title": "No s'ha pogut obrir el selector de fitxers"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "S'han creat dreceres a la carpeta d'aplicacions i a l'escriptori",
+            "messageRemoveMacDesktop": "S'han suprimit les dreceres de la carpeta d'aplicacions i de l'escriptori"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Reinstal·la mitjançant CrossOver",

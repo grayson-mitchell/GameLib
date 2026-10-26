@@ -25,6 +25,10 @@
                 "title": "Kunne ikke åbne filvælgeren"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Genveje blev oprettet i Applikationsmappen og på Skrivebordet",
+            "messageRemoveMacDesktop": "Genveje blev fjernet fra Applikationsmappen og Skrivebordet"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Geninstaller via CrossOver",

@@ -25,6 +25,10 @@
                 "title": "Không thể mở trình chọn tệp"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Lối Tắt đã được tạo trong thư mục Ứng Dụng và trên Desktop",
+            "messageRemoveMacDesktop": "Lối Tắt đã bị xóa khỏi thư mục Ứng Dụng và Desktop"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Cài đặt lại qua CrossOver",

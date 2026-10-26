@@ -25,6 +25,10 @@
                 "title": "파일 선택기를 열 수 없음"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "응용 프로그램 폴더와 바탕 화면에 바로가기가 생성됨",
+            "messageRemoveMacDesktop": "응용 프로그램 폴더와 바탕 화면에서 바로가기가 제거됨"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "CrossOver로 다시 설치",

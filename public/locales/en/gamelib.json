@@ -36,6 +36,10 @@
                 "noArguments": "(none)"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Shortcuts were created in the Applications folder and on the Desktop",
+            "messageRemoveMacDesktop": "Shortcuts were removed from the Applications folder and the Desktop"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Reinstall via CrossOver",

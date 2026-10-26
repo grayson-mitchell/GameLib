@@ -26,6 +26,10 @@
                 "title": "Não foi possível abrir o seletor de arquivos"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Os atalhos foram criados na pasta Aplicativos e na área de trabalho",
+            "messageRemoveMacDesktop": "Os atalhos foram removidos da pasta Aplicativos e da área de trabalho"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Reinstalar via CrossOver",

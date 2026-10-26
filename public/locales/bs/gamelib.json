@@ -26,6 +26,10 @@
                 "title": "Nije moguće otvoriti birač datoteka"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Prečice su kreirane u folderu Aplikacije i na radnoj površini",
+            "messageRemoveMacDesktop": "Prečice su uklonjene iz foldera Aplikacije i s radne površine"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Ponovo instaliraj putem CrossOver",

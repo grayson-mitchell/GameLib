@@ -25,6 +25,10 @@
                 "title": "Failivalijat ei saanud avada"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Otseteed loodi rakenduste kausta ja töölauale",
+            "messageRemoveMacDesktop": "Otseteed eemaldati rakenduste kaustast ja töölaualt"
+        },
         "steam": {
             "mac32Detected": {
                 "title": "Tuvastati 32-bitine macOS versioon",

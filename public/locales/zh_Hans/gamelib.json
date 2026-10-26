@@ -25,6 +25,10 @@
                 "title": "无法打开文件选择器"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "快捷方式已创建于应用程序文件夹和桌面",
+            "messageRemoveMacDesktop": "已从应用程序文件夹和桌面删除快捷方式"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "通过 CrossOver 重新安装",

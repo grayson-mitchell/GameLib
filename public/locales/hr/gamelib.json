@@ -26,6 +26,10 @@
                 "title": "Birač datoteka nije se mogao otvoriti"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Prečaci su stvoreni u mapi Aplikacije i na radnoj površini",
+            "messageRemoveMacDesktop": "Prečaci su uklonjeni iz mape Aplikacije i s radne površine"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Ponovno instaliraj putem CrossOver",

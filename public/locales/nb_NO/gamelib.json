@@ -25,6 +25,10 @@
                 "title": "Kunne ikke åpne filvelgeren"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Snarveier ble opprettet i applikasjonsmappen og på skrivebordet",
+            "messageRemoveMacDesktop": "Snarveier ble fjernet fra applikasjonsmappen og skrivebordet"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Installer på nytt via CrossOver",

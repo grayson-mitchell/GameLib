@@ -18,6 +18,8 @@
     "box.error.install.stalled_two",
     "box.filePicker.error.message",
     "box.filePicker.error.title",
+    "box.shortcuts.messageMacDesktop",
+    "box.shortcuts.messageRemoveMacDesktop",
     "box.steam.mac32Detected.confirm",
     "box.steam.mac32Detected.message",
     "box.steam.mac32Detected.title",

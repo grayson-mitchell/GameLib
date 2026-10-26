@@ -25,6 +25,10 @@
                 "title": "Fayl seçicisi açıla bilmədi"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Qısayollar Tətbiqlər qovluğunda və Masaüstündə yaradıldı",
+            "messageRemoveMacDesktop": "Qısayollar Tətbiqlər qovluğundan və Masaüstündən silindi"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "CrossOver ilə yenidən quraşdır",

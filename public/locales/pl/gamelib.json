@@ -27,6 +27,10 @@
                 "title": "Nie można otworzyć okna wyboru plików"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Skróty utworzono w folderze Applications i na Pulpicie",
+            "messageRemoveMacDesktop": "Skróty zostały usunięte z folderu Applications i z Pulpitu"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Zainstaluj ponownie przez CrossOver",

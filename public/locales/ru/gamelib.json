@@ -27,6 +27,10 @@
                 "title": "Не удалось открыть выбор файлов"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Ярлыки созданы в папке «Программы» и на рабочем столе",
+            "messageRemoveMacDesktop": "Ярлыки удалены из папки «Программы» и с рабочего стола"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Переустановить через CrossOver",

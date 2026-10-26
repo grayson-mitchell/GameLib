@@ -25,6 +25,10 @@
                 "title": "Tidak dapat membuka pemilih berkas"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Pintasan telah dibuat di folder Aplikasi dan di Desktop",
+            "messageRemoveMacDesktop": "Pintasan telah dihapus dari folder Aplikasi dan Desktop"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Pasang ulang melalui CrossOver",

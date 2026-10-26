@@ -26,6 +26,10 @@
                 "title": "Impossibile aprire il selettore di file"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Sono stati creati dei collegamenti nella cartella Applications (Applicazioni) e sul Desktop",
+            "messageRemoveMacDesktop": "Sono stati rimossi dei collegamenti dalla cartella Applications (Applicazioni) e dal Desktop"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Reinstalla tramite CrossOver",

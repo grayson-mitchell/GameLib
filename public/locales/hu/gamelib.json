@@ -25,6 +25,10 @@
                 "title": "Nem sikerült megnyitni a fájlválasztót"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "A parancsikonok létre lettek hozva az Alkalmazások mappában és az Asztalon",
+            "messageRemoveMacDesktop": "A parancsikonok el lettek távolítva az Alkalmazások mappából és az Asztalról"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Újratelepítés a CrossOver segítségével",

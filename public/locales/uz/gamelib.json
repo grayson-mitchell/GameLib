@@ -25,6 +25,10 @@
                 "title": "Fayl tanlagichini ochib bo'lmadi"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Yorliqlar Ilovalar papkasida va Ish stolida yaratildi",
+            "messageRemoveMacDesktop": "Yorliqlar Ilovalar papkasidan va Ish stolidan olib tashlandi"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "CrossOver orqali qayta o'rnatish",

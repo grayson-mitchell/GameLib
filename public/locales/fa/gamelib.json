@@ -25,6 +25,10 @@
                 "title": "انتخاب‌گر فایل باز نشد"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "میانبرها در پوشه نرم افزارها و روی دسکتاپ ایجاد شدند",
+            "messageRemoveMacDesktop": "میانبرها از پوشه نرم افزارها و از دسکتاپ پاک شدند"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "نصب مجدد از طریق CrossOver",

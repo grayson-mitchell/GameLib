@@ -25,6 +25,10 @@
                 "title": "無法開啟檔案選擇器"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "已在應用程式資料夾和桌面建立捷徑",
+            "messageRemoveMacDesktop": "已從應用程式資料夾和桌面移除捷徑"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "透過 CrossOver 重新安裝",

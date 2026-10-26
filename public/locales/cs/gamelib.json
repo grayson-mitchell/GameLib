@@ -27,6 +27,10 @@
                 "title": "Nepodařilo se otevřít výběr souborů"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Zástupci byli vytvořeni ve složce Aplikace a na ploše",
+            "messageRemoveMacDesktop": "Zástupci byli odstraněni ze složky Aplikace a z plochy"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Přeinstalovat přes CrossOver",

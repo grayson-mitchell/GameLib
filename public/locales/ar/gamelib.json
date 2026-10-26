@@ -29,6 +29,10 @@
                 "title": "تعذّر فتح منتقي الملفات"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "أُنشئت الاختصارات في مجلد التطبيقات وعلى سطح المكتب",
+            "messageRemoveMacDesktop": "أُزيلت الاختصارات من مجلد التطبيقات ومن سطح المكتب"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "أعد التثبيت عبر CrossOver",

@@ -27,6 +27,10 @@
                 "title": "Nepavyko atverti failų parinkiklio"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Nuorodos buvo sukurtos programų aplanke ir darbalaukyje",
+            "messageRemoveMacDesktop": "Nuorodos buvo pašalintos iš programų aplanko ir darbalaukio"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Įdiegti iš naujo per CrossOver",

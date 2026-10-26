@@ -25,6 +25,10 @@
                 "title": "Kon de bestandskiezer niet openen"
             }
         },
+        "shortcuts": {
+            "messageMacDesktop": "Snelkoppelingen zijn aangemaakt in de map Programma's en op het bureaublad",
+            "messageRemoveMacDesktop": "Snelkoppelingen zijn verwijderd uit de map Programma's en van het bureaublad"
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Opnieuw installeren via CrossOver",
