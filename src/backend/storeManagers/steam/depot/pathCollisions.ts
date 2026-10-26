@@ -26,6 +26,8 @@
 // losing to a real file is auto-resolved. Any other collision is REPORTED and
 // left alone rather than silently picking a winner.
 
+import { stat as fsStat } from 'node:fs/promises'
+import { basename, dirname, join } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { DepotPlan, DepotPlanFile } from '../depot'
 
@@ -56,14 +58,56 @@ interface PathCollisionReport {
  * path derives it: `resolveContainedPath` normalises `\` to `/` before
  * resolving, so `sound\music\x.acm` and `sound/music/x.acm` are ONE path.
  *
- * Deliberately CASE-SENSITIVE. macOS/Windows filesystems are usually
- * case-insensitive and would additionally collide `Master.dat` with
- * `master.dat`, but Linux is case-sensitive and two differently-cased files can
- * legitimately coexist there — folding case would invent collisions on the one
- * platform where they are not collisions. The observed defect is exact-case.
+ * Case is folded ONLY when the destination volume is case-insensitive
+ * (APFS/NTFS defaults, and Wine bottles on them): there two differently-cased
+ * claims write ONE file, so they are a real collision. On a case-sensitive
+ * volume (typical Linux) they legitimately coexist, so folding there would
+ * invent collisions. Observed by the 2026-10-25 scan: Wasteland 3 (198),
+ * Californium (53), Civ V (4).
  */
-function normalizePath(filename: string): string {
-  return filename.replace(/\\/g, '/')
+export function pathCollisionKey(
+  filename: string,
+  caseInsensitive: boolean
+): string {
+  const n = filename.replace(/\\/g, '/')
+  return caseInsensitive ? n.toLowerCase() : n
+}
+
+const swapCase = (s: string): string =>
+  [...s]
+    .map((c) => (c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase()))
+    .join('')
+
+/**
+ * Is the volume holding `dir` case-insensitive? Read-only: two stat calls on
+ * the directory's own name and its case-swapped spelling, never a file
+ * creation (the directory may be a user's real library). Equal dev+ino means
+ * the swapped spelling reached the same entry. Anything inconclusive (no
+ * letters in the name, the directory missing, EACCES) falls back to the
+ * platform default: linux is case-sensitive, macOS/Windows default to
+ * case-insensitive.
+ */
+export async function probeCaseInsensitiveVolume(
+  dir: string,
+  deps: { stat?: typeof fsStat; platform?: NodeJS.Platform } = {}
+): Promise<boolean> {
+  const doStat = deps.stat ?? fsStat
+  const fallback = (deps.platform ?? process.platform) !== 'linux'
+  const name = basename(dir)
+  const swapped = swapCase(name)
+  if (swapped === name) return fallback
+  try {
+    const orig = await doStat(dir)
+    try {
+      const alt = await doStat(join(dirname(dir), swapped))
+      return alt.dev === orig.dev && alt.ino === orig.ino
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException)?.code === 'ENOENT') return false
+      return fallback
+    }
+  } catch {
+    return fallback
+  }
 }
 
 /** A clean directory marker: the Directory bit AND no content whatsoever.
@@ -95,15 +139,17 @@ function hasContent(f: DepotPlanFile): boolean {
  * Returns what it did so the caller can log it and tests can assert on it.
  */
 export function resolveDepotPathCollisions(
-  plan: Pick<DepotPlan, 'appId' | 'depots'>
+  plan: Pick<DepotPlan, 'appId' | 'depots'>,
+  opts: { caseInsensitive?: boolean } = {}
 ): PathCollisionReport {
+  const caseInsensitive = !!opts.caseInsensitive
   const depotById = new Map(plan.depots.map((d) => [d.depotId, d]))
   // path -> every (depot, file) claiming it
   const byPath = new Map<string, { depotId: string; file: DepotPlanFile }[]>()
 
   for (const depot of plan.depots) {
     for (const file of depot.files) {
-      const key = normalizePath(file.filename)
+      const key = pathCollisionKey(file.filename, caseInsensitive)
       const bucket = byPath.get(key)
       if (bucket) bucket.push({ depotId: depot.depotId, file })
       else byPath.set(key, [{ depotId: depot.depotId, file }])
@@ -114,11 +160,30 @@ export function resolveDepotPathCollisions(
   const unresolved: string[] = []
   const drop = new Set<DepotPlanFile>()
 
-  for (const [path, claims] of byPath) {
+  for (const [, claims] of byPath) {
     if (claims.length < 2) continue
+
+    // Report/log with the first claim's un-folded spelling so case-sensitive
+    // output is byte-identical to before.
+    const path = pathCollisionKey(claims[0].file.filename, false)
+    const spellings = new Map<string, string[]>()
+    for (const c of claims) {
+      const sp = pathCollisionKey(c.file.filename, false)
+      spellings.set(sp, [...(spellings.get(sp) ?? []), c.depotId])
+    }
+    const caseNote =
+      spellings.size > 1
+        ? ` [case-only collision on a case-insensitive volume: ${[...spellings]
+            .map(([sp, ids]) => `"${sp}" (depot ${ids.join(',')})`)
+            .join(' vs ')}]`
+        : ''
 
     const emptyDirs = claims.filter((c) => isEmptyDirectoryEntry(c.file))
     const content = claims.filter((c) => hasContent(c.file))
+
+    // Bare directory markers only: one mkdir satisfies all of them on either
+    // volume type, so this is not a collision. Silent.
+    if (emptyDirs.length === claims.length) continue
 
     // The Fallout 2 shape: one or more bare directory markers against exactly
     // one real file. The file wins, matching the real Steam client's result.
@@ -133,7 +198,8 @@ export function resolveDepotPathCollisions(
           `${content[0].depotId} declares a file of ` +
           `${Number(content[0].file.size)} bytes (${content[0].file.chunks.length} chunks). ` +
           `Keeping the FILE and dropping the directory marker(s) — without this ` +
-          `the directory can win the write race and the file fails EISDIR.`,
+          `the directory can win the write race and the file fails EISDIR.` +
+          caseNote,
         LogPrefix.Steam
       )
       continue
@@ -172,7 +238,8 @@ export function resolveDepotPathCollisions(
             `(size=${Number(winner.c.file.size)}, appinfo rank ` +
             `${winner.entry?.appinfoRank}), dropped depot(s) ` +
             `${losers.map((l) => `${l.c.depotId} (size=${Number(l.c.file.size)}, rank ${l.entry?.appinfoRank})`).join(', ')} ` +
-            `by rule "later in the app's appinfo depot order wins".`,
+            `by rule "later in the app's appinfo depot order wins".` +
+            caseNote,
           LogPrefix.Steam
         )
         continue
@@ -191,7 +258,8 @@ export function resolveDepotPathCollisions(
             (c) =>
               `size=${Number(c.file.size)} chunks=${c.file.chunks.length} flags=${c.file.flags ?? 0}`
           )
-          .join(' | ')}] — left in the plan unchanged, no winner guessed.`,
+          .join(' | ')}] — left in the plan unchanged, no winner guessed.` +
+        caseNote,
       LogPrefix.Steam
     )
   }
