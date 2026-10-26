@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-26 - Completed quick task 261026-t7b: cancel-download dialog redesigned with verb buttons
+Last activity: 2026-10-26 - Completed quick task 261026-u1a: bridge auto-clear retains originalFingerprints
 
 Progress: [██████████] 100%
 
@@ -406,6 +406,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261026-rb4 | Added 51-UAT items 21-24 (pending) for the four 51-REVIEW-FIX human-verification fixes: WR-01 (auto-cleared scan keeps interface-version pool, AoD 230070, staged precondition), WR-08 (interrupted GameLibSteam download resumes in GameLibSteam), WR-09 (launch follows the manifest-holding bottle, staged clone of Avernum 6), WR-11 (force-bottled toggle persists only on Install; failed write blocks install). UAT status `partial`; REVIEW-FIX Outstanding points at each item. | 2026-10-26 | 77ff1dd60 | Done; audit-uat reads 21-24 as pending, planning-gates 12/12. **Unverified:** all four await the operator on the Mac. | [261026-rb4-phase-51-uat-items-for-review-fix-human-](./quick/261026-rb4-phase-51-uat-items-for-review-fix-human-/) |
 | 261026-rqb | **Fixed the generated shim's string-return decode**: it copied the helper's `[u32 len][bytes]` reply raw, so every wired `const char*` return (68 sites: GetPersonaName, GetFriendPersonaName, GetCurrentGameLanguage, …) reached games as a single length byte. Single-sourced encode/decode emitters in `gen_vtables.ts`, bounds-checked decode, retbuf 259 (also closes the 252..255-byte drop). Clang ASan/UBSan encode→decode round-trip test. steam_api.dll 290816, steam_api64.dll 506368. | 2026-10-26 | `6d8a4c94c`, `79d6cd28f`, `e7e0eff4a`, `3b016c1ea` | Verified live: Overlooting 3410180 godot.log `Usernam: Grayson`, 2 CALLs incl. identity, census verified; todo closed, 53-UAT item 36 pass. 26 suites / 1048 tests, planning-gates 12/12. | [261026-rqb-fix-shim-string-return-decoding-of-the-h](./quick/261026-rqb-fix-shim-string-return-decoding-of-the-h/) |
 | 261026-t7b | Cancel-download dialog redesigned: "Cancel download?" with verb buttons [Delete Files (danger, left)] [Keep Downloading] [Stop & Keep Files (primary)]; Steam hides Delete (backend delete is a no-op, todo filed); opt-in `ButtonOptions.variant`; ConsoleMode Yes/No → verbs. Not rendered live | 2026-10-26 | 78fd7aef2 | code-verified | [261026-t7b-redesign-cancel-download-dialog-with-sta](./quick/261026-t7b-redesign-cancel-download-dialog-with-sta/) |
+| 261026-u1a | Bridge auto-clear now retains `scan.originalFingerprints` as top-level `bridge.originalFingerprints` (mirrors WR-01); launch falls back to it (scan copy wins). Also declared `originalFingerprints` in both bridge read schemas -- zod stripped it on every `readBridgeVerdict`, so the lif guard never saw persisted fingerprints in production. Not re-run live (51-UAT item 21) | 2026-10-26 | `fa466406e`, `8ff448e5f` | code-verified: 540 jest tests, tsc, prettier | [261026-u1a-bridge-auto-clear-retains-scan-originalf](./quick/261026-u1a-bridge-auto-clear-retains-scan-originalf/) |
 
 ## Deferred Items
 
