@@ -55,3 +55,33 @@ TBD. Starting points:
    whether resetting the entry and re-prompting clears it.
 4. Done-when: a live launch of the bundle logs `granted=true`, and the forwarded-SteamStub notice
    logs `accepted by UserNotifications` and is seen as a banner.
+
+## Cause and fix (2026-10-26)
+
+The hypothesis above was close but not exact. The per-build identifier was a symptom. The cause
+was that Tauri left the debug bundle with only the linker's ad-hoc signature:
+`flags=adhoc,linker-signed`, `Info.plist=not bound`, `Sealed Resources=none`. UserNotifications
+requested authorization as `[com.gamelib.shell]` and failed in 3ms. usernoted kept no
+`com.gamelib.shell` record. lsd logged -67062 (errSecCSUnsigned). Without a bound Info.plist,
+usernoted could not tie the process to the bundle id enabled in System Settings, so it answered
+UNErrorDomain 1. The request options (`Alert|Sound`) were ruled out. Debug session:
+`.planning/debug/resolved/notification-auth-denied-bundle.md`.
+
+Fix: `"signingIdentity": "-"` under `bundle.macOS` in `src-tauri/tauri.macos.conf.json`. Tauri now
+ad-hoc signs the whole bundle on every build. A release build with the signing secrets still
+gets its identity from `APPLE_SIGNING_IDENTITY` (`release-tauri.yml`). That override is not
+verified in CI. A release build without the secrets now gets a whole-bundle ad-hoc signature
+instead of a linker-only one.
+
+## Live gate passed (2026-10-26)
+
+- Rebuilt bundle: `Identifier=com.gamelib.shell`, `Info.plist entries=15`,
+  `Sealed Resources version=2`, `flags=adhoc,runtime`.
+- Launch (pid 60575): `notification authorization: granted=true error=None`.
+- System Settings → Notifications shows one GameLib entry.
+- Play Grim Dawn (219990): `notify(): "Steam DRM check not supported" accepted by
+  UserNotifications (auth=authorized, alert=enabled, style=banner)`. The operator saw the banner.
+
+A local `pnpm tauri build --debug` exits with "A public key has been found, but no private key"
+from the updater-artifact step after the `.app` is built. Add
+`--config '{"bundle":{"createUpdaterArtifacts":false}}'` to skip that step.

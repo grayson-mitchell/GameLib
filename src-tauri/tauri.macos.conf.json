@@ -8,6 +8,7 @@
     },
     "macOS": {
       "entitlements": "entitlements.plist",
+      "signingIdentity": "-",
       "files": {
         "Resources/build/bin/arm64/darwin": "../build/bin/arm64/darwin"
       }
