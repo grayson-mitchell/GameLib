@@ -2096,6 +2096,120 @@ describe('shimGenerate', () => {
       expect(readFileSync(shim64DestPath(), 'utf-8')).toBe(MARK_X64)
       expectNoFallbackLog()
     })
+
+    describe('quick 261026-mhg: non-core null-object gaps are placed', () => {
+      const ELEX_2026 =
+        'SteamUser019 SteamFriends015 SteamUtils008 SteamController003 STEAMUGC_INTERFACE_VERSION008'
+      const staticExe = (versions: string) => {
+        noDllExe(versions)
+        mockedScanSteamApiImports.mockResolvedValue({
+          status: 'ok',
+          arch: 'x64',
+          symbols: ['SteamAPI_Init', 'SteamInternal_CreateInterface']
+        })
+      }
+      const infoLines = () =>
+        (
+          jest.requireMock('backend/logger').logInfo as jest.Mock
+        ).mock.calls.map((c) =>
+          Array.isArray(c[0]) ? String(c[0][0]) : String(c[0])
+        )
+
+      it('static, ELEX-2026 shape with a game-original dll and a backup: placed-miss, gaps named', async () => {
+        staticExe(ELEX_2026)
+        writeFileSync(shim64DestPath(), 'game-original-bytes')
+        writeFileSync(shim64DestPath() + BACKUP, 'game-original-bytes')
+
+        const result = await placeShimForGame('411300', gameExePath, {
+          shim64SourcePath: realShim64SourcePath
+        })
+
+        expect(result.status).toBe('placed-miss')
+        if (result.status === 'placed-miss') {
+          expect(result.verdict.missingSymbols).toEqual(
+            expect.arrayContaining([
+              'SteamController003',
+              'STEAMUGC_INTERFACE_VERSION008'
+            ])
+          )
+        }
+        expect(readFileSync(shim64DestPath(), 'utf-8')).toBe(MARK_X64)
+        expect(allWarnings().some((m) => m.includes('withheld the shim'))).toBe(
+          false
+        )
+        expect(
+          infoLines().filter((m) => m.includes('non-core unservable'))
+        ).toHaveLength(1)
+      })
+
+      it('static, ELEX-2026 shape over an older shim with a restorable backup: refreshed, not restored', async () => {
+        staticExe(ELEX_2026)
+        writeFileSync(shim64DestPath(), 'GameLibSteamBridgeShim old')
+        writeFileSync(shim64DestPath() + BACKUP, 'orig-bytes')
+
+        const result = await placeShimForGame('411300', gameExePath, {
+          shim64SourcePath: realShim64SourcePath
+        })
+
+        expect(result.status).toBe('placed-miss')
+        expect(readFileSync(shim64DestPath(), 'utf-8')).toBe(MARK_X64)
+        expect(readFileSync(shim64DestPath() + BACKUP, 'utf-8')).toBe(
+          'orig-bytes'
+        )
+      })
+
+      it('static, mixed core + non-core withholds and names both', async () => {
+        staticExe(
+          'SteamUser019 SteamFriends016 SteamController003 SteamUtils008'
+        )
+        writeFileSync(shim64DestPath(), 'GameLibSteamBridgeShim old')
+        writeFileSync(shim64DestPath() + BACKUP, 'orig-bytes')
+
+        const result = await placeShimForGame('411300', gameExePath, {
+          shim64SourcePath: realShim64SourcePath
+        })
+
+        expect(result.status).toBe('withheld')
+        if (result.status === 'withheld') {
+          expect(result.verdict.missingSymbols).toEqual(
+            expect.arrayContaining(['SteamFriends016', 'SteamController003'])
+          )
+        }
+        expect(readFileSync(shim64DestPath(), 'utf-8')).toBe('orig-bytes')
+        const warned = allWarnings().filter((m) =>
+          m.includes('withheld the shim')
+        )
+        expect(warned).toHaveLength(1)
+        expect(warned[0]).toContain('SteamFriends016')
+        expect(warned[0]).toContain('SteamController003')
+      })
+
+      it('runtime-loaded, Overlooting shape with a restorable backup: placed-miss naming every non-core gap', async () => {
+        const { shipping, dll } = ueTree(
+          'SteamUser019 SteamFriends015 SteamUtils008 STEAMREMOTEPLAY_INTERFACE_VERSION003 STEAMTIMELINE_INTERFACE_V004 STEAMUGC_INTERFACE_VERSION021',
+          'GameLibSteamBridgeShim old'
+        )
+        writeFileSync(dll + BACKUP, 'orig-bytes')
+        scanByPath({
+          [shipping]: { status: 'ok', arch: 'x64', symbols: COVERED }
+        })
+
+        const result = await placeShimForGame('3410180', gameExePath, opts())
+
+        expect(result.status).toBe('placed-miss')
+        if (result.status === 'placed-miss') {
+          expect(result.verdict.missingSymbols).toEqual(
+            expect.arrayContaining([
+              'STEAMREMOTEPLAY_INTERFACE_VERSION003',
+              'STEAMTIMELINE_INTERFACE_V004',
+              'STEAMUGC_INTERFACE_VERSION021'
+            ])
+          )
+        }
+        expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
+        expect(readFileSync(dll + BACKUP, 'utf-8')).toBe('orig-bytes')
+      })
+    })
   })
 
   describe('Phase 52 Plan 08: SteamStub .bind detection', () => {

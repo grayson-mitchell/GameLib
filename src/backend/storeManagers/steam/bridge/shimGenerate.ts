@@ -43,6 +43,15 @@
  * 261026-lif); placement then prefers the backup over the persisted pool and
  * rescans when a backup is new or its fingerprint changed.
  *
+ * Revised 2026-10-26 (quick 261026-mhg, operator option a): the withhold
+ * triggers only on a delay-imported miss or a BLOCKING interface gap (a core
+ * startup family, or a version the shim would answer with NULL). A non-core
+ * gap answered by the x64 null object (SteamController, SteamUGC,
+ * SteamTimeline, SteamRemotePlay, ...) is placed (placed-miss) and still named
+ * in the verdict. Served-map growth had turned those half-served families
+ * into "skew" and regressed ELEX; the native resolver's runtime answer never
+ * changed (exact-version match, else the null object).
+ *
  * BLOCKER 2: the compiled x86 `.dll` is read from `builtBridgeShimPath`
  * (`backend/constants/paths.ts`, 24-01) -- the SAME shared location 24-07
  * (packaging) writes to. This module never invents a second/divergent
@@ -120,7 +129,7 @@ import {
 // CR-02 review-pass obligation on any SDK bump.
 import {
   evaluateShimCoverage,
-  findUnservableInterfaceVersions,
+  classifyUnservableInterfaceVersions,
   SHIM_EXPORT_SET_VERSION
 } from './shimCoverage'
 
@@ -700,6 +709,13 @@ type WithholdInput = {
   originalFingerprints?: OriginalFingerprints
 }
 
+function logNonCorePlaced(appId: string, gaps: string[]): void {
+  logInfo(
+    `placeShimForGame: appId ${appId} placing the shim despite non-core unservable interface versions answered by the x64 null object: ${gaps.join(', ')} (quick 261026-mhg)`,
+    LogPrefix.Steam
+  )
+}
+
 /**
  * Phase 52 Plan 15: withhold only when every GameLib shim in scope can be
  * restored from a valid backup. Otherwise there is no game-original
@@ -941,7 +957,8 @@ async function placeShimForGameInner(
       )
       const combinedMissing: string[] = []
       const delayMissingAll: string[] = []
-      const unservableAll: string[] = []
+      const blockingAll: string[] = []
+      const nonCoreAll: string[] = []
       const unservedManaged = new Map<string, number>()
       let primaryEval: {
         required: Record<string, string>
@@ -1040,13 +1057,13 @@ async function placeShimForGameInner(
         delayMissingAll.push(
           ...coverage.missingSymbols.filter((m) => delaySet.has(m))
         )
-        unservableAll.push(
-          ...findUnservableInterfaceVersions({
-            arch: nameArch,
-            symbols: merged,
-            requiredInterfaceVersions: required
-          })
-        )
+        const classified = classifyUnservableInterfaceVersions({
+          arch: nameArch,
+          symbols: merged,
+          requiredInterfaceVersions: required
+        })
+        blockingAll.push(...classified.blocking)
+        nonCoreAll.push(...classified.nonCore)
         if (name === primaryName) {
           primaryEval = {
             required,
@@ -1055,7 +1072,7 @@ async function placeShimForGameInner(
         }
       }
 
-      if (delayMissingAll.length > 0 || unservableAll.length > 0) {
+      if (delayMissingAll.length > 0 || blockingAll.length > 0) {
         const withheld = withholdIfRestorable({
           appId,
           bottleDir,
@@ -1067,15 +1084,23 @@ async function placeShimForGameInner(
           stubbedInterfaces: primaryEval?.stubbedInterfaces ?? [],
           allMissing: combinedMissing,
           delayMissing: [...new Set(delayMissingAll)],
-          unservable: [...new Set(unservableAll)],
+          unservable: [...new Set([...blockingAll, ...nonCoreAll])],
           scannedAt,
           originalFingerprints
         })
         if (withheld) return withheld
         // Refresh path: name every gap in the placed-miss verdict.
-        for (const gap of [...delayMissingAll, ...unservableAll]) {
+        for (const gap of [...delayMissingAll, ...blockingAll]) {
           if (!combinedMissing.includes(gap)) combinedMissing.push(gap)
         }
+      }
+      // quick 261026-mhg: non-core gaps never withhold; name them in the
+      // placed-miss verdict.
+      if (nonCoreAll.length > 0) {
+        for (const gap of nonCoreAll) {
+          if (!combinedMissing.includes(gap)) combinedMissing.push(gap)
+        }
+        logNonCorePlaced(appId, [...new Set(nonCoreAll)])
       }
 
       for (const dll of toCopy) {
@@ -1337,13 +1362,13 @@ async function placeShimForGameInner(
     ...importers.flatMap((i) => i.delaySymbols)
   ])
   const delayMissing = coverage.missingSymbols.filter((m) => delaySet.has(m))
-  const unservable = findUnservableInterfaceVersions({
+  const { blocking, nonCore } = classifyUnservableInterfaceVersions({
     arch,
     symbols,
     requiredInterfaceVersions: required
   })
   const refreshGaps: string[] = []
-  if (delayMissing.length > 0 || unservable.length > 0) {
+  if (delayMissing.length > 0 || blocking.length > 0) {
     // WR-11: withhold only when a target exists; with no file there is no
     // game steam_api to fall back to, so the gaps join refreshGaps and the
     // shim is placed (placed-miss).
@@ -1357,14 +1382,17 @@ async function placeShimForGameInner(
           stubbedInterfaces: coverage.stubbedInterfaces,
           allMissing: coverage.missingSymbols,
           delayMissing: [...new Set(delayMissing)],
-          unservable,
+          unservable: [...blocking, ...nonCore],
           scannedAt,
           originalFingerprints
         })
       : null
     if (withheld) return withheld
-    refreshGaps.push(...delayMissing, ...unservable)
+    refreshGaps.push(...delayMissing, ...blocking)
   }
+  // quick 261026-mhg: non-core gaps never withhold; name them in the verdict.
+  refreshGaps.push(...nonCore)
+  if (nonCore.length > 0) logNonCorePlaced(appId, nonCore)
   const placedMissing = [
     ...new Set([...coverage.missingSymbols, ...refreshGaps])
   ]
