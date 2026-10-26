@@ -77,16 +77,21 @@ describe('handleStopInstallation', () => {
     expect(removeItem).not.toHaveBeenCalled()
   })
 
-  test('steam: no delete button, never cancels with removal', () => {
+  test('steam: same three verb buttons as other runners', () => {
     const o = open('steam')
     expect(o.buttons?.map((b) => b.text)).toEqual([
+      'Delete Files',
       'Keep Downloading',
       'Stop & Keep Files'
     ])
-    expect(o.buttons?.[1].variant).toBe('primary')
-    expect(o.message as string).toContain('resumes')
-    o.buttons?.forEach((b) => b.onClick?.())
-    expect(cancelDownload).not.toHaveBeenCalledWith(true)
-    expect(cancelDownload).toHaveBeenCalledWith(false)
+    expect(o.buttons?.map((b) => b.variant)).toEqual([
+      'danger',
+      undefined,
+      'primary'
+    ])
+    expect(o.message as string).toContain('delete them')
+    o.buttons?.[0].onClick?.()
+    expect(cancelDownload).toHaveBeenCalledWith(true)
+    expect(removeItem).toHaveBeenCalledWith('app1')
   })
 })

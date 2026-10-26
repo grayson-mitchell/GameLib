@@ -15,7 +15,7 @@ files:
 Quick task 261026-t7b (`565421d16`, verb-button cancel download dialog) added seven keys to
 `public/locales/en/gamelib.json` only:
 
-`downloadManager.cancelDialog.{title,message,messageSteam,stopDownload,stopKeepFiles,deleteFiles,keepDownloading}`
+`downloadManager.cancelDialog.{title,message,stopDownload,stopKeepFiles,deleteFiles,keepDownloading}`
 
 Its verify ran `gamelibCatalogParity` but not `lintTranslations`, so it missed the gap. Since then
 `pnpm lint-translations:gamelib` exits 1 with 336 hard failures (7 keys × 48 locales), and two

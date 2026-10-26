@@ -136,27 +136,14 @@ function handleStopInstallation(
     }
   }
 
-  // Steam: the backend removeDownloaded path is gated on GameInfo.folder_name,
-  // which Steam never sets, so a Delete button would silently keep the files.
-  // Keep-files does resume (reconcilePartialState). Hide Delete until a real
-  // Steam delete exists (see the steam-cancel-delete-files todo).
-  const isSteam = runner === 'steam'
   showDialogModal({
     title: t('gamelib:downloadManager.cancelDialog.title', 'Cancel download?'),
-    message: isSteam
-      ? t(
-          'gamelib:downloadManager.cancelDialog.messageSteam',
-          '{{title}} is partly downloaded. The downloaded files are kept so the download resumes where it left off next time you install it.',
-          { title: gameTitle }
-        )
-      : t(
-          'gamelib:downloadManager.cancelDialog.message',
-          '{{title}} is partly downloaded. Keep the downloaded files to resume later, or delete them to free up disk space.',
-          { title: gameTitle }
-        ),
-    buttons: isSteam
-      ? [keepDownloading, stopKeepFiles]
-      : [deleteFiles, keepDownloading, stopKeepFiles]
+    message: t(
+      'gamelib:downloadManager.cancelDialog.message',
+      '{{title}} is partly downloaded. Keep the downloaded files to resume later, or delete them to free up disk space.',
+      { title: gameTitle }
+    ),
+    buttons: [deleteFiles, keepDownloading, stopKeepFiles]
   })
 }
 
