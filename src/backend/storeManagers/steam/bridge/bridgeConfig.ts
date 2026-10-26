@@ -161,8 +161,9 @@ export function writeBridgeConfig(
 
   if (typeof secret !== 'string' || !BRIDGE_SECRET_PATTERN.test(secret)) {
     // Never echo the value -- length only.
+    const launchSecretLen = typeof secret === 'string' ? secret.length : -1
     logWarning(
-      `writeBridgeConfig: rejected invalid launch secret (length ${typeof secret === 'string' ? secret.length : 'n/a'}) for appId ${appId} -- not writing a config (WR-03)`,
+      `writeBridgeConfig: rejected invalid launch secret (len=${launchSecretLen}) for appId ${appId} -- not writing a config (WR-03)`,
       LogPrefix.Steam
     )
     return { status: 'error', error: 'Invalid bridge launch secret' }
