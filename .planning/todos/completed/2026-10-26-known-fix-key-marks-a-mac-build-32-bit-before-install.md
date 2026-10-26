@@ -51,3 +51,15 @@ A curated per-game fact is the ground truth the pre-install path was refusing to
   on that todo and can land first.
 - Seed data: the titles the Mach-O check has already found 32-bit on the operator's Mac (HOARD
   63000 was one, per 260821-le0).
+
+## Resolution
+
+Closed by quick 261027-bqe (2026-10-27), commits a029f1f15 (key, validator, seed module) and b4e8c11e0 (routing wiring, Mach-O fallback log).
+
+- `macArch` is a tier-1 known-fix key; only the literal `"32"` survives `filterTier1KnownFixes`, any other value is dropped with a warning.
+- Honoured only when `isAppleSiliconMac` is true (positive probe, never `!isIntelMac`). On Intel and unconfirmed hosts the hint is ignored.
+- `seedMacArchFromKnownFix` writes `mac_arch: '32'` with `mac_arch_source: 'known-fix'` and leaves `mac_arch_verified` unset. It is called from `ensurePlatformsCaptured()` before any caller reads `isBottleEligible()`, and `fetchMetadataIfNeeded` re-derives it so an appdetails rewrite cannot drop it. A retracted hint un-seeds the entry.
+- `verifyMacArchGroundTruth` still runs for a `known-fix` '32' (Mach-O keeps the last word), logs a paste-ready `<appId>-steam.json` entry on any '32' verdict, and warns when Mach-O contradicts a curated '32'.
+- Bundled seeds: 57300 Amnesia: The Dark Descent, 63000 HOARD, 402060 Californium. Mirroring them into the remote known-fixes repo is an operator step.
+
+No live install on Apple silicon was run, so the end-to-end "no Mac download" claim rests on the unit-level routing test (`macArchKnownFixRouting.test.ts`).

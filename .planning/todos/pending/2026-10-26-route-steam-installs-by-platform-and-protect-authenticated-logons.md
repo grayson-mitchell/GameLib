@@ -39,3 +39,7 @@ sends every install down the native path, including titles Mac Steam can install
 Also worth a look before building: Mac Steam's console `download_depot <app> <depot> [manifest]`.
 It downloads through the user's own session, so it could replace native Windows-only installs with
 no GameLib logon. It is unverified, and automating the console is awkward.
+
+## Cross-reference: known-fix macArch "32" (quick 261027-bqe)
+
+The "title with a macOS build goes to steam://install" rule must treat a title for which `knownFixSaysMac32(appId, meta)` is true, or whose stored `mac_arch` is '32', as Windows-only. Otherwise this routing sends it to the unusable Mac build. See `src/backend/storeManagers/steam/macArchKnownFix.ts`.

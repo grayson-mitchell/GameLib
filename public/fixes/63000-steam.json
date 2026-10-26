@@ -1,0 +1,7 @@
+{
+  "title": "HOARD",
+  "macArch": "32",
+  "notes": {
+    "macArch": "The macOS build is 32-bit only (i386); Apple silicon cannot run it, so GameLib installs the Windows build. Mach-O ground truth from verifyMacArchGroundTruth on the operator's Apple-silicon Mac (mac_arch_source macho, verified), recorded 2026-10-27 (quick 261027-bqe)."
+  }
+}
