@@ -25,7 +25,17 @@ cleanly.
 `rating` key in the fix file and defaults to 4 when that key is missing: if it is fixed, it should
 run.
 
-**Decisions needed before coding (why this is `ready: human`):**
+**Decided (operator, 2026-10-26):**
+
+- **Bundled and local fixes only.** A fix found only in the remote layer (`fixes/`) never shows the
+  row or implies a rating.
+- **Separate row.** "GameLib" is its own row beside CrossOver, Proton and Wine, not a badge on the
+  Wine row.
+
+Decisions 1 and 3 below are settled by these. 2 and 4 are still open, so this stays
+`ready: human`.
+
+**Decisions needed before coding:**
 
 1. **Which fixes count.** Tier 1 (`<id>-<store>.json`) is also read from the remote layer
    (`fixes/`, Heroic's download). A Heroic remote fix is not GameLib-validated, so its presence
