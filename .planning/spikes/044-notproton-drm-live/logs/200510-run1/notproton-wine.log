@@ -1,0 +1,31 @@
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=31955 exe=wine layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=31960 exe=wineboot.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=31962 exe=services.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=31965 exe=winedevice.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=31969 exe=plugplay.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=31972 exe=svchost.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=31974 exe=winedevice.exe layer_hooks=3 overlay=present
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=31976 exe=explorer.exe layer_hooks=3 overlay=present
+0024:err:kerberos:kerberos_LsaApInitializePackage no Kerberos support, expect problems
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=31978 exe=XComGame.exe layer_hooks=3 overlay=present
+overlay_shim ensure_device_hooks: AGXG17DDevice hooks=4
+overlay_shim ensure_queue_hooks: AGXG17XFamilyCommandQueue hooks=2
+overlay_shim ensure_command_buffer_hooks: AGXG17XFamilyCommandBuffer hooks=1 overlay_commit=missing
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=31981 exe=rpcss.exe layer_hooks=3 overlay=present
+overlay_shim ensure_device_hooks: AGXG17DDevice hooks=4
+overlay_shim ensure_device_hooks: AGXG17DDevice hooks=4
+overlay_shim ensure_queue_hooks: AGXG17XFamilyCommandQueue hooks=2
+overlay_shim ensure_queue_hooks: AGXG17XFamilyCommandQueue hooks=2
+overlay_shim ensure_command_buffer_hooks: AGXG17XFamilyCommandBuffer hooks=1 overlay_commit=missing
+overlay_shim ensure_command_buffer_hooks: AGXG17XFamilyCommandBuffer hooks=1 overlay_commit=missing

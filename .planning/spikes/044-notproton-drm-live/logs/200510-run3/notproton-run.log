@@ -1,0 +1,2332 @@
+=== notproton run Tue Oct 27 08:16:02 NZDT 2026 ===
+verb=run
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe]
+  [legacycompat\evaluatorscript_200510.vdf]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamUser=soreluel
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+=== prefix claimed by build 26.3.0.39832 ===
+sync: WINEMSYNC=0 from default
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+=== cloned this prefix from the crossover-26.3.0.39832-x86_64-unix template ===
+=== mapped drive S: to /Users/graysonmitchell/Library/Application Support/Steam ===
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+0034:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+controllers: 3 kept off hidraw
+=== installed legacy Steam.dll ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf
+=== launching (run): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+=== running helper through the shim: /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_0.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_1.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_2.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_3.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_4.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_5.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_6.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_7.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_8.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_9.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_10.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_0.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_0.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_1.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_1.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_2.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_2.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_3.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_3.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_4.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_4.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_5.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_5.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_6.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_6.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_7.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_7.dll'
+00e0:err:process:set_env_vars HACK: adding env vars
+0468:err:kerberos:kerberos_LsaApInitializePackage no Kerberos support, expect problems
+0468:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+=== helper exited status=0 ===
+=== notproton run Tue Oct 27 08:16:50 NZDT 2026 ===
+verb=waitforexitandrun
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
+SDL_GAMECONTROLLER_IGNORE_DEVICES=0x28de/0x1002,0x28de/0x1003,0x28de/0x1071,0x28de/0x1052,0x28de/0x1042,0x28de/0x1203,0x28de/0x1204,0x28de/0x1205,0x28de/0x1206,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x28de/0x12ff,0x28de/0x12fe,0x28de/0x12fd,0x28de/0x12fc,0x28de/0x12fb,0x28de/0x12fa,0x28de/0x12f9,0x28de/0x12f8,0x28de/0x12f7,0x28de/0x12f6,0x28de/0x12f5,0x28de/0x12f4,0x28de/0x12f3,0x28de/0x12f2,0x28de/0x12f1,0x28de/0x12f0,0x28DE/0x11E0,0x2dc8/0x6000,0x2dc8/0x6100,0x2dc8/0x6001,0x2dc8/0x6101,0x2dc8/0x6003,0x2dc8/0x6006,0x2dc8/0x6009,0x2dc8/0x6012,0x0000/0x11fb,0x28de/0x1101,0x28de/0x1102,0x28de/0x1105,0x28de/0x1106,0x28de/0x1142,0x28de/0x1201,0x28de/0x1202,0x28de/0x1205,0x28de/0x1220,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x0f0d/0x01ab,0x0f0d/0x0196,
+SDL_JOYSTICK_HIDAPI_STEAMXBOX=0
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_DYLD_INSERT_LIBRARIES=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamAppId=200510
+SteamAppUser=soreluel
+SteamClientLaunch=1
+SteamEnv=1
+SteamGameId=200510
+SteamOverlayGameId=200510
+SteamUser=soreluel
+SteamVirtualGamepadInfo_Proton=/Users/graysonmitchell/Library/Application Support/Steam/config/virtualgamepadinfo.txt
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+sync: WINEMSYNC=0 from default
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+video: RetinaMode=0
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+0034:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+controllers: 52 kept off hidraw
+=== bridge already staged ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe
+=== launching (waitforexitandrun): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe ===
+fetched client icon a14ea28d6f4cb5764b174e085514726b81ca6d65
+icon built from /Users/graysonmitchell/Library/Application Support/notproton/launchers/200510/clienticon-a14ea28d6f4cb5764b174e085514726b81ca6d65.ico
+loader staged in bundle for game mode
+launcher bundle updated
+=== overlay injected from /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib ===
+=== game exited status=0, killing wine prefix ===
+=== session health: healthy after 36s ===
+=== wine prefix killed, session ending ===
+=== notproton run Tue Oct 27 08:17:42 NZDT 2026 ===
+verb=run
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe]
+  [legacycompat\evaluatorscript_200510.vdf]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamUser=soreluel
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+sync: WINEMSYNC=0 from carried-over
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+0034:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+controllers: 52 kept off hidraw
+=== bridge already staged ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf
+=== launching (run): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+=== running helper through the shim: /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+=== helper exited status=0 ===
+=== notproton run Tue Oct 27 08:17:46 NZDT 2026 ===
+verb=waitforexitandrun
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
+SDL_GAMECONTROLLER_IGNORE_DEVICES=0x28de/0x1002,0x28de/0x1003,0x28de/0x1071,0x28de/0x1052,0x28de/0x1042,0x28de/0x1203,0x28de/0x1204,0x28de/0x1205,0x28de/0x1206,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x28de/0x12ff,0x28de/0x12fe,0x28de/0x12fd,0x28de/0x12fc,0x28de/0x12fb,0x28de/0x12fa,0x28de/0x12f9,0x28de/0x12f8,0x28de/0x12f7,0x28de/0x12f6,0x28de/0x12f5,0x28de/0x12f4,0x28de/0x12f3,0x28de/0x12f2,0x28de/0x12f1,0x28de/0x12f0,0x28DE/0x11E0,0x2dc8/0x6000,0x2dc8/0x6100,0x2dc8/0x6001,0x2dc8/0x6101,0x2dc8/0x6003,0x2dc8/0x6006,0x2dc8/0x6009,0x2dc8/0x6012,0x0000/0x11fb,0x28de/0x1101,0x28de/0x1102,0x28de/0x1105,0x28de/0x1106,0x28de/0x1142,0x28de/0x1201,0x28de/0x1202,0x28de/0x1205,0x28de/0x1220,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x0f0d/0x01ab,0x0f0d/0x0196,
+SDL_JOYSTICK_HIDAPI_STEAMXBOX=0
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_DYLD_INSERT_LIBRARIES=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamAppId=200510
+SteamAppUser=soreluel
+SteamClientLaunch=1
+SteamEnv=1
+SteamGameId=200510
+SteamOverlayGameId=200510
+SteamUser=soreluel
+SteamVirtualGamepadInfo_Proton=/Users/graysonmitchell/Library/Application Support/Steam/config/virtualgamepadinfo.txt
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+sync: WINEMSYNC=0 from default
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+video: RetinaMode=0
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+0034:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+controllers: 52 kept off hidraw
+=== bridge already staged ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe
+=== launching (waitforexitandrun): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe ===
+icon reused from /Users/graysonmitchell/Library/Application Support/notproton/launchers/200510/clienticon-a14ea28d6f4cb5764b174e085514726b81ca6d65.ico
+loader staged in bundle for game mode
+launcher bundle unchanged
+=== overlay injected from /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib ===
+=== game exited status=0, killing wine prefix ===
+=== session health: healthy after 36s ===
+=== wine prefix killed, session ending ===
+=== notproton run Tue Oct 27 08:22:51 NZDT 2026 ===
+verb=run
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe]
+  [legacycompat\evaluatorscript_200510.vdf]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamUser=soreluel
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+sync: WINEMSYNC=0 from carried-over
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+0034:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+controllers: 52 kept off hidraw
+=== bridge already staged ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf
+=== launching (run): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+=== running helper through the shim: /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+=== helper exited status=0 ===
+=== notproton run Tue Oct 27 08:22:54 NZDT 2026 ===
+verb=waitforexitandrun
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
+SDL_GAMECONTROLLER_IGNORE_DEVICES=0x28de/0x1002,0x28de/0x1003,0x28de/0x1071,0x28de/0x1052,0x28de/0x1042,0x28de/0x1203,0x28de/0x1204,0x28de/0x1205,0x28de/0x1206,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x28de/0x12ff,0x28de/0x12fe,0x28de/0x12fd,0x28de/0x12fc,0x28de/0x12fb,0x28de/0x12fa,0x28de/0x12f9,0x28de/0x12f8,0x28de/0x12f7,0x28de/0x12f6,0x28de/0x12f5,0x28de/0x12f4,0x28de/0x12f3,0x28de/0x12f2,0x28de/0x12f1,0x28de/0x12f0,0x28DE/0x11E0,0x2dc8/0x6000,0x2dc8/0x6100,0x2dc8/0x6001,0x2dc8/0x6101,0x2dc8/0x6003,0x2dc8/0x6006,0x2dc8/0x6009,0x2dc8/0x6012,0x0000/0x11fb,0x28de/0x1101,0x28de/0x1102,0x28de/0x1105,0x28de/0x1106,0x28de/0x1142,0x28de/0x1201,0x28de/0x1202,0x28de/0x1205,0x28de/0x1220,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x0f0d/0x01ab,0x0f0d/0x0196,
+SDL_JOYSTICK_HIDAPI_STEAMXBOX=0
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_DYLD_INSERT_LIBRARIES=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamAppId=200510
+SteamAppUser=soreluel
+SteamClientLaunch=1
+SteamEnv=1
+SteamGameId=200510
+SteamOverlayGameId=200510
+SteamUser=soreluel
+SteamVirtualGamepadInfo_Proton=/Users/graysonmitchell/Library/Application Support/Steam/config/virtualgamepadinfo.txt
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+sync: WINEMSYNC=0 from default
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+video: RetinaMode=0
+0024:trace:sync:sysv_NtCreateEvent access 0x1f0003, name L"\\KernelObjects\\__wineboot_event", type 0, state 0
+0024:trace:sync:NtWaitForSingleObject handle 0x10, alertable 0, timeout (infinite)
+002c:trace:sync:NtCreateKeyedEvent access 0xc0000000, name (null), flags 0
+0024:trace:sync:NtWaitForSingleObject -> 0
+0024:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x4, 0x14}, timeout -300.0000000
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\wineboot.exe" at 0000000140000000: builtin
+002c:trace:loaddll:build_ntdll_module Loaded L"C:\\windows\\system32\\ntdll.dll" at 00006FFFFFF40000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernelbase.dll" at 00006FFFFFC10000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernel32.dll" at 00006FFFFFEC0000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\msvcrt.dll" at 00006FFFFFB10000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ucrtbase.dll" at 00006FFFFFA00000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\sechost.dll" at 00006FFFFFAE0000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\advapi32.dll" at 00006FFFFFBC0000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ws2_32.dll" at 00006FFFFF9C0000: builtin
+002c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name L"\\KernelObjects\\__wineboot_event", type 0, state 0
+002c:trace:sync:sysv_NtResetEvent handle 0x10, prev_state 0x0
+002c:trace:sync:NtWaitForSingleObject handle 0x38, alertable 0, timeout (infinite)
+0034:trace:sync:NtCreateKeyedEvent access 0xc0000000, name (null), flags 0
+002c:trace:sync:NtWaitForSingleObject -> 0
+002c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name L"__wine_SvcctlStarted", type 0, state 0
+002c:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x38, 0x3c}, timeout (infinite)
+0034:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\services.exe" at 0000000140000000: builtin
+0034:trace:loaddll:build_ntdll_module Loaded L"C:\\windows\\system32\\ntdll.dll" at 00006FFFFFF40000: builtin
+0034:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernelbase.dll" at 00006FFFFFC10000: builtin
+0034:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernel32.dll" at 00006FFFFFEC0000: builtin
+0034:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\msvcrt.dll" at 00006FFFFFB10000: builtin
+0034:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ucrtbase.dll" at 00006FFFFFA00000: builtin
+0034:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\sechost.dll" at 00006FFFFFAE0000: builtin
+0034:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\advapi32.dll" at 00006FFFFFBC0000: builtin
+0034:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\cryptbase.dll" at 00006FFFFF900000: builtin
+0034:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\rpcrt4.dll" at 00006FFFFF920000: builtin
+0034:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\setupapi.dll" at 00006FFFFF870000: builtin
+0034:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\userenv.dll" at 00006FFFFF850000: builtin
+0034:trace:sync:NtSetInformationJobObject (0x2c, 9, 0x31fc50, 144)
+0034:trace:sync:CreateIoCompletionPort (FFFFFFFFFFFFFFFF, 0000000000000000, 00000000, 00000001)
+0034:trace:sync:NtCreateIoCompletion (0x31fb18, 1f0003, 0x0, 1)
+0034:trace:sync:NtSetInformationJobObject (0x2c, 7, 0x31fc20, 16)
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name L"__wine_SvcctlStarted", type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0034:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\svcctl", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:NtCreateMutant access 0x1f0001, name <null>, owned 0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0034:trace:sync:NtWaitForSingleObject handle 0xa8, alertable 0, timeout (infinite)
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:sysv_NtSetEvent handle 0x9c, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject handle 0xac, alertable 0, timeout (infinite)
+0038:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0038:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x9c, 0xb4}, timeout (infinite)
+0038:trace:sync:NtWaitForMultipleObjects -> 0
+0038:trace:sync:sysv_NtSetEvent handle 0xac, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0038:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x9c, 0xb4}, timeout (infinite)
+0034:trace:sync:NtReleaseMutant handle 0xa8, prev_count 0x0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:NtCreateMutant access 0x1f0001, name <null>, owned 1
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\net\\NtControlPipe0", 0x40000003, 00000000, 1, 256, 256, 10000, 0000000000000000)
+0034:trace:sync:sysv_NtResetEvent handle 0xbc, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0040:trace:sync:NtCreateKeyedEvent access 0xc0000000, name (null), flags 0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtAssignProcessToJobObject (0x2c 0xe4)
+0034:trace:sync:ConnectNamedPipe (00000000000000C8,000000000031F700)
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0xc4, 0xe4}, timeout -40.0000000
+0040:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\winedevice.exe" at 0000000140000000: builtin
+0040:trace:loaddll:build_ntdll_module Loaded L"C:\\windows\\system32\\ntdll.dll" at 00006FFFFFF40000: builtin
+0040:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernelbase.dll" at 00006FFFFFC10000: builtin
+0040:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernel32.dll" at 00006FFFFFEC0000: builtin
+0040:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\msvcrt.dll" at 00006FFFFFB10000: builtin
+0040:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ucrtbase.dll" at 00006FFFFFA00000: builtin
+0040:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\sechost.dll" at 00006FFFFFAE0000: builtin
+0040:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\advapi32.dll" at 00006FFFFFBC0000: builtin
+0040:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\cryptbase.dll" at 00006FFFFF900000: builtin
+0040:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ntoskrnl.exe" at 00006FFFFF7D0000: builtin
+0040:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\rpcrt4.dll" at 00006FFFFF920000: builtin
+0040:trace:sync:SetNamedPipeHandleState 0000000000000024 000000000031E0FC/2 0000000000000000 0000000000000000
+0038:trace:sync:NtWaitForMultipleObjects -> 0x1
+0038:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\svcctl", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0040:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0038:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x9c, 0xb4}, timeout (infinite)
+0040:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0040:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:NtWaitForSingleObject -> 0
+0040:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0040:trace:sync:NtWaitForSingleObject -> 0
+0048:trace:sync:RtlWakeAddressAll 0000000000810168
+0048:trace:sync:RtlWakeAddressAll 0000000000810160
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0040:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtWaitForSingleObject handle 0xc4, alertable 0, timeout -40.0000000
+0040:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x34, 0x38, 0x30}, timeout (infinite)
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC8
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC8
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:sysv_NtSetEvent handle 0x30, prev_state 0x0
+0040:trace:sync:NtWaitForMultipleObjects -> 0x2
+0040:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x34, 0x38, 0x30, 0x3c}, timeout (infinite)
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0xbc, 0xe4}, timeout -40.0000000
+0050:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0050:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC8
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0050:trace:sync:NtWaitForSingleObject -> 0
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0050:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtSetEvent handle 0xbc, prev_state 0x0
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0048:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:NtReleaseMutant handle 0xc0, prev_count 0x0
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC8
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0050:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:sysv_NtResetEvent handle 0x5c, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject handle 0xc0, alertable 0, timeout -30.0000000
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:ConnectNamedPipe (00000000000000C8,000000000031FB00)
+0034:trace:sync:NtWaitForSingleObject handle 0xc4, alertable 0, timeout -40.0000000
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC8
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC8
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0050:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x44, 0x40}, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC8
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+0054:trace:sync:RtlWaitOnAddress addr 00006FFFFF81D4C0 cmp 0000000000F1FE4C size 0x4 timeout (infinite)
+0054:trace:sync:NtWaitForAlertByThreadId 0x0 (infinite)
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC8
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC8
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x5c, prev_state 0x0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC8
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\drivers\\mountmgr.sys" at 00006FFFFF7A0000: builtin
+004c:trace:sync:RtlWakeAddressSingle 00000000000300E8
+004c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\setupapi.dll" at 00006FFFFF870000: builtin
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtSetEvent handle 0x5c, prev_state 0x0
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0058:trace:sync:NtMakeTemporaryObject 0x54
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC8
+0048:trace:sync:RtlWakeAddressAll 0000000000813EC0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+004c:trace:sync:NtWaitForSingleObject -> 0
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x5c, 0xe4}, timeout -40.0000000
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtReleaseMutant handle 0xc0, prev_count 0x0
+0034:trace:sync:NtCreateMutant access 0x1f0001, name <null>, owned 1
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\net\\NtControlPipe1", 0x40000003, 00000000, 1, 256, 256, 10000, 0000000000000000)
+0034:trace:sync:sysv_NtResetEvent handle 0x6c, prev_state 0x0
+0058:trace:sync:NtMakeTemporaryObject 0x54
+0058:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\win32u.dll" at 00006FFFFF4F0000: builtin
+0058:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\gdi32.dll" at 00006FFFFF540000: builtin
+0058:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\user32.dll" at 00006FFFFF5D0000: builtin
+0034:trace:sync:NtWaitForSingleObject handle 0xfc, alertable 0, timeout (infinite)
+0064:trace:sync:NtCreateKeyedEvent access 0xc0000000, name (null), flags 0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtAssignProcessToJobObject (0x2c 0x100)
+0034:trace:sync:ConnectNamedPipe (00000000000000F4,000000000031FB00)
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0xf0, 0x100}, timeout -40.0000000
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\plugplay.exe" at 0000000140000000: builtin
+0064:trace:loaddll:build_ntdll_module Loaded L"C:\\windows\\system32\\ntdll.dll" at 00006FFFFFF40000: builtin
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernelbase.dll" at 00006FFFFFC10000: builtin
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernel32.dll" at 00006FFFFFEC0000: builtin
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\msvcrt.dll" at 00006FFFFFB10000: builtin
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ucrtbase.dll" at 00006FFFFFA00000: builtin
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\sechost.dll" at 00006FFFFFAE0000: builtin
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\advapi32.dll" at 00006FFFFFBC0000: builtin
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\cryptbase.dll" at 00006FFFFF900000: builtin
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\rpcrt4.dll" at 00006FFFFF920000: builtin
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\win32u.dll" at 00006FFFFF4F0000: builtin
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\gdi32.dll" at 00006FFFFF540000: builtin
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\user32.dll" at 00006FFFFF5D0000: builtin
+0058:trace:sync:NtCreateMutant access 0x1f0001, name L"\\BaseNamedObjects\\__WINE_FONT_MUTEX__", owned 0
+0058:trace:sync:NtWaitForSingleObject handle 0x60, alertable 0, timeout (infinite)
+0058:trace:sync:NtWaitForSingleObject -> 0
+0058:trace:sync:NtReleaseMutant handle 0x60, prev_count 0x0
+0058:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\imm32.dll" at 00006FFFFF4C0000: builtin
+0058:trace:sync:NtMakeTemporaryObject 0xa4
+0058:trace:sync:NtMakeTemporaryObject 0xa4
+0058:trace:sync:NtMakeTemporaryObject 0xa4
+0058:trace:sync:NtMakeTemporaryObject 0xa4
+0058:trace:sync:NtMakeTemporaryObject 0xa4
+0058:trace:sync:NtMakeTemporaryObject 0xa4
+0058:trace:sync:NtMakeTemporaryObject 0xa4
+0058:trace:sync:NtMakeTemporaryObject 0xa4
+0058:trace:sync:NtMakeTemporaryObject 0xa4
+0064:trace:sync:NtCreateMutant access 0x1f0001, name L"\\BaseNamedObjects\\__WINE_FONT_MUTEX__", owned 0
+0064:trace:sync:NtWaitForSingleObject handle 0x2c, alertable 0, timeout (infinite)
+0064:trace:sync:NtWaitForSingleObject -> 0
+0064:trace:sync:NtReleaseMutant handle 0x2c, prev_count 0x0
+0064:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\imm32.dll" at 00006FFFFF4C0000: builtin
+0038:trace:sync:NtWaitForMultipleObjects -> 0x1
+0064:trace:sync:SetNamedPipeHandleState 0000000000000044 000000000031E11C/2 0000000000000000 0000000000000000
+0038:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\svcctl", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0064:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0038:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x9c, 0xb4}, timeout (infinite)
+0068:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0068:trace:sync:NtWaitForSingleObject handle 0xfc, alertable 0, timeout (infinite)
+0068:trace:sync:NtWaitForSingleObject -> 0
+0068:trace:sync:RtlWakeAddressSingle 0000000000810258
+0064:trace:sync:NtWaitForSingleObject handle 0x50, alertable 0, timeout (infinite)
+0068:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0068:trace:sync:NtWaitForSingleObject handle 0xfc, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000818D48
+0048:trace:sync:RtlWakeAddressAll 0000000000818D40
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0064:trace:sync:NtWaitForSingleObject -> 0
+0064:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtWaitForSingleObject handle 0xf0, alertable 0, timeout -40.0000000
+0064:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x5c, 0x60, 0x58}, timeout (infinite)
+006c:trace:sync:NtWaitForSingleObject handle 0x50, alertable 0, timeout (infinite)
+0068:trace:sync:NtWaitForSingleObject -> 0
+0068:trace:sync:RtlWakeAddressSingle 0000000000810258
+0068:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0068:trace:sync:NtWaitForSingleObject handle 0xfc, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000818D48
+0048:trace:sync:RtlWakeAddressAll 0000000000818D40
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+006c:trace:sync:NtWaitForSingleObject -> 0
+006c:trace:sync:NtWaitForSingleObject handle 0x50, alertable 0, timeout (infinite)
+0068:trace:sync:NtWaitForSingleObject -> 0
+0068:trace:sync:RtlWakeAddressSingle 0000000000810258
+0068:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0068:trace:sync:NtWaitForSingleObject handle 0xfc, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000818D48
+0048:trace:sync:RtlWakeAddressAll 0000000000818D40
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+006c:trace:sync:NtWaitForSingleObject -> 0
+006c:trace:sync:sysv_NtSetEvent handle 0x58, prev_state 0x0
+0064:trace:sync:NtWaitForMultipleObjects -> 0x2
+0064:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x5c, 0x60, 0x58, 0x64}, timeout (infinite)
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x6c, 0x100}, timeout -40.0000000
+0070:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0070:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\wine_plugplay", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0070:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0070:trace:sync:NtCreateMutant access 0x1f0001, name <null>, owned 0
+0070:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0070:trace:sync:NtWaitForSingleObject handle 0x78, alertable 0, timeout (infinite)
+0070:trace:sync:NtWaitForSingleObject -> 0
+0070:trace:sync:sysv_NtSetEvent handle 0x6c, prev_state 0x0
+0070:trace:sync:NtWaitForSingleObject handle 0x7c, alertable 0, timeout (infinite)
+0074:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0074:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x6c, 0x84}, timeout (infinite)
+0074:trace:sync:NtWaitForMultipleObjects -> 0
+0074:trace:sync:sysv_NtSetEvent handle 0x7c, prev_state 0x0
+0070:trace:sync:NtWaitForSingleObject -> 0
+0074:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x6c, 0x84}, timeout (infinite)
+0070:trace:sync:NtReleaseMutant handle 0x78, prev_count 0x0
+0070:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0070:trace:sync:NtWaitForSingleObject handle 0x50, alertable 0, timeout (infinite)
+0068:trace:sync:NtWaitForSingleObject -> 0
+0068:trace:sync:RtlWakeAddressSingle 0000000000810258
+0068:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x6c, prev_state 0x0
+0068:trace:sync:NtWaitForSingleObject handle 0xfc, alertable 0, timeout (infinite)
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0048:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0034:trace:sync:RtlWaitOnAddress addr 000000000003E9C8 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:NtReleaseMutant handle 0xec, prev_count 0x0
+0048:trace:sync:RtlWakeAddressAll 0000000000818D48
+0048:trace:sync:RtlWakeAddressAll 0000000000818D40
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0070:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtCreateMutant access 0x1f0001, name <null>, owned 1
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\net\\NtControlPipe2", 0x40000003, 00000000, 1, 256, 256, 10000, 0000000000000000)
+0070:trace:sync:NtWaitForSingleObject handle 0x88, alertable 0, timeout (infinite)
+0034:trace:sync:sysv_NtResetEvent handle 0x48, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject handle 0x118, alertable 0, timeout (infinite)
+007c:trace:sync:NtCreateKeyedEvent access 0xc0000000, name (null), flags 0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtAssignProcessToJobObject (0x2c 0x11c)
+0034:trace:sync:ConnectNamedPipe (0000000000000110,000000000031FB00)
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x10c, 0x11c}, timeout -40.0000000
+007c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\svchost.exe" at 0000000140000000: builtin
+007c:trace:loaddll:build_ntdll_module Loaded L"C:\\windows\\system32\\ntdll.dll" at 00006FFFFFF40000: builtin
+007c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernelbase.dll" at 00006FFFFFC10000: builtin
+007c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernel32.dll" at 00006FFFFFEC0000: builtin
+007c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\msvcrt.dll" at 00006FFFFFB10000: builtin
+007c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ucrtbase.dll" at 00006FFFFFA00000: builtin
+007c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\sechost.dll" at 00006FFFFFAE0000: builtin
+007c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\advapi32.dll" at 00006FFFFFBC0000: builtin
+007c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\wevtsvc.dll" at 00006FFFFF4A0000: builtin
+007c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\cryptbase.dll" at 00006FFFFF900000: builtin
+007c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\rpcrt4.dll" at 00006FFFFF920000: builtin
+0038:trace:sync:NtWaitForMultipleObjects -> 0x1
+007c:trace:sync:SetNamedPipeHandleState 0000000000000024 000000000031E04C/2 0000000000000000 0000000000000000
+0038:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\svcctl", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+007c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0038:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x9c, 0xb4}, timeout (infinite)
+0080:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0080:trace:sync:NtWaitForSingleObject handle 0x118, alertable 0, timeout (infinite)
+0080:trace:sync:NtWaitForSingleObject -> 0
+0080:trace:sync:RtlWakeAddressSingle 0000000000810258
+007c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0080:trace:sync:NtAlertThreadByThreadId 0x48
+0080:trace:sync:NtWaitForSingleObject handle 0x118, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+007c:trace:sync:NtWaitForSingleObject -> 0
+007c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtWaitForSingleObject handle 0x10c, alertable 0, timeout -40.0000000
+007c:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x34, 0x38, 0x30}, timeout (infinite)
+0084:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0080:trace:sync:NtWaitForSingleObject -> 0
+0080:trace:sync:RtlWakeAddressSingle 0000000000810258
+0080:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0080:trace:sync:NtWaitForSingleObject handle 0x118, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0084:trace:sync:NtWaitForSingleObject -> 0
+0084:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0080:trace:sync:NtWaitForSingleObject -> 0
+0080:trace:sync:RtlWakeAddressSingle 0000000000810258
+0080:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0080:trace:sync:NtWaitForSingleObject handle 0x118, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0084:trace:sync:NtWaitForSingleObject -> 0
+0084:trace:sync:sysv_NtSetEvent handle 0x30, prev_state 0x0
+007c:trace:sync:NtWaitForMultipleObjects -> 0x2
+0084:trace:sync:RtlWakeAddressSingle 00006FFFFFAF00B8
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x48, 0x11c}, timeout -40.0000000
+007c:trace:sync:RtlWaitOnAddress addr 00006FFFFFAF00B8 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+007c:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x34, 0x38, 0x30, 0x3c}, timeout (infinite)
+0088:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0080:trace:sync:NtWaitForSingleObject -> 0
+0080:trace:sync:RtlWakeAddressSingle 0000000000810258
+0080:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x48, prev_state 0x0
+0080:trace:sync:NtWaitForSingleObject handle 0x118, alertable 0, timeout (infinite)
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtReleaseMutant handle 0x108, prev_count 0x0
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0088:trace:sync:NtWaitForSingleObject -> 0
+0088:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0088:trace:sync:NtWaitForSingleObject handle 0x44, alertable 0, timeout (infinite)
+0034:trace:sync:sysv_NtResetEvent handle 0x68, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject handle 0xc0, alertable 0, timeout -30.0000000
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:ConnectNamedPipe (00000000000000C8,000000000031FB00)
+0034:trace:sync:NtWaitForSingleObject handle 0xc4, alertable 0, timeout -40.0000000
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x68, prev_state 0x0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\drivers\\nsiproxy.sys" at 00006FFFFF480000: builtin
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x68, prev_state 0x0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x68, 0xe4}, timeout -40.0000000
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtReleaseMutant handle 0xc0, prev_count 0x0
+0034:trace:sync:sysv_NtResetEvent handle 0x64, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject handle 0xc0, alertable 0, timeout -30.0000000
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:ConnectNamedPipe (00000000000000C8,000000000031FB00)
+0034:trace:sync:NtWaitForSingleObject handle 0xc4, alertable 0, timeout -40.0000000
+0044:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x64, prev_state 0x0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+004c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\dnsapi.dll" at 00006FFFFF3E0000: builtin
+004c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\nsi.dll" at 00006FFFFF3C0000: builtin
+004c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ws2_32.dll" at 00006FFFFF9C0000: builtin
+004c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\iphlpapi.dll" at 00006FFFFF410000: builtin
+004c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\drivers\\ndis.sys" at 00006FFFFF450000: builtin
+0050:trace:sync:NtWaitForMultipleObjects -> 0x1
+0050:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x44, 0x40}, timeout (infinite)
+004c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0044:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:RtlWakeAddressSingle 0000000000810258
+0044:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x64, prev_state 0x0
+0044:trace:sync:NtWaitForSingleObject handle 0xe0, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000081D598
+0048:trace:sync:RtlWakeAddressAll 000000000081D590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+004c:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x64, 0xe4}, timeout -40.0000000
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtReleaseMutant handle 0xc0, prev_count 0x0
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:NtCreateMutant access 0x1f0001, name <null>, owned 1
+0034:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\net\\NtControlPipe3", 0x40000003, 00000000, 1, 256, 256, 10000, 0000000000000000)
+0034:trace:sync:sysv_NtResetEvent handle 0x124, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0094:trace:sync:NtCreateKeyedEvent access 0xc0000000, name (null), flags 0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtAssignProcessToJobObject (0x2c 0x13c)
+0034:trace:sync:ConnectNamedPipe (0000000000000130,000000000031F700)
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x12c, 0x13c}, timeout -40.0000000
+0094:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\winedevice.exe" at 0000000140000000: builtin
+0094:trace:loaddll:build_ntdll_module Loaded L"C:\\windows\\system32\\ntdll.dll" at 00006FFFFFF40000: builtin
+0094:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernelbase.dll" at 00006FFFFFC10000: builtin
+0094:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernel32.dll" at 00006FFFFFEC0000: builtin
+0094:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\msvcrt.dll" at 00006FFFFFB10000: builtin
+0094:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ucrtbase.dll" at 00006FFFFFA00000: builtin
+0094:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\sechost.dll" at 00006FFFFFAE0000: builtin
+0094:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\advapi32.dll" at 00006FFFFFBC0000: builtin
+0094:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\cryptbase.dll" at 00006FFFFF900000: builtin
+0094:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ntoskrnl.exe" at 00006FFFFF7D0000: builtin
+0094:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\rpcrt4.dll" at 00006FFFFF920000: builtin
+0038:trace:sync:NtWaitForMultipleObjects -> 0x1
+0094:trace:sync:SetNamedPipeHandleState 0000000000000024 000000000031E0FC/2 0000000000000000 0000000000000000
+0038:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\svcctl", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0094:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0038:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x9c, 0xb4}, timeout (infinite)
+0098:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0094:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0094:trace:sync:NtWaitForSingleObject -> 0
+0094:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtWaitForSingleObject handle 0x12c, alertable 0, timeout -40.0000000
+0094:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x34, 0x38, 0x30}, timeout (infinite)
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822608
+0048:trace:sync:RtlWakeAddressAll 0000000000822600
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000822608
+0048:trace:sync:RtlWakeAddressAll 0000000000822600
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:sysv_NtSetEvent handle 0x30, prev_state 0x0
+0094:trace:sync:NtWaitForMultipleObjects -> 0x2
+009c:trace:sync:RtlWakeAddressSingle 00006FFFFFAF00B8
+0094:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x34, 0x38, 0x30, 0x3c}, timeout (infinite)
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x124, 0x13c}, timeout -40.0000000
+00a0:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00a0:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a0:trace:sync:NtWaitForSingleObject -> 0
+00a0:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x124, prev_state 0x0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtReleaseMutant handle 0x128, prev_count 0x0
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:sysv_NtResetEvent handle 0x8c, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject handle 0x128, alertable 0, timeout -30.0000000
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:ConnectNamedPipe (0000000000000130,000000000031FB00)
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a0:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForSingleObject handle 0x12c, alertable 0, timeout -40.0000000
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+00a0:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x44, 0x40}, timeout (infinite)
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:RtlWaitOnAddress addr 00006FFFFF81D4C0 cmp 0000000000F1FE4C size 0x4 timeout (infinite)
+00a4:trace:sync:NtWaitForAlertByThreadId 0x0 (infinite)
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x8c, prev_state 0x0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\drivers\\hidparse.sys" at 00006FFFFF370000: builtin
+009c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\drivers\\winebus.sys" at 00006FFFFF3A0000: builtin
+009c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\setupapi.dll" at 00006FFFFF870000: builtin
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:RtlWakeAddressSingle 00006FFFFF81D4C0
+009c:trace:sync:NtAlertThreadByThreadId 0xa4
+00a4:trace:sync:RtlWaitOnAddress returning 0x101
+009c:trace:sync:RtlWakeAddressSingle 00006FFFFF81D4C0
+009c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+009c:trace:sync:NtWaitForSingleObject handle 0x50, alertable 0, timeout (infinite)
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x90, prev_state 0x0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\win32u.dll" at 00006FFFFF4F0000: builtin
+00a4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\gdi32.dll" at 00006FFFFF540000: builtin
+00a4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\user32.dll" at 00006FFFFF5D0000: builtin
+00a4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\drivers\\hidclass.sys" at 00006FFFFF330000: builtin
+00a4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\drivers\\winehid.sys" at 00006FFFFF350000: builtin
+00a8:trace:sync:sysv_NtSetEvent handle 0x50, prev_state 0x0
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+009c:trace:sync:NtWaitForSingleObject handle 0x50, alertable 0, timeout (infinite)
+00ac:trace:sync:RtlWaitOnAddress addr 00006FFFFFFB3458 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+00ac:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtCreateMutant access 0x1f0001, name L"\\BaseNamedObjects\\__WINE_FONT_MUTEX__", owned 0
+00a4:trace:sync:NtWaitForSingleObject handle 0x74, alertable 0, timeout (infinite)
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:NtReleaseMutant handle 0x74, prev_count 0x0
+00a4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\imm32.dll" at 00006FFFFF4C0000: builtin
+00a4:trace:sync:RtlWakeAddressSingle 00006FFFFFFB3458
+00a4:trace:sync:NtAlertThreadByThreadId 0xac
+00a4:trace:sync:RtlWakeAddressSingle 00006FFFFFFB3458
+00ac:trace:sync:RtlWaitOnAddress returning 0x101
+00ac:trace:sync:sysv_NtSetEvent handle 0x50, prev_state 0x0
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+009c:trace:sync:NtWaitForSingleObject handle 0x50, alertable 0, timeout (infinite)
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtSetEvent handle 0x90, prev_state 0x0
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:RtlWakeAddressSingle 00006FFFFF81D4C0
+00b0:trace:sync:sysv_NtSetEvent handle 0x50, prev_state 0x0
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+00b4:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00a4:trace:sync:RtlWaitOnAddress addr 00006FFFFF7FC518 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+00b4:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00a4:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00b4:trace:sync:RtlWakeAddressSingle 00006FFFFF7FC518
+00b4:trace:sync:NtAlertThreadByThreadId 0xa4
+00b4:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0xa4, 0xac}, timeout (infinite)
+00a4:trace:sync:RtlWaitOnAddress returning 0x101
+009c:trace:sync:NtWaitForSingleObject handle 0x50, alertable 0, timeout (infinite)
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00b8:trace:sync:sysv_NtSetEvent handle 0x50, prev_state 0x0
+009c:trace:sync:NtWaitForSingleObject -> 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000822598
+0048:trace:sync:RtlWakeAddressAll 0000000000822590
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:SetNamedPipeHandleState 0000000000000068 0000000000A1E30C/2 0000000000000000 0000000000000000
+009c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0038:trace:sync:NtWaitForMultipleObjects -> 0x1
+0038:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\svcctl", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+009c:trace:sync:NtWaitForSingleObject handle 0x64, alertable 0, timeout (infinite)
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0038:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x9c, 0xb4}, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000823D18
+00bc:trace:sync:RtlWakeAddressSingle 00000000000300E8
+00bc:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000823D10
+00a4:trace:sync:NtWaitForSingleObject -> 0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+00bc:trace:sync:NtWaitForSingleObject handle 0x148, alertable 0, timeout (infinite)
+009c:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+009c:trace:sync:NtWaitForSingleObject handle 0x64, alertable 0, timeout (infinite)
+00bc:trace:sync:NtWaitForSingleObject -> 0
+0048:trace:sync:RtlWakeAddressAll 0000000000826B98
+0048:trace:sync:RtlWakeAddressAll 0000000000826B90
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00bc:trace:sync:RtlWakeAddressSingle 0000000000810258
+00bc:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x8c, prev_state 0x0
+00bc:trace:sync:NtWaitForSingleObject handle 0x148, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00a4:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000826B98
+0048:trace:sync:RtlWakeAddressAll 0000000000826B90
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x8c, 0x13c}, timeout -40.0000000
+0048:trace:sync:RtlWakeAddressAll 0000000000826B98
+0048:trace:sync:RtlWakeAddressAll 0000000000826B90
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtReleaseMutant handle 0x128, prev_count 0x0
+00a4:trace:sync:RtlWakeAddressSingle 00006FFFFF81D4C0
+0034:trace:sync:sysv_NtResetEvent handle 0x88, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject handle 0x128, alertable 0, timeout -30.0000000
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:ConnectNamedPipe (0000000000000130,000000000031FB00)
+0034:trace:sync:NtWaitForSingleObject handle 0x12c, alertable 0, timeout -40.0000000
+00c0:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00c0:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00c0:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x6c, 0xbc}, timeout (infinite)
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000826B98
+0048:trace:sync:RtlWakeAddressAll 0000000000826B90
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 0000000000826B98
+0048:trace:sync:RtlWakeAddressAll 0000000000826B90
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000826B98
+0048:trace:sync:RtlWakeAddressAll 0000000000826B90
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000826B98
+0048:trace:sync:RtlWakeAddressAll 0000000000826B90
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000826B98
+0048:trace:sync:RtlWakeAddressAll 0000000000826B90
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x88, prev_state 0x0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000826B98
+0048:trace:sync:RtlWakeAddressAll 0000000000826B90
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:RtlWaitOnAddress addr 00006FFFFFFB3458 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+00a4:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\drivers\\winebth.sys" at 00006FFFFF300000: builtin
+009c:trace:sync:RtlWakeAddressSingle 00006FFFFFFB3458
+009c:trace:sync:NtAlertThreadByThreadId 0xa4
+009c:trace:sync:RtlWakeAddressSingle 00006FFFFFFB3458
+00a4:trace:sync:RtlWaitOnAddress returning 0x101
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtSetEvent handle 0x88, prev_state 0x0
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 0000000000826B98
+0048:trace:sync:RtlWakeAddressAll 0000000000826B90
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+009c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:SetNamedPipeHandleState 00000000000000DC 0000000000F1DE7C/2 0000000000000000 0000000000000000
+00a4:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0074:trace:sync:NtWaitForMultipleObjects -> 0x1
+0098:trace:sync:RtlWakeAddressSingle 0000000000810258
+0098:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+00a4:trace:sync:NtWaitForSingleObject handle 0xec, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject handle 0x138, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0074:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\wine_plugplay", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0048:trace:sync:RtlWakeAddressAll 0000000000826B98
+0048:trace:sync:RtlWakeAddressAll 0000000000826B90
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+009c:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtReleaseMutant handle 0x128, prev_count 0x0
+0074:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x6c, 0x84}, timeout (infinite)
+0034:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+00c4:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00c4:trace:sync:NtWaitForSingleObject handle 0x90, alertable 0, timeout (infinite)
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:NtWaitForSingleObject handle 0xec, alertable 0, timeout (infinite)
+00c4:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:sysv_NtSetEvent handle 0x38, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject handle 0xb8, alertable 0, timeout (infinite)
+002c:trace:sync:NtWaitForMultipleObjects -> 0
+00c8:trace:sync:GetQueuedCompletionStatus (0000000000000030,00000000018FFF0C,00000000018FFF18,00000000018FFF10,-1)
+00c8:trace:sync:NtRemoveIoCompletion (0x30, 0x18fff18, 0x18fff10, 0x18ffe70, 0x0)
+00c8:trace:sync:GetQueuedCompletionStatus (0000000000000030,00000000018FFF0C,00000000018FFF18,00000000018FFF10,-1)
+00c8:trace:sync:NtRemoveIoCompletion (0x30, 0x18fff18, 0x18fff10, 0x18ffe70, 0x0)
+00c8:trace:sync:GetQueuedCompletionStatus (0000000000000030,00000000018FFF0C,00000000018FFF18,00000000018FFF10,-1)
+00c8:trace:sync:NtRemoveIoCompletion (0x30, 0x18fff18, 0x18fff10, 0x18ffe70, 0x0)
+00c8:trace:sync:GetQueuedCompletionStatus (0000000000000030,00000000018FFF0C,00000000018FFF18,00000000018FFF10,-1)
+00c8:trace:sync:NtRemoveIoCompletion (0x30, 0x18fff18, 0x18fff10, 0x18ffe70, 0x0)
+00c8:trace:sync:GetQueuedCompletionStatus (0000000000000030,00000000018FFF0C,00000000018FFF18,00000000018FFF10,-1)
+00c8:trace:sync:NtRemoveIoCompletion (0x30, 0x18fff18, 0x18fff10, 0x18ffe70, 0x0)
+00c4:trace:sync:RtlWakeAddressSingle 0000000000B804A8
+00c4:trace:sync:NtWaitForSingleObject handle 0x90, alertable 0, timeout (infinite)
+00cc:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00cc:trace:sync:RtlWakeAddressAll 0000000000B806C8
+00cc:trace:sync:RtlWakeAddressAll 0000000000B806C0
+00cc:trace:sync:RtlWaitOnAddress addr 0000000000B804A8 cmp 000000000166FECC size 0x4 timeout fffffffffd050f80
+00a4:trace:sync:NtWaitForSingleObject handle 0xec, alertable 0, timeout (infinite)
+00c4:trace:sync:NtWaitForSingleObject -> 0
+00c4:trace:sync:RtlWakeAddressSingle 0000000000B804A8
+00cc:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00c4:trace:sync:NtAlertThreadByThreadId 0xcc
+00cc:trace:sync:RtlWaitOnAddress returning 0x101
+00c4:trace:sync:NtWaitForSingleObject handle 0x90, alertable 0, timeout (infinite)
+00cc:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00cc:trace:sync:RtlWakeAddressAll 0000000000B84318
+00cc:trace:sync:RtlWakeAddressAll 0000000000B84310
+00cc:trace:sync:RtlWaitOnAddress addr 0000000000B804A8 cmp 000000000166FECC size 0x4 timeout fffffffffd050f80
+00cc:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00a4:trace:sync:NtWaitForSingleObject handle 0xec, alertable 0, timeout (infinite)
+00c4:trace:sync:NtWaitForSingleObject -> 0
+00c4:trace:sync:RtlWakeAddressSingle 0000000000B804A8
+00c4:trace:sync:NtAlertThreadByThreadId 0xcc
+00cc:trace:sync:RtlWaitOnAddress returning 0x101
+00c4:trace:sync:NtWaitForSingleObject handle 0x90, alertable 0, timeout (infinite)
+00cc:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00cc:trace:sync:RtlWakeAddressAll 0000000000B84318
+00cc:trace:sync:RtlWakeAddressAll 0000000000B84310
+00cc:trace:sync:RtlWaitOnAddress addr 0000000000B804A8 cmp 000000000166FECC size 0x4 timeout fffffffffd050f80
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00cc:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:NtWaitForSingleObject handle 0xec, alertable 0, timeout (infinite)
+00c4:trace:sync:NtWaitForSingleObject -> 0
+00c4:trace:sync:RtlWakeAddressSingle 0000000000B804A8
+00c4:trace:sync:NtAlertThreadByThreadId 0xcc
+00cc:trace:sync:RtlWaitOnAddress returning 0x101
+00c4:trace:sync:NtWaitForSingleObject handle 0x90, alertable 0, timeout (infinite)
+00cc:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+00cc:trace:sync:RtlWakeAddressAll 0000000000B84318
+00cc:trace:sync:RtlWakeAddressAll 0000000000B84310
+00cc:trace:sync:RtlWaitOnAddress addr 0000000000B804A8 cmp 000000000166FECC size 0x4 timeout fffffffffd050f80
+00a4:trace:sync:NtWaitForSingleObject -> 0
+00cc:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00a4:trace:sync:RtlWaitOnAddress addr 00006FFFFF81D4C0 cmp 0000000000F1FE4C size 0x4 timeout (infinite)
+00a4:trace:sync:NtWaitForAlertByThreadId 0x0 (infinite)
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\win32u.dll" at 00006FFFFF4F0000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\user32.dll" at 00006FFFFF5D0000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\gdi32.dll" at 00006FFFFF540000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\shcore.dll" at 00006FFFFE930000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\shlwapi.dll" at 00006FFFFE960000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\shell32.dll" at 00006FFFFE9C0000: builtin
+002c:trace:sync:NtCreateMutant access 0x1f0001, name L"\\BaseNamedObjects\\__WINE_FONT_MUTEX__", owned 0
+002c:trace:sync:NtWaitForSingleObject handle 0x44, alertable 0, timeout (infinite)
+002c:trace:sync:NtWaitForSingleObject -> 0
+002c:trace:sync:NtReleaseMutant handle 0x44, prev_count 0x0
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\imm32.dll" at 00006FFFFF4C0000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\cryptbase.dll" at 00006FFFFF900000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\rpcrt4.dll" at 00006FFFFF920000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\combase.dll" at 00006FFFFE7F0000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\coml2.dll" at 00006FFFFE7C0000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ole32.dll" at 00006FFFFE860000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\mpr.dll" at 00006FFFFE700000: builtin
+002c:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\wininet.dll" at 00006FFFFE730000: builtin
+002c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+002c:trace:sync:sysv_NtCreateSemaphore access 0x1f0003, name <null>, initial 1, max 1
+002c:trace:sync:NtCreateMutant access 0x1f0001, name L"c:!users!crossover!appdata!local!microsoft!windows!inetcache!", owned 0
+002c:trace:sync:NtCreateMutant access 0x1f0001, name L"c:!users!crossover!appdata!local!microsoft!windows!history!", owned 0
+002c:trace:sync:NtCreateMutant access 0x1f0001, name L"c:!users!crossover!appdata!local!microsoft!windows!inetcookies!", owned 0
+002c:trace:sync:sysv_NtSetEvent handle 0x10, prev_state 0x0
+0024:trace:sync:NtWaitForMultipleObjects -> 0
+0024:trace:sync:NtCreateKeyedEvent access 0xc0000000, name (null), flags 0
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\start.exe" at 0000000140000000: builtin
+0024:trace:loaddll:build_ntdll_module Loaded L"C:\\windows\\system32\\ntdll.dll" at 00006FFFFFF40000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernelbase.dll" at 00006FFFFFC10000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernel32.dll" at 00006FFFFFEC0000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\msvcrt.dll" at 00006FFFFFB10000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ucrtbase.dll" at 00006FFFFFA00000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\sechost.dll" at 00006FFFFFAE0000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\advapi32.dll" at 00006FFFFFBC0000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\win32u.dll" at 00006FFFFF4F0000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\user32.dll" at 00006FFFFF5D0000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\gdi32.dll" at 00006FFFFF540000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\shcore.dll" at 00006FFFFE930000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\shlwapi.dll" at 00006FFFFE960000: builtin
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\shell32.dll" at 00006FFFFE9C0000: builtin
+0024:trace:sync:NtCreateMutant access 0x1f0001, name L"\\BaseNamedObjects\\__WINE_FONT_MUTEX__", owned 0
+0024:trace:sync:NtWaitForSingleObject handle 0x3c, alertable 0, timeout (infinite)
+0024:trace:sync:NtWaitForSingleObject -> 0
+0024:trace:sync:NtReleaseMutant handle 0x3c, prev_count 0x0
+0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\imm32.dll" at 00006FFFFF4C0000: builtin
+0024:trace:sync:NtWaitForSingleObject handle 0x60, alertable 0, timeout (infinite)
+00d4:trace:sync:NtCreateKeyedEvent access 0xc0000000, name (null), flags 0
+0024:trace:sync:NtWaitForSingleObject -> 0
+0024:trace:sync:NtSetInformationJobObject (0x54, 9, 0x31fe60, 144)
+0024:trace:sync:NtAssignProcessToJobObject (0x54 0x64)
+0024:trace:sync:NtWaitForSingleObject handle 0x64, alertable 0, timeout (infinite)
+00d4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\reg.exe" at 0000000140000000: builtin
+00d4:trace:loaddll:build_ntdll_module Loaded L"C:\\windows\\system32\\ntdll.dll" at 00006FFFFFF40000: builtin
+00d4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernelbase.dll" at 00006FFFFFC10000: builtin
+00d4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernel32.dll" at 00006FFFFFEC0000: builtin
+00d4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\msvcrt.dll" at 00006FFFFFB10000: builtin
+00d4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ucrtbase.dll" at 00006FFFFFA00000: builtin
+00d4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\sechost.dll" at 00006FFFFFAE0000: builtin
+00d4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\advapi32.dll" at 00006FFFFFBC0000: builtin
+0024:trace:sync:NtWaitForSingleObject -> 0
+controllers: 52 kept off hidraw
+=== bridge already staged ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe
+=== launching (waitforexitandrun): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe ===
+icon reused from /Users/graysonmitchell/Library/Application Support/notproton/launchers/200510/clienticon-a14ea28d6f4cb5764b174e085514726b81ca6d65.ico
+loader staged in bundle for game mode
+launcher bundle unchanged
+=== overlay injected from /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib ===
+0038:trace:sync:NtWaitForMultipleObjects -> 0x1
+0038:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\svcctl", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0038:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x9c, 0xb4}, timeout (infinite)
+010c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+010c:trace:sync:NtWaitForSingleObject handle 0x150, alertable 0, timeout (infinite)
+010c:trace:sync:NtWaitForSingleObject -> 0
+010c:trace:sync:RtlWakeAddressSingle 0000000000810258
+010c:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+010c:trace:sync:NtWaitForSingleObject handle 0x150, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000080A2E8
+0048:trace:sync:RtlWakeAddressAll 000000000080A2E0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+010c:trace:sync:NtWaitForSingleObject -> 0
+010c:trace:sync:RtlWakeAddressSingle 0000000000810258
+010c:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+010c:trace:sync:NtWaitForSingleObject handle 0x150, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000080A2E8
+0048:trace:sync:RtlWakeAddressAll 000000000080A2E0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+010c:trace:sync:NtWaitForSingleObject -> 0
+010c:trace:sync:RtlWakeAddressSingle 0000000000810258
+010c:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+010c:trace:sync:NtWaitForSingleObject handle 0x150, alertable 0, timeout (infinite)
+0048:trace:sync:NtCreateMutant access 0x1f0001, name <null>, owned 1
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\net\\NtControlPipe4", 0x40000003, 00000000, 1, 256, 256, 10000, 0000000000000000)
+0048:trace:sync:sysv_NtResetEvent handle 0x70, prev_state 0x0
+0048:trace:sync:NtWaitForSingleObject handle 0x164, alertable 0, timeout (infinite)
+0114:trace:sync:NtCreateKeyedEvent access 0xc0000000, name (null), flags 0
+0048:trace:sync:NtWaitForSingleObject -> 0
+0048:trace:sync:NtAssignProcessToJobObject (0x2c 0x168)
+0048:trace:sync:ConnectNamedPipe (000000000000015C,0000000000EFEF80)
+00c8:trace:sync:GetQueuedCompletionStatus (0000000000000030,00000000018FFF0C,00000000018FFF18,00000000018FFF10,-1)
+00c8:trace:sync:NtRemoveIoCompletion (0x30, 0x18fff18, 0x18fff10, 0x18ffe70, 0x0)
+0048:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x158, 0x168}, timeout -40.0000000
+0114:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\rpcss.exe" at 0000000140000000: builtin
+0114:trace:loaddll:build_ntdll_module Loaded L"C:\\windows\\system32\\ntdll.dll" at 00006FFFFFF40000: builtin
+0114:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernelbase.dll" at 00006FFFFFC10000: builtin
+0114:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernel32.dll" at 00006FFFFFEC0000: builtin
+0114:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\msvcrt.dll" at 00006FFFFFB10000: builtin
+0114:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ucrtbase.dll" at 00006FFFFFA00000: builtin
+0114:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\sechost.dll" at 00006FFFFFAE0000: builtin
+0114:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\advapi32.dll" at 00006FFFFFBC0000: builtin
+0114:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\cryptbase.dll" at 00006FFFFF900000: builtin
+0114:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\rpcrt4.dll" at 00006FFFFF920000: builtin
+0114:trace:sync:SetNamedPipeHandleState 0000000000000028 000000000031E11C/2 0000000000000000 0000000000000000
+0038:trace:sync:NtWaitForMultipleObjects -> 0x1
+0038:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\svcctl", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0114:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0038:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x9c, 0xb4}, timeout (infinite)
+0118:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0118:trace:sync:NtWaitForSingleObject handle 0x164, alertable 0, timeout (infinite)
+0118:trace:sync:NtWaitForSingleObject -> 0
+0114:trace:sync:NtWaitForSingleObject handle 0x2c, alertable 0, timeout (infinite)
+0118:trace:sync:NtWaitForSingleObject handle 0x164, alertable 0, timeout (infinite)
+011c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+011c:trace:sync:RtlWakeAddressAll 000000000080A6D8
+011c:trace:sync:RtlWakeAddressAll 000000000080A6D0
+011c:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000001EFFECC size 0x4 timeout fffffffffd050f80
+011c:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0114:trace:sync:NtWaitForSingleObject -> 0
+0114:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0048:trace:sync:NtWaitForMultipleObjects -> 0
+0048:trace:sync:NtWaitForSingleObject handle 0x158, alertable 0, timeout -40.0000000
+0114:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x38, 0x3c, 0x34}, timeout (infinite)
+0120:trace:sync:NtWaitForSingleObject handle 0x2c, alertable 0, timeout (infinite)
+0118:trace:sync:NtWaitForSingleObject -> 0
+0118:trace:sync:RtlWakeAddressSingle 0000000000810258
+0118:trace:sync:NtAlertThreadByThreadId 0x11c
+011c:trace:sync:RtlWaitOnAddress returning 0x101
+0118:trace:sync:NtWaitForSingleObject handle 0x164, alertable 0, timeout (infinite)
+011c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+011c:trace:sync:RtlWakeAddressAll 000000000083D878
+011c:trace:sync:RtlWakeAddressAll 000000000083D870
+011c:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000001EFFECC size 0x4 timeout fffffffffd050f80
+011c:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0120:trace:sync:NtWaitForSingleObject -> 0
+0120:trace:sync:NtWaitForSingleObject handle 0x2c, alertable 0, timeout (infinite)
+0118:trace:sync:NtWaitForSingleObject -> 0
+0118:trace:sync:RtlWakeAddressSingle 0000000000810258
+0118:trace:sync:NtAlertThreadByThreadId 0x11c
+011c:trace:sync:RtlWaitOnAddress returning 0x101
+0118:trace:sync:NtWaitForSingleObject handle 0x164, alertable 0, timeout (infinite)
+011c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+011c:trace:sync:RtlWakeAddressAll 000000000083D878
+011c:trace:sync:RtlWakeAddressAll 000000000083D870
+011c:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000001EFFECC size 0x4 timeout fffffffffd050f80
+011c:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0120:trace:sync:NtWaitForSingleObject -> 0
+0120:trace:sync:sysv_NtSetEvent handle 0x34, prev_state 0x0
+0114:trace:sync:NtWaitForMultipleObjects -> 0x2
+0114:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x38, 0x3c, 0x34, 0x40}, timeout (infinite)
+0048:trace:sync:NtWaitForSingleObject -> 0
+0048:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x70, 0x168}, timeout -40.0000000
+0124:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0124:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\epmapper", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0124:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0124:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\lrpc\\epmapper", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0124:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\lrpc\\irot", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0124:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\lrpc\\irpcss", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0124:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0124:trace:sync:NtCreateMutant access 0x1f0001, name <null>, owned 0
+0124:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0124:trace:sync:NtWaitForSingleObject handle 0x64, alertable 0, timeout (infinite)
+0124:trace:sync:NtWaitForSingleObject -> 0
+0124:trace:sync:sysv_NtSetEvent handle 0x50, prev_state 0x0
+0124:trace:sync:NtWaitForSingleObject handle 0x68, alertable 0, timeout (infinite)
+0128:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0128:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0128:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0128:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x50, 0x70, 0x74, 0x78}, timeout (infinite)
+0128:trace:sync:NtWaitForMultipleObjects -> 0
+0128:trace:sync:sysv_NtSetEvent handle 0x68, prev_state 0x0
+0124:trace:sync:NtWaitForSingleObject -> 0
+0128:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x50, 0x70, 0x74, 0x78}, timeout (infinite)
+0124:trace:sync:NtReleaseMutant handle 0x64, prev_count 0x0
+0124:trace:sync:NtCreateMutant access 0x1f0001, name <null>, owned 0
+0124:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 1, state 0
+0124:trace:sync:NtWaitForSingleObject handle 0x7c, alertable 0, timeout (infinite)
+0124:trace:sync:NtWaitForSingleObject -> 0
+0124:trace:sync:sysv_NtSetEvent handle 0x48, prev_state 0x0
+0124:trace:sync:NtWaitForSingleObject handle 0x80, alertable 0, timeout (infinite)
+012c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+012c:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x48, 0x88}, timeout (infinite)
+012c:trace:sync:NtWaitForMultipleObjects -> 0
+012c:trace:sync:sysv_NtSetEvent handle 0x80, prev_state 0x0
+0124:trace:sync:NtWaitForSingleObject -> 0
+0124:trace:sync:NtReleaseMutant handle 0x7c, prev_count 0x0
+012c:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x48, 0x88}, timeout (infinite)
+0124:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0124:trace:sync:NtWaitForSingleObject handle 0x2c, alertable 0, timeout (infinite)
+0118:trace:sync:NtWaitForSingleObject -> 0
+0118:trace:sync:RtlWakeAddressSingle 0000000000810258
+0118:trace:sync:NtAlertThreadByThreadId 0x11c
+011c:trace:sync:RtlWaitOnAddress returning 0x101
+011c:trace:sync:sysv_NtSetEvent handle 0x70, prev_state 0x0
+0118:trace:sync:NtWaitForSingleObject handle 0x164, alertable 0, timeout (infinite)
+0048:trace:sync:NtWaitForMultipleObjects -> 0
+0048:trace:sync:RtlWaitOnAddress addr 000000000003E9C8 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtReleaseMutant handle 0x154, prev_count 0x0
+011c:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+011c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+011c:trace:sync:RtlWakeAddressAll 000000000083D878
+011c:trace:sync:RtlWakeAddressAll 000000000083D870
+011c:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000001EFFECC size 0x4 timeout fffffffffd050f80
+011c:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0124:trace:sync:NtWaitForSingleObject -> 0
+0124:trace:sync:NtWaitForSingleObject handle 0x8c, alertable 0, timeout (infinite)
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0048:trace:sync:RtlWakeAddressAll 000000000080A2E8
+0048:trace:sync:RtlWakeAddressAll 000000000080A2E0
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+010c:trace:sync:NtWaitForSingleObject -> 0
+010c:trace:sync:RtlWakeAddressSingle 0000000000810258
+010c:trace:sync:NtAlertThreadByThreadId 0x11c
+011c:trace:sync:RtlWaitOnAddress returning 0x101
+010c:trace:sync:NtWaitForSingleObject handle 0x150, alertable 0, timeout (infinite)
+011c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+011c:trace:sync:RtlWakeAddressAll 000000000083FF48
+011c:trace:sync:RtlWakeAddressAll 000000000083FF40
+011c:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000001EFFECC size 0x4 timeout fffffffffd050f80
+011c:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+010c:trace:sync:NtWaitForSingleObject -> 0
+010c:trace:sync:RtlWakeAddressSingle 0000000000810258
+010c:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+010c:trace:sync:NtWaitForSingleObject handle 0x150, alertable 0, timeout (infinite)
+0048:trace:sync:RtlWakeAddressAll 000000000083FF48
+0048:trace:sync:RtlWakeAddressAll 000000000083FF40
+0048:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+010c:trace:sync:NtWaitForSingleObject -> 0
+010c:trace:sync:RtlWakeAddressSingle 0000000000810258
+010c:trace:sync:NtAlertThreadByThreadId 0x11c
+011c:trace:sync:RtlWaitOnAddress returning 0x101
+011c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+010c:trace:sync:NtWaitForSingleObject handle 0x150, alertable 0, timeout (infinite)
+011c:trace:sync:RtlWakeAddressAll 000000000083FF48
+011c:trace:sync:RtlWakeAddressAll 000000000083FF40
+011c:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000001EFFECC size 0x4 timeout fffffffffd050f80
+011c:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0128:trace:sync:NtWaitForMultipleObjects -> 0x1
+0128:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\lrpc\\irpcss", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0128:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x50, 0x70, 0x74, 0x78}, timeout (infinite)
+0130:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0130:trace:sync:NtWaitForSingleObject handle 0x94, alertable 0, timeout (infinite)
+0130:trace:sync:NtWaitForSingleObject -> 0
+0130:trace:sync:RtlWakeAddressSingle 0000000000A0FEB8
+0130:trace:sync:NtWaitForSingleObject handle 0x94, alertable 0, timeout (infinite)
+0134:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0134:trace:sync:RtlWakeAddressAll 0000000000A0FDC8
+0134:trace:sync:RtlWakeAddressAll 0000000000A0FDC0
+0134:trace:sync:RtlWaitOnAddress addr 0000000000A0FEB8 cmp 00000000014FFECC size 0x4 timeout fffffffffd050f80
+0134:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0128:trace:sync:NtWaitForMultipleObjects -> 0x1
+0128:trace:sync:CreateNamedPipeW (L"\\\\.\\pipe\\lrpc\\irpcss", 0x40000003, 0x000006, 255, 5840, 5840, 5000, 0000000000000000)
+0128:trace:sync:NtWaitForMultipleObjects type 1, alertable 1, handles {0x50, 0x70, 0x74, 0x78}, timeout (infinite)
+013c:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+013c:trace:sync:NtWaitForSingleObject handle 0xa0, alertable 0, timeout (infinite)
+013c:trace:sync:NtWaitForSingleObject -> 0
+013c:trace:sync:RtlWakeAddressSingle 0000000000A0FEB8
+013c:trace:sync:NtAlertThreadByThreadId 0x134
+0134:trace:sync:RtlWaitOnAddress returning 0x101
+013c:trace:sync:NtWaitForSingleObject handle 0xa0, alertable 0, timeout (infinite)
+0134:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0134:trace:sync:RtlWakeAddressAll 0000000000A17788
+0134:trace:sync:RtlWakeAddressAll 0000000000A17780
+0134:trace:sync:RtlWaitOnAddress addr 0000000000A0FEB8 cmp 00000000014FFECC size 0x4 timeout fffffffffd050f80
+0134:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+013c:trace:sync:NtWaitForSingleObject -> 0
+013c:trace:sync:RtlWakeAddressSingle 0000000000A0FEB8
+013c:trace:sync:NtAlertThreadByThreadId 0x134
+0134:trace:sync:RtlWaitOnAddress returning 0x101
+013c:trace:sync:NtWaitForSingleObject handle 0xa0, alertable 0, timeout (infinite)
+0134:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0134:trace:sync:RtlWakeAddressAll 0000000000A176A8
+0134:trace:sync:RtlWakeAddressAll 0000000000A176A0
+0134:trace:sync:RtlWaitOnAddress addr 0000000000A0FEB8 cmp 00000000014FFECC size 0x4 timeout fffffffffd050f80
+0134:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+013c:trace:sync:NtWaitForSingleObject -> 0
+00cc:trace:sync:RtlWaitOnAddress returning 0x102
+0048:trace:sync:RtlWaitOnAddress returning 0x102
+011c:trace:sync:RtlWaitOnAddress returning 0x102
+0048:trace:sync:RtlWaitOnAddress addr 00006FFFFFFB3458 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+011c:trace:sync:RtlWakeAddressSingle 00006FFFFFFB3458
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+011c:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0048:trace:sync:RtlWaitOnAddress addr 00000000000300E8 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+011c:trace:sync:RtlWakeAddressSingle 00000000000300E8
+0048:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+011c:trace:sync:NtAlertThreadByThreadId 0x48
+0048:trace:sync:RtlWaitOnAddress returning 0x101
+0134:trace:sync:RtlWaitOnAddress returning 0x102
+0130:trace:sync:NtWaitForSingleObject -> 0
+0130:trace:sync:RtlWakeAddressSingle 0000000000A0FEB8
+0130:trace:sync:NtWaitForSingleObject handle 0x94, alertable 0, timeout (infinite)
+0140:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0140:trace:sync:RtlWakeAddressAll 0000000000A16688
+0140:trace:sync:RtlWakeAddressAll 0000000000A16680
+0140:trace:sync:RtlWaitOnAddress addr 0000000000A0FEB8 cmp 00000000016FFECC size 0x4 timeout fffffffffd050f80
+0140:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0130:trace:sync:NtWaitForSingleObject -> 0
+010c:trace:sync:NtWaitForSingleObject -> 0
+0064:trace:sync:NtWaitForMultipleObjects -> 0
+0094:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0114:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:PostQueuedCompletionStatus 0000000000000030 0 00000000 0000000000000000
+0040:trace:sync:NtWaitForMultipleObjects -> 0
+007c:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtSetIoCompletion (0x30, 0, 0, 0, 0)
+0094:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0064:trace:sync:NtWaitForSingleObject handle 0x50, alertable 0, timeout (infinite)
+0034:trace:sync:NtWaitForSingleObject handle 0xd0, alertable 0, timeout (infinite)
+0068:trace:sync:NtWaitForSingleObject -> 0
+0114:trace:sync:NtWaitForSingleObject handle 0x2c, alertable 0, timeout (infinite)
+0040:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+007c:trace:sync:NtWaitForSingleObject handle 0x28, alertable 0, timeout (infinite)
+0098:trace:sync:NtWaitForSingleObject -> 0
+0118:trace:sync:NtWaitForSingleObject -> 0
+0044:trace:sync:NtWaitForSingleObject -> 0
+0080:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0098:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0118:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0118:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0068:trace:sync:RtlWakeAddressSingle 0000000000810218
+0068:trace:sync:NtAlertThreadByThreadId 0x98
+0068:trace:sync:RtlWakeAddressSingle 0000000000810258
+0068:trace:sync:RtlWakeAddressSingle 0000000000810218
+0068:trace:sync:NtAlertThreadByThreadId 0x118
+0034:trace:sync:NtWaitForSingleObject handle 0xe4, alertable 0, timeout (infinite)
+0098:trace:sync:RtlWaitOnAddress returning 0x101
+0034:trace:sync:NtWaitForSingleObject -> 0
+0118:trace:sync:RtlWaitOnAddress returning 0x101
+0068:trace:sync:NtWaitForSingleObject handle 0xfc, alertable 0, timeout (infinite)
+0098:trace:sync:RtlWakeAddressSingle 0000000000810218
+0098:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0098:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0144:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0144:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0044:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0044:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0118:trace:sync:RtlWakeAddressSingle 0000000000810218
+0118:trace:sync:NtAlertThreadByThreadId 0x98
+0034:trace:sync:NtWaitForSingleObject handle 0x100, alertable 0, timeout (infinite)
+0080:trace:sync:RtlWakeAddressSingle 0000000000810218
+0080:trace:sync:NtAlertThreadByThreadId 0x144
+0098:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0098:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0144:trace:sync:RtlWaitOnAddress returning 0x101
+0144:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0034:trace:sync:NtWaitForSingleObject -> 0
+0118:trace:sync:NtWaitForSingleObject handle 0x164, alertable 0, timeout (infinite)
+0144:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0068:trace:sync:NtWaitForSingleObject -> 0
+0148:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0148:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0034:trace:sync:NtWaitForSingleObject handle 0x11c, alertable 0, timeout (infinite)
+0080:trace:sync:RtlWakeAddressSingle 0000000000810218
+0080:trace:sync:NtAlertThreadByThreadId 0x44
+0044:trace:sync:RtlWaitOnAddress returning 0x101
+0044:trace:sync:RtlWakeAddressSingle 0000000000810218
+0044:trace:sync:NtAlertThreadByThreadId 0x98
+0034:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWaitOnAddress returning 0x101
+0098:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0098:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+014c:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+014c:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0034:trace:sync:NtWaitForSingleObject handle 0x13c, alertable 0, timeout (infinite)
+0044:trace:sync:RtlWakeAddressSingle 0000000000810218
+0044:trace:sync:NtAlertThreadByThreadId 0x144
+0144:trace:sync:RtlWaitOnAddress returning 0x101
+0144:trace:sync:RtlWakeAddressSingle 0000000000810218
+0144:trace:sync:NtAlertThreadByThreadId 0x148
+0150:trace:sync:RtlWakeAddressSingle 0000000000810218
+0150:trace:sync:NtAlertThreadByThreadId 0x98
+0148:trace:sync:RtlWaitOnAddress returning 0x101
+0148:trace:sync:RtlWakeAddressSingle 0000000000810218
+0148:trace:sync:NtAlertThreadByThreadId 0x14c
+0148:trace:sync:RtlWaitOnAddress addr 00006FFFFF96E3B8 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0148:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0150:trace:sync:RtlWakeAddressSingle 00006FFFFF96E3B8
+0150:trace:sync:NtAlertThreadByThreadId 0x148
+0150:trace:sync:sysv_NtCreateEvent access 0x1f0003, name <null>, type 0, state 0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0098:trace:sync:RtlWaitOnAddress returning 0x101
+014c:trace:sync:RtlWaitOnAddress returning 0x101
+0148:trace:sync:RtlWaitOnAddress returning 0x101
+0148:trace:sync:RtlWaitOnAddress addr 000000000003E9C8 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0148:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+014c:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+014c:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+00bc:trace:sync:NtWaitForSingleObject -> 0
+0150:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0150:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0034:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0034:trace:sync:NtAlertThreadByThreadId 0x148
+0034:trace:sync:NtWaitForSingleObject handle 0x168, alertable 0, timeout (infinite)
+0148:trace:sync:RtlWaitOnAddress returning 0x101
+0118:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForSingleObject -> 0
+0154:trace:sync:RtlWaitOnAddress addr 0000000000810218 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0154:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0098:trace:sync:RtlWakeAddressSingle 0000000000810218
+0144:trace:sync:RtlWakeAddressAll 000000000083FF48
+0144:trace:sync:RtlWakeAddressAll 000000000083FF40
+0144:trace:sync:RtlWakeAddressSingle 0000000000810218
+0098:trace:sync:NtAlertThreadByThreadId 0x14c
+0144:trace:sync:NtAlertThreadByThreadId 0x150
+014c:trace:sync:RtlWaitOnAddress returning 0x101
+0150:trace:sync:RtlWaitOnAddress returning 0x101
+0150:trace:sync:RtlWakeAddressAll 000000000083D878
+0150:trace:sync:RtlWakeAddressAll 000000000083D870
+0150:trace:sync:RtlWakeAddressSingle 0000000000810218
+014c:trace:sync:RtlWakeAddressSingle 0000000000810218
+0150:trace:sync:NtAlertThreadByThreadId 0x154
+00bc:trace:sync:RtlWaitOnAddress addr 00000000000300E8 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0098:trace:sync:RtlWakeAddressSingle 00000000000300E8
+0154:trace:sync:RtlWaitOnAddress returning 0x101
+0154:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 00000000010FFECC size 0x4 timeout fffffffffd050f80
+0150:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 00000000018FFECC size 0x4 timeout fffffffffd050f80
+0034:trace:sync:NtWaitForSingleObject handle 0xa8, alertable 0, timeout (infinite)
+0150:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0154:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:sysv_NtSetEvent handle 0x9c, prev_state 0x0
+0038:trace:sync:NtWaitForMultipleObjects -> 0
+0034:trace:sync:NtWaitForSingleObject handle 0xac, alertable 0, timeout (infinite)
+014c:trace:sync:RtlWaitOnAddress addr 000000000003E9C8 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+014c:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0148:trace:sync:RtlWaitOnAddress addr 000000000003E9C8 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0148:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0118:trace:sync:RtlWaitOnAddress addr 000000000003E9C8 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0118:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0144:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0144:trace:sync:NtAlertThreadByThreadId 0x14c
+0144:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+014c:trace:sync:RtlWaitOnAddress returning 0x101
+014c:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0144:trace:sync:NtAlertThreadByThreadId 0x148
+014c:trace:sync:NtAlertThreadByThreadId 0x118
+0148:trace:sync:RtlWaitOnAddress returning 0x101
+0144:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0144:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0144:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0118:trace:sync:RtlWaitOnAddress returning 0x101
+0144:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0144:trace:sync:RtlWakeAddressAll 0000000000846C48
+014c:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0148:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0144:trace:sync:RtlWakeAddressAll 0000000000846C40
+0038:trace:sync:sysv_NtSetEvent handle 0xac, prev_state 0x0
+0148:trace:sync:RtlWaitOnAddress addr 000000000003E9C8 cmp 00006FFFFFFC3E30 size 0x4 timeout fffffffffd050f80
+0148:trace:sync:RtlWakeAddressAll 000000000084AE68
+0148:trace:sync:RtlWakeAddressAll 000000000084AE60
+014c:trace:sync:RtlWakeAddressSingle 000000000003E9C8
+0148:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000001AFFECC size 0x4 timeout fffffffffd050f80
+014c:trace:sync:RtlWakeAddressAll 0000000000842A28
+0144:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000000EFFECC size 0x4 timeout fffffffffd050f80
+014c:trace:sync:RtlWakeAddressAll 0000000000842A20
+0144:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0034:trace:sync:NtWaitForSingleObject -> 0
+0148:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+014c:trace:sync:RtlWaitOnAddress addr 0000000000810258 cmp 0000000001EFFECC size 0x4 timeout fffffffffd050f80
+014c:trace:sync:NtWaitForAlertByThreadId 0x0 -5.0000000
+0034:trace:sync:NtReleaseMutant handle 0xa8, prev_count 0x0
+0034:trace:sync:sysv_NtSetEvent handle 0xa4, prev_state 0x0
+0034:trace:sync:NtWaitForSingleObject handle 0xa4, alertable 0, timeout (infinite)
+0034:trace:sync:NtWaitForSingleObject -> 0
+0034:trace:sync:NtWaitForSingleObject handle 0xb0, alertable 0, timeout (infinite)
+0034:trace:sync:NtWaitForSingleObject -> 0
+=== game exited status=0, killing wine prefix ===
+=== session health: healthy after 35s ===
+=== wine prefix killed, session ending ===
+=== notproton run Tue Oct 27 08:29:42 NZDT 2026 ===
+verb=run
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe]
+  [legacycompat\evaluatorscript_200510.vdf]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamUser=soreluel
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+sync: WINEMSYNC=0 from carried-over
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+0034:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+controllers: 52 kept off hidraw
+=== bridge already staged ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf
+=== launching (run): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+=== running helper through the shim: /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+=== helper exited status=0 ===
+=== notproton run Tue Oct 27 08:29:46 NZDT 2026 ===
+verb=waitforexitandrun
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
+SDL_GAMECONTROLLER_IGNORE_DEVICES=0x28de/0x1002,0x28de/0x1003,0x28de/0x1071,0x28de/0x1052,0x28de/0x1042,0x28de/0x1203,0x28de/0x1204,0x28de/0x1205,0x28de/0x1206,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x28de/0x12ff,0x28de/0x12fe,0x28de/0x12fd,0x28de/0x12fc,0x28de/0x12fb,0x28de/0x12fa,0x28de/0x12f9,0x28de/0x12f8,0x28de/0x12f7,0x28de/0x12f6,0x28de/0x12f5,0x28de/0x12f4,0x28de/0x12f3,0x28de/0x12f2,0x28de/0x12f1,0x28de/0x12f0,0x28DE/0x11E0,0x2dc8/0x6000,0x2dc8/0x6100,0x2dc8/0x6001,0x2dc8/0x6101,0x2dc8/0x6003,0x2dc8/0x6006,0x2dc8/0x6009,0x2dc8/0x6012,0x0000/0x11fb,0x28de/0x1101,0x28de/0x1102,0x28de/0x1105,0x28de/0x1106,0x28de/0x1142,0x28de/0x1201,0x28de/0x1202,0x28de/0x1205,0x28de/0x1220,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x0f0d/0x01ab,0x0f0d/0x0196,
+SDL_JOYSTICK_HIDAPI_STEAMXBOX=0
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_DYLD_INSERT_LIBRARIES=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamAppId=200510
+SteamAppUser=soreluel
+SteamClientLaunch=1
+SteamEnv=1
+SteamGameId=200510
+SteamOverlayGameId=200510
+SteamUser=soreluel
+SteamVirtualGamepadInfo_Proton=/Users/graysonmitchell/Library/Application Support/Steam/config/virtualgamepadinfo.txt
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+sync: WINEMSYNC=0 from default
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+video: RetinaMode=0
+00dc:trace:sync:sysv_NtCreateEvent access 0x1f0003, name L"\\KernelObjects\\__wineboot_event", type 0, state 0
+00dc:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x4}, timeout -300.0000000
+00dc:trace:sync:NtWaitForMultipleObjects -> 0
+00dc:trace:sync:NtCreateKeyedEvent access 0xc0000000, name (null), flags 0
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\start.exe" at 0000000140000000: builtin
+00dc:trace:loaddll:build_ntdll_module Loaded L"C:\\windows\\system32\\ntdll.dll" at 00006FFFFFF40000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernelbase.dll" at 00006FFFFFC10000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernel32.dll" at 00006FFFFFEC0000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\msvcrt.dll" at 00006FFFFFB10000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ucrtbase.dll" at 00006FFFFFA00000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\sechost.dll" at 00006FFFFFAE0000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\advapi32.dll" at 00006FFFFFBC0000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\win32u.dll" at 00006FFFFF4F0000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\user32.dll" at 00006FFFFF5D0000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\gdi32.dll" at 00006FFFFF540000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\shcore.dll" at 00006FFFFE930000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\shlwapi.dll" at 00006FFFFE960000: builtin
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\shell32.dll" at 00006FFFFE9C0000: builtin
+00dc:trace:sync:NtCreateMutant access 0x1f0001, name L"\\BaseNamedObjects\\__WINE_FONT_MUTEX__", owned 0
+00dc:trace:sync:NtWaitForSingleObject handle 0x3c, alertable 0, timeout (infinite)
+00dc:trace:sync:NtWaitForSingleObject -> 0
+00dc:trace:sync:NtReleaseMutant handle 0x3c, prev_count 0x0
+00dc:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\imm32.dll" at 00006FFFFF4C0000: builtin
+00dc:trace:sync:NtWaitForSingleObject handle 0x60, alertable 0, timeout (infinite)
+00e4:trace:sync:NtCreateKeyedEvent access 0xc0000000, name (null), flags 0
+00dc:trace:sync:NtWaitForSingleObject -> 0
+00dc:trace:sync:NtSetInformationJobObject (0x54, 9, 0x31fe60, 144)
+00dc:trace:sync:NtAssignProcessToJobObject (0x54 0x64)
+00dc:trace:sync:NtWaitForSingleObject handle 0x64, alertable 0, timeout (infinite)
+00e4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\reg.exe" at 0000000140000000: builtin
+00e4:trace:loaddll:build_ntdll_module Loaded L"C:\\windows\\system32\\ntdll.dll" at 00006FFFFFF40000: builtin
+00e4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernelbase.dll" at 00006FFFFFC10000: builtin
+00e4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\kernel32.dll" at 00006FFFFFEC0000: builtin
+00e4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\msvcrt.dll" at 00006FFFFFB10000: builtin
+00e4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\ucrtbase.dll" at 00006FFFFFA00000: builtin
+00e4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\sechost.dll" at 00006FFFFFAE0000: builtin
+00e4:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\advapi32.dll" at 00006FFFFFBC0000: builtin
+00dc:trace:sync:NtWaitForSingleObject -> 0
+controllers: 52 kept off hidraw
+=== bridge already staged ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe
+=== launching (waitforexitandrun): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe ===
+icon reused from /Users/graysonmitchell/Library/Application Support/notproton/launchers/200510/clienticon-a14ea28d6f4cb5764b174e085514726b81ca6d65.ico
+loader staged in bundle for game mode
+launcher bundle unchanged
+=== overlay injected from /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib ===
+=== game exited status=0, killing wine prefix ===

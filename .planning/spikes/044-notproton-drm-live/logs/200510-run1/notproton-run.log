@@ -1,0 +1,236 @@
+=== notproton run Tue Oct 27 08:16:02 NZDT 2026 ===
+verb=run
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe]
+  [legacycompat\evaluatorscript_200510.vdf]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamUser=soreluel
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+=== prefix claimed by build 26.3.0.39832 ===
+sync: WINEMSYNC=0 from default
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+=== cloned this prefix from the crossover-26.3.0.39832-x86_64-unix template ===
+=== mapped drive S: to /Users/graysonmitchell/Library/Application Support/Steam ===
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+0034:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+controllers: 3 kept off hidraw
+=== installed legacy Steam.dll ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf
+=== launching (run): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+=== running helper through the shim: /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_0.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_1.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_2.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_3.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_4.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_5.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_6.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_7.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_8.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_9.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine2_10.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_0.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_0.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_1.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_1.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_2.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_2.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_3.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_3.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_4.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_4.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_5.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_5.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_6.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_6.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\xactengine3_7.dll'
+regsvr32: Successfully registered DLL 'C:\windows\system32\XAudio2_7.dll'
+00e0:err:process:set_env_vars HACK: adding env vars
+0468:err:kerberos:kerberos_LsaApInitializePackage no Kerberos support, expect problems
+0468:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+0470:err:ver:GetFileVersionInfoSizeExW HACK: not exposing version info.
+=== helper exited status=0 ===
+=== notproton run Tue Oct 27 08:16:50 NZDT 2026 ===
+verb=waitforexitandrun
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
+SDL_GAMECONTROLLER_IGNORE_DEVICES=0x28de/0x1002,0x28de/0x1003,0x28de/0x1071,0x28de/0x1052,0x28de/0x1042,0x28de/0x1203,0x28de/0x1204,0x28de/0x1205,0x28de/0x1206,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x28de/0x12ff,0x28de/0x12fe,0x28de/0x12fd,0x28de/0x12fc,0x28de/0x12fb,0x28de/0x12fa,0x28de/0x12f9,0x28de/0x12f8,0x28de/0x12f7,0x28de/0x12f6,0x28de/0x12f5,0x28de/0x12f4,0x28de/0x12f3,0x28de/0x12f2,0x28de/0x12f1,0x28de/0x12f0,0x28DE/0x11E0,0x2dc8/0x6000,0x2dc8/0x6100,0x2dc8/0x6001,0x2dc8/0x6101,0x2dc8/0x6003,0x2dc8/0x6006,0x2dc8/0x6009,0x2dc8/0x6012,0x0000/0x11fb,0x28de/0x1101,0x28de/0x1102,0x28de/0x1105,0x28de/0x1106,0x28de/0x1142,0x28de/0x1201,0x28de/0x1202,0x28de/0x1205,0x28de/0x1220,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x0f0d/0x01ab,0x0f0d/0x0196,
+SDL_JOYSTICK_HIDAPI_STEAMXBOX=0
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_DYLD_INSERT_LIBRARIES=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamAppId=200510
+SteamAppUser=soreluel
+SteamClientLaunch=1
+SteamEnv=1
+SteamGameId=200510
+SteamOverlayGameId=200510
+SteamUser=soreluel
+SteamVirtualGamepadInfo_Proton=/Users/graysonmitchell/Library/Application Support/Steam/config/virtualgamepadinfo.txt
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+sync: WINEMSYNC=0 from default
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+video: RetinaMode=0
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+0034:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+controllers: 52 kept off hidraw
+=== bridge already staged ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe
+=== launching (waitforexitandrun): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe ===
+fetched client icon a14ea28d6f4cb5764b174e085514726b81ca6d65
+icon built from /Users/graysonmitchell/Library/Application Support/notproton/launchers/200510/clienticon-a14ea28d6f4cb5764b174e085514726b81ca6d65.ico
+loader staged in bundle for game mode
+launcher bundle updated
+=== overlay injected from /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib ===
+=== game exited status=0, killing wine prefix ===
+=== session health: healthy after 36s ===
+=== wine prefix killed, session ending ===
+=== notproton run Tue Oct 27 08:17:42 NZDT 2026 ===
+verb=run
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe]
+  [legacycompat\evaluatorscript_200510.vdf]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamUser=soreluel
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+sync: WINEMSYNC=0 from carried-over
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+0034:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+controllers: 52 kept off hidraw
+=== bridge already staged ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf
+=== launching (run): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+=== running helper through the shim: /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe legacycompat\evaluatorscript_200510.vdf ===
+=== helper exited status=0 ===
+=== notproton run Tue Oct 27 08:17:46 NZDT 2026 ===
+verb=waitforexitandrun
+args:
+  [/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe]
+cwd=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_APP_ID=200510
+-- steam env passed through --
+SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
+SDL_GAMECONTROLLER_IGNORE_DEVICES=0x28de/0x1002,0x28de/0x1003,0x28de/0x1071,0x28de/0x1052,0x28de/0x1042,0x28de/0x1203,0x28de/0x1204,0x28de/0x1205,0x28de/0x1206,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x28de/0x12ff,0x28de/0x12fe,0x28de/0x12fd,0x28de/0x12fc,0x28de/0x12fb,0x28de/0x12fa,0x28de/0x12f9,0x28de/0x12f8,0x28de/0x12f7,0x28de/0x12f6,0x28de/0x12f5,0x28de/0x12f4,0x28de/0x12f3,0x28de/0x12f2,0x28de/0x12f1,0x28de/0x12f0,0x28DE/0x11E0,0x2dc8/0x6000,0x2dc8/0x6100,0x2dc8/0x6001,0x2dc8/0x6101,0x2dc8/0x6003,0x2dc8/0x6006,0x2dc8/0x6009,0x2dc8/0x6012,0x0000/0x11fb,0x28de/0x1101,0x28de/0x1102,0x28de/0x1105,0x28de/0x1106,0x28de/0x1142,0x28de/0x1201,0x28de/0x1202,0x28de/0x1205,0x28de/0x1220,0x28de/0x1302,0x28de/0x1303,0x28de/0x1304,0x28de/0x1305,0x0f0d/0x01ab,0x0f0d/0x0196,
+SDL_JOYSTICK_HIDAPI_STEAMXBOX=0
+STEAM_APP_BUNDLE_PATH=/Applications/Steam.app
+STEAM_CLIENT_CONFIG_FILE=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam.cfg
+STEAM_COMPAT_APP_ID=200510
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+STEAM_COMPAT_DATA_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510
+STEAM_COMPAT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown
+STEAM_COMPAT_LIBRARY_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/steamapps
+STEAM_COMPAT_MOUNTS=
+STEAM_COMPAT_PROTON=1
+STEAM_COMPAT_SHADER_PATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/200510
+STEAM_COMPAT_TOOL_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.
+STEAM_DYLD_INSERT_LIBRARIES=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib
+STEAM_EXTRA_COMPAT_TOOLS_PATHS=/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d
+Steam3Master=127.0.0.1:57343
+SteamAppId=200510
+SteamAppUser=soreluel
+SteamClientLaunch=1
+SteamEnv=1
+SteamGameId=200510
+SteamOverlayGameId=200510
+SteamUser=soreluel
+SteamVirtualGamepadInfo_Proton=/Users/graysonmitchell/Library/Application Support/Steam/config/virtualgamepadinfo.txt
+app_id=200510 (STEAM_COMPAT_APP_ID=200510)
+runner: build 26.3.0.39832 (CrossOver 26.3) at /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver
+sync: WINEMSYNC=0 from default
+avx: ROSETTA_ADVERTISE_AVX=1 from default
+video: RetinaMode=0
+009c:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+0034:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+controllers: 52 kept off hidraw
+=== bridge already staged ===
+=== bridge staged into /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam ===
+WINEDLLPATH=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/200510/pfx/drive_c/Program Files (x86)/Steam:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows:/Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix
+WINEDLLOVERRIDES=steamclient=n;steamclient64=n;lsteamclient=b
+STEAM_COMPAT_CLIENT_INSTALL_PATH=/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+launch_args=/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe
+=== launching (waitforexitandrun): /Users/graysonmitchell/Library/Application Support/notproton/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix/wine /Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe ===
+icon reused from /Users/graysonmitchell/Library/Application Support/notproton/launchers/200510/clienticon-a14ea28d6f4cb5764b174e085514726b81ca6d65.ico
+loader staged in bundle for game mode
+launcher bundle unchanged
+=== overlay injected from /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib ===
+=== game exited status=0, killing wine prefix ===
+=== session health: healthy after 36s ===
+=== wine prefix killed, session ending ===

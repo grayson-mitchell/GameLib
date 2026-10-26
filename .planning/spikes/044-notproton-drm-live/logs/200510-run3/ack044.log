@@ -1,0 +1,5 @@
+2026-10-26T19:29:47.862Z +1ms ack_watch: polling 90s, delay 0ms
+2026-10-26T19:29:51.510Z +3649ms saw STEAM_START_ACK_EVENT_252_14811188 in \BaseNamedObjects\Session\1
+2026-10-26T19:29:51.510Z +3650ms   control SetEvent(0x100000 handle) -> 0 err 5
+2026-10-26T19:29:51.510Z +3650ms   SetEvent(0x100002 handle) -> 1 err 0
+2026-10-26T19:31:17.870Z +90003ms ack_watch: done, 1 ACK event(s) handled

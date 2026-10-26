@@ -1,0 +1,59 @@
+
+
+[2026-10-27 08:05:59] Client version: 1792618285
+[2026-10-27 08:05:59] Processing local tool list at /Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/compatibilitytool.vdf...
+[2026-10-27 08:05:59] Registering tool notproton-26.3, AppID 0
+[2026-10-27 08:05:59] Mapping AppID 219990 to tool "notproton-26.3" with priority 250
+[2026-10-27 08:05:59] Mapping AppID 200510 to tool "notproton-26.3" with priority 250
+[2026-10-27 08:05:59] Loaded manifest for tool notproton-26.3.
+[2026-10-27 08:06:04] CCacheOffSteamPlayStateJob: start job, reason: LaunchLogOnCompatProcessingJob
+[2026-10-27 08:06:04] CCacheOffSteamPlayStateJob 6056338890664893305 processing all compat lists..
+[2026-10-27 08:06:04] Processing tool list from AppID 891390
+[2026-10-27 08:06:04] Registering tool proton_experimental, AppID 1493710
+[2026-10-27 08:06:04] Ignoring tool proton_experimental as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_11, AppID 4628710
+[2026-10-27 08:06:04] Ignoring tool proton_11 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_10, AppID 3658110
+[2026-10-27 08:06:04] Ignoring tool proton_10 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_9, AppID 2805730
+[2026-10-27 08:06:04] Ignoring tool proton_9 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_8, AppID 2348590
+[2026-10-27 08:06:04] Ignoring tool proton_8 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_7, AppID 1887720
+[2026-10-27 08:06:04] Ignoring tool proton_7 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_63, AppID 1580130
+[2026-10-27 08:06:04] Ignoring tool proton_63 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_513, AppID 1420170
+[2026-10-27 08:06:04] Ignoring tool proton_513 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_5, AppID 1245040
+[2026-10-27 08:06:04] Ignoring tool proton_5 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_411, AppID 1113280
+[2026-10-27 08:06:04] Ignoring tool proton_411 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_42, AppID 1054830
+[2026-10-27 08:06:04] Ignoring tool proton_42 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_316, AppID 961940
+[2026-10-27 08:06:04] Ignoring tool proton_316 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_37, AppID 858280
+[2026-10-27 08:06:04] Ignoring tool proton_37 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool proton_hotfix, AppID 2180100
+[2026-10-27 08:06:04] Ignoring tool proton_hotfix as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool steamlinuxruntime_4, AppID 4183110
+[2026-10-27 08:06:04] Ignoring tool steamlinuxruntime_4 as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool steamlinuxruntime_sniper, AppID 1628350
+[2026-10-27 08:06:04] Ignoring tool steamlinuxruntime_sniper as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool steamlinuxruntime_soldier, AppID 1391110
+[2026-10-27 08:06:04] Ignoring tool steamlinuxruntime_soldier as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool steamlinuxruntime, AppID 1070560
+[2026-10-27 08:06:04] Ignoring tool steamlinuxruntime as it's for a different target platform linux.
+[2026-10-27 08:06:04] Registering tool legacysteamruntime, AppID 4690330
+[2026-10-27 08:06:04] Ignoring tool legacysteamruntime as it's for a different target platform linux.
+[2026-10-27 08:06:04] CCacheOffSteamPlayStateJob 6056338890664893305 complete
+[2026-10-27 08:06:04] Posting queued tool registration callback 0 notproton-26.3
+[2026-10-27 08:06:04] Command prefix for tool 0 "CrossOver 26.3" set to: "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run run ".
+[2026-10-27 08:06:04] Waiting for compat in post-logon took: 0.050652s
+[2026-10-27 08:09:20] StartSession: appID 219990 session bdbc17bc401de3e5
+[2026-10-27 08:10:39] StartSession: appID 219990 added secondary session 34ae42cacbc8b4ca to session bdbc17bc401de3e5
+[2026-10-27 08:10:39] Command prefix for tool 0 "CrossOver 26.3" set to: "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run run ".
+[2026-10-27 08:10:39] ReleaseSession: appID 219990 session 34ae42cacbc8b4ca released, 1 left
+[2026-10-27 08:12:07] Command prefix for tool 0 "CrossOver 26.3" set to: "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun ".
+[2026-10-27 08:13:26] OnAppLifetimeNotification: release session(s) for appID 219990

@@ -1,0 +1,400 @@
+[2026-10-27 08:06:56] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:06:57] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:06:59] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:06:59] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:06:59] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:00] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:00] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:02] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:03] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:04] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:04] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:04] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:05] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:06] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:06] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:07] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:08] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:08] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:09] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:09] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:09] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:10] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:11] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:12] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:12] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:13] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:14] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:14] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:15] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:15] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:16] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.3ms
+[2026-10-27 08:07:16] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:19] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:19] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:20] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:20] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:21] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:21] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:23] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:25] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:26] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:27] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:27] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:28] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:28] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:29] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:30] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:36] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:37] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:37] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:38] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:39] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:39] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:40] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 3.0ms
+[2026-10-27 08:07:40] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.5ms
+[2026-10-27 08:07:40] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.8ms
+[2026-10-27 08:07:40] STARTUP SlowJSMethodCall Apps.GetGameActionForApp took 11.0ms
+[2026-10-27 08:07:40] STARTUP SlowJSMethodCall Apps.GetLaunchOptionsForApp took 11.1ms
+[2026-10-27 08:07:40] STARTUP SlowJSMethodCall RoamingStorage.GetJSON took 11.1ms
+[2026-10-27 08:07:40] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:41] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:41] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:42] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:43] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:45] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:46] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:47] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:49] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:49] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:51] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:51] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:52] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:52] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:53] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:54] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:54] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:57] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:07:58] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:02] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:02] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:04] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:05] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:05] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:06] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:07] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:09] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:09] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:10] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:14] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:15] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:20] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:22] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:23] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:24] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:25] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:27] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:29] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:29] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:30] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:30] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:31] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:31] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:33] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:36] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:37] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:39] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:39] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:40] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:44] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:44] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:45] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:45] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:46] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:46] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:47] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:49] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:53] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:53] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:54] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:54] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:54] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:55] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:08:58] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:00] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:00] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:00] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:01] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:01] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:01] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:04] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:04] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:06] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:07] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:07] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:09] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:09] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.1ms
+[2026-10-27 08:09:09] STARTUP SlowJSMethodCall Storage.GetString took 11.1ms
+[2026-10-27 08:09:09] STARTUP SlowJSMethodCall Apps.GetLaunchOptionsForApp took 11.1ms
+[2026-10-27 08:09:09] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:10] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:10] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:11] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:11] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:11] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:11] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:12] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:12] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:13] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:15] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:15] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:16] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:17] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:17] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:17] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:18] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:18] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:19] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:20] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:20] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to ShowLaunchOption with ""
+[2026-10-27 08:09:20] GameAction [AppID 219990, ActionID 1] : LaunchApp waiting for user response to ShowLaunchOption ""
+[2026-10-27 08:09:20] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:20] STARTUP SlowJSMethodCall Apps.GetLaunchOptionsForApp took 11.2ms
+[2026-10-27 08:09:20] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.2ms
+[2026-10-27 08:09:20] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:21] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:21] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:21] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.4ms
+[2026-10-27 08:09:21] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:22] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:22] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:23] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:23] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:23] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:24] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:24] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:24] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:25] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:25] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:09:25] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:25] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:09:25] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:26] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:26] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:26] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:09:26] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:27] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:27] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:09:27] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:28] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:28] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 1.2ms
+[2026-10-27 08:09:28] CAPIJobRequestUserStats - Server response failed 2
+[2026-10-27 08:09:32] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:09:36] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.8ms
+[2026-10-27 08:10:05] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 1.7ms
+[2026-10-27 08:10:10] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:10:10] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.9ms
+[2026-10-27 08:10:13] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 1.3ms
+[2026-10-27 08:10:34] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.2ms
+[2026-10-27 08:10:39] GameAction [AppID 219990, ActionID 1] : LaunchApp continues with user response "1"
+[2026-10-27 08:10:39] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to ProcessingInstallScript with ""
+[2026-10-27 08:10:39] STARTUP SlowJSMethodCall Apps.ContinueGameAction took 1.4ms
+[2026-10-27 08:10:39] Running install script evaluator for AppID 219990, 6 step(s)  '/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run run '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe' 'legacycompat\evaluatorscript_219990.vdf'
+[2026-10-27 08:10:42] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:10:43] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:10:43] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:10:49] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:10:52] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:10:54] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:11:06] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:11:07] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.4ms
+[2026-10-27 08:11:15] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:17] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:27] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:29] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:30] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:11:30] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:31] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:31] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:33] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.8ms
+[2026-10-27 08:11:35] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:36] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:38] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:38] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.1ms
+[2026-10-27 08:11:39] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:40] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:41] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:44] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:46] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:46] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.9ms
+[2026-10-27 08:11:46] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:47] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:51] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.7ms
+[2026-10-27 08:11:54] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.5ms
+[2026-10-27 08:11:56] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:11:59] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.8ms
+[2026-10-27 08:12:04] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 1.0ms
+[2026-10-27 08:12:04] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.6ms
+[2026-10-27 08:12:05] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to SynchronizingCloud with ""
+[2026-10-27 08:12:06] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to SynchronizingStats with ""
+[2026-10-27 08:12:07] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to ShowInterstitials with ""
+[2026-10-27 08:12:07] GameAction [AppID 219990, ActionID 1] : LaunchApp waiting for user response to ShowInterstitials ""
+[2026-10-27 08:12:07] GameAction [AppID 219990, ActionID 1] : LaunchApp continues with user response "ShowInterstitials"
+[2026-10-27 08:12:07] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to SiteLicenseSeatCheckout with ""
+[2026-10-27 08:12:07] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to DelayLaunch with ""
+[2026-10-27 08:12:07] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to CreatingProcess with ""
+[2026-10-27 08:12:07] GameAction [AppID 219990, ActionID 1] : LaunchApp waiting for user response to CreatingProcess ""
+[2026-10-27 08:12:07] GameAction [AppID 219990, ActionID 1] : LaunchApp continues with user response "CreatingProcess"
+[2026-10-27 08:12:07] /bin/sh\0-c\0'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'\0
+[2026-10-27 08:12:07] Game process added : AppID 219990 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'", ProcID 27135, IP 0.0.0.0:0
+[2026-10-27 08:12:07] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to WaitingGameWindow with ""
+[2026-10-27 08:12:07] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:12:07] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to Completed with ""
+[2026-10-27 08:12:18] Game process updated : AppID 219990 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'", ProcID 27570, IP 0.0.0.0:0
+[2026-10-27 08:12:18] ThreadGetProcessExitCode: no such process 27583 - 10
+[2026-10-27 08:12:19] Game process updated : AppID 219990 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'", ProcID 27602, IP 0.0.0.0:0
+[2026-10-27 08:12:20] Game process updated : AppID 219990 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'", ProcID 27602, IP 0.0.0.0:0
+[2026-10-27 08:12:24] GameOverlay: started '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui' (pid 27616) for game process 27602
+[2026-10-27 08:12:25] STARTUP SlowJSMethodCall Storage.GetString took 11.1ms
+[2026-10-27 08:12:25] STARTUP SlowJSMethodCall Storage.GetString took 11.1ms
+[2026-10-27 08:12:25] STARTUP SlowJSMethodCall ServerBrowser.GetMultiplayerGames took 1.8ms
+[2026-10-27 08:13:26] Game process removed: AppID 219990 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'", ProcID 27602 
+[2026-10-27 08:13:26] ThreadGetProcessExitCode: no such process 27602 - 10
+[2026-10-27 08:13:26] ThreadGetProcessExitCode: no such process 27600 - 10
+[2026-10-27 08:13:26] ThreadGetProcessExitCode: no such process 27596 - 10
+[2026-10-27 08:13:26] ThreadGetProcessExitCode: no such process 27594 - 10
+[2026-10-27 08:13:26] ThreadGetProcessExitCode: no such process 27592 - 10
+[2026-10-27 08:13:26] ThreadGetProcessExitCode: no such process 27590 - 10
+[2026-10-27 08:13:26] ThreadGetProcessExitCode: no such process 27587 - 10
+[2026-10-27 08:13:26] ThreadGetProcessExitCode: no such process 27585 - 10
+[2026-10-27 08:13:26] ThreadGetProcessExitCode: no such process 27570 - 10
+[2026-10-27 08:13:27] STARTUP SlowJSMethodCall RemotePlay.BCanCreateInviteForGame took 11.1ms
+[2026-10-27 08:15:54] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.3ms
+[2026-10-27 08:15:54] STARTUP SlowJSMethodCall RoamingStorage.GetJSON took 11.1ms
+[2026-10-27 08:15:59] GameAction [AppID 200510, ActionID 2] : LaunchApp changed task to ShowEula with ""
+[2026-10-27 08:15:59] GameAction [AppID 200510, ActionID 2] : LaunchApp waiting for user response to ShowEula ""
+[2026-10-27 08:16:02] GameAction [AppID 200510, ActionID 2] : LaunchApp continues with user response "ShowEula"
+[2026-10-27 08:16:02] GameAction [AppID 200510, ActionID 2] : LaunchApp changed task to ProcessingInstallScript with ""
+[2026-10-27 08:16:02] STARTUP SlowJSMethodCall Apps.ContinueGameAction took 1.0ms
+[2026-10-27 08:16:02] Running install script evaluator for AppID 200510, 1 step(s)  '/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run run '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe' 'legacycompat\evaluatorscript_200510.vdf'
+[2026-10-27 08:16:09] GameAction [AppID 200510, ActionID 2] : LaunchApp changed task to RunningInstallScript with ""
+[2026-10-27 08:16:10] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:11] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.8ms
+[2026-10-27 08:16:11] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:16:12] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:14] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.6ms
+[2026-10-27 08:16:14] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:16] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:16:16] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.1ms
+[2026-10-27 08:16:16] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:18] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:19] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:20] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:16:20] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:21] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:22] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:23] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.3ms
+[2026-10-27 08:16:24] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:25] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-10-27 08:16:25] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:25] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:26] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.3ms
+[2026-10-27 08:16:26] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:26] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.5ms
+[2026-10-27 08:16:28] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:29] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.1ms
+[2026-10-27 08:16:31] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:32] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:33] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.5ms
+[2026-10-27 08:16:34] GameAction [AppID 200510, ActionID 2] : LaunchApp changed task to SynchronizingCloud with ""
+[2026-10-27 08:16:35] GameAction [AppID 200510, ActionID 2] : LaunchApp waiting for user response to SynchronizingCloud "pendingcloudsessions"
+[2026-10-27 08:16:35] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.3ms
+[2026-10-27 08:16:35] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 12.3ms
+[2026-10-27 08:16:35] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.9ms
+[2026-10-27 08:16:36] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 1.6ms
+[2026-10-27 08:16:43] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 21.2ms
+[2026-10-27 08:16:44] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:48] GameAction [AppID 200510, ActionID 2] : LaunchApp continues with user response "IgnorePendingCloudSessions"
+[2026-10-27 08:16:49] GameAction [AppID 200510, ActionID 2] : LaunchApp changed task to SynchronizingStats with ""
+[2026-10-27 08:16:49] GameAction [AppID 200510, ActionID 2] : LaunchApp changed task to ShowInterstitials with ""
+[2026-10-27 08:16:49] GameAction [AppID 200510, ActionID 2] : LaunchApp waiting for user response to ShowInterstitials ""
+[2026-10-27 08:16:49] GameAction [AppID 200510, ActionID 2] : LaunchApp continues with user response "ShowInterstitials"
+[2026-10-27 08:16:49] GameAction [AppID 200510, ActionID 2] : LaunchApp changed task to SiteLicenseSeatCheckout with ""
+[2026-10-27 08:16:49] GameAction [AppID 200510, ActionID 2] : LaunchApp changed task to DelayLaunch with ""
+[2026-10-27 08:16:49] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:16:50] GameAction [AppID 200510, ActionID 2] : LaunchApp changed task to CreatingProcess with ""
+[2026-10-27 08:16:50] GameAction [AppID 200510, ActionID 2] : LaunchApp waiting for user response to CreatingProcess ""
+[2026-10-27 08:16:50] GameAction [AppID 200510, ActionID 2] : LaunchApp continues with user response "CreatingProcess"
+[2026-10-27 08:16:50] /bin/sh\0-c\0'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'\0
+[2026-10-27 08:16:50] Game process added : AppID 200510 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'", ProcID 30621, IP 0.0.0.0:0
+[2026-10-27 08:16:50] GameAction [AppID 200510, ActionID 2] : LaunchApp changed task to WaitingGameWindow with ""
+[2026-10-27 08:16:50] GameAction [AppID 200510, ActionID 2] : LaunchApp changed task to Completed with ""
+[2026-10-27 08:16:57] Game process updated : AppID 200510 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'", ProcID 31022, IP 0.0.0.0:0
+[2026-10-27 08:16:58] ThreadGetProcessExitCode: no such process 31028 - 10
+[2026-10-27 08:17:33] Game process removed: AppID 200510 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'", ProcID 31022 
+[2026-10-27 08:17:33] ThreadGetProcessExitCode: no such process 31051 - 10
+[2026-10-27 08:17:33] ThreadGetProcessExitCode: no such process 31047 - 10
+[2026-10-27 08:17:33] ThreadGetProcessExitCode: no such process 31045 - 10
+[2026-10-27 08:17:33] ThreadGetProcessExitCode: no such process 31042 - 10
+[2026-10-27 08:17:33] ThreadGetProcessExitCode: no such process 31040 - 10
+[2026-10-27 08:17:33] ThreadGetProcessExitCode: no such process 31038 - 10
+[2026-10-27 08:17:33] ThreadGetProcessExitCode: no such process 31032 - 10
+[2026-10-27 08:17:33] ThreadGetProcessExitCode: no such process 31030 - 10
+[2026-10-27 08:17:33] ThreadGetProcessExitCode: no such process 31022 - 10
+[2026-10-27 08:17:42] GameAction [AppID 200510, ActionID 3] : LaunchApp changed task to ProcessingInstallScript with ""
+[2026-10-27 08:17:42] Running install script evaluator for AppID 200510, 1 step(s)  '/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run run '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe' 'legacycompat\evaluatorscript_200510.vdf'
+[2026-10-27 08:17:44] GameAction [AppID 200510, ActionID 3] : LaunchApp changed task to SynchronizingCloud with ""
+[2026-10-27 08:17:45] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:17:45] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-10-27 08:17:45] GameAction [AppID 200510, ActionID 3] : LaunchApp changed task to SynchronizingStats with ""
+[2026-10-27 08:17:45] GameAction [AppID 200510, ActionID 3] : LaunchApp changed task to ShowInterstitials with ""
+[2026-10-27 08:17:45] GameAction [AppID 200510, ActionID 3] : LaunchApp waiting for user response to ShowInterstitials ""
+[2026-10-27 08:17:46] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.4ms
+[2026-10-27 08:17:46] GameAction [AppID 200510, ActionID 3] : LaunchApp continues with user response "ShowInterstitials"
+[2026-10-27 08:17:46] GameAction [AppID 200510, ActionID 3] : LaunchApp changed task to SiteLicenseSeatCheckout with ""
+[2026-10-27 08:17:46] GameAction [AppID 200510, ActionID 3] : LaunchApp changed task to DelayLaunch with ""
+[2026-10-27 08:17:46] GameAction [AppID 200510, ActionID 3] : LaunchApp changed task to CreatingProcess with ""
+[2026-10-27 08:17:46] GameAction [AppID 200510, ActionID 3] : LaunchApp waiting for user response to CreatingProcess ""
+[2026-10-27 08:17:46] GameAction [AppID 200510, ActionID 3] : LaunchApp continues with user response "CreatingProcess"
+[2026-10-27 08:17:46] /bin/sh\0-c\0'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'\0
+[2026-10-27 08:17:46] Game process added : AppID 200510 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'", ProcID 31382, IP 0.0.0.0:0
+[2026-10-27 08:17:46] GameAction [AppID 200510, ActionID 3] : LaunchApp changed task to WaitingGameWindow with ""
+[2026-10-27 08:17:46] GameAction [AppID 200510, ActionID 3] : LaunchApp changed task to Completed with ""
+[2026-10-27 08:17:52] Game process updated : AppID 200510 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'", ProcID 31955, IP 0.0.0.0:0
+[2026-10-27 08:17:53] ThreadGetProcessExitCode: no such process 31960 - 10
+[2026-10-27 08:18:29] Game process removed: AppID 200510 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'", ProcID 31955 
+[2026-10-27 08:18:29] ThreadGetProcessExitCode: no such process 31981 - 10
+[2026-10-27 08:18:29] ThreadGetProcessExitCode: no such process 31978 - 10
+[2026-10-27 08:18:29] ThreadGetProcessExitCode: no such process 31976 - 10
+[2026-10-27 08:18:29] ThreadGetProcessExitCode: no such process 31974 - 10
+[2026-10-27 08:18:29] ThreadGetProcessExitCode: no such process 31972 - 10
+[2026-10-27 08:18:29] ThreadGetProcessExitCode: no such process 31969 - 10
+[2026-10-27 08:18:29] ThreadGetProcessExitCode: no such process 31965 - 10
+[2026-10-27 08:18:29] ThreadGetProcessExitCode: no such process 31962 - 10
+[2026-10-27 08:18:29] ThreadGetProcessExitCode: no such process 31955 - 10
+[2026-10-27 08:21:57] STARTUP SlowJSMethodCall Apps.ToggleAppSteamCloudEnabled took 8.1ms
+[2026-10-27 08:21:57] saving roaming config store to 'sharedconfig.vdf'
+[2026-10-27 08:21:57] roaming config store 2 saved successfully
+[2026-10-27 08:22:17] STARTUP SlowJSMethodCall Apps.SetAppLaunchOptions took 7.0ms
+[2026-10-27 08:22:51] GameAction [AppID 200510, ActionID 4] : LaunchApp changed task to ProcessingInstallScript with ""
+[2026-10-27 08:22:51] Running install script evaluator for AppID 200510, 1 step(s)  '/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run run '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe' 'legacycompat\evaluatorscript_200510.vdf'
+[2026-10-27 08:22:53] GameAction [AppID 200510, ActionID 4] : LaunchApp changed task to SynchronizingCloud with ""
+[2026-10-27 08:22:53] GameAction [AppID 200510, ActionID 4] : LaunchApp changed task to SynchronizingStats with ""
+[2026-10-27 08:22:54] GameAction [AppID 200510, ActionID 4] : LaunchApp changed task to ShowInterstitials with ""
+[2026-10-27 08:22:54] GameAction [AppID 200510, ActionID 4] : LaunchApp waiting for user response to ShowInterstitials ""
+[2026-10-27 08:22:54] GameAction [AppID 200510, ActionID 4] : LaunchApp continues with user response "ShowInterstitials"
+[2026-10-27 08:22:54] GameAction [AppID 200510, ActionID 4] : LaunchApp changed task to SiteLicenseSeatCheckout with ""
+[2026-10-27 08:22:54] GameAction [AppID 200510, ActionID 4] : LaunchApp changed task to DelayLaunch with ""
+[2026-10-27 08:22:54] GameAction [AppID 200510, ActionID 4] : LaunchApp changed task to CreatingProcess with ""
+[2026-10-27 08:22:54] GameAction [AppID 200510, ActionID 4] : LaunchApp waiting for user response to CreatingProcess ""
+[2026-10-27 08:22:54] GameAction [AppID 200510, ActionID 4] : LaunchApp continues with user response "CreatingProcess"
+[2026-10-27 08:22:54] /bin/sh\0-c\0WINEDEBUG=+sync,+loaddll '/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'\0
+[2026-10-27 08:22:54] Game process added : AppID 200510 "WINEDEBUG=+sync,+loaddll '/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'", ProcID 32675, IP 0.0.0.0:0
+[2026-10-27 08:22:54] GameAction [AppID 200510, ActionID 4] : LaunchApp changed task to WaitingGameWindow with ""
+[2026-10-27 08:22:54] GameAction [AppID 200510, ActionID 4] : LaunchApp changed task to Completed with ""
+[2026-10-27 08:22:59] Game process updated : AppID 200510 "WINEDEBUG=+sync,+loaddll '/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'", ProcID 33247, IP 0.0.0.0:0
+[2026-10-27 08:23:36] Game process removed: AppID 200510 "WINEDEBUG=+sync,+loaddll '/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/XCom-Enemy-Unknown/Binaries/Win32/XComGame.exe'", ProcID 33247 
+[2026-10-27 08:23:36] ThreadGetProcessExitCode: no such process 33256 - 10
+[2026-10-27 08:23:36] ThreadGetProcessExitCode: no such process 33253 - 10
+[2026-10-27 08:23:36] ThreadGetProcessExitCode: no such process 33250 - 10
+[2026-10-27 08:23:36] ThreadGetProcessExitCode: no such process 33247 - 10
