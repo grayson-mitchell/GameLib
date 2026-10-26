@@ -18,10 +18,12 @@ That log has since rotated away, so whether the timeouts cluster on depot 200511
 hosts cannot be answered from it. The empty-token cause is removed by quick 261026-piq, so it is
 no longer a confound.
 
-The `[Timing] chunk-stream stats` lines (`depot.ts` ~2498-2630) already carry per-host
-`worstHosts=[host[a=N ok=N to=N err=N ...]]` counts, so the next live XCOM 200510 run answers the
-host half with no code change. The depot half would still need per-depot timeout counts or a stats
-line scoped to a depot. Open question: whether that instrumentation is worth adding.
+The `[Timing] chunk-stream stats` lines (`logChunkStreamStats` in `downloadDepotFiles`,
+`depot.ts`) carry per-host `worstHosts=[host[a=N ok=N to=N err=N ...]]` counts, and quick
+261027-d5i added a trailing `depots=[<id>[a=N ok=N to=N err=N] ...]` segment (worst-first by
+timeouts+errors, capped at 6) to the same line. The next live XCOM 200510 run therefore answers
+both halves: the depot half from `depots=[...]` (is 200511's `to` share disproportionate?) and the
+host half from `worstHosts=[...]`.
 
 Comparison point, measured 2026-10-26 during planning (re-checked against
 `~/Library/Logs/GameLib/gamelib.log.pre-51-29-20261023-214423`, XCOM 200510 plus 230070):
