@@ -3610,7 +3610,9 @@ export async function downloadDepotFiles(
     // reach chmod, so chmodAttempts=0 is EXPECTED there and is not an
     // integrity finding. Suppress only the log line: allModesApplied above is
     // deliberately still false, so the 1026 outcome is unchanged, and the
-    // cancelled run also fails allFilesVerifiedThisRun via allJobsAttempted.
+    // run's outcome 'cancelled' independently fails canWriteFullOwnership
+    // (allFilesVerifiedThisRun can still be true when the abort lands after
+    // the queue drained, so it is not the guard here).
     // The gate is abort-only (not runLooksComplete) so a non-cancelled run
     // that applied zero chmods against an executable-claiming manifest, with
     // or without failures, still warns.
