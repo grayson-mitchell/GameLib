@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 51-widen-the-native-steam-bridge-more-interface-proxies-and-sca
 source:
   - 51-01-SUMMARY.md
@@ -21,7 +21,7 @@ source:
   - 51-17-SUMMARY.md
   - 51-18-SUMMARY.md
 started: 2026-10-21T12:30:34Z
-updated: 2026-10-26T07:33:12Z
+updated: 2026-10-26T07:52:43Z
 ---
 
 ## Preconditions
@@ -46,7 +46,7 @@ legacy-bottle launch-time-miss evidence.
 
 ## Current Test
 
-[testing paused — 1 items outstanding]
+[testing complete]
 
 ## Tests
 
@@ -218,14 +218,14 @@ result: pass — 2026-10-26, packaged debug bundle, staged as written. `GameLibS
 
 ### 24. Review-fix WR-11 — the force-bottled toggle persists only on Install, and a failed route write blocks the install
 expected: Use a small owned Windows-only title U that is not installed and not knownBad, whose Install dialog shows the route line "Native Steam bridge" and the "Use the Windows Steam client instead" toggle. Watch `U.bridge.userRoute` in `~/Library/Application Support/gamelib/store_cache/steam_metadata.json`; read it, and edit it only where an arm says so, with GameLib quit. (a) Pending only: tick the toggle. It shows ticked, the route line still reads "Native Steam bridge", and `userRoute` is unchanged. This is the behaviour change: the route line no longer re-probes when the toggle flips, and only the toggle shows the pending choice. (b) Cancel writes nothing: press Cancel and reopen. The toggle is unticked and `userRoute` is still unchanged. Under the review's WR-11, cancelling left the game permanently forced to the bottle. (c) Install persists, then dispatches: tick and press Install. `userRoute` becomes `"bottle"` and the download goes into the GameLibSteam bottle, with no `GameLibSteamBridge-<U>` bottle and no `[Timing] prescreenBridgeDepots: appId <U>` line; item 22's setup can start from here. (d) A stored `'bridge'` override survives: on a second such title V, with GameLib quit, set `V.bridge.userRoute` to `"bridge"`, restart, open V's Install dialog, tick then untick the toggle, press Install, then cancel that download. `userRoute` still reads `"bridge"`; under the review, unticking wrote `null` and deleted it. (e) A failed write blocks the install: the backend returns `{ ok: false }` only for invalid payloads the UI never sends, so force it from the packaged debug build's webview devtools console with `window.api.setSteamBridgeUserRoute = async () => ({ ok: false, error: 'uat-forced' })`. Then flip U's toggle and press Install. The dialog shows "Starting the install failed: uat-forced" inline, no download starts, Install can be pressed again, and gamelib.log has `SteamDialog: setSteamBridgeUserRoute failed (uat-forced) for appName "<U>" -- install not started`. Game-page route notice, with the same override still in place: it needs a not-installed knownBad title, and all three (200510, 411300, 63000) are installed here, so uninstall retired Hoard (63000, knownBad does-not-run) if the operator agrees. Press Install on Hoard's game page, then "Use bottled Steam" in the notice. The notice shows "Starting the install failed: uat-forced" and no install starts; under the review it installed anyway and looped back to the same notice. Restart GameLib to drop the override and repeat: the install starts, and `63000.bridge.noticeAcknowledgedFor` records the notice's reason. If the console assignment does not take, record (e) as not producible from the UI and uncovered: no test renders the `{ ok: false }` branch, since steamBridgeRouteLine.test.ts covers only `resolveForceBottleDisplayed` and `resolveForceBottleWrite`.
-result: pending
+result: pass — 2026-10-26, packaged debug bundle. Dialog arms (a)-(e) passed; the game-page route-notice half was not run (operator chose to skip it, so Hoard stays installed). (a)-(c) U = Luxor 3 (15930); a first attempt on Dungeonmans (288120) was abandoned after an unticked Install went to the bridge, see below. (a) Ticking the toggle left the route line reading "Native Steam bridge" (operator observed). (b) After Cancel and reopen, the toggle was unticked (operator observed); under the review's WR-11, the tick had already been persisted. (c) Tick then Install: `15930.bridge.userRoute` = `"bottle"`; buildDepotPlan probed GameLibSteam's steamapps (20:43:33); `Writing StateFlags=4 full-ownership manifest for appId 15930` at 20:43:43, then `install polling complete … badge flipped to installed`. No `GameLibSteamBridge-15930` bottle and no `prescreenBridgeDepots: appId 15930` line. (d) V = Fallout 2 (38410): with GameLib quit, `38410.bridge.userRoute` was set to `"bridge"`; after a restart, ticking then unticking and pressing Install left `userRoute` reading `"bridge"`, and the download went into `GameLibSteamBridge-38410` before it was cancelled. (e) The console override `window.api.setSteamBridgeUserRoute = async () => ({ ok: false, error: 'uat-forced' })` took. The dialog showed "Starting the install failed: uat-forced" inline. gamelib.log 20:51:42: `SteamDialog: setSteamBridgeUserRoute failed (uat-forced) for appName "38410" -- install not started`, with no new download for 38410 and `userRoute` still `"bridge"`. The arm ran on Fallout 2 (V), not on Fallout (38400) as briefed, and is equally valid. Not run: the game-page SteamBridgeRouteNotice `{ ok: false }` path. It needs a not-installed knownBad title (Hoard would have to be uninstalled and its `noticeAcknowledgedFor: known-bad` cleared), and no test renders that branch, so it stays uncovered. Side observations (not WR-11): (1) after an in-flight download is cancelled and removed from Downloads, the game keeps `install.steamResumePending` with a resume target and the partial on disk, so its page offers "Resume install" rather than Install (operator: "should just be install"), seen on Dungeonmans 288120 and Fallout 2 38410; (2) the unticked Dungeonmans install provisioned `GameLibSteamBridge-288120` inline (20:35:00, prescreen result=x64), which is expected for the default bridge route.
 
 ## Summary
 
 total: 24
-passed: 14
+passed: 15
 issues: 6
-pending: 1
+pending: 0
 skipped: 2
 blocked: 1
 

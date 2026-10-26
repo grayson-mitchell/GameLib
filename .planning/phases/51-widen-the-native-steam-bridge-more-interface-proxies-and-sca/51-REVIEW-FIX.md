@@ -1,7 +1,7 @@
 ---
 phase: 51-widen-the-native-steam-bridge-more-interface-proxies-and-sca
 fixed_at: 2026-10-25T00:00:00Z
-updated_at: 2026-10-26T00:00:00Z
+updated_at: 2026-10-26T07:55:00Z
 review_path: .planning/phases/51-widen-the-native-steam-bridge-more-interface-proxies-and-sca/51-REVIEW.md
 iteration: 1
 findings_in_scope: 15
@@ -199,11 +199,11 @@ None (WR-02 and WR-04 were resolved after iteration 1; see Fixed Issues).
 
 ## Outstanding
 
-- WR-01, WR-08, WR-09 and WR-11 remain "fixed: requires human verification". No human check has been recorded for any of them. Each now has a pending live check in 51-UAT.md (added 2026-10-26, quick 261026-rb4):
+- WR-01, WR-08, WR-09 and WR-11 were "fixed: requires human verification". Each got a live check in 51-UAT.md (added 2026-10-26, quick 261026-rb4), and all four passed live on 2026-10-26. The halves noted below were not produced live:
   - WR-01 → 51-UAT item 21: pass 2026-10-26 on the store half (retained top-level `interfaceVersions`, 22 entries, no `@unknown-version`). The already-placed cfg half could not be produced live and stays desk-covered.
   - WR-08 → 51-UAT item 22: pass 2026-10-26 (Legends of Eisenwald 246760: the interrupted GameLibSteam download resumed and completed in GameLibSteam; no bridge bottle was provisioned). The "Try the bridge anyway" exception stays desk-covered.
   - WR-09 → 51-UAT item 23: pass 2026-10-26 (Avernum 6 launched from the legacy bottle holding the manifest; the empty per-game bottle was not used). The wrong-bottle uninstall half stays desk-covered.
-  - WR-11 → 51-UAT item 24
+  - WR-11 → 51-UAT item 24: pass 2026-10-26 on every install-dialog arm (pending-only toggle, Cancel writes nothing, Install persists then dispatches, a stored "bridge" override survives, a forced `{ ok: false }` blocks the install). The game-page route-notice `{ ok: false }` path was not run and has no test.
 - The WR-03 behavioural fix: `.planning/todos/pending/2026-10-26-x64-null-object-sret-aware-per-family.md`. It needs a decision (`ready: human`) and then a live Wine gate.
 
 ## Out of Scope (Info)
