@@ -64,6 +64,15 @@
         "navLabel": "Donate"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Delete Files",
+            "keepDownloading": "Keep Downloading",
+            "message": "{{title}} is partly downloaded. Keep the downloaded files to resume later, or delete them to free up disk space.",
+            "messageSteam": "{{title}} is partly downloaded. The downloaded files are kept so the download resumes where it left off next time you install it.",
+            "stopDownload": "Stop Download",
+            "stopKeepFiles": "Stop & Keep Files",
+            "title": "Cancel download?"
+        },
         "progressPaused": "Paused",
         "upNext": "Up Next"
     },

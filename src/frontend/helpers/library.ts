@@ -5,7 +5,8 @@ import {
   InstallProgress,
   Runner,
   UpdateParams,
-  LaunchOption
+  LaunchOption,
+  ButtonOptions
 } from 'common/types'
 
 import { TFunction } from 'i18next'
@@ -62,7 +63,8 @@ async function install({
       t,
       progress,
       runner,
-      showDialogModal
+      showDialogModal,
+      gameInfo.title
     )
   }
 
@@ -105,31 +107,56 @@ function handleStopInstallation(
   t: TFunction<'gamepage'>,
   progress: InstallProgress,
   runner: Runner,
-  showDialogModal: (options: DialogModalOptions) => void
+  showDialogModal: (options: DialogModalOptions) => void,
+  gameTitle: string
 ) {
+  const keepDownloading: ButtonOptions = {
+    text: t(
+      'gamelib:downloadManager.cancelDialog.keepDownloading',
+      'Keep Downloading'
+    )
+  }
+  const stopKeepFiles: ButtonOptions = {
+    text: t(
+      'gamelib:downloadManager.cancelDialog.stopKeepFiles',
+      'Stop & Keep Files'
+    ),
+    variant: 'primary',
+    onClick: () => {
+      storage.setItem(appName, JSON.stringify({ ...progress, folder: path }))
+      window.api.cancelDownload(false)
+    }
+  }
+  const deleteFiles: ButtonOptions = {
+    text: t('gamelib:downloadManager.cancelDialog.deleteFiles', 'Delete Files'),
+    variant: 'danger',
+    onClick: () => {
+      window.api.cancelDownload(true)
+      storage.removeItem(appName)
+    }
+  }
+
+  // Steam: the backend removeDownloaded path is gated on GameInfo.folder_name,
+  // which Steam never sets, so a Delete button would silently keep the files.
+  // Keep-files does resume (reconcilePartialState). Hide Delete until a real
+  // Steam delete exists (see the steam-cancel-delete-files todo).
+  const isSteam = runner === 'steam'
   showDialogModal({
-    title: t('gamepage:box.stopInstall.title'),
-    message: t('gamepage:box.stopInstall.message'),
-    buttons: [
-      { text: t('gamepage:box.stopInstall.keepInstalling') },
-      {
-        text: t('box.yes'),
-        onClick: () => {
-          storage.setItem(
-            appName,
-            JSON.stringify({ ...progress, folder: path })
-          )
-          window.api.cancelDownload(false)
-        }
-      },
-      {
-        text: t('box.no'),
-        onClick: () => {
-          window.api.cancelDownload(true)
-          storage.removeItem(appName)
-        }
-      }
-    ]
+    title: t('gamelib:downloadManager.cancelDialog.title', 'Cancel download?'),
+    message: isSteam
+      ? t(
+          'gamelib:downloadManager.cancelDialog.messageSteam',
+          '{{title}} is partly downloaded. The downloaded files are kept so the download resumes where it left off next time you install it.',
+          { title: gameTitle }
+        )
+      : t(
+          'gamelib:downloadManager.cancelDialog.message',
+          '{{title}} is partly downloaded. Keep the downloaded files to resume later, or delete them to free up disk space.',
+          { title: gameTitle }
+        ),
+    buttons: isSteam
+      ? [keepDownloading, stopKeepFiles]
+      : [deleteFiles, keepDownloading, stopKeepFiles]
   })
 }
 

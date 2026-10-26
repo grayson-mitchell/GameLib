@@ -137,7 +137,8 @@ export default function DownloadHero({ element, state }: Props) {
       t,
       progress,
       runner,
-      showDialogModal
+      showDialogModal,
+      title
     )
   }
 

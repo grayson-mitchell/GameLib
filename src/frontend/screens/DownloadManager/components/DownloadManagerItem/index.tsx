@@ -119,7 +119,8 @@ const DownloadManagerItem = ({
       t,
       progress,
       runner,
-      showDialogModal
+      showDialogModal,
+      gameInfo.title
     )
   }
 
