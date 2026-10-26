@@ -34,3 +34,9 @@
     opacity: 0.6;
   }
 }
+
+/* Pushes the destructive button to the far left, away from the safe/primary
+   pair on the right (footer is flex, justify-content: end). */
+.Dialog__footer .messageBoxModal__button--separated {
+  margin-right: auto;
+}

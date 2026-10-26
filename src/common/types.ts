@@ -54,6 +54,9 @@ export interface ButtonOptions {
     | 'vcRuntimeDownload'
     | 'vcRuntimeSkip'
     | 'snapWarningSuppress'
+  // Visual emphasis only. Serializable (survives the backend showDialog hop
+  // like `action`). Absent = the default secondary-outline look.
+  variant?: 'primary' | 'danger'
 }
 
 export type LaunchParams = {

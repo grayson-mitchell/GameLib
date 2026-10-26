@@ -9,6 +9,7 @@ import {
 import classNames from 'classnames'
 import { useTranslation } from 'react-i18next'
 import { DialogType, ButtonOptions } from 'common/types'
+import { messageBoxButtonClassName } from './buttonClassName'
 interface MessageBoxModalProps {
   title: string
   message: string | ReactElement
@@ -50,7 +51,7 @@ const MessageBoxModal: React.FC<MessageBoxModalProps> = function (props) {
             props.onClose()
             props.buttons[i].onClick?.()
           }}
-          className={`button is-secondary outline`}
+          className={messageBoxButtonClassName(props.buttons[i].variant)}
           key={'messageBoxModalButton_' + i.toString()}
         >
           {props.buttons[i].text}
