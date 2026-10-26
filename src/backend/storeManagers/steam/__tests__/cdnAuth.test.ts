@@ -28,6 +28,7 @@ import {
   PROACTIVE_REFRESH_BUFFER_MS,
   CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS,
   CDN_AUTH_TOKEN_FAILURE_COOLDOWN_MS,
+  CDN_AUTH_NO_TOKEN_TTL_MS,
   type CDNAuthTokenClient
 } from '../depot/cdnAuth'
 import { makeFakeSendClient } from './fixtures/cdnAuthSendFixture'
@@ -642,5 +643,113 @@ describe('CdnAuthTokenCache', () => {
       : String(messageParts)
     expect(text).toContain('12345')
     expect(text).toContain('host-a')
+  })
+})
+
+describe('no-token reply (eresult=OK, empty token) — quick 261026-piq', () => {
+  it('A: is cached for the full TTL, including the last PROACTIVE_REFRESH_BUFFER_MS', async () => {
+    jest.useFakeTimers()
+    try {
+      const { client, calls } = makeFakeClient(() => ({ token: '' }))
+      const cache = new CdnAuthTokenCache(client, 1091500)
+
+      expect(await cache.getToken('12345', 'host-a')).toBe('')
+      expect(await cache.getToken('12345', 'host-a')).toBe('')
+      expect(calls).toHaveLength(1)
+
+      jest.advanceTimersByTime(
+        CDN_AUTH_NO_TOKEN_TTL_MS - PROACTIVE_REFRESH_BUFFER_MS + 1000
+      )
+      expect(await cache.getToken('12345', 'host-a')).toBe('')
+      expect(calls).toHaveLength(1)
+
+      jest.advanceTimersByTime(PROACTIVE_REFRESH_BUFFER_MS - 1000 - 1)
+      expect(await cache.getToken('12345', 'host-a')).toBe('')
+      expect(calls).toHaveLength(1)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('B: is re-fetched once the TTL has expired', async () => {
+    jest.useFakeTimers()
+    try {
+      let call = 0
+      const { client, calls } = makeFakeClient(() => {
+        call++
+        if (call === 1) return { token: '' }
+        return {
+          token: '?later-token',
+          expiration_time: Math.floor(Date.now() / 1000) + 3600
+        }
+      })
+      const cache = new CdnAuthTokenCache(client, 1091500)
+
+      expect(await cache.getToken('12345', 'host-a')).toBe('')
+      jest.advanceTimersByTime(CDN_AUTH_NO_TOKEN_TTL_MS + 1)
+      expect(await cache.getToken('12345', 'host-a')).toBe('?later-token')
+      expect(calls).toHaveLength(2)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('C: logs exactly one plain info line per fetch, no warning, no Error', async () => {
+    const { client } = makeFakeClient(() => ({ token: '' }))
+    const cache = new CdnAuthTokenCache(client, 1091500)
+
+    await cache.getToken('12345', 'host-a')
+
+    expect(logWarning).not.toHaveBeenCalled()
+    expect(logInfo).toHaveBeenCalledTimes(1)
+    const args = (logInfo as jest.Mock).mock.calls[0]
+    expect(typeof args[0]).toBe('string')
+    expect(args.some((a: unknown) => a instanceof Error)).toBe(false)
+    const msg = args[0] as string
+    for (const part of [
+      '12345',
+      'host-a',
+      'eresult=1',
+      'rawBodyShape=',
+      'rawBodyBytes=',
+      'decodedExpirationTime='
+    ]) {
+      expect(msg).toContain(part)
+    }
+
+    await cache.getToken('12345', 'host-a')
+    expect(logInfo).toHaveBeenCalledTimes(1)
+  })
+
+  it('D: invalidate clears a no-token entry and starts no cooldown', async () => {
+    const { client, calls } = makeFakeClient(() => ({ token: '' }))
+    const cache = new CdnAuthTokenCache(client, 1091500)
+
+    await cache.getToken('12345', 'host-a')
+    cache.invalidate('12345', 'host-a')
+    await cache.getToken('12345', 'host-a')
+    expect(calls).toHaveLength(2)
+  })
+
+  it('E: an empty token with an undefined eresult is still a failure with the 60s cooldown', async () => {
+    const send = jest.fn(
+      (
+        _header: unknown,
+        _body: Buffer,
+        callback: (
+          body: unknown,
+          hdr?: { proto?: { eresult?: number } }
+        ) => void
+      ) => {
+        callback(encodeResponse({}), { proto: {} })
+      }
+    )
+    const client = { _send: send } as unknown as CDNAuthTokenClient
+    const cache = new CdnAuthTokenCache(client, 1091500)
+
+    expect(await cache.getToken('12345', 'host-a')).toBe('')
+    expect(logWarning).toHaveBeenCalled()
+    expect(await cache.getToken('12345', 'host-a')).toBe('')
+    expect(send).toHaveBeenCalledTimes(1)
   })
 })

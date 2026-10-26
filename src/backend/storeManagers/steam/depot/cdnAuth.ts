@@ -163,6 +163,11 @@
 // the token endpoint failed. `callGetCDNAuthToken` itself is deliberately
 // left un-threaded (D5, see its own doc comment).
 //
+// QUICK 261026-piq: a clean eresult=OK reply whose decoded token is empty is
+// NOT a failure. It is Steam's definitive "this depot+host needs no token"
+// answer, so it is a positive cached result ('' for CDN_AUTH_NO_TOKEN_TTL_MS,
+// one info line) and never arms the failure cooldown or logs a warning.
+//
 // SECURITY: the token is a short-lived credential. NEVER log its value —
 // every log line below reports only host/depot/length/expiry, never the
 // token string itself. Never persisted to disk; lives only in this in-memory,
@@ -320,8 +325,9 @@ function decodeCdnAuthTokenResponse(
  *  log below. Distinct from `normalizeResponseBuffer` (which THROWS on an
  *  unrecognized shape, by design, since decode genuinely cannot proceed) —
  *  this helper must never itself throw, since it runs on the path that is
- *  ABOUT to log a diagnostic and reject; a description failure here must
- *  never mask or replace the real "empty response" rejection. */
+ *  about to log the empty-token diagnostic (an info line for a clean-OK
+ *  reply, a warning plus rejection otherwise); a description failure here
+ *  must never mask or replace that outcome. */
 function describeRawBody(raw: unknown): {
   shape: string
   byteLength: number | null
@@ -369,9 +375,19 @@ export const CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS = 3000
  *  still bounded per-attempt, but needlessly repeated thousands of times. */
 export const CDN_AUTH_TOKEN_FAILURE_COOLDOWN_MS = 60 * 1000
 
+/** quick 261026-piq: a clean eresult=OK, empty-token reply is Steam's
+ *  definitive "this depot+host needs no token" answer (the 2026-10-23 log
+ *  served type=CDN hosts token-less with zero timeouts; the 2026-09-07
+ *  Californium run showed the same). It is cached rather than re-asked. The
+ *  TTL is finite only so a later Valve policy change is still picked up
+ *  within a download. */
+export const CDN_AUTH_NO_TOKEN_TTL_MS = 30 * 60 * 1000
+
 interface CachedToken {
   token: string
   expiresAt: number
+  /** True for the eresult=OK empty-token "no token required" entry. */
+  noToken?: true
 }
 
 /**
@@ -400,7 +416,10 @@ interface CachedToken {
  *     hiccup, must never become a hard failure here, and must never block or
  *     serialize the chunk-download pipeline — fetchChunk's own existing
  *     retry/host-rotation mechanism remains the single place a genuine chunk
- *     failure is decided).
+ *     failure is decided);
+ *   - a clean eresult=OK reply with an empty token is NOT a failure: it is
+ *     cached as "no token required" for CDN_AUTH_NO_TOKEN_TTL_MS (no
+ *     cooldown, one info line, no proactive-refresh margin).
  */
 export class CdnAuthTokenCache {
   private readonly cache = new Map<string, CachedToken>()
@@ -421,7 +440,8 @@ export class CdnAuthTokenCache {
   /** Returns the token string to append VERBATIM to a chunk/manifest URL
    *  (already including its own leading `?` per steam-user's own usage
    *  convention — see module doc comment), or `''` when no token could be
-   *  obtained (including a currently-in-cooldown key, PART 3, or an
+   *  obtained or needed (a cached eresult=OK "no token required" reply,
+   *  quick 261026-piq, also yields `''`; including a currently-in-cooldown key, PART 3, or an
    *  ABORTED `signal`, quick 260909-q2o). Never throws, never blocks past
    *  `CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS`.
    *
@@ -458,7 +478,10 @@ export class CdnAuthTokenCache {
     }
 
     const cached = this.cache.get(key)
-    if (cached && cached.expiresAt - Date.now() > PROACTIVE_REFRESH_BUFFER_MS) {
+    // A no-token entry has no token to expire mid-chunk, so it gets no
+    // proactive-refresh margin and is served for its full TTL.
+    const freshnessMarginMs = cached?.noToken ? 0 : PROACTIVE_REFRESH_BUFFER_MS
+    if (cached && cached.expiresAt - Date.now() > freshnessMarginMs) {
       return cached.token
     }
 
@@ -528,11 +551,14 @@ export class CdnAuthTokenCache {
       this.cache.set(key, result)
       this.negativeCache.delete(key)
       // SECURITY: log length/expiry only — NEVER the token value itself.
-      logInfo(
-        `[Timing] CDN auth token acquired: depot=${depotId} host=${host} ` +
-          `tokenLen=${result.token.length} expiresInMs=${Math.max(0, result.expiresAt - Date.now())}`,
-        LogPrefix.Steam
-      )
+      // The no-token path already logged its own single info line.
+      if (!result.noToken) {
+        logInfo(
+          `[Timing] CDN auth token acquired: depot=${depotId} host=${host} ` +
+            `tokenLen=${result.token.length} expiresInMs=${Math.max(0, result.expiresAt - Date.now())}`,
+          LogPrefix.Steam
+        )
+      }
       return result.token
     } catch (err) {
       // PART 3 (regression guard): a failure OR a bounded timeout NEVER
@@ -586,7 +612,7 @@ export class CdnAuthTokenCache {
   private callGetCDNAuthToken(
     depotId: string,
     host: string
-  ): Promise<{ token: string; expiresAt: number }> {
+  ): Promise<CachedToken> {
     const schema = loadCdnAuthTokenSchema()
     const requestBuffer = schema.Request.encode({
       app_id: this.appId,
@@ -643,25 +669,30 @@ export class CdnAuthTokenCache {
           }
 
           if (!body.token) {
-            // DIAGNOSTIC (debug/steam-install-slow-start, cycle 12): a
-            // cycle-11 hardware run reached this exact branch for every
-            // type=CDN host (akamai/fastly/alibaba) — the RPC now
-            // encodes/sends/gets a real callback (cycle 10's TypeError is
-            // gone), but the decoded response has no token. This is the
-            // single fact that distinguishes a genuine server-side rejection
-            // (eresult != OK, or a well-formed-but-empty business response)
-            // from a decode-side bug on our end (e.g. wrong body arg,
-            // ByteBuffer-vs-Buffer mishandling, or decoding a buffer that
-            // isn't actually this message's payload): log the RAW eresult
-            // value and the raw response body's shape/byte length BEFORE
-            // rejecting. NEVER logs token content — only eresult (a small
-            // integer code), the body's shape/length, and the (non-secret)
-            // decoded expiration_time. A non-zero rawBodyBytes alongside a
-            // plausible decodedExpirationTime points at a genuine
-            // well-formed-but-tokenless response; a suspiciously tiny/zero
-            // rawBodyBytes or an unrecognized rawBodyShape points at a
-            // decode-side bug instead.
+            // DIAGNOSTIC (debug/steam-install-slow-start, cycle 12), settled by
+            // quick 261026-piq: live evidence (the 2026-10-23 log, the
+            // 2026-09-07 Californium run) showed a clean eresult=OK reply
+            // with an empty token means "this depot+host needs no token", so
+            // that case resolves '' as a positive cached result. Anything
+            // else (eresult undefined) stays a failure. The log carries only
+            // eresult, the raw body's shape/byte length and the (non-secret)
+            // decoded expiration_time. NEVER token content.
             const rawBodyInfo = describeRawBody(rawBody)
+            if (eresult === ERESULT_OK) {
+              logInfo(
+                'CdnAuthTokenCache: no CDN auth token required (empty token, eresult=OK) ' +
+                  `for depot=${depotId} host=${host} eresult=${eresult} ` +
+                  `rawBodyShape=${rawBodyInfo.shape} rawBodyBytes=${rawBodyInfo.byteLength ?? 'unknown'} ` +
+                  `decodedExpirationTime=${body.expiration_time} noTokenTtlMs=${CDN_AUTH_NO_TOKEN_TTL_MS}`,
+                LogPrefix.Steam
+              )
+              resolvePromise({
+                token: '',
+                expiresAt: Date.now() + CDN_AUTH_NO_TOKEN_TTL_MS,
+                noToken: true
+              })
+              return
+            }
             logWarning(
               [
                 'CdnAuthTokenCache: empty token field in decoded GetCDNAuthToken response ' +
@@ -696,8 +727,10 @@ export class CdnAuthTokenCache {
 
   /** Reactive refresh: invalidates a cached token so the NEXT getToken call
    *  for this exact depot+host re-fetches instead of serving a value the
-   *  server just rejected (401/403). Never throws; a no-op if nothing was
-   *  cached for this key. Deliberately does NOT touch the failure cooldown
+   *  server just rejected (401/403). Also clears an eresult=OK "no token
+   *  required" entry (quick 261026-piq), so a 401/403 re-asks rather than
+   *  trusting a 30-minute-old "no token" answer. Never throws; a no-op if
+   *  nothing was cached for this key. Deliberately does NOT touch the failure cooldown
    *  (PART 3) — a 401/403 means the token itself was rejected, a completely
    *  different signal from "the fetch failed/timed out", and the next
    *  getToken call for this key should attempt a fresh fetch, not sit out a
