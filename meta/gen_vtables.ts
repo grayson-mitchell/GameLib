@@ -864,12 +864,22 @@ const CALLBACK_DRAIN_BACKOFF_MS = 1000
  *
  * Embedder contract (all must be defined BEFORE this text; the embedder also
  * includes stdint.h/string.h): GL_CB_LOCK(), GL_CB_UNLOCK(), THISCALL,
+ * GL_CB_THREAD_ID() (a uint32_t id of the calling thread), GL_CB_YIELD()
+ * (give up the CPU briefly; called with no lock held),
  * `uint32_t gl_cb_now_ms(void)`, and
  * `int gl_cb_transport_drain(uint8_t *buf, uint32_t cap, uint32_t *lenOut)`
  * (returns 1 on a good reply, 0 on any failure).
  *
  * Lock rule: the registry lock is NEVER held across the transport or a Run
  * call, so a handler may unregister, register or make a bridge call.
+ *
+ * In-flight rule (55 WR-01): only one RunCallbacks dispatch is active at a
+ * time (a concurrent or re-entrant RunCallbacks returns at once), and while a
+ * game object's Run is in flight, an UnregisterCallback for that SAME object
+ * from ANOTHER thread waits until Run returns. Without this the object could
+ * be unregistered and destroyed between the "still registered" check and the
+ * Run call. Unregister from the dispatching thread itself (a handler
+ * unregistering itself) never waits.
  */
 export function generateCallbackRegistryC(): string {
   const x86 = MSVC_CCALLBACKBASE_OFFSETS.x86
@@ -922,6 +932,10 @@ static uint32_t gl_cb_last_drain_ms;
 static int gl_cb_have_drained;
 static uint32_t gl_cb_fail_count;
 static uint32_t gl_cb_overflow;
+/* In-flight state (55 WR-01), all guarded by the registry lock. */
+static int gl_cb_running;
+static uint32_t gl_cb_run_tid;
+static void *gl_cb_dispatching;
 
 static uint32_t gl_cb_relay_size(int32_t id) {
   uint32_t i;
@@ -973,6 +987,13 @@ static void gl_cb_unregister(void *cb) {
   int idx;
   if (!cb) return;
   GL_CB_LOCK();
+  /* WR-01: another thread is inside this object's Run -- wait for it to
+   * return before the caller may destroy the object. */
+  while (gl_cb_dispatching == cb && gl_cb_run_tid != GL_CB_THREAD_ID()) {
+    GL_CB_UNLOCK();
+    GL_CB_YIELD();
+    GL_CB_LOCK();
+  }
   idx = gl_cb_find(cb);
   if (idx >= 0) {
     if (gl_cb_relay_size(gl_cb_entries[idx].iCallback)) gl_cb_relay_count--;
@@ -1009,7 +1030,7 @@ static void gl_cb_run_callbacks(void) {
   uint32_t zi;
 
   GL_CB_LOCK();
-  if (gl_cb_relay_count == 0) {
+  if (gl_cb_running || gl_cb_relay_count == 0) {
     GL_CB_UNLOCK();
     return;
   }
@@ -1023,6 +1044,8 @@ static void gl_cb_run_callbacks(void) {
   }
   gl_cb_have_drained = 1;
   gl_cb_last_drain_ms = now;
+  gl_cb_running = 1;
+  gl_cb_run_tid = GL_CB_THREAD_ID();
   GL_CB_UNLOCK();
 
   for (iter = 0; iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
@@ -1065,13 +1088,22 @@ static void gl_cb_run_callbacks(void) {
       GL_CB_LOCK();
       idx = gl_cb_find(targets[i]);
       still = idx >= 0 && gl_cb_entries[idx].iCallback == id;
+      if (still) gl_cb_dispatching = targets[i];
       GL_CB_UNLOCK();
-      if (still) gl_cb_dispatch_one(targets[i], buf + 12);
+      if (still) {
+        gl_cb_dispatch_one(targets[i], buf + 12);
+        GL_CB_LOCK();
+        gl_cb_dispatching = NULL;
+        GL_CB_UNLOCK();
+      }
     }
   }
 
   zp = buf;
   for (zi = 0; zi < GL_CB_DRAIN_RESP_MAX_BYTES; zi++) zp[zi] = 0;
+  GL_CB_LOCK();
+  gl_cb_running = 0;
+  GL_CB_UNLOCK();
 }
 `
 }
@@ -2892,6 +2924,8 @@ static void gamelib_report_init(uint32_t fn, int32_t ret) {
 static SRWLOCK g_cb_registry_lock = SRWLOCK_INIT;
 #define GL_CB_LOCK() AcquireSRWLockExclusive(&g_cb_registry_lock)
 #define GL_CB_UNLOCK() ReleaseSRWLockExclusive(&g_cb_registry_lock)
+#define GL_CB_THREAD_ID() ((uint32_t)GetCurrentThreadId())
+#define GL_CB_YIELD() Sleep(1)
 static uint32_t gl_cb_now_ms(void) { return (uint32_t)GetTickCount(); }
 static int gl_cb_transport_drain(uint8_t *buf, uint32_t cap, uint32_t *lenOut) {
   return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS, NULL, 0, buf, cap, lenOut);

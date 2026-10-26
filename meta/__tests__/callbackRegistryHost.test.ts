@@ -23,6 +23,8 @@ const CASES = [
   'dispatch_matching_only',
   'no_lock_held',
   'reentrant_handler',
+  'cross_thread_unregister_waits',
+  'reentrant_run_skipped',
   'throttle',
   'max_per_run',
   'backoff',

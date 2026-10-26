@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define THISCALL
 
@@ -47,6 +48,16 @@ static void h_unlock(void) {
 }
 #define GL_CB_LOCK() h_lock()
 #define GL_CB_UNLOCK() h_unlock()
+
+/* Thread ids for the in-flight rule (WR-01): a per-thread counter value. */
+static _Thread_local uint32_t h_tid_val;
+static uint32_t h_tid_next = 1;
+static uint32_t h_tid(void) {
+  if (h_tid_val == 0) h_tid_val = __atomic_fetch_add(&h_tid_next, 1, __ATOMIC_SEQ_CST);
+  return h_tid_val;
+}
+#define GL_CB_THREAD_ID() h_tid()
+#define GL_CB_YIELD() usleep(1000)
 
 /* ---- scripted transport + fake clock ---- */
 #define MAXQ 16
@@ -104,7 +115,7 @@ _Static_assert(offsetof(fobj, flags) == GL_CB_FLAGS_OFF, "flags offset");
 _Static_assert(offsetof(fobj, iCallback) == GL_CB_ICALLBACK_OFF,
                "iCallback offset");
 
-static fobj objA, objB, objG, objR, objS;
+static fobj objA, objB, objG, objR, objS, objX;
 static fobj bulk[520];
 
 static void trap(void *self) {
@@ -114,6 +125,15 @@ static void trap(void *self) {
   exit(1);
 }
 static void h_run1(void *self, void *param);
+static int g_x_run_done;
+static int g_x_saw_done = -1;
+static pthread_t g_x_thread;
+static void *xthread_unregister(void *arg) {
+  (void)arg;
+  gl_cb_unregister(&objX);
+  g_x_saw_done = __atomic_load_n(&g_x_run_done, __ATOMIC_SEQ_CST);
+  return NULL;
+}
 static void *g_vt[4] = {(void *)trap, (void *)h_run1, (void *)trap,
                         (void *)trap};
 
@@ -124,6 +144,15 @@ static void h_run1(void *self, void *param) {
   o->lock_free = (r == 0);
   if (r == 0) pthread_mutex_unlock(&g_reg);
   if (param) o->payload_ok = (memcmp(param, g_expect, sizeof g_expect) == 0);
+  if (o == &objX) {
+    /* WR-01: another thread unregisters this object while Run is in
+     * flight; it must not return before Run does. */
+    pthread_t t;
+    CHECK(pthread_create(&t, NULL, xthread_unregister, NULL) == 0);
+    usleep(50000);
+    __atomic_store_n(&g_x_run_done, 1, __ATOMIC_SEQ_CST);
+    g_x_thread = t;
+  }
   if (o == &objR) {
     gl_cb_unregister(&objR);
     gl_cb_register(&objS, 168);
@@ -152,6 +181,7 @@ static void reset(void) {
   init_obj(&objG);
   init_obj(&objR);
   init_obj(&objS);
+  init_obj(&objX);
   for (i = 0; i < sizeof bulk / sizeof bulk[0]; i++) init_obj(&bulk[i]);
 }
 
@@ -258,6 +288,40 @@ static void case_reentrant_handler(void) {
   CHECK((objS.flags & 0x01) == 1);
   CHECK(objS.iCallback == 168);
   CHECK(gl_cb_count == 1);
+  PASS();
+}
+
+static void case_cross_thread_unregister_waits(void) {
+  g_case = "cross_thread_unregister_waits";
+  reset();
+  g_x_run_done = 0;
+  g_x_saw_done = -1;
+  gl_cb_register(&objX, 168);
+  push_msg(168, 1, 2572, 2572);
+  gl_cb_run_callbacks();
+  CHECK(objX.calls == 1);
+  CHECK(pthread_join(g_x_thread, NULL) == 0);
+  CHECK(g_x_saw_done == 1);
+  CHECK((objX.flags & 0x01) == 0);
+  CHECK(gl_cb_count == 0);
+  CHECK(gl_cb_dispatching == NULL);
+  CHECK(gl_cb_running == 0);
+  PASS();
+}
+
+static void case_reentrant_run_skipped(void) {
+  g_case = "reentrant_run_skipped";
+  reset();
+  gl_cb_register(&objA, 168);
+  gl_cb_running = 1; /* as if another RunCallbacks were in flight */
+  push_msg(168, 1, 2572, 2572);
+  gl_cb_run_callbacks();
+  CHECK(g_tcalls == 0);
+  CHECK(objA.calls == 0);
+  gl_cb_running = 0;
+  gl_cb_run_callbacks();
+  CHECK(g_tcalls >= 1);
+  CHECK(objA.calls == 1);
   PASS();
 }
 
@@ -405,6 +469,8 @@ int main(void) {
   case_dispatch_matching_only();
   case_no_lock_held();
   case_reentrant_handler();
+  case_cross_thread_unregister_waits();
+  case_reentrant_run_skipped();
   case_throttle();
   case_max_per_run();
   case_backoff();
