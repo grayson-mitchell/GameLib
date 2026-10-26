@@ -43,6 +43,8 @@ import {
   ensureBridgeHelperReady,
   stopBridgeHelper,
   shutdownAllBridgeHelpers,
+  classifyInitFlatError,
+  __setSteamWaitScheduleForTests,
   __setBridgeHelperPathForTests,
   __setBridgeHelperSpawnEnvForTests,
   __resetBridgeHelperStateForTests
@@ -51,6 +53,7 @@ import {
   shutdownLongLivedChildren,
   __resetLongLivedChildrenForTests
 } from 'backend/longLivedChildren'
+import { shell } from 'backend/platform'
 import { stripSourceComments } from '../../../../testUtils/stripSourceComments'
 
 jest.mock('backend/logger', () => ({
@@ -59,6 +62,13 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
+
+// 261027-aue: the default Steam starter calls shell.openExternal on macOS only.
+jest.mock('backend/platform', () => ({
+  shell: { openExternal: jest.fn().mockResolvedValue(undefined) }
+}))
+
+jest.mock('backend/constants/environment', () => ({ isMac: true }))
 
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn()
@@ -995,5 +1005,250 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       child.stdout.emit('data', Buffer.from('lo\n'))
       expect(bridgeMessages(logInfo)).toEqual(['bridge helper [42]: hello'])
     })
+  })
+})
+
+/** The helper's real InitFlat failure line (bridge_helper.c init_steam_api_once). */
+function emitInitFailedLine(
+  child: FakeChildProcess,
+  appId: string,
+  err: string
+): void {
+  child.stderr.emit(
+    'data',
+    Buffer.from(
+      `[2026-10-27T00:00:00Z] INIT   InitFlat failed r=1 err=${err} appid=${appId} (is Steam running + signed in?) -- serving HEALTH/HELLO only until a real session is live\n`
+    )
+  )
+}
+
+/** Queues a spawn implementation that returns one fresh FakeChildProcess per
+ * call; `script[i]` says what attempt i's helper reports (an InitFlat err text,
+ * or 'ok'). Sockets answer HEALTH/HELLO/WHOAMI ok. */
+function scriptSpawns(script: Array<string | 'ok'>, appId = APP_ID_A) {
+  const children: FakeChildProcess[] = []
+  mockedSpawn.mockImplementation(() => {
+    const child = new FakeChildProcess()
+    const step = script[Math.min(children.length, script.length - 1)]
+    children.push(child)
+    process.nextTick(() => {
+      emitListenLine(child, 55000 + children.length, appId, null)
+      if (step === 'ok') {
+        emitReadyLine(child, appId, 'ok')
+      } else {
+        emitInitFailedLine(child, appId, step)
+        emitReadyLine(child, appId, 'failed')
+      }
+    })
+    return child
+  })
+  MockedSocket.mockImplementation(
+    () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+  )
+  return children
+}
+
+describe('261027-aue: wait for Steam to start / sign in', () => {
+  const NOT_RUNNING = 'Could not determine Steam client install directory'
+  const SIGNING_IN = 'ConnectToGlobalUser failed'
+
+  beforeEach(() => {
+    __resetBridgeHelperStateForTests()
+    __resetLongLivedChildrenForTests()
+    mockedSpawn.mockReset()
+    mockedSendFrontendMessage.mockClear()
+    ;(shell.openExternal as jest.Mock).mockClear()
+    __setSteamWaitScheduleForTests({ budgetMs: 150, intervalMs: 5 })
+  })
+
+  test.each([
+    [NOT_RUNNING, 'steam-not-running'],
+    [SIGNING_IN, 'steam-not-signed-in'],
+    ['some other InitFlat error', 'other'],
+    ['', 'other'],
+    [null, 'other']
+  ])('classifyInitFlatError(%p) -> %s', (err, expected) => {
+    expect(classifyInitFlatError(err)).toBe(expected)
+  })
+
+  test('Steam quit: starter called once, waiting hook once, no 480 spawn, ready on attempt 3', async () => {
+    const children = scriptSpawns([NOT_RUNNING, NOT_RUNNING, 'ok'])
+    const startSteam = jest.fn().mockResolvedValue(undefined)
+    const onWaitingForSteam = jest.fn()
+
+    const result = await ensureBridgeHelperReady(APP_ID_A, {
+      startSteam,
+      onWaitingForSteam
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      ready: true,
+      port: 55003,
+      secret: mockedSpawn.mock.calls[2][2].env[BRIDGE_SECRET_ENV]
+    })
+    expect(startSteam).toHaveBeenCalledTimes(1)
+    expect(onWaitingForSteam).toHaveBeenCalledTimes(1)
+    expect(onWaitingForSteam).toHaveBeenCalledWith('steam-not-running')
+    expect(mockedSpawn).toHaveBeenCalledTimes(3)
+    for (const [, args] of mockedSpawn.mock.calls) {
+      expect(args).toEqual(['--appid', APP_ID_A, '--port', '0'])
+    }
+    expect(children[0].kill).toHaveBeenCalled()
+    expect(children[1].kill).toHaveBeenCalled()
+    expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  test('Steam signing in: retries with fresh helpers, starter NOT called', async () => {
+    scriptSpawns([SIGNING_IN, SIGNING_IN, 'ok'])
+    const startSteam = jest.fn().mockResolvedValue(undefined)
+    const onWaitingForSteam = jest.fn()
+
+    const result = await ensureBridgeHelperReady(APP_ID_A, {
+      startSteam,
+      onWaitingForSteam
+    })
+
+    expect(result.status).toBe('ready')
+    expect(startSteam).not.toHaveBeenCalled()
+    expect(onWaitingForSteam).toHaveBeenCalledWith('steam-not-signed-in')
+    expect(mockedSpawn).toHaveBeenCalledTimes(3)
+  })
+
+  test.each([
+    [SIGNING_IN, 'steam-not-signed-in'],
+    [NOT_RUNNING, 'steam-not-running']
+  ])(
+    'budget exhausted while %p -> %s, one setup message, no fallback, registry empty, spawns bounded',
+    async (err, status) => {
+      scriptSpawns([err])
+      const startSteam = jest.fn().mockResolvedValue(undefined)
+
+      const result = await ensureBridgeHelperReady(APP_ID_A, { startSteam })
+
+      expect(result).toEqual({
+        status,
+        ready: false,
+        error: expect.any(String)
+      })
+      expect(mockedSendFrontendMessage).toHaveBeenCalledTimes(1)
+      expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        { appName: APP_ID_A, reason: status, fallbackAvailable: false }
+      )
+      for (const [, args] of mockedSpawn.mock.calls) {
+        expect(args).not.toContain('--identity-only')
+      }
+      expect(mockedSpawn.mock.calls.length).toBeLessThanOrEqual(
+        1 + Math.floor(150 / 5) + 1
+      )
+      expect(mockedSpawn.mock.calls.length).toBeGreaterThan(1)
+      // Registry empty: the next call spawns fresh rather than reusing.
+      mockedSpawn.mockClear()
+      scriptSpawns(['ok'])
+      await ensureBridgeHelperReady(APP_ID_A)
+      expect(mockedSpawn).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  test('a failed starter (openExternal rejects) is not fatal', async () => {
+    scriptSpawns([NOT_RUNNING, 'ok'])
+    ;(shell.openExternal as jest.Mock).mockRejectedValueOnce(new Error('boom'))
+
+    const result = await ensureBridgeHelperReady(APP_ID_A)
+
+    expect(result.status).toBe('ready')
+  })
+
+  test('default starter opens steam://open/main through the shell opener', async () => {
+    scriptSpawns([NOT_RUNNING, 'ok'])
+
+    await ensureBridgeHelperReady(APP_ID_A)
+
+    expect(shell.openExternal).toHaveBeenCalledTimes(1)
+    expect(shell.openExternal).toHaveBeenCalledWith('steam://open/main', {
+      activate: false
+    })
+  })
+
+  test('non-transient failure (unknown err text) is never retried: 480 fallback, not-inited', async () => {
+    const fullChild = new FakeChildProcess()
+    const identityChild = new FakeChildProcess()
+    mockedSpawn
+      .mockReturnValueOnce(fullChild)
+      .mockReturnValueOnce(identityChild)
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiErrFrame)
+    )
+    const startSteam = jest.fn()
+
+    const pending = ensureBridgeHelperReady(APP_ID_A, { startSteam })
+    emitListenLine(fullChild, 55001, APP_ID_A, null)
+    emitInitFailedLine(fullChild, APP_ID_A, 'Steam is out of cheese')
+    emitReadyLine(fullChild, APP_ID_A, 'failed')
+    await waitForSpawnCallCount(2)
+    emitListenLine(identityChild, 55002, '480')
+
+    const result = await pending
+
+    expect(result.status).toBe('not-inited')
+    expect(mockedSpawn).toHaveBeenCalledTimes(2)
+    expect(startSteam).not.toHaveBeenCalled()
+    expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      { appName: APP_ID_A, reason: 'not-inited' }
+    )
+  })
+
+  test('an INIT line for a different appid is ignored (classification stays other)', async () => {
+    const fullChild = new FakeChildProcess()
+    const identityChild = new FakeChildProcess()
+    mockedSpawn
+      .mockReturnValueOnce(fullChild)
+      .mockReturnValueOnce(identityChild)
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiErrFrame)
+    )
+
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(fullChild, 55001, APP_ID_A, null)
+    emitInitFailedLine(fullChild, APP_ID_B, NOT_RUNNING)
+    emitReadyLine(fullChild, APP_ID_A, 'failed')
+    await waitForSpawnCallCount(2)
+    emitListenLine(identityChild, 55002, '480')
+
+    expect((await pending).status).toBe('not-inited')
+    expect(mockedSpawn).toHaveBeenCalledTimes(2)
+  })
+
+  test('a registry entry whose InitFlat failed is stopped and respawned, not reused', async () => {
+    const failedChild = new FakeChildProcess()
+    mockedSpawn.mockReturnValueOnce(failedChild)
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiErrFrame)
+    )
+    // A first call that leaves a failed-init entry behind: drive it by
+    // reading the registry through a second call instead -- start a helper
+    // and fail its init without letting the first call finish.
+    const first = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(failedChild, 55001, APP_ID_A, null)
+    emitReadyLine(failedChild, APP_ID_A, 'failed')
+    // Second call while the first is still mid-probe sees initOutcome failed.
+    mockedSpawn.mockImplementation(() => {
+      const child = new FakeChildProcess()
+      process.nextTick(() => {
+        emitListenLine(child, 55009, APP_ID_A)
+      })
+      return child
+    })
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+    const second = await ensureBridgeHelperReady(APP_ID_A)
+
+    expect(failedChild.kill).toHaveBeenCalled()
+    expect(second.status).toBe('ready')
+    expect(second.port).toBe(55009)
+    await first
   })
 })

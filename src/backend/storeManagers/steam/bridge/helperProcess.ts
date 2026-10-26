@@ -34,6 +34,14 @@
  * waits for the helper's `READY` stderr line (bounded by INIT_WAIT_BUDGET_MS)
  * before the HEALTH/WHOAMI probe.
  *
+ * 261027-aue: `SteamAPI_InitFlat` fails FAST when Steam is quit or still
+ * signing in (it never waits), so a launch used to dead-end in under a second.
+ * The helper's `INIT   InitFlat failed ... err=<text>` stderr line is now
+ * classified (`classifyInitFlatError`): the two known Steam-state texts start
+ * Steam (when it is not running) and respawn a FRESH helper on a bounded
+ * schedule (InitFlat runs once per process, so a failed helper can never
+ * recover); every other failure keeps the D-51-04 path unchanged.
+ *
  * These are two DISTINCT states (24-02 review finding #7): "process up, no
  * live Steam session" (`status: 'not-inited'`) is reported differently from
  * "helper never answered at all" (`status: 'unreachable'`) so a caller can
@@ -53,6 +61,8 @@ import {
   steamBridgeHelperStateDir
 } from 'backend/constants/paths'
 import { sendFrontendMessage } from 'backend/ipc'
+import { isMac } from 'backend/constants/environment'
+import { shell } from 'backend/platform'
 import { registerLongLivedChild } from 'backend/longLivedChildren'
 import {
   BRIDGE_SECRET_ENV,
@@ -81,6 +91,54 @@ const LISTEN_LINE = /LISTEN 127\.0\.0\.1:(\d+) appid=(\d+)/
 // `logts_f("READY", "init=%s appid=%s", ...)` byte-for-byte. The TWO spaces
 // come from logts's `%-6s` padding of the 5-character category.
 const READY_LINE = /READY {2}init=(ok|failed|dylib-missing) appid=(\d+)/
+
+// Parses the helper's InitFlat failure line, e.g.
+// `[ts] INIT   InitFlat failed r=1 err=ConnectToGlobalUser failed appid=206060
+// (is Steam running + signed in?) -- serving ...` -- MUST match
+// bridge_helper.c's `init_steam_api_once` failure log. The err text is
+// arbitrary, so it is captured lazily up to the fixed ` appid=<digits> (is
+// Steam running` marker.
+const INIT_FAILED_LINE =
+  /InitFlat failed r=-?\d+ err=(.*?) appid=(\d+) \(is Steam running/
+
+export type InitFlatErrorCause = 'steam-not-running' | 'steam-not-signed-in'
+
+/**
+ * 261027-aue: maps the helper's InitFlat err text to a Steam-state cause.
+ * Texts measured live (261026-k6o gate). Anything else (including no INIT
+ * line at all) is NOT transient and is never retried.
+ */
+export function classifyInitFlatError(
+  err: string | null
+): InitFlatErrorCause | 'other' {
+  if (!err) return 'other'
+  if (err.includes('Could not determine Steam client install directory')) {
+    return 'steam-not-running'
+  }
+  if (err.includes('ConnectToGlobalUser failed')) {
+    return 'steam-not-signed-in'
+  }
+  return 'other'
+}
+
+// How long a launch keeps waiting for Steam to start / sign in. A cold Mac
+// Steam launch plus update check plus auto sign-in is tens of seconds --
+// UNMEASURED (the live gate records the real figure). 60 s is long enough
+// that a normal cold start lands inside it, while a user left at Steam's
+// login screen still gets an answer within a minute.
+const STEAM_WAIT_BUDGET_MS = 60_000
+// Gap between respawns. Each failing attempt is a sub-second fast-fail spawn
+// writing ~4 log lines, so 3 s caps the loop at ~20 spawns.
+const STEAM_RETRY_INTERVAL_MS = 3_000
+
+let steamWaitScheduleOverride: { budgetMs: number; intervalMs: number } | null =
+  null
+
+export function __setSteamWaitScheduleForTests(
+  schedule: { budgetMs: number; intervalMs: number } | null
+): void {
+  steamWaitScheduleOverride = schedule
+}
 
 const MIN_EPHEMERAL_PORT = 1024
 const MAX_PORT = 65535
@@ -121,6 +179,8 @@ type BridgeHelperReadyStatus =
   | 'not-inited'
   | 'unreachable'
   | 'fallback-identity'
+  | 'steam-not-running'
+  | 'steam-not-signed-in'
 
 interface EnsureBridgeHelperReadyResult {
   status: BridgeHelperReadyStatus
@@ -145,6 +205,9 @@ interface BridgeHelperEntry {
   portReady: Promise<number | null>
   /** Init outcome parsed from the helper's READY line; null until seen. */
   initOutcome: 'ok' | 'failed' | 'dylib-missing' | null
+  /** 261027-aue: the err text of the helper's `INIT InitFlat failed` line;
+   * null until (unless) seen. */
+  initError: string | null
   /** Resolves true once the READY line is seen, false if the process exits
    * or errors first. Settles exactly once. */
   initReady: Promise<boolean>
@@ -349,7 +412,21 @@ function ensureHelperSpawned(
 
   const handleStderrLine = (line: string) => {
     handleListenLine(line)
+    handleInitFailedLine(line)
     handleReadyLine(line)
+  }
+
+  // 261027-aue: same appid rule and own-stream rule as LISTEN/READY (T-aue-01).
+  // The err text is not logged again -- the per-line relay already logs it.
+  const handleInitFailedLine = (line: string) => {
+    const match = INIT_FAILED_LINE.exec(line)
+    if (!match) return
+    const [, errText, matchedAppId] = match
+    if (matchedAppId !== expectedListenAppId) return
+    const entry = helpers.get(appId)
+    if (entry && entry.child === child) {
+      entry.initError = errText
+    }
   }
 
   // T-k6o-01: same appid rule as the LISTEN line (T-51-05), and only from this
@@ -465,6 +542,7 @@ function ensureHelperSpawned(
     port: null,
     portReady,
     initOutcome: null,
+    initError: null,
     initReady,
     unregister,
     identityOnly,
@@ -621,8 +699,10 @@ function waitForInit(
 }
 
 interface HelperReadinessProbe {
-  outcome: 'ready' | 'not-inited' | 'unreachable'
+  outcome: 'ready' | 'not-inited' | 'unreachable' | 'steam-wait'
   port?: number
+  /** Set when outcome is 'steam-wait'. */
+  cause?: InitFlatErrorCause
 }
 
 /**
@@ -652,6 +732,15 @@ async function probeHelperReadiness(
       `bridge helper [${entry.appId}] never reported READY within ${INIT_WAIT_BUDGET_MS}ms -- probing anyway`,
       LogPrefix.Steam
     )
+  }
+
+  // 261027-aue: a full-AppID helper whose InitFlat failed with a known
+  // Steam-state text has a result that is already known -- skip the polls.
+  if (!entry.identityOnly && entry.initOutcome === 'failed') {
+    const cause = classifyInitFlatError(entry.initError)
+    if (cause !== 'other') {
+      return { outcome: 'steam-wait', cause, port }
+    }
   }
 
   for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
@@ -687,6 +776,24 @@ async function probeHelperReadiness(
 }
 
 /**
+ * 261027-aue: asks Mac Steam to open (`steam://open/main`, a fixed constant --
+ * T-aue-03). `activate: false` for the same Console-mode Space reason
+ * games.ts gives for rungameid. A failed open is not fatal: the loop still
+ * waits, the user may start Steam by hand. macOS only (the bridge is macOS).
+ */
+async function startSteamDefault(): Promise<void> {
+  if (!isMac) return
+  try {
+    await shell.openExternal('steam://open/main', { activate: false })
+  } catch (error) {
+    logWarning(
+      ['startSteamDefault: could not open Steam', error],
+      LogPrefix.Steam
+    )
+  }
+}
+
+/**
  * D-51-01/D-06/D-51-04: lazily spawns a per-appId bridge helper, waits
  * (bounded) for it to report its own OS-assigned port, then bounded-polls
  * its CONTROL HEALTH/WHOAMI readiness against that port -- returning an
@@ -716,10 +823,25 @@ async function probeHelperReadiness(
  *    no fallback attempt at all (an unreachable process proves nothing
  *    about whether Steam itself would accept the real AppID).
  *  - A live entry for `appId` (full OR identity-only) is reused as-is by a
- *    later call -- never respawned just to retry the other mode.
+ *    later call -- never respawned just to retry the other mode. EXCEPT an
+ *    entry whose InitFlat failed (261027-aue): InitFlat runs once per
+ *    process, so it can never become ready and is stopped and respawned.
+ *  - 261027-aue: a full helper whose InitFlat failed with a known Steam-state
+ *    text (Steam quit / still signing in) enters a bounded wait: Steam is
+ *    started when it is not running, `onWaitingForSteam` fires once, and a
+ *    fresh helper is respawned every STEAM_RETRY_INTERVAL_MS until it is
+ *    ready or STEAM_WAIT_BUDGET_MS passes. Budget exhausted ->
+ *    `{ status: 'steam-not-running' | 'steam-not-signed-in', ready: false }`
+ *    with exactly one `steamBridgeSetupRequired` (fallbackAvailable false).
+ *    The 480 fallback is never tried for these causes -- Steam-level failures
+ *    fail it identically.
  */
 export async function ensureBridgeHelperReady(
-  appId: string
+  appId: string,
+  options: {
+    onWaitingForSteam?: (cause: InitFlatErrorCause) => void
+    startSteam?: () => Promise<void>
+  } = {}
 ): Promise<EnsureBridgeHelperReadyResult> {
   if (!NUMERIC_APP_ID.test(appId)) {
     logWarning(
@@ -733,8 +855,57 @@ export async function ensureBridgeHelperReady(
     }
   }
 
-  const entry = ensureHelperSpawned(appId)
-  const probe = await probeHelperReadiness(entry)
+  // InitFlat runs once per helper process: a failed one can never recover.
+  if (helpers.get(appId)?.initOutcome === 'failed') {
+    stopBridgeHelper(appId)
+  }
+
+  let entry = ensureHelperSpawned(appId)
+  let probe = await probeHelperReadiness(entry)
+
+  let waitStart: number | null = null
+  let steamStarted = false
+  let notified = false
+  const budgetMs = steamWaitScheduleOverride?.budgetMs ?? STEAM_WAIT_BUDGET_MS
+  const intervalMs =
+    steamWaitScheduleOverride?.intervalMs ?? STEAM_RETRY_INTERVAL_MS
+  while (probe.outcome === 'steam-wait') {
+    const cause = probe.cause as InitFlatErrorCause
+    waitStart ??= Date.now()
+    if (!notified) {
+      notified = true
+      options.onWaitingForSteam?.(cause)
+    }
+    if (cause === 'steam-not-running' && !steamStarted) {
+      steamStarted = true
+      await (options.startSteam ?? startSteamDefault)()
+    }
+    stopBridgeHelper(appId)
+    await sleep(intervalMs)
+    // Budget is checked BEFORE every new spawn (T-aue-02).
+    const elapsed = Date.now() - waitStart
+    if (elapsed >= budgetMs) {
+      logWarning(
+        `ensureBridgeHelperReady: gave up waiting for Steam for appId ${appId} (${cause}) after ${elapsed}ms`,
+        LogPrefix.Steam
+      )
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: appId,
+        reason: cause,
+        fallbackAvailable: false
+      })
+      return {
+        status: cause,
+        ready: false,
+        error:
+          cause === 'steam-not-running'
+            ? 'Steam did not start within the wait budget'
+            : 'Steam did not finish signing in within the wait budget'
+      }
+    }
+    entry = ensureHelperSpawned(appId)
+    probe = await probeHelperReadiness(entry)
+  }
 
   if (probe.outcome === 'unreachable') {
     logWarning(
@@ -821,9 +992,12 @@ export async function ensureBridgeHelperReady(
   // this is reported identically to the identityOnly-reuse branch above:
   // exactly one steamBridgeSetupRequired, reason 'not-inited'.
   logWarning(
-    `ensureBridgeHelperReady: identity-only fallback also failed to initialize for appId ${appId} -- Steam appears signed out (D-51-04)`,
+    `ensureBridgeHelperReady: identity-only fallback also failed to initialize for appId ${appId} -- Steam refused a session for both the real AppID and the identity-only 480 fallback (D-51-04)`,
     LogPrefix.Steam
   )
+  // The failed 480 helper is deliberately left registered (helperIntegration
+  // inspects it); the next ensureBridgeHelperReady call stops and respawns it
+  // because its InitFlat failed (no-reuse rule above).
   sendFrontendMessage('steamBridgeSetupRequired', {
     appName: appId,
     reason: 'not-inited'
@@ -887,4 +1061,5 @@ export function shutdownAllBridgeHelpers(): void {
 export function __resetBridgeHelperStateForTests(): void {
   helpers.clear()
   bridgeHelperPathOverride = null
+  steamWaitScheduleOverride = null
 }
