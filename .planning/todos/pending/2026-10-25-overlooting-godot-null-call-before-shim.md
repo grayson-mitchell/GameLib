@@ -29,3 +29,11 @@ ready: live-gate
 ## 53-20 evidence (2026-10-25)
 
 The null-call crash is gone on the 53-19 build: the `nvapi64` per-exe override applied (user.reg `"nvapi64"=""`), no `page fault on read access to 0x0`, godot.log advances past the driver lines, and the operator reached the menu. The bridge saw HELLO and one game call, `SteamUser023.GetSteamID`; the census reads `unverified (1 game call; needs 2 incl. identity)`. Not closed, because the row is not verified (53-UAT item 36). Open question for the next round: godot.log prints `Usernam: ` empty after `Steam is running!` and no GetPersonaName CALL was traced.
+
+## 261026-qvc evidence (2026-10-26)
+
+Second root cause, after the 53-19 nvapi fix. Overlooting's main_screen.gdc calls `Steam.getSteamID` and then `Steam.getFriendPersonaName(<own id>)`, printing `Usernam: ` plus the result. It never calls getPersonaName. `ISteamFriends::GetFriendPersonaName` (slot 6 of SteamFriends018) was a generated stub that returned "" with no `bridge_transact`, which is why godot.log showed an empty name and the census saw one game call.
+
+Fix: the generator now admits `CSteamID` as an 8-byte by-value wire param (both Win32 ABIs pass it like a uint64; i386 `ret $0x8`, x64 value in `%rdx`, both pinned in `shimAbiGate`). `CGameID` stays rejected because it has no consumer and its flat-API shape is unverified. `GetFriendPersonaName` is wired in SteamFriends011/013/015/017/018 to `SteamAPI_ISteamFriends_GetFriendPersonaName`, returning through the CR-01 shim-owned buffer. Wire-table hash `e05aec2c174d` -> `00e358feeee6`. Rebuilt sizes: steam_api.dll 290304, steam_api64.dll 505344, steam-bridge-helper 156688.
+
+Next: a live re-run on a packaged build (restart dev so the rebuilt helper is used) must show HELLO plus CALLs for both `SteamUser023.GetSteamID` and `SteamFriends018.GetFriendPersonaName`, a non-empty `Usernam:` line in godot.log, and the census row verified.
