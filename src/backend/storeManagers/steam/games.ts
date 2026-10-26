@@ -3699,7 +3699,13 @@ export default class SteamGame implements Game {
         `SteamGame: removed per-game bridge bottle "${bottleName}" for appId ${this.appId} (${result.status})`,
         LogPrefix.Steam
       )
-      this.markBridgeGameUninstalled()
+      // Finish through pollUninstallOnce, like uninstallBottleGameDirectly():
+      // its 'absent' branch checks the other roots, so a surviving native or
+      // bottle copy keeps the badge and gets its notice, and a full uninstall
+      // gets the "Game Uninstalled" toast. markBridgeGameUninstalled() did
+      // neither (live 2026-10-27, Grim Dawn 219990: native copy survived, no
+      // message, badge flipped back to Play on the next refresh).
+      await pollUninstallOnce(this.appId, 'bridge')
       return { stdout: '', stderr: '' }
     }
 
@@ -3765,7 +3771,8 @@ export default class SteamGame implements Game {
       `SteamGame: removed bridge install for appId ${this.appId} at "${installRoot}" and its manifest "${manifestPath}"`,
       LogPrefix.Steam
     )
-    this.markBridgeGameUninstalled()
+    // Same completion as the per-game branch above.
+    await pollUninstallOnce(this.appId, 'bridge')
     return { stdout: '', stderr: '' }
   }
 

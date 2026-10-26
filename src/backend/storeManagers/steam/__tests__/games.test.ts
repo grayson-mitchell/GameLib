@@ -8956,6 +8956,41 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     )
   })
 
+  // Live 2026-10-27, Grim Dawn 219990: both bridge removal branches finish
+  // through pollUninstallOnce(appId, 'bridge') so a surviving native/bottle
+  // copy is noticed (library.test.ts covers what that branch then does).
+  it.each([
+    ['per-game bottle', true],
+    ['legacy shared bottle', false]
+  ])(
+    'bridge uninstall (%s) completes through pollUninstallOnce(appId, "bridge")',
+    async (_label, perGame) => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+        RESOLVED_EXE_PATH
+      )
+      if (perGame) {
+        ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
+          wineCrossoverBottle: `GameLibSteamBridge-${APP_ID}`
+        })
+        ;(removePerGameBridgeBottle as jest.Mock).mockResolvedValue({
+          status: 'removed'
+        })
+      }
+      const pollSpy = jest
+        .spyOn(libraryModule, 'pollUninstallOnce')
+        .mockResolvedValue(undefined)
+
+      await new SteamGame(APP_ID).uninstall({} as any)
+
+      if (perGame) {
+        expect(removePerGameBridgeBottle).toHaveBeenCalledWith(APP_ID)
+      }
+      expect(pollSpy).toHaveBeenCalledWith(APP_ID, 'bridge')
+      pollSpy.mockRestore()
+    }
+  )
+
   it('D-UAT-24-07 fold-in: gameStatusUpdate {status:"done"} still fires even when the library entry is absent for that appId (resolveBridgeLaunchExe returns undefined — nothing to remove)', async () => {
     library.delete(APP_ID)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)

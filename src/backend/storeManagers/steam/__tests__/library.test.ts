@@ -6006,6 +6006,95 @@ describe('pollUninstallOnce()', () => {
       )
     })
 
+    // Live 2026-10-27, Grim Dawn 219990: the bridge uninstall path now
+    // finishes through pollUninstallOnce(appId, 'bridge').
+    describe('bridge copy removed (bridge uninstall path)', () => {
+      const envMock = jest.requireMock('backend/constants/environment')
+
+      beforeEach(() => {
+        jest
+          .mocked(getBridgeBottleSettings)
+          .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
+        jest
+          .mocked(getBottleSteamappsDir)
+          .mockImplementation((bottleName: string) =>
+            bottleName === 'GameLibSteamBridge'
+              ? '/bridge/steamapps'
+              : '/bottle/steamapps'
+          )
+        // Bridge root gone (the whole per-game bottle was removed); the
+        // native copy is still there.
+        ;(existsSync as jest.Mock).mockImplementation(
+          (path: string) =>
+            !path.startsWith('/bridge/') && !path.startsWith('/bottle/')
+        )
+        ;(readFileSync as jest.Mock).mockReturnValue('native manifest content')
+        ;(vdf.parse as jest.Mock).mockReturnValue({
+          AppState: {
+            appid: '730',
+            StateFlags: '4',
+            installdir: 'CS2Native',
+            SizeOnDisk: '99999'
+          }
+        })
+      })
+
+      afterEach(() => {
+        envMock.isMac = false
+        envMock.isLinux = true
+      })
+
+      it('a NATIVE copy survives: badge stays installed on the native copy and the notice names both copies', async () => {
+        await pollUninstallOnce('730', 'bridge')
+
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'pushGameToLibrary',
+          expect.objectContaining({
+            app_name: '730',
+            is_installed: true,
+            install: expect.objectContaining({
+              install_path: '/steam/steamapps/common/CS2Native'
+            })
+          })
+        )
+        expect(notify).toHaveBeenCalledTimes(1)
+        expect(i18next.t).toHaveBeenCalledWith(
+          'gamelib:steam.uninstall.copySurvives',
+          expect.any(String),
+          { removed: 'Steam bridge', survivor: 'Mac Steam' }
+        )
+      })
+
+      it('bridge-AUTHORITATIVE title: a native copy is not a survivor — full uninstall, "Game Uninstalled", no surviving-copy notice', async () => {
+        // Same composition refresh() uses: only a bridge copy satisfies
+        // is_installed here, so claiming the native copy "is still installed"
+        // would be undone by the next refresh.
+        envMock.isMac = true
+        envMock.isLinux = false
+        jest.mocked(bridgeAllowlist.has).mockReturnValue(true)
+        ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+          platformsCaptured: true,
+          is_mac_native: false
+        })
+
+        await pollUninstallOnce('730', 'bridge')
+
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'pushGameToLibrary',
+          expect.objectContaining({ app_name: '730', is_installed: false })
+        )
+        expect(notify).toHaveBeenCalledWith({
+          title: 'CS:GO',
+          body: 'Game Uninstalled'
+        })
+        expect(i18next.t).not.toHaveBeenCalledWith(
+          'gamelib:steam.uninstall.copySurvives',
+          expect.anything(),
+          expect.anything()
+        )
+      })
+    })
+
     it('NEITHER root has a surviving copy: falls through to the original full-uninstall behaviour (badge flips false, "Game Uninstalled" toast fires) — regression guard', async () => {
       ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone everywhere
       startUninstallPolling('730', 60000)

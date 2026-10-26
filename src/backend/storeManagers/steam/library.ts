@@ -3242,10 +3242,17 @@ export async function pollUninstallOnce(
     // whole uninstall completion down with it. An unreadable root cannot
     // confirm a survivor either way, so it is treated as absent and logged —
     // never allowed to throw out of the poller.
+    //
+    // A survivor must also be one the library refresh will count: for a
+    // bridge-authoritative title only a bridge copy satisfies is_installed
+    // (isBridgeAuthoritativeForInstallState), so a native/bottle copy left
+    // behind there is not a survivor — claiming "still installed" would be
+    // undone by the next refresh.
+    const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(appId)
     let survivorSource: AcfSource | null = null
     let survivor: Awaited<ReturnType<typeof readAcfState>> = { state: 'absent' }
     for (const candidate of (['native', 'bottle', 'bridge'] as const).filter(
-      (root) => root !== source
+      (root) => root !== source && (!bridgeAuthoritative || root === 'bridge')
     )) {
       try {
         const candidateState = await readAcfState(appId, candidate)
