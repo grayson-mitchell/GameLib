@@ -21,7 +21,7 @@ source:
   - 51-17-SUMMARY.md
   - 51-18-SUMMARY.md
 started: 2026-10-21T12:30:34Z
-updated: 2026-10-26T06:51:08Z
+updated: 2026-10-26T07:05:38Z
 ---
 
 ## Preconditions
@@ -46,7 +46,7 @@ legacy-bottle launch-time-miss evidence.
 
 ## Current Test
 
-[testing paused — 4 items outstanding]
+[testing paused — 3 items outstanding]
 
 ## Tests
 
@@ -206,7 +206,7 @@ Separate count, never folded into K: played with shim attached but unverified un
 
 ### 21. Review-fix WR-01 — an auto-cleared scan keeps its interface-version pool (AoD, 230070)
 expected: Setup (staged: at HEAD no owned title's persisted scan miss is covered by the current shim — 219990, 230070, 411300, 1603180, 1782460 and 3410180 all stay misses — so nothing auto-clears on its own): quit GameLib; copy `~/Library/Application Support/gamelib/store_cache/steam_metadata.json` aside; in it set `230070.bridge.scan.missingSymbols` to `["SteamInternal_CreateInterface"]` (an x64 shim export, so `isScanVerdictNowCovered` treats the miss as covered), leaving `status: "miss"`, `arch: "x64"` and the 22-entry `scan.interfaceVersions` untouched; note the 22 `iface.` lines in `gamelib_bridge.cfg` beside `AoD64.exe` (GameLibSteamBridge-230070, `steamapps/common/Age of Decadence/`). Start GameLib and Play The Age of Decadence. Pass: gamelib.log has `SteamGame: appId 230070 — bridge verdict auto-cleared (D-51-07), the current shim now covers: SteamInternal_CreateInterface`; afterwards `230070.bridge` carries a top-level `interfaceVersions` holding the same 22 entries, and no `missingSymbols` entry anywhere in it reads `@unknown-version`; `HELLO shim attached appid=230070` is logged; and when the launch logs `placeShimForGame: shim already present and byte-identical at "…/Age of Decadence/steam_api64.dll" for appId 230070 (idempotent, no-op)`, the rewritten `gamelib_bridge.cfg` still has its 22 `iface.` lines. Fail (the review's WR-01): no top-level `interfaceVersions`, the cfg rewritten with no `iface.` lines on that already-placed launch, or a new scan naming `<Family>@unknown-version`. If the shim was re-placed instead of already-placed, the cfg half does not discriminate; record that and judge on the store key. The review's full `@unknown-version` path needs a GameLib shim with no restorable `.gamelib-orig` backup; AoD has one (`steam_api64.dll.gamelib-orig`), so that half is desk-covered only, by the WR-01 tests in bridgeVerdict.test.ts and games.test.ts. Afterwards quit GameLib and put the copied steam_metadata.json back.
-result: pending
+result: pass — 2026-10-26, packaged debug bundle (sidecar built 19:46), staged as written. Operator: AoD reached its main menu on both launches. Store half PASSED: gamelib.log 20:03:40 `SteamGame: appId 230070 — bridge verdict auto-cleared (D-51-07), the current shim now covers: SteamInternal_CreateInterface`; afterwards `230070.bridge` carries a top-level `interfaceVersions` with the same 22 entries, and no value anywhere in `230070.bridge` contains `unknown-version`. `HELLO shim attached appid=230070` on both launches (20:03:45, 20:04:11), each with `READY init=ok`. Cfg half NOT discriminated: neither launch was already-placed. Launch 1 re-placed the shim, because the bottle's 501248-byte shim predated the 505344-byte one from quick 261026-qvc. That launch's fresh scan re-persisted the real miss (`SteamController003`, `STEAMUGC_INTERFACE_VERSION008`) with its own 22-entry pool. Launch 2 logged `new .gamelib-orig -- discarding the persisted verdict and rescanning (quick 261026-lif)` and re-placed again (shim mtime 20:04). Its `gamelib_bridge.cfg` (20:04) has 22 `iface.` lines, but that launch had a non-empty scan pool, so the retained-pool fallback was not the source. With a real miss re-persisted on the first launch, no further launch can exercise the already-placed fallback under this staging, so that half stays desk-covered by the WR-01 test in games.test.ts. Side observation (not WR-01): after an auto-clear, the next launch always does one extra rescan and re-placement. The auto-clear drops `scan.originalFingerprints` along with the scan, so quick 261026-lif's check reads the existing backup as new. This costs one rescan and does not loop: launch 2 re-persisted the fingerprints. Original steam_metadata.json restored after the run; the post-run copy and the log are archived in the session scratchpad.
 
 ### 22. Review-fix WR-08 — an interrupted GameLibSteam download resumes in GameLibSteam, not in a new bridge bottle
 expected: Setup: pick a small owned Windows-only title T that is not installed, not knownBad, and whose Install dialog route line reads "Native Steam bridge". In that dialog tick "Use the Windows Steam client instead" and press Install, so GameLib's native download goes into the GameLibSteam bottle (item 24's Install arm leaves this same state). Part-way through, Force Quit GameLib, and check with `pgrep -fl gamelib-sidecar` that no sidecar survives (`kill -9` it if one does), so no JS runs. With GameLib still quit, confirm that T's `install.steamResumeTargetSteamappsDir` in `~/Library/Application Support/gamelib/store_cache/steam_library.json` is `…/Bottles/GameLibSteam/drive_c/Program Files (x86)/Steam/steamapps`, and that no `GameLibSteamBridge-<T>` bottle exists in `~/Library/Application Support/CrossOver/Bottles`. Then delete `<T>.bridge.userRoute` from `steam_metadata.json`, so T's route returns to the bridge by default and not by a user choice. Start GameLib and press Install on T. Pass: gamelib.log has `SteamGame: appId <T> already has bits in the GameLibSteam bottle -- keeping the bottled install path instead of starting a second download into a bridge bottle (51-REVIEW WR-08)`; the download continues in GameLibSteam's steamapps and completes there; no `GameLibSteamBridge-<T>` bottle appears; and no `[Timing] prescreenBridgeDepots: appId <T>` line is logged for this attempt. Fail (the review's WR-08): `SteamGame: bridge bottle "GameLibSteamBridge-<T>" not yet provisioned for appId <T> — provisioning inline (BLOCKER 1, no consent dialog needed)`, then a second download into that new bottle, which orphans the GameLibSteam partial. The exception, where an explicit "Try the bridge anyway" still wins over the guard, is desk-covered only (games.test.ts). Afterwards T is a GameLibSteam install; uninstall it if unwanted.
@@ -223,9 +223,9 @@ result: pending
 ## Summary
 
 total: 24
-passed: 11
+passed: 12
 issues: 6
-pending: 4
+pending: 3
 skipped: 2
 blocked: 1
 

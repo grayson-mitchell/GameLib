@@ -200,7 +200,7 @@ None (WR-02 and WR-04 were resolved after iteration 1; see Fixed Issues).
 ## Outstanding
 
 - WR-01, WR-08, WR-09 and WR-11 remain "fixed: requires human verification". No human check has been recorded for any of them. Each now has a pending live check in 51-UAT.md (added 2026-10-26, quick 261026-rb4):
-  - WR-01 → 51-UAT item 21
+  - WR-01 → 51-UAT item 21: pass 2026-10-26 on the store half (retained top-level `interfaceVersions`, 22 entries, no `@unknown-version`). The already-placed cfg half could not be produced live and stays desk-covered.
   - WR-08 → 51-UAT item 22
   - WR-09 → 51-UAT item 23
   - WR-11 → 51-UAT item 24
