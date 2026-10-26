@@ -55,3 +55,16 @@ was already red at HEAD for the 261027-cux `cancelDialog` keys.
 
 Not live-gated: uninstalling a title that has both a native and a bottle copy and seeing the
 notice.
+
+## Follow-up (2026-10-27, `7c15a1a45`)
+
+A live test on Grim Dawn (219990, with native and per-game bridge copies) showed the notice above
+was only half the fix. `uninstall()` routes to the bridge first whenever a bridge copy exists,
+which matches `launch()`; the operator chose to keep that rule. That path then finished with
+`markBridgeGameUninstalled()`, which never checks the other roots. The bridge bottle was removed,
+no message was shown, and the next refresh flipped the badge back to Play from the native copy.
+Both bridge removal branches now finish through `pollUninstallOnce(appId, 'bridge')`, as
+`uninstallBottleGameDirectly()` already did. The survivor probe also follows `refresh()`'s
+bridge-authoritative rule, so for a bridge-authoritative title only a bridge copy counts as a
+survivor. games.test.ts adds 2 tests and library.test.ts adds 2 (638/638 across both files);
+codecheck is green. Not live-gated: a dual-copy uninstall with a bridge copy.
