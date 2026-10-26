@@ -10,7 +10,7 @@ files:
   - public/locales/en/gamepage.json
 severity: minor
 platform: any
-ready: human
+ready: code
 ---
 
 A GameLib known-fix for a game means GameLib has made it run, so it carries an implied Wine
@@ -32,10 +32,15 @@ run.
 - **Separate row.** "GameLib" is its own row beside CrossOver, Proton and Wine, not a badge on the
   Wine row.
 
-Decisions 1 and 3 below are settled by these. 2 and 4 are still open, so this stays
-`ready: human`.
+- **A fix existing is enough.** A bundled or local fix shows the row with its `rating`, or 4 when
+  the file has none. No evidence key or census result is required.
+- **Keep the other rows.** CrossOver, Proton and Wine render exactly as they do now. The GameLib
+  row sits beside them and overrides nothing.
 
-**Decisions needed before coding:**
+All four decisions below are settled by these, so this is `ready: code`. The list is kept as the
+record of what was weighed.
+
+**Decisions weighed (all settled above):**
 
 1. **Which fixes count.** Tier 1 (`<id>-<store>.json`) is also read from the remote layer
    (`fixes/`, Heroic's download). A Heroic remote fix is not GameLib-validated, so its presence
