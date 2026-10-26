@@ -23,11 +23,17 @@
  * fire-and-forget (`runWineCommand({ wait: false })`), the bridge cannot
  * assume success -- `ensureBridgeHelperReady()` probes the helper over the
  * protocol.ts (24-02) CONTROL frame:
- *  - HEALTH: answerable by the helper immediately at process start, BEFORE
- *    `SteamAPI_InitFlat` completes -- proves "process up".
+ *  - HEALTH: independent of the init OUTCOME, but only served once the
+ *    helper reaches its accept loop, which is after `SteamAPI_InitFlat` has
+ *    run (success or failure) -- proves "process up and serving".
  *  - WHOAMI: answerable ok only AFTER `SteamAPI_InitFlat` succeeded against
  *    the live signed-in Mac Steam -- proves "init succeeded against a live
  *    session".
+ * 51-REVIEW WR-02: the helper is single-threaded, so connections made while
+ * InitFlat runs sit unanswered in the listen backlog. The backend therefore
+ * waits for the helper's `READY` stderr line (bounded by INIT_WAIT_BUDGET_MS)
+ * before the HEALTH/WHOAMI probe.
+ *
  * These are two DISTINCT states (24-02 review finding #7): "process up, no
  * live Steam session" (`status: 'not-inited'`) is reported differently from
  * "helper never answered at all" (`status: 'unreachable'`) so a caller can
@@ -76,9 +82,9 @@ const MIN_EPHEMERAL_PORT = 1024
 const MAX_PORT = 65535
 
 // Bounded-poll budget (D-06, T-24-10 -- observable failure, never a hang).
-// Reused for TWO distinct waits: (1) the freshly-spawned process reporting
-// its LISTEN port at all, and (2) the HEALTH/WHOAMI CONTROL round-trip once
-// that port is known.
+// Reused across the wait stages: (1) the freshly-spawned process reporting
+// its LISTEN port, (2) its READY line (INIT_WAIT_BUDGET_MS, below), then
+// (3) the HEALTH/WHOAMI CONTROL round-trip once that port is known.
 const POLL_ATTEMPTS = 6
 const POLL_INTERVAL_MS = 250
 const PROBE_TIMEOUT_MS = 250

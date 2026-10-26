@@ -758,6 +758,14 @@ describeDarwinOnly(
             (await sendFrameOnSocket(socket, initFrame(3, 1, 2))).status
           ).toBe(STATUS_OK)
           await new Promise((r) => setTimeout(r, 100))
+          // WR-02: the helper's READY marker follows LISTEN and precedes accept
+          // (a frame is only answered once accept runs).
+          expect(stderr).toMatch(
+            /READY {2}init=(ok|failed|dylib-missing) appid=\d+\n/
+          )
+          expect(stderr.indexOf('READY  init=')).toBeGreaterThan(
+            stderr.indexOf('LISTEN 127.0.0.1:')
+          )
           expect(stderr).toMatch(
             /GINIT {2}fn=SteamAPI_Init ret=1 ok=1 session=0\n/
           )

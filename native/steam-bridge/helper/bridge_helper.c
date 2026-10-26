@@ -58,8 +58,10 @@
  * CONTROL frame (Phase 24 review finding #7, extended D-51-01): a reserved
  * ordinal (0xFFFF) reconciles the human-readable PING/WHOAMI text handshake
  * into this binary protocol, now with a THIRD slot:
- *   - HEALTH (slot 0): answered immediately, BEFORE/independent of whether
- *     `SteamAPI_InitFlat` succeeded -- proves "process up". This is why
+ *   - HEALTH (slot 0): answered independent of whether `SteamAPI_InitFlat`
+ *     succeeded, but only once the accept loop runs, i.e. after init has RUN
+ *     (single-threaded; see the READY line in main()) -- proves "process up
+ *     and serving". This is why
  *     dylib-load/init failure below does NOT exit() -- it degrades to
  *     serving HEALTH ok / WHOAMI not-inited rather than crashing the whole
  *     helper.
@@ -74,7 +76,7 @@
  *     per request.
  *
  *   - REPORT_INIT (slot 5, D-53-15): argBlob is {u32 fn, i32 ret}, the GAME's
- *     own SteamAPI_Init result as reported by the shim. Answered pre-init;
+ *     own SteamAPI_Init result as reported by the shim. Answered regardless of g_inited;
  *     logged as `GINIT` (fn name from a closed table, ints only, max 8).
  *     GINIT is written only from this wire handler: this helper's own
  *     in-process InitFlat logs under `INIT`, so it can never emit GINIT.
@@ -375,7 +377,8 @@ static int load_steam_api(void) {
  * init contract -- identity resolves from the `steam_appid.txt`
  * `ensure_steam_appid_file()` already wrote into this process's own cwd,
  * BEFORE this is called). Structurally, this call -- and this call alone
- * -- precedes the bind/listen/accept loop below; it is never retried, and
+ * -- runs after bind/listen and the LISTEN line, and before the accept loop
+ * below; it is never retried, and
  * there is no re-init path anywhere else in this file.
  *
  * Only reached when `load_steam_api()` succeeded -- see main()'s
@@ -556,7 +559,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
                                   const uint8_t *argBlob, uint32_t argLen, int *helloLogged) {
   if (ordinal == CONTROL_ORDINAL) {
     if (slot == CONTROL_SLOT_HEALTH) {
-      // Answerable pre-init / independent of init outcome -- "process up".
+      // Answered regardless of g_inited / init outcome -- "process up".
       send_response(fd, requestId, STATUS_OK, NULL, 0);
       return;
     }
@@ -583,7 +586,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       return;
     }
     if (slot == CONTROL_SLOT_HELLO) {
-      // D-51-01: answerable pre-init, like HEALTH -- proves "this is a
+      // D-51-01: answered regardless of g_inited, like HEALTH -- proves "this is a
       // real GameLib per-appId helper", independent of whether Steam is
       // signed in yet.
       if (helloLogged && !*helloLogged) {
@@ -659,7 +662,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       return;
     }
     if (slot == CONTROL_SLOT_REPORT_INIT) {
-      // D-53-15: answerable pre-init (like HELLO). T-kax-01: bounds-check before
+      // D-53-15: answered regardless of g_inited (like HELLO). T-kax-01: bounds-check before
       // the copy, closed code table, only table strings and %d reach the log.
       static const char *const k_init_names[4] = {
           "SteamAPI_Init", "SteamInternal_SteamAPI_Init", "SteamAPI_InitSafe",
@@ -692,7 +695,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       return;
     }
     if (slot == CONTROL_SLOT_DRAIN_CALLBACKS) {
-      // Phase 55: answerable pre-init like HEALTH. Never sleeps (the shim
+      // Phase 55: answered regardless of g_inited, like HEALTH. Never sleeps (the shim
       // blocks in recv with no timeout while holding g_bridge_lock) and never
       // logs bytes. At most one queued message per round trip.
       if (argLen != 0) {
