@@ -5,13 +5,13 @@
  * hint/name entries. No game binaries are used or checked in.
  */
 
-export type DelayImportDll = {
+type DelayImportDll = {
   name: string
   /** a string is a by-name import, a number an ordinal */
   imports: (string | number)[]
 }
 
-export type DelayImportPeOptions = {
+type DelayImportPeOptions = {
   plus: boolean
   dlls: DelayImportDll[]
   /** Attributes = 0 and the descriptor fields are VAs (ImageBase + RVA) */

@@ -36,7 +36,7 @@ export interface ValidRegistryFix {
   views: KnownFixRegistryView[]
 }
 
-export interface RegistryFixLogContext {
+interface RegistryFixLogContext {
   label: string
   logPrefix: LogPrefix
 }

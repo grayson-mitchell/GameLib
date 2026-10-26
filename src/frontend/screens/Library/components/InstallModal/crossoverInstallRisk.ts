@@ -11,7 +11,7 @@ import type { DialogModalOptions } from 'frontend/types'
  * an absent key is nothing.
  */
 
-export type CrossoverInstallRisk =
+type CrossoverInstallRisk =
   | { kind: 'none' }
   | { kind: 'unrated' }
   | {
