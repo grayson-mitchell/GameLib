@@ -5873,7 +5873,7 @@ describe('pollUninstallOnce()', () => {
       expect(notify).not.toHaveBeenCalledWith(
         expect.objectContaining({ body: 'Game Uninstalled' })
       )
-      expect(i18next.t).toHaveBeenCalledWith(
+      expect(i18nextT).toHaveBeenCalledWith(
         'gamelib:steam.uninstall.copySurvives',
         expect.any(String),
         { removed: 'Windows Steam (CrossOver)', survivor: 'Mac Steam' }
@@ -5928,7 +5928,7 @@ describe('pollUninstallOnce()', () => {
       expect(notify).not.toHaveBeenCalledWith(
         expect.objectContaining({ body: 'Game Uninstalled' })
       )
-      expect(i18next.t).toHaveBeenCalledWith(
+      expect(i18nextT).toHaveBeenCalledWith(
         'gamelib:steam.uninstall.copySurvives',
         expect.any(String),
         { removed: 'Mac Steam', survivor: 'Windows Steam (CrossOver)' }
@@ -5999,7 +5999,7 @@ describe('pollUninstallOnce()', () => {
       expect(notify).not.toHaveBeenCalledWith(
         expect.objectContaining({ body: 'Game Uninstalled' })
       )
-      expect(i18next.t).toHaveBeenCalledWith(
+      expect(i18nextT).toHaveBeenCalledWith(
         'gamelib:steam.uninstall.copySurvives',
         expect.any(String),
         { removed: 'Mac Steam', survivor: 'Steam bridge' }
@@ -6058,7 +6058,7 @@ describe('pollUninstallOnce()', () => {
           })
         )
         expect(notify).toHaveBeenCalledTimes(1)
-        expect(i18next.t).toHaveBeenCalledWith(
+        expect(i18nextT).toHaveBeenCalledWith(
           'gamelib:steam.uninstall.copySurvives',
           expect.any(String),
           { removed: 'Steam bridge', survivor: 'Mac Steam' }
@@ -6071,6 +6071,7 @@ describe('pollUninstallOnce()', () => {
         // would be undone by the next refresh.
         envMock.isMac = true
         envMock.isLinux = false
+        // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
         jest.mocked(bridgeAllowlist.has).mockReturnValue(true)
         ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
           platformsCaptured: true,
@@ -6087,7 +6088,7 @@ describe('pollUninstallOnce()', () => {
           title: 'CS:GO',
           body: 'Game Uninstalled'
         })
-        expect(i18next.t).not.toHaveBeenCalledWith(
+        expect(i18nextT).not.toHaveBeenCalledWith(
           'gamelib:steam.uninstall.copySurvives',
           expect.anything(),
           expect.anything()
