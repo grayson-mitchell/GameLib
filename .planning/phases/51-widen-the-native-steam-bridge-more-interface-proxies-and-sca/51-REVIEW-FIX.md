@@ -1,11 +1,12 @@
 ---
 phase: 51-widen-the-native-steam-bridge-more-interface-proxies-and-sca
 fixed_at: 2026-10-25T00:00:00Z
+updated_at: 2026-10-26T00:00:00Z
 review_path: .planning/phases/51-widen-the-native-steam-bridge-more-interface-proxies-and-sca/51-REVIEW.md
 iteration: 1
 findings_in_scope: 15
-fixed: 13
-skipped: 2
+fixed: 15
+skipped: 0
 status: partial
 ---
 
@@ -18,11 +19,14 @@ status: partial
 **Summary:**
 
 - Findings in scope: 15 (CR-01..CR-04, WR-01..WR-11; IN-01..IN-05 out of scope)
-- Fixed: 13
+- Fixed: 15 (13 in iteration 1, plus 2 afterwards by quick tasks: WR-02 by 261026-k6o, and WR-04 by 082ff80db, pinned and live-gated by 261026-kyv)
   - 5 by earlier gap plans: CR-01, CR-02, CR-03, CR-04, WR-05
   - 1 incidentally by Phase 53: WR-10
   - 7 in this pass: WR-01, WR-03 (doc-only, partial), WR-06, WR-07, WR-08, WR-09, WR-11
-- Skipped: 2 (WR-02, WR-04). Both are native C changes that need a live gate.
+- Skipped: 0
+- Status stays `partial`: WR-03 is fixed doc-only with its behavioural fix tracked as a todo, and WR-01, WR-08, WR-09 and WR-11 still await human verification (see Outstanding).
+
+Updated 2026-10-26: WR-02 and WR-04, skipped in iteration 1, were resolved afterwards by the quick tasks named above.
 
 The review is dated 2026-10-22. Every open finding was re-checked against the current code (after 51-20..51-30, Phase 52, Phase 53 and the quick tasks) before any fix. The cited line numbers were stale throughout.
 
@@ -84,6 +88,9 @@ The review is dated 2026-10-22. Every open finding was re-checked against the cu
   - CR-03 (51-20) narrowed the hazard to runtime-lookup families;
   - a real fix needs per-family, sret-aware null objects generated from the Proton inventory.
 - This is a comment change in the generator only. `pnpm gen-vtables` regenerates byte-identical output, so the generated shim and its binaries are untouched.
+
+**Tracked:** `.planning/todos/pending/2026-10-26-x64-null-object-sret-aware-per-family.md`
+**Decision:** On 2026-10-26 the user accepted the doc-only fix for Phase 51; the behavioural fix is tracked by the todo above.
 
 **Not done:** the behavioural fix. Either option (per-family null objects in the generated C, or counting sret-bearing unserved families as missing, which would re-route titles such as ELEX) needs a design decision and a live Wine/hardware gate. The review's other minimum, adding the risk to the D-51-02 notice text, was also not done. It is a user-facing copy decision.
 
@@ -160,28 +167,40 @@ The review is dated 2026-10-22. Every open finding was re-checked against the cu
 
 **Behaviour change to confirm:** the route line ("Native Steam bridge" / "Bottled Steam client") used to re-probe and update the moment the toggle flipped. It now reflects the persisted verdict until Install, and only the toggle shows the pending choice.
 
-## Skipped Issues
-
 ### WR-02: Helper runs `SteamAPI_InitFlat` before entering its accept loop
 
-**File:** `native/steam-bridge/helper/bridge_helper.c` (`main()`: `logts("LISTEN")` at ~:793, `load_steam_api()`/`init_steam_api_once()` at ~:799-800, `accept()` at ~:806)
-**Reason:** Still present, but the fix needs a live gate. Each fix the review offers changes either native helper C or the readiness timing:
-
-- Init on a separate thread, or serve accepts during init.
-- Emit LISTEN only after init.
-- Size the backend wait budget to cover init. This needs a measured cold `SteamAPI_InitFlat` duration, which no desk run can supply.
-
-None of these can be verified without a live Mac Steam session.
-**Note:** The `helperProcess.ts` module doc still claims HEALTH is answerable "immediately at process start, BEFORE `SteamAPI_InitFlat` completes". That is false until this is fixed. Correct it together with the fix.
-**Tracked:** `.planning/todos/pending/2026-10-25-bridge-helper-inits-steam-before-accept-loop.md`
+**Files modified:** `native/steam-bridge/helper/bridge_helper.c`, `src/backend/storeManagers/steam/bridge/helperProcess.ts`, `src/backend/storeManagers/steam/bridge/__tests__/helperProcess.test.ts`, `src/backend/storeManagers/steam/bridge/__tests__/helperIntegration.test.ts`
+**Commits:** 977f6d2db, 18a9d0bc3 (quick 261026-k6o). Live gate recorded in ab3e3b264.
+**Status:** fixed
 **Original issue:** If dlopen plus InitFlat takes longer than about 3 s (cold Steam IPC, Steam mid-update), the per-launch helper is reported `unreachable` and the launch fails with a bridge-setup dialog.
+**Applied fix:**
+
+- The helper emits a READY line before `accept()`, and the backend does a bounded 20 s, unref'd wait for it before the HEALTH/WHOAMI poll.
+- The false "HEALTH before InitFlat" docs in `bridge_helper.c` and `helperProcess.ts` were corrected, and a READY-after-LISTEN integration assertion was added.
+- Live-gate finding (2026-10-26): `SteamAPI_InitFlat` never blocked (under 1 s in every Steam state tested), so the slow path was not observed. The wait stays as a safeguard.
+- Todo moved to `.planning/todos/completed/2026-10-25-bridge-helper-inits-steam-before-accept-loop.md`.
 
 ### WR-04: The shim's single socket and request id are shared across game threads without a lock
 
-**File:** `meta/gen_vtables.ts` (generated `g_bridge_sock` ~:2365, `bridge_ensure_connected` ~:2483, `bridge_transact_once` ~:2523-2537)
-**Reason:** Still present: the generator and the generated shim contain no lock. The fix is a `CRITICAL_SECTION` plus `InitOnceExecuteOnce` in generated native shim code. It cannot be verified at the desk; it needs a zig shim build and a live multi-threaded Wine run to rule out deadlock and loader-lock interactions. Per this pass's rule, no speculative change was forced into the generated native C.
-**Tracked:** `.planning/todos/pending/2026-10-25-bridge-shim-socket-shared-across-threads-without-lock.md`
+**Files modified:** `meta/gen_vtables.ts`, `native/steam-bridge/generated/steam_api_shim.c`, `meta/__tests__/gen_vtables.test.ts`
+**Commits:** 082ff80db introduced the SRWLOCK serializing bridge round trips. e88486bf4 (quick 261026-kyv) pins it with four regression tests. The live multi-threaded gate is recorded in 4d9999c53.
+**Status:** fixed
 **Original issue:** Concurrent `bridge_transact` calls interleave frames on one stream. A request-id mismatch then closes the socket under another thread. Phase 51's wider served surface makes cross-thread calls more likely.
+**Applied fix:**
+
+- Bridge round trips are serialized with an SRWLOCK in the generated shim (082ff80db). The iteration-1 entry proposed a `CRITICAL_SECTION`; the shipped lock is an SRWLOCK.
+- Quick 261026-kyv did not add the lock. It added four regression tests in `meta/__tests__/gen_vtables.test.ts`, with mutation proofs.
+- Live gate on Abiotic Factor 427410: two bridge threads, 6 real lock waits, 0 failures, 0 request-id mismatches, clean shutdown.
+- Todo moved to `.planning/todos/completed/2026-10-25-bridge-shim-socket-shared-across-threads-without-lock.md`.
+
+## Skipped Issues
+
+None (WR-02 and WR-04 were resolved after iteration 1; see Fixed Issues).
+
+## Outstanding
+
+- WR-01, WR-08, WR-09 and WR-11 remain "fixed: requires human verification". No human check has been recorded for any of them.
+- The WR-03 behavioural fix: `.planning/todos/pending/2026-10-26-x64-null-object-sret-aware-per-family.md`. It needs a decision (`ready: human`) and then a live Wine gate.
 
 ## Out of Scope (Info)
 
@@ -204,3 +223,4 @@ IN-01, IN-02, IN-03, IN-04 and IN-05 are Info findings, outside `fix_scope: crit
 _Fixed: 2026-10-25_
 _Fixer: Claude (gsd-code-fixer)_
 _Iteration: 1_
+_Updated: 2026-10-26_
