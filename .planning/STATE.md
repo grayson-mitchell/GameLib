@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-26
+Last activity: 2026-10-26 - Completed quick task 261026-lif: restore missing .gamelib-orig bridge originals
 
 Progress: [██████████] 100%
 
@@ -390,6 +390,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261026-k6o | Bridge helper prints `READY  init=<ok\|failed\|dylib-missing>` before `accept()`; the backend waits for it (20 s, exit means `unreachable` at once) before HEALTH/WHOAMI, replacing the implicit ~3 s budget; false HEALTH-before-InitFlat docs corrected. WR-02 todo closed; follow-up todo for fail-fast launch while Steam is quit or signing in. | 2026-10-26 | 18a9d0bc3 | code-verified; live gate pass (InitFlat returned in under 1 s in all 3 Steam states; slow path never observed) | [261026-k6o-bridge-helper-waits-for-init-line](./quick/261026-k6o-bridge-helper-waits-for-init-line/) |
 | 261026-ku9 | bridgeScan `isContainedWithin` now rejects only `''`, `..`, `..`+`sep` prefix or absolute, so a `..foo` child is contained (53-REVIEW IN-03); tests for `..foo`, parent, `../x`, shared-prefix sibling. Todo closed. Same idiom remains in importScan/bridgeConfig/steamClientSetup/library.ts (out of scope). | 2026-10-26 | 8a155aabd | code-verified (jest 17/17, tsc clean) | [261026-ku9-bridgescan-iscontainedwithin-rejects-chi](./quick/261026-ku9-bridgescan-iscontainedwithin-rejects-chi/) |
 | 261026-kyv | WR-04 shim socket lock was already fixed in 082ff80db (static `SRWLOCK g_bridge_lock` around connect + transact + retry); 4 gen_vtables tests now pin it (lock order in `bridge_transact`, transport fns reachable only via the locked path, `g_bridge_sock` uses lock-held), each mutation-proven. Todo narrowed to its live multi-threaded Wine gate, severity minor. | 2026-10-26 | e88486bf4 | code-verified (233/233); live gate PASS (Abiotic: 2 bridge threads, 6 lock waits, 0 failures/mismatches, clean Shutdown); todo closed | [261026-kyv-pin-the-shim-bridge-srwlock-with-a-regre](./quick/261026-kyv-pin-the-shim-bridge-srwlock-with-a-regre/) |
+| 261026-lif | Restore missing `.gamelib-orig` bridge originals: filtered depot fetch (`downloadSelectedDepotFiles`) + `restoreBridgeSteamApiOriginals`, original fingerprints in the verdict with rescan on a new/changed backup (incl. already-placed), real `SteamGame.repair()` + Steam "Verify and Repair" menu item. Live backfill: all 11 bottles backed up. | 2026-10-26 | 39692c70a | live backfill done (11/11 backed up); fresh scans withhold 4 titles, ELEX regressed (follow-up: withhold rule); todo closed | [261026-lif-restore-missing-gamelib-orig-bridge-orig](./quick/261026-lif-restore-missing-gamelib-orig-bridge-orig/) |
 
 ## Deferred Items
 

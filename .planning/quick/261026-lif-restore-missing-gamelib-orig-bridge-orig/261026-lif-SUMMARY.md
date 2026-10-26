@@ -25,12 +25,12 @@ key-files:
     - src/backend/gamedetails/dispatch.ts
     - src/frontend/screens/Game/GameSubMenu/index.tsx
 metrics:
-  tasks-complete: 3 of 4 (Task 4 is the pending operator checkpoint)
+  tasks-complete: 4 of 4
 ---
 
 # Quick 261026-lif: Restore missing `.gamelib-orig` bridge originals
 
-**Status: code complete (Tasks 1-3 committed); Task 4 operator checkpoint PENDING. The todo has not been moved or closed.**
+**Status: complete. Task 4 live backfill ran 2026-10-26: every placed shim in all 11 bottles now has a `.gamelib-orig` (13 restored + 230070 `steam_api.dll` original-in-place); todo closed. Regression found: the fresh scans withhold the shim for ELEX (exits after 2s), Mining Mechs, Overlooting and The Age of Decadence; follow-up quick task revises the withhold rule (operator chose option a).**
 
 GameLib's own depot download now restores the game-original `steam_api*.dll` as `<shim>.gamelib-orig`
 behind placed bridge shims, `SteamGame.repair()` drives it, and placement rescans when a backup is new or
@@ -103,7 +103,7 @@ None.
 No new surface beyond the plan's threat model (T-lif-01..06 mitigations implemented: sha1 + shim-marker
 check, containment + lstat + `wx` write, backup read only when `restorable`, live dll never overwritten).
 
-## Task 4: operator checkpoint (PENDING)
+## Task 4: operator checkpoint (DONE 2026-10-26)
 
 Executor prep done: `pnpm build:sidecar` run (sidecar.js 15:43:45, after the Task 3 commit); BACKFILL.md
 written with the "before" survey for all 11 appIds (11 rows, verify command passes). The repair outcome,
@@ -114,7 +114,11 @@ operator after a live signed-in run. Instructions are at the bottom of
 
 ### Per-bottle backfill table
 
-See `261026-lif-BACKFILL.md` (before-survey only; operator columns pending).
+Filled in `261026-lif-BACKFILL.md`. Outcome:
+- 7 titles bridged and HELLO-attached: Vampire's Fall, Planet Crafter, Rogue Waters, Hell Clock, Avernum 6; Grim Dawn and Raft via the steamstub forwarder (DRM, as before).
+- 4 titles now withheld by the fresh scan of the real original: Mining Mechs, Overlooting, The Age of Decadence run without Steam; **ELEX exits after 2s** (it ran 188s with the shim on 2026-10-23 despite the same SteamController003 / STEAMUGC008 gaps). Owned by the withhold-rule follow-up.
+- Grim Dawn's second launch logged `steamstub-unforwarded:withheld` and exited after 2s; investigated in the same follow-up.
+- First-launch shared redists (261025-rkj, not this task) installed in Rogue Waters, Grim Dawn, Age of Decadence, ELEX, Raft.
 
 ## Self-Check: PASSED
 
