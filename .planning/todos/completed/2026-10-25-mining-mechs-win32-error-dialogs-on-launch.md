@@ -52,3 +52,9 @@ launches above had no GameLib peer, so Steam init failed in them by design.
 
 **Likely wider:** every GameMaker 2024 D3D11 title will hit the same probe under D3DMetal. If a
 second one shows up, a generic rule (GameMaker runner detected → dxvk) beats per-app files.
+
+## Live gate passed (2026-10-26)
+
+Operator launched through GameLib with the fix bundled: no dialogs, game ran. gamelib.log 18:51:18–21:
+`HELLO shim attached appid=1603180` plus five distinct CALLs incl. identity (`SteamUser023.GetSteamID`,
+`SteamFriends017.GetPersonaName`), the same evidence as before the backend change. Closed.
