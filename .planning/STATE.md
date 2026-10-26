@@ -299,6 +299,11 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-10-25] [notifications] "Notification authorization fails (granted=false, UNErrorDomain error 1) on the bundled GameLib.app althou… — [todo file](.planning/todos/pending/2026-10-25-notification-authorization-fails-on-bundled-app-despite-settings-enabled.md)
 - [2026-10-26] [steam-bridge] "Bridge helper's callback ring is drainable by any local process and outlives the connection that queued it (Phase 55 WR-03)" — [todo file](.planning/todos/pending/2026-10-26-bridge-helper-callback-ring-drainable-by-any-local-process.md)
 - [2026-10-26] [steam-bridge] "Redist installers flash a Dock icon per process on a bridge first launch" — [todo file](.planning/todos/pending/2026-10-26-redist-installers-flash-a-dock-icon-per-process-on-a-bridge-first-launch.md)
+- [2026-10-26] [steam-bridge] "x64 null object returns 0 in RAX for MSVC sret slots; make it per-family and sret-aware (51-REVIEW WR-03)" — [todo file](.planning/todos/pending/2026-10-26-x64-null-object-sret-aware-per-family.md)
+- [2026-10-26] [steam] "Cancelling a native Steam download and removing it from Downloads still leaves the game on \"Resume install\"" — [todo file](.planning/todos/pending/2026-10-26-cancelled-steam-download-leaves-resume-install.md)
+- [2026-10-26] [sidecar] "The Node sidecar survives a Force Quit of GameLib while a native Steam download is in flight" — [todo file](.planning/todos/pending/2026-10-26-sidecar-survives-force-quit-of-gamelib.md)
+- [2026-10-26] [steam] "Install poller logs \"no manifest detected; user may have cancelled\" after a successful native install into GameLibSteam" — [todo file](.planning/todos/pending/2026-10-26-install-poller-false-cancel-warning-after-native-install.md)
+- [2026-10-26] [steam-bridge] "Bridge scan auto-clear drops scan.originalFingerprints, so the next launch does one extra rescan and shim re-place" — [todo file](.planning/todos/pending/2026-10-26-bridge-auto-clear-drops-original-fingerprints.md)
 
 ### Blockers/Concerns
 

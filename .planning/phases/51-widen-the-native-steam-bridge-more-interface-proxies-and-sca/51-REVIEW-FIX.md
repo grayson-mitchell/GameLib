@@ -1,13 +1,13 @@
 ---
 phase: 51-widen-the-native-steam-bridge-more-interface-proxies-and-sca
 fixed_at: 2026-10-25T00:00:00Z
-updated_at: 2026-10-26T07:55:00Z
+updated_at: 2026-10-26T08:05:00Z
 review_path: .planning/phases/51-widen-the-native-steam-bridge-more-interface-proxies-and-sca/51-REVIEW.md
 iteration: 1
 findings_in_scope: 15
 fixed: 15
 skipped: 0
-status: partial
+status: all_fixed
 ---
 
 # Phase 51: Code Review Fix Report
@@ -24,7 +24,7 @@ status: partial
   - 1 incidentally by Phase 53: WR-10
   - 7 in this pass: WR-01, WR-03 (doc-only, partial), WR-06, WR-07, WR-08, WR-09, WR-11
 - Skipped: 0
-- Status stays `partial`: WR-03 is fixed doc-only with its behavioural fix tracked as a todo, and WR-01, WR-08, WR-09 and WR-11 still await human verification (see Outstanding).
+- Status was `partial` on this date (WR-03 doc-only, four fixes awaiting human verification). It was later set to `all_fixed`; see Status below.
 
 Updated 2026-10-26: WR-02 and WR-04, skipped in iteration 1, were resolved afterwards by the quick tasks named above.
 
@@ -205,6 +205,10 @@ None (WR-02 and WR-04 were resolved after iteration 1; see Fixed Issues).
   - WR-09 → 51-UAT item 23: pass 2026-10-26 (Avernum 6 launched from the legacy bottle holding the manifest; the empty per-game bottle was not used). The wrong-bottle uninstall half stays desk-covered.
   - WR-11 → 51-UAT item 24: pass 2026-10-26 on every install-dialog arm (pending-only toggle, Cancel writes nothing, Install persists then dispatches, a stored "bridge" override survives, a forced `{ ok: false }` blocks the install). The game-page route-notice `{ ok: false }` path was not run and has no test.
 - The WR-03 behavioural fix: `.planning/todos/pending/2026-10-26-x64-null-object-sret-aware-per-family.md`. It needs a decision (`ready: human`) and then a live Wine gate.
+
+## Status
+
+`all_fixed` as of 2026-10-26, by operator decision. All 15 in-scope findings are closed. WR-01, WR-08, WR-09 and WR-11 were verified live (51-UAT items 21-24). WR-03 counts as fixed because the operator accepted the doc-only fix (006e5f8f1) for Phase 51. Its behavioural fix is tracked in `.planning/todos/pending/2026-10-26-x64-null-object-sret-aware-per-family.md` and is not done.
 
 ## Out of Scope (Info)
 
