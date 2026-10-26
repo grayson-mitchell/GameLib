@@ -85,7 +85,7 @@ export const TIER1_KNOWN_FIX_KEYS = [
  * Keys that only change where a title is installed or launched from; they are
  * not a fix and never make the GameLib row claim one (quick 261027-gtd).
  */
-export const TIER1_ROUTING_KEYS = ['macArch', 'drm'] as const
+const TIER1_ROUTING_KEYS = ['macArch', 'drm'] as const
 
 // `dllOverrides`, `overlays`, `platforms` join this list when implemented.
 // `title` and `notes` are descriptive and allowed in both tiers.
