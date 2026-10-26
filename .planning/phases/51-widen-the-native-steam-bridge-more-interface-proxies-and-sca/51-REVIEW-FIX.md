@@ -199,7 +199,11 @@ None (WR-02 and WR-04 were resolved after iteration 1; see Fixed Issues).
 
 ## Outstanding
 
-- WR-01, WR-08, WR-09 and WR-11 remain "fixed: requires human verification". No human check has been recorded for any of them.
+- WR-01, WR-08, WR-09 and WR-11 remain "fixed: requires human verification". No human check has been recorded for any of them. Each now has a pending live check in 51-UAT.md (added 2026-10-26, quick 261026-rb4):
+  - WR-01 → 51-UAT item 21
+  - WR-08 → 51-UAT item 22
+  - WR-09 → 51-UAT item 23
+  - WR-11 → 51-UAT item 24
 - The WR-03 behavioural fix: `.planning/todos/pending/2026-10-26-x64-null-object-sret-aware-per-family.md`. It needs a decision (`ready: human`) and then a live Wine gate.
 
 ## Out of Scope (Info)

@@ -1,5 +1,5 @@
 ---
-status: complete
+status: partial
 phase: 51-widen-the-native-steam-bridge-more-interface-proxies-and-sca
 source:
   - 51-01-SUMMARY.md
@@ -21,7 +21,7 @@ source:
   - 51-17-SUMMARY.md
   - 51-18-SUMMARY.md
 started: 2026-10-21T12:30:34Z
-updated: 2026-10-25T02:15:49Z
+updated: 2026-10-26T06:51:08Z
 ---
 
 ## Preconditions
@@ -46,7 +46,7 @@ legacy-bottle launch-time-miss evidence.
 
 ## Current Test
 
-[testing complete]
+[testing paused — 4 items outstanding]
 
 ## Tests
 
@@ -204,12 +204,28 @@ Static-class blind spot (recorded, not fixed here): the class column reads `no-s
 
 Separate count, never folded into K: played with shim attached but unverified under the strict rule (HELLO recorded in a live session, no clean game-side Steam init or no game log): AoD 230070 (item 18, 452s, no game log), Avernum 6 206060 (item 1), plus the sample titles whose HELLO was logged but whose game log shows a Steam-init failure (1167950, 1284190, 1691190, init-failed). Of these only 1167950 and 1284190 play (offline).
 
+### 21. Review-fix WR-01 — an auto-cleared scan keeps its interface-version pool (AoD, 230070)
+expected: Setup (staged: at HEAD no owned title's persisted scan miss is covered by the current shim — 219990, 230070, 411300, 1603180, 1782460 and 3410180 all stay misses — so nothing auto-clears on its own): quit GameLib; copy `~/Library/Application Support/gamelib/store_cache/steam_metadata.json` aside; in it set `230070.bridge.scan.missingSymbols` to `["SteamInternal_CreateInterface"]` (an x64 shim export, so `isScanVerdictNowCovered` treats the miss as covered), leaving `status: "miss"`, `arch: "x64"` and the 22-entry `scan.interfaceVersions` untouched; note the 22 `iface.` lines in `gamelib_bridge.cfg` beside `AoD64.exe` (GameLibSteamBridge-230070, `steamapps/common/Age of Decadence/`). Start GameLib and Play The Age of Decadence. Pass: gamelib.log has `SteamGame: appId 230070 — bridge verdict auto-cleared (D-51-07), the current shim now covers: SteamInternal_CreateInterface`; afterwards `230070.bridge` carries a top-level `interfaceVersions` holding the same 22 entries, and no `missingSymbols` entry anywhere in it reads `@unknown-version`; `HELLO shim attached appid=230070` is logged; and when the launch logs `placeShimForGame: shim already present and byte-identical at "…/Age of Decadence/steam_api64.dll" for appId 230070 (idempotent, no-op)`, the rewritten `gamelib_bridge.cfg` still has its 22 `iface.` lines. Fail (the review's WR-01): no top-level `interfaceVersions`, the cfg rewritten with no `iface.` lines on that already-placed launch, or a new scan naming `<Family>@unknown-version`. If the shim was re-placed instead of already-placed, the cfg half does not discriminate; record that and judge on the store key. The review's full `@unknown-version` path needs a GameLib shim with no restorable `.gamelib-orig` backup; AoD has one (`steam_api64.dll.gamelib-orig`), so that half is desk-covered only, by the WR-01 tests in bridgeVerdict.test.ts and games.test.ts. Afterwards quit GameLib and put the copied steam_metadata.json back.
+result: pending
+
+### 22. Review-fix WR-08 — an interrupted GameLibSteam download resumes in GameLibSteam, not in a new bridge bottle
+expected: Setup: pick a small owned Windows-only title T that is not installed, not knownBad, and whose Install dialog route line reads "Native Steam bridge". In that dialog tick "Use the Windows Steam client instead" and press Install, so GameLib's native download goes into the GameLibSteam bottle (item 24's Install arm leaves this same state). Part-way through, Force Quit GameLib, and check with `pgrep -fl gamelib-sidecar` that no sidecar survives (`kill -9` it if one does), so no JS runs. With GameLib still quit, confirm that T's `install.steamResumeTargetSteamappsDir` in `~/Library/Application Support/gamelib/store_cache/steam_library.json` is `…/Bottles/GameLibSteam/drive_c/Program Files (x86)/Steam/steamapps`, and that no `GameLibSteamBridge-<T>` bottle exists in `~/Library/Application Support/CrossOver/Bottles`. Then delete `<T>.bridge.userRoute` from `steam_metadata.json`, so T's route returns to the bridge by default and not by a user choice. Start GameLib and press Install on T. Pass: gamelib.log has `SteamGame: appId <T> already has bits in the GameLibSteam bottle -- keeping the bottled install path instead of starting a second download into a bridge bottle (51-REVIEW WR-08)`; the download continues in GameLibSteam's steamapps and completes there; no `GameLibSteamBridge-<T>` bottle appears; and no `[Timing] prescreenBridgeDepots: appId <T>` line is logged for this attempt. Fail (the review's WR-08): `SteamGame: bridge bottle "GameLibSteamBridge-<T>" not yet provisioned for appId <T> — provisioning inline (BLOCKER 1, no consent dialog needed)`, then a second download into that new bottle, which orphans the GameLibSteam partial. The exception, where an explicit "Try the bridge anyway" still wins over the guard, is desk-covered only (games.test.ts). Afterwards T is a GameLibSteam install; uninstall it if unwanted.
+result: pending
+
+### 23. Review-fix WR-09 — launch follows the bottle that holds the manifest, not an empty per-game bottle (Avernum 6, 206060)
+expected: Setup (staged: this Mac has no legacy shared `GameLibSteamBridge` bottle, which the review's state needs): quit GameLib; in `~/Library/Application Support/CrossOver/Bottles` make an APFS clone of `GameLibSteamBridge-206060` named `GameLibSteamBridge` (`cp -cR GameLibSteamBridge-206060 GameLibSteamBridge`), then move `appmanifest_206060.acf` out of `GameLibSteamBridge-206060/drive_c/Program Files (x86)/Steam/steamapps/` to a safe place. The per-game bottle is now ready (its `cxbottle.conf` is present) but holds no manifest, while the legacy shared bottle holds the appId. A bridge reinstall whose download failed after inline provisioning leaves this state. Start GameLib and Play Avernum 6. Pass: the game launches from the legacy bottle. Its launch's `placeShimForGame:` lines name paths under `Bottles/GameLibSteamBridge/drive_c/`, not `GameLibSteamBridge-206060`; `HELLO shim attached appid=206060` is logged; and Avernum 6 reaches its menu. Fail (the review's WR-09): decision and execution disagree and the launch targets the empty per-game bottle, shown by `SteamGame: could not resolve a Windows launch executable for appId 206060 — not launching a bare/undefined path` or any launch path under `GameLibSteamBridge-206060`, with the game marked bridge-failed. Do not Uninstall in this state: the review's wrong-bottle uninstall half destroys data, and is desk-covered only, by the two WR-09 resolver tests in bottle.test.ts. If the clone does not come up as a bottle (the launch fails for a CrossOver reason, not a resolver one), record `blocked` with the reason. Afterwards quit GameLib, move the cloned `GameLibSteamBridge` bottle to the Trash, and put `appmanifest_206060.acf` back.
+result: pending
+
+### 24. Review-fix WR-11 — the force-bottled toggle persists only on Install, and a failed route write blocks the install
+expected: Use a small owned Windows-only title U that is not installed and not knownBad, whose Install dialog shows the route line "Native Steam bridge" and the "Use the Windows Steam client instead" toggle. Watch `U.bridge.userRoute` in `~/Library/Application Support/gamelib/store_cache/steam_metadata.json`; read it, and edit it only where an arm says so, with GameLib quit. (a) Pending only: tick the toggle. It shows ticked, the route line still reads "Native Steam bridge", and `userRoute` is unchanged. This is the behaviour change: the route line no longer re-probes when the toggle flips, and only the toggle shows the pending choice. (b) Cancel writes nothing: press Cancel and reopen. The toggle is unticked and `userRoute` is still unchanged. Under the review's WR-11, cancelling left the game permanently forced to the bottle. (c) Install persists, then dispatches: tick and press Install. `userRoute` becomes `"bottle"` and the download goes into the GameLibSteam bottle, with no `GameLibSteamBridge-<U>` bottle and no `[Timing] prescreenBridgeDepots: appId <U>` line; item 22's setup can start from here. (d) A stored `'bridge'` override survives: on a second such title V, with GameLib quit, set `V.bridge.userRoute` to `"bridge"`, restart, open V's Install dialog, tick then untick the toggle, press Install, then cancel that download. `userRoute` still reads `"bridge"`; under the review, unticking wrote `null` and deleted it. (e) A failed write blocks the install: the backend returns `{ ok: false }` only for invalid payloads the UI never sends, so force it from the packaged debug build's webview devtools console with `window.api.setSteamBridgeUserRoute = async () => ({ ok: false, error: 'uat-forced' })`. Then flip U's toggle and press Install. The dialog shows "Starting the install failed: uat-forced" inline, no download starts, Install can be pressed again, and gamelib.log has `SteamDialog: setSteamBridgeUserRoute failed (uat-forced) for appName "<U>" -- install not started`. Game-page route notice, with the same override still in place: it needs a not-installed knownBad title, and all three (200510, 411300, 63000) are installed here, so uninstall retired Hoard (63000, knownBad does-not-run) if the operator agrees. Press Install on Hoard's game page, then "Use bottled Steam" in the notice. The notice shows "Starting the install failed: uat-forced" and no install starts; under the review it installed anyway and looped back to the same notice. Restart GameLib to drop the override and repeat: the install starts, and `63000.bridge.noticeAcknowledgedFor` records the notice's reason. If the console assignment does not take, record (e) as not producible from the UI and uncovered: no test renders the `{ ok: false }` branch, since steamBridgeRouteLine.test.ts covers only `resolveForceBottleDisplayed` and `resolveForceBottleWrite`.
+result: pending
+
 ## Summary
 
-total: 20
+total: 24
 passed: 11
 issues: 6
-pending: 0
+pending: 4
 skipped: 2
 blocked: 1
 
@@ -222,6 +238,8 @@ ROADMAP hazard (b) acknowledged: for titles that still route to the shared `Game
 Re-gate 2026-10-23 (plan 51-27, packaged build at c8729c36a): item 14 passes and closes the helper-teardown gap (item 2). Item 15 closes the stubbed Win64 core-interface gap (item 6) at the wiring level but records an issue: ELEX hangs on its loading screen and is classified does-not-run (knownBad). Item 16 is blocked: bottled Steam auto-signed-in with remembered credentials, so the login-cause half of the item 11 gap is still unproven live; it also surfaced a stuck-on-Launching defect after a bottled-Steam game exits.
 
 "Most" verdict (D-51-15, 2026-10-24): goal NOT met. Item 20, verbatim: `18 of 19 routed to the bridge; 0 of 19 verified running through the bridge (HELLO + clean game log; 1 init-failed, 18 unverified)`, so N=18, K=0, M=19 on the strict criterion (HELLO plus a clean game-side Steam init; no game log is unverified; Mac Steam In-Game never counts). In the item 19 sample 12 of 12 were bridge-routed, 6 play offline, 6 do not run, 0 verified. Operator option: unmet-follow-up, answer recorded verbatim: "Unmet, follow-up phase (Recommended)"; follow-up phase name: Steam bridge coverage: modern-SDK exports, flat API, engine-layout scan, SteamStub forwarder, bottle runtime components. Phase 51 closes on the mechanism it built (per-app bridge bottle, helper, shim, routing, census evidence). Dominant miss classes, ranked by sample reach: (1) modern-SDK SteamInternal exports, (2) flat API for Unity Steamworks.NET, (3) Unreal bootstrap-exe scan miss, (4) SteamStub forwarding steamclient, (5) bottle Windows runtime components. The follow-up phase is to be added with /gsd-add-phase.
+
+Items 21-24 added 2026-10-26 by quick 261026-rb4: one pending live check for each 51-REVIEW-FIX finding still marked "fixed: requires human verification" (WR-01 item 21, WR-08 item 22, WR-09 item 23, WR-11 item 24). Items 21 and 23 stage their precondition, with an undo step, because it does not occur naturally on this Mac. Sub-checks that cannot be produced live are named in each item as desk-covered or uncovered.
 
 ## Gaps
 
