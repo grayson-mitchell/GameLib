@@ -39,3 +39,10 @@ kept.
 Fix direction: detect collisions on a case-folded key. The appinfo-order winner rule then needs that
 same key, and cross-owner pairs fall back to the existing UNRESOLVED path. After the fix, run a live
 gate on Californium or Civ V.
+
+**Resolved 2026-10-26 by quick 261026-nhy** (`924a8c264`, `b67e26e3b`). Live gate passed on macOS:
+Californium (402060) plan build probed the steamapps volume `case-insensitive=true`, RESOLVED 109
+case-only collisions (402064 rank 2 over 402062 rank 1, both spellings logged, 0 UNRESOLVED), and
+finalized `StateFlags=4`. A macOS Civ V (8930) install on the same build had no collisions and also
+finalized `StateFlags=4`, so case folding invented none across 11,946 files. The Windows-depot
+Civ V pairs (8933 vs 16863) and the cross-owner Wasteland 3 shape were covered by unit tests only.
