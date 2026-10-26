@@ -1159,9 +1159,10 @@ export interface KnownFixProfile {
   evidence?: string
   notes?: Record<string, string>
   /**
-   * Registry values to set in the Steam bridge bottle. Read only from
+   * Registry values to set in the game's Wine prefix (the bridge bottle for
+   * Steam) on every launch, for every store. Read only from
    * `<appName>-<store>.profile.json` (local/bundled). `views` defaults to both
-   * 32 and 64. Applied by the Steam bridge only today.
+   * 32 and 64. Applied on every launch.
    */
   registry?: KnownFixRegistryEntry[]
   /**

@@ -80,6 +80,7 @@ import gogPresence from './storeManagers/gog/presence'
 import { addRecentGame } from './recent_games/recent_games'
 import { tsStore } from './constants/key_value_stores'
 import { readKnownFixes } from './knownFixes'
+import { applyKnownFixProfileRegistry } from './knownFixesRegistry'
 import {
   defaultUmuPath,
   sharedWinePrefix,
@@ -920,6 +921,13 @@ async function prepareWineLaunch(
 
     await installFixes(gameInfo.app_name, gameInfo.runner)
   }
+
+  // Tier-2 profile registry, every launch (Decision 1, quick 261026-j6x).
+  await applyKnownFixProfileRegistry(
+    gameInfo.app_name,
+    gameInfo.runner,
+    gameSettings
+  )
 
   try {
     if (
