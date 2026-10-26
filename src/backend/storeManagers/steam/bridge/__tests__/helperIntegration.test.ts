@@ -67,7 +67,10 @@ import {
   __setBridgeHelperSpawnEnvForTests
 } from '../helperProcess'
 import {
+  BRIDGE_SECRET_ENV,
+  HELLO_ROLE_PROBE,
   encodeControl,
+  encodeHello,
   encodeRequest,
   decodeResponse,
   CONTROL_ORDINAL,
@@ -112,6 +115,10 @@ const HOARD_APP_ID = '63000'
 const IS_DARWIN = process.platform === 'darwin'
 const describeDarwinOnly = IS_DARWIN ? describe : describe.skip
 
+// WR-03: the per-launch secret the directly-spawned helpers receive via env.
+const TEST_SECRET = 'c0ffee'.repeat(10) + 'abcd'
+const WRONG_SECRET = '0123456789abcdef'.repeat(4)
+
 /**
  * Resolves once `port` refuses a connection (the helper has really
  * exited), or rejects after a bounded number of attempts -- never an
@@ -142,9 +149,9 @@ async function expectPortEventuallyClosed(port: number): Promise<void> {
 
 /**
  * Opens a short-lived raw socket to `port` and sends one CONTROL HELLO
- * request, returning the decoded status byte.
+ * request carrying `secret`, returning the decoded status byte.
  */
-function sendControlHello(port: number): Promise<number> {
+function sendControlHello(port: number, secret: string): Promise<number> {
   return new Promise((resolvePromise, rejectPromise) => {
     const socket = new Socket()
     let received = Buffer.alloc(0)
@@ -159,7 +166,7 @@ function sendControlHello(port: number): Promise<number> {
     })
 
     socket.connect(port, '127.0.0.1', () => {
-      socket.write(encodeControl(1, 'hello'))
+      socket.write(encodeHello(1, secret))
     })
 
     socket.on('data', (chunk: Buffer) => {
@@ -255,6 +262,19 @@ describeDarwinOnly(
       __setBridgeHelperSpawnEnvForTests(profile.childEnv())
     }, 30000)
 
+    // WR-03: spreads the fake-HOME env and adds one non-home var -- not a
+    // hand-rolled home/config/state env literal.
+    const authedEnv = (): NodeJS.ProcessEnv => ({
+      ...profile.childEnv(),
+      [BRIDGE_SECRET_ENV]: TEST_SECRET
+    })
+
+    // Authenticates an open socket (HELLO with the launch secret).
+    const authenticate = async (socket: Socket, id = 9000) => {
+      const res = await sendFrameOnSocket(socket, encodeHello(id, TEST_SECRET))
+      expect(res.status).toBe(STATUS_OK)
+    }
+
     afterAll(() => {
       __setBridgeHelperPathForTests(null)
       __setBridgeHelperSpawnEnvForTests(null)
@@ -283,8 +303,15 @@ describeDarwinOnly(
       expect(second.port).not.toBe(first.port)
       expect(second.port).not.toBe(FORMER_SHARED_PORT)
 
-      const helloStatus = await sendControlHello(first.port as number)
-      expect(helloStatus).toBe(STATUS_OK)
+      // WR-03: the real-spawn helper holds a backend-generated secret this
+      // test cannot know (a not-inited result carries none), so a HELLO with
+      // a wrong secret is refused. The authenticated round-trip is proved by
+      // the direct-spawn tests below.
+      const helloStatus = await sendControlHello(
+        first.port as number,
+        WRONG_SECRET
+      )
+      expect(helloStatus).toBe(STATUS_ERR)
 
       stopBridgeHelper(AVERNUM_APP_ID)
       stopBridgeHelper(HOARD_APP_ID)
@@ -373,12 +400,12 @@ describeDarwinOnly(
           const first = await sendFrameOnSocket(socket, unknownOrdinalFrame)
           expect(first.status).toBe(STATUS_ERR)
 
-          // The SAME connection, a SECOND frame (CONTROL HELLO -- always
-          // answerable regardless of init state) -- proves the connection
-          // was never closed after the error response above.
+          // The SAME connection, a SECOND frame (CONTROL HEALTH -- always
+          // answerable, unauthenticated) -- proves the connection was never
+          // closed after the error response above.
           const second = await sendFrameOnSocket(
             socket,
-            encodeControl(2, 'hello')
+            encodeControl(2, 'health')
           )
           expect(second.status).toBe(STATUS_OK)
         } finally {
@@ -403,7 +430,7 @@ describeDarwinOnly(
         {
           cwd: stageDir,
           stdio: ['ignore', 'pipe', 'pipe'],
-          env: profile.childEnv()
+          env: authedEnv()
         }
       )
       let stderr = ''
@@ -453,6 +480,7 @@ describeDarwinOnly(
         }
 
         const socket = await connect()
+        await authenticate(socket)
         try {
           const ok = await sendFrameOnSocket(
             socket,
@@ -521,7 +549,7 @@ describeDarwinOnly(
         {
           cwd: stageDir,
           stdio: ['ignore', 'pipe', 'pipe'],
-          env: profile.childEnv()
+          env: authedEnv()
         }
       )
       let stderr = ''
@@ -565,6 +593,7 @@ describeDarwinOnly(
           socket.once('error', rej)
           socket.connect(port, '127.0.0.1', () => res())
         })
+        await authenticate(socket)
         try {
           const ok = await sendFrameOnSocket(
             socket,
@@ -642,7 +671,7 @@ describeDarwinOnly(
         {
           cwd: stageDir,
           stdio: ['ignore', 'pipe', 'pipe'],
-          env: profile.childEnv()
+          env: authedEnv()
         }
       )
       let stderr = ''
@@ -669,6 +698,7 @@ describeDarwinOnly(
           socket.once('error', rej)
           socket.connect(port, '127.0.0.1', () => res())
         })
+        await authenticate(socket)
         try {
           for (let i = 0; i < 20; i++) {
             const bytes = Buffer.from(`SteamFake${i}`, 'ascii')
@@ -706,7 +736,7 @@ describeDarwinOnly(
         {
           cwd: stageDir,
           stdio: ['ignore', 'pipe', 'pipe'],
-          env: profile.childEnv()
+          env: authedEnv()
         }
       )
       let stderr = ''
@@ -744,6 +774,7 @@ describeDarwinOnly(
           socket.once('error', rej)
           socket.connect(port, '127.0.0.1', () => res())
         })
+        await authenticate(socket)
         // The helper's own startup init logs INIT; only frames sent from here
         // on must add none.
         const afterStartup = stderr.length
@@ -835,7 +866,7 @@ describeDarwinOnly(
         {
           cwd: stageDir,
           stdio: ['ignore', 'pipe', 'pipe'],
-          env: profile.childEnv()
+          env: authedEnv()
         }
       )
       let stderr = ''
@@ -862,6 +893,7 @@ describeDarwinOnly(
           socket.once('error', rej)
           socket.connect(port, '127.0.0.1', () => res())
         })
+        await authenticate(socket)
         try {
           for (const id of [1, 2]) {
             const res = await sendFrameOnSocket(
@@ -900,6 +932,264 @@ describeDarwinOnly(
         child.kill()
       }
     }, 15000)
+
+    // ── Phase 55 WR-03: per-connection authentication ─────────────────────
+    // Real compiled helper, spawned with a known secret in env (or none).
+    const startAuthHelper = async (prefix: string, env: NodeJS.ProcessEnv) => {
+      const stageDir = mkdtempSync(join(profile.root, prefix))
+      const child = spawn(
+        compiledHelperPath,
+        ['--appid', '480', '--port', '0'],
+        { cwd: stageDir, stdio: ['ignore', 'pipe', 'pipe'], env }
+      )
+      let stderr = ''
+      child.stderr?.on('data', (data: Buffer) => {
+        stderr += data.toString()
+      })
+      const port = await new Promise<number>((resolvePromise, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error(`no LISTEN line -- stderr: ${stderr}`)),
+          5000
+        )
+        const poll = setInterval(() => {
+          const m = /LISTEN 127\.0\.0\.1:(\d+)/.exec(stderr)
+          if (m) {
+            clearInterval(poll)
+            clearTimeout(timeout)
+            resolvePromise(Number(m[1]))
+          }
+        }, 25)
+      })
+      const connect = async () => {
+        const socket = new Socket()
+        await new Promise<void>((res, rej) => {
+          socket.once('error', rej)
+          socket.connect(port, '127.0.0.1', () => res())
+        })
+        return socket
+      }
+      return { child, port, connect, getStderr: () => stderr }
+    }
+    const settle = () => new Promise((r) => setTimeout(r, 150))
+    const drainFrame = (id: number) =>
+      encodeRequest(id, CONTROL_ORDINAL, CONTROL_SLOT.drainCallbacks)
+
+    test('WR-03: an unauthenticated socket gets HEALTH only -- DRAIN and every other slot/ordinal is refused, connection stays open, no CALL/NOVER/GINIT/FWD', async () => {
+      const h = await startAuthHelper('wr03-unauth-', authedEnv())
+      try {
+        const socket = await h.connect()
+        const before = h.getStderr().length
+        try {
+          expect(
+            (await sendFrameOnSocket(socket, encodeControl(1, 'health'))).status
+          ).toBe(STATUS_OK)
+          const drain = await sendFrameOnSocket(socket, drainFrame(2))
+          expect(drain.status).toBe(STATUS_ERR)
+          expect(drain.retBlob).toHaveLength(0)
+          expect(
+            (await sendFrameOnSocket(socket, encodeControl(3, 'whoami'))).status
+          ).toBe(STATUS_ERR)
+          const nameBlob = Buffer.concat([
+            Buffer.from([4, 0, 0, 0]),
+            Buffer.from('abcd')
+          ])
+          for (const [id, slot, blob] of [
+            [4, CONTROL_SLOT.createInterface, nameBlob],
+            [5, CONTROL_SLOT.reportVersion, nameBlob],
+            [6, CONTROL_SLOT.reportInit, Buffer.alloc(8)]
+          ] as const) {
+            expect(
+              (
+                await sendFrameOnSocket(
+                  socket,
+                  encodeRequest(id, CONTROL_ORDINAL, slot, blob)
+                )
+              ).status
+            ).toBe(STATUS_ERR)
+          }
+          expect(
+            (await sendFrameOnSocket(socket, encodeRequest(7, 0, 0))).status
+          ).toBe(STATUS_ERR)
+          // Still open and still serving HEALTH.
+          expect(
+            (await sendFrameOnSocket(socket, encodeControl(8, 'health'))).status
+          ).toBe(STATUS_OK)
+        } finally {
+          socket.destroy()
+        }
+        await settle()
+        const added = h.getStderr().slice(before)
+        expect(added).not.toMatch(/CALL|NOVER|GINIT|FWD/)
+        expect(added).toMatch(/AUTH {1,}refused/)
+        expect(h.getStderr()).not.toContain(TEST_SECRET)
+      } finally {
+        h.child.kill()
+      }
+    }, 15000)
+
+    test('WR-03: wrong / empty HELLO is refused and DRAIN stays refused; a matching HELLO authenticates; a later wrong HELLO de-authenticates (D-D)', async () => {
+      const h = await startAuthHelper('wr03-hello-', authedEnv())
+      try {
+        const socket = await h.connect()
+        try {
+          expect(
+            (await sendFrameOnSocket(socket, encodeHello(1, WRONG_SECRET)))
+              .status
+          ).toBe(STATUS_ERR)
+          expect((await sendFrameOnSocket(socket, drainFrame(2))).status).toBe(
+            STATUS_ERR
+          )
+          expect(
+            (await sendFrameOnSocket(socket, encodeControl(3, 'hello'))).status
+          ).toBe(STATUS_ERR)
+
+          expect(
+            (await sendFrameOnSocket(socket, encodeHello(4, TEST_SECRET)))
+              .status
+          ).toBe(STATUS_OK)
+          const drain = await sendFrameOnSocket(socket, drainFrame(5))
+          expect(drain.status).toBe(STATUS_OK)
+          // Not inited (fake HOME): P55-5 shape, a zero count.
+          expect(Buffer.from(drain.retBlob).equals(Buffer.alloc(4))).toBe(true)
+
+          expect(
+            (await sendFrameOnSocket(socket, encodeHello(6, WRONG_SECRET)))
+              .status
+          ).toBe(STATUS_ERR)
+          expect((await sendFrameOnSocket(socket, drainFrame(7))).status).toBe(
+            STATUS_ERR
+          )
+        } finally {
+          socket.destroy()
+        }
+      } finally {
+        h.child.kill()
+      }
+    }, 15000)
+
+    test('WR-03: a matching reconnect on a NEW socket re-authenticates and still drains (the ring is bound to the launch secret, not the socket)', async () => {
+      const h = await startAuthHelper('wr03-reconnect-', authedEnv())
+      try {
+        const first = await h.connect()
+        await authenticate(first)
+        first.destroy()
+        await settle()
+
+        const second = await h.connect()
+        try {
+          // Fresh socket starts unauthenticated.
+          expect((await sendFrameOnSocket(second, drainFrame(1))).status).toBe(
+            STATUS_ERR
+          )
+          await authenticate(second, 2)
+          expect((await sendFrameOnSocket(second, drainFrame(3))).status).toBe(
+            STATUS_OK
+          )
+        } finally {
+          second.destroy()
+        }
+      } finally {
+        h.child.kill()
+      }
+    }, 15000)
+
+    test('WR-03: probe-role HELLO authenticates without logging `shim attached`; a role-less HELLO logs it exactly once per connection', async () => {
+      const h = await startAuthHelper('wr03-role-', authedEnv())
+      try {
+        const probe = await h.connect()
+        try {
+          expect(
+            (
+              await sendFrameOnSocket(
+                probe,
+                encodeHello(1, TEST_SECRET, HELLO_ROLE_PROBE)
+              )
+            ).status
+          ).toBe(STATUS_OK)
+          expect((await sendFrameOnSocket(probe, drainFrame(2))).status).toBe(
+            STATUS_OK
+          )
+        } finally {
+          probe.destroy()
+        }
+        await settle()
+        expect(h.getStderr()).not.toMatch(/HELLO {2}shim attached/)
+
+        const shim = await h.connect()
+        try {
+          await authenticate(shim, 1)
+          await authenticate(shim, 2)
+        } finally {
+          shim.destroy()
+        }
+        await settle()
+        expect(h.getStderr().match(/HELLO {2}shim attached/g)).toHaveLength(1)
+      } finally {
+        h.child.kill()
+      }
+    }, 15000)
+
+    test('WR-03 / OD-6: a helper without a valid env secret fails closed -- AUTH no-secret line, HELLO and DRAIN both refused', async () => {
+      const h = await startAuthHelper('wr03-nosecret-', profile.childEnv())
+      try {
+        const socket = await h.connect()
+        try {
+          expect(
+            (await sendFrameOnSocket(socket, encodeHello(1, TEST_SECRET)))
+              .status
+          ).toBe(STATUS_ERR)
+          expect((await sendFrameOnSocket(socket, drainFrame(2))).status).toBe(
+            STATUS_ERR
+          )
+        } finally {
+          socket.destroy()
+        }
+        expect(h.getStderr()).toMatch(/AUTH {1,}no valid secret in env/)
+      } finally {
+        h.child.kill()
+      }
+
+      // A malformed (uppercase) env secret is also treated as no secret.
+      const bad = await startAuthHelper('wr03-badsecret-', {
+        ...profile.childEnv(),
+        [BRIDGE_SECRET_ENV]: TEST_SECRET.toUpperCase()
+      })
+      try {
+        expect(bad.getStderr()).toMatch(/AUTH {1,}no valid secret in env/)
+      } finally {
+        bad.child.kill()
+      }
+    }, 15000)
+
+    test('WR-03: at most 16 `AUTH refused` lines however many frames are refused', async () => {
+      const h = await startAuthHelper('wr03-cap-', authedEnv())
+      try {
+        const socket = await h.connect()
+        try {
+          for (let i = 0; i < 30; i++) {
+            expect(
+              (await sendFrameOnSocket(socket, drainFrame(i + 1))).status
+            ).toBe(STATUS_ERR)
+          }
+        } finally {
+          socket.destroy()
+        }
+        await settle()
+        expect(h.getStderr().match(/AUTH {1,}refused/g)).toHaveLength(16)
+      } finally {
+        h.child.kill()
+      }
+    }, 20000)
+
+    test('WR-03 source pins: the ring is never cleared on accept/close; the secret is unset after loading and never logged', () => {
+      const src = readFileSync(HELPER_SOURCE_PATH, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      expect(src).not.toMatch(/gl_cbq_(secure_zero|zero_entry)\(&g_cbq/)
+      expect(src).not.toMatch(/memset\(&g_cbq/)
+      expect(src).toContain('unsetenv(BRIDGE_SECRET_ENV)')
+      expect(src).not.toMatch(/logts[_f]*\([^;]*g_secret\b[^;]*;/)
+    })
 
     test('DRAIN source pins: slot 6, no sleep in handler, integer-only CBQ log (P55-5)', () => {
       const raw = readFileSync(HELPER_SOURCE_PATH, 'utf8')

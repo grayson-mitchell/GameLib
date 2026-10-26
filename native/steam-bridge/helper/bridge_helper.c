@@ -68,15 +68,31 @@
  *   - WHOAMI (slot 1): answered ok+real-SteamID64-bytes ONLY once InitFlat
  *     succeeded against the live signed-in Mac Steam -- proves "init
  *     succeeded against a live session".
- *   - HELLO (slot 2, D-51-01): answered STATUS_OK unconditionally (like
- *     HEALTH, independent of init outcome) the moment the regenerated
- *     shim's own `SteamAPI_Init()` connects -- proves "this is really a
- *     GameLib per-appId helper, not a stale/foreign listener on the port
- *     read out of gamelib_bridge.cfg". Logged once per connection, not once
- *     per request.
+ *   - HELLO (slot 2, D-51-01; WR-03): the connection handshake. The arg
+ *     blob is the 64 ASCII-hex per-launch secret, optionally followed by ONE
+ *     role byte (HELLO_ROLE_PROBE = the backend readiness probe). A
+ *     constant-time match against the secret this process got from env marks
+ *     the connection authenticated and answers STATUS_OK; a mismatch (or no
+ *     secret in env) answers STATUS_ERR and de-authenticates the connection.
+ *     "shim attached" is logged once per connection, only for a matching
+ *     HELLO with NO role byte (the probe never manufactures that evidence).
+ *
+ * AUTHENTICATION (Phase 55 WR-03): the loopback listener is reachable by any
+ * local user, and the callback ring can hold a Steam web-API auth ticket.
+ * HEALTH and HELLO are the ONLY slots served on an unauthenticated
+ * connection. WHOAMI, CREATE_INTERFACE, REPORT_VERSION, REPORT_INIT, DRAIN and
+ * every interface ordinal answer STATUS_ERR (empty ret, connection kept
+ * open) until a matching HELLO. The ring is bound to the launch secret, NOT to
+ * a socket: it is never cleared on accept or close, because the shim
+ * reconnects routinely (idle SO_RCVTIMEO close, WR-02 oversize drop) and the
+ * next, re-authenticating connection is almost always the same game waiting
+ * for its ticket. Threat model: other OS users and processes that cannot read
+ * this user's files are in scope; a same-user attacker can read
+ * gamelib_bridge.cfg and the stored Steam refresh token and is out of scope.
+ * No env secret -> fail closed (every authenticated slot refused).
  *
  *   - REPORT_INIT (slot 5, D-53-15): argBlob is {u32 fn, i32 ret}, the GAME's
- *     own SteamAPI_Init result as reported by the shim. Answered regardless of g_inited;
+ *     own SteamAPI_Init result as reported by the shim. Answered regardless of g_inited (authenticated connections only, WR-03);
  *     logged as `GINIT` (fn name from a closed table, ints only, max 8).
  *     GINIT is written only from this wire handler: this helper's own
  *     in-process InitFlat logs under `INIT`, so it can never emit GINIT.
@@ -168,6 +184,14 @@
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
+
+// WR-03: per-launch secret (backend -> env). Matches protocol.ts's
+// BRIDGE_SECRET_ENV / BRIDGE_SECRET_HEX_LEN / HELLO_ROLE_PROBE exactly.
+#define BRIDGE_SECRET_ENV "GAMELIB_BRIDGE_SECRET"
+#define BRIDGE_SECRET_HEX_LEN 64
+#define HELLO_ROLE_PROBE 0x01
+// At most this many `AUTH refused` log lines per process (hostile-client flood cap).
+#define AUTH_REFUSED_LOG_MAX 16
 
 // WR-02: bounds how long a single recv() call will block waiting for more
 // bytes of an in-progress frame. Generous relative to a legitimate
@@ -531,6 +555,28 @@ static uint8_t g_call_seen[BD_CALL_COUNT > 0 ? BD_CALL_COUNT : 1];
 
 // 53-13 WR-06: helper-side cap; the shim's 16-report cap (T-53-25) is not a trust boundary.
 static unsigned g_nover_logged = 0;
+
+// WR-03: the launch secret, copied from env at startup (then unsetenv'd).
+static char g_secret[BRIDGE_SECRET_HEX_LEN];
+static int g_secret_set = 0;
+static unsigned g_auth_refused_logged = 0;
+
+// Constant-time equality over exactly n bytes (no early exit). The length of
+// the candidate is public and is checked by the caller first.
+static int ct_equal(const uint8_t *a, const uint8_t *b, size_t n) {
+  volatile uint8_t acc = 0;
+  for (size_t i = 0; i < n; i++) acc |= (uint8_t)(a[i] ^ b[i]);
+  return acc == 0;
+}
+
+// Capped refusal log: one line per refused frame, at most
+// AUTH_REFUSED_LOG_MAX per process. Never prints any frame bytes.
+static void log_auth_refused(uint16_t ordinal, uint16_t slot) {
+  if (g_auth_refused_logged >= AUTH_REFUSED_LOG_MAX) return;
+  g_auth_refused_logged++;
+  logts_f("AUTH", "refused unauthenticated frame ordinal=%u slot=%u secret=%s",
+          (unsigned)ordinal, (unsigned)slot, g_secret_set ? "required" : "unset");
+}
 // D-53-15 (T-kax-04): cap on GINIT lines per process.
 static unsigned g_ginit_logged = 0;
 
@@ -556,11 +602,46 @@ static void sanitize_ver(const char *in, char *out, size_t outSize) {
  * per connection, not once per request on that connection.
  */
 static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, uint16_t slot,
-                                  const uint8_t *argBlob, uint32_t argLen, int *helloLogged) {
+                                  const uint8_t *argBlob, uint32_t argLen, int *helloLogged,
+                                  int *authenticated) {
   if (ordinal == CONTROL_ORDINAL) {
+    if (slot == CONTROL_SLOT_HELLO) {
+      // WR-03: HELLO is the authentication step. Match = 64 hex bytes, plus
+      // optionally the single probe role byte, equal to the env secret.
+      int matched = g_secret_set && argBlob != NULL &&
+                    (argLen == BRIDGE_SECRET_HEX_LEN ||
+                     (argLen == BRIDGE_SECRET_HEX_LEN + 1 && argBlob[BRIDGE_SECRET_HEX_LEN] == HELLO_ROLE_PROBE)) &&
+                    ct_equal(argBlob, (const uint8_t *)g_secret, BRIDGE_SECRET_HEX_LEN);
+      if (!matched) {
+        // Fail closed: even a previously-authenticated socket is demoted.
+        *authenticated = 0;
+        log_auth_refused(ordinal, slot);
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      *authenticated = 1;
+      // D-51-01: answered regardless of g_inited, like HEALTH. The role byte
+      // (backend probe) suppresses the "shim attached" evidence line.
+      if (helloLogged && !*helloLogged && argLen == BRIDGE_SECRET_HEX_LEN) {
+        char msg[64];
+        snprintf(msg, sizeof msg, "shim attached appid=%s", g_appid);
+        logts("HELLO", msg);
+        *helloLogged = 1;
+      }
+      send_response(fd, requestId, STATUS_OK, NULL, 0);
+      return;
+    }
     if (slot == CONTROL_SLOT_HEALTH) {
       // Answered regardless of g_inited / init outcome -- "process up".
       send_response(fd, requestId, STATUS_OK, NULL, 0);
+      return;
+    }
+    if (!*authenticated) {
+      // WR-03: every CONTROL slot other than HEALTH/HELLO needs an
+      // authenticated connection. Return BEFORE touching the ring, logging
+      // fwd/version/init lines, or pumping callbacks.
+      log_auth_refused(ordinal, slot);
+      send_response(fd, requestId, STATUS_ERR, NULL, 0);
       return;
     }
     if (slot == CONTROL_SLOT_WHOAMI) {
@@ -583,19 +664,6 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       uint8_t retbuf[8];
       memcpy(retbuf, &id, 8); // raw bytes, never parsed to a JS number
       send_response(fd, requestId, STATUS_OK, retbuf, 8);
-      return;
-    }
-    if (slot == CONTROL_SLOT_HELLO) {
-      // D-51-01: answered regardless of g_inited, like HEALTH -- proves "this is a
-      // real GameLib per-appId helper", independent of whether Steam is
-      // signed in yet.
-      if (helloLogged && !*helloLogged) {
-        char msg[64];
-        snprintf(msg, sizeof msg, "shim attached appid=%s", g_appid);
-        logts("HELLO", msg);
-        *helloLogged = 1;
-      }
-      send_response(fd, requestId, STATUS_OK, NULL, 0);
       return;
     }
     if (slot == CONTROL_SLOT_CREATE_INTERFACE) {
@@ -724,6 +792,13 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
     return;
   }
 
+  if (!*authenticated) {
+    // WR-03: interface dispatch requires an authenticated connection.
+    log_auth_refused(ordinal, slot);
+    send_response(fd, requestId, STATUS_ERR, NULL, 0);
+    return;
+  }
+
   if (!g_inited) {
     // Every real interface call requires a live session (spike-proven --
     // no live Steam, no valid interface pointers to call through).
@@ -761,6 +836,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
  */
 static void serve_connection(int fd) {
   int helloLogged = 0;
+  int authenticated = 0; // WR-03: per-connection, set only by a matching HELLO
   for (;;) {
     uint8_t lenField[LENGTH_FIELD_BYTES];
     if (!recv_all(fd, lenField, sizeof lenField)) break; // peer closed / error
@@ -794,7 +870,7 @@ static void serve_connection(int fd) {
     // so this recv can never write past the buffer.
     if (argLen > 0 && !recv_all(fd, g_argbuf, argLen)) break;
 
-    dispatch_and_respond(fd, requestId, ordinal, slot, g_argbuf, argLen, &helloLogged);
+    dispatch_and_respond(fd, requestId, ordinal, slot, g_argbuf, argLen, &helloLogged, &authenticated);
   }
   close(fd);
 }
@@ -807,6 +883,25 @@ int main(int argc, char **argv) {
   // kill this helper.  send_all() above already treats the resulting
   // EPIPE like any other terminal send error.
   signal(SIGPIPE, SIG_IGN);
+
+  // WR-03: load the per-launch secret from env (never argv -- visible in ps),
+  // then unsetenv() so nothing the Steam dylib spawns inherits it. Missing or
+  // malformed -> fail closed: every authenticated slot is refused.
+  {
+    const char *envSecret = getenv(BRIDGE_SECRET_ENV);
+    int valid = envSecret != NULL && strlen(envSecret) == BRIDGE_SECRET_HEX_LEN;
+    for (size_t i = 0; valid && i < BRIDGE_SECRET_HEX_LEN; i++) {
+      char ch = envSecret[i];
+      if (!((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f'))) valid = 0;
+    }
+    if (valid) {
+      memcpy(g_secret, envSecret, BRIDGE_SECRET_HEX_LEN);
+      g_secret_set = 1;
+    } else {
+      logts("AUTH", "no valid secret in env -- authenticated slots refused (fail closed)");
+    }
+    unsetenv(BRIDGE_SECRET_ENV);
+  }
 
   const char *appIdArg = NULL;
   const char *reportAppIdArg = NULL;
