@@ -1,14 +1,15 @@
 import { MouseEvent, useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
-import { Refresh, WineBar } from '@mui/icons-material'
+import { Build, CheckCircle, Refresh, WineBar } from '@mui/icons-material'
 import { IconButton, Rating } from '@mui/material'
 import { createNewWindow } from 'frontend/helpers'
-import { GameInfo } from 'common/types'
+import { GameInfo, GamelibFixStatus } from 'common/types'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import { ratingTier } from './appleRating'
 import { protonTierToStars } from './protonRating'
 import { resolveBridgeRouteDisplay } from './bridgeRouteDisplay'
+import { resolveGamelibFixDisplay } from './gamelibFixDisplay'
 import CrossoverIcon from 'frontend/assets/crossover_icon.svg?react'
 
 interface Props {
@@ -51,6 +52,33 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     }
   }, [gameInfo.runner, gameInfo.app_name])
 
+  // Quick 261027-ch9: GameLib row (bundled/local known-fix exists). Declared
+  // before the early returns for the same Rules-of-Hooks reason as above.
+  const [gamelibFix, setGamelibFix] = useState<
+    GamelibFixStatus | null | undefined
+  >(undefined)
+
+  useEffect(() => {
+    if (gameInfo.runner === 'sideload') {
+      return
+    }
+    let gamelibFixCancelled = false
+    window.api
+      .getGamelibFixStatus(gameInfo.app_name, gameInfo.runner)
+      .then((status) => {
+        if (!gamelibFixCancelled) setGamelibFix(status)
+      })
+      .catch(() => {
+        // Fail-closed and silent: no row.
+        if (!gamelibFixCancelled) setGamelibFix(undefined)
+      })
+    return () => {
+      gamelibFixCancelled = true
+    }
+  }, [gameInfo.runner, gameInfo.app_name])
+
+  const gamelibLine = resolveGamelibFixDisplay(gamelibFix)
+
   const onClickRefresh = async (event: MouseEvent<HTMLButtonElement>) => {
     // Stop the parent <a onClick={onClickCrossover}> from opening CodeWeavers.
     event.stopPropagation()
@@ -63,7 +91,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     }
   }
 
-  if (!wikiInfo) {
+  if (!wikiInfo && !gamelibLine.visible) {
     return null
   }
 
@@ -71,9 +99,9 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     return null
   }
 
-  const codeweavers = wikiInfo.codeweavers
-  const applegamingwiki = wikiInfo.applegamingwiki
-  const steamInfo = wikiInfo.steamInfo
+  const codeweavers = wikiInfo?.codeweavers
+  const applegamingwiki = wikiInfo?.applegamingwiki
+  const steamInfo = wikiInfo?.steamInfo
 
   const showProton =
     is.linux && gameInfo.runner === 'steam' && !!steamInfo?.compatibilityLevel
@@ -200,6 +228,29 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
           <b>{t('info.wine-rating', 'Wine emulation')}:</b>
           {ratingTier(applegamingwiki?.wineRating ?? '', tGamelib).label}
         </a>
+      )}
+      {gamelibLine.visible && (
+        <span
+          className="iconWithText"
+          title={
+            tGamelib(
+              'info.gamelibFix.title',
+              'GameLib has a fix for this game, so it should run'
+            ) +
+            (gamelibLine.launchNotice ? `\n\n${gamelibLine.launchNotice}` : '')
+          }
+        >
+          <Build />
+          <b>{tGamelib('info.gamelibFix.label', 'GameLib')}:</b>
+          <CheckCircle
+            fontSize="small"
+            color="success"
+            aria-label={tGamelib(
+              'info.gamelibFix.title',
+              'GameLib has a fix for this game, so it should run'
+            )}
+          />
+        </span>
       )}
       {bridgeLine.visible && (
         <span className="iconWithText steamBridgeRouteRow">
