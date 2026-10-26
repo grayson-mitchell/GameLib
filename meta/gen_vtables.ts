@@ -2853,10 +2853,21 @@ static int bridge_transact_once(uint16_t ordinal, uint16_t slot,
   memcpy(&respRequestId, respHeader + 4, 4);
   status = respHeader[8];
   if (respRequestId != requestId) { *transportFailed = 1; return 0; }
+  if (respLen < 5) { *transportFailed = 1; return 0; } // malformed frame -- respLen must cover request_id(4) + status(1)
   if (status != 0) return 0; // legitimate error response -- healthy connection, do not retry
 
   uint32_t retLen = respLen - 5; // subtract request_id(4) + status(1)
-  if (retLen > retBufCap) return 0; // caller-buffer mismatch -- not a transport failure
+  if (retLen > retBufCap) {
+    // 55 WR-02: caller-buffer mismatch. The retLen payload bytes (possibly an
+    // auth ticket) are still unread on the socket and would be parsed as the
+    // next response header, so drop the connection -- the next call
+    // reconnects. Deliberately NOT *transportFailed: the helper already
+    // answered (and, for DRAIN, already popped the message), so a resend
+    // would repeat a non-idempotent request.
+    closesocket(g_bridge_sock);
+    g_bridge_sock = INVALID_SOCKET;
+    return 0;
+  }
   if (retLen > 0 && recv(g_bridge_sock, (char *)retBuf, retLen, MSG_WAITALL) != (int)retLen) { *transportFailed = 1; return 0; }
   *retLenOut = retLen;
   return 1;
