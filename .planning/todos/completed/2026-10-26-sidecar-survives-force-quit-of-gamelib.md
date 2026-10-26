@@ -23,3 +23,7 @@ Not measured: whether the download was still making progress, and how long the o
 ## Solution
 
 TBD. Options: on stdin EOF/close in the sidecar, abort in-flight native downloads (the AbortController registry) and stop polling, then let the loop drain. Or have the shell put the sidecar where SIGKILL of the parent still reaches it (on macOS, a kqueue `NOTE_EXIT` watch on the parent pid in the sidecar). Note the exit contract deliberately has no stdin `'end'` teardown, so the first option is a contract change to decide, not a drive-by. Live gate: force-quit mid-download and confirm no sidecar remains within a few seconds.
+
+## Resolution
+
+Fixed 2026-10-26 by debug session `.planning/debug/resolved/sidecar-survives-force-quit.md` (commits 28005987a, a8a548b71). The cause was the signed-in steam-user CM connection, not the download alone. Live gate passed with and without a download in flight; the interrupted download stays paused and resumable.
