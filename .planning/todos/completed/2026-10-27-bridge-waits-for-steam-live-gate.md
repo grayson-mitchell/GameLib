@@ -32,6 +32,10 @@ Record the measured seconds from cold start to `READY init=ok`, to confirm or re
 - Check 2 **passed**. The Play button greyed out, then the game launched once Steam was up. The log shows one `ConnectToGlobalUser failed` at 12:33:55, then `init=ok` 3 s later.
 - Check 3 **not exercised**. Steam signed the saved account in by itself, so the game launched and the timeout branch never ran.
 
-## Remaining
+## Check 3, re-run 2026-10-27
 
-Only check 3 is left. In Steam, sign out (Steam menu → Sign out) so it sits at the login window, then press Play and wait more than 60 s. The dialog should show the not-signed-in copy with no bottled-Steam button. `gamelib.log` should show a run of `ConnectToGlobalUser failed` attempts about 3 s apart, then the budget-exhausted warning. After signing in, a second Play should still go through the bridge.
+Check 3 **passed**. Steam was left at its login window, then Play was pressed. A fresh helper was spawned every 3 s, each refused with `ConnectToGlobalUser failed`, from 12:37:41. At 12:38:42 the log shows `gave up waiting for Steam for appId 1363080 (steam-not-signed-in) after 60693ms`. The dialog read "Steam is open but not signed in…" with only a Cancel button and no bottled-Steam fallback. After signing in, a second Play gave `READY init=ok` at 12:40:24 and the log shows `launching appId 1363080 via the Steam bridge`, so the earlier timeout did not stop the second Play from using the bridge.
+
+## Resolution
+
+All three live checks passed on 2026-10-27, and quick `261027-aue` is live-verified. The cold start took ~7 s against the 60 s budget, so no retune is needed.
