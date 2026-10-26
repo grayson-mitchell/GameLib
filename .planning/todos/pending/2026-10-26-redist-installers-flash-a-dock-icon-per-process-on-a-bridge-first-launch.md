@@ -1,0 +1,62 @@
+---
+created: 2026-10-26
+title: "Redist installers flash a Dock icon per process on a bridge first launch"
+source: 261026-jmm live gate (Manor Lords 1363080), operator report plus a desk probe the same day
+area: steam-bridge
+files:
+  - src/backend/storeManagers/steam/bridge/sharedRedistInstall.ts
+  - src/backend/launcher.ts
+severity: minor
+platform: macos
+ready: live-gate
+---
+
+## Problem
+
+On a bridge first launch that installs the shared redists (quick 261025-rkj), the operator saw the
+Dock "going a bit mad" as Wine processes opened and closed. The install itself works, and later
+launches skip the step, so this is cosmetic and limited to first launches.
+
+Measured 2026-10-26 in `GameLibSteamBridge-1363080`, by diffing `lsappinfo list` (by pid) while
+each command ran:
+
+- `reg query ... /reg:32` (the HasRunKey check before and after each entry) registers no app with
+  macOS, so it gets no Dock icon.
+- `cmd /c ...\vcredist\2022\Microsoft Visual C++ 2022 x86.cmd` (which runs `VC_redist.x86.exe /q
+  /norestart`) registers `VC_redist.x86.exe` as `type="Foreground"`, which means a Dock icon. A
+  `BackgroundOnly` `VC_redist.x86.exe` and `explorer.exe` appear alongside it, with no icon.
+  `/q` already shows no UI, so the icon is not an installer window.
+- The same run with the Mac driver disabled (`--dll winemac.drv=d`) registers no app at all, but
+  the installer exits 130 instead of 0. It fails, so this switch cannot be used as it stands.
+
+Gotcha found on the way: CrossOver's `bin/wine` is a Perl wrapper that deletes `WINEDLLOVERRIDES`
+from the environment (line 716). It takes overrides only from its own `--dll=` option (lines 162
+and 717). An environment-variable test therefore silently tests nothing. GameLib's own
+`setupWineEnvVars` sets `WINEDLLOVERRIDES` only for the plain-`wine` type, not for CrossOver, so it
+is not affected.
+
+The 10-25 and 10-26 runs each started three installers (vcredist x86, vcredist x64, DirectX
+Jun2010). dxsetup probably starts further processes of its own (not measured), so expect several
+icons per first launch.
+
+## Solution
+
+TBD. The candidate, untested: switch the bottle to Wine's null display driver
+(`HKCU\Software\Wine\Drivers` `Graphics=null`) only for the redist step, and restore it before the
+game launches. Bridge bottles hold one game each, and the step already finishes before the
+monitor and game start (`fireBridgeWineLaunch`), so the window is clean. What must be proven:
+
+1. The installers succeed under the null driver. The `winemac.drv=d` failure shows they need *a*
+   display driver, but not that they need the Mac one.
+2. The restore happens even if the step throws or times out, and the wineserver session (with
+   its `explorer.exe`) has fully exited before the game starts. Otherwise the game could inherit
+   a session with no display.
+3. The cost: the extra wineserver shutdown and restart, measured against the step's ~70 s.
+
+If the null driver also fails, record that and close as won't-fix. Nothing lets a launcher set
+another process's Dock activation policy from outside.
+
+Done when: on a first launch that installs redists (reset as in 261026-jmm: move the bottle's
+`gamelib-shared-redists.json` aside and `reg delete` its `CommonRedist` key), no Wine process
+registers as `Foreground` in `lsappinfo` before the game's own, every installer exits successfully
+with its HasRunKey written, and the game starts normally.

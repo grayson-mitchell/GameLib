@@ -298,6 +298,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-10-11] [ui] Winetricks settings window not resizable by dragging on macOS, yet captures show three distinct widths — [todo file](.planning/todos/pending/2026-10-11-winetricks-settings-window-not-resizable-by-drag-on-macos.md)
 - [2026-10-25] [notifications] "Notification authorization fails (granted=false, UNErrorDomain error 1) on the bundled GameLib.app althou… — [todo file](.planning/todos/pending/2026-10-25-notification-authorization-fails-on-bundled-app-despite-settings-enabled.md)
 - [2026-10-26] [steam-bridge] "Bridge helper's callback ring is drainable by any local process and outlives the connection that queued it (Phase 55 WR-03)" — [todo file](.planning/todos/pending/2026-10-26-bridge-helper-callback-ring-drainable-by-any-local-process.md)
+- [2026-10-26] [steam-bridge] "Redist installers flash a Dock icon per process on a bridge first launch" — [todo file](.planning/todos/pending/2026-10-26-redist-installers-flash-a-dock-icon-per-process-on-a-bridge-first-launch.md)
 
 ### Blockers/Concerns
 
