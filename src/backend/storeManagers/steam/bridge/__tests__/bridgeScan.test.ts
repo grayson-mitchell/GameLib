@@ -39,11 +39,12 @@ const put = (rel: string, data: Buffer | string = 'x') => {
 }
 
 const makeDeps = (
-  scan: BridgeScanDeps['scanImports'] = async () => ({
-    status: 'ok',
-    arch: 'none',
-    symbols: []
-  })
+  scan: BridgeScanDeps['scanImports'] = () =>
+    Promise.resolve({
+      status: 'ok',
+      arch: 'none',
+      symbols: []
+    })
 ) => {
   const warn = jest.fn()
   const deps: BridgeScanDeps = {
@@ -114,9 +115,13 @@ describe('lifted walks (smoke)', () => {
     const ship = put('Game/Binaries/Win64/G-Win64-Shipping.exe')
     put('x64/steam_api64.dll')
     const scanned: string[] = []
-    const { deps } = makeDeps(async (p) => {
+    const { deps } = makeDeps((p) => {
       scanned.push(p)
-      return { status: 'ok', arch: 'x64', symbols: ['SteamAPI_Init'] }
+      return Promise.resolve({
+        status: 'ok',
+        arch: 'x64',
+        symbols: ['SteamAPI_Init']
+      })
     })
     const found = await findSteamApiImporterPes('1', root, launch, [ship], deps)
     expect(found.map((f) => f.path)).toEqual([ship, dll])

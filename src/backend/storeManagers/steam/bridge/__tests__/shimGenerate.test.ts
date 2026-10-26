@@ -2343,16 +2343,18 @@ describe('shimGenerate', () => {
       nothingImported()
       const spy = jest
         .spyOn(bridgeScan, 'scanManagedSteamApi')
-        .mockImplementation(async (_exe, _bottle, arch) =>
-          arch === 'x86'
-            ? {
-                kind: 'mono',
-                assemblies: 3,
-                unparsed: 0,
-                symbols: ['SteamAPI_ISteamNoSuchFamily_DoThing'],
-                versionStrings: []
-              }
-            : { kind: 'none' }
+        .mockImplementation((_exe, _bottle, arch) =>
+          Promise.resolve(
+            arch === 'x86'
+              ? {
+                  kind: 'mono',
+                  assemblies: 3,
+                  unparsed: 0,
+                  symbols: ['SteamAPI_ISteamNoSuchFamily_DoThing'],
+                  versionStrings: []
+                }
+              : { kind: 'none' }
+          )
         )
       try {
         const result = await placeShimForGame('1234', gameExePath, opts())

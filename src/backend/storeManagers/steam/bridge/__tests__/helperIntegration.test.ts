@@ -619,9 +619,11 @@ describeDarwinOnly(
         }
 
         await new Promise((r) => setTimeout(r, 100))
-        expect(stderr).toMatch(/NOVER  flat lookup ver=SteamUser024 served=no/)
         expect(stderr).toMatch(
-          /NOVER  flat lookup ver=Bad\?FAKE\?Line served=no/
+          /NOVER {2}flat lookup ver=SteamUser024 served=no/
+        )
+        expect(stderr).toMatch(
+          /NOVER {2}flat lookup ver=Bad\?FAKE\?Line served=no/
         )
         expect(stderr).not.toMatch(/Bad\n/)
         expect(stderr).not.toMatch(/CALL/)

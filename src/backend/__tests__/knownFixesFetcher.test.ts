@@ -46,12 +46,12 @@ type Reply = { status: number; data?: unknown } | Error
 
 function makeGet(replies: Record<string, Reply>) {
   const urls: string[] = []
-  const get: KnownFixesGet = async (url) => {
+  const get: KnownFixesGet = (url) => {
     urls.push(url)
     const reply = replies[url]
-    if (!reply) return { status: 404, data: '' }
-    if (reply instanceof Error) throw reply
-    return { status: reply.status, data: reply.data }
+    if (!reply) return Promise.resolve({ status: 404, data: '' })
+    if (reply instanceof Error) return Promise.reject(reply)
+    return Promise.resolve({ status: reply.status, data: reply.data })
   }
   return { get, urls }
 }
