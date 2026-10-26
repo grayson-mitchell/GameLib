@@ -17,7 +17,8 @@
  * `<appId>-steam.profile.json`, honoured only from the bundled
  * (`public/fixes/`) and local (`fixes/local/`) sources, never the remote layer
  * (decision 6 of per-game-compat-fixes-architecture.md); the layering lives in
- * `readKnownFixProfile`. The applied-fix ledger and
+ * `readKnownFixProfile`. Validation and application now live in
+ * `knownFixesRegistry.ts`, shared with the non-Steam Wine path. The applied-fix ledger and
  * reversal (decision 5) are deferred, like D2: turning a profile off does not
  * remove a value already written.
  *
@@ -29,152 +30,30 @@
  */
 
 import { isAbsolute, relative, resolve } from 'node:path'
-import type { GameSettings, KnownFixRegistryView } from 'common/types'
+import type { GameSettings } from 'common/types'
 import { readKnownFixes, readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning, LogPrefix } from 'backend/logger'
+import {
+  applyRegistryFixes,
+  buildRegistryFixCommandParts,
+  validateRegistryFixes as sharedValidateRegistryFixes,
+  type ValidRegistryFix
+} from 'backend/knownFixesRegistry'
 import { getBottleDir } from './bottle'
 
-const REGISTRY_FIX_TIMEOUT_MS = 15_000
-const REGISTRY_ROOTS = [
-  'HKLM\\',
-  'HKEY_LOCAL_MACHINE\\',
-  'HKCU\\',
-  'HKEY_CURRENT_USER\\'
-]
-const FORBIDDEN_CHARS = /["\r\n\0]/
+export type { ValidRegistryFix }
+export { buildRegistryFixCommandParts }
 
-export interface ValidRegistryFix {
-  key: string
-  name: string
-  type: 'REG_DWORD' | 'REG_SZ'
-  data: string
-  views: KnownFixRegistryView[]
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v)
-}
-
-function validKey(key: unknown): key is string {
-  if (typeof key !== 'string' || key.length > 512) return false
-  if (FORBIDDEN_CHARS.test(key)) return false
-  const root = REGISTRY_ROOTS.find((r) => key.startsWith(r))
-  if (!root) return false
-  const rest = key.slice(root.length)
-  if (rest === '' || rest.endsWith('\\')) return false
-  return rest.split('\\').every((seg) => seg !== '')
-}
-
-function parseViews(raw: unknown): KnownFixRegistryView[] | null {
-  if (raw === undefined) return [32, 64]
-  if (!Array.isArray(raw) || raw.length === 0) return null
-  if (!raw.every((v) => v === 32 || v === 64)) return null
-  const out: KnownFixRegistryView[] = []
-  if (raw.includes(32)) out.push(32)
-  if (raw.includes(64)) out.push(64)
-  return out
-}
-
-/** Validates raw `registry` entries; never throws, warns once per reject. */
+/** Steam-labelled wrapper over the shared validator. */
 export function validateRegistryFixes(
   appId: string,
   raw: unknown
 ): ValidRegistryFix[] {
-  if (!Array.isArray(raw)) {
-    logWarning(
-      `Steam ${appId}: ignoring registry fixes, not an array`,
-      LogPrefix.Steam
-    )
-    return []
-  }
-  const out: ValidRegistryFix[] = []
-  for (const entry of raw) {
-    const reject = (why: string) => {
-      let shown: string
-      try {
-        shown = String(JSON.stringify(entry)).slice(0, 200)
-      } catch {
-        shown = '[unserialisable]'
-      }
-      logWarning(
-        `Steam ${appId}: skipping invalid registry fix (${why}): ${shown}`,
-        LogPrefix.Steam
-      )
-    }
-    if (!isRecord(entry)) {
-      reject('not an object')
-      continue
-    }
-    const { key, name, type, value } = entry
-    if (!validKey(key)) {
-      reject('bad key')
-      continue
-    }
-    if (
-      typeof name !== 'string' ||
-      name === '' ||
-      name.length > 256 ||
-      name.startsWith('/') ||
-      FORBIDDEN_CHARS.test(name)
-    ) {
-      reject('bad name')
-      continue
-    }
-    let data: string
-    if (type === 'REG_DWORD') {
-      if (
-        typeof value !== 'number' ||
-        !Number.isInteger(value) ||
-        value < 0 ||
-        value > 0xffffffff
-      ) {
-        reject('bad REG_DWORD value')
-        continue
-      }
-      data = String(value)
-    } else if (type === 'REG_SZ') {
-      if (
-        typeof value !== 'string' ||
-        value.length > 1024 ||
-        FORBIDDEN_CHARS.test(value)
-      ) {
-        reject('bad REG_SZ value')
-        continue
-      }
-      data = value
-    } else {
-      reject('unknown type')
-      continue
-    }
-    const views = parseViews(entry.views)
-    if (!views) {
-      reject('bad views')
-      continue
-    }
-    out.push({ key, name, type, data, views })
-  }
-  return out
-}
-
-/** Argv for `reg add`; an array, never a shell string. */
-export function buildRegistryFixCommandParts(
-  fix: ValidRegistryFix,
-  view: KnownFixRegistryView
-): string[] {
-  return [
-    'reg',
-    'add',
-    fix.key,
-    '/v',
-    fix.name,
-    '/t',
-    fix.type,
-    '/d',
-    fix.data,
-    `/reg:${view}`,
-    '/f'
-  ]
+  return sharedValidateRegistryFixes(raw, {
+    label: `Steam ${appId}`,
+    logPrefix: LogPrefix.Steam
+  })
 }
 
 export async function applySteamBridgeKnownFixes(
@@ -195,46 +74,18 @@ export async function applySteamBridgeKnownFixes(
       // First, so later fix steps see the marker. wait: false follows
       // steamClientSetup.ts: reg.exe's exit code proves the write and
       // `wineserver --wait` can block forever.
-      for (const fix of validateRegistryFixes(appId, profile.registry)) {
-        for (const view of fix.views) {
-          const where = `${fix.key} ${fix.name} (/reg:${view})`
-          let timer: NodeJS.Timeout | undefined
-          try {
-            const timeout = new Promise<'timeout'>((res) => {
-              timer = setTimeout(() => res('timeout'), REGISTRY_FIX_TIMEOUT_MS)
-              timer.unref()
-            })
-            const outcome = await Promise.race([
-              runWineCommand({
-                commandParts: buildRegistryFixCommandParts(fix, view),
-                gameSettings: bridgeBottleSettings,
-                wait: false,
-                protonVerb: 'run',
-                skipPrefixCheckIKnowWhatImDoing: true
-              }),
-              timeout
-            ])
-            if (outcome === 'timeout') {
-              logWarning(
-                `Steam ${appId}: registry fix ${where} timed out`,
-                LogPrefix.Steam
-              )
-            } else if (outcome?.code !== 0) {
-              logWarning(
-                `Steam ${appId}: registry fix ${where} did not succeed (code ${String(outcome?.code)})`,
-                LogPrefix.Steam
-              )
-            }
-          } catch (error) {
-            logWarning(
-              `Steam ${appId}: registry fix ${where} threw: ${String(error)}`,
-              LogPrefix.Steam
-            )
-          } finally {
-            clearTimeout(timer)
-          }
-        }
-      }
+      await applyRegistryFixes(
+        profile.registry,
+        { label: `Steam ${appId}`, logPrefix: LogPrefix.Steam },
+        (commandParts) =>
+          runWineCommand({
+            commandParts,
+            gameSettings: bridgeBottleSettings,
+            wait: false,
+            protonVerb: 'run',
+            skipPrefixCheckIKnowWhatImDoing: true
+          })
+      )
     }
 
     if (fixes?.winetricks) {
