@@ -52,6 +52,10 @@ const TIER2_FILE_SUFFIX = '.profile.json'
  * must never be added here. `dllOverrides`, `overlays` and `platforms` are
  * not implemented yet; they belong in TIER2_PROFILE_KEYS when they are, and
  * must never be added here either.
+ * `macArch` is plain routing data that never touches a running game, so it is
+ * tier 1 and reaches users from the remote repo without a release (quick
+ * 261027-bqe). It is deliberately not called `platforms`, a reserved tier-2
+ * name.
  */
 export const TIER1_KNOWN_FIX_KEYS = [
   'title',
@@ -60,7 +64,8 @@ export const TIER1_KNOWN_FIX_KEYS = [
   'runInPrefix',
   'envVariables',
   'wikiLink',
-  'launchNotice'
+  'launchNotice',
+  'macArch'
 ] as const
 
 // `dllOverrides`, `overlays`, `platforms` join this list when implemented.
@@ -150,6 +155,14 @@ export function filterTier1KnownFixes(
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(parsed)) {
     if (allowed.includes(key)) {
+      // A curated "64" adds nothing over the min-OS heuristic and the Mach-O
+      // check, so only the literal "32" is accepted (quick 261027-bqe).
+      if (key === 'macArch' && value !== '32') {
+        logWarning(
+          `Known fixes for '${appName}' (${layerLabel} layer): 'macArch' accepts only "32", ignoring ${JSON.stringify(value)}.`
+        )
+        continue
+      }
       out[key] = value
     } else if (tier2.includes(key) && !DESCRIPTIVE_KEYS.includes(key)) {
       logWarning(

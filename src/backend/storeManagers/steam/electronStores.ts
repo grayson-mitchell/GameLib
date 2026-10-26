@@ -129,8 +129,11 @@ export interface SteamMetadataCacheEntry {
    * implicit (absent key) — NEVER infer '32' from a low/unparseable min-OS
    * signal (the false-flag trap, see games.ts isBottleEligible). Direction B
    * (18-02): set from the store-API mac_requirements min-OS heuristic
-   * pre-install (never '32' — see macArchFromMinOS); corrected to '32' only
-   * by the post-install Mach-O ground-truth check (Plan 18-03). */
+   * pre-install (never '32' — see macArchFromMinOS); corrected to '32' by the
+   * post-install Mach-O ground-truth check (Plan 18-03), or SEEDED to '32' by
+   * a curated known-fix `macArch` on Apple silicon (quick 261027-bqe). The
+   * seed never sets mac_arch_verified, so the Mach-O check keeps the last
+   * word. */
   mac_arch?: '32' | '64' | 'unknown'
   /** True once the post-install lipo/file check has run and confirmed or
    * corrected mac_arch — prevents re-shelling-out on every launch(). */
@@ -138,10 +141,11 @@ export interface SteamMetadataCacheEntry {
   /** MAC32-cache-shape (LOCKED, CONTEXT.md; reconciled 18-02 direction B):
    * provenance of the mac_arch verdict — 'minos' (store-API mac_requirements
    * min-OS pre-install heuristic) or 'macho' (post-install Mach-O ground
-   * truth, i.e. a Steam-corrected fact). Forward-compat for a future
+   * truth, i.e. a Steam-corrected fact) or 'known-fix' (curated pre-install
+   * seed, never verified). Forward-compat for a future
    * community override export (Phase 19); do not omit even though nothing
    * reads it yet. */
-  mac_arch_source?: 'minos' | 'macho'
+  mac_arch_source?: 'minos' | 'macho' | 'known-fix'
   /** Phase 51 Plan 03 (D-51-07/D-51-10): the PERSISTED bridge verdict for
    * this appId — the scan result, the pre-install steam_api prescreen
    * signal, the user's own bridge/bottle override, and the one-time-notice

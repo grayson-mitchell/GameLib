@@ -1149,6 +1149,9 @@ export interface KnowFixesInfo {
   wikiLink?: string
   /** UI text only. Nothing renders it yet. */
   launchNotice?: string
+  /** Tier 1, only "32" is accepted. The macOS build is 32-bit (i386); honoured
+   * only on Apple silicon (quick 261027-bqe). */
+  macArch?: '32'
 }
 
 /**
