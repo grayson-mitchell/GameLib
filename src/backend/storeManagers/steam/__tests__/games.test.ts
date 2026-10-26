@@ -3102,6 +3102,70 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     )
   })
 
+  it('quick 261026-u1a: with the scan auto-cleared, the top-level retained originalFingerprints are threaded as persistedOriginalFingerprints', async () => {
+    const FP_APP_ID = '555562'
+    library.set(FP_APP_ID, makeEntry({ title: 'Fingerprint Fallback' }))
+    const scanFps = { 'a.dll': { size: 1, sha1: 'scan' } }
+    const staleFps = { 'a.dll': { size: 2, sha1: 'stale' } }
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: { originalFingerprints: staleFps }
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'already-placed',
+      shimPath: RESOLVED_EXE_PATH
+    })
+
+    const game = new SteamGame(FP_APP_ID)
+    await game.launch({} as any)
+
+    expect(placeShimForGame).toHaveBeenCalledWith(
+      FP_APP_ID,
+      RESOLVED_EXE_PATH,
+      expect.objectContaining({ persistedOriginalFingerprints: staleFps })
+    )
+  })
+
+  it('quick 261026-u1a: scan.originalFingerprints takes precedence over the top-level retained copy', async () => {
+    const FP_APP_ID = '555563'
+    library.set(FP_APP_ID, makeEntry({ title: 'Fingerprint Fallback' }))
+    const scanFps = { 'a.dll': { size: 1, sha1: 'scan' } }
+    const staleFps = { 'a.dll': { size: 2, sha1: 'stale' } }
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: {
+        scan: {
+          status: 'miss',
+          arch: 'x86',
+          missingSymbols: [],
+          interfaceVersions: {},
+          stubbedInterfaces: [],
+          shimExportSetVersion: 'x',
+          scannedAt: 'x',
+          originalFingerprints: scanFps
+        },
+        originalFingerprints: staleFps
+      }
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'already-placed',
+      shimPath: RESOLVED_EXE_PATH
+    })
+
+    const game = new SteamGame(FP_APP_ID)
+    await game.launch({} as any)
+
+    expect(placeShimForGame).toHaveBeenCalledWith(
+      FP_APP_ID,
+      RESOLVED_EXE_PATH,
+      expect.objectContaining({ persistedOriginalFingerprints: scanFps })
+    )
+  })
+
   it('R7 forced failure: ensureBridgeHelperReady not-ready — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired, and a subsequent launch() for the SAME appId skips the bridge (finding #3 bypass)', async () => {
     // A dedicated appId, never reused elsewhere in this file, so this
     // test's bridgeFailedThisSession mutation cannot leak into other tests.

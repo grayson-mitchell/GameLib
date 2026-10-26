@@ -2955,6 +2955,11 @@ export default class SteamGame implements Game {
       scanPool && Object.keys(scanPool).length > 0
         ? scanPool
         : (persistedVerdict?.interfaceVersions ?? scanPool)
+    // `??` on purpose: the scan's own map (even empty) describes the current
+    // scan; the retained copy is never empty (see clearBridgeScanVerdict).
+    const persistedOriginalFingerprints =
+      persistedScan?.originalFingerprints ??
+      persistedVerdict?.originalFingerprints
     const shimResult = await placeShimForGame(this.appId, exePath, {
       bottleName: bridgeBottleSettings.wineCrossoverBottle,
       gameInstallRoot:
@@ -2965,8 +2970,12 @@ export default class SteamGame implements Game {
       ...(persistedInterfaceVersions ? { persistedInterfaceVersions } : {}),
       // quick 261026-lif: lets placement notice a new or changed
       // `.gamelib-orig` and rescan instead of trusting this verdict.
-      ...(persistedScan?.originalFingerprints
-        ? { persistedOriginalFingerprints: persistedScan.originalFingerprints }
+      // quick 261026-u1a: after an auto-clear the fingerprints
+      // `clearBridgeScanVerdict` kept at the top level are the fallback. A
+      // stale top-level copy cannot shadow a fresher scan: scan wins, and
+      // every new scan write re-persists into scan.
+      ...(persistedOriginalFingerprints
+        ? { persistedOriginalFingerprints }
         : {})
     })
 
