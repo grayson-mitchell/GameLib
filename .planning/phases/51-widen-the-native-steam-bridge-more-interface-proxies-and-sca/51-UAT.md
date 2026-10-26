@@ -21,7 +21,7 @@ source:
   - 51-17-SUMMARY.md
   - 51-18-SUMMARY.md
 started: 2026-10-21T12:30:34Z
-updated: 2026-10-26T07:05:38Z
+updated: 2026-10-26T07:29:24Z
 ---
 
 ## Preconditions
@@ -46,7 +46,7 @@ legacy-bottle launch-time-miss evidence.
 
 ## Current Test
 
-[testing paused — 3 items outstanding]
+[testing paused — 2 items outstanding]
 
 ## Tests
 
@@ -210,7 +210,7 @@ result: pass — 2026-10-26, packaged debug bundle (sidecar built 19:46), staged
 
 ### 22. Review-fix WR-08 — an interrupted GameLibSteam download resumes in GameLibSteam, not in a new bridge bottle
 expected: Setup: pick a small owned Windows-only title T that is not installed, not knownBad, and whose Install dialog route line reads "Native Steam bridge". In that dialog tick "Use the Windows Steam client instead" and press Install, so GameLib's native download goes into the GameLibSteam bottle (item 24's Install arm leaves this same state). Part-way through, Force Quit GameLib, and check with `pgrep -fl gamelib-sidecar` that no sidecar survives (`kill -9` it if one does), so no JS runs. With GameLib still quit, confirm that T's `install.steamResumeTargetSteamappsDir` in `~/Library/Application Support/gamelib/store_cache/steam_library.json` is `…/Bottles/GameLibSteam/drive_c/Program Files (x86)/Steam/steamapps`, and that no `GameLibSteamBridge-<T>` bottle exists in `~/Library/Application Support/CrossOver/Bottles`. Then delete `<T>.bridge.userRoute` from `steam_metadata.json`, so T's route returns to the bridge by default and not by a user choice. Start GameLib and press Install on T. Pass: gamelib.log has `SteamGame: appId <T> already has bits in the GameLibSteam bottle -- keeping the bottled install path instead of starting a second download into a bridge bottle (51-REVIEW WR-08)`; the download continues in GameLibSteam's steamapps and completes there; no `GameLibSteamBridge-<T>` bottle appears; and no `[Timing] prescreenBridgeDepots: appId <T>` line is logged for this attempt. Fail (the review's WR-08): `SteamGame: bridge bottle "GameLibSteamBridge-<T>" not yet provisioned for appId <T> — provisioning inline (BLOCKER 1, no consent dialog needed)`, then a second download into that new bottle, which orphans the GameLibSteam partial. The exception, where an explicit "Try the bridge anyway" still wins over the guard, is desk-covered only (games.test.ts). Afterwards T is a GameLibSteam install; uninstall it if unwanted.
-result: pending
+result: pass — 2026-10-26, packaged debug bundle, T = Legends of Eisenwald (246760). Setup as written. The install dialog showed "Native Steam bridge"; "Use the Windows Steam client instead" was ticked and Install pressed (20:25:36, download into GameLibSteam). The operator then Force Quit GameLib part-way. The sidecar survived the Force Quit (node pid 3762) and was `kill -9`'d before any check. While GameLib was quit: `install.steamResumeTargetSteamappsDir` = `…/Bottles/GameLibSteam/drive_c/Program Files (x86)/Steam/steamapps`; `common/Eisenwald` held a 1.2 GB partial; no `GameLibSteamBridge-246760` existed; `246760.bridge.userRoute` (`bottle`) was deleted, leaving `bridge: {}`. Relaunch and Install: gamelib.log 20:27:44 `SteamGame: appId 246760 already has bits in the GameLibSteam bottle -- keeping the bottled install path instead of starting a second download into a bridge bottle (51-REVIEW WR-08)`. The plan was built against GameLibSteam's steamapps, `download-complete` came at 20:28:34, and `Writing StateFlags=4 full-ownership manifest for appId 246760 (sizeOnDisk=2393941270, …)` was logged. `appmanifest_246760.acf` is in GameLibSteam with StateFlags 4, and `common/Eisenwald` is 2.2 GB. The library entry is installed at the GameLibSteam path. No `GameLibSteamBridge-246760` bottle appeared, there is no `provisioning inline` line, and there are 0 `prescreenBridgeDepots: appId 246760` lines. Side observations (not WR-08): (1) after the successful install, the poller logged `install polling for appId 246760 stopped after grace window (20 ticks) — no manifest detected; user may have cancelled` at 20:28:44, a false cancel warning on a completed install; (2) an unrelated install of Legends of Aethereus (248410) into GameLibSteam was started and cancelled during setup (20:21-20:25), leaving a 922 MB partial and `appmanifest_248410.acf` at StateFlags 1026. The log is archived in the session scratchpad.
 
 ### 23. Review-fix WR-09 — launch follows the bottle that holds the manifest, not an empty per-game bottle (Avernum 6, 206060)
 expected: Setup (staged: this Mac has no legacy shared `GameLibSteamBridge` bottle, which the review's state needs): quit GameLib; in `~/Library/Application Support/CrossOver/Bottles` make an APFS clone of `GameLibSteamBridge-206060` named `GameLibSteamBridge` (`cp -cR GameLibSteamBridge-206060 GameLibSteamBridge`), then move `appmanifest_206060.acf` out of `GameLibSteamBridge-206060/drive_c/Program Files (x86)/Steam/steamapps/` to a safe place. The per-game bottle is now ready (its `cxbottle.conf` is present) but holds no manifest, while the legacy shared bottle holds the appId. A bridge reinstall whose download failed after inline provisioning leaves this state. Start GameLib and Play Avernum 6. Pass: the game launches from the legacy bottle. Its launch's `placeShimForGame:` lines name paths under `Bottles/GameLibSteamBridge/drive_c/`, not `GameLibSteamBridge-206060`; `HELLO shim attached appid=206060` is logged; and Avernum 6 reaches its menu. Fail (the review's WR-09): decision and execution disagree and the launch targets the empty per-game bottle, shown by `SteamGame: could not resolve a Windows launch executable for appId 206060 — not launching a bare/undefined path` or any launch path under `GameLibSteamBridge-206060`, with the game marked bridge-failed. Do not Uninstall in this state: the review's wrong-bottle uninstall half destroys data, and is desk-covered only, by the two WR-09 resolver tests in bottle.test.ts. If the clone does not come up as a bottle (the launch fails for a CrossOver reason, not a resolver one), record `blocked` with the reason. Afterwards quit GameLib, move the cloned `GameLibSteamBridge` bottle to the Trash, and put `appmanifest_206060.acf` back.
@@ -223,9 +223,9 @@ result: pending
 ## Summary
 
 total: 24
-passed: 12
+passed: 13
 issues: 6
-pending: 3
+pending: 2
 skipped: 2
 blocked: 1
 
