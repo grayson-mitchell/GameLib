@@ -411,6 +411,84 @@ describe('gen_vtables', () => {
     )
   })
 
+  describe('quick 261026-qvc: GetFriendPersonaName wire (by-value CSteamID, shim-owned string buffer)', () => {
+    const SHIM_C = join(
+      __dirname,
+      '..',
+      '..',
+      'native',
+      'steam-bridge',
+      'generated',
+      'steam_api_shim.c'
+    )
+    const cases: Array<[string, number, number]> = [
+      ['SteamFriends018', 2, 6],
+      ['SteamFriends011', 4, 7],
+      ['SteamFriends013', 8, 7],
+      ['SteamFriends015', 18, 7],
+      ['SteamFriends017', 28, 7]
+    ]
+
+    it.each<[string, () => string]>([
+      ['generateShimC output', () => generateShimC(loadAllManifests())],
+      ['committed steam_api_shim.c', () => readFileSync(SHIM_C, 'utf-8')]
+    ])('(%s) every served SteamFriends version transacts', (_l, getSource) => {
+      const source = getSource()
+      for (const [iface, ordinal, slot] of cases) {
+        const fn = `vt_${iface}_GetFriendPersonaName`
+        const m = source.match(
+          new RegExp(
+            `${fn}\\(void \\*self, uint64_t steamIDFriend\\) \\{[\\s\\S]*?\\n\\}`
+          )
+        )
+        expect(m).not.toBeNull()
+        const body = m![0]
+        expect(body).not.toContain('dummy0')
+        expect(body).toContain(
+          'memcpy(argbuf + argOff, &steamIDFriend, 8); argOff += 8;'
+        )
+        expect(body).toContain(
+          `bridge_transact(${ordinal}, ${slot}, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)`
+        )
+        expect(body).toContain('uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]')
+        expect(body).toContain(`memcpy(${fn}_buf, retbuf, retlen);`)
+        expect(body).toContain(`${fn}_buf[retlen] = '\\0';`)
+        expect(body).toContain(`return ${fn}_buf;`)
+        expect(source).toContain(
+          `static char ${fn}_buf[STRING_RETURN_BUF_BYTES];`
+        )
+      }
+      expect(source).not.toMatch(
+        /\/\/[^\n]*SteamFriends018[^\n]*GetFriendPersonaName\b[^\n]*\(STUB\)/
+      )
+    })
+
+    it('dispatch header: typed flat fn, bounded 8-byte read, string encode, no value logging', () => {
+      const dispatch = generateDispatchHeader(loadAllManifests())
+      expect(dispatch).toContain(
+        'dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetFriendPersonaName")'
+      )
+      expect(dispatch).toContain(
+        'typedef const char * (*BDFlatFn_SteamFriends018_GetFriendPersonaName_t)(void *, uint64_t);'
+      )
+      const caseBody = dispatch.match(
+        /SteamFriends018\.GetFriendPersonaName\n([\s\S]*?)\n {4}\}/
+      )
+      expect(caseBody).not.toBeNull()
+      const body = caseBody![1]
+      expect(body).toMatch(/uint64_t arg_steamIDFriend;/)
+      expect(body).toMatch(/memcpy\(&arg_steamIDFriend, arg \+ \w+, 8\)/)
+      expect(body).toMatch(/argLen < [^)]*8/)
+      expect(body).toContain('if (strLen > 255) strLen = 255;')
+      expect(body).toContain('memcpy(resp + 4, result, strLen);')
+      // CALL log names only the method (T-qvc-02)
+      for (const line of body.split('\n').filter((l) => l.includes('logts('))) {
+        expect(line).not.toContain('arg_steamIDFriend')
+        expect(line).not.toContain('result')
+      }
+    })
+  })
+
   describe('validateManifest', () => {
     const base: InterfaceManifestV2 = {
       schemaVersion: 2,
@@ -968,18 +1046,38 @@ describe('gen_vtables', () => {
       expect(errors.some((e) => /out-buffer.*sizeParam/i.test(e))).toBe(true)
     })
 
-    it('flags a by-value struct param (CSteamID)', () => {
+    it('flags a by-value struct param (CGameID)', () => {
       const bad: InterfaceManifestV2 = {
         ...base,
         methods: [
           {
             ...base.methods[0],
-            params: [{ name: 'steamID', type: 'CSteamID', kind: 'value' }]
+            params: [{ name: 'gameID', type: 'CGameID', kind: 'value' }]
           }
         ]
       }
       const errors = validateManifest(bad)
       expect(errors.some((e) => /by-value struct param/i.test(e))).toBe(true)
+    })
+
+    it('admits a by-value CSteamID wire param (quick 261026-qvc)', () => {
+      for (const kind of ['value', undefined] as const) {
+        const good: InterfaceManifestV2 = {
+          ...base,
+          methods: [
+            {
+              ...base.methods[0],
+              params: [
+                kind
+                  ? { name: 'steamID', type: 'CSteamID', kind }
+                  : { name: 'steamID', type: 'CSteamID' }
+              ]
+            }
+          ]
+        }
+        const errors = validateManifest(good)
+        expect(errors.some((e) => /by-value struct param/i.test(e))).toBe(false)
+      }
     })
 
     it('does NOT flag an in-string/out-value/out-buffer param with a properly declared kind', () => {

@@ -88,11 +88,22 @@ const FIXTURE_MANIFEST: InterfaceManifestV2 = {
       structSize: 8,
       stackBytes: 4,
       params: []
+    },
+    {
+      slot: 1,
+      name: 'GetFixtureFriendName_TESTONLY',
+      returns: 'const char*',
+      returnKind: 'string',
+      stackBytes: 8,
+      mode: 'wire',
+      note: 'Synthetic (NOT a real Steamworks method): a wire method taking one by-value CSteamID, proving its 8-byte placement (quick 261026-qvc).',
+      params: [{ name: 'steamIDFriend', type: 'CSteamID' }]
     }
   ]
 }
 
 const TARGET_FUNC = 'vt_GameLibAbiGate001_GetFixtureID_TESTONLY'
+const FRIEND_NAME_FUNC = 'vt_GameLibAbiGate001_GetFixtureFriendName_TESTONLY'
 const NULL_OBJECT_FUNC = 'vt_x64_null_object'
 
 /**
@@ -174,6 +185,22 @@ function lastReturnInstruction(block: string): string {
   return last
 }
 
+/** The FIRST ret instruction in the block. objdump only labels exported
+ * symbols, so `extractFunctionBlock` for a function followed by an
+ * unexported static one runs on into that neighbour's body and
+ * `lastReturnInstruction` would read the neighbour's epilogue. The
+ * string-return wire thunks have a single epilogue, so first == real. */
+function firstReturnInstruction(block: string): string {
+  const first = block
+    .split('\n')
+    .map((l) => l.trim())
+    .find((l) => /\bret[a-z]*\b/.test(l))
+  if (first === undefined) {
+    throw new Error('firstReturnInstruction: no ret/retl/retq line in block')
+  }
+  return first
+}
+
 describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthetic free function)', () => {
   let skipReason: string | null = null
   let zigBinPath = ''
@@ -213,6 +240,7 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
       generateShimC([FIXTURE_MANIFEST]),
       TARGET_FUNC
     )
+    source = exportSymbolForDisasm(source, FRIEND_NAME_FUNC)
     // The generic null-object fallback stub only exists under
     // `#if defined(__x86_64__)` -- exporting it is only valid (and only
     // needed) when compiling for the x64 target.
@@ -286,6 +314,29 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
     const disasm = await compileAndDisasm('x86-windows-gnu', 'x86')
     const block = extractFunctionBlock(disasm, TARGET_FUNC)
     expect(lastReturnInstruction(block)).toMatch(/ret[a-z]*\s+\$0x4/)
+  }, 180000)
+
+  it('i386: a by-value CSteamID wire method pops its 8 stack bytes (ret $0x8)', async () => {
+    if (skipReason) {
+      console.warn(`shimAbiGate SKIPPED: ${skipReason}`)
+      return
+    }
+    const disasm = await compileAndDisasm('x86-windows-gnu', 'x86')
+    const block = extractFunctionBlock(disasm, FRIEND_NAME_FUNC)
+    expect(firstReturnInstruction(block)).toMatch(/ret[a-z]*\s+\$0x8/)
+  }, 180000)
+
+  it('x64: a by-value CSteamID wire method takes the value in %rdx and ends in a plain ret', async () => {
+    if (skipReason) {
+      console.warn(`shimAbiGate SKIPPED: ${skipReason}`)
+      return
+    }
+    const disasm = await compileAndDisasm('x86_64-windows-gnu', 'x64')
+    const block = extractFunctionBlock(disasm, FRIEND_NAME_FUNC)
+    expect(block).toMatch(/movq\s+%rdx,\s*-?0x[0-9a-f]+\(%r[bs]p\)/)
+    const lastRet = firstReturnInstruction(block)
+    expect(lastRet).toMatch(/ret[a-z]*\s*$/)
+    expect(lastRet).not.toMatch(/\$0x/)
   }, 180000)
 
   it('x64: the generic null-object fallback stub ends in a plain retq -- Win64 is caller-cleans, never ret N', async () => {

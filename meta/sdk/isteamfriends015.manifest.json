@@ -115,7 +115,9 @@
           "name": "steamIDFriend",
           "type": "CSteamID"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamFriends_GetFriendPersonaName"
     },
     {
       "slot": 8,

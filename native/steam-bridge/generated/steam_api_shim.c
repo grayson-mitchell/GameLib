@@ -112,7 +112,7 @@ Response blob (per method):
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "e05aec2c174d"
+#define BRIDGE_SHIM_TABLE_HASH "00e358feeee6"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -1280,10 +1280,21 @@ static uint32_t THISCALL vt_SteamFriends018_GetFriendPersonaState(void *self, ui
   return 0;
 }
 
-// slot 6: GetFriendPersonaName(CSteamID steamIDFriend) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
-static const char * THISCALL vt_SteamFriends018_GetFriendPersonaName(void *self, uint32_t dummy0, uint32_t dummy1) {
+// slot 6: GetFriendPersonaName(CSteamID steamIDFriend) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamFriends018_GetFriendPersonaName_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamFriends018_GetFriendPersonaName(void *self, uint64_t steamIDFriend) {
   (void)self;
-  return "";
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDFriend, 8); argOff += 8;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(2, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamFriends018_GetFriendPersonaName_buf[0] = '\0';
+    return vt_SteamFriends018_GetFriendPersonaName_buf;
+  }
+  memcpy(vt_SteamFriends018_GetFriendPersonaName_buf, retbuf, retlen);
+  vt_SteamFriends018_GetFriendPersonaName_buf[retlen] = '\0';
+  return vt_SteamFriends018_GetFriendPersonaName_buf;
 }
 
 // slot 7: GetFriendGamePlayed(CSteamID steamIDFriend, FriendGameInfo_t* pFriendGameInfo) -> bool | __thiscall ret 12 (STUB)
@@ -2018,10 +2029,21 @@ static uint32_t THISCALL vt_SteamFriends011_GetFriendPersonaState(void *self, ui
   return 0;
 }
 
-// slot 7: GetFriendPersonaName(CSteamID steamIDFriend) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
-static const char * THISCALL vt_SteamFriends011_GetFriendPersonaName(void *self, uint32_t dummy0, uint32_t dummy1) {
+// slot 7: GetFriendPersonaName(CSteamID steamIDFriend) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamFriends011_GetFriendPersonaName_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamFriends011_GetFriendPersonaName(void *self, uint64_t steamIDFriend) {
   (void)self;
-  return "";
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDFriend, 8); argOff += 8;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(4, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamFriends011_GetFriendPersonaName_buf[0] = '\0';
+    return vt_SteamFriends011_GetFriendPersonaName_buf;
+  }
+  memcpy(vt_SteamFriends011_GetFriendPersonaName_buf, retbuf, retlen);
+  vt_SteamFriends011_GetFriendPersonaName_buf[retlen] = '\0';
+  return vt_SteamFriends011_GetFriendPersonaName_buf;
 }
 
 // slot 8: GetFriendGamePlayed(CSteamID steamIDFriend, FriendGameInfo_t* pFriendGameInfo) -> bool | __thiscall ret 12 (STUB)
@@ -3514,10 +3536,21 @@ static uint32_t THISCALL vt_SteamFriends013_GetFriendPersonaState(void *self, ui
   return 0;
 }
 
-// slot 7: GetFriendPersonaName(CSteamID steamIDFriend) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
-static const char * THISCALL vt_SteamFriends013_GetFriendPersonaName(void *self, uint32_t dummy0, uint32_t dummy1) {
+// slot 7: GetFriendPersonaName(CSteamID steamIDFriend) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamFriends013_GetFriendPersonaName_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamFriends013_GetFriendPersonaName(void *self, uint64_t steamIDFriend) {
   (void)self;
-  return "";
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDFriend, 8); argOff += 8;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(8, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamFriends013_GetFriendPersonaName_buf[0] = '\0';
+    return vt_SteamFriends013_GetFriendPersonaName_buf;
+  }
+  memcpy(vt_SteamFriends013_GetFriendPersonaName_buf, retbuf, retlen);
+  vt_SteamFriends013_GetFriendPersonaName_buf[retlen] = '\0';
+  return vt_SteamFriends013_GetFriendPersonaName_buf;
 }
 
 // slot 8: GetFriendGamePlayed(CSteamID steamIDFriend, FriendGameInfo_t* pFriendGameInfo) -> bool | __thiscall ret 12 (STUB)
@@ -7417,10 +7450,21 @@ static uint32_t THISCALL vt_SteamFriends015_GetFriendPersonaState(void *self, ui
   return 0;
 }
 
-// slot 7: GetFriendPersonaName(CSteamID steamIDFriend) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
-static const char * THISCALL vt_SteamFriends015_GetFriendPersonaName(void *self, uint32_t dummy0, uint32_t dummy1) {
+// slot 7: GetFriendPersonaName(CSteamID steamIDFriend) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamFriends015_GetFriendPersonaName_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamFriends015_GetFriendPersonaName(void *self, uint64_t steamIDFriend) {
   (void)self;
-  return "";
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDFriend, 8); argOff += 8;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(18, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamFriends015_GetFriendPersonaName_buf[0] = '\0';
+    return vt_SteamFriends015_GetFriendPersonaName_buf;
+  }
+  memcpy(vt_SteamFriends015_GetFriendPersonaName_buf, retbuf, retlen);
+  vt_SteamFriends015_GetFriendPersonaName_buf[retlen] = '\0';
+  return vt_SteamFriends015_GetFriendPersonaName_buf;
 }
 
 // slot 8: GetFriendGamePlayed(CSteamID steamIDFriend, FriendGameInfo_t* pFriendGameInfo) -> bool | __thiscall ret 12 (STUB)
@@ -13095,10 +13139,21 @@ static uint32_t THISCALL vt_SteamFriends017_GetFriendPersonaState(void *self, ui
   return 0;
 }
 
-// slot 7: GetFriendPersonaName(CSteamID steamIDFriend) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
-static const char * THISCALL vt_SteamFriends017_GetFriendPersonaName(void *self, uint32_t dummy0, uint32_t dummy1) {
+// slot 7: GetFriendPersonaName(CSteamID steamIDFriend) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamFriends017_GetFriendPersonaName_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamFriends017_GetFriendPersonaName(void *self, uint64_t steamIDFriend) {
   (void)self;
-  return "";
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDFriend, 8); argOff += 8;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(28, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamFriends017_GetFriendPersonaName_buf[0] = '\0';
+    return vt_SteamFriends017_GetFriendPersonaName_buf;
+  }
+  memcpy(vt_SteamFriends017_GetFriendPersonaName_buf, retbuf, retlen);
+  vt_SteamFriends017_GetFriendPersonaName_buf[retlen] = '\0';
+  return vt_SteamFriends017_GetFriendPersonaName_buf;
 }
 
 // slot 8: GetFriendGamePlayed(CSteamID steamIDFriend, FriendGameInfo_t* pFriendGameInfo) -> bool | __thiscall ret 12 (STUB)

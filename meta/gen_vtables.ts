@@ -120,11 +120,20 @@ const KNOWN_RETURN_KINDS: ReadonlySet<string> = new Set([
 ])
 
 /** 51-06 Task 3: by-value struct param types a wire method may never
- * declare (kind 'value' or absent) -- too large/non-scalar to marshal as
- * raw register-width bytes; a future method needing one of these as a
- * genuine wire param must use a different kind (none exists for this
- * yet) or stay a stub. */
-const STRUCT_PARAM_TYPES: ReadonlySet<string> = new Set(['CSteamID', 'CGameID'])
+ * declare (kind 'value' or absent).
+ *
+ * quick 261026-qvc: CSteamID is NO LONGER in this set. It is an 8-byte
+ * trivially-copyable aggregate that both Win32 ABIs pass exactly like a
+ * uint64_t (MSVC x64: one GPR; i386 __thiscall: 8 stack bytes, callee pops
+ * 8), and Steam's macOS flat API takes it as a plain uint64 (same precedent
+ * as GetSteamID's return at dispatchCType). First consumer is
+ * GetFriendPersonaName (Overlooting 3410180).
+ *
+ * CGameID stays rejected: it is ABI-identical but has no consumer, and its
+ * flat-API parameter shape has not been checked against a real caller, so
+ * admitting it now would be an unexercised path. Re-evaluate when a CGameID
+ * wire method is actually needed. */
+const STRUCT_PARAM_TYPES: ReadonlySet<string> = new Set(['CGameID'])
 
 export interface MethodSignature {
   slot: number
