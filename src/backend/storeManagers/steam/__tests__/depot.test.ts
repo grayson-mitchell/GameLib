@@ -4075,6 +4075,91 @@ describe('downloadDepotFiles', () => {
     }
   }
 
+  it('chunk-stream stats line carries per-depot a/ok/to/err counts, worst-first (261027-d5i)', async () => {
+    const bufA = Buffer.from('AAAA')
+    const bufB = Buffer.from('BBBB')
+    const mkFile = (name: string, buf: Buffer, sha: string): DepotPlanFile => ({
+      filename: name,
+      size: buf.length,
+      sha_content: sha1Hex(buf),
+      chunks: [{ sha, cb_original: buf.length, offset: 0 }]
+    })
+
+    jest.mocked(fetchChunk).mockImplementation(async (...args: unknown[]) => {
+      const depotId = args[1] as string
+      const onAttempt = args[8] as (ev: {
+        host: string
+        attempt: number
+        outcome: 'success' | 'timeout' | 'error'
+        ms: number
+        netMs?: number
+      }) => void
+      if (depotId === '222') {
+        onAttempt({
+          host: 'cdn1.example.com',
+          attempt: 0,
+          outcome: 'timeout',
+          ms: 100
+        })
+        onAttempt({
+          host: 'cdn1.example.com',
+          attempt: 1,
+          outcome: 'success',
+          ms: 10,
+          netMs: 5
+        })
+        return bufB
+      }
+      onAttempt({
+        host: 'cdn1.example.com',
+        attempt: 0,
+        outcome: 'success',
+        ms: 10,
+        netMs: 5
+      })
+      return bufA
+    })
+
+    const plan = makePlan(
+      [
+        {
+          depotId: '111',
+          gid: 'g1',
+          key: Buffer.from('key'),
+          files: [mkFile('a.bin', bufA, 'sha-a')]
+        },
+        {
+          depotId: '222',
+          gid: 'g2',
+          key: Buffer.from('key'),
+          files: [mkFile('b.bin', bufB, 'sha-b')]
+        }
+      ],
+      bufA.length + bufB.length
+    )
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+    expect(result.outcome).toBe('completed')
+
+    const lines = jest
+      .mocked(logInfo)
+      .mock.calls.map((c) => String(c[0]))
+      .filter((m) => m.includes('chunk-stream stats'))
+    const line = lines[lines.length - 1]
+    expect(line).toBeDefined()
+    expect(line).toContain('totalAttempts=3 rotations=1 timeouts=1')
+    expect(line.indexOf('worstHosts=[')).toBeLessThan(line.indexOf(' depots=['))
+    expect(
+      line.endsWith(
+        'depots=[222[a=2 ok=1 to=1 err=0] 111[a=1 ok=1 to=0 err=0]]'
+      )
+    ).toBe(true)
+  })
+
   it('streams chunks to disk via positional writes at their exact offsets (no whole-file Buffer.alloc)', async () => {
     const chunkA = Buffer.from('AAAA') // 4 bytes at offset 0
     const chunkB = Buffer.from('BBBBBB') // 6 bytes at offset 4

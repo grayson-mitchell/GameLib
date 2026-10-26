@@ -3105,6 +3105,32 @@ export async function downloadDepotFiles(
       hostStats.set(ev.host, stat)
     }
 
+    // quick 261027-d5i (todo 2026-10-26-chunk-timeouts-by-depot-or-host-unmeasured):
+    // per-depot attempt counts so a live run can tell whether timeouts cluster
+    // on one depot (e.g. XCOM 200511). Purely observational: read only by
+    // logChunkStreamStats, never by any retry/backoff/rotation/hostHealth/
+    // selection logic.
+    const depotStats = new Map<
+      string,
+      { attempts: number; successes: number; timeouts: number; errors: number }
+    >()
+    const recordDepotAttempt = (
+      depotId: string,
+      ev: Parameters<OnChunkAttempt>[0]
+    ) => {
+      const d = depotStats.get(depotId) ?? {
+        attempts: 0,
+        successes: 0,
+        timeouts: 0,
+        errors: 0
+      }
+      d.attempts++
+      if (ev.outcome === 'success') d.successes++
+      else if (ev.outcome === 'timeout') d.timeouts++
+      else d.errors++
+      depotStats.set(depotId, d)
+    }
+
     // Ranks hosts worst-first (timeouts+errors desc) and caps the line length —
     // a large install can resolve dozens of content-server hosts, and logging
     // every one every ~15s would itself become log noise.
@@ -3189,6 +3215,14 @@ export async function downloadDepotFiles(
         : 0
       const avgDecodeMs = avgMsAll - avgNetMs
       const poolStats = pool.stats()
+      const depots = [...depotStats.entries()]
+        .sort(([, a], [, b]) => b.timeouts + b.errors - (a.timeouts + a.errors))
+        .slice(0, 6)
+        .map(
+          ([id, s]) =>
+            `${id}[a=${s.attempts} ok=${s.successes} to=${s.timeouts} err=${s.errors}]`
+        )
+        .join(' ')
       logInfo(
         `[Timing] chunk-stream stats @${elapsedSec}s: percent=${percent}% ` +
           `downSpeedMiBs=${lastDownSpeed.toFixed(2)} diskSpeedMiBs=${lastDiskSpeed.toFixed(2)} ` +
@@ -3196,7 +3230,10 @@ export async function downloadDepotFiles(
           `avgMs=${avgMsAll} avgNetMs=${avgNetMs} avgDecodeMs=${avgDecodeMs} ` +
           `pool[size=${poolStats.size} busy=${poolStats.busy} idle=${poolStats.idle} ` +
           `queued=${poolStats.queued} inline=${poolStats.inlineFallback}] ` +
-          `hosts=${hostStats.size} worstHosts=[${worst}]`,
+          `hosts=${hostStats.size} worstHosts=[${worst}]` +
+          // Appended last deliberately: keeps every earlier field in place for
+          // parsers/greps over the existing line.
+          ` depots=[${depots}]`,
         LogPrefix.Steam
       )
     }
@@ -3463,7 +3500,10 @@ export async function downloadDepotFiles(
                   emitProgress(false)
                 },
                 pool.decode,
-                onAttempt,
+                (ev) => {
+                  recordDepotAttempt(job.depotId, ev)
+                  onAttempt(ev)
+                },
                 hostHealth,
                 opts.cdnAuth,
                 opts.hostMeta,
