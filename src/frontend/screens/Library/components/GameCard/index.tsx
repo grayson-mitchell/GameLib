@@ -729,15 +729,18 @@ const GameCard = ({
       setIsLaunching(true)
       const isOffline = connectivity.status !== 'online'
       const notPlayableOffline = isOffline && !gameInfo.canRunOffline
-      await launch({
-        appName,
-        t,
-        runner,
-        hasUpdate,
-        showDialogModal,
-        notPlayableOffline
-      })
-      setIsLaunching(false)
+      try {
+        await launch({
+          appName,
+          t,
+          runner,
+          hasUpdate,
+          showDialogModal,
+          notPlayableOffline
+        })
+      } finally {
+        setIsLaunching(false)
+      }
     }
     return
   }

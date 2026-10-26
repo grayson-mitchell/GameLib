@@ -10,6 +10,9 @@ files:
 severity: minor
 platform: macos
 ready: live-gate
+status: RESOLVED
+resolved: 2026-10-26
+resolved_by: quick-261026-jmm
 ---
 
 Quick 261025-rkj made the bridge launch await `installSteamBridgeSharedRedists` before the game
@@ -44,3 +47,9 @@ Done-when: a first launch that installs redists shows a correct, continuous Play
 click to game start, with no unhandled rejection logged. Verify by deleting a bridge bottle's
 `gamelib-shared-redists.json` ledger and relaunching (the HasRunKey values make the installers
 no-ops, so remove those too, or use a title that has not installed them yet).
+
+## Resolution
+
+Option 1 taken: `launch` was added to the shell's `LONG_RUNNING_CHANNELS` (quick 261026-jmm), on the 261025-rkj Manor Lords measurement plus the structural reason that non-Steam launch handlers await the whole game session, so no wall-clock bound is correct for them. Options 2 (decouple the bridge launch via status events) and 3 (renderer treats the timeout as non-fatal) were rejected because each fixes only the bridge path, and option 3 also leaves the late real result dropped as an unknown id. The `dispatch_tray_launch` doc comment was corrected to say `launch` is now exempt, and the Library GameCard's launch is now try/finally so a rejection can no longer strand the card in the launching state.
+
+**Residual:** the live done-when (a continuous, correct Play-button state from click to game start on a redist-installing first launch, with no unhandled rejection logged) is NOT verified by this task. It is a live gate: relaunch with the bottle's `gamelib-shared-redists.json` ledger and HasRunKey values removed (or a title that has not yet installed them), after restarting dev so the shell rebuilds. The todo's unknown, what the Play button actually showed during the redist install (`Installing Redistributables (...)` or otherwise), also remains unobserved.
