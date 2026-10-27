@@ -245,6 +245,12 @@
             "groupSelectedCount_few": "{{count}} izbrani",
             "groupSelectedCount_other": "{{count}} izbranih"
         },
+        "groupBy": {
+            "installStatus": "Stanje namestitve",
+            "label": "Združi po",
+            "none": "Brez",
+            "store": "Trgovina"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} od {{total}} iger",
             "totalGames": "{{total}} iger"
@@ -257,6 +263,18 @@
             "notConnected": "{{store}} ni povezan",
             "reconnect": "Ponovno poveži",
             "signIn": "Prijava"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Naraščajoče",
+                "descending": "Padajoče"
+            },
+            "field": {
+                "installSize": "Velikost namestitve",
+                "lastPlayed": "Nazadnje igrano",
+                "name": "Ime"
+            },
+            "label": "Razvrsti po"
         },
         "steamSync": {
             "failedBody": "Vaše ostale knjižnice so še vedno na voljo. Poskusite znova ali preverite, ali je Steam dosegljiv.",
@@ -697,5 +715,11 @@
     "languageSelector": {
         "mtNotice": "Nekaj besedila v tem jeziku je bilo strojno prevedeno in lahko vsebuje napake.",
         "reportTranslationProblem": "Prijavi težavo s prevodom"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Združite igre po stanju namestitve ali trgovini ali izklopite združevanje.",
+            "sort": "Razvrstite igre po imenu, zadnji igri ali velikosti namestitve in obrnite smer."
+        }
     }
 }

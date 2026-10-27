@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "已选择 {{count}} 个",
             "groupSelectedCount_other": "已选择 {{count}} 个"
         },
+        "groupBy": {
+            "installStatus": "安装状态",
+            "label": "分组依据",
+            "none": "无",
+            "store": "商店"
+        },
         "header": {
             "filteredOfTotal": "{{total}} 款游戏中的 {{shown}} 款",
             "totalGames": "{{total}} 款游戏"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} 未连接",
             "reconnect": "重新连接",
             "signIn": "登录"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "升序",
+                "descending": "降序"
+            },
+            "field": {
+                "installSize": "安装大小",
+                "lastPlayed": "上次游玩",
+                "name": "名称"
+            },
+            "label": "排序方式"
         },
         "steamSync": {
             "failedBody": "你的其他库仍然可用。请重试，或检查 Steam 是否可以访问。",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "此语言中的部分文本是机器翻译，可能存在错误。",
         "reportTranslationProblem": "报告翻译问题"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "按安装状态或商店对游戏分组，也可以关闭分组。",
+            "sort": "按名称、上次游玩时间或安装大小对游戏排序，并可切换排序方向。"
+        }
     }
 }

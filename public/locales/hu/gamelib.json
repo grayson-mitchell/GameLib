@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "{{count}} kiválasztva",
             "groupSelectedCount_other": "{{count}} kiválasztva"
         },
+        "groupBy": {
+            "installStatus": "Telepítés állapota",
+            "label": "Csoportosítás",
+            "none": "Nincs",
+            "store": "Áruház"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} / {{total}} játék",
             "totalGames": "{{total}} játék"
@@ -243,6 +249,18 @@
             "notConnected": "A(z) {{store}} nincs csatlakoztatva",
             "reconnect": "Újracsatlakozás",
             "signIn": "Bejelentkezés"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Növekvő",
+                "descending": "Csökkenő"
+            },
+            "field": {
+                "installSize": "Telepítési méret",
+                "lastPlayed": "Utoljára játszva",
+                "name": "Név"
+            },
+            "label": "Rendezés"
         },
         "steamSync": {
             "failedBody": "A többi könyvtárad továbbra is elérhető. Próbáld újra, vagy ellenőrizd, hogy a Steam elérhető-e.",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "Ezen a nyelven egyes szövegek gépi fordítással készültek, és hibákat tartalmazhatnak.",
         "reportTranslationProblem": "Fordítási hiba bejelentése"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Csoportosítsd a játékaidat telepítési állapot vagy áruház szerint, vagy kapcsold ki a csoportosítást.",
+            "sort": "Rendezd a játékaidat név, utolsó játék ideje vagy telepítési méret szerint, és fordítsd meg az irányt."
+        }
     }
 }

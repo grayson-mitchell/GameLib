@@ -264,6 +264,12 @@
             "viewRecentlyPlayed": "Recently played",
             "wontRun": "Won't run"
         },
+        "groupBy": {
+            "installStatus": "Install status",
+            "label": "Group by",
+            "none": "None",
+            "store": "Store"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} of {{total}} games",
             "totalGames": "{{total}} games"
@@ -276,6 +282,18 @@
             "notConnected": "{{store}} is not connected",
             "reconnect": "Reconnect",
             "signIn": "Sign in"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Ascending",
+                "descending": "Descending"
+            },
+            "field": {
+                "installSize": "Install size",
+                "lastPlayed": "Last played",
+                "name": "Name"
+            },
+            "label": "Sort by"
         },
         "steamSync": {
             "failedBody": "Your other libraries are still available. Try again, or check that Steam is reachable.",
@@ -547,6 +565,8 @@
     },
     "tour": {
         "library": {
+            "groupBy": "Group your games by install status or by store, or turn grouping off.",
+            "sort": "Sort your games by name, last played or install size, and flip the direction.",
             "welcome": {
                 "intro2": "If the library is empty, sign in to your stores from the Accounts tab, or add your own games with the Add Game button."
             }

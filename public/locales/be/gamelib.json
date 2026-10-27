@@ -245,6 +245,12 @@
             "groupSelectedCount_many": "Выбрана {{count}}",
             "groupSelectedCount_other": "Выбрана {{count}}"
         },
+        "groupBy": {
+            "installStatus": "Стан усталёўкі",
+            "label": "Групаваць па",
+            "none": "Няма",
+            "store": "Крама"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} з {{total}} гульні",
             "totalGames": "{{total}} гульні"
@@ -257,6 +263,18 @@
             "notConnected": "{{store}} не падключаны",
             "reconnect": "Падключыцца зноў",
             "signIn": "Увайсці"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Па ўзрастанні",
+                "descending": "Па змяншэнні"
+            },
+            "field": {
+                "installSize": "Памер усталёўкі",
+                "lastPlayed": "Апошні запуск",
+                "name": "Назва"
+            },
+            "label": "Сартаваць па"
         },
         "steamSync": {
             "failedBody": "Астатнія вашы бібліятэкі па-ранейшаму даступныя. Паспрабуйце зноў або праверце, ці даступны Steam.",
@@ -697,5 +715,11 @@
     "languageSelector": {
         "mtNotice": "Частка тэксту на гэтай мове перакладзена машынна і можа змяшчаць памылкі.",
         "reportTranslationProblem": "Паведаміць пра праблему з перакладам"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Групуйце гульні па стане ўсталёўкі або па краме, ці адключыце групаванне.",
+            "sort": "Сартуйце гульні па назве, апошнім запуску або памеры ўсталёўкі і змяняйце кірунак."
+        }
     }
 }

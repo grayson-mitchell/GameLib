@@ -238,6 +238,12 @@
             "groupSelectedCount_many": "{{count}} selecionados",
             "groupSelectedCount_other": "{{count}} selecionados"
         },
+        "groupBy": {
+            "installStatus": "Estado da instalação",
+            "label": "Agrupar por",
+            "none": "Nenhum",
+            "store": "Loja"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} de {{total}} jogos",
             "totalGames": "{{total}} jogos"
@@ -250,6 +256,18 @@
             "notConnected": "{{store}} não está ligado",
             "reconnect": "Reconectar",
             "signIn": "Iniciar sessão"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Ascendente",
+                "descending": "Descendente"
+            },
+            "field": {
+                "installSize": "Tamanho da instalação",
+                "lastPlayed": "Última vez jogado",
+                "name": "Nome"
+            },
+            "label": "Ordenar por"
         },
         "steamSync": {
             "failedBody": "As suas outras bibliotecas continuam disponíveis. Tente novamente ou verifique se o Steam está acessível.",
@@ -685,5 +703,11 @@
     "languageSelector": {
         "mtNotice": "Algum texto neste idioma foi traduzido automaticamente e pode conter erros.",
         "reportTranslationProblem": "Reportar um problema de tradução"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Agrupe os seus jogos por estado da instalação ou por loja, ou desative o agrupamento.",
+            "sort": "Ordene os seus jogos por nome, última vez jogado ou tamanho da instalação e inverta a direção."
+        }
     }
 }

@@ -231,6 +231,12 @@
             "groupSelectedCount_other": "{{count}} geselecteerd",
             "viewFavourites": "Favourites"
         },
+        "groupBy": {
+            "installStatus": "Installatiestatus",
+            "label": "Groeperen op",
+            "none": "Geen",
+            "store": "Winkel"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} van {{total}} spellen",
             "totalGames": "{{total}} spellen"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} is niet verbonden",
             "reconnect": "Opnieuw verbinden",
             "signIn": "Aanmelden"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Oplopend",
+                "descending": "Aflopend"
+            },
+            "field": {
+                "installSize": "Installatiegrootte",
+                "lastPlayed": "Laatst gespeeld",
+                "name": "Naam"
+            },
+            "label": "Sorteren op"
         },
         "steamSync": {
             "failedBody": "Je andere bibliotheken zijn nog steeds beschikbaar. Probeer het opnieuw of controleer of Steam bereikbaar is.",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "Sommige tekst in deze taal is machinaal vertaald en kan fouten bevatten.",
         "reportTranslationProblem": "Een vertaalprobleem melden"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Groepeer je games op installatiestatus of winkel, of schakel groeperen uit.",
+            "sort": "Sorteer je games op naam, laatst gespeeld of installatiegrootte en draai de volgorde om."
+        }
     }
 }

@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "{{count}} مورد انتخاب شده",
             "groupSelectedCount_other": "{{count}} مورد انتخاب شده"
         },
+        "groupBy": {
+            "installStatus": "وضعیت نصب",
+            "label": "گروه‌بندی بر اساس",
+            "none": "هیچ‌کدام",
+            "store": "فروشگاه"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} از {{total}} بازی",
             "totalGames": "{{total}} بازی"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} متصل نیست",
             "reconnect": "اتصال مجدد",
             "signIn": "ورود"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "صعودی",
+                "descending": "نزولی"
+            },
+            "field": {
+                "installSize": "حجم نصب",
+                "lastPlayed": "آخرین اجرا",
+                "name": "نام"
+            },
+            "label": "مرتب‌سازی بر اساس"
         },
         "steamSync": {
             "failedBody": "کتابخانه‌های دیگر شما همچنان در دسترس هستند. دوباره امتحان کنید یا مطمئن شوید Steam در دسترس است.",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "برخی از متن‌های این زبان به‌صورت ماشینی ترجمه شده‌اند و ممکن است دارای اشتباه باشند.",
         "reportTranslationProblem": "گزارش مشکل ترجمه"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "بازی‌هایتان را بر اساس وضعیت نصب یا فروشگاه گروه‌بندی کنید یا گروه‌بندی را خاموش کنید.",
+            "sort": "بازی‌هایتان را بر اساس نام، آخرین اجرا یا حجم نصب مرتب کنید و جهت را برعکس کنید."
+        }
     }
 }

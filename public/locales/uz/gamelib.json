@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "{{count}} tanlangan",
             "groupSelectedCount_other": "{{count}} tanlangan"
         },
+        "groupBy": {
+            "installStatus": "O'rnatish holati",
+            "label": "Guruhlash",
+            "none": "Yo'q",
+            "store": "Do'kon"
+        },
         "header": {
             "filteredOfTotal": "{{total}} o'yin tadan {{shown}}",
             "totalGames": "{{total}} o'yin"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} ulanmagan",
             "reconnect": "Qayta ulanish",
             "signIn": "Kirish"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "O'sish bo'yicha",
+                "descending": "Kamayish bo'yicha"
+            },
+            "field": {
+                "installSize": "O'rnatish hajmi",
+                "lastPlayed": "Oxirgi o'ynalgan",
+                "name": "Nomi"
+            },
+            "label": "Saralash"
         },
         "steamSync": {
             "failedBody": "Boshqa kutubxonalaringiz hali ham mavjud. Qayta urinib ko'ring yoki Steam ishga tushayotganini tekshiring.",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "Ushbu tildagi ba'zi matnlar mashina tarjimasi orqali tarjima qilingan va xatolarga ega bo'lishi mumkin.",
         "reportTranslationProblem": "Tarjima muammosi haqida xabar berish"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "O'yinlaringizni o'rnatish holati yoki do'kon bo'yicha guruhlang yoki guruhlashni o'chiring.",
+            "sort": "O'yinlaringizni nomi, oxirgi o'ynalgani yoki o'rnatish hajmi bo'yicha saralang va yo'nalishni almashtiring."
+        }
     }
 }

@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "{{count}} vald",
             "groupSelectedCount_other": "{{count}} valda"
         },
+        "groupBy": {
+            "installStatus": "Installationsstatus",
+            "label": "Gruppera efter",
+            "none": "Ingen",
+            "store": "Butik"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} av {{total}} spel",
             "totalGames": "{{total}} spel"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} är inte ansluten",
             "reconnect": "Återanslut",
             "signIn": "Logga in"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Stigande",
+                "descending": "Fallande"
+            },
+            "field": {
+                "installSize": "Installationsstorlek",
+                "lastPlayed": "Senast spelad",
+                "name": "Namn"
+            },
+            "label": "Sortera efter"
         },
         "steamSync": {
             "failedBody": "Dina andra bibliotek är fortfarande tillgängliga. Försök igen, eller kontrollera att Steam går att nå.",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "En del text på detta språk har maskinöversatts och kan innehålla fel.",
         "reportTranslationProblem": "Rapportera ett översättningsproblem"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Gruppera dina spel efter installationsstatus eller butik, eller stäng av gruppering.",
+            "sort": "Sortera dina spel efter namn, senast spelad eller installationsstorlek och vänd riktningen."
+        }
     }
 }

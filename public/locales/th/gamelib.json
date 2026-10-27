@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "เลือกแล้ว {{count}} รายการ",
             "groupSelectedCount_other": "เลือกแล้ว {{count}} รายการ"
         },
+        "groupBy": {
+            "installStatus": "สถานะการติดตั้ง",
+            "label": "จัดกลุ่มตาม",
+            "none": "ไม่มี",
+            "store": "ร้านค้า"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} จาก {{total}} เกม",
             "totalGames": "{{total}} เกม"
@@ -243,6 +249,18 @@
             "notConnected": "ยังไม่ได้เชื่อมต่อ {{store}}",
             "reconnect": "เชื่อมต่อใหม่",
             "signIn": "ลงชื่อเข้าใช้"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "จากน้อยไปมาก",
+                "descending": "จากมากไปน้อย"
+            },
+            "field": {
+                "installSize": "ขนาดการติดตั้ง",
+                "lastPlayed": "เล่นล่าสุด",
+                "name": "ชื่อ"
+            },
+            "label": "เรียงตาม"
         },
         "steamSync": {
             "failedBody": "ไลบรารีอื่นของคุณยังคงใช้งานได้ ลองใหม่อีกครั้ง หรือตรวจสอบว่าเชื่อมต่อกับ Steam ได้หรือไม่",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "ข้อความบางส่วนในภาษานี้ได้รับการแปลด้วยเครื่อง และอาจมีข้อผิดพลาด",
         "reportTranslationProblem": "รายงานปัญหาการแปล"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "จัดกลุ่มเกมของคุณตามสถานะการติดตั้งหรือร้านค้า หรือปิดการจัดกลุ่ม",
+            "sort": "เรียงเกมของคุณตามชื่อ เล่นล่าสุด หรือขนาดการติดตั้ง และสลับทิศทางได้"
+        }
     }
 }

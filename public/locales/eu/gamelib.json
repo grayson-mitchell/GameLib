@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "{{count}} hautatuta",
             "groupSelectedCount_other": "{{count}} hautatuta"
         },
+        "groupBy": {
+            "installStatus": "Instalazio-egoera",
+            "label": "Multzokatu honen arabera",
+            "none": "Bat ere ez",
+            "store": "Denda"
+        },
         "header": {
             "filteredOfTotal": "{{shown}}/{{total}} joko",
             "totalGames": "{{total}} joko"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} ez dago konektatuta",
             "reconnect": "Berrkonektatu",
             "signIn": "Hasi saioa"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Gorantz",
+                "descending": "Beherantz"
+            },
+            "field": {
+                "installSize": "Instalazioaren tamaina",
+                "lastPlayed": "Azken aldiz jokatua",
+                "name": "Izena"
+            },
+            "label": "Ordenatu honen arabera"
         },
         "steamSync": {
             "failedBody": "Zure beste liburutegiak eskuragarri jarraitzen dute. Saiatu berriro, edo egiaztatu Steam eskuragarri dagoela.",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "Hizkuntza honetako testu bat automatikoki itzulita dago eta akatsak izan ditzake.",
         "reportTranslationProblem": "Jakinarazi itzulpen arazo bat"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Multzokatu zure jokoak instalazio-egoeraren edo dendaren arabera, edo desaktibatu multzokatzea.",
+            "sort": "Ordenatu zure jokoak izenaren, azken aldiz jokatutakoaren edo instalazioaren tamainaren arabera, eta aldatu norabidea."
+        }
     }
 }

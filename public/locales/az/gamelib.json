@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "{{count}} seçilib",
             "groupSelectedCount_other": "{{count}} seçilib"
         },
+        "groupBy": {
+            "installStatus": "Quraşdırma statusu",
+            "label": "Qruplaşdır",
+            "none": "Heç biri",
+            "store": "Mağaza"
+        },
         "header": {
             "filteredOfTotal": "{{total}} oyun arasından {{shown}}",
             "totalGames": "{{total}} oyun"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} qoşulmayıb",
             "reconnect": "Yenidən qoşul",
             "signIn": "Daxil ol"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Artan",
+                "descending": "Azalan"
+            },
+            "field": {
+                "installSize": "Quraşdırma ölçüsü",
+                "lastPlayed": "Son oynanma",
+                "name": "Ad"
+            },
+            "label": "Sırala"
         },
         "steamSync": {
             "failedBody": "Digər kitabxanalarınız hələ də əlçatandır. Yenidən cəhd edin və ya Steam-in əlçatan olduğunu yoxlayın.",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "Bu dildəki bəzi mətnlər maşın tərcüməsi ilə hazırlanıb və səhvlər ola bilər.",
         "reportTranslationProblem": "Tərcümə problemi bildirin"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Oyunlarınızı quraşdırma statusuna və ya mağazaya görə qruplaşdırın, ya da qruplaşdırmanı söndürün.",
+            "sort": "Oyunlarınızı ada, son oynanmaya və ya quraşdırma ölçüsünə görə sıralayın və istiqaməti dəyişin."
+        }
     }
 }

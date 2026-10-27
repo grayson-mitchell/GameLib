@@ -252,6 +252,12 @@
             "groupSelectedCount_many": "{{count}} roghnaithe",
             "groupSelectedCount_other": "{{count}} roghnaithe"
         },
+        "groupBy": {
+            "installStatus": "Stádas suiteála",
+            "label": "Grúpáil de réir",
+            "none": "Gan aon cheann",
+            "store": "Siopa"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} as {{total}} cluiche",
             "totalGames": "{{total}} cluiche"
@@ -264,6 +270,18 @@
             "notConnected": "Níl {{store}} ceangailte",
             "reconnect": "Ceangail arís",
             "signIn": "Sínigh isteach"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Ardaitheach",
+                "descending": "Íslitheach"
+            },
+            "field": {
+                "installSize": "Méid suiteála",
+                "lastPlayed": "Imrithe go deireanach",
+                "name": "Ainm"
+            },
+            "label": "Sórtáil de réir"
         },
         "steamSync": {
             "failedBody": "Tá do leabharlanna eile fós ar fáil. Bain triail eile as, nó cinntigh go bhfuil Steam inrochtana.",
@@ -709,5 +727,11 @@
     "languageSelector": {
         "mtNotice": "Rinneadh meaisínaistriúchán ar chuid den téacs sa teanga seo agus d'fhéadfadh botúin a bheith ann.",
         "reportTranslationProblem": "Tuairiscigh fadhb aistriúcháin"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Grúpáil do chluichí de réir stádas suiteála nó siopa, nó cuir an grúpáil as.",
+            "sort": "Sórtáil do chluichí de réir ainm, an uair dheireanach a imríodh iad nó méid suiteála, agus iompaigh an treo."
+        }
     }
 }

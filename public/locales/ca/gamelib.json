@@ -238,6 +238,12 @@
             "groupSelectedCount_many": "{{count}} seleccionats",
             "groupSelectedCount_other": "{{count}} seleccionats"
         },
+        "groupBy": {
+            "installStatus": "Estat d'instal·lació",
+            "label": "Agrupa per",
+            "none": "Cap",
+            "store": "Botiga"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} de {{total}} jocs",
             "totalGames": "{{total}} jocs"
@@ -250,6 +256,18 @@
             "notConnected": "{{store}} no està connectat",
             "reconnect": "Reconnecta",
             "signIn": "Inicia sessió"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Ascendent",
+                "descending": "Descendent"
+            },
+            "field": {
+                "installSize": "Mida d'instal·lació",
+                "lastPlayed": "Última partida",
+                "name": "Nom"
+            },
+            "label": "Ordena per"
         },
         "steamSync": {
             "failedBody": "Les teves altres biblioteques encara estan disponibles. Torna-ho a provar o comprova que Steam sigui accessible.",
@@ -685,5 +703,11 @@
     "languageSelector": {
         "mtNotice": "Alguns textos en aquest idioma s'han traduït automàticament i poden contenir errors.",
         "reportTranslationProblem": "Informa d'un problema de traducció"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Agrupa els teus jocs per estat d'instal·lació o per botiga, o desactiva l'agrupació.",
+            "sort": "Ordena els teus jocs per nom, última partida o mida d'instal·lació, i inverteix la direcció."
+        }
     }
 }

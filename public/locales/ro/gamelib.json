@@ -238,6 +238,12 @@
             "groupSelectedCount_few": "{{count}} selectate",
             "groupSelectedCount_other": "{{count}} selectate"
         },
+        "groupBy": {
+            "installStatus": "Starea instalării",
+            "label": "Grupează după",
+            "none": "Niciuna",
+            "store": "Magazin"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} din {{total}} jocuri",
             "totalGames": "{{total}} jocuri"
@@ -250,6 +256,18 @@
             "notConnected": "{{store}} nu este conectat",
             "reconnect": "Reconectează-te",
             "signIn": "Conectează-te"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Crescător",
+                "descending": "Descrescător"
+            },
+            "field": {
+                "installSize": "Dimensiunea instalării",
+                "lastPlayed": "Ultima rulare",
+                "name": "Nume"
+            },
+            "label": "Sortează după"
         },
         "steamSync": {
             "failedBody": "Celelalte biblioteci ale tale sunt încă disponibile. Încearcă din nou sau verifică dacă Steam este accesibil.",
@@ -685,5 +703,11 @@
     "languageSelector": {
         "mtNotice": "O parte din textul în această limbă a fost tradus automat și poate conține greșeli.",
         "reportTranslationProblem": "Raportează o problemă de traducere"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Grupează-ți jocurile după starea instalării sau după magazin, ori dezactivează gruparea.",
+            "sort": "Sortează-ți jocurile după nume, ultima rulare sau dimensiunea instalării și inversează direcția."
+        }
     }
 }

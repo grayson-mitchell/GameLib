@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "{{count}} dipilih",
             "groupSelectedCount_other": "{{count}} dipilih"
         },
+        "groupBy": {
+            "installStatus": "Status instalasi",
+            "label": "Kelompokkan menurut",
+            "none": "Tidak ada",
+            "store": "Toko"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} dari {{total}} gim",
             "totalGames": "{{total}} gim"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} tidak terhubung",
             "reconnect": "Hubungkan ulang",
             "signIn": "Masuk"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Naik",
+                "descending": "Turun"
+            },
+            "field": {
+                "installSize": "Ukuran instalasi",
+                "lastPlayed": "Terakhir dimainkan",
+                "name": "Nama"
+            },
+            "label": "Urutkan menurut"
         },
         "steamSync": {
             "failedBody": "Pustaka lainnya masih tersedia. Coba lagi, atau periksa apakah Steam dapat dijangkau.",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "Beberapa teks dalam bahasa ini diterjemahkan oleh mesin dan mungkin mengandung kesalahan.",
         "reportTranslationProblem": "Laporkan masalah terjemahan"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Kelompokkan gim Anda berdasarkan status instalasi atau toko, atau matikan pengelompokan.",
+            "sort": "Urutkan gim Anda berdasarkan nama, terakhir dimainkan, atau ukuran instalasi, lalu balik arahnya."
+        }
     }
 }

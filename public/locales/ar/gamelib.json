@@ -259,6 +259,12 @@
             "groupSelectedCount_many": "تم تحديد {{count}} عنصرًا",
             "groupSelectedCount_other": "تم تحديد {{count}} عنصر"
         },
+        "groupBy": {
+            "installStatus": "حالة التثبيت",
+            "label": "تجميع حسب",
+            "none": "بدون",
+            "store": "المتجر"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} من {{total}} ألعاب",
             "totalGames": "{{total}} ألعاب"
@@ -271,6 +277,18 @@
             "notConnected": "{{store}} غير متصل",
             "reconnect": "إعادة الاتصال",
             "signIn": "تسجيل الدخول"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "تصاعدي",
+                "descending": "تنازلي"
+            },
+            "field": {
+                "installSize": "حجم التثبيت",
+                "lastPlayed": "آخر تشغيل",
+                "name": "الاسم"
+            },
+            "label": "ترتيب حسب"
         },
         "steamSync": {
             "failedBody": "لا تزال مكتباتك الأخرى متاحة. حاول مرة أخرى، أو تحقق من إمكانية الوصول إلى Steam.",
@@ -721,5 +739,11 @@
     "languageSelector": {
         "mtNotice": "تمت ترجمة بعض النصوص بهذه اللغة آليًا وقد تحتوي على أخطاء.",
         "reportTranslationProblem": "الإبلاغ عن مشكلة في الترجمة"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "جمّع ألعابك حسب حالة التثبيت أو المتجر، أو أوقف التجميع.",
+            "sort": "رتّب ألعابك حسب الاسم أو آخر تشغيل أو حجم التثبيت، واعكس الاتجاه."
+        }
     }
 }

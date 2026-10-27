@@ -245,6 +245,12 @@
             "groupSelectedCount_many": "Pasirinkta {{count}}",
             "groupSelectedCount_other": "Pasirinkta {{count}}"
         },
+        "groupBy": {
+            "installStatus": "Įdiegimo būsena",
+            "label": "Grupuoti pagal",
+            "none": "Nėra",
+            "store": "Parduotuvė"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} iš {{total}} žaidimų",
             "totalGames": "{{total}} žaidimų"
@@ -257,6 +263,18 @@
             "notConnected": "Prie {{store}} neprisijungta",
             "reconnect": "Prisijungti iš naujo",
             "signIn": "Prisijungti"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Didėjimo tvarka",
+                "descending": "Mažėjimo tvarka"
+            },
+            "field": {
+                "installSize": "Įdiegimo dydis",
+                "lastPlayed": "Paskutinį kartą žaista",
+                "name": "Pavadinimas"
+            },
+            "label": "Rūšiuoti pagal"
         },
         "steamSync": {
             "failedBody": "Kitos jūsų bibliotekos vis dar pasiekiamos. Bandykite dar kartą arba patikrinkite, ar Steam pasiekiamas.",
@@ -697,5 +715,11 @@
     "languageSelector": {
         "mtNotice": "Dalis šios kalbos teksto buvo išversta automatiškai ir gali turėti klaidų.",
         "reportTranslationProblem": "Pranešti apie vertimo problemą"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Grupuokite žaidimus pagal įdiegimo būseną arba parduotuvę, arba išjunkite grupavimą.",
+            "sort": "Rūšiuokite žaidimus pagal pavadinimą, paskutinį žaidimą ar įdiegimo dydį ir pakeiskite kryptį."
+        }
     }
 }

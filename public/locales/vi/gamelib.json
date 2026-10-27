@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "Đã chọn {{count}}",
             "groupSelectedCount_other": "Đã chọn {{count}}"
         },
+        "groupBy": {
+            "installStatus": "Trạng thái cài đặt",
+            "label": "Nhóm theo",
+            "none": "Không",
+            "store": "Cửa hàng"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} trên {{total}} game",
             "totalGames": "{{total}} game"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} chưa được kết nối",
             "reconnect": "Kết nối lại",
             "signIn": "Đăng nhập"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Tăng dần",
+                "descending": "Giảm dần"
+            },
+            "field": {
+                "installSize": "Dung lượng cài đặt",
+                "lastPlayed": "Chơi gần nhất",
+                "name": "Tên"
+            },
+            "label": "Sắp xếp theo"
         },
         "steamSync": {
             "failedBody": "Các thư viện khác của bạn vẫn khả dụng. Hãy thử lại, hoặc kiểm tra xem có thể kết nối tới Steam không.",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "Một số văn bản trong ngôn ngữ này được dịch máy và có thể chứa lỗi.",
         "reportTranslationProblem": "Báo cáo lỗi bản dịch"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Nhóm trò chơi theo trạng thái cài đặt hoặc cửa hàng, hoặc tắt nhóm.",
+            "sort": "Sắp xếp trò chơi theo tên, lần chơi gần nhất hoặc dung lượng cài đặt, và đảo chiều sắp xếp."
+        }
     }
 }

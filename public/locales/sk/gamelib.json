@@ -245,6 +245,12 @@
             "storeGroup": "Store",
             "viewFavourites": "Obľúbené"
         },
+        "groupBy": {
+            "installStatus": "Stav inštalácie",
+            "label": "Zoskupiť podľa",
+            "none": "Žiadne",
+            "store": "Obchod"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} z {{total}} hier",
             "totalGames": "{{total}} hier"
@@ -257,6 +263,18 @@
             "notConnected": "{{store}} nie je pripojený",
             "reconnect": "Znova pripojiť",
             "signIn": "Prihlásiť sa"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Vzostupne",
+                "descending": "Zostupne"
+            },
+            "field": {
+                "installSize": "Veľkosť inštalácie",
+                "lastPlayed": "Naposledy hrané",
+                "name": "Názov"
+            },
+            "label": "Zoradiť podľa"
         },
         "steamSync": {
             "failedBody": "Vaše ostatné knižnice sú stále dostupné. Skúste to znova alebo skontrolujte, či je Steam dostupný.",
@@ -697,5 +715,11 @@
     "languageSelector": {
         "mtNotice": "Niektoré texty v tomto jazyku boli strojovo preložené a môžu obsahovať chyby.",
         "reportTranslationProblem": "Nahlásiť problém s prekladom"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Zoskupte hry podľa stavu inštalácie alebo obchodu, prípadne zoskupovanie vypnite.",
+            "sort": "Zoraďte hry podľa názvu, posledného spustenia alebo veľkosti inštalácie a otočte smer."
+        }
     }
 }

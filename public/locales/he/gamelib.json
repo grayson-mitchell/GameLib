@@ -238,6 +238,12 @@
             "groupSelectedCount_two": "{{count}} נבחרו",
             "groupSelectedCount_other": "{{count}} נבחרו"
         },
+        "groupBy": {
+            "installStatus": "מצב התקנה",
+            "label": "קבץ לפי",
+            "none": "ללא",
+            "store": "חנות"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} מתוך {{total}} משחקים",
             "totalGames": "{{total}} משחקים"
@@ -250,6 +256,18 @@
             "notConnected": "{{store}} אינו מחובר",
             "reconnect": "התחבר מחדש",
             "signIn": "התחבר"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "עולה",
+                "descending": "יורד"
+            },
+            "field": {
+                "installSize": "גודל התקנה",
+                "lastPlayed": "הופעל לאחרונה",
+                "name": "שם"
+            },
+            "label": "מיין לפי"
         },
         "steamSync": {
             "failedBody": "שאר הספריות שלך עדיין זמינות. נסה שוב, או ודא ש-Steam נגיש.",
@@ -685,5 +703,11 @@
     "languageSelector": {
         "mtNotice": "חלק מהטקסט בשפה הזו תורגם באמצעות תרגום מכונה ועשוי להכיל טעויות.",
         "reportTranslationProblem": "דיווח על תקלת תרגום"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "קבצו את המשחקים שלכם לפי מצב התקנה או לפי חנות, או כבו את הקיבוץ.",
+            "sort": "מיינו את המשחקים שלכם לפי שם, הפעלה אחרונה או גודל התקנה, והפכו את הכיוון."
+        }
     }
 }

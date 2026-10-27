@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "已選取 {{count}} 個",
             "groupSelectedCount_other": "已選取 {{count}} 個"
         },
+        "groupBy": {
+            "installStatus": "安裝狀態",
+            "label": "分組依據",
+            "none": "無",
+            "store": "商店"
+        },
         "header": {
             "filteredOfTotal": "{{total}} 款遊戲中的 {{shown}} 款",
             "totalGames": "{{total}} 款遊戲"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} 未連接",
             "reconnect": "重新連接",
             "signIn": "登入"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "遞增",
+                "descending": "遞減"
+            },
+            "field": {
+                "installSize": "安裝大小",
+                "lastPlayed": "上次遊玩",
+                "name": "名稱"
+            },
+            "label": "排序方式"
         },
         "steamSync": {
             "failedBody": "您的其他資料庫仍然可用。請重試，或確認 Steam 是否可連線。",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "此語言中的部分文字為機器翻譯，可能包含錯誤。",
         "reportTranslationProblem": "回報翻譯問題"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "依安裝狀態或商店將遊戲分組，也可以關閉分組。",
+            "sort": "依名稱、上次遊玩時間或安裝大小排序遊戲，並可切換排序方向。"
+        }
     }
 }

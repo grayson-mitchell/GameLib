@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "{{count}} 件選択中",
             "groupSelectedCount_other": "{{count}} 件選択中"
         },
+        "groupBy": {
+            "installStatus": "インストール状況",
+            "label": "グループ化",
+            "none": "なし",
+            "store": "ストア"
+        },
         "header": {
             "filteredOfTotal": "{{total}}件中{{shown}}件のゲーム",
             "totalGames": "{{total}}件のゲーム"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}}は接続されていません",
             "reconnect": "再接続",
             "signIn": "サインイン"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "昇順",
+                "descending": "降順"
+            },
+            "field": {
+                "installSize": "インストールサイズ",
+                "lastPlayed": "最終プレイ日",
+                "name": "名前"
+            },
+            "label": "並べ替え"
         },
         "steamSync": {
             "failedBody": "他のライブラリは引き続き利用できます。もう一度試すか、Steamに接続できるか確認してください。",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "この言語の一部のテキストは機械翻訳されており、誤りが含まれる場合があります。",
         "reportTranslationProblem": "翻訳の問題を報告"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "ゲームをインストール状況またはストアでグループ化できます。グループ化をオフにすることもできます。",
+            "sort": "ゲームを名前、最終プレイ日、インストールサイズで並べ替え、昇順と降順を切り替えられます。"
+        }
     }
 }

@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "{{count}} valittu",
             "groupSelectedCount_other": "{{count}} valittu"
         },
+        "groupBy": {
+            "installStatus": "Asennuksen tila",
+            "label": "Ryhmittele",
+            "none": "Ei mitään",
+            "store": "Kauppa"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} / {{total}} peliä",
             "totalGames": "{{total}} peliä"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} ei ole yhdistetty",
             "reconnect": "Yhdistä uudelleen",
             "signIn": "Kirjaudu sisään"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Nouseva",
+                "descending": "Laskeva"
+            },
+            "field": {
+                "installSize": "Asennuskoko",
+                "lastPlayed": "Viimeksi pelattu",
+                "name": "Nimi"
+            },
+            "label": "Lajitteluperuste"
         },
         "steamSync": {
             "failedBody": "Muut kirjastosi ovat yhä käytettävissä. Yritä uudelleen tai tarkista, että Steam on tavoitettavissa.",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "Osa tämän kielen tekstistä on konekäännetty ja voi sisältää virheitä.",
         "reportTranslationProblem": "Ilmoita käännösongelmasta"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Ryhmittele pelisi asennuksen tilan tai kaupan mukaan tai poista ryhmittely käytöstä.",
+            "sort": "Lajittele pelisi nimen, viimeksi pelatun ajan tai asennuskoon mukaan ja käännä suunta."
+        }
     }
 }

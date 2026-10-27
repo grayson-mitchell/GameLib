@@ -231,6 +231,12 @@
             "groupSelectedCount_one": "{{count}} valitud",
             "groupSelectedCount_other": "{{count}} valitud"
         },
+        "groupBy": {
+            "installStatus": "Paigalduse olek",
+            "label": "Rühmita",
+            "none": "Puudub",
+            "store": "Pood"
+        },
         "header": {
             "filteredOfTotal": "{{shown}} / {{total}} mängu",
             "totalGames": "{{total}} mängu"
@@ -243,6 +249,18 @@
             "notConnected": "{{store}} pole ühendatud",
             "reconnect": "Ühenda uuesti",
             "signIn": "Logi sisse"
+        },
+        "sort": {
+            "direction": {
+                "ascending": "Kasvav",
+                "descending": "Kahanev"
+            },
+            "field": {
+                "installSize": "Paigalduse suurus",
+                "lastPlayed": "Viimati mängitud",
+                "name": "Nimi"
+            },
+            "label": "Sorteeri"
         },
         "steamSync": {
             "failedBody": "Teie teised teegid on endiselt saadaval. Proovige uuesti või kontrollige, kas Steam on kättesaadav.",
@@ -673,5 +691,11 @@
     "languageSelector": {
         "mtNotice": "Osa selles keeles olevast tekstist on masintõlgitud ja võib sisaldada vigu.",
         "reportTranslationProblem": "Teata tõlkeprobleemist"
+    },
+    "tour": {
+        "library": {
+            "groupBy": "Rühmita oma mängud paigalduse oleku või poe järgi või lülita rühmitamine välja.",
+            "sort": "Sorteeri oma mängud nime, viimati mängitud aja või paigalduse suuruse järgi ja pööra suund ümber."
+        }
     }
 }
