@@ -66,6 +66,7 @@ import {
 } from './installLocation'
 import { readAcfInstalldir } from './acfInstalldir'
 import { bridgeAllowlist } from './bridge/allowlist'
+import { backfillBridgeLaunchTargets } from './bridge/launchTarget'
 import { depotSignalCaptured } from './metadataCapture'
 import {
   captureOwnedAppPlatforms,
@@ -1172,6 +1173,23 @@ export default class SteamLibraryManager implements LibraryManager {
         isMac && listReadyBridgeBottleNames().length > 0
           ? await buildBridgeInstalledMap()
           : null
+      // Phase 54: repair missing bridge launch targets for installed bridge
+      // titles (pre-Phase-54 installs of gated apps) on the lease this Refresh
+      // already holds. Never reached on the ungranted path, so Play stays free
+      // of CM work. Fail-soft: a rejection must not change the sync outcome.
+      if (bridgeInstalledMap && bridgeInstalledMap.size > 0) {
+        await backfillBridgeLaunchTargets(
+          client as unknown as Parameters<
+            typeof backfillBridgeLaunchTargets
+          >[0],
+          [...bridgeInstalledMap.keys()].map(String)
+        ).catch((err: unknown) => {
+          logWarning(
+            ['Steam bridge launch-target backfill failed:', err],
+            LogPrefix.Steam
+          )
+        })
+      }
       // WR-01 (21-17): the incomplete-on-disk set (native ACF present, bit 4
       // unset — e.g. a 1026 cancel handoff). Because this rebuild does
       // library.clear() below and derives each GameInfo purely from the ACF
