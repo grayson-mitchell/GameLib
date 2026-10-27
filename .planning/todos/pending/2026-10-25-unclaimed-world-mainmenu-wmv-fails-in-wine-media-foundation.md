@@ -4,11 +4,12 @@ title: "Unclaimed World's main-menu WMV fails to open in the bridge bottle's Med
 source: 261025-t7i live check, Unclaimed World (284100)
 area: steam-bridge
 files:
-  - public/fixes/284100-steam.json
+  - public/fixes/284100-steam.profile.json
   - src/backend/storeManagers/steam/bridgeKnownFixes.ts
+  - src/backend/storeManagers/steam/bridge/bridge-allowlist.json
 severity: medium
 platform: macos
-ready: live-gate
+ready: human
 ---
 
 With the Steam path working (quick 261025-t7i, `4d26c70d1`), Unclaimed World 284100 gets through
@@ -51,3 +52,58 @@ out.
 
 Done-when: 284100 reaches its main menu in the bridge bottle without the fatal error, through a fix
 expressed as known-fixes data or a generic building block.
+
+## Root cause (debug/unclaimed-world-wmv-mf, 2026-10-26)
+
+CrossOver 26.3's bundled GStreamer 1.24.4 (x86_64) has no WMV3 or WMA9 (Pro) decoder: there is no
+gst-libav, and `winedmo.so` is an ffmpeg-less stub. Wine's `winegstreamer` builds the Media
+Foundation media source on `decodebin`, which logs "Missing decoder: Windows Media Video 9 / Windows
+Media Audio 9", so `CreateObjectFromURL` returns 0xC00D36BB (MF_E_UNSUPPORTED_BYTESTREAM_TYPE). The
+ASF byte-stream handler, the URL scheme and `MFCreateFile` are all fine (asfdemux parses the streams
+as WMV3 1280x720 and WMA9). A standalone MF probe reproduces it with no game, 32- and 64-bit, so
+the bridge and the game are not involved. All 17 bridge bottles have identical MF registry, so no
+per-bottle registry tweak can add a codec.
+
+Tested on a clone of `GameLibSteamBridge-284100` (clone deleted afterwards):
+
+- `winetricks wmv9vcm`: installs the VfW codec `wmv9vcm.dll`; MF does not use VfW. Still 0xC00D36BB
+  (32- and 64-bit).
+- `winetricks wmp11`: installs, but replaces Wine's `mfplat`/`wmvcore`/`wmasf` with the 2006 native
+  XP builds. 64-bit system32 is left without `mfplat`/`wmvcore`, and the 32-bit native `MFPlat.dll`
+  has no `MFCreateSourceResolver` ("unimplemented function"), so MF is worse than before.
+
+Outcome: 284100 is marked `does-not-run` in `bridge-allowlist.json` `knownBad` (the existing
+mechanism; it stays on the bridge behind the informational notice and is not rerouted to bottled
+Steam). The WMP Active Setup marker in `284100-steam.profile.json` is still needed to get this far.
+
+Route proven by spike 042 (`.planning/spikes/042-crossover-gst-libav-overlay/`, VALIDATED
+2026-10-27). An x86_64 gst-libav plugin plus LGPL ffmpeg (10 dylibs, 19 MB, thinned from the
+official GStreamer 1.24.13 universal pkg) on `GST_PLUGIN_PATH` makes CrossOver's GStreamer decode
+WMV3, WMA9 Pro and WMA8 (`avdec_wmv3`, `avdec_wmapro`, `avdec_wmav2`). A live GameLib bridge
+launch then reached the main menu with video and music. That run used a temporary local tier-1
+file (`fixes/local/284100-steam.json`, `envVariables.GST_PLUGIN_PATH` only) pointing at a scratch
+copy of the payload, so nothing shippable exists yet. The `Options.xml` `PlayVideo=false` tip
+from ProtonDB does not work under CrossOver: the game still loads a WMA8 music track at startup
+(`MusicEnabled=false` makes no difference).
+
+Remaining, hence `ready: human` (product decisions before code):
+1. How the payload reaches users: bundled with GameLib, or downloaded on demand with a pinned sha.
+   The upstream pkg is unsigned; its only integrity check is a same-server sha256.
+2. LGPL obligations for ffmpeg and gst-libav (notice plus source offer), and the WMV/WMA patent
+   position.
+3. Then build the tier-2 `overlays` plugin-directory target kind: place the sha-pinned payload in a
+   GameLib-owned directory (never the game folder or the bottle) and add `GST_PLUGIN_PATH` at
+   launch, appending rather than replacing. Give 284100's profile the entry. The fix is generic, so
+   other WMV/WMA titles can reuse it.
+4. Log the known-fix env vars applied at launch. The live run could only be confirmed by its
+   effect.
+
+Done-when (unchanged): 284100 reaches its main menu in the bridge bottle through the shipped
+profile, without the temporary local file. Then lift the knownBad entry and delete
+`fixes/local/284100-steam.json`.
+
+Local workaround (2026-10-27, operator's machine only): the spike 042 payload was moved out of the
+scratchpad into `~/Library/Application Support/gamelib/overlays/gst-libav-1.24.13/` (sha256 per file
+in its `SHA256SUMS`), and `fixes/local/284100-steam.json` now points `GST_PLUGIN_PATH` there, so the
+game keeps playing across reboots. This is a hand-applied stand-in for the unbuilt tier-2 target,
+not a shipped fix; the done-when above is unchanged.

@@ -120,3 +120,17 @@ Update (quick 261026-ng9): spike 034 ran option (a) only (data-only `shimFeature
 productionised. Option (b) (`overlays`, `dllOverrides`, ledger) remains open, as does the
 packaged-build retest of Hoard with the bundled profile, which must pass before Hoard's
 does-not-run entry in `bridge-allowlist.json` is lifted.
+
+Update (debug/unclaimed-world-wmv-mf, 2026-10-26): Unclaimed World (284100) is a codec gap that no
+current building block can close. CrossOver's bundled GStreamer has no WMV3/WMA9 decoder, so MF
+`CreateObjectFromURL` fails with 0xC00D36BB for its main-menu `.wmv`. Tested on a bottle clone:
+`winetricks wmv9vcm` (VfW only, no effect on MF) and `winetricks wmp11` (swaps in a native `mfplat`
+without `MFCreateSourceResolver`, breaking MF) both fail, and a registry or env value cannot add a
+codec. Recorded as a `does-not-run` knownBad entry. The route is tier 2: an `overlays` entry with
+a second target kind. Today's overlays are Windows DLLs placed beside the exe; this payload is a
+host-side macOS `.dylib` set (gst-libav plus LGPL-only ffmpeg: `avdec_wmv3`, `avdec_wmapro`) that
+winegstreamer's unix side loads, so the overlay has to land in a GStreamer plugin directory, plus
+the `GST_PLUGIN_PATH` that points at it. A binary payload stays tier 2 (bundled/local, never
+remote). Unverified: whether CrossOver's GStreamer honours `GST_PLUGIN_PATH` and loads an
+externally built 1.24.x plugin. A spike settles that before the key is designed. Detail in
+`.planning/todos/pending/2026-10-25-unclaimed-world-mainmenu-wmv-fails-in-wine-media-foundation.md`.

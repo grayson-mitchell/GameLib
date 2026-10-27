@@ -30,5 +30,12 @@
       "note": "Win64 (x64 ELEX.exe); runtime-lookup path (SteamInternal_CreateInterface) through per-game bottle GameLibSteamBridge-411300. Was knownBad does-not-run (51-UAT item 15: hung on its loading screen). Root cause found by quick 261027-jgs STUBCALL logging: the game calls SteamUserStats011 RequestCurrentStats (answered locally, no Mac flat export) and waits for UserStatsReceived_t (1101), which the bridge never delivered. Quick 261027-k51 forwards the real 1101 from the helper. Live run 2026-10-27: STATS fetch, CBQ 1101 result=1 app=own, CBDISP targets=1, then press-any-key and main menu. SteamController003, SteamUGC008 and SteamRemoteStorage014 stay answered by x64 null objects. Live evidence (no UAT item yet, so no playVerified): HELLO, GINIT SteamAPI_Init ok=1, CBDISP 1101 targets=1, main menu and in-game for 529s, game-originated CALLs GetStat, GetNumAchievements, GetAchievement, SetStat, StoreStats."
     }
   ],
-  "knownBad": []
+  "knownBad": [
+    {
+      "appId": "284100",
+      "title": "Unclaimed World",
+      "reason": "does-not-run",
+      "note": "debug/unclaimed-world-wmv-mf (2026-10-26): the bridge half works (HELLO, GINIT SteamAPI_InitSafe ok=1) but the game exits with a fatal error 0xC00D36BB (MF_E_UNSUPPORTED_BYTESTREAM_TYPE) loading its main-menu background video Content/MainMenu/TauCetiMainMenu.wmv (ASF, WMV3 video + WMA9 Pro audio). Root cause: CrossOver 26.3's bundled GStreamer 1.24.4 has no WMV3/WMA9 decoder (no gst-libav; winedmo is an ffmpeg-less stub), so winegstreamer cannot create a media source. A standalone Media Foundation probe reproduces it with no game running, for both 32- and 64-bit. Tested and ruled out on a clone of the bottle: winetricks wmv9vcm (installs wmv9vcm.dll, a VfW codec MF never uses; still 0xC00D36BB) and winetricks wmp11 (replaces Wine's mfplat with the 2006 native one, which has no MFCreateSourceResolver, so MF breaks outright). Not fixable by tier-1 keys (winetricks, env) or registry; the route is a tier-2 profile with an overlays entry whose target is a GStreamer plugin directory (a libav-enabled plugin set on GST_PLUGIN_PATH). Spike 042 (2026-10-27) proved it: with that plugin set, a live bridge launch reached the main menu with video and music. The overlays building block is not built yet. Lift this entry once that profile makes CreateObjectFromURL succeed on the video and a live run reaches the main menu. Never modify game files, so re-encoding the video is out."
+    }
+  ]
 }

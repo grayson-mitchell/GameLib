@@ -161,7 +161,7 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(() => bridgeAllowlistSchema.parse(JSON.parse(raw))).not.toThrow()
   })
 
-  test('the bundled bridge-allowlist.json is version 2 with no evidence-backed knownBad entries (51-19, 51-27)', () => {
+  test('the bundled bridge-allowlist.json is version 2 with Unclaimed World as its evidence-backed knownBad entries (51-19, 51-27, debug/unclaimed-world-wmv-mf)', () => {
     const raw = readFileSync(
       join(__dirname, '..', 'bridge-allowlist.json'),
       'utf-8'
@@ -169,7 +169,13 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     const parsed = JSON.parse(raw)
 
     expect(parsed.version).toBe(2)
-    expect(parsed.knownBad.map((e: { appId: string }) => e.appId)).toEqual([])
+    expect(parsed.knownBad.map((e: { appId: string }) => e.appId)).toEqual([
+      '284100'
+    ])
+  })
+
+  test('Unclaimed World (284100) is does-not-run: CrossOver GStreamer has no WMV3/WMA9 decoder (debug/unclaimed-world-wmv-mf)', () => {
+    expect(bridgeAllowlist.knownBadReason('284100')).toBe('does-not-run')
   })
 
   // Evidence: 261026-ng9 SUMMARY "Live retest: packaged debug build" (2026-10-26):
