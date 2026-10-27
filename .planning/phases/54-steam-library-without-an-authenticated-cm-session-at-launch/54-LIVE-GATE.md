@@ -423,3 +423,49 @@ Observations, not failures; no item failed and no todo was created.
 5. A no-logon Refresh path (research option B1, MobileApp token plus Web API GetOwnedGames) was considered and explicitly declined for now; to be reassessed after use.
 
 The session directory is left in place for the operator to remove once satisfied.
+
+## Run record — 2026-10-28 (plan 54-11), post-review-fix re-run of items 5-13
+
+Result: all 13 items of 54-UAT.md pass in the final state. Items 5-13 were re-run on the build that includes the code-review fixes (CR-01 and WR-01..WR-09, commits `84c2a046e`..`9135c2c50`, report `0c19eabdd`). Items 1-4 were not re-run; they exercise the launch, browse and Play paths the review fixes did not touch. Evidence stayed in `/tmp/gamelib-gate-rerun-20261027T205952Z/` (not committed); this record carries counts, state words and timestamps only. Item 11 FAILED on the first post-fix build, was fixed in `95a89d8d3`, and passed on the rebuilt sidecar.
+
+### Builds
+
+| Build | HEAD | Sidecar rebuilt | Used for |
+|-------|------|-----------------|----------|
+| A: review fixes | `20c1fe9d5` (contains `84c2a046e`..`9135c2c50`) | 10:02:50 | items 5-9, item 10 attempts 1-2, item 11 first run (FAIL) |
+| B: mid-connect logon fix | `95a89d8d3` (debug session `eb445bd56`) | 10:38:05 | item 10 repeat, item 11 retry, items 12-13 |
+
+### Scores
+
+Launch ordinals count GameLib launches in this session, 1-9.
+
+| Item | Launch | Result | Key counts / timestamps |
+|------|--------|--------|-------------------------|
+| 5 | 1 | pass | wrap=toggled 10:03:39, 1 user-initiated logoff, 1 `processing complete`, `Logged On` and `go-offline wrap: Mac Steam back online, marker cleared` 10:03:44, authenticated idle close 10:04:46; N=385 unchanged; operator: Friends dropped and came back, status works, Steam menu says Go Offline |
+| 6 | 1 | pass | install of Avadon 2 (233310): `reason=user-install` wrap=toggled 10:05:48, marker cleared 10:05:53, installed 10:06:16, authenticated idle close 10:07:19 (install finished earlier); operator Friends ok |
+| 7 | 1 | pass | `Mac Steam state=Logged Off, no toggle needed` and `wrap=already-offline` 10:09:10, 0 `wrap=toggled`; connection_log slice 0 `user initiated logoff`, 0 `processing complete`; Steam restored online by the operator afterwards. An Epic 504 Gateway Timeout appeared in this Refresh; an Epic server error, not a Phase 54 issue |
+| 8a | 1 | pass | Refresh with Wazhack running: gooffline 10:11:56, no user-initiated logoff within 5000 ms, `CM logon skipped` 10:12:01, 0 authenticated logons; dialog copy now tells the user to quit the game first (WR-06, operator-confirmed); Cancel left Steam online; marker kept as toggled-unconfirmed |
+| 8b | 1 | pass | CR-01: Isaac (113200), platform Windows, install 10:15:47 -> dialog (logon skipped 10:15:52); operator quit the game, Go Offline 10:16:31, Continue -> `wrap=guided-restore` 10:16:35, goonline 10:16:38, marker cleared 10:16:39; install logged `source bottle` and `persisted forced Windows-via-bottle verdict` 10:16:49, so the forced-Windows verdict survives the guided Continue |
+| 9 | 1 | pass | Cmd+Q 10:18:31; shell and sidecar gone in the same second |
+| 10 | 2 (attempt 1, VOID), 3 (attempt 2, superseded), 5 (repeat, scored) | pass | See deviations. Repeat on build B: gooffline 10:38:52, logon 10:38:53, quit 10:38:54 during the settle, `go-offline restore trigger=shutdown` and wrap goonline 10:38:54, `Logged On` 10:38:55, no sync after quit, sidecar gone, marker absent, WantsOfflineMode count 0; operator Friends ok. Attempt 2 on build A had also passed (restore 10:22:36, Logged On 10:22:38) |
+| 11 | 4 (build A, FAIL), 6 (build B, scored) | pass | First run FAIL, see below. Retry on build B: shell kill 10:40:49, the logon had already landed so the session closed `cause=disconnected`, `restore trigger=shutdown` goonline 10:40:49, `Logged On` 10:40:50, sidecar gone within 4 s, no `loggedOn` or sync after EOF over 60 s, marker absent, count 0; operator Friends ok |
+| 12 | 7 (interrupt), 8 (boot) | pass | Interrupt: gooffline 10:43:37, STOP+KILL 10:43:38; at +20 s `Logged Off`, marker present, count 1, 0 processes. Boot (launch 8) restore firing goonline 10:44:32, back online and marker cleared 10:44:34, `Logged On` 10:44:34, marker absent, count 0; operator Friends ok |
+| 13 | 8 (manual offline + quit), 9 (relaunch 10:46:12) | pass | 0 restore lines in both logs, 0 authenticated logons, 0 `processing complete`, last state `Logged Off`, marker absent, count 1; operator: Steam stayed offline |
+
+New confirmation line seen after every wrap on both builds: `go-offline wrap: Mac Steam back online, marker cleared` (WR-01).
+
+### Item 11 failure on build A, and the fix
+
+Launch 4. The shell was killed with `kill -9` at 10:24:20 and the shutdown restore fired goonline at once (`Logged On` 10:24:22). But the CM connect was slow (7.9 s cold connect), so the kill landed mid-connect. steam-user's 5 s `_logonMsgTimeout` re-sent the logon about 6 s later, outside the wrap and while Mac Steam was online: `loggedOn` 10:24:27, an authenticated session next to a signed-in Mac Steam, exactly what Phase 54 forbids. The refresh then ran to completion (385 owned, sync complete 10:24:29). The wrap's own goonline fired at 10:24:27 and its confirm poll saw no new logon, logging `online not confirmed within 10000ms, marker kept` at 10:24:37 (a false negative; marker file was absent afterwards). The sidecar was orphaned for more than 107 s, breaking the exit contract; the orchestrator killed it per the contract. Operator: Steam online, Friends signed in.
+
+Fix `95a89d8d3` ("stop a mid-connect Steam logon from completing after stdin EOF"), debug session `eb445bd56` (`.planning/debug/shutdown-mid-connect-logon-survives.md`): a shutdown now aborts an in-flight logon so steam-user's retry cannot complete after stdin EOF.
+
+Honest caveat: the passing item 11 retry (launch 6) did NOT reproduce the slow mid-connect path live. The logon had already landed before the kill, so that run exercised the ordinary restore and clean-exit path only. The mid-connect abort is covered by unit tests in `95a89d8d3`, including one against the real steam-user library, not by a live pass. The live failure on build A is the only live evidence of the slow path.
+
+### Deviations from the contract
+
+- Item 10 attempt 1 (launch 2) VOID: the wrap had completed (online confirmed 10:19:56) before the quit at 10:20:11, so no shutdown restore line; the quit was too late. Attempt 2 (launch 3, build A) passed, then was superseded by the repeat on build B (launch 5), which is the scored run. The repeat passed first try.
+- Launch numbering 1-9 (item 10: 2, 3; item 11 first run: 4; item 10 repeat: 5; item 11 retry: 6; item 12: 7, 8; item 13: 8, 9), shifted against the contract because of the extra attempts.
+- Before launch 1 the shell terminal failed on a working-directory problem; environmental, no GameLib code involved.
+- Item 8 was extended into 8a (game running, dialog copy, Cancel) and 8b (CR-01 via the guided Continue). The install-folder half of CR-01 could not be tested live: the operator has one Steam library, so there is no folder dropdown.
+- Item 7: the operator verdict line for the offline Refresh was not logged in the session notes; the pass rests on the log and connection_log counts above.
