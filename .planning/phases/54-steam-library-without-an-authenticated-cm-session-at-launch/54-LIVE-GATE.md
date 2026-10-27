@@ -379,3 +379,47 @@ IMPOSSIBLE verdicts: none. CONDITIONAL rows (item 3/4 anonymous line, item 4 bri
 state the condition and what the runner records if it does not hold. Count of structural impossibilities
 and unresolved requirement interactions found at authoring: 0 unresolved (3 interactions flagged and
 resolved in the contract text).
+
+## Run record — 2026-10-28 (plan 54-11)
+
+Result: all 13 items of 54-UAT.md passed on the operator's Mac. Evidence stayed in `/tmp/gamelib-gate-20261027T094938Z/` (not committed); this record carries counts, state words and timestamps only. The UAT gap "Mac Steam is never left offline by GameLib" is resolved (items 10-13).
+
+### Deviations from the contract
+
+- PC1: Mac Steam was not freshly restarted before launch 1. CONNLOG showed it continuously Logged On since 22:58 the previous night with no GameLib-caused events. The launch-1 delimiter and the item-1 offsets were written retroactively (dev was already running).
+- Launch ordinals shifted against the contract. Item 10 attempt 1 = launch 2 (VOID: the operator's Cmd+Q went to Mac Steam, which the gooffline URL had brought to the foreground, so Steam itself quit; steam_osx was absent afterwards). Item 10 attempt 2 = launch 3 (scored; triggered before offsets were recorded, so sliced by timestamp, launch-3 log begins 08:51:18). Item 11 = launch 4. Item 12 = launches 5 (interrupt) and 6 (boot restore). Item 13 = launch 6 (manual offline and quit) and launch 7 (relaunch).
+- Item 7 first attempt VOID: the operator pressed Refresh before Steam was actually offline (Steam was Logged On, so the wrap toggled normally). Re-armed after a confirmed CONNLOG Logged Off at 08:27:38.
+- Items 9 and 11: sidecar exit confirmed within 10 s, exact second not resolved.
+- Contract note: CONNLOG's "Shutdown" token also appears in a normal gooffline; it does not by itself indicate Steam quit. Item 10 attempt 1's VOID rests on steam_osx being absent afterwards.
+
+### Scores
+
+| Item | Launch | Result | Key counts / timestamps |
+|------|--------|--------|-------------------------|
+| 1 | 1 | pass | 0 authenticated, 0 logoff; Friends ok |
+| 2 | 1 | pass | 0 authenticated, 0 wrap lines, 0 logoff |
+| 3 | 1 | pass | 1 anonymous launch-target (08:09:03), 0 authenticated, 0 logoff; Avernum 6; neither behaviour change hit |
+| 4 | 1 | pass | same slice as item 3 |
+| 5 | 1 | pass | logoff and wrap=toggled 08:10:23, Logged On 08:10:27, idle close 08:11:31; N0=N5=385 |
+| 6 | 1 | pass | user-install wrap=toggled 08:19:04, Logged On 08:19:08, idle close 08:20:32; World of Goo |
+| 7 | 1 | pass | 1 wrap=already-offline (08:29:13), 0 logoff, 0 processing complete |
+| 8 | 1 | pass, outcome (b) | 1 CM logon skipped (08:39:39), 1 guided-restore (08:43:42), Logged On 08:43:46 |
+| 9 | 1 | pass | shell and sidecar gone by 08:45:01 |
+| 10 | 3 (attempt 2) | pass | restore trigger=shutdown 08:51:49, Logged On 08:51:51, marker absent, VDF count 0 |
+| 11 | 4 | pass | stdin closed and restore trigger=shutdown 08:55:17, Logged On 08:55:18, marker absent, VDF count 0 |
+| 12 | 5, 6 | pass | interrupted state reproduced (Logged Off, marker present, VDF count 1); boot restore 08:58:28 to 08:58:30, Logged On, marker absent, count 0 |
+| 13 | 6, 7 | pass | 0 restore lines in both logs, 0 processing complete, last state Logged Off, VDF count 1 |
+
+Operator Friends verdicts: items 1-3 signed in and status changeable; item 5 friends dropped and came back, status works, 385 unchanged; item 6 same; item 7 Steam stayed offline; item 8 Steam came back online, Friends signed in, status works; items 10, 11, 12 signed in and status works; item 13 Steam stayed offline.
+
+### Findings / follow-ups
+
+Observations, not failures; no item failed and no todo was created.
+
+1. After a wrap, Mac Steam's UI can believe it is offline while the CM is Logged On and Friends works: at about 08:24 the Steam menu offered "Go Online" and the operator's click logged a "go online" UI request with no CONNLOG change. steamui_login shows "Ignoring success response due to current state" after every wrap's goonline.
+2. Mac Steam ignores Go Offline (the URL and its own menu) while a game is running, so the guided dialog asks for something impossible until the game quits. The dialog copy should say to quit the game first.
+3. `steam://open/gooffline` brings Mac Steam to the foreground (focus steal). This caused item 10's VOID attempt.
+4. `runThenGoOnline` (macSteamOffline.ts, about line 500) clears the owed marker right after firing goonline via `shell.openExternal`, without confirming Steam came back. Not observed to fail in this run.
+5. A no-logon Refresh path (research option B1, MobileApp token plus Web API GetOwnedGames) was considered and explicitly declined for now; to be reassessed after use.
+
+The session directory is left in place for the operator to remove once satisfied.
