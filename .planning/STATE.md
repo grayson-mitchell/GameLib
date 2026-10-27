@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-27 - Completed quick task 261027-nd3: bridge shared redists run under Wine's null display driver
+Last activity: 2026-10-27 - Completed quick task 261027-n77: known-fix overlays target and gst-libav codec overlay for Unclaimed World
 
 Progress: [██████████] 100%
 
@@ -454,6 +454,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261027-m1m | Known-fix `registry` values already present in the prefix `system.reg`/`user.reg` (same type and data; REG_DWORD/REG_SZ, conservative reader, doubt re-runs) no longer spawn a `reg add` per launch, and a timed-out `reg add` is SIGKILLed instead of left running. Both callers (Steam bridge, non-Steam prefix). Cause: each cold Wine session can stall ~80 s in `wineboot --init`; Unclaimed World spent 2 extra sessions per launch. Tests 96/97 (one pre-existing 63000-profile failure, unrelated). Live check passed: 3 launches of 284100, no `reg add`, game up in 1-2 s. | 2026-10-27 | `dd0b27fd9` | Done | [261027-m1m-known-fix-registry-skip-reg-add-when-val](./quick/261027-m1m-known-fix-registry-skip-reg-add-when-val/) |
 | fast | Stale "bundled 63000 profile" test fixed: it asserted `public/fixes/63000-steam.json` absent, but 261027-bqe bundled it for the macArch seed. It now asserts the tier-1 file holds only `title`/`macArch`/`notes`, so the WGL fix stays profile-only. steamBridgeKnownFixes 65/65. | 2026-10-27 | `ec9dff2a9` | Done | — |
 | 261027-m1r | Wine PE harness (P55-9) for x86 callback 168 `__thiscall` dispatch: zig-built 32-bit exe + real x86 `steam_api.dll` under CrossOver wineloader, in-process fake helper answering CONTROL slot 6 with a canned 168 frame. ECX/payload/iCallback/return-into-shim/ESP-balanced all PASS; no-callee-pop mutant crashes (negative control). `pnpm test:x86-callback-wine` 12/12; self-skips without CrossOver/zig. Todo closed harness-confirmed; no real 32-bit title exercised live. | 2026-10-27 | `c9a679272` | Verified | [261027-m1r-wine-pe-harness-for-x86-bridge-callback](./quick/261027-m1r-wine-pe-harness-for-x86-bridge-callback/) |
+| 261027-n77 | Tier-2 known-fix `overlays` (plugin-directory target): profiles name a catalogue id only; the catalogue pins a GitHub release asset (sha256 `57e5f74b…`, 8279592 B) plus 10 per-file sums. Strict in-Node tar reader, verify-before-parse and re-verify-before-rename, 120 s unref'd deadline, warn-and-launch-without on any failure. `GST_PLUGIN_PATH` appended + deduped on the Steam bridge and non-Steam paths; known-fix env logged at launch. 284100 profile entry, LGPL notice (About line, THIRD-PARTY-NOTICES.md), publish checklist. Live gate pending operator publish. | 2026-10-27 | `eced60c9d` | Needs Review | [261027-n77-known-fix-overlays-plugin-directory-targ](./quick/261027-n77-known-fix-overlays-plugin-directory-targ/) |
 
 ## Session Continuity
 
