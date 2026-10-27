@@ -34,6 +34,7 @@ import {
   GUIDED_RESTORE_TTL_MS,
   STEAM_GO_OFFLINE_URL,
   STEAM_GO_ONLINE_URL,
+  __macSteamOnlineConfirmForTests,
   __resetMacSteamOfflineForTests,
   checkGuidedOfflineReady,
   readMacSteamCmState,
@@ -148,6 +149,11 @@ describe('withMacSteamOffline', () => {
         order.push(url)
         if (url === STEAM_GO_OFFLINE_URL)
           fs.appendFileSync(logPath, LOGOFF_LINE)
+      },
+      // 54-REVIEW WR-01: the goonline goes through the detached opener.
+      openUrlDetached: (url) => {
+        urls.push(url)
+        order.push(url)
       }
     })
     const connect = jest.fn(async () => {
@@ -198,18 +204,23 @@ describe('withMacSteamOffline', () => {
 
   it('connect throws: the error propagates and goonline still fires, without a settle wait', async () => {
     fs.writeFileSync(logPath, ONLINE_LINE)
+    let clockAtOnline = -1
     const deps = makeDeps({
       openUrl: (url) => {
         urls.push(url)
         if (url === STEAM_GO_OFFLINE_URL)
           fs.appendFileSync(logPath, LOGOFF_LINE)
+      },
+      openUrlDetached: (url) => {
+        urls.push(url)
+        clockAtOnline = clock
       }
     })
-    const before = () => clock
     const connect = jest.fn().mockRejectedValue(new Error('boom'))
     await expect(withMacSteamOffline(connect, deps)).rejects.toThrow('boom')
     expect(urls).toEqual([STEAM_GO_OFFLINE_URL, STEAM_GO_ONLINE_URL])
-    expect(before()).toBeLessThan(2000)
+    expect(clockAtOnline).toBeGreaterThanOrEqual(0)
+    expect(clockAtOnline).toBeLessThan(2000)
   })
 
   it.each(['win32', 'linux'] as const)(
@@ -230,13 +241,22 @@ describe('withMacSteamOffline', () => {
 describe('guided restore', () => {
   it('checkGuidedOfflineReady arms a one-shot restore', async () => {
     fs.writeFileSync(logPath, OFFLINE_LINE)
-    const deps = makeDeps()
+    const deps = makeDeps({
+      openUrlDetached: (url) => {
+        urls.push(url)
+        fs.appendFileSync(logPath, ONLINE_LINE)
+      }
+    })
     expect(await checkGuidedOfflineReady(deps)).toEqual({ status: 'ready' })
     const connect = jest.fn().mockResolvedValue('v')
     const r = await withMacSteamOffline(connect, deps)
     expect(r.wrap).toBe('guided-restore')
     expect(urls).toEqual([STEAM_GO_ONLINE_URL])
+    // 54-REVIEW WR-01: the marker clears once Steam is confirmed online.
+    await __macSteamOnlineConfirmForTests()
     urls.length = 0
+    // The user then goes offline again by choice.
+    fs.appendFileSync(logPath, OFFLINE_LINE)
     const r2 = await withMacSteamOffline(connect, deps)
     expect(r2.wrap).toBe('already-offline')
     expect(urls).toEqual([])

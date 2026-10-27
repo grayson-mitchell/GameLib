@@ -14,7 +14,8 @@
  * user to go offline by hand.
  *
  * The wrap records the goonline it owes on disk before going offline and
- * clears the record only after goonline. `restoreMacSteamOnlineIfOwed` is the
+ * clears the record only once Mac Steam is confirmed back online after the
+ * goonline (54-REVIEW WR-01). `restoreMacSteamOnlineIfOwed` is the
  * shutdown and boot cover for a wrap that never reached its goonline, and the
  * boot call is the only cover for a `kill -9` of the sidecar.
  */
@@ -184,6 +185,12 @@ function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
 // is never undone.
 let guidedArmedAt: number | null = null
 
+// 54-REVIEW WR-01: bumped on every marker write, so a late goonline
+// confirmation clears only the marker it was fired for, never a newer one.
+let debtGeneration = 0
+// The in-session goonline confirmation still watching connection_log, if any.
+let onlineConfirmInFlight: Promise<void> | null = null
+
 // One restore flight per trigger: a shutdown never waits on a boot's confirm window.
 const restoreInFlight: {
   boot: Promise<MacSteamRestoreOutcome> | null
@@ -195,12 +202,20 @@ export function __resetMacSteamOfflineForTests(): void {
   guidedArmedAt = null
   restoreInFlight.boot = null
   restoreInFlight.shutdown = null
+  debtGeneration = 0
+  onlineConfirmInFlight = null
+}
+
+// ts-prune-ignore-next
+export function __macSteamOnlineConfirmForTests(): Promise<void> {
+  return onlineConfirmInFlight ?? Promise.resolve()
 }
 
 function recordOnlineDebt(
   by: 'toggled' | 'guided',
   deps: MacSteamOfflineDeps
 ): void {
+  debtGeneration++
   try {
     const p = deps.onlineDebtPath()
     mkdirSync(dirname(p), { recursive: true })
@@ -498,9 +513,66 @@ async function runThenGoOnline<T>(
   } finally {
     if (ok) await deps.sleep(MAC_STEAM_ONLINE_SETTLE_MS)
     logInfo('[Steam] go-offline wrap: firing goonline', LogPrefix.Steam)
-    deps.openUrl(STEAM_GO_ONLINE_URL)
-    clearOnlineDebt(deps)
+    fireGoOnlineAndConfirm(deps)
   }
+}
+
+/**
+ * 54-REVIEW WR-01: the in-session goonline. Fired through the detached
+ * `/usr/bin/open` (not the shell's stdout frame, which has no acknowledgement
+ * and is dropped when the shell is exiting), then confirmed from
+ * connection_log the way the boot restore confirms it. The marker is cleared
+ * only on confirmation; unconfirmed, it stays owed for the next wrap, the
+ * shutdown restore or the boot restore. Never awaited by the wrap, so the
+ * lease holder's result is not held for the confirm window; the watch polls
+ * on `deps.sleep` (unref'd) and is bounded at MAC_STEAM_RESTORE_CONFIRM_MS.
+ */
+function fireGoOnlineAndConfirm(deps: MacSteamOfflineDeps): void {
+  const gen = debtGeneration
+  let logPath: string | null = null
+  try {
+    logPath = deps.connectionLogPath()
+  } catch {
+    logPath = null
+  }
+  const since = deps.now()
+  // Watch BEFORE the fire so the start offset precedes any confirming line.
+  const seen =
+    logPath === null
+      ? Promise.resolve(false)
+      : watchConnectionLog(
+          logPath,
+          /processing complete/,
+          MAC_STEAM_RESTORE_CONFIRM_MS,
+          deps
+        )
+  deps.openUrlDetached(STEAM_GO_ONLINE_URL)
+  const p: Promise<void> = seen
+    .then((saw) => {
+      const confirmed =
+        saw ||
+        (logPath !== null &&
+          readMacSteamCmStateSince(logPath, since) === 'Logged On')
+      if (!confirmed) {
+        logWarning(
+          `[Steam] go-offline wrap: online not confirmed within ${MAC_STEAM_RESTORE_CONFIRM_MS}ms, marker kept`,
+          LogPrefix.Steam
+        )
+        return
+      }
+      // A wrap that started after this goonline owns the marker now.
+      if (debtGeneration !== gen) return
+      clearOnlineDebt(deps)
+      logInfo(
+        '[Steam] go-offline wrap: Mac Steam back online, marker cleared',
+        LogPrefix.Steam
+      )
+    })
+    .catch(() => undefined)
+    .finally(() => {
+      if (onlineConfirmInFlight === p) onlineConfirmInFlight = null
+    })
+  onlineConfirmInFlight = p
 }
 
 async function runRestore(

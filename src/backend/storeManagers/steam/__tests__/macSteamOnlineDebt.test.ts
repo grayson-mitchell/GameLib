@@ -29,12 +29,13 @@ jest.mock('backend/config', () => ({
 }))
 
 import { spawn } from 'child_process'
-import { logWarning } from 'backend/logger'
+import { logInfo, logWarning } from 'backend/logger'
 import {
   GuidedOfflineRequiredError,
   MAC_STEAM_RESTORE_CONFIRM_MS,
   STEAM_GO_OFFLINE_URL,
   STEAM_GO_ONLINE_URL,
+  __macSteamOnlineConfirmForTests,
   __resetMacSteamOfflineForTests,
   checkGuidedOfflineReady,
   readMacSteamCmStateSince,
@@ -120,7 +121,7 @@ afterEach(() => {
 })
 
 describe('marker lifecycle in the wrap', () => {
-  it('toggled: marker exists when gooffline fires, is gone afterwards, keys are since/by/pid', async () => {
+  it('toggled: marker exists when gooffline fires, is gone once online is confirmed, keys are since/by/pid', async () => {
     fs.writeFileSync(logPath, onlineLine(BASE - 60000))
     let atFire: string | null = null
     const deps = makeDeps({
@@ -132,19 +133,27 @@ describe('marker lifecycle in the wrap', () => {
             : null
           fs.appendFileSync(logPath, offlineLine(clock))
         }
+      },
+      openUrlDetached: (url) => {
+        urls.push('detached:' + url)
+        fs.appendFileSync(logPath, onlineLine(clock))
       }
     })
     await withMacSteamOffline(jest.fn().mockResolvedValue('v'), deps)
+    await __macSteamOnlineConfirmForTests()
     expect(atFire).not.toBeNull()
     const parsed = JSON.parse(atFire as unknown as string)
     expect(Object.keys(parsed).sort()).toEqual(['by', 'pid', 'since'])
     expect(parsed.by).toBe('toggled')
     expect(parsed.pid).toBe(4242)
     expect(fs.existsSync(markerPath)).toBe(false)
-    expect(urls).toEqual([STEAM_GO_OFFLINE_URL, STEAM_GO_ONLINE_URL])
+    expect(urls).toEqual([
+      STEAM_GO_OFFLINE_URL,
+      'detached:' + STEAM_GO_ONLINE_URL
+    ])
   })
 
-  it('connect throws: goonline still fires and the marker is gone', async () => {
+  it('54-REVIEW WR-01: the in-session goonline goes detached (never the shell frame)', async () => {
     fs.writeFileSync(logPath, onlineLine(BASE - 60000))
     const deps = makeDeps({
       openUrl: (url) => {
@@ -153,10 +162,107 @@ describe('marker lifecycle in the wrap', () => {
           fs.appendFileSync(logPath, offlineLine(clock))
       }
     })
+    await withMacSteamOffline(jest.fn().mockResolvedValue('v'), deps)
+    await __macSteamOnlineConfirmForTests()
+    expect(urls.filter((u) => u === STEAM_GO_ONLINE_URL)).toEqual([])
+    expect(urls).toContain('detached:' + STEAM_GO_ONLINE_URL)
+  })
+
+  it('54-REVIEW WR-01: an unconfirmed goonline keeps the marker owed', async () => {
+    fs.writeFileSync(logPath, onlineLine(BASE - 60000))
+    const deps = makeDeps({
+      openUrl: (url) => {
+        urls.push(url)
+        if (url === STEAM_GO_OFFLINE_URL)
+          fs.appendFileSync(logPath, offlineLine(clock))
+      }
+    })
+    await withMacSteamOffline(jest.fn().mockResolvedValue('v'), deps)
+    await __macSteamOnlineConfirmForTests()
+    expect(fs.existsSync(markerPath)).toBe(true)
+    expect(
+      (logWarning as jest.Mock).mock.calls.some((c) =>
+        String(c[0]).includes('online not confirmed within')
+      )
+    ).toBe(true)
+    expect(
+      (logInfo as jest.Mock).mock.calls.some((c) =>
+        String(c[0]).includes('marker cleared')
+      )
+    ).toBe(false)
+  })
+
+  it('54-REVIEW WR-01: a fresh Logged On line is the confirmation fallback', async () => {
+    fs.writeFileSync(logPath, onlineLine(BASE - 60000))
+    const deps = makeDeps({
+      openUrl: (url) => {
+        urls.push(url)
+        if (url === STEAM_GO_OFFLINE_URL)
+          fs.appendFileSync(logPath, offlineLine(clock))
+      },
+      openUrlDetached: (url) => {
+        urls.push('detached:' + url)
+        // No 'processing complete' text, but a bracketed Logged On state.
+        fs.appendFileSync(
+          logPath,
+          `${stamp(clock)} [Logged On, 4, 19] [U:1:1] state change\r\n`
+        )
+      }
+    })
+    await withMacSteamOffline(jest.fn().mockResolvedValue('v'), deps)
+    await __macSteamOnlineConfirmForTests()
+    expect(fs.existsSync(markerPath)).toBe(false)
+  })
+
+  it('54-REVIEW WR-01: a late confirmation never clears a marker a newer step recorded', async () => {
+    fs.writeFileSync(logPath, onlineLine(BASE - 60000))
+    let release!: () => void
+    const gate = new Promise<void>((r) => {
+      release = r
+    })
+    let holdPolls = false
+    const deps = makeDeps({
+      openUrl: (url) => {
+        urls.push(url)
+        if (url === STEAM_GO_OFFLINE_URL)
+          fs.appendFileSync(logPath, offlineLine(clock))
+      },
+      openUrlDetached: (url) => {
+        urls.push('detached:' + url)
+        holdPolls = true
+      },
+      sleep: async (ms) => {
+        if (holdPolls) await gate
+        clock += ms
+      }
+    })
+    await withMacSteamOffline(jest.fn().mockResolvedValue('v'), deps)
+    // Steam still reads Logged Off: the guided check records a newer marker.
+    await checkGuidedOfflineReady(deps)
+    fs.appendFileSync(logPath, onlineLine(clock))
+    release()
+    await __macSteamOnlineConfirmForTests()
+    expect(JSON.parse(fs.readFileSync(markerPath, 'utf8')).by).toBe('guided')
+  })
+
+  it('connect throws: goonline still fires and the marker is gone once confirmed', async () => {
+    fs.writeFileSync(logPath, onlineLine(BASE - 60000))
+    const deps = makeDeps({
+      openUrl: (url) => {
+        urls.push(url)
+        if (url === STEAM_GO_OFFLINE_URL)
+          fs.appendFileSync(logPath, offlineLine(clock))
+      },
+      openUrlDetached: (url) => {
+        urls.push('detached:' + url)
+        fs.appendFileSync(logPath, onlineLine(clock))
+      }
+    })
     await expect(
       withMacSteamOffline(jest.fn().mockRejectedValue(new Error('boom')), deps)
     ).rejects.toThrow('boom')
-    expect(urls).toContain(STEAM_GO_ONLINE_URL)
+    await __macSteamOnlineConfirmForTests()
+    expect(urls).toContain('detached:' + STEAM_GO_ONLINE_URL)
     expect(fs.existsSync(markerPath)).toBe(false)
   })
 
@@ -186,10 +292,19 @@ describe('marker lifecycle in the wrap', () => {
     fs.writeFileSync(logPath, offlineLine(BASE - 1000))
     writeMarker()
     const connect = jest.fn().mockResolvedValue('v')
-    const r = await withMacSteamOffline(connect, makeDeps())
+    const r = await withMacSteamOffline(
+      connect,
+      makeDeps({
+        openUrlDetached: (url) => {
+          urls.push('detached:' + url)
+          fs.appendFileSync(logPath, onlineLine(clock))
+        }
+      })
+    )
+    await __macSteamOnlineConfirmForTests()
     expect(connect).toHaveBeenCalledWith('guided-restore')
     expect(r.wrap).toBe('guided-restore')
-    expect(urls).toEqual([STEAM_GO_ONLINE_URL])
+    expect(urls).toEqual(['detached:' + STEAM_GO_ONLINE_URL])
     expect(fs.existsSync(markerPath)).toBe(false)
   })
 
@@ -233,7 +348,10 @@ describe('marker lifecycle in the wrap', () => {
     const connect = jest.fn().mockResolvedValue('v')
     const r = await withMacSteamOffline(connect, deps)
     expect(r.wrap).toBe('toggled')
-    expect(urls).toEqual([STEAM_GO_OFFLINE_URL, STEAM_GO_ONLINE_URL])
+    expect(urls).toEqual([
+      STEAM_GO_OFFLINE_URL,
+      'detached:' + STEAM_GO_ONLINE_URL
+    ])
     expect(
       (logWarning as jest.Mock).mock.calls.some((c) =>
         String(c[0]).includes('could not record the owed goonline')
