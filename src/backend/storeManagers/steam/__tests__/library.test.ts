@@ -55,6 +55,7 @@ import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import i18next, { t as i18nextT } from 'i18next'
+import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { SteamUser } from '../user'
 import {
   noteRefreshTrigger,
@@ -275,6 +276,9 @@ jest.mock('../bridge/allowlist', () => ({
 jest.mock('../anonymousClient', () => ({
   getAnonymousPicsClient: jest.fn()
 }))
+jest.mock('../bridge/launchTarget', () => ({
+  backfillBridgeLaunchTargets: jest.fn()
+}))
 jest.mock('../platformCapture', () => ({
   captureOwnedAppPlatforms: jest.fn()
 }))
@@ -356,6 +360,7 @@ beforeEach(() => {
   // isBridgeBottleReady()-returns-undefined default gave it, rather than a
   // TypeError from calling .length on an un-mocked return value.
   jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
+  jest.mocked(backfillBridgeLaunchTargets).mockResolvedValue(0)
 })
 
 const makeFakeClient = (apps: ReturnType<typeof makeOwnedApp>[]) => ({
@@ -1462,6 +1467,91 @@ describe('SteamLibraryManager', () => {
       )?.[1] as any
 
       expect(pushed?.is_installed).toBe(true)
+    })
+
+    const armBridgeInstalled = () => {
+      jest
+        .mocked(listReadyBridgeBottleNames)
+        .mockReturnValue(['GameLibSteamBridge'])
+      jest.mocked(resolveBridgeBottleName).mockReturnValue('GameLibSteamBridge')
+      ;(existsSync as jest.Mock).mockImplementation(
+        (path: string) => path === BRIDGE_BOTTLE_STEAMAPPS_ROOT
+      )
+      ;(readdirSync as jest.Mock).mockImplementation((dir: string) =>
+        dir === BRIDGE_BOTTLE_STEAMAPPS_ROOT
+          ? ['appmanifest_206040.acf', 'appmanifest_206041.acf']
+          : []
+      )
+      ;(readFileSync as jest.Mock).mockImplementation((p: string) =>
+        String(p).includes('206041') ? 'two' : 'one'
+      )
+      ;(vdf.parse as jest.Mock).mockImplementation((c: string) => ({
+        AppState: {
+          appid: c === 'two' ? '206041' : '206040',
+          StateFlags: '4',
+          installdir: c === 'two' ? 'Game Two' : 'Avernum 5',
+          SizeOnDisk: '9000'
+        }
+      }))
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    }
+
+    it('Phase 54: a granted refresh backfills launch targets for the installed bridge titles on its held client, once', async () => {
+      armBridgeInstalled()
+      const fakeClient = makeFakeClient([
+        makeOwnedApp(206040, 'Avernum 5', 15),
+        makeOwnedApp(206041, 'Game Two', 15)
+      ])
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+
+      await manager.refresh()
+
+      expect(backfillBridgeLaunchTargets).toHaveBeenCalledTimes(1)
+      expect(backfillBridgeLaunchTargets).toHaveBeenCalledWith(
+        fakeClient,
+        expect.arrayContaining(['206040', '206041'])
+      )
+      expect(
+        jest.mocked(backfillBridgeLaunchTargets).mock.calls[0][1]
+      ).toHaveLength(2)
+    })
+
+    it('Phase 54: an ungranted refresh never backfills', async () => {
+      armBridgeInstalled()
+      jest.mocked(SteamUser.acquireAuthenticated).mockResolvedValue({
+        ok: false,
+        reason: 'go-offline-required'
+      } as never)
+
+      await manager.refresh()
+
+      expect(backfillBridgeLaunchTargets).not.toHaveBeenCalled()
+    })
+
+    it('Phase 54: a rejecting backfill leaves the refresh to its single idle terminal emit', async () => {
+      armBridgeInstalled()
+      jest
+        .mocked(backfillBridgeLaunchTargets)
+        .mockRejectedValue(new Error('pics down'))
+      const fakeClient = makeFakeClient([makeOwnedApp(206040, 'Avernum 5', 15)])
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+
+      await manager.refresh()
+
+      expect(steamSyncEmits()).toEqual([
+        { status: 'syncing' },
+        { status: 'idle' }
+      ])
+    })
+
+    it('Phase 54: with no ready bridge bottle the backfill is not called', async () => {
+      jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
+      const fakeClient = makeFakeClient([makeOwnedApp(206040, 'Avernum 5', 15)])
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+
+      await manager.refresh()
+
+      expect(backfillBridgeLaunchTargets).not.toHaveBeenCalled()
     })
 
     it('performs NO bridge reconciliation when listReadyBridgeBottleNames() returns [] (byte-for-byte native/bottle-only behavior preserved)', async () => {
