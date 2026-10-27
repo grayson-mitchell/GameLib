@@ -107,3 +107,8 @@ scratchpad into `~/Library/Application Support/gamelib/overlays/gst-libav-1.24.1
 in its `SHA256SUMS`), and `fixes/local/284100-steam.json` now points `GST_PLUGIN_PATH` there, so the
 game keeps playing across reboots. This is a hand-applied stand-in for the unbuilt tier-2 target,
 not a shipped fix; the done-when above is unchanged.
+
+Relaunch from the moved payload confirmed by the operator, 2026-10-27: the game reached the main
+menu. Both overlay launches (spike 042 and this one) paused for about a minute before the game
+appeared. The cause is unknown. Rule out a GStreamer plugin-registry rescan on every launch before
+designing the tier-2 target, because the shipped fix would inherit that cost.
