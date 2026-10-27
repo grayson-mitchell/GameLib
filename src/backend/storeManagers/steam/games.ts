@@ -1021,26 +1021,11 @@ export default class SteamGame implements Game {
    * Analog: nile/games.ts lines 95-107.
    */
   async getExtraInfo(): Promise<ExtraInfo> {
-    // quick-260817-d61: opening a game page is a deliberate Steam action, so
-    // it unlocks the keyring deferral gate. On the locked->unlocked
-    // TRANSITION ONLY (noteSteamAuthTrigger returns true exactly once) this
-    // fires a bounded, fire-and-forget ensureConnected() so the read genuinely
-    // happens at page-open, per the locked design decision — never awaited
-    // (this method is on the render path and must not block it), and its own
-    // rejection is swallowed here so a failed reconnect never surfaces as a
-    // getExtraInfo() failure. A second (or later) getExtraInfo() call fires
-    // none — the transition already happened.
-    if (noteSteamAuthTrigger('game-page')) {
-      void SteamUser.ensureConnected().catch((err) => {
-        logWarning(
-          [
-            `SteamGame: getExtraInfo() locked->unlocked ensureConnected() failed (appId: ${this.appId}), never blocks page render:`,
-            err
-          ],
-          LogPrefix.Steam
-        )
-      })
-    }
+    // Phase 54: a game page reads cached metadata only; opening it must not
+    // log on (ROADMAP SC2; debug friends-signout-steam-user). The call below
+    // only labels later keyring reads, it reads no keyring and opens no
+    // connection.
+    noteSteamAuthTrigger('game-page')
     const info = this.getGameInfo()
     return (
       info.extra ?? {
@@ -3358,6 +3343,10 @@ export default class SteamGame implements Game {
       // No signal is passed: the bridge launch has no abort signal, and stop() has no
       // handle on this step (bridgeLaunchBottles is recorded after it). The helper accepts
       // one (WR-06) for when a launch-scoped AbortController exists.
+      //
+      // Phase 54: Play passes no allowLogon, so a Play can reuse an open session
+      // but never opens an authenticated logon. Unsettled redists are fetched by
+      // the bridge install step (plan 08 Task 2) or the next session-holding action.
       await installSteamBridgeSharedRedists(
         this.appId,
         bridgeBottleSettings
