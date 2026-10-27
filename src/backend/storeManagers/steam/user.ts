@@ -302,7 +302,11 @@ export class SteamUser {
    *
    * Takes NO lease, so it never arms the idle timer: a long install run by a
    * caller that has not moved to acquireAuthenticated() is never logged off
-   * mid-download. Plan 09's source gate forbids callers outside user.ts.
+   * mid-download.
+   *
+   * user.ts-internal session check, kept public only because tests drive it
+   * directly. Every production caller must use acquireAuthenticated /
+   * acquireOpenAuthenticated; steamAuthSessionPolicy.test.ts enforces this.
    */
   static async ensureConnected(): Promise<boolean> {
     const refusal = await this.ensureAuthenticatedSession('user-refresh')
