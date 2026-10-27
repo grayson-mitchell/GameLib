@@ -697,6 +697,98 @@ describe('sign-out during a wrapped logon (54-REVIEW WR-07)', () => {
   })
 })
 
+describe('shutdown during a wrapped logon (debug/shutdown-mid-connect-logon-survives)', () => {
+  const acquire = (
+    opts: Record<string, unknown> = { reason: 'user-refresh' }
+  ) => (SteamUser as any).acquireAuthenticated(opts)
+  const settle = async () => {
+    for (let i = 0; i < 20; i++) await Promise.resolve()
+  }
+
+  it('stdin EOF while the logon is in flight abandons it at once, cancels the library retry, and a late loggedOn is logged off and never kept', async () => {
+    FakeLib.behaviour = 'hang'
+    const lease = acquire()
+    await settle()
+    expect(instances()).toHaveLength(1)
+    const inst = instances()[0]
+    expect(inst.logOn).toHaveBeenCalledTimes(1)
+    // steam-user's own logon-message retry, armed once ClientLogon is sent.
+    // Left alone it logs on again ~6 s after logOff() (the live defect).
+    const libraryRetry = jest.fn()
+    inst._logonMsgTimeout = setTimeout(libraryRetry, 5000)
+
+    SteamUser.releaseForShutdown()
+
+    // No timer advance: the wrap is settled by the release, not by the 35 s
+    // bound, so it goes back online now and the refresh gets no client.
+    expect(await lease).toEqual({ ok: false, reason: 'shutting-down' })
+    expect(inst.logOff).toHaveBeenCalledTimes(1)
+    expect(inst.logOff.mock.invocationCallOrder[0]).toBeLessThan(
+      mockRestoreMacSteamOnlineIfOwed.mock.invocationCallOrder[0]
+    )
+    expect(internals.abandonPendingLogon).toBeNull()
+    expect(internals.client).toBeNull()
+    await jest.advanceTimersByTimeAsync(10000)
+    expect(libraryRetry).not.toHaveBeenCalled()
+    // No referenced timer of ours is left to hold the loop (the 35 s bound
+    // was cleared, and it was unref'd anyway).
+    expect(jest.getTimerCount()).toBe(0)
+
+    // Backstop: a logon that lands anyway is logged off at once, not kept.
+    inst.steamID = { getSteamID64: () => '76561198000000000' }
+    inst.emit('loggedOn')
+    expect(inst.logOff).toHaveBeenCalledTimes(2)
+    expect(internals.client).toBeNull()
+    expect(SteamUser.acquireOpenAuthenticated('user-install')).toBeNull()
+    expect(
+      logInfoLines().some((l) => l.startsWith('[Timing] SteamUser.loggedOn'))
+    ).toBe(false)
+    expect(logWarning).toHaveBeenCalledWith(
+      '[Steam] CM logon landed after the shutdown release, logged off at once',
+      expect.anything()
+    )
+    // Nothing reconnects after shutdown: one wrap, one client, one logOn.
+    expect(await SteamUser.ensureConnected()).toBe(false)
+    expect(macMock.withMacSteamOffline).toHaveBeenCalledTimes(1)
+    expect(instances()).toHaveLength(1)
+    expect(inst.logOn).toHaveBeenCalledTimes(1)
+  })
+
+  it('a loggedOn that lands after the release, with no pending-logon hook, is still logged off', async () => {
+    FakeLib.behaviour = 'hang'
+    const lease = acquire()
+    await settle()
+    const inst = instances()[0]
+    // Simulate a release that could not reach the hook (e.g. a client that
+    // was not the one being waited on): only the loggedOn backstop is left.
+    internals.abandonPendingLogon = null
+    internals.client = null
+    SteamUser.releaseForShutdown()
+    inst.steamID = { getSteamID64: () => '76561198000000000' }
+    inst.emit('loggedOn')
+    expect(inst.logOff).toHaveBeenCalledTimes(1)
+    expect(internals.client).toBeNull()
+    expect(await lease).toEqual({ ok: false, reason: 'shutting-down' })
+  })
+
+  it('stdin EOF after the logon still closes the session as before', async () => {
+    const lease = await acquire()
+    expect(lease.ok).toBe(true)
+    const inst = instances()[0]
+    SteamUser.releaseForShutdown()
+    expect(inst.logOff).toHaveBeenCalledTimes(1)
+    // steam-user answers a logged-on logOff() with 'disconnected'.
+    inst.emit('disconnected', 0, 'Logged off')
+    expect(logInfoLines()).toContain(
+      '[Steam] CM session closed mode=authenticated cause=disconnected'
+    )
+    expect(internals.client).toBeNull()
+    expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('shutdown')
+    lease.release()
+    expect(internals.idleTimer).toBeNull()
+  })
+})
+
 describe('stale canary with other leases held (54-REVIEW WR-08)', () => {
   const acquire = (
     opts: Record<string, unknown> = { reason: 'user-install' }

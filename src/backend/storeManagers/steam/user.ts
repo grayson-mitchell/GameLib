@@ -25,6 +25,7 @@ import {
   type MacSteamRestoreOutcome,
   type MacSteamWrapKind
 } from './macSteamOffline'
+import { abortSteamUserLogon } from './steamUserLogonAbort'
 import { platform } from 'process'
 import type {
   RedeemKeyOutcome,
@@ -679,6 +680,9 @@ export class SteamUser {
       throw err
     }
     if (generation !== this.sessionGeneration) return 'not-signed-in'
+    // debug/shutdown-mid-connect-logon-survives: a connect the shutdown
+    // release abandoned reports that, and opens nothing for its caller.
+    if (this.shuttingDown) return 'shutting-down'
     if (this.client?.steamID) return null
     if (this.getLogonFailure()) return 'logon-rejected'
     return 'client-not-ready'
@@ -889,15 +893,21 @@ export class SteamUser {
    * Unlike logout() this clears no token and no stored session -- the user stays signed in.
    * The release also pays any goonline the go-offline wrap owes, after logOff, so no GameLib
    * logon can land once Mac Steam reconnects.
+   *
+   * debug/shutdown-mid-connect-logon-survives: a logon still in flight is abandoned FIRST
+   * (abortSteamUserLogon, so steam-user cannot log on again by itself), which also settles
+   * the wrap at once: it goes back online now and runs no refresh, instead of waiting on a
+   * logon that would otherwise land seconds later with Mac Steam online.
    */
   static releaseForShutdown(): Promise<MacSteamRestoreOutcome> {
     this.shuttingDown = true
     this.clearIdleTimer()
     releaseAnonymousForShutdown()
+    this.abandonPendingLogon?.()
     const client = this.client
     if (client) {
       try {
-        client.logOff()
+        abortSteamUserLogon(client)
       } catch (err) {
         logWarning(
           ['Steam client logOff error during shutdown release:', err],
@@ -926,7 +936,7 @@ export class SteamUser {
     }
     if (this.client) {
       try {
-        this.client.logOff()
+        abortSteamUserLogon(this.client)
       } catch {
         // ignore
       }
@@ -967,7 +977,7 @@ export class SteamUser {
         // Abandon BEFORE the wrap fires goonline, so no logon can land while
         // Mac Steam is back online.
         try {
-          client.logOff()
+          abortSteamUserLogon(client)
         } catch {
           // ignore
         }
@@ -987,11 +997,12 @@ export class SteamUser {
       }
 
       // 54-REVIEW WR-07: logout() calls this so the wrap stops waiting on a
-      // logon for an account that is no longer signed in.
+      // logon for an account that is no longer signed in. releaseForShutdown()
+      // calls it too (debug/shutdown-mid-connect-logon-survives).
       const abandon = (): void => {
         if (settled) return
         try {
-          client.logOff()
+          abortSteamUserLogon(client)
         } catch {
           // ignore
         }
@@ -1001,14 +1012,24 @@ export class SteamUser {
       this.abandonPendingLogon = abandon
 
       client.once('loggedOn', () => {
-        if (opts.generation !== this.sessionGeneration) {
-          // Signed out while this logon was in flight: never keep it.
+        // debug/shutdown-mid-connect-logon-survives: a logon that lands after
+        // the shutdown release is never kept either. Mac Steam may already be
+        // back online, so it is logged off before anything else runs.
+        if (this.shuttingDown || opts.generation !== this.sessionGeneration) {
+          // Signed out (or shut down) while this logon was in flight: never
+          // keep it.
           try {
-            client.logOff()
+            abortSteamUserLogon(client)
           } catch {
             // ignore
           }
           if (this.client === client) this.client = null
+          if (this.shuttingDown) {
+            logWarning(
+              '[Steam] CM logon landed after the shutdown release, logged off at once',
+              LogPrefix.Steam
+            )
+          }
           settle()
           return
         }
