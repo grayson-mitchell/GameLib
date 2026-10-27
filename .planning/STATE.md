@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
 status: ready_to_plan
-stopped_at: Phase 54 complete (14/14) — ready to discuss Phase 55
+stopped_at: Phase 54 complete (14/14) — ready to plan Phase 56 (Phase 55 already complete 2026-10-26)
 last_updated: 2026-10-27T21:51:31.255Z
 last_activity: 2026-10-27
 progress:
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 55 — steam bridge callback delivery for the web api auth ticket
+**Current focus:** Phase 56 — bridge steamclient-layer DRM mode for SteamStub titles
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
