@@ -18,6 +18,9 @@ Precedent: `55-LIVE-GATE.md` (authored 55-06, run 55-07). Wrap behaviour and tim
 
 Also covered: P54-SC5 (the guided fallback and the already-offline path) and the sidecar exit contract.
 
+Also covered: the 54-UAT.md gap (Mac Steam never left offline by GameLib): items 10-13 interrupt a live
+wrap by routed quit, shell kill and `kill -9`, and prove a user's own offline choice survives.
+
 ## Oracles
 
 1. `GAMELOG` = `~/Library/Logs/GameLib/gamelib.log`. The sidecar `logInfo`/`logWarning` sink. Every
@@ -45,6 +48,7 @@ record counts and timestamps, not raw lines.
 | PC6 | At least one installed Steam title; record whether any is a bridge title (CrossOver bottle `GameLibSteamBridge-<appId>`) | `ls ~/Library/Application\ Support/CrossOver/Bottles/ \| grep GameLibSteamBridge` plus the library view | names recorded. A bridge title present decides whether item 4 can pass or is blocked |
 | PC7 | A small not-installed Steam title for item 6 | operator picks one | name and appId recorded |
 | PC8 | A game available to start from Mac Steam for item 8 | operator picks one | name recorded |
+| PC9 | No owed goonline marker and Mac Steam not persisted offline, so a stale debt cannot be mistaken for this session's. `MARKER="$HOME/Library/Application Support/GameLib/mac-steam-offline-owed.json"`, `VDF="$HOME/Library/Application Support/Steam/config/loginusers.vdf"` | `test -e "$MARKER"; echo $?`; `grep -c '"WantsOfflineMode"[[:space:]]*"1"' "$VDF"` | the first prints `1` (absent) and the count is `0`. If the marker is present, stop: record it, let one GameLib launch pay it, and restart from PC1. `VDF` holds account names and SteamIDs, so it is scored only as this count, never copied or quoted (T-54-41) |
 
 External state (Test 6): PC1 is the Mac Steam external-state premise for items 1-6 and PC8's game
 must not already be running. Fresh-Steam Friends state is confirmed positively by the operator, never
@@ -52,9 +56,11 @@ inferred from GameLib's stores.
 
 ## 2. Session procedure
 
-One session directory, one GameLib launch for the whole run (launch ordinal 1 covers items 1 to 9).
-There is no mid-run relaunch, so nothing truncates `gamelib.log` between items and the transcript
-cannot be destroyed by a restart.
+One session directory. Items 1-9 stay on launch ordinal 1 with no mid-run relaunch, so nothing
+truncates `gamelib.log` between those items. Items 10-13 use launch ordinals 2 to 6. Before **every**
+relaunch, run `cp "$GAMELOG" "$SESSION/gamelib-launch-${N}.log"`, increment `N`, and write the
+`=== GATE LAUNCH ${N} — <UTC> ===` delimiter into `terminal.log`. Item 9 still copies
+`gamelib-launch-1.log`.
 
 ```
 SESSION=/tmp/gamelib-gate-$(date -u +%Y-%m-%dT%H-%M-%SZ); mkdir -p "$SESSION"
@@ -72,9 +78,8 @@ pnpm tauri:dev 2>&1 | tee -a "$SESSION/terminal.log"
 - The terminal transcript is **appended** (`tee -a`), never truncated.
 - Exact delimiter text: `=== GATE LAUNCH ${N} — <UTC> ===`. Find boundaries with
   `grep -n '^=== GATE LAUNCH' "$SESSION/terminal.log"`.
-- `gamelib.log` rotates to `.old` at the next launch's first write (`log_writer.ts:72-74`); this
-  session has one launch, but the runner still copies it at the end of the run and **before any
-  further launch**: `cp "$GAMELOG" "$SESSION/gamelib-launch-${N}.log"`.
+- `gamelib.log` rotates to `.old` at the next launch's first write (`log_writer.ts:72-74`); items 10-13
+  relaunch, so the runner copies it at the end of the run and **before every further launch**: `cp "$GAMELOG" "$SESSION/gamelib-launch-${N}.log"`.
 - **One instance asserted, not assumed.** Before launch: `pgrep -f 'target/debug/gamelib-shell'`
   empty. After the window appears: `pgrep -f 'target/debug/gamelib-shell' | tee -a "$SESSION/terminal.log"`
   prints exactly one PID. Record it again at teardown. A count other than 1 aborts the launch;
@@ -83,7 +88,7 @@ pnpm tauri:dev 2>&1 | tee -a "$SESSION/terminal.log"
   `echo "item <K> $(date -u +%H:%M:%S) conn=$(stat -f %z "$CONNLOG") gl=$(stat -f %z "$GAMELOG")" >> "$SESSION/offsets.txt"`.
   Slice an item's evidence with `tail -c +$((OFFSET+1)) "$CONNLOG"` and the same for `$GAMELOG`.
   Save each slice as `$SESSION/item-<K>-conn.txt` and `$SESSION/item-<K>-gl.txt`.
-- **Closing inventory** after teardown: `ls -la "$SESSION"/` and `wc -l "$SESSION"/*`, recorded in the
+- **Closing inventory** after teardown (taken at the end of item 13): `ls -la "$SESSION"/` and `wc -l "$SESSION"/*`, recorded in the
   write-up, so a missing or empty capture is visible during the run.
 
 Literal sinks: every scored literal below is a sidecar `logInfo`/`logWarning` and is scored from
@@ -92,7 +97,7 @@ not reach the dev transcript.
 
 ## 3. Items
 
-Each item: launch ordinal 1 unless stated. "No authenticated logon" means zero lines containing
+Each item: launch ordinal 1 unless stated (items 10-13: launches 2 to 6). "No authenticated logon" means zero lines containing
 `CM logon mode=authenticated` in that item's `$GAMELOG` slice, and zero `RecvMsgClientLogOnResponse`,
 `user initiated logoff` or `[Logged Off` lines in that item's CONNLOG slice that were caused by GameLib.
 
@@ -199,8 +204,87 @@ Quit the Mac Steam game afterwards.
 Steps: quit GameLib (Cmd+Q). Within 10 s: `pgrep -f 'build/main/sidecar.js'` is empty and
 `pgrep -f 'target/debug/gamelib-shell'` is empty. (The sidecar exits by event-loop drain at stdin EOF;
 `smoke:sidecar` misses slow exit, so this live check is the measurement.) Then
-`cp "$GAMELOG" "$SESSION/gamelib-launch-1.log"` and take the closing inventory.
+`cp "$GAMELOG" "$SESSION/gamelib-launch-1.log"`. (The closing inventory is now taken at the end of item 13.)
 Pass: both empty by 10 s. Fail: an orphan sidecar remains (record its PID and kill it).
+
+### Item 10. Routed quit mid-wrap (layer 1, handleExit)
+
+Launch 2. Wait for Mac Steam `Logged On` and Friends signed in. Record offsets. Press Refresh, then
+press Cmd+Q within about 1 s. The wrap window is about 3-5 s: LogOff within 0.25 s, the logon, then a
+2 s settle before goonline. Wait 20 s, then `cp "$GAMELOG" "$SESSION/gamelib-launch-2.log"`.
+
+- **Mid-wrap discriminator** (otherwise the run is VOID): the launch-2 log has
+  `go-offline wrap: Mac Steam state=<word>, firing gooffline` AND
+  `go-offline restore trigger=shutdown: firing goonline`. The restore logs that line only when the
+  marker is present at quit time, and the marker is cleared after the wrap's own goonline, so the line
+  proves the quit landed between gooffline and goonline. The wrap's own `go-offline wrap: firing
+  goonline` line **may also be present** and does not void the run: `releaseForShutdown`'s `logOff`
+  aborts the in-flight logon, so the wrap's `finally` normally fires too, through a transport that may
+  already be gone.
+- **VOID cap:** at most 3 attempts. After 3 VOID runs record the item as
+  `blocked — unscorable: quit never landed mid-wrap in 3 attempts`, with each attempt's timestamps.
+  Do not record it as a pass or as an issue.
+- **Pass:** the CONNLOG slice has `user initiated logoff`, then `processing complete`, and its last
+  state is `Logged On` within 20 s of the quit. `test -e "$MARKER"` prints `1`. The `VDF` count (`grep -c '"WantsOfflineMode"[[:space:]]*"1"' "$VDF"`) is 0.
+  The operator confirms Friends signed in and status changeable.
+- **Fail:** the discriminator holds but Steam's last state is `Logged Off`, or the `VDF` count is 1,
+  or the marker remains.
+- **Caveat:** gamelib.log is written with async `appendFile`, and `app.exit()` is followed by a group
+  SIGTERM, so the restore line can be lost. A missing line makes the attempt VOID (it counts toward
+  the cap), never a pass on CONNLOG alone. In CONNLOG, a quit that landed after the wrap's own goonline
+  looks the same as one that landed mid-wrap.
+
+Read `VDF` at least 15 s after the event (Mac Steam rewrites it on a state change; logon completes in
+about 1.5 s, spike 046a).
+
+### Item 11. Shell killed mid-wrap (layer 2, stdin EOF)
+
+Launch 3. Record offsets. Arm the watcher in a second terminal:
+`tail -n0 -F "$GAMELOG" | grep -m1 -q 'firing gooffline' && sleep 1 && pkill -9 -f 'target/debug/gamelib-shell'`.
+The `sleep 1` puts the kill after the LogOff (0.25 s) and before goonline (logon plus a 2 s settle).
+Then press Refresh. Within 10 s `pgrep -f 'build/main/sidecar.js'` must be empty (exit by drain). Wait
+20 s, then `cp "$GAMELOG" "$SESSION/gamelib-launch-3.log"`. The sidecar lives until drain, so its log is
+flushed.
+
+- **Discriminator:** as item 10 (the wrap's own goonline line is allowed; the same 3-attempt VOID cap
+  applies), plus the stdin-EOF line `[sidecar] stdin closed:` is present.
+- **Pass:** as item 10's oracles, plus the sidecar is gone within 10 s.
+- **Fail:** Steam left `Logged Off`, the `VDF` count is 1, the marker remains, or an orphan sidecar
+  remains (record its PID and kill it).
+
+### Item 12. kill -9 of shell and sidecar mid-wrap (layer 3, boot)
+
+Launch 4. Record offsets. Arm:
+`tail -n0 -F "$GAMELOG" | grep -m1 -q 'firing gooffline' && sleep 1 && pkill -STOP -f 'build/main/sidecar.js'; pkill -STOP -f 'target/debug/gamelib-shell'; pkill -9 -f 'build/main/sidecar.js'; pkill -9 -f 'target/debug/gamelib-shell'`.
+Stopping both first means the sidecar can neither see stdin EOF nor be respawned before it dies, so no
+in-process restore can run. This is the `kill -9` case the gap names. Press Refresh. Wait 20 s. Then
+record the **interrupted state**, the evidence that the item reproduces the defect: CONNLOG last state
+`Logged Off`, `test -e "$MARKER"` prints `0` (present), and the `VDF` count (`grep -c '"WantsOfflineMode"[[:space:]]*"1"' "$VDF"`) is 1. If Steam is already
+online the run is VOID (a restore ran); repeat under the same 3-attempt cap as item 10. Copy
+`gamelib-launch-4.log`. Relaunch (launch 5), record offsets, and wait 30 s.
+
+- **Pass:** the launch-5 log has `go-offline restore trigger=boot: firing goonline` and
+  `go-offline restore trigger=boot: Mac Steam back online, marker cleared`. CONNLOG after the launch-5
+  offset has `processing complete` and last state `Logged On`. The marker is absent. The `VDF` count is
+  0 (same `WantsOfflineMode` count). The operator confirms Friends signed in and status changeable.
+- **Fail:** any of those missing. `restore-unconfirmed` (`online not confirmed within 10000ms`) is an
+  issue, not a pass, even if Steam later comes online.
+
+### Item 13. The user's own offline choice survives quit and relaunch
+
+Never fire when GameLib did not take Steam offline. In launch 5, after item 12, the operator sets Mac
+Steam offline by hand (Steam > Go Offline) and waits for `[Logged Off` in CONNLOG. Confirm
+`test -e "$MARKER"` prints `1`. Record offsets. Cmd+Q GameLib. Copy `gamelib-launch-5.log`. Relaunch
+(launch 6) and wait 30 s.
+
+- **Pass:** neither the launch-5 log slice after item 13's recorded `gl=` offset (item 12's boot
+  restore lines sit before it) nor the launch-6 log contains any `go-offline restore trigger=` line.
+  CONNLOG after the offset has no `processing complete` and its last state is still `Logged Off`. The
+  `VDF` count (`grep -c '"WantsOfflineMode"[[:space:]]*"1"' "$VDF"`) is 1 (the user's choice, persisted by Steam).
+- **Fail:** any restore line, or Steam comes back online.
+- **Afterwards:** the operator restores Steam online by hand and waits for `[Logged On`. Quit GameLib,
+  `cp "$GAMELOG" "$SESSION/gamelib-launch-6.log"`, and take the closing inventory
+  (`ls -la "$SESSION"/` and `wc -l "$SESSION"/*`).
 
 ## 4. Recorded behaviour changes (not items to pass or fail)
 
@@ -212,6 +296,13 @@ session-holding action. Not a failure.
 (ii) A pre-Phase-54, license-gated bridge title Played before any Refresh shows the SteamBridgeSetup
 dialog with `Reason: launch-exe-not-resolved` (`games.ts:1712`, `games.ts:3026`); one Refresh backfills
 its launch target (plans 06/08). Item 3 records which of these the operator's titles hit.
+
+(iii) A kept marker can outlive a manual goonline in one narrow case: (1) GameLib quits while Mac Steam
+is not running (`kept-not-running`); (2) the user starts Steam, which starts offline, and brings it
+online by hand; (3) the user later deliberately goes offline; (4) GameLib's next boot then fires
+goonline and undoes that later choice. The marker records only that GameLib owes a goonline, not
+whether the user has since paid it. The window closes at the first boot or wrap that finds Steam
+running, so a stale marker is paid at most once.
 
 ## 5. Structural Reachability Review
 
@@ -260,11 +351,31 @@ sidecar code, so they reach `~/Library/Logs/GameLib/gamelib.log` and never the d
 | Item 7 | already-offline | `macSteamOffline.ts:230-240` | REACHABLE | state read |
 | Item 8 | guided fallback | Mac Steam's behaviour with a game running was not measured in spike 046 | CONDITIONAL | contract accepts both outcomes (wrap succeeds, or dialog + `guided-restore`) |
 | Item 9 | sidecar exit | exit by stdin EOF drain (`releaseOnStdinEof`) | REACHABLE | CLAUDE.md sidecar exit contract |
-| PC1-PC8 | preconditions | each has a command or operator confirmation | REACHABLE | Section 1 |
+| PC1-PC9 | preconditions | each has a command or operator confirmation | REACHABLE | Section 1 |
 | PC4 | stale sidecar | mtime vs newest feat commit and a literal grep of `build/main/sidecar.js` (author checked at authoring: sidecar mtime 2026-10-27 22:44, newest feat commit 22:18, so it passes now; the runner re-checks) | REACHABLE | Section 1 |
 | Evidence capture | whole pipeline | dual sink, session dir, appended transcript, delimiter, per-item offsets, one-instance assertion, closing inventory | REACHABLE | Section 2 |
+| T3 `go-offline wrap: Mac Steam state=<word>, firing gooffline` (items 10-12) | gamelib.log | `logInfo` at `macSteamOffline.ts:462` | REACHABLE | `sed -n 462p` shows the literal |
+| T3 `go-offline wrap: firing goonline` (items 10, 11, allowed not required) | gamelib.log | `logInfo` at `macSteamOffline.ts:500` | REACHABLE | line 500 |
+| T3 `go-offline restore trigger=shutdown: firing goonline` (items 10, 11) | gamelib.log | template `go-offline restore trigger=${trigger}: firing goonline` at `macSteamOffline.ts:550`; `'shutdown'` passed at `user.ts:826` from `releaseForShutdown`, reached by `await SteamUser.releaseForShutdown()` at `utils.ts:329` | REACHABLE | lines 550, 826, 329 |
+| T3 `go-offline restore trigger=boot: firing goonline` (items 12, 13 absence) | gamelib.log | same template, line 550, `'boot'` passed by `restoreMacSteamOnlineIfOwed('boot')` at `bootstrap.ts:1104` | REACHABLE | lines 550, 1104 |
+| T3 `go-offline restore trigger=boot: Mac Steam back online, marker cleared` (item 12) | gamelib.log | `logInfo` at `macSteamOffline.ts:565` | REACHABLE | line 565 |
+| T3 `go-offline restore trigger=boot: online not confirmed within ...ms, marker kept` (item 12 fail) | gamelib.log | `logWarning` at `macSteamOffline.ts:571`, outcome `restore-unconfirmed` (line 574) | REACHABLE | line 571 |
+| T3 `[sidecar] stdin closed:` (item 11) | gamelib.log | `stdinEofRelease.ts:40`, in `releaseOnStdinEof` (line 34) | REACHABLE | line 40 |
+| T7 Cmd+Q through the sidecar `quit` handler (items 10, 13) | OS menu | `route_app_menu_quit_through_sidecar` (`src-tauri/src/main.rs:1227`, called at 13192); `ipcMain.on('quit'` (`appShellFlowRegistration.ts:325`); `handleExit` awaits `SteamUser.releaseForShutdown()` (`utils.ts:329`) | REACHABLE | those lines |
+| T7 `pkill -9` of the shell (item 11) | shell process | stdin EOF reaches `releaseOnStdinEof` (`stdinEofRelease.ts:34`) | REACHABLE | CLAUDE.md sidecar exit contract |
+| T7 STOP plus KILL of both processes (item 12) | both processes | no JS runs after STOP, so no in-process restore; only the boot layer can pay | REACHABLE | Item 12 steps |
+| T7 relaunch (items 12, 13) | `pnpm tauri:dev` | `init()` reaches `restoreMacSteamOnlineIfOwed('boot')` at `bootstrap.ts:1104` | REACHABLE | line 1104 |
+| T4 absence: "no `go-offline restore trigger=` line" (item 13) | gamelib.log | every non-`not-owed` outcome logs a restore line (`macSteamOffline.ts:516-574`), so a fire would always leave one; falsifiable | REACHABLE (falsifiable absence) | `macSteamOffline.ts:516,526,533,550` |
+| T4 items 10, 11 | gamelib.log | use a positive discriminator (the `trigger=shutdown` restore line, logged only when the marker exists at quit), not an absence. The wrap's own goonline line is expected under a correct build (`logOff` aborts the logon and the `finally` runs), so its absence is never required | CONDITIONAL (timing; VOID-and-repeat, cap 3) | Item 10 text |
+| T5 each relaunch x E2 (`.old` rotation) | launch vs archived log | the copy `gamelib-launch-${N}.log` is taken before every relaunch | REACHABLE | Section 2 |
+| T5 item 12 interrupted Steam-offline state x item 13 premise | item 12 leaves Steam offline | item 12's pass restores `Logged On` before item 13 starts | REACHABLE | Item 12 pass |
+| T5 item 13 hand-set offline x end of session | item 13 leaves Steam offline | the operator restores Steam online by hand and waits for `[Logged On` | REACHABLE | Item 13 Afterwards |
+| T6 PC9 marker and VDF premise | on-disk state | positive observables `test -e "$MARKER"` and the `grep -c` count | REACHABLE | PC9 |
+| T6 item 12 interrupted state | Mac Steam and marker | positive observable (CONNLOG `Logged Off`, marker present, VDF count 1), not inferred | REACHABLE | Item 12 |
+| Item 10 | routed quit mid-wrap | timing-dependent landing | CONDITIONAL | VOID cap 3 |
+| Items 11, 12, 13 | shell kill, kill -9, own offline choice | deterministic watcher or operator gesture | REACHABLE | Section 3 |
 
-IMPOSSIBLE verdicts: none. CONDITIONAL rows (item 3/4 anonymous line, item 4 bridge title, item 8) each
+IMPOSSIBLE verdicts: none. CONDITIONAL rows (item 3/4 anonymous line, item 4 bridge title, item 8, item 10) each
 state the condition and what the runner records if it does not hold. Count of structural impossibilities
 and unresolved requirement interactions found at authoring: 0 unresolved (3 interactions flagged and
 resolved in the contract text).
