@@ -83,7 +83,7 @@ export type AuthSessionRefusal =
   | 'client-not-ready'
   | 'go-offline-required'
 
-export interface AcquireAuthenticatedOpts {
+interface AcquireAuthenticatedOpts {
   reason: AuthSessionReason
   guidedAction?: SteamGoOfflineAction
   appName?: string
@@ -91,11 +91,11 @@ export interface AcquireAuthenticatedOpts {
 
 type SteamUserClient = InstanceType<typeof SteamUserLib>
 
-export type AuthenticatedLease =
+type AuthenticatedLease =
   | { ok: true; client: SteamUserClient; release: () => void }
   | { ok: false; reason: AuthSessionRefusal }
 
-export interface OpenAuthenticatedLease {
+interface OpenAuthenticatedLease {
   client: SteamUserClient
   release: () => void
 }

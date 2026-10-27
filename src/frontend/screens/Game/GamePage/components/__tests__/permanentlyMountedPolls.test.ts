@@ -411,11 +411,13 @@ describe('C-23: no async handler is wired bare to an onClick', () => {
     // without applying it. All Steam setup/notice surfaces carry an async
     // handler behind a button, so all of them must be enrolled. Phase 51
     // Plan 13 (2026-10-21) added SteamBridgeRouteNotice's chooseRoute handler.
+    // Phase 54 Plan 07 (2026-10-27) added SteamGoOfflineNotice's retry handler.
     expect(asyncHandlerSurfaces.map((c) => c.name).sort()).toEqual([
       'SteamBottleSetup',
       'SteamBridgeRouteNotice',
       'SteamBridgeSetup',
-      'SteamClientSetup'
+      'SteamClientSetup',
+      'SteamGoOfflineNotice'
     ])
   })
 

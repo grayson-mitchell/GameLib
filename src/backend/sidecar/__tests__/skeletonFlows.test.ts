@@ -126,12 +126,20 @@ jest.mock('backend/constants/environment', () => ({
 // library.test.ts's LIB-01 convention); automocked, no factory ──────────────
 jest.mock('../../storeManagers/steam/user')
 
+// ── Anonymous PICS client mock (Phase 54) — refresh() captures platforms on
+// the anonymous steam-user client first; automocked so no test opens a real
+// CM connection. Resolves null below, so capture falls back to the held
+// (mocked) client. ─────────────────────────────────────────────────────────
+jest.mock('../../storeManagers/steam/anonymousClient')
+
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { getPath } from '../pathShim'
 import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { SteamUser } from '../../storeManagers/steam/user'
+import { mockLeaseOk } from '../../storeManagers/steam/__tests__/depotLeaseMocks'
+import { getAnonymousPicsClient } from '../../storeManagers/steam/anonymousClient'
 import { getSteamLibraries } from 'backend/utils'
 import { configStore as steamConfigStore } from '../../storeManagers/steam/electronStores'
 import { configStore } from 'backend/constants/key_value_stores'
@@ -150,6 +158,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // implementations before every test — re-establish the defaults every
     // test relies on.
     jest.mocked(getSteamLibraries).mockResolvedValue([])
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
   })
 
   // Test 1 (read flow): dispatching a `refreshLibrary` invoke frame through
@@ -169,7 +178,9 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
   // the environment rather than weakening the assertion, per this plan's own
   // instruction.
   it('Test 1 (read flow): refreshLibrary invoke produces a pushGameToLibrary notification carrying a steam GameInfo', async () => {
-    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+    // Phase 54 (54-04): a granted refresh takes an authenticated lease via
+    // acquireAuthenticated() instead of calling ensureConnected().
+    mockLeaseOk()
     const fakeClient = {
       steamID: 'STEAMID_TEST',
       getUserOwnedApps: jest.fn().mockResolvedValue({

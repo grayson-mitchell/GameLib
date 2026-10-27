@@ -20,9 +20,9 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { shell } from 'backend/platform'
 import type { SteamGoOfflineRetryResult } from 'common/types/steam'
 
-export const MAC_STEAM_LOGOFF_WAIT_MS = 5000
-export const MAC_STEAM_LOG_POLL_MS = 250
-export const MAC_STEAM_ONLINE_SETTLE_MS = 2000
+const MAC_STEAM_LOGOFF_WAIT_MS = 5000
+const MAC_STEAM_LOG_POLL_MS = 250
+const MAC_STEAM_ONLINE_SETTLE_MS = 2000
 export const GUIDED_RESTORE_TTL_MS = 600000
 export const STEAM_GO_OFFLINE_URL = 'steam://open/gooffline'
 export const STEAM_GO_ONLINE_URL = 'steam://open/goonline'
@@ -60,7 +60,7 @@ export interface MacSteamOfflineDeps {
   now: () => number
 }
 
-export function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
+function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
   return {
     platform: process.platform,
     connectionLogPath: () => {

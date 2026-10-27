@@ -20,7 +20,7 @@ export const ANON_CONNECT_TIMEOUT_MS = 15000
 export const ANON_IDLE_CLOSE_MS = 60000
 
 /** Structurally compatible with platformCapture's PlatformCapturePicsClient. */
-export interface AnonymousPicsClient {
+interface AnonymousPicsClient {
   getProductInfo(
     apps: number[],
     packages: number[],
