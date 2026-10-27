@@ -47,15 +47,21 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { ReactElement, ReactNode } from 'react'
 import type { GameInfo } from 'common/types'
+import {
+  LIBRARY_GROUP_BYS,
+  LIBRARY_SORT_FIELDS
+} from 'frontend/screens/Library/librarySort'
 
 type LibraryContextStub = {
   activeFilterCount: number
   layout: string
   handleLayout: jest.Mock
-  sortDescending: boolean
-  setSortDescending: jest.Mock
-  sortInstalled: boolean
-  setSortInstalled: jest.Mock
+  sortField: string
+  setSortField: jest.Mock
+  sortDirection: string
+  setSortDirection: jest.Mock
+  groupBy: string
+  setGroupBy: jest.Mock
   showAlphabetFilter: boolean
   onToggleAlphabetFilter: jest.Mock
 }
@@ -76,10 +82,12 @@ function makeLibraryContextValue(
     activeFilterCount: 0,
     layout: 'grid',
     handleLayout: jest.fn(),
-    sortDescending: true,
-    setSortDescending: jest.fn(),
-    sortInstalled: true,
-    setSortInstalled: jest.fn(),
+    sortField: 'name',
+    setSortField: jest.fn(),
+    sortDirection: 'asc',
+    setSortDirection: jest.fn(),
+    groupBy: 'installStatus',
+    setGroupBy: jest.fn(),
     showAlphabetFilter: false,
     onToggleAlphabetFilter: jest.fn(),
     ...overrides
@@ -405,19 +413,101 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     expect(childTypes).toContain(FilterFocusRow)
   })
 
-  it('.Header has exactly six direct children in the locked panel order', () => {
+  it('.Header has exactly seven direct children in the locked panel order', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    expect(children).toHaveLength(6)
+    expect(children).toHaveLength(7)
     expect(children[0].props?.className).toBe('Header__utilities')
-    expect(children[1].props?.className).toBe('Header__search')
-    expect(children[2].props?.className).toBe('Header__categoriesGroup')
-    expect(children[3].props?.className).toBe('Header__focusRowGroup')
-    expect(children[4].props?.className).toBe('Header__filtersGroup')
-    expect(children[5].props?.className).toBe('Header__footer')
+    expect(children[1].props?.className).toBe('Header__sortGroup')
+    expect(children[2].props?.className).toBe('Header__search')
+    expect(children[3].props?.className).toBe('Header__categoriesGroup')
+    expect(children[4].props?.className).toBe('Header__focusRowGroup')
+    expect(children[5].props?.className).toBe('Header__filtersGroup')
+    expect(children[6].props?.className).toBe('Header__footer')
   })
 
-  it('Header__utilities holds exactly six controls in the locked D-01 order, and no FormControl element survives anywhere in the tree', () => {
+  describe('sort and group-by controls (quick 261027-jjz)', () => {
+    const selectIn = (row: AnyElement): AnyElement => {
+      const found = collectElements(row.props.children).filter(
+        (el) => el.type === 'select'
+      )
+      expect(found).toHaveLength(1)
+      return found[0]
+    }
+    const fire = (
+      el: AnyElement,
+      prop: 'onChange' | 'onClick',
+      arg?: unknown
+    ) => (el.props[prop] as (a?: unknown) => void)(arg)
+    const optionValues = (select: AnyElement): unknown[] =>
+      collectElements(select.props.children)
+        .filter((el) => el.type === 'option')
+        .map((el) => el.props.value)
+
+    it('one sort row and one group-by row, each inside Header__sortGroup', () => {
+      const tree = renderHeader()
+      const group = topLevelChildren(tree)[1]
+      const sortRows = findByDataTour(group, 'library-sort')
+      const groupRows = findByDataTour(group, 'library-group-by')
+      expect(sortRows).toHaveLength(1)
+      expect(groupRows).toHaveLength(1)
+      expect(findByDataTour(tree, 'library-sort')).toHaveLength(1)
+      expect(findByDataTour(tree, 'library-group-by')).toHaveLength(1)
+    })
+
+    it('the selects offer exactly the closed value lists', () => {
+      const tree = renderHeader()
+      const group = topLevelChildren(tree)[1]
+      const sortSelect = selectIn(findByDataTour(group, 'library-sort')[0])
+      const groupSelect = selectIn(findByDataTour(group, 'library-group-by')[0])
+      expect(optionValues(sortSelect)).toEqual([...LIBRARY_SORT_FIELDS])
+      expect(optionValues(groupSelect)).toEqual([...LIBRARY_GROUP_BYS])
+      expect(optionValues(sortSelect)).toHaveLength(3)
+    })
+
+    it('sort select onChange validates the value before setSortField', () => {
+      const tree = renderHeader()
+      const group = topLevelChildren(tree)[1]
+      const select = selectIn(findByDataTour(group, 'library-sort')[0])
+      fire(select, 'onChange', { currentTarget: { value: 'bogus' } })
+      expect(libraryContextValue.setSortField).not.toHaveBeenCalled()
+      fire(select, 'onChange', { currentTarget: { value: 'lastPlayed' } })
+      expect(libraryContextValue.setSortField).toHaveBeenCalledWith(
+        'lastPlayed'
+      )
+    })
+
+    it('group-by select onChange validates the value before setGroupBy', () => {
+      const tree = renderHeader()
+      const group = topLevelChildren(tree)[1]
+      const select = selectIn(findByDataTour(group, 'library-group-by')[0])
+      fire(select, 'onChange', { currentTarget: { value: 'bogus' } })
+      expect(libraryContextValue.setGroupBy).not.toHaveBeenCalled()
+      fire(select, 'onChange', { currentTarget: { value: 'store' } })
+      expect(libraryContextValue.setGroupBy).toHaveBeenCalledWith('store')
+    })
+
+    it('the direction button flips asc to desc and desc to asc', () => {
+      const tree = renderHeader()
+      const group = topLevelChildren(tree)[1]
+      const button = collectElements(
+        findByDataTour(group, 'library-sort')[0].props.children
+      ).find((el) => el.type === 'button') as AnyElement
+      fire(button, 'onClick')
+      expect(libraryContextValue.setSortDirection).toHaveBeenCalledWith('desc')
+
+      libraryContextValue = makeLibraryContextValue({ sortDirection: 'desc' })
+      const tree2 = renderHeader()
+      const button2 = collectElements(
+        findByDataTour(topLevelChildren(tree2)[1], 'library-sort')[0].props
+          .children
+      ).find((el) => el.type === 'button') as AnyElement
+      fire(button2, 'onClick')
+      expect(libraryContextValue.setSortDirection).toHaveBeenCalledWith('asc')
+    })
+  })
+
+  it('Header__utilities holds exactly four controls in the locked D-01 order, and no FormControl element survives anywhere in the tree', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
     const utilities = children[0]
@@ -425,15 +515,13 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     const controls = collectElements(utilities.props.children).filter(
       (el) => el.type === Link || el.type === 'button' || el.type === TourButton
     )
-    expect(controls).toHaveLength(6)
-    // D-01's order: console mode, layout toggle, sort A-Z, sort by status,
-    // alphabet filter, tour.
+    expect(controls).toHaveLength(4)
+    // D-01's order: console mode, layout toggle, alphabet filter, tour. The
+    // two sort buttons moved to `Header__sortGroup` (quick 261027-jjz).
     expect(controls[0].type).toBe(Link)
     expect(controls[1].type).toBe('button')
     expect(controls[2].type).toBe('button')
-    expect(controls[3].type).toBe('button')
-    expect(controls[4].type).toBe('button')
-    expect(controls[5].type).toBe(TourButton)
+    expect(controls[3].type).toBe(TourButton)
 
     const formControlEls = collectElements(tree).filter(
       (el) => el.type === FormControl
@@ -443,7 +531,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
 
   it('the last top-level child of Header__footer is the LibraryTileSizeSlider, by identity (261011-t4y, D-02)', () => {
     const tree = renderHeader()
-    const footer = topLevelChildren(tree)[5]
+    const footer = topLevelChildren(tree)[6]
     const footerChildren = topLevelChildren(footer)
     expect(footerChildren[0].props?.className).toBe('Header__footerRow')
     expect(footerChildren[footerChildren.length - 1].type).toBe(
@@ -454,7 +542,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
   it('Header__footer renders AddGameButton, by identity', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    const footer = children[5]
+    const footer = children[6]
 
     const addGameButtonEls = collectElements(footer.props.children).filter(
       (el) => el.type === AddGameButton
@@ -513,7 +601,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     expect(filtersBlock).toMatch(/gap:\s*var\(--space-md\)/)
   })
 
-  it('Header__utilities declares a gap, so the merged six-control row does not collapse', () => {
+  it('Header__utilities declares a gap, so the merged four-control row does not collapse', () => {
     const source = read(HEADER_CSS_PATH)
     const block = cssBlock(source, '.Header__utilities')
     expect(block).toMatch(/display:\s*flex/)
@@ -538,7 +626,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
   it('Header__footerRow renders the plus button, count pill, then refresh button in D-04/D-06 order', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    const footer = children[5]
+    const footer = children[6]
     const footerRow = topLevelChildren(footer)[0]
     expect(footerRow.props?.className).toBe('Header__footerRow')
 

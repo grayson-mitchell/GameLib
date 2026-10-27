@@ -14,10 +14,8 @@ import {
   faSyncAlt,
   faBorderAll,
   faList,
-  faArrowDownAZ,
-  faArrowDownZA,
-  faHardDrive,
-  faCircleXmark,
+  faArrowDownShortWide,
+  faArrowDownWideShort,
   faFilter,
   faFilterCircleXmark
 } from '@fortawesome/free-solid-svg-icons'
@@ -37,6 +35,10 @@ import FilterStoreFacet from '../NavShell/components/FilterStoreFacet'
 import FilterRunnabilityFacet from '../NavShell/components/FilterRunnabilityFacet'
 import FilterMoreGroup from '../NavShell/components/FilterMoreGroup'
 import LibraryTileSizeSlider from '../NavShell/components/LibraryTileSizeSlider'
+import {
+  LIBRARY_GROUP_BYS,
+  LIBRARY_SORT_FIELDS
+} from 'frontend/screens/Library/librarySort'
 import './index.css'
 
 type Props = {
@@ -84,13 +86,19 @@ export default function Header({ list, totalGames }: Props) {
     activeFilterCount,
     layout,
     handleLayout,
-    sortDescending,
-    setSortDescending,
-    sortInstalled,
-    setSortInstalled,
+    sortField,
+    setSortField,
+    sortDirection,
+    setSortDirection,
+    groupBy,
+    setGroupBy,
     showAlphabetFilter,
     onToggleAlphabetFilter
   } = useContext(LibraryContext)
+  const directionLabel =
+    sortDirection === 'asc'
+      ? tGamelib('gamelib:library.sort.direction.ascending', 'Ascending')
+      : tGamelib('gamelib:library.sort.direction.descending', 'Descending')
   const {
     refreshLibrary,
     refreshing,
@@ -231,46 +239,6 @@ export default function Header({ list, totalGames }: Props) {
         <button
           className="Header__utilityButton"
           title={
-            sortDescending
-              ? t('library.sortDescending', 'Sort Descending')
-              : t('library.sortAscending', 'Sort Ascending')
-          }
-          onClick={() => setSortDescending(!sortDescending)}
-        >
-          <FontAwesomeIcon
-            icon={sortDescending ? faArrowDownZA : faArrowDownAZ}
-            data-tour="library-sort-az"
-          />
-        </button>
-        <button
-          className="Header__utilityButton"
-          // The state cue is now the small-x badge rendered on the glyph
-          // below (D-02/D-07) plus aria-pressed, not a latched tile fill --
-          // the fill's only consumer was this button, and D-10 reverts the
-          // shared FormControl rule now that it has none. The title stays
-          // STATELESS: an accessible name should name the control, not
-          // narrate its state, and a stateful pair would cost 96 new
-          // catalogue strings (D-09).
-          aria-pressed={sortInstalled}
-          title={t('library.sortByStatus', 'Sort by Status')}
-          onClick={() => setSortInstalled(!sortInstalled)}
-        >
-          <span
-            className="Header__statusGlyph"
-            data-tour="library-sort-installed"
-          >
-            <FontAwesomeIcon icon={faHardDrive} />
-            {sortInstalled && (
-              <FontAwesomeIcon
-                icon={faCircleXmark}
-                className="Header__statusGlyphBadge"
-              />
-            )}
-          </span>
-        </button>
-        <button
-          className="Header__utilityButton"
-          title={
             showAlphabetFilter
               ? t('library.hideAlphabetFilter', 'Hide Alphabet Filter')
               : t('library.showAlphabetFilter', 'Show Alphabet Filter')
@@ -282,6 +250,83 @@ export default function Header({ list, totalGames }: Props) {
           />
         </button>
         <TourButton tourId={LIBRARY_TOUR_ID} className="library-tour-button" />
+      </div>
+      <div className="Header__sortGroup">
+        <div className="Header__sortRow" data-tour="library-sort">
+          <label className="Header__sortLabel" htmlFor="library-sort-field">
+            {tGamelib('gamelib:library.sort.label', 'Sort by')}
+          </label>
+          <select
+            id="library-sort-field"
+            className="Header__sortSelect"
+            value={sortField}
+            onChange={(event) => {
+              const next = LIBRARY_SORT_FIELDS.find(
+                (field) => field === event.currentTarget.value
+              )
+              if (next) setSortField(next)
+            }}
+          >
+            <option value="name">
+              {tGamelib('gamelib:library.sort.field.name', 'Name')}
+            </option>
+            <option value="lastPlayed">
+              {tGamelib('gamelib:library.sort.field.lastPlayed', 'Last played')}
+            </option>
+            <option value="installSize">
+              {tGamelib(
+                'gamelib:library.sort.field.installSize',
+                'Install size'
+              )}
+            </option>
+          </select>
+          <button
+            type="button"
+            className="Header__utilityButton Header__sortDirection"
+            aria-label={directionLabel}
+            title={directionLabel}
+            onClick={() =>
+              setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+            }
+          >
+            <FontAwesomeIcon
+              icon={
+                sortDirection === 'asc'
+                  ? faArrowDownShortWide
+                  : faArrowDownWideShort
+              }
+            />
+          </button>
+        </div>
+        <div className="Header__sortRow" data-tour="library-group-by">
+          <label className="Header__sortLabel" htmlFor="library-group-by">
+            {tGamelib('gamelib:library.groupBy.label', 'Group by')}
+          </label>
+          <select
+            id="library-group-by"
+            className="Header__sortSelect Header__sortSelect--wide"
+            value={groupBy}
+            onChange={(event) => {
+              const next = LIBRARY_GROUP_BYS.find(
+                (group) => group === event.currentTarget.value
+              )
+              if (next) setGroupBy(next)
+            }}
+          >
+            <option value="none">
+              {tGamelib('gamelib:library.groupBy.none', 'None')}
+            </option>
+            <option value="installStatus">
+              {tGamelib(
+                'gamelib:library.groupBy.installStatus',
+                'Install status'
+              )}
+            </option>
+            <option value="store">
+              {tGamelib('gamelib:library.groupBy.store', 'Store')}
+            </option>
+          </select>
+        </div>
       </div>
       <div className="Header__search">
         <LibrarySearchBar />

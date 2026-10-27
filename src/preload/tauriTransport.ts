@@ -406,6 +406,16 @@ function reportLazyMiss(storeName: string, key: string, forCall: string): void {
 }
 
 /**
+ * Resolves once `storeName` is hydrated. A lazy store's first synchronous read returns the
+ * caller default and only kicks off a background fetch, with no notification when it ends;
+ * a caller that must not act on that miss awaits this first and then reads. Never rejects
+ * (`hydrateStore` swallows fetch errors), and de-dupes with any in-flight fetch.
+ */
+export function ensureStoreHydrated(storeName: string): Promise<void> {
+  return hydrated.has(storeName) ? Promise.resolve() : hydrateStore(storeName)
+}
+
+/**
  * Synchronous read from the in-memory snapshot (D-03: boot-set stores are populated by
  * `hydrateStoreSnapshot()`, lazy stores by `hydrateStore()` on first miss).
  *

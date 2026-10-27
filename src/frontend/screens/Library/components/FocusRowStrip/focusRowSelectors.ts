@@ -35,9 +35,10 @@ export const FOCUS_ROW_MAX_CARDS = 20
 export { isValidFocusRowSelection }
 
 /**
- * The grid's own comparator (`Library/index.tsx:916-922`), reused so the
- * focus row's ordering cannot drift from it. Always ascending -- the focus
- * row has no `sortDescending` (SPEC R4 independence) -- with a final
+ * The grid's own title key (`librarySortTitle` in `Library/librarySort.ts`),
+ * reused so the focus row's ordering cannot drift from it. Always ascending
+ * -- the focus row has no sort field or direction of its own (SPEC R4
+ * independence) -- with a final
  * `app_name` tie-break so identical titles are stable regardless of input
  * order.
  */

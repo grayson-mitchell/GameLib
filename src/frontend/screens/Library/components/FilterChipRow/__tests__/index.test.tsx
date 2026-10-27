@@ -784,7 +784,7 @@ describe('FilterChipRow -- D-08 source gate (sort/layout/alphabet are not filter
 
   it('the component source never references sort/layout/alphabet vocabulary', () => {
     expect(source).not.toMatch(
-      /sortDescending|sortInstalled|alphabetFilterLetter|showAlphabetFilter/
+      /sortDescending|sortInstalled|sortField|sortDirection|groupBy|alphabetFilterLetter|showAlphabetFilter/
     )
   })
 

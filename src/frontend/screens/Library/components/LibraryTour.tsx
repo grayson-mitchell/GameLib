@@ -113,18 +113,18 @@ const LibraryTour: React.FC = () => {
         position: 'bottom'
       },
       {
-        element: '[data-tour="library-sort-az"]',
-        intro: t(
-          'tour.library.sortOptions',
-          'Click here to sort games alphabetically.'
+        element: '[data-tour="library-sort"]',
+        intro: tGamelib(
+          'gamelib:tour.library.sort',
+          'Sort your games by name, last played or install size, and flip the direction.'
         ),
         position: 'left'
       },
       {
-        element: '[data-tour="library-sort-installed"]',
-        intro: t(
-          'tour.library.sortInstalled',
-          'Sort games by installed status.'
+        element: '[data-tour="library-group-by"]',
+        intro: tGamelib(
+          'gamelib:tour.library.groupBy',
+          'Group your games by install status or by store, or turn grouping off.'
         ),
         position: 'left'
       },

@@ -65,29 +65,47 @@
   background: var(--focus-ring-fill);
 }
 
-/* D-07/D-08: composed badge for the sort-by-status glyph. No x-marked or
-   slashed drive glyph exists in either installed FontAwesome set (measured,
-   D-07), so this renders a solid drive icon plus a smaller faCircleXmark
-   absolutely positioned at its bottom-right corner, visible only while
-   sortInstalled is true. The badge punches out with --navbar-background --
-   declared in all 10 theme blocks and the literal background
-   .NavShell__tier2 paints on itself, so the halo matches the panel exactly
-   in every theme by construction. The x itself takes color: inherit, so it
-   carries the same foreground as the glyph it sits on rather than a new
-   foreground/background pair. */
-.Header__statusGlyph {
-  position: relative;
-  display: inline-flex;
+.Header__sortGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
 }
 
-.Header__statusGlyphBadge {
-  position: absolute;
-  right: -0.25em;
-  bottom: -0.25em;
-  font-size: 0.625em;
-  color: inherit;
-  background: var(--navbar-background);
-  border-radius: 50%;
+.Header__sortRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.Header__sortLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+/* Group-by has no direction button, so its select takes the last two tracks. */
+.Header__sortSelect--wide {
+  grid-column: span 2;
+}
+
+/* Specificity: `.Header .Header__sortSelect` out-ranks the global select rules. */
+.Header .Header__sortSelect {
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding-block: var(--space-3xs);
+  padding-inline: var(--space-xs);
+  border-radius: var(--space-3xs);
+  border: 1px solid var(--navbar-active-background);
+  background: var(--input-background);
+  color: var(--text-default);
+  font-family: inherit;
+  font-size: var(--text-xs);
+}
+
+.Header .Header__sortSelect:focus-visible {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--accent, #0080ff));
+  outline-offset: calc(-1 * var(--focus-ring-width, 3px));
 }
 
 .Header__search {

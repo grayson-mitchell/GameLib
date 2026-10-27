@@ -2,6 +2,7 @@ import React from 'react'
 
 import { GameInfo } from 'common/types'
 import { LibraryContextType } from 'frontend/types'
+import { DEFAULT_LIBRARY_SORT_PREFS } from './librarySort'
 
 const initialContext: LibraryContextType = {
   filterText: '',
@@ -18,10 +19,12 @@ const initialContext: LibraryContextType = {
   setNoStorePage: () => null,
   showInstalledOnly: false,
   setShowInstalledOnly: () => null,
-  sortDescending: true,
-  setSortDescending: () => null,
-  sortInstalled: true,
-  setSortInstalled: () => null,
+  sortField: DEFAULT_LIBRARY_SORT_PREFS.field,
+  setSortField: () => null,
+  sortDirection: DEFAULT_LIBRARY_SORT_PREFS.direction,
+  setSortDirection: () => null,
+  groupBy: DEFAULT_LIBRARY_SORT_PREFS.groupBy,
+  setGroupBy: () => null,
   showSupportOfflineOnly: false,
   setShowSupportOfflineOnly: () => null,
   showThirdPartyManagedOnly: false,

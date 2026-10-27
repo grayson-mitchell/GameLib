@@ -21,6 +21,11 @@ import { HumbleKey } from 'common/types/humble'
 import type { OAuthLoginCompletionPayload } from 'frontend/screens/WebView/useTauriOAuthLogin'
 import type { SteamSyncStatus } from 'common/types/ipc'
 import type {
+  LibraryGroupBy,
+  LibrarySortDirection,
+  LibrarySortField
+} from 'frontend/screens/Library/librarySort'
+import type {
   SignInProbeOutcomeMap,
   SignInState,
   SignInStore
@@ -321,10 +326,12 @@ export interface LibraryContextType {
   // for the forced-hide REQ-37-02/D-15 removed from isNonAvailableGame.
   noStorePage: NoStorePageMode
   setNoStorePage: (value: NoStorePageMode) => void
-  sortDescending: boolean
-  setSortDescending: (value: boolean) => void
-  sortInstalled: boolean
-  setSortInstalled: (value: boolean) => void
+  sortField: LibrarySortField
+  setSortField: (value: LibrarySortField) => void
+  sortDirection: LibrarySortDirection
+  setSortDirection: (value: LibrarySortDirection) => void
+  groupBy: LibraryGroupBy
+  setGroupBy: (value: LibraryGroupBy) => void
   showSupportOfflineOnly: boolean
   setShowSupportOfflineOnly: (value: boolean) => void
   showThirdPartyManagedOnly: boolean

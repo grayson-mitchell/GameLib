@@ -117,7 +117,14 @@ export const handleShowDialog = frontendListenerSlot('showDialog')
 
 import type { StoreOptions } from 'common/types/electron_store'
 import { isAllowedStoreField } from 'common/types/storePolicy'
-import { registerStore, snapshotGet, snapshotHas, snapshotSet, snapshotDelete } from '../tauriTransport'
+import {
+  ensureStoreHydrated,
+  registerStore,
+  snapshotGet,
+  snapshotHas,
+  snapshotSet,
+  snapshotDelete
+} from '../tauriTransport'
 // FUTURE WORK
 // here is how the store methods can be refactored
 // in order to set nodeIntegration: false
@@ -193,6 +200,8 @@ export const storeGet = (storeName: string, key: string, defaultValue?: unknown)
   }
   return snapshotGet(storeName, key, defaultValue)
 }
+
+export const storeEnsureHydrated = (storeName: string) => ensureStoreHydrated(storeName)
 
 export const storeDelete = (storeName: string, key: string) => {
   snapshotDelete(storeName, key)

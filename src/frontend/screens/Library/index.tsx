@@ -47,7 +47,24 @@ import { renderableActiveFilters } from './components/FilterChipRow/chipLabels'
 import FilterZeroResult from './components/FilterZeroResult'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalContext'
-import { configStore, steamConfigStore } from 'frontend/helpers/electronStores'
+import {
+  configStore,
+  steamConfigStore,
+  timestampStore
+} from 'frontend/helpers/electronStores'
+import {
+  defaultDirectionFor,
+  readLibrarySortPrefs,
+  sortAndGroupLibrary,
+  writeLibraryGroupBy,
+  writeLibrarySortDirection,
+  writeLibrarySortField
+} from './librarySort'
+import type {
+  LibraryGroupBy,
+  LibrarySortDirection,
+  LibrarySortField
+} from './librarySort'
 import SteamSyncNotice from './components/SteamSyncNotice'
 import LibrarySignInNotice from './components/LibrarySignInNotice'
 import { resolveSteamSyncIndicator } from './librarySyncIndicator'
@@ -486,20 +503,26 @@ export default React.memo(function Library(): JSX.Element {
     string | null
   >(null)
 
-  const [sortDescending, setSortDescending] = useState(
-    JSON.parse(storage?.getItem('sortDescending') || 'false')
+  const [sortPrefs, setSortPrefs] = useState(() =>
+    readLibrarySortPrefs(storage)
   )
-  function handleSortDescending(value: boolean) {
-    storage.setItem('sortDescending', JSON.stringify(value))
-    setSortDescending(value)
+  const { field: sortField, direction: sortDirection, groupBy } = sortPrefs
+  // Switching field also resets direction to that field's natural default
+  // (Name asc, Last played / Install size desc); the direction button then
+  // flips it, and the last choice is what persists.
+  function handleSortField(value: LibrarySortField) {
+    const direction = defaultDirectionFor(value)
+    writeLibrarySortField(storage, value)
+    writeLibrarySortDirection(storage, direction)
+    setSortPrefs((prev) => ({ ...prev, field: value, direction }))
   }
-
-  const [sortInstalled, setSortInstalled] = useState(
-    JSON.parse(storage?.getItem('sortInstalled') || 'true')
-  )
-  function handleSortInstalled(value: boolean) {
-    storage.setItem('sortInstalled', JSON.stringify(value))
-    setSortInstalled(value)
+  function handleSortDirection(value: LibrarySortDirection) {
+    writeLibrarySortDirection(storage, value)
+    setSortPrefs((prev) => ({ ...prev, direction: value }))
+  }
+  function handleGroupBy(value: LibraryGroupBy) {
+    writeLibraryGroupBy(storage, value)
+    setSortPrefs((prev) => ({ ...prev, groupBy: value }))
   }
 
   const backToTopElement = useRef(null)
@@ -837,6 +860,33 @@ export default React.memo(function Library(): JSX.Element {
 
   const gamesForAlphabetFilter = gridPipeline.games
 
+  // Last played for non-Steam runners comes from GameLib's timestamp store
+  // (ISO). It is a LAZY store: a synchronous read before hydration returns
+  // undefined, so wait for hydration, then read each game ONCE into a map.
+  // Steam never reads this store (it uses extra.steamLastPlayed). A launch
+  // refreshes recentAppNames, which re-runs this effect.
+  const [nonSteamLastPlayedIso, setNonSteamLastPlayedIso] = useState<
+    Record<string, string | undefined>
+  >({})
+  useEffect(() => {
+    if (sortField !== 'lastPlayed') return
+    let cancelled = false
+    void window.api.storeEnsureHydrated('timestampStore').then(() => {
+      if (cancelled) return
+      const map: Record<string, string | undefined> = {}
+      for (const game of gamesForAlphabetFilter) {
+        if (game.runner === 'steam') continue
+        map[game.app_name] = timestampStore.get_nodefault(
+          game.app_name
+        )?.lastPlayed
+      }
+      setNonSteamLastPlayedIso(map)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [sortField, gamesForAlphabetFilter, recentAppNames])
+
   // select library
   const libraryToShow = useMemo(() => {
     let library = [...gamesForAlphabetFilter]
@@ -860,33 +910,21 @@ export default React.memo(function Library(): JSX.Element {
       })
     }
 
-    // sort
-    library = library.sort((a, b) => {
-      const gameA = a.title.toUpperCase().replace('THE ', '')
-      const gameB = b.title.toUpperCase().replace('THE ', '')
-      return sortDescending
-        ? -gameA.localeCompare(gameB)
-        : gameA.localeCompare(gameB)
+    return sortAndGroupLibrary(library, {
+      field: sortField,
+      direction: sortDirection,
+      groupBy,
+      installing,
+      nonSteamLastPlayedIso
     })
-    const installed = library.filter((game) => game?.is_installed)
-    const notInstalled = library.filter(
-      (game) => !game?.is_installed && !installing.includes(game?.app_name)
-    )
-    const installingGames = library.filter(
-      (g) => !g.is_installed && installing.includes(g.app_name)
-    )
-
-    library = sortInstalled
-      ? [...installed, ...installingGames, ...notInstalled]
-      : library
-
-    return [...library]
   }, [
     gamesForAlphabetFilter,
     alphabetFilterLetter,
-    sortDescending,
-    sortInstalled,
-    installing
+    sortField,
+    sortDirection,
+    groupBy,
+    installing,
+    nonSteamLastPlayedIso
   ])
 
   // Reports to the shell that the Games tier-2 column has content, so it can
@@ -1094,16 +1132,18 @@ export default React.memo(function Library(): JSX.Element {
         setShowInstalledOnly: handleShowInstalledOnly,
         setShowNonAvailable: handleShowNonAvailable,
         setNoStorePage: handleNoStorePage,
-        setSortDescending: handleSortDescending,
-        setSortInstalled: handleSortInstalled,
+        setSortField: handleSortField,
+        setSortDirection: handleSortDirection,
+        setGroupBy: handleGroupBy,
         showSupportOfflineOnly,
         setShowSupportOfflineOnly: handleShowSupportOfflineOnly,
         showThirdPartyManagedOnly,
         setShowThirdPartyManagedOnly: handleShowThirdPartyOnly,
         showUpdatesOnly,
         setShowUpdatesOnly: handleShowUpdatesOnly,
-        sortDescending,
-        sortInstalled,
+        sortField,
+        sortDirection,
+        groupBy,
         handleAddGameButtonClick: () => handleModal('', 'sideload', null),
         setShowCategories,
         categoriesManagerIntent,

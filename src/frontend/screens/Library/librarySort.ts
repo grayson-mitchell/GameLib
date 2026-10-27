@@ -41,7 +41,7 @@ export const LIBRARY_GROUP_BY_KEY = 'libraryGroupBy'
 export const LEGACY_SORT_DESCENDING_KEY = 'sortDescending'
 export const LEGACY_SORT_INSTALLED_KEY = 'sortInstalled'
 
-export interface LibrarySortPrefs {
+interface LibrarySortPrefs {
   field: LibrarySortField
   direction: LibrarySortDirection
   groupBy: LibraryGroupBy
@@ -179,7 +179,7 @@ export function parseInstallSize(raw: unknown): number | undefined {
  * todo calls a "leading THE"; the code has always been unanchored and
  * behaviour-preservation wins). Kept in parity with `focusRowTitleComparator`.
  */
-export function librarySortTitle(game: GameInfo): string {
+function librarySortTitle(game: GameInfo): string {
   return game.title.toUpperCase().replace('THE ', '')
 }
 
@@ -206,7 +206,7 @@ function installSizeBytes(game: GameInfo): number | undefined {
   return parseInstallSize(game.install?.install_size)
 }
 
-export interface SortAndGroupOptions {
+interface SortAndGroupOptions {
   field: LibrarySortField
   direction: LibrarySortDirection
   groupBy: LibraryGroupBy
