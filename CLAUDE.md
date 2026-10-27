@@ -32,9 +32,12 @@ rejected-alternatives table with reasons, confidence ratings and sources — is 
 plumbing; otherwise you do not need it.
 
 The short version: **steam-session** for auth (QR / credentials / SteamGuard, yielding a refresh
-token), **steam-user** to reach the CM network and call `getOwnedApps()`, **@node-steam/vdf** to
-read local `libraryfolders.vdf` and `appmanifest_*.acf`, **axios** for public store metadata and
-artwork, and `shell.openExternal("steam://rungameid/{appId}")` to launch.
+token), **steam-user** to reach the CM network anonymously for public app data
+and authenticated only on demand (explicit Refresh, sign-in, redeem, depot installs; wrapped on
+macOS so Mac Steam's Friends list stays signed in), calling `getUserOwnedApps()`,
+**@node-steam/vdf** to read local `libraryfolders.vdf` and `appmanifest_*.acf`, **axios** for
+public store metadata and artwork, and `shell.openExternal("steam://rungameid/{appId}")` to
+launch.
 
 `steamworks.js`, `greenworks`, `electron-steam-openid`, Steam partner OAuth and browser-based
 Steam login were each evaluated and **rejected** — mostly because they require a Valve-assigned
