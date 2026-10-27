@@ -243,7 +243,9 @@ jest.mock('../user', () => ({
   SteamUser: {
     isLoggedIn: jest.fn(),
     getClient: jest.fn(),
-    ensureConnected: jest.fn().mockResolvedValue(true)
+    ensureConnected: jest.fn().mockResolvedValue(true),
+    acquireAuthenticated: jest.fn(),
+    acquireOpenAuthenticated: jest.fn()
   }
 }))
 jest.mock('backend/online_monitor', () => ({
@@ -2145,6 +2147,19 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(order).toBeLessThan(
       (runWineCommand as jest.Mock).mock.invocationCallOrder[0]
     )
+  })
+
+  it('Phase 54: a bridge Play never acquires or ensures a CM session and passes no allowLogon to the shared redist step', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+
+    await new SteamGame(APP_ID).launch({} as any)
+
+    expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
+    expect(SteamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
+    expect(SteamUser.ensureConnected).not.toHaveBeenCalled()
+    const call = (installSteamBridgeSharedRedists as jest.Mock).mock.calls[0]
+    expect(call[3]?.allowLogon).not.toBe(true)
   })
 
   it('quick 261025-rkj: the installer runs once per bridge launch', async () => {

@@ -597,49 +597,29 @@ describe('SteamGame keyring deferral unlock (quick-260817-d61)', () => {
     expect(isSteamAuthUnlocked()).toBe(true)
   })
 
-  describe('getExtraInfo() — locked->unlocked transition fires ensureConnected() exactly once', () => {
+  describe('getExtraInfo() opens no CM session (Phase 54)', () => {
     afterEach(() => {
       jest.restoreAllMocks()
     })
 
-    it('the FIRST getExtraInfo() call unlocks the gate and fires exactly one ensureConnected()', async () => {
-      const ensureConnectedSpy = jest
+    it('calling getExtraInfo() twice never reaches ensureConnected, acquireAuthenticated or acquireOpenAuthenticated, and still notes the game-page trigger', async () => {
+      const ensureSpy = jest
         .spyOn(SteamUser, 'ensureConnected')
         .mockResolvedValue(true)
+      const acquireSpy = jest.spyOn(SteamUser, 'acquireAuthenticated')
+      const openSpy = jest.spyOn(SteamUser, 'acquireOpenAuthenticated')
       const game = new SteamGame(APP_ID)
       expect(isSteamAuthUnlocked()).toBe(false)
 
       await game.getExtraInfo()
+      await game.getExtraInfo()
       await flushAsync()
 
       expect(isSteamAuthUnlocked()).toBe(true)
-      expect(ensureConnectedSpy).toHaveBeenCalledTimes(1)
-    })
-
-    it('a SECOND getExtraInfo() call fires NO additional ensureConnected() — only the transition fires it', async () => {
-      const ensureConnectedSpy = jest
-        .spyOn(SteamUser, 'ensureConnected')
-        .mockResolvedValue(true)
-      const game = new SteamGame(APP_ID)
-
-      await game.getExtraInfo()
-      await flushAsync()
-      expect(ensureConnectedSpy).toHaveBeenCalledTimes(1)
-
-      await game.getExtraInfo()
-      await flushAsync()
-
-      expect(ensureConnectedSpy).toHaveBeenCalledTimes(1)
-    })
-
-    it('getExtraInfo() never blocks page render — a rejected ensureConnected() is swallowed, resolution is unaffected', async () => {
-      jest
-        .spyOn(SteamUser, 'ensureConnected')
-        .mockRejectedValue(new Error('boom'))
-      const game = new SteamGame(APP_ID)
-
-      await expect(game.getExtraInfo()).resolves.not.toThrow()
-      await flushAsync()
+      expect(currentTriggerLabel()).toBe('game-page')
+      expect(ensureSpy).not.toHaveBeenCalled()
+      expect(acquireSpy).not.toHaveBeenCalled()
+      expect(openSpy).not.toHaveBeenCalled()
     })
   })
 })
