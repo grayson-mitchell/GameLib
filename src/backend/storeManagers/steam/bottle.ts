@@ -650,8 +650,9 @@ export type ProvisionBottleResult = {
  */
 async function killBottleWineServer(
   bottleName: string,
-  knownBinDir?: string
-): Promise<void> {
+  knownBinDir?: string,
+  timeoutMs?: number
+): Promise<boolean> {
   const binDir =
     knownBinDir ??
     (await resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() }))
@@ -660,16 +661,25 @@ async function killBottleWineServer(
       `killBottleWineServer: no CrossOver install found, skipping wineserver -k for "${bottleName}"`,
       LogPrefix.Steam
     )
-    return
+    return false
   }
   try {
-    await spawnAsync(wineserverIn(binDir), ['-k'], {
+    const result = await spawnAsync(wineserverIn(binDir), ['-k'], {
       env: {
         ...process.env,
         WINEPREFIX: getBottleDir(bottleName),
         CX_ROOT: cxRootFrom(binDir)
-      }
+      },
+      ...(timeoutMs !== undefined ? { timeout: timeoutMs } : {})
     })
+    if (result?.code === null) {
+      logWarning(
+        `killBottleWineServer: wineserver -k for bottle "${bottleName}" was killed by its timeout`,
+        LogPrefix.Steam
+      )
+      return false
+    }
+    return true
   } catch (error) {
     logWarning(
       [
@@ -678,6 +688,7 @@ async function killBottleWineServer(
       ],
       LogPrefix.Steam
     )
+    return false
   }
 }
 
@@ -1668,6 +1679,41 @@ export async function stopPerGameBridgeBottle(
   )
   await killBottleWineServer(name)
   return { status: 'stopped' }
+}
+
+/**
+ * Quick 261027-nd3: ends the wineserver session of this appId's OWN per-game
+ * bridge bottle so a Wine driver change takes effect (and so the game starts a
+ * fresh session). Per-game-only for the same reason as stopPerGameBridgeBottle:
+ * a shared-bottle game is never killed. Bounded by `timeoutMs`. Never throws;
+ * resolves true only when a `wineserver -k` ran to completion.
+ */
+export async function endPerGameBridgeBottleSession(
+  appId: string,
+  bottleName: string | undefined,
+  timeoutMs: number
+): Promise<boolean> {
+  try {
+    if (!bottleName || bottleName !== bridgeBottleNameFor(appId)) return false
+    const guard = guardPerGameBridgeBottleName(
+      appId,
+      'endPerGameBridgeBottleSession'
+    )
+    if (!guard.ok) return false
+    const { name } = guard
+    if (!existsSync(getBottleDir(name))) return false
+    logInfo(
+      `endPerGameBridgeBottleSession: wineserver -k for bottle "${name}" (appId ${appId})`,
+      LogPrefix.Steam
+    )
+    return await killBottleWineServer(name, undefined, timeoutMs)
+  } catch (error) {
+    logWarning(
+      [`endPerGameBridgeBottleSession: failed for appId "${appId}"`, error],
+      LogPrefix.Steam
+    )
+    return false
+  }
 }
 
 /**

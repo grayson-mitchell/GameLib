@@ -57,6 +57,7 @@ import {
   listReadyBridgeBottleNames,
   removePerGameBridgeBottle,
   stopPerGameBridgeBottle,
+  endPerGameBridgeBottleSession,
   findBridgeInstallBottle
 } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
@@ -2472,6 +2473,96 @@ describe('bottle.ts', () => {
         expect(result).toEqual({ status: 'absent' })
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
         expect(mockedRmSync).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('endPerGameBridgeBottleSession', () => {
+      const perGameName = 'GameLibSteamBridge-206040'
+      const perGameDir = getBottleDir(perGameName)
+
+      beforeEach(() => {
+        mockedGetNodefault.mockReturnValue(undefined)
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+        })
+        mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+        mockedExistsSync.mockImplementation(
+          (path: string) => path === perGameDir
+        )
+      })
+
+      test('present dir: one bounded wineserver -k scoped to the per-game WINEPREFIX', async () => {
+        const ok = await endPerGameBridgeBottleSession(
+          '206040',
+          perGameName,
+          20_000
+        )
+
+        expect(ok).toBe(true)
+        const calls = mockedSpawnAsync.mock.calls.filter(([bin]) =>
+          String(bin).includes('wineserver')
+        )
+        expect(calls).toHaveLength(1)
+        expect(calls[0][1]).toEqual(['-k'])
+        expect(calls[0][2]?.env?.WINEPREFIX).toBe(perGameDir)
+        expect(calls[0][2]?.timeout).toBe(20_000)
+      })
+
+      test.each(['GameLib', 'GameLibSteamBridge', 'GameLibSteamBridge-999'])(
+        'bottle %s is not this appId per-game bottle: false, no spawn',
+        async (name) => {
+          expect(await endPerGameBridgeBottleSession('206040', name, 1)).toBe(
+            false
+          )
+          expect(mockedSpawnAsync).not.toHaveBeenCalled()
+        }
+      )
+
+      test('non-numeric appId: false, no spawn', async () => {
+        expect(await endPerGameBridgeBottleSession('abc', perGameName, 1)).toBe(
+          false
+        )
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      })
+
+      test('shared bottle configured as the per-game name: false, no spawn', async () => {
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () =>
+            ({
+              wineVersion: defaultWine,
+              wineCrossoverBottle: perGameName
+            }) as GameSettings
+        })
+        expect(
+          await endPerGameBridgeBottleSession('206040', perGameName, 1)
+        ).toBe(false)
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      })
+
+      test('absent dir: false, no spawn', async () => {
+        mockedExistsSync.mockReturnValue(false)
+        expect(
+          await endPerGameBridgeBottleSession('206040', perGameName, 1)
+        ).toBe(false)
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      })
+
+      test('spawn rejects: false', async () => {
+        mockedSpawnAsync.mockRejectedValue(new Error('boom'))
+        expect(
+          await endPerGameBridgeBottleSession('206040', perGameName, 1)
+        ).toBe(false)
+      })
+
+      test('timeout kill (code null): false', async () => {
+        mockedSpawnAsync.mockResolvedValue({
+          code: null,
+          stdout: '',
+          stderr: ''
+        })
+        expect(
+          await endPerGameBridgeBottleSession('206040', perGameName, 1)
+        ).toBe(false)
       })
     })
   })

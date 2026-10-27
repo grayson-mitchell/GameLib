@@ -5,6 +5,10 @@ import {
   BOTTLE_WINDOWS_VERSION,
   buildHasRunKeyAddParts,
   buildHasRunKeyQueryParts,
+  buildWineGraphicsDeleteParts,
+  buildWineGraphicsQueryParts,
+  buildWineGraphicsSetParts,
+  parseRegQueryGraphics,
   buildRedistProcessCommandParts,
   classifySharedRedist,
   declaredSharedRedistDepotIds,
@@ -668,5 +672,54 @@ describe('sharedRedistLedgerKey', () => {
     expect(sharedRedistLedgerKey('a%7Cb', 'c', '1')).not.toBe(
       sharedRedistLedgerKey('a|b', 'c', '1')
     )
+  })
+})
+
+describe('Wine Graphics driver reg helpers (261027-nd3)', () => {
+  const drivers = 'HKEY_CURRENT_USER\\Software\\Wine\\Drivers'
+  it('builds query/set/delete argv', () => {
+    expect(buildWineGraphicsQueryParts()).toEqual([
+      'reg',
+      'query',
+      drivers,
+      '/v',
+      'Graphics'
+    ])
+    expect(buildWineGraphicsSetParts('null')).toEqual([
+      'reg',
+      'add',
+      drivers,
+      '/v',
+      'Graphics',
+      '/t',
+      'REG_SZ',
+      '/d',
+      'null',
+      '/f'
+    ])
+    expect(buildWineGraphicsDeleteParts()).toEqual([
+      'reg',
+      'delete',
+      drivers,
+      '/v',
+      'Graphics',
+      '/f'
+    ])
+  })
+  it.each(['"', '\r', '\n', '\0'])('set throws on forbidden char %j', (c) => {
+    expect(() => buildWineGraphicsSetParts('a' + c)).toThrow()
+  })
+  it('parses Graphics REG_SZ', () => {
+    expect(
+      parseRegQueryGraphics(`${drivers}\r\n    Graphics    REG_SZ    mac\r\n`)
+    ).toBe('mac')
+    expect(
+      parseRegQueryGraphics(`${drivers}\r\n    Graphics    REG_SZ    \r\n`)
+    ).toBe('')
+    expect(parseRegQueryGraphics('    graphics    reg_sz    x11\r\n')).toBe(
+      'x11'
+    )
+    expect(parseRegQueryGraphics(`${drivers}\r\n`)).toBeNull()
+    expect(parseRegQueryGraphics('    Other    REG_SZ    mac\r\n')).toBeNull()
   })
 })

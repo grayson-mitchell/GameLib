@@ -443,6 +443,42 @@ export function parseRegQueryDword(stdout: string): number | null {
   return m ? parseInt(m[1], 16) : null
 }
 
+/** Wine's per-user driver selection key (Graphics value picks the display driver). */
+export const WINE_DRIVERS_KEY = 'HKEY_CURRENT_USER\\Software\\Wine\\Drivers'
+
+/** `reg query` argv for the Wine display driver choice (Graphics). */
+export function buildWineGraphicsQueryParts(): string[] {
+  return ['reg', 'query', WINE_DRIVERS_KEY, '/v', 'Graphics']
+}
+
+/** `reg add` argv that sets the Wine display driver (e.g. `null`). */
+export function buildWineGraphicsSetParts(value: string): string[] {
+  assertSafeRegValue('Graphics driver', value)
+  return [
+    'reg',
+    'add',
+    WINE_DRIVERS_KEY,
+    '/v',
+    'Graphics',
+    '/t',
+    'REG_SZ',
+    '/d',
+    value,
+    '/f'
+  ]
+}
+
+/** `reg delete` argv that removes the Graphics value (back to the default driver). */
+export function buildWineGraphicsDeleteParts(): string[] {
+  return ['reg', 'delete', WINE_DRIVERS_KEY, '/v', 'Graphics', '/f']
+}
+
+/** Parse the Graphics REG_SZ out of `reg query` stdout; '' for empty, null when absent. */
+export function parseRegQueryGraphics(stdout: string): string | null {
+  const m = /^[ \t]*Graphics[ \t]+REG_SZ(?:[ \t]+([^\r\n]*))?$/im.exec(stdout)
+  return m ? (m[1] ?? '').trim() : null
+}
+
 /**
  * Steam accepts only exit code 0. Treating 3010 (reboot required) and 1638 (newer version
  * present) as done for `vcredist` is a deliberate, recorded deviation from Steam (RESEARCH Q5.6,
