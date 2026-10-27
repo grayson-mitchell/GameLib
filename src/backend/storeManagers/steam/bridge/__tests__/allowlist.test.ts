@@ -161,7 +161,7 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(() => bridgeAllowlistSchema.parse(JSON.parse(raw))).not.toThrow()
   })
 
-  test('the bundled bridge-allowlist.json is version 2 with ELEX as its evidence-backed knownBad entries (51-19, 51-27)', () => {
+  test('the bundled bridge-allowlist.json is version 2 with no evidence-backed knownBad entries (51-19, 51-27)', () => {
     const raw = readFileSync(
       join(__dirname, '..', 'bridge-allowlist.json'),
       'utf-8'
@@ -169,13 +169,7 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     const parsed = JSON.parse(raw)
 
     expect(parsed.version).toBe(2)
-    expect(parsed.knownBad.map((e: { appId: string }) => e.appId)).toEqual([
-      '411300'
-    ])
-  })
-
-  test('the real bundle: 411300 is does-not-run (D-51-08 amendment)', () => {
-    expect(bridgeAllowlist.knownBadReason('411300')).toBe('does-not-run')
+    expect(parsed.knownBad.map((e: { appId: string }) => e.appId)).toEqual([])
   })
 
   // Evidence: 261026-ng9 SUMMARY "Live retest: packaged debug build" (2026-10-26):
@@ -190,18 +184,18 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     ).toBe(false)
   })
 
-  test('ELEX (411300) is known-bad as does-not-run, citing 51-UAT item 15, and is not in seed', () => {
-    expect(bridgeAllowlist.knownBadReason('411300')).toBe('does-not-run')
+  test('ELEX (411300) is no longer known-bad: seeded once the bridge delivered UserStatsReceived_t (quick 261027-k51)', () => {
+    expect(bridgeAllowlist.knownBadReason('411300')).toBeNull()
     const parsed = JSON.parse(
       readFileSync(join(__dirname, '..', 'bridge-allowlist.json'), 'utf-8')
     )
-    const elex = parsed.knownBad.find(
+    expect(
+      parsed.knownBad.some((e: { appId: string }) => e.appId === '411300')
+    ).toBe(false)
+    const elex = parsed.seed.find(
       (e: { appId: string }) => e.appId === '411300'
     )
-    expect(elex.note).toMatch(/51-UAT item 15/)
-    expect(
-      parsed.seed.some((e: { appId: string }) => e.appId === '411300')
-    ).toBe(false)
+    expect(elex.note).toMatch(/261027-k51/)
   })
 
   test('The Age of Decadence (230070) is seeded and play-verified, citing 51-UAT item 18, and is not known-bad (D-51-14 anchor)', () => {

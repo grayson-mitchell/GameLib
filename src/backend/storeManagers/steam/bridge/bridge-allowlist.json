@@ -23,14 +23,12 @@
         "evidence": "51-UAT item 18 (packaged debug bundle, per-game bottle GameLibSteamBridge-230070, x64 AoD64.exe, main menu and in-game, Mac Steam In-Game, played 452s)",
         "date": "2026-10-23"
       }
-    }
-  ],
-  "knownBad": [
+    },
     {
       "appId": "411300",
       "title": "ELEX",
-      "reason": "does-not-run",
-      "note": "51-UAT item 15 (2026-10-23, packaged debug bundle): the bridge half passed with the wired Win64 shim (per-game bottle GameLibSteamBridge-411300, placed steam_api64.dll 848896 bytes == SHIM64, HELLO shim attached appid=411300, no not-subscribed error, the stubbed-interface notice no longer lists SteamUser/SteamUtils/SteamApps/SteamFriends) but ELEX hangs on its loading screen and never reaches the main menu. The operator rates ELEX does-not-run; the cause past the bridge handshake is not diagnosed."
+      "note": "Win64 (x64 ELEX.exe); runtime-lookup path (SteamInternal_CreateInterface) through per-game bottle GameLibSteamBridge-411300. Was knownBad does-not-run (51-UAT item 15: hung on its loading screen). Root cause found by quick 261027-jgs STUBCALL logging: the game calls SteamUserStats011 RequestCurrentStats (answered locally, no Mac flat export) and waits for UserStatsReceived_t (1101), which the bridge never delivered. Quick 261027-k51 forwards the real 1101 from the helper. Live run 2026-10-27: STATS fetch, CBQ 1101 result=1 app=own, CBDISP targets=1, then press-any-key and main menu. SteamController003, SteamUGC008 and SteamRemoteStorage014 stay answered by x64 null objects. Live evidence (no UAT item yet, so no playVerified): HELLO, GINIT SteamAPI_Init ok=1, CBDISP 1101 targets=1, main menu and in-game for 529s, game-originated CALLs GetStat, GetNumAchievements, GetAchievement, SetStat, StoreStats."
     }
-  ]
+  ],
+  "knownBad": []
 }
