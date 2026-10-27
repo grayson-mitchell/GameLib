@@ -59,6 +59,8 @@ export const defaultWinePrefixDir = join(
 export const sharedWinePrefix = join(defaultWinePrefixDir, 'shared')
 export const defaultWinePrefix = join(defaultWinePrefixDir, 'default')
 export const fixesPath = join(appFolder, 'fixes')
+// GameLib-owned known-fix overlay payloads; never a game folder or a bottle.
+export const knownFixOverlaysPath = join(appFolder, 'overlays')
 
 // Anchor on app.getAppPath() (project root in dev, asar root when packaged)
 // rather than counting `..` from __dirname: electron-vite code-splits the
