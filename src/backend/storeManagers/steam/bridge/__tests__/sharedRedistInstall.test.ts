@@ -1122,3 +1122,31 @@ describe('installSteamBridgeSharedRedists', () => {
     })
   })
 })
+
+describe('Phase 54: allowLogon threading', () => {
+  it('passes no allowLogon at Play time and allowLogon: true when the install asks', async () => {
+    mockedDownload.mockResolvedValue({
+      status: 'offline',
+      depots: [],
+      failed: [],
+      skipped: []
+    })
+    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    expect(mockedDownload.mock.calls[0][1].allowLogon).toBeUndefined()
+
+    mockedDownload.mockClear()
+    await installSteamBridgeSharedRedists(APP, SETTINGS, undefined, {
+      allowLogon: true
+    })
+    expect(mockedDownload.mock.calls[0][1].allowLogon).toBe(true)
+  })
+
+  it('a Play-time call joining an install-time in-flight run returns the same promise', () => {
+    mockedDownload.mockReturnValue(new Promise(() => undefined))
+    const a = installSteamBridgeSharedRedists(APP, SETTINGS, undefined, {
+      allowLogon: true
+    })
+    const b = installSteamBridgeSharedRedists(APP, SETTINGS)
+    expect(b).toBe(a)
+  })
+})

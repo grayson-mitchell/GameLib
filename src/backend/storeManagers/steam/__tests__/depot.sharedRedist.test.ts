@@ -22,6 +22,7 @@ import { dirname, join, resolve } from 'path'
 
 import { downloadSharedRedistDepots, type DepotPlan } from '../depot'
 import { SteamUser } from '../user'
+import { mockLeaseOk, mockLeaseRefused, mockOpenLease } from './depotLeaseMocks'
 import { decryptFilename } from '../depot/crypto'
 
 jest.mock('backend/logger', () => ({
@@ -250,8 +251,9 @@ beforeEach(() => {
   }
   cacheDir = mkdtempSync(join(tmpdir(), 'rkj-depot-'))
   client = makeClient()
-  jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
   jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
+  mockLeaseOk()
+  mockOpenLease()
   jest.mocked(decryptFilename).mockImplementation((raw: unknown) => String(raw))
   parser.parse.mockImplementation((raw: Buffer) => ({
     files: manifestFiles[raw.toString()] ?? []
@@ -270,22 +272,85 @@ const callsFor = (dl: { mock: { calls: unknown[][] } }, depotId: string) =>
   )
 
 describe('downloadSharedRedistDepots', () => {
-  it('resolves offline without touching the client', async () => {
-    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(false)
+  const OFFLINE = {
+    status: 'offline',
+    depots: [],
+    failed: [],
+    skipped: []
+  }
+
+  it('Play time (no allowLogon) with no open session resolves offline and never logs on', async () => {
+    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
     const dl = fakeDownloader()
     const r = await downloadSharedRedistDepots(GAME, {
       cacheSteamappsDir: cacheDir,
       optInDepotIds: [],
       downloadFiles: dl
     })
-    expect(r).toEqual({
-      status: 'offline',
-      depots: [],
-      failed: [],
-      skipped: []
-    })
+    expect(r).toEqual(OFFLINE)
+    expect(SteamUser.acquireOpenAuthenticated).toHaveBeenCalledWith(
+      'shared-redist'
+    )
+    expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
     expect(SteamUser.getClient).not.toHaveBeenCalled()
     expect(dl).not.toHaveBeenCalled()
+  })
+
+  it('Play time with an open session runs on it and releases it once', async () => {
+    const releaseOpen = mockOpenLease()
+    await downloadSharedRedistDepots(GAME, {
+      cacheSteamappsDir: cacheDir,
+      optInDepotIds: [],
+      downloadFiles: fakeDownloader()
+    })
+    expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
+    expect(releaseOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('allowLogon: a refused acquire resolves offline', async () => {
+    mockLeaseRefused('go-offline-required')
+    const dl = fakeDownloader()
+    const r = await downloadSharedRedistDepots(GAME, {
+      cacheSteamappsDir: cacheDir,
+      optInDepotIds: [],
+      allowLogon: true,
+      downloadFiles: dl
+    })
+    expect(r).toEqual(OFFLINE)
+    expect(SteamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
+    expect(dl).not.toHaveBeenCalled()
+  })
+
+  it('allowLogon: acquires a shared-redist install lease and releases it once', async () => {
+    const release = mockLeaseOk()
+    await downloadSharedRedistDepots(GAME, {
+      cacheSteamappsDir: cacheDir,
+      optInDepotIds: [],
+      allowLogon: true,
+      downloadFiles: fakeDownloader()
+    })
+    expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith({
+      reason: 'shared-redist',
+      guidedAction: 'install',
+      appName: GAME
+    })
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+
+  it('allowLogon: releases the lease when a step throws, and the throw propagates', async () => {
+    const release = mockLeaseOk()
+    jest
+      .mocked(client.getProductInfo)
+      .mockRejectedValue(new Error('appinfo down'))
+    await expect(
+      downloadSharedRedistDepots(GAME, {
+        cacheSteamappsDir: cacheDir,
+        optInDepotIds: [],
+        allowLogon: true,
+        downloadFiles: fakeDownloader()
+      })
+    ).rejects.toThrow()
+    expect(release).toHaveBeenCalledTimes(1)
   })
 
   it("returns 'none' when no 228980 depots are declared and never fetches 228980", async () => {
