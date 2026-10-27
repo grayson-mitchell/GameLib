@@ -13,6 +13,8 @@ import {
 import { captureSignInEpoch } from 'backend/signInProbe/sessionEpoch'
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { withTimeout } from './withTimeout'
+import { sendFrontendMessage } from '../../ipc'
+import { releaseAnonymousForShutdown } from './anonymousClient'
 import {
   withMacSteamOffline,
   GuidedOfflineRequiredError,
@@ -300,7 +302,109 @@ export class SteamUser {
    * mid-download. Plan 09's source gate forbids callers outside user.ts.
    */
   static async ensureConnected(): Promise<boolean> {
-    return (await this.ensureAuthenticatedSession('user-refresh')) === null
+    const refusal = await this.ensureAuthenticatedSession('user-refresh')
+    // An earlier lease cycle may have armed the idle timer; this un-leased
+    // caller is now relying on the session, so it must not be logged off
+    // under it.
+    if (refusal === null && this.leaseCount === 0) this.clearIdleTimer()
+    return refusal === null
+  }
+
+  /**
+   * Lease the authenticated session, opening it (through the go-offline wrap)
+   * when it is not already open. Concurrent acquires share one logon. The last
+   * release closes the session after AUTH_SESSION_IDLE_GRACE_MS.
+   */
+  static acquireAuthenticated(
+    opts: AcquireAuthenticatedOpts
+  ): Promise<AuthenticatedLease> {
+    return this.acquireInternal(opts)
+  }
+
+  private static acquireAuthenticatedWithToken(
+    opts: AcquireAuthenticatedOpts,
+    token: string
+  ): Promise<AuthenticatedLease> {
+    return this.acquireInternal(opts, token)
+  }
+
+  private static async acquireInternal(
+    opts: AcquireAuthenticatedOpts,
+    token?: string
+  ): Promise<AuthenticatedLease> {
+    if (this.shuttingDown) return { ok: false, reason: 'shutting-down' }
+    this.leaseCount++
+    this.clearIdleTimer()
+    let refusal: AuthSessionRefusal | null
+    try {
+      refusal = await this.ensureAuthenticatedSession(opts.reason, token)
+    } catch (err) {
+      this.leaseCount--
+      this.armIdleTimer()
+      throw err
+    }
+    const client = this.client
+    if (refusal === null && !client?.steamID) refusal = 'client-not-ready'
+    if (refusal !== null || !client) {
+      this.leaseCount--
+      this.armIdleTimer()
+      const reason = refusal ?? 'client-not-ready'
+      if (reason === 'go-offline-required' && opts.guidedAction) {
+        sendFrontendMessage('steamGoOfflineRequired', {
+          action: opts.guidedAction,
+          appName: opts.appName
+        })
+      }
+      return { ok: false, reason }
+    }
+    return { ok: true, client, release: this.makeRelease() }
+  }
+
+  /**
+   * A lease on a session that is ALREADY open, or null. Never reads the
+   * keyring and never logs on: launch-path consumers use it so they can reuse
+   * an install's session but can never open one.
+   */
+  static acquireOpenAuthenticated(
+    reason: AuthSessionReason
+  ): OpenAuthenticatedLease | null {
+    const client = this.client
+    if (this.shuttingDown || !client?.steamID) return null
+    this.leaseCount++
+    this.clearIdleTimer()
+    logInfo(
+      `[Steam] CM session reused mode=authenticated reason=${reason}`,
+      LogPrefix.Steam
+    )
+    return { client, release: this.makeRelease() }
+  }
+
+  /** configStore userData.steamId when it is a numeric SteamID64 string. */
+  static getPersistedSteamId64(): string | undefined {
+    const steamId = configStore.get_nodefault('userData')?.steamId
+    return typeof steamId === 'string' && /^\d+$/.test(steamId)
+      ? steamId
+      : undefined
+  }
+
+  private static makeRelease(): () => void {
+    let released = false
+    return () => {
+      if (released) return
+      released = true
+      this.leaseCount = Math.max(0, this.leaseCount - 1)
+      this.armIdleTimer()
+    }
+  }
+
+  private static armIdleTimer(): void {
+    if (this.leaseCount > 0 || !this.client) return
+    this.clearIdleTimer()
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = null
+      if (this.leaseCount === 0) this.endSession('idle')
+    }, AUTH_SESSION_IDLE_GRACE_MS)
+    this.idleTimer.unref?.()
   }
 
   /**
@@ -675,6 +779,8 @@ export class SteamUser {
    */
   static releaseForShutdown(): void {
     this.shuttingDown = true
+    this.clearIdleTimer()
+    releaseAnonymousForShutdown()
     const client = this.client
     if (!client) return
     try {
