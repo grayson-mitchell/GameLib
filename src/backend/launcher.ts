@@ -81,6 +81,7 @@ import { addRecentGame } from './recent_games/recent_games'
 import { tsStore } from './constants/key_value_stores'
 import { readKnownFixes } from './knownFixes'
 import { applyKnownFixProfileRegistry } from './knownFixesRegistry'
+import { knownFixProfileOverlayEnv, logKnownFixEnv } from './knownFixOverlays'
 import {
   defaultUmuPath,
   sharedWinePrefix,
@@ -793,11 +794,16 @@ async function getCrossoverBottleFolder(gameSettings: GameSettings) {
 
 async function prepareWineLaunch(
   game: Game,
-  logWriter: LogWriter
+  logWriter: LogWriter,
+  // False for callers that do not merge tier-1 `envVariables` (the sideload
+  // path), so the overlay base is not seeded from, and the log does not claim,
+  // a tier-1 value that is never applied there.
+  opts: { mergesTier1Env?: boolean } = {}
 ): Promise<{
   success: boolean
   failureReason?: string
   envVars?: Record<string, string>
+  knownFixEnv?: Record<string, string>
 }> {
   const gameInfo = game.getGameInfo()
 
@@ -929,6 +935,35 @@ async function prepareWineLaunch(
     gameSettings
   )
 
+  // Tier-2 overlays (quick 261027-n77): installed on demand, env merged last.
+  const tier1Env =
+    opts.mergesTier1Env === false
+      ? {}
+      : getKnownFixesEnvVariables(gameInfo.app_name, gameInfo.runner)
+  const knownFixEnv = await knownFixProfileOverlayEnv(
+    gameInfo.app_name,
+    gameInfo.runner,
+    gameSettings,
+    tier1Env
+  )
+  const knownFixEnvLine = logKnownFixEnv(
+    `${gameInfo.runner} ${gameInfo.app_name}`,
+    [
+      ...Object.entries(tier1Env).map(([key, value]) => ({
+        key,
+        value: String(value),
+        source: 'tier-1'
+      })),
+      ...Object.entries(knownFixEnv).map(([key, value]) => ({
+        key,
+        value,
+        source: 'overlay'
+      }))
+    ],
+    LogPrefix.Backend
+  )
+  if (knownFixEnvLine) void logWriter.logInfo(knownFixEnvLine)
+
   try {
     if (
       gameInfo.runner === 'gog' &&
@@ -995,7 +1030,11 @@ async function prepareWineLaunch(
 
   const envVars = setupWineEnvVars(gameSettings, gameInfo.folder_name)
 
-  return { success: true, envVars: envVars }
+  return {
+    success: true,
+    envVars: { ...envVars, ...knownFixEnv },
+    knownFixEnv
+  }
 }
 
 async function installFixes(appName: string, runner: Runner) {

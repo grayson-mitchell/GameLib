@@ -25,6 +25,11 @@
  * D2: winetricks verbs re-run on every launch, as for other stores. There is
  * no applied-fix ledger.
  *
+ * `overlays` (quick 261027-n77): tier-2 entries naming a catalogue overlay (a
+ * GStreamer plugin dir) are installed on demand and appended to
+ * `GST_PLUGIN_PATH` after the tier-1 entries, on darwin + CrossOver only; see
+ * `knownFixOverlays.ts`. Every known-fix env var applied is logged.
+ *
  * This function never rejects: a fix failure logs a warning and the launch
  * continues, so it can never mark the bridge failed for the session.
  */
@@ -34,6 +39,11 @@ import type { GameSettings } from 'common/types'
 import { readKnownFixes, readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning, LogPrefix } from 'backend/logger'
+import {
+  lastEnvOption,
+  logKnownFixEnv,
+  resolveKnownFixOverlayEnv
+} from 'backend/knownFixOverlays'
 import {
   applyRegistryFixes,
   buildRegistryFixCommandParts,
@@ -240,22 +250,43 @@ export async function applySteamBridgeKnownFixes(
       }
     }
 
-    const entries = Object.entries(fixes?.envVariables ?? {})
-    if (entries.length > 0) {
-      // enviromentOptions is the channel runWineCommand already applies via
-      // setupEnvVars. Appending puts fix vars after the user's own, matching
-      // GOG's fixes-win precedence. setupWineEnvVars (CX_BOTTLE) still wins, so
-      // a fix can never redirect the bottle. options.env would be overridden
-      // by setupEnvVars.
-      return {
-        ...bridgeBottleSettings,
-        enviromentOptions: [
-          ...(bridgeBottleSettings.enviromentOptions ?? []),
-          ...entries.map(([key, value]) => ({ key, value: String(value) }))
-        ]
-      }
+    // enviromentOptions is the channel runWineCommand already applies via
+    // setupEnvVars. Appending puts fix vars after the user's own, matching
+    // GOG's fixes-win precedence. setupWineEnvVars (CX_BOTTLE) still wins, so
+    // a fix can never redirect the bottle. options.env would be overridden
+    // by setupEnvVars.
+    const tier1Entries = Object.entries(fixes?.envVariables ?? {}).map(
+      ([key, value]) => ({ key, value: String(value) })
+    )
+    const merged = [
+      ...(bridgeBottleSettings.enviromentOptions ?? []),
+      ...tier1Entries
+    ]
+    const overlayEnv = await resolveKnownFixOverlayEnv(profile?.overlays, {
+      label: `Steam ${appId}`,
+      logPrefix: LogPrefix.Steam,
+      wineType: bridgeBottleSettings.wineVersion?.type,
+      baseValue: (k) => lastEnvOption(merged, k) ?? process.env[k]
+    })
+    const overlayEntries = Object.entries(overlayEnv).map(([key, value]) => ({
+      key,
+      value
+    }))
+    if (tier1Entries.length === 0 && overlayEntries.length === 0) {
+      return bridgeBottleSettings
     }
-    return bridgeBottleSettings
+    logKnownFixEnv(
+      `Steam ${appId}`,
+      [
+        ...tier1Entries.map((e) => ({ ...e, source: 'tier-1' })),
+        ...overlayEntries.map((e) => ({ ...e, source: 'overlay' }))
+      ],
+      LogPrefix.Steam
+    )
+    return {
+      ...bridgeBottleSettings,
+      enviromentOptions: [...merged, ...overlayEntries]
+    }
   } catch (error) {
     logWarning(
       `Steam ${appId}: known-fixes application failed: ${String(error)}`,

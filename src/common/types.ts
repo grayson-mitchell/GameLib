@@ -1176,6 +1176,13 @@ export interface GamelibFixStatus {
  * the local and bundled layers, never the remote download directory
  * (decisions 1 and 6, quick 261025-vnf).
  */
+/** Tier-2 `overlays` entry: names a GameLib catalogue id, never a URL. */
+export interface KnownFixOverlayEntry {
+  id: string
+  // Keep in sync with KnownFixOverlayTarget in common/knownFixOverlayCatalogue.
+  target: 'gstreamer-plugin-path'
+}
+
 export interface KnownFixProfile {
   title?: string
   /** Link to the evidence for the fix (decision 3). */
@@ -1188,6 +1195,12 @@ export interface KnownFixProfile {
    * 32 and 64. Applied on every launch.
    */
   registry?: KnownFixRegistryEntry[]
+  /**
+   * Overlays to install on demand and put on a plugin path (quick
+   * 261027-n77). Tier 2 only (local/bundled); each entry names an id in
+   * GameLib's catalogue, which alone owns the download URL and the sums.
+   */
+  overlays?: KnownFixOverlayEntry[]
   /**
    * 228980 depot ids this title opts into beyond the automatic VC++/DirectX
    * set. Read only from `<appName>-<store>.profile.json` (local/bundled) and

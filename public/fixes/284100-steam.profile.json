@@ -2,8 +2,12 @@
   "title": "Unclaimed World",
   "evidence": ".planning/todos/completed/2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md",
   "notes": {
-    "wmp-marker": "Sets Windows Media Player's Active Setup marker, which the game checks at startup before it will run."
+    "wmp-marker": "Sets Windows Media Player's Active Setup marker, which the game checks at startup before it will run.",
+    "gst-libav-overlay": "Adds GameLib's sha-pinned gst-libav + LGPL FFmpeg overlay to GST_PLUGIN_PATH so CrossOver's GStreamer can decode the WMV3/WMA9 menu video and WMA8 music (spike 042)."
   },
+  "overlays": [
+    { "id": "gst-libav-1.24.13", "target": "gstreamer-plugin-path" }
+  ],
   "registry": [
     {
       "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",

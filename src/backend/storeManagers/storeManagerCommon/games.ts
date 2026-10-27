@@ -26,6 +26,7 @@ import { BrowserWindow, dialog, Menu } from 'backend/platform'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
 import { windowIcon } from 'backend/constants/paths'
+import { withKnownFixEnv } from 'backend/knownFixOverlays'
 import { raiseWineGameWindow } from 'backend/utils/wineWindowRaise'
 
 import type LogWriter from 'backend/logger/log_writer'
@@ -194,9 +195,11 @@ export async function launchGame(
       gameModeBin
     } = await prepareLaunch(gameSettings, logWriter, gameInfo)
 
-    if (!isNative) {
-      await prepareWineLaunch(game, logWriter)
-    }
+    // The sideload path does not merge tier-1 envVariables (unchanged), so it
+    // opts out of tier-1 in the overlay base and log.
+    const wineLaunch = !isNative
+      ? await prepareWineLaunch(game, logWriter, { mergesTier1Env: false })
+      : undefined
 
     const wrappers = setupWrappers(
       gameSettings,
@@ -292,7 +295,10 @@ export async function launchGame(
 
     await runWineCommand({
       commandParts: [executable, ...extraArgs],
-      gameSettings,
+      gameSettings: withKnownFixEnv(
+        gameSettings,
+        wineLaunch?.knownFixEnv ?? {}
+      ),
       wait: true,
       protonVerb: 'waitforexitandrun',
       startFolder: dirname(executable),

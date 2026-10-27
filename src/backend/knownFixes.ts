@@ -58,9 +58,10 @@ const TIER2_FILE_SUFFIX = '.profile.json'
  * Keys a tier-1 file may carry, at any layer. An allow-list, so a newly added
  * tier-2 key cannot reach the remote layer by being forgotten.
  * `shimFeatures` is already a tier-2 key (spike 034 / quick 261026-ng9) and
- * must never be added here. `dllOverrides`, `overlays` and `platforms` are
- * not implemented yet; they belong in TIER2_PROFILE_KEYS when they are, and
- * must never be added here either.
+ * must never be added here. `overlays` is implemented as a tier-2 key (quick
+ * 261027-n77) and must never be added here. `dllOverrides` and `platforms`
+ * are not implemented yet; they belong in TIER2_PROFILE_KEYS when they are,
+ * and must never be added here either.
  * `macArch` is plain routing data that never touches a running game, so it is
  * tier 1 and reaches users from the remote repo without a release (quick
  * 261027-bqe). It is deliberately not called `platforms`, a reserved tier-2
@@ -87,13 +88,15 @@ export const TIER1_KNOWN_FIX_KEYS = [
  */
 const TIER1_ROUTING_KEYS = ['macArch', 'drm'] as const
 
-// `dllOverrides`, `overlays`, `platforms` join this list when implemented.
+// `overlays` was added by quick 261027-n77. `dllOverrides` and `platforms`
+// join this list when implemented.
 // `title` and `notes` are descriptive and allowed in both tiers.
 const TIER2_PROFILE_KEYS = [
   'title',
   'notes',
   'evidence',
   'registry',
+  'overlays',
   'steamSharedRedists',
   'shimFeatures'
 ] as const

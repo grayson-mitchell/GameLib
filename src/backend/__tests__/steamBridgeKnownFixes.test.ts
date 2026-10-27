@@ -58,7 +58,14 @@ jest.mock('backend/utils', () => ({
 jest.mock('backend/logger', () => ({
   logWarning: (...args: unknown[]) => mockLogWarning(...args),
   logInfo: (...args: unknown[]) => mockLogInfo(...args),
+  logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
+}))
+const mockResolveOverlayEnv = jest.fn()
+jest.mock('backend/knownFixOverlays', () => ({
+  ...jest.requireActual('backend/knownFixOverlays'),
+  resolveKnownFixOverlayEnv: (...args: unknown[]) =>
+    mockResolveOverlayEnv(...args)
 }))
 jest.mock('../storeManagers/steam/bottle', () => ({
   getBottleDir: (name: string) => `${mockBottleRoot}/${name}`
@@ -109,12 +116,50 @@ beforeEach(() => {
   rmSync(bundledFixesPath, { recursive: true, force: true })
   mockWinetricksInstall.mockResolvedValue('installed')
   mockRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
+  mockResolveOverlayEnv.mockResolvedValue({})
 })
 
 afterAll(() => {
   rmSync(fixesPath, { recursive: true, force: true })
   rmSync(bundledFixesPath, { recursive: true, force: true })
   void tmpdir
+})
+
+describe('applySteamBridgeKnownFixes overlays', () => {
+  const OVERLAY = { id: 'gst-libav-1.24.13', target: 'gstreamer-plugin-path' }
+
+  it('computes the overlay env from the tier-1 value and appends it last', async () => {
+    writeFixes({ envVariables: { GST_PLUGIN_PATH: '/t1', OTHER: 'o' } })
+    writeLocal({ overlays: [OVERLAY] })
+    mockResolveOverlayEnv.mockResolvedValue({ GST_PLUGIN_PATH: '/t1:/ov' })
+
+    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+
+    expect(mockResolveOverlayEnv).toHaveBeenCalledTimes(1)
+    const [raw, opts] = mockResolveOverlayEnv.mock.calls[0]
+    expect(raw).toEqual([OVERLAY])
+    expect(opts.wineType).toBe('crossover')
+    expect(opts.baseValue('GST_PLUGIN_PATH')).toBe('/t1')
+    expect(result.enviromentOptions).toEqual([
+      { key: 'USER', value: 'x' },
+      { key: 'GST_PLUGIN_PATH', value: '/t1' },
+      { key: 'OTHER', value: 'o' },
+      { key: 'GST_PLUGIN_PATH', value: '/t1:/ov' }
+    ])
+    const line = mockLogInfo.mock.calls.map((c) => c[0]).join('\n')
+    expect(line).toContain('GST_PLUGIN_PATH=/t1 (tier-1)')
+    expect(line).toContain('GST_PLUGIN_PATH=/t1:/ov (overlay)')
+  })
+
+  it('leaves settings untouched when a profile has no overlays', async () => {
+    writeLocal({ title: 't' })
+    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    expect(mockResolveOverlayEnv).toHaveBeenCalledWith(
+      undefined,
+      expect.anything()
+    )
+    expect(result).toBe(BRIDGE)
+  })
 })
 
 describe('applySteamBridgeKnownFixes', () => {
