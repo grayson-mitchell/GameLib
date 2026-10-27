@@ -4,14 +4,14 @@ phase: 54-steam-library-without-an-authenticated-cm-session-at-launch
 source:
   - 54-LIVE-GATE.md
 started: 2026-10-27T00:00:00Z
-updated: 2026-10-27T10:05:00Z
+updated: 2026-10-27T23:30:00Z
 ---
 
 Authored by plan 54-10, run by 54-11. The plan that authored this contract did not run any item of it.
 
 Done-when being gated (ROADMAP): SC4, launch, browse, game page and Play leave Mac Steam Friends signed in with status changeable, and the anonymous session alone does not flip Friends. SC6 (live half), an explicit Refresh and a depot install with Mac Steam online leave Friends signed in with status changeable.
 
-Before item 1, the runner completes preconditions PC1 to PC8 in 54-LIVE-GATE.md, including restarting `pnpm tauri:dev` so `build/main/sidecar.js` is rebuilt (tauri dev does not rebuild the sidecar) and checking its mtime is newer than the newest `feat(54-` commit. Evidence goes in `/tmp/gamelib-gate-<UTC>/`, never committed; record counts and timestamps here, not raw lines.
+Before item 1, the runner completes preconditions PC1 to PC9 in 54-LIVE-GATE.md, including restarting `pnpm tauri:dev` so `build/main/sidecar.js` is rebuilt (tauri dev does not rebuild the sidecar) and checking its mtime is newer than the newest `feat(54-` commit. Evidence goes in `/tmp/gamelib-gate-<UTC>/`, never committed; items 10-13 use launches 2 to 6 (relaunching between them); record counts and timestamps here, not raw lines.
 
 ## Current Test
 
@@ -55,6 +55,22 @@ result: pending
 
 ### 9. Sidecar exit
 expected: After quitting GameLib, `pgrep -f 'build/main/sidecar.js'` and `pgrep -f 'target/debug/gamelib-shell'` are both empty within 10 s.
+result: pending
+
+### 10. Routed quit mid-wrap restores Mac Steam online
+expected: After Refresh then Cmd+Q within about 1 s (launch 2 log has `go-offline restore trigger=shutdown: firing goonline`, else VOID, at most 3 attempts), connection_log.txt shows `user initiated logoff`, `processing complete` and last state `Logged On` within 20 s, the owed-goonline marker file is absent, the loginusers.vdf WantsOfflineMode=1 count is 0, and Friends is signed in and status changeable, judged by the operator.
+result: pending
+
+### 11. Shell killed mid-wrap restores Mac Steam online
+expected: After the shell is killed 1 s after `firing gooffline` (launch 3 log has `[sidecar] stdin closed:` and `go-offline restore trigger=shutdown: firing goonline`, else VOID, at most 3 attempts), the sidecar is gone within 10 s, connection_log.txt ends `Logged On` after `processing complete`, the marker is absent, the WantsOfflineMode=1 count is 0, and Friends is signed in and status changeable, judged by the operator.
+result: pending
+
+### 12. kill -9 mid-wrap is restored at the next launch
+expected: After STOP plus kill -9 of shell and sidecar (interrupted state recorded: last state `Logged Off`, marker present, WantsOfflineMode=1 count 1), the launch-5 log has `go-offline restore trigger=boot: firing goonline` and `go-offline restore trigger=boot: Mac Steam back online, marker cleared`, connection_log.txt shows `processing complete` and last state `Logged On`, the marker is absent, the count is 0, and Friends is signed in and status changeable, judged by the operator.
+result: pending
+
+### 13. A user's own offline choice survives quit and relaunch
+expected: With Steam set offline by hand, after Cmd+Q and relaunch (launches 5 and 6) neither log slice contains any `go-offline restore trigger=` line, connection_log.txt has no `processing complete` and its last state is still `Logged Off`, and the WantsOfflineMode=1 count is 1; the operator then restores Steam online by hand.
 result: pending
 
 ## Notes
