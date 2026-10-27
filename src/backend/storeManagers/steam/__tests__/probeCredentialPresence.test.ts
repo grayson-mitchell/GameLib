@@ -49,6 +49,30 @@ jest.mock('steam-session', () => ({
 const mockSteamUserCtor = jest.fn()
 jest.mock('steam-user', () => mockSteamUserCtor)
 
+// Phase 54 (54-03): every authenticated cold connect runs inside the Mac Steam
+// go-offline wrap. The default double is a pass-through that reports 'toggled';
+// individual tests make it reject with GuidedOfflineRequiredError.
+jest.mock('../macSteamOffline', () => {
+  class GuidedOfflineRequiredError extends Error {
+    cause: string
+    constructor(cause: string) {
+      super('guided')
+      this.name = 'GuidedOfflineRequiredError'
+      this.cause = cause
+    }
+  }
+  return { withMacSteamOffline: jest.fn(), GuidedOfflineRequiredError }
+})
+const mockReleaseAnonymousForShutdown = jest.fn()
+jest.mock('../anonymousClient', () => ({
+  closeAnonymousClient: jest.fn(),
+  releaseAnonymousForShutdown: () => mockReleaseAnonymousForShutdown()
+}))
+jest.mock('backend/ipc', () => ({
+  sendFrontendMessage: jest.fn(),
+  addHandler: jest.fn()
+}))
+
 import { SteamUser } from '../user'
 import {
   isSteamAuthUnlocked,
