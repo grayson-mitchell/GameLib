@@ -96,7 +96,7 @@ import { noteSteamAuthTrigger } from './authTrigger'
 // introduces no cycle. Used ONLY by getExtraInfo()'s fire-and-forget
 // locked->unlocked transition below — install()/update()/launch() only need
 // noteSteamAuthTrigger, not SteamUser itself.
-import { SteamUser } from './user'
+import { SteamUser, type AuthSessionRefusal } from './user'
 import { downloadSteamDepots, prescreenBridgeDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup' // Plan 10 seam
 import {
@@ -1252,14 +1252,28 @@ export default class SteamGame implements Game {
         readBridgeVerdict(this.appId)?.steamApi === undefined
       ) {
         const bridgeBottleName = bridgeBottleNameFor(this.appId)
-        const prescreenResult = await prescreenBridgeDepots(this.appId, {
-          targetSteamappsDir: bridgeBottleName
-            ? getBottleSteamappsDir(bridgeBottleName)
-            : '',
-          installdir: this.appId,
-          os: 'windows'
+        // Phase 54: a short lease for the screen alone, so a refusal here
+        // stops before a second wrap attempt in installBridgeGame.
+        const prescreenLease = await SteamUser.acquireAuthenticated({
+          reason: 'prescreen',
+          guidedAction: 'install',
+          appName: this.appId
         })
-        setBridgeSteamApiPrescreen(this.appId, prescreenResult)
+        if (!prescreenLease.ok) {
+          return this.installResultForRefusal(prescreenLease.reason)
+        }
+        try {
+          const prescreenResult = await prescreenBridgeDepots(this.appId, {
+            targetSteamappsDir: bridgeBottleName
+              ? getBottleSteamappsDir(bridgeBottleName)
+              : '',
+            installdir: this.appId,
+            os: 'windows'
+          })
+          setBridgeSteamApiPrescreen(this.appId, prescreenResult)
+        } finally {
+          prescreenLease.release()
+        }
         bridgeRoute = this.bridgeRoute()
       }
 
@@ -1645,12 +1659,38 @@ export default class SteamGame implements Game {
       }
     }
 
+    // Phase 54: one lease from the download through shim placement and the
+    // install-time shared-redist step. Provisioning above holds none.
+    const lease = await SteamUser.acquireAuthenticated({
+      reason: 'user-install',
+      guidedAction: 'install',
+      appName: this.appId
+    })
+    if (!lease.ok) {
+      return this.installResultForRefusal(lease.reason)
+    }
+    try {
+      return await this.installBridgeGameLeased(args, bridgeBottleName)
+    } finally {
+      lease.release()
+    }
+  }
+
+  /** The lease-held part of installBridgeGame: download, shim, redists. */
+  private async installBridgeGameLeased(
+    args: InstallArgs,
+    bridgeBottleName: string
+  ): Promise<InstallResult> {
     const targetSteamappsDir = getBottleSteamappsDir(bridgeBottleName)
     const downloadResult = await this.installDepotDownload(args, {
       targetSteamappsDirOverride: targetSteamappsDir,
       os: 'windows',
       pollerSource: 'bridge'
     })
+
+    // A refusal wrapped by the go-offline step reports `done` with
+    // deferredToSetup: a dialog owns the next step, nothing was downloaded.
+    if (downloadResult.deferredToSetup) return downloadResult
 
     if (downloadResult.status !== 'done') {
       markBridgeFailedThisSession(this.appId)
@@ -1839,6 +1879,22 @@ export default class SteamGame implements Game {
     // for this appId routes back to the bridge instead of staying stuck on
     // an earlier recoverable failure.
     clearBridgeFailedThisSession(this.appId)
+
+    // Plan 05 decision: the Steamworks shared redists download under THIS
+    // install's logon, so Play never needs one. Never fails the install.
+    const { installSteamBridgeSharedRedists } =
+      await import('./bridge/sharedRedistInstall')
+    await installSteamBridgeSharedRedists(
+      this.appId,
+      getBridgeBottleSettings(this.appId),
+      undefined,
+      { allowLogon: true }
+    ).catch((error: unknown) => {
+      logWarning(
+        `SteamGame: install-time shared redist step failed for appId ${this.appId}: ${String(error)}`,
+        LogPrefix.Steam
+      )
+    })
 
     return { status: 'done' }
   }
@@ -2131,184 +2187,28 @@ export default class SteamGame implements Game {
         }
       }
 
-      const resolveTargetStart = Date.now()
-      let resolved: Awaited<ReturnType<typeof resolveSteamInstallTarget>>
+      // Phase 54: one authenticated lease for the whole install run, taken
+      // BEFORE resolveSteamInstallTarget (so the installdir fallback sees an
+      // open session for gated apps) and BEFORE the crash breadcrumb (so a
+      // refused install leaves no residue record). Released in finally on
+      // every exit path, including abort.
+      const lease = await SteamUser.acquireAuthenticated({
+        reason: 'user-install',
+        guidedAction: 'install',
+        appName: this.appId
+      })
+      if (!lease.ok) {
+        return this.installResultForRefusal(lease.reason)
+      }
       try {
-        // G-30-02 (30-07): belt-and-suspenders bound around the pre-download
-        // resolution PHASE itself — guards against a future un-timed
-        // pre-download await that is NOT a CM primitive (those are already
-        // bounded individually inside resolveSteamInstallTarget/depot.ts),
-        // and guarantees the badge can never hang from this phase. Converted
-        // to the returned-error contract 30-05's finally/catch already
-        // clears — never let this propagate as an unhandled throw.
-        //
-        // WR-01: this outer bound is STRICTLY LARGER than any bound inside
-        // resolveSteamInstallTarget (fetchInstalldir's per-call
-        // STEAM_PICS_TIMEOUT_MS). If it shared the same bound, this outer
-        // timer — armed first — would always elapse before fetchInstalldir's
-        // inner timer, pre-empting fetchInstalldir's DELIBERATE no-hard-fail
-        // fallback (installLocation.ts:130-188: a hung installdir lookup must
-        // degrade to a safe fallback dir name, NOT fail the whole install)
-        // and converting a recoverable transient CM hang into a fatal
-        // "Steam pre-download timed out". A larger outer bound lets the inner
-        // graceful fallback always win its own race; the outer only trips on a
-        // non-CM await (the belt-and-suspenders case it exists for).
-        resolved = await withTimeout(
-          resolveSteamInstallTarget(this.appId, args), // Plan 09
-          STEAM_PICS_TIMEOUT_MS * 2,
-          'resolveSteamInstallTarget'
+        return await this.runNativeDepotDownloadLeased(
+          args,
+          opts,
+          controller,
+          runStart
         )
-      } catch (err) {
-        // T-37-01/T-37-03: an UnsafeInstalldirError is a security abort, not
-        // a timeout/CM failure — checked FIRST so it never gets mislabeled
-        // "timed out".
-        //
-        // 37-REVIEW C-01: this path must call `classifyDepotError` ITSELF.
-        // The abort is raised by `resolveSteamInstallTarget`, i.e. BEFORE the
-        // depot download starts, so it never reaches depot.ts's classifier
-        // call sites. Returning `err.message` directly leaked the raw,
-        // untrusted PICS-sourced installdir candidate into the install-failure
-        // dialog. The raw candidate must surface ONLY in the log line below.
-        if (err instanceof UnsafeInstalldirError) {
-          logWarning(
-            `SteamGame: rejected unsafe PICS installdir for appId ${this.appId}: ${err.message}`,
-            LogPrefix.Steam
-          )
-          return {
-            status: 'error',
-            error: classifyDepotError(err).message
-          }
-        }
-        logWarning(
-          `SteamGame: resolveSteamInstallTarget timed out/failed for appId ${this.appId}: ${String(err)}`,
-          LogPrefix.Steam
-        )
-        return {
-          status: 'error',
-          error: `Steam pre-download timed out: ${String(err)}`
-        }
-      }
-      logInfo(
-        `[Timing] runNativeDepotDownload: resolveSteamInstallTarget took ${Date.now() - resolveTargetStart}ms for appId ${this.appId}`,
-        LogPrefix.Steam
-      )
-      // D-04 (second half): not an error — PICS returned no usable
-      // installdir, so resolveSteamInstallTarget already fell back to
-      // `app_<id>`. Logged once here (rather than left to silently
-      // disappear after this seam) and propagated onto the { status: 'done' }
-      // result below so a caller/UI can surface the non-portable layout.
-      if (resolved.installdirFallbackUsed) {
-        logWarning(
-          `SteamGame: appId ${this.appId} installed to fallback directory "${resolved.installdir}" (PICS installdir was absent/unresolved)`,
-          LogPrefix.Steam
-        )
-      }
-      if (controller.signal.aborted) {
-        return { status: 'abort' }
-      }
-      const targetSteamappsDir =
-        opts.targetSteamappsDirOverride ?? resolved.targetSteamappsDir
-
-      // 260821-rb5: persist a crash-surviving breadcrumb BEFORE the
-      // downloadSteamDepots await below — this ordering IS the fix. A hard
-      // kill (kill -9, crash, power loss) from this point on runs no JS at
-      // all, so no appmanifest_*.acf is ever written (case C of
-      // .planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md);
-      // this breadcrumb is the ONLY record of the residue that survives.
-      // Must stay synchronous and above the await.
-      markSteamNativeInstallStarted(this.appId, {
-        targetSteamappsDir,
-        installdir: resolved.installdir
-      })
-
-      const downloadStart = Date.now()
-      const outcome = await downloadSteamDepots(this.appId, {
-        targetSteamappsDir,
-        installdir: resolved.installdir,
-        os: opts.os,
-        signal: controller.signal
-      })
-      logInfo(
-        `[Timing] runNativeDepotDownload: downloadSteamDepots (buildDepotPlan + stream) took ${Date.now() - downloadStart}ms so far for appId ${this.appId} (status=${outcome.status}); total since click ${Date.now() - runStart}ms`,
-        LogPrefix.Steam
-      )
-
-      if (outcome.status === 'cancelled') {
-        // D-UAT-09 (21-17): init()'s startup-surface scan only catches an
-        // interrupted install on the NEXT process restart — a same-session
-        // cancel (this branch) is never surfaced any other way. Mark the
-        // library entry incomplete/resumable now so the frontend never
-        // renders a stale is_installed:true/Play for the rest of THIS
-        // session (Task 2 reads is_installed + steamResumePending).
-        markSteamInstallIncomplete(this.appId)
-        return { status: 'abort' }
-      }
-
-      if (outcome.status === 'error') {
-        logWarning(
-          `SteamGame: depot install failed for appId ${this.appId}: ${outcome.error}`,
-          LogPrefix.Steam
-        )
-        // 37-02 (D-06/D-07): forward the classifier's structured affordance
-        // untouched — never re-classify here. The pre-download error returns
-        // above (clientReady.error, the resolve-target catch) deliberately
-        // carry no errorAction: undefined means "no specific affordance".
-        return {
-          status: 'error',
-          error: outcome.error,
-          errorAction: outcome.errorAction
-        }
-      }
-
-      // 260821-rb5: downloadSteamDepots has finished and written its own
-      // manifest at this point, so the ACF-derived path
-      // (scanDownloadingAppIds) now covers this appId — the breadcrumb has
-      // served its purpose, and keeping it would double-surface. Clear it
-      // BEFORE polling starts. The 'cancelled' and 'error' branches above
-      // deliberately do NOT clear it — a cancelled or errored run leaves
-      // residue too (markSteamInstallIncomplete's 'cancelled' spread
-      // already preserves the breadcrumb fields).
-      clearSteamResumeBreadcrumb(this.appId)
-
-      // Start ACF polling so Steam's own verify/repair pass (which flips
-      // StateFlags 1026 -> 4) is reflected in the UI, same as the legacy
-      // steam://install path (D-07) — bottle-scoped when pollerSource is set
-      // (Plan 08's distinct bottle steamapps root, D-15).
-      //
-      // debug/steam-1026-download-restart: isNativeHandoff:true is CORRECT
-      // (and ONLY correct) here — this line only runs after downloadSteamDepots
-      // has ALREADY finished downloading every depot itself (outcome.status
-      // ran past the 'error'/'cancelled' checks above). The 1026 manifest this
-      // poll will observe is GameLib's OWN finished-handoff write, genuinely
-      // waiting for a Steam restart — never a Steam-driven active download.
-      // Do NOT copy this flag to the OFF-path startInstallPolling calls above
-      // in install() (steam://install handoff / tellBottledSteamToInstall) —
-      // those hand the ENTIRE download off to Steam, so a 1026 seen there is
-      // Steam's own ordinary active-download state, not a handoff.
-      //
-      // 23.2-04 (D-06/D-07): thread outcome.skippedDepots through the same
-      // way, and for the same reason — meaningful only on the native path,
-      // because it comes from GameLib's own downloadSteamDepots run above.
-      // The OFF-path calls in install() have no skipped-depot knowledge
-      // (Steam owns those downloads) and must NOT receive it.
-      if (opts.pollerSource) {
-        startInstallPolling(this.appId, {
-          source: opts.pollerSource,
-          isNativeHandoff: true,
-          skippedDepots: outcome.skippedDepots ?? []
-        })
-      } else {
-        startInstallPolling(this.appId, {
-          isNativeHandoff: true,
-          skippedDepots: outcome.skippedDepots ?? []
-        })
-      }
-
-      return {
-        status: 'done',
-        ...(resolved.installdirFallbackUsed
-          ? { installdirFallbackUsed: true as const }
-          : {})
+      } finally {
+        lease.release()
       }
     } finally {
       // T-23-13: fail-safe cleanup on success, error, or cancel (including an
@@ -2316,6 +2216,230 @@ export default class SteamGame implements Game {
       // blocked from a later re-install.
       nativeInstallsInFlight.delete(this.appId)
       deleteAbortController(this.appId)
+    }
+  }
+
+  /**
+   * Phase 54: maps a refused authenticated acquire to an install result. A
+   * go-offline refusal means the guided dialog owns the next step (the install
+   * did not fail), so it returns the same deferredToSetup contract the bridge
+   * route notice uses. Every other refusal carries the fixed not-signed-in copy.
+   */
+  private installResultForRefusal(reason: AuthSessionRefusal): InstallResult {
+    if (reason === 'go-offline-required') {
+      logInfo(
+        `SteamGame: appId ${this.appId} install waiting on the guided Go Offline step, no logon issued`,
+        LogPrefix.Steam
+      )
+      return { status: 'done', deferredToSetup: true }
+    }
+    logWarning(
+      `SteamGame: appId ${this.appId} install refused, no authenticated Steam session (${reason})`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'error',
+      error: classifyDepotError(
+        new Error(
+          `downloadSteamDepots: no authenticated Steam CM connection available for appId ${this.appId}`
+        )
+      ).message
+    }
+  }
+
+  /**
+   * The body of runNativeDepotDownload that needs the authenticated lease:
+   * target resolution, crash breadcrumb, depot download, polling. The caller
+   * owns the lease and the in-flight registry cleanup.
+   */
+  private async runNativeDepotDownloadLeased(
+    args: InstallArgs,
+    opts: {
+      targetSteamappsDirOverride?: string
+      os: string
+      pollerSource?: 'bottle' | 'bridge'
+    },
+    controller: ReturnType<typeof createAbortController>,
+    runStart: number
+  ): Promise<InstallResult> {
+    const resolveTargetStart = Date.now()
+    let resolved: Awaited<ReturnType<typeof resolveSteamInstallTarget>>
+    try {
+      // G-30-02 (30-07): belt-and-suspenders bound around the pre-download
+      // resolution PHASE itself — guards against a future un-timed
+      // pre-download await that is NOT a CM primitive (those are already
+      // bounded individually inside resolveSteamInstallTarget/depot.ts),
+      // and guarantees the badge can never hang from this phase. Converted
+      // to the returned-error contract 30-05's finally/catch already
+      // clears — never let this propagate as an unhandled throw.
+      //
+      // WR-01: this outer bound is STRICTLY LARGER than any bound inside
+      // resolveSteamInstallTarget (fetchInstalldir's per-call
+      // STEAM_PICS_TIMEOUT_MS). If it shared the same bound, this outer
+      // timer — armed first — would always elapse before fetchInstalldir's
+      // inner timer, pre-empting fetchInstalldir's DELIBERATE no-hard-fail
+      // fallback (installLocation.ts:130-188: a hung installdir lookup must
+      // degrade to a safe fallback dir name, NOT fail the whole install)
+      // and converting a recoverable transient CM hang into a fatal
+      // "Steam pre-download timed out". A larger outer bound lets the inner
+      // graceful fallback always win its own race; the outer only trips on a
+      // non-CM await (the belt-and-suspenders case it exists for).
+      resolved = await withTimeout(
+        resolveSteamInstallTarget(this.appId, args), // Plan 09
+        STEAM_PICS_TIMEOUT_MS * 2,
+        'resolveSteamInstallTarget'
+      )
+    } catch (err) {
+      // T-37-01/T-37-03: an UnsafeInstalldirError is a security abort, not
+      // a timeout/CM failure — checked FIRST so it never gets mislabeled
+      // "timed out".
+      //
+      // 37-REVIEW C-01: this path must call `classifyDepotError` ITSELF.
+      // The abort is raised by `resolveSteamInstallTarget`, i.e. BEFORE the
+      // depot download starts, so it never reaches depot.ts's classifier
+      // call sites. Returning `err.message` directly leaked the raw,
+      // untrusted PICS-sourced installdir candidate into the install-failure
+      // dialog. The raw candidate must surface ONLY in the log line below.
+      if (err instanceof UnsafeInstalldirError) {
+        logWarning(
+          `SteamGame: rejected unsafe PICS installdir for appId ${this.appId}: ${err.message}`,
+          LogPrefix.Steam
+        )
+        return {
+          status: 'error',
+          error: classifyDepotError(err).message
+        }
+      }
+      logWarning(
+        `SteamGame: resolveSteamInstallTarget timed out/failed for appId ${this.appId}: ${String(err)}`,
+        LogPrefix.Steam
+      )
+      return {
+        status: 'error',
+        error: `Steam pre-download timed out: ${String(err)}`
+      }
+    }
+    logInfo(
+      `[Timing] runNativeDepotDownload: resolveSteamInstallTarget took ${Date.now() - resolveTargetStart}ms for appId ${this.appId}`,
+      LogPrefix.Steam
+    )
+    // D-04 (second half): not an error — PICS returned no usable
+    // installdir, so resolveSteamInstallTarget already fell back to
+    // `app_<id>`. Logged once here (rather than left to silently
+    // disappear after this seam) and propagated onto the { status: 'done' }
+    // result below so a caller/UI can surface the non-portable layout.
+    if (resolved.installdirFallbackUsed) {
+      logWarning(
+        `SteamGame: appId ${this.appId} installed to fallback directory "${resolved.installdir}" (PICS installdir was absent/unresolved)`,
+        LogPrefix.Steam
+      )
+    }
+    if (controller.signal.aborted) {
+      return { status: 'abort' }
+    }
+    const targetSteamappsDir =
+      opts.targetSteamappsDirOverride ?? resolved.targetSteamappsDir
+
+    // 260821-rb5: persist a crash-surviving breadcrumb BEFORE the
+    // downloadSteamDepots await below — this ordering IS the fix. A hard
+    // kill (kill -9, crash, power loss) from this point on runs no JS at
+    // all, so no appmanifest_*.acf is ever written (case C of
+    // .planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md);
+    // this breadcrumb is the ONLY record of the residue that survives.
+    // Must stay synchronous and above the await.
+    markSteamNativeInstallStarted(this.appId, {
+      targetSteamappsDir,
+      installdir: resolved.installdir
+    })
+
+    const downloadStart = Date.now()
+    const outcome = await downloadSteamDepots(this.appId, {
+      targetSteamappsDir,
+      installdir: resolved.installdir,
+      os: opts.os,
+      signal: controller.signal
+    })
+    logInfo(
+      `[Timing] runNativeDepotDownload: downloadSteamDepots (buildDepotPlan + stream) took ${Date.now() - downloadStart}ms so far for appId ${this.appId} (status=${outcome.status}); total since click ${Date.now() - runStart}ms`,
+      LogPrefix.Steam
+    )
+
+    if (outcome.status === 'cancelled') {
+      // D-UAT-09 (21-17): init()'s startup-surface scan only catches an
+      // interrupted install on the NEXT process restart — a same-session
+      // cancel (this branch) is never surfaced any other way. Mark the
+      // library entry incomplete/resumable now so the frontend never
+      // renders a stale is_installed:true/Play for the rest of THIS
+      // session (Task 2 reads is_installed + steamResumePending).
+      markSteamInstallIncomplete(this.appId)
+      return { status: 'abort' }
+    }
+
+    if (outcome.status === 'error') {
+      logWarning(
+        `SteamGame: depot install failed for appId ${this.appId}: ${outcome.error}`,
+        LogPrefix.Steam
+      )
+      // 37-02 (D-06/D-07): forward the classifier's structured affordance
+      // untouched — never re-classify here. The pre-download error returns
+      // above (clientReady.error, the resolve-target catch) deliberately
+      // carry no errorAction: undefined means "no specific affordance".
+      return {
+        status: 'error',
+        error: outcome.error,
+        errorAction: outcome.errorAction
+      }
+    }
+
+    // 260821-rb5: downloadSteamDepots has finished and written its own
+    // manifest at this point, so the ACF-derived path
+    // (scanDownloadingAppIds) now covers this appId — the breadcrumb has
+    // served its purpose, and keeping it would double-surface. Clear it
+    // BEFORE polling starts. The 'cancelled' and 'error' branches above
+    // deliberately do NOT clear it — a cancelled or errored run leaves
+    // residue too (markSteamInstallIncomplete's 'cancelled' spread
+    // already preserves the breadcrumb fields).
+    clearSteamResumeBreadcrumb(this.appId)
+
+    // Start ACF polling so Steam's own verify/repair pass (which flips
+    // StateFlags 1026 -> 4) is reflected in the UI, same as the legacy
+    // steam://install path (D-07) — bottle-scoped when pollerSource is set
+    // (Plan 08's distinct bottle steamapps root, D-15).
+    //
+    // debug/steam-1026-download-restart: isNativeHandoff:true is CORRECT
+    // (and ONLY correct) here — this line only runs after downloadSteamDepots
+    // has ALREADY finished downloading every depot itself (outcome.status
+    // ran past the 'error'/'cancelled' checks above). The 1026 manifest this
+    // poll will observe is GameLib's OWN finished-handoff write, genuinely
+    // waiting for a Steam restart — never a Steam-driven active download.
+    // Do NOT copy this flag to the OFF-path startInstallPolling calls above
+    // in install() (steam://install handoff / tellBottledSteamToInstall) —
+    // those hand the ENTIRE download off to Steam, so a 1026 seen there is
+    // Steam's own ordinary active-download state, not a handoff.
+    //
+    // 23.2-04 (D-06/D-07): thread outcome.skippedDepots through the same
+    // way, and for the same reason — meaningful only on the native path,
+    // because it comes from GameLib's own downloadSteamDepots run above.
+    // The OFF-path calls in install() have no skipped-depot knowledge
+    // (Steam owns those downloads) and must NOT receive it.
+    if (opts.pollerSource) {
+      startInstallPolling(this.appId, {
+        source: opts.pollerSource,
+        isNativeHandoff: true,
+        skippedDepots: outcome.skippedDepots ?? []
+      })
+    } else {
+      startInstallPolling(this.appId, {
+        isNativeHandoff: true,
+        skippedDepots: outcome.skippedDepots ?? []
+      })
+    }
+
+    return {
+      status: 'done',
+      ...(resolved.installdirFallbackUsed
+        ? { installdirFallbackUsed: true as const }
+        : {})
     }
   }
 
