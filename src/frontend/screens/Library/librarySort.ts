@@ -177,9 +177,10 @@ export function parseInstallSize(raw: unknown): number | undefined {
 /**
  * Exactly the grid's historical title key (unanchored first `THE `, which the
  * todo calls a "leading THE"; the code has always been unanchored and
- * behaviour-preservation wins). Kept in parity with `focusRowTitleComparator`.
+ * behaviour-preservation wins). The ONE definition: `focusRowTitleComparator`
+ * calls this too, so the focus row and the grid cannot drift apart.
  */
-function librarySortTitle(game: GameInfo): string {
+export function librarySortTitle(game: GameInfo): string {
   return game.title.toUpperCase().replace('THE ', '')
 }
 

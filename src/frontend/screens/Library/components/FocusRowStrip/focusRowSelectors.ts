@@ -22,6 +22,7 @@ import {
   filterLibrary,
   passesHiddenLaneFilter
 } from '../../filterEngine'
+import { librarySortTitle } from '../../librarySort'
 
 // SPEC R3's amended cap, CONTEXT D-04: a fixed 20-card ceiling, independent
 // of any user setting (the old RecentlyPlayed lane used a user-chosen count
@@ -36,16 +37,13 @@ export { isValidFocusRowSelection }
 
 /**
  * The grid's own title key (`librarySortTitle` in `Library/librarySort.ts`),
- * reused so the focus row's ordering cannot drift from it. Always ascending
- * -- the focus row has no sort field or direction of its own (SPEC R4
- * independence) -- with a final
- * `app_name` tie-break so identical titles are stable regardless of input
- * order.
+ * called rather than copied so the focus row's ordering cannot drift from it.
+ * Always ascending -- the focus row has no sort field or direction of its own
+ * (SPEC R4 independence) -- with a final `app_name` tie-break so identical
+ * titles are stable regardless of input order.
  */
 export function focusRowTitleComparator(a: GameInfo, b: GameInfo): number {
-  const titleA = a.title.toUpperCase().replace('THE ', '')
-  const titleB = b.title.toUpperCase().replace('THE ', '')
-  const cmp = titleA.localeCompare(titleB)
+  const cmp = librarySortTitle(a).localeCompare(librarySortTitle(b))
   if (cmp !== 0) {
     return cmp
   }
