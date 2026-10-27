@@ -257,6 +257,22 @@ const MockSteamUserLib = jest.fn(() => ({
 MockSteamUserLib.EPurchaseResult = { Unknown: -1, OK: 0 }
 jest.mock('steam-user', () => MockSteamUserLib)
 
+// Phase 54: the authenticated cold connect runs inside the Mac go-offline wrap
+// and the platform capture reaches for the anonymous client. Plain functions
+// (not jest.fn) so the project's resetMocks cannot strip them.
+jest.mock('../macSteamOffline', () => ({
+  withMacSteamOffline: async (connect: (wrap: string) => Promise<unknown>) => ({
+    value: await connect('not-darwin'),
+    wrap: 'not-darwin'
+  }),
+  GuidedOfflineRequiredError: class GuidedOfflineRequiredError extends Error {}
+}))
+jest.mock('../anonymousClient', () => ({
+  getAnonymousPicsClient: async () => null,
+  closeAnonymousClient: () => undefined,
+  releaseAnonymousForShutdown: () => undefined
+}))
+
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { join } from 'path'
 import { sendFrontendMessage } from '../../../ipc'
@@ -271,6 +287,7 @@ import {
   isSteamAuthUnlocked,
   resetSteamAuthTrigger,
   noteSteamAuthTrigger,
+  noteRefreshTrigger,
   currentTriggerLabel
 } from '../authTrigger'
 import type { GameInfo, InstallArgs } from 'common/types'
@@ -402,18 +419,29 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
     expect(spy.getToken).toHaveBeenCalledTimes(0)
   })
 
-  it('after noteSteamAuthTrigger("user-install"), refresh() reaches ensureConnected() and the spy store IS read exactly ONCE (anti-vacuity: proves the zero above is not "never reads at all")', async () => {
+  it('after an explicit Refresh dispatch, refresh() reaches the entry point and the spy store IS read exactly ONCE (anti-vacuity: proves the zero above is not "never reads at all")', async () => {
     const spy = installSpyTokenStore({ status: 'absent' })
     mockConfigStore.get_nodefault.mockImplementation((key: string) =>
       key === 'isLoggedIn' ? true : undefined
     )
-    noteSteamAuthTrigger('user-install')
+    noteRefreshTrigger('steam', 'action-icons-refresh-button')
     expect(isSteamAuthUnlocked()).toBe(true)
 
     const manager = new SteamLibraryManager()
     await manager.refresh()
 
     expect(spy.readToken).toHaveBeenCalledTimes(1)
+  })
+
+  it('unlocking the keyring gate alone (user-install, boot-probe) does not let refresh() log on or read the keyring', async () => {
+    const spy = installSpyTokenStore({ status: 'present' })
+    noteSteamAuthTrigger('user-install')
+    noteSteamAuthTrigger('boot-probe')
+
+    const manager = new SteamLibraryManager()
+    await manager.refresh()
+
+    expect(spy.readToken).toHaveBeenCalledTimes(0)
   })
 
   it('the deferral log line names the reason and the current trigger, without ever containing a token value', async () => {
@@ -428,11 +456,101 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
     expect(
       lines.some(
         (l) =>
-          l.includes('deferred until a deliberate Steam action') &&
-          l.includes('no keyring_get issued') &&
+          l.includes('no explicit Refresh and no open Steam session') &&
+          l.includes('no CM logon') &&
           l.includes(`trigger=${currentTriggerLabel()}`)
       )
     ).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Phase 54 SC1: whichever of the boot probe and the mount refresh lands first,
+// launch issues no authenticated logon.
+// ---------------------------------------------------------------------------
+
+describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () => {
+  const logOnSpy = jest.fn()
+
+  beforeEach(() => {
+    logOnSpy.mockReset()
+    MockSteamUserLib.mockImplementation(() => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { EventEmitter } = require('events')
+      const fake = new EventEmitter() as any
+      fake.steamID = null
+      fake.logOff = jest.fn()
+      fake.getUserOwnedApps = jest.fn().mockResolvedValue({ apps: [] })
+      fake.getProductInfo = jest.fn().mockResolvedValue({ apps: {} })
+      fake.logOn = (...args: unknown[]) => {
+        logOnSpy(...args)
+        Promise.resolve().then(() => {
+          fake.steamID = { getSteamID64: () => '76561198000000000' }
+          fake.emit('loggedOn')
+        })
+      }
+      return fake
+    })
+    mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+      key === 'isLoggedIn' ? true : undefined
+    )
+    installSpyTokenStore({ status: 'present', token: 'secret-refresh-token' })
+  })
+
+  afterEach(() => {
+    SteamUser.releaseForShutdown()
+  })
+
+  const authenticatedLogonLines = () => {
+    const { logInfo } = jest.requireMock('backend/logger')
+    return (logInfo as jest.Mock).mock.calls
+      .map((c) => String(c[0]))
+      .filter((l) => l.includes('CM logon mode=authenticated'))
+  }
+
+  const expectNoAuthenticatedLogon = () => {
+    expect(logOnSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({ refreshToken: expect.anything() })
+    )
+    expect(authenticatedLogonLines()).toEqual([])
+  }
+
+  it('ordering A: boot probe first, then the mount refresh', async () => {
+    const manager = new SteamLibraryManager()
+
+    await SteamUser.probeCredentialPresence()
+    noteRefreshTrigger(null, 'mount')
+    await manager.refresh()
+
+    expect(isSteamAuthUnlocked()).toBe(true)
+    expectNoAuthenticatedLogon()
+  })
+
+  it('ordering B: mount refresh first, then the boot probe, then a second mount refresh', async () => {
+    const manager = new SteamLibraryManager()
+
+    noteRefreshTrigger(null, 'mount')
+    await manager.refresh()
+    await SteamUser.probeCredentialPresence()
+    noteRefreshTrigger(null, 'mount')
+    await manager.refresh()
+
+    expect(isSteamAuthUnlocked()).toBe(true)
+    expectNoAuthenticatedLogon()
+  })
+
+  it('non-vacuity control: an explicit Refresh DOES log on, exactly once, with the refresh token', async () => {
+    const manager = new SteamLibraryManager()
+
+    await SteamUser.probeCredentialPresence()
+    noteRefreshTrigger('steam', 'action-icons-refresh-button')
+    await manager.refresh()
+
+    expect(logOnSpy).toHaveBeenCalledTimes(1)
+    expect(logOnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ refreshToken: 'secret-refresh-token' })
+    )
+    expect(authenticatedLogonLines()).toHaveLength(1)
   })
 })
 

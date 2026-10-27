@@ -56,7 +56,12 @@ import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import i18next, { t as i18nextT } from 'i18next'
 import { SteamUser } from '../user'
-import { noteSteamAuthTrigger } from '../authTrigger'
+import {
+  noteRefreshTrigger,
+  resetSteamAuthTrigger,
+  consumeSteamRefreshLogonGrant
+} from '../authTrigger'
+import { getAnonymousPicsClient } from '../anonymousClient'
 import {
   steamLibraryStore,
   steamMetadataStore,
@@ -267,6 +272,9 @@ jest.mock('../bridge/allowlist', () => ({
 // PICS scoping and merge logic — the shared beforeEach below defaults it to
 // a no-op success so every pre-existing refresh() test is unaffected; the
 // 'D-03 fail-soft' describe block below overrides this default per-test.
+jest.mock('../anonymousClient', () => ({
+  getAnonymousPicsClient: jest.fn()
+}))
 jest.mock('../platformCapture', () => ({
   captureOwnedAppPlatforms: jest.fn()
 }))
@@ -361,20 +369,30 @@ const makeFakeClient = (apps: ReturnType<typeof makeOwnedApp>[]) => ({
 
 describe('SteamLibraryManager', () => {
   let manager: SteamLibraryManager
+  let leaseRelease: jest.Mock
 
   beforeEach(() => {
     jest.clearAllMocks()
     manager = new SteamLibraryManager()
-    // quick-260817-d61: this suite tests refresh()'s BEHAVIOR (playtime,
-    // install-state merge, bridge reconciliation, etc.), not the keyring
-    // deferral gate itself — that gate has its own dedicated suite
-    // (steamStartupKeyringDeferral.test.ts). Unlock it here so every
-    // pre-existing test below keeps exercising refresh()'s full body exactly
-    // as it did before this task, instead of short-circuiting on the new
-    // exit path 0.
-    noteSteamAuthTrigger('user-refresh')
-    // Default: client reconnect succeeds so refresh() proceeds past the guard
-    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+    // Phase 54: refresh() logs on only for a granted (explicit) Refresh. This
+    // suite tests refresh()'s BEHAVIOR, so arm the one-shot grant the way the
+    // IPC handler does; the grant is consumed by the first refresh() call, so
+    // tests that refresh twice re-arm it. The grant gate itself has its own
+    // describe below and the structural launch test.
+    resetSteamAuthTrigger()
+    noteRefreshTrigger('steam', 'action-icons-refresh-button')
+    // Default lease: the client the test installed via SteamUser.getClient().
+    leaseRelease = jest.fn()
+    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(SteamUser.acquireAuthenticated).mockImplementation(
+      async () =>
+        ({
+          ok: true,
+          client: SteamUser.getClient(),
+          release: leaseRelease
+        }) as never
+    )
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
     // Default: getSteamLibraries returns empty so buildInstalledMap is fast
     jest.mocked(getSteamLibraries).mockResolvedValue([])
     // Default: metadata store returns undefined (no cached artwork)
@@ -821,29 +839,27 @@ describe('SteamLibraryManager', () => {
       .map(([, payload]) => payload)
 
   describe('SteamLibraryManager.refresh() sync status emission (34.15 D-07)', () => {
-    it('exit path 1 (client not ready): emits [syncing, failed/client-not-ready] and resolves null', async () => {
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(false)
+    const refuse = (reason: string) =>
+      jest
+        .mocked(SteamUser.acquireAuthenticated)
+        .mockResolvedValue({ ok: false, reason } as never)
+
+    it('exit path 1 (client not ready): emits [failed/client-not-ready] and resolves null', async () => {
+      refuse('client-not-ready')
 
       const result = await manager.refresh()
 
       expect(result).toBeNull()
       expect(steamSyncEmits()).toEqual([
-        { status: 'syncing' },
         { status: 'failed', reason: 'client-not-ready' }
       ])
     })
 
     it('exit path 1 (CM rejected the logon): still ONE failed emit, but names it logon-rejected so it never reads as a readiness race', async () => {
-      // steam-sync-false-failed-banner: AccessDenied is terminal in steam-user
-      // (no retry is scheduled), so this is not a reconnect in flight. The
-      // four-exit-path census is unchanged -- same exit, same single emit --
-      // only the reason differs.
       // `jest.mocked(SteamUser).x` rather than `jest.mocked(SteamUser.x)`:
-      // the latter is a bare method reference and trips unbound-method, and
-      // this repo's lint ceiling for tests is exact.
-      const user = jest.mocked(SteamUser)
-      user.ensureConnected.mockResolvedValue(false)
-      user.getLogonFailure.mockReturnValue({
+      // the latter is a bare method reference and trips unbound-method.
+      refuse('logon-rejected')
+      jest.mocked(SteamUser).getLogonFailure.mockReturnValue({
         message: 'AccessDenied',
         eresult: 15
       })
@@ -852,22 +868,74 @@ describe('SteamLibraryManager', () => {
 
       expect(result).toBeNull()
       expect(steamSyncEmits()).toEqual([
-        { status: 'syncing' },
         { status: 'failed', reason: 'logon-rejected' }
       ])
     })
 
-    it('exit path 1 (no rejection recorded): an unreadable/absent/slow connect keeps the generic client-not-ready reason', async () => {
-      const user = jest.mocked(SteamUser)
-      user.ensureConnected.mockResolvedValue(false)
-      user.getLogonFailure.mockReturnValue(null)
+    it.each(['token-absent', 'token-unreadable', 'not-signed-in'])(
+      'exit path 1 (%s): maps to the generic client-not-ready reason',
+      async (reason) => {
+        refuse(reason)
+
+        await manager.refresh()
+
+        expect(steamSyncEmits()).toEqual([
+          { status: 'failed', reason: 'client-not-ready' }
+        ])
+      }
+    )
+
+    it('refused go-offline-required: exactly one idle emit, no logon, cached library untouched', async () => {
+      refuse('go-offline-required')
+
+      const result = await manager.refresh()
+
+      expect(result).toBeNull()
+      expect(steamSyncEmits()).toEqual([{ status: 'idle' }])
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.anything()
+      )
+    })
+
+    it('a granted Refresh asks for the guided Go Offline step', async () => {
+      const fakeClient = makeFakeClient([])
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
 
       await manager.refresh()
 
-      expect(steamSyncEmits()).toEqual([
-        { status: 'syncing' },
-        { status: 'failed', reason: 'client-not-ready' }
-      ])
+      expect(SteamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
+      expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith({
+        reason: 'user-refresh',
+        guidedAction: 'refresh'
+      })
+      expect(leaseRelease).toHaveBeenCalledTimes(1)
+    })
+
+    it('a sign-in grant acquires with reason login', async () => {
+      resetSteamAuthTrigger()
+      noteRefreshTrigger('steam', 'login-success')
+      jest
+        .mocked(SteamUser.getClient)
+        .mockReturnValue(makeFakeClient([]) as any)
+
+      await manager.refresh()
+
+      expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith({
+        reason: 'login',
+        guidedAction: 'refresh'
+      })
+    })
+
+    it('the grant is one-shot: a second refresh without a new grant does not acquire', async () => {
+      jest
+        .mocked(SteamUser.getClient)
+        .mockReturnValue(makeFakeClient([]) as any)
+
+      await manager.refresh()
+      await manager.refresh()
+
+      expect(SteamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
     })
 
     it('exit path 2 (getUserOwnedApps throws): emits [syncing, failed/owned-apps-failed] AFTER cached games are pushed', async () => {
@@ -939,6 +1007,129 @@ describe('SteamLibraryManager', () => {
       ])
       // Negative gate: the regression a `finally` block would introduce.
       expect(steamSyncEmits()).not.toContainEqual({ status: 'idle' })
+    })
+  })
+
+  describe('Phase 54 ungranted (automatic) refresh', () => {
+    beforeEach(() => {
+      // Drop the grant the shared beforeEach armed.
+      consumeSteamRefreshLogonGrant()
+    })
+
+    it('with no open session: no logon, one idle emit, install state reconciled locally', async () => {
+      const result = await manager.refresh()
+
+      expect(result).toBeNull()
+      expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
+      expect(steamSyncEmits()).toEqual([{ status: 'idle' }])
+    })
+
+    it('a throwing local reconcile still yields exactly one idle emit', async () => {
+      jest.mocked(getSteamLibraries).mockRejectedValue(new Error('boom'))
+
+      await manager.refresh()
+
+      expect(steamSyncEmits()).toEqual([{ status: 'idle' }])
+    })
+
+    it('with an open session: full sync on that client, no new logon, lease released', async () => {
+      const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
+      jest
+        .mocked(SteamUser.acquireOpenAuthenticated)
+        .mockReturnValue({ client: fakeClient, release: leaseRelease } as never)
+
+      await manager.refresh()
+
+      expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
+      expect(fakeClient.getUserOwnedApps).toHaveBeenCalledTimes(1)
+      expect(steamSyncEmits()).toEqual([
+        { status: 'syncing' },
+        { status: 'idle' }
+      ])
+      expect(leaseRelease).toHaveBeenCalledTimes(1)
+    })
+
+    it('releases the open-session lease on the hydration-catch rethrow', async () => {
+      const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
+      jest
+        .mocked(SteamUser.acquireOpenAuthenticated)
+        .mockReturnValue({ client: fakeClient, release: leaseRelease } as never)
+      jest.mocked(steamLibraryStore.set).mockImplementation(() => {
+        throw new Error('disk write failed')
+      })
+
+      await expect(manager.refresh()).rejects.toThrow('disk write failed')
+
+      expect(leaseRelease).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('Phase 54 platform capture runs anonymous first', () => {
+    const anon = { tag: 'anon' }
+
+    it('a complete anonymous pass is the only pass', async () => {
+      const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(getAnonymousPicsClient).mockResolvedValue(anon as never)
+      jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
+        scopedCount: 1,
+        capturedCount: 1,
+        skippedCount: 0,
+        failed: false
+      })
+
+      await manager.refresh()
+
+      expect(captureOwnedAppPlatforms).toHaveBeenCalledTimes(1)
+      expect(captureOwnedAppPlatforms).toHaveBeenCalledWith(anon, [570])
+    })
+
+    it('an incomplete anonymous pass gets a second pass on the held session', async () => {
+      const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(getAnonymousPicsClient).mockResolvedValue(anon as never)
+      jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
+        scopedCount: 1,
+        capturedCount: 0,
+        skippedCount: 0,
+        failed: false
+      })
+
+      await manager.refresh()
+
+      expect(captureOwnedAppPlatforms).toHaveBeenCalledTimes(2)
+      expect(captureOwnedAppPlatforms).toHaveBeenNthCalledWith(1, anon, [570])
+      expect(captureOwnedAppPlatforms).toHaveBeenNthCalledWith(
+        2,
+        fakeClient,
+        [570]
+      )
+    })
+
+    it('a failed anonymous pass gets a second pass', async () => {
+      const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(getAnonymousPicsClient).mockResolvedValue(anon as never)
+      jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
+        scopedCount: 1,
+        capturedCount: 1,
+        skippedCount: 0,
+        failed: true
+      })
+
+      await manager.refresh()
+
+      expect(captureOwnedAppPlatforms).toHaveBeenCalledTimes(2)
+    })
+
+    it('no anonymous client: one pass on the held session', async () => {
+      const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+
+      await manager.refresh()
+
+      expect(captureOwnedAppPlatforms).toHaveBeenCalledTimes(1)
+      expect(captureOwnedAppPlatforms).toHaveBeenCalledWith(fakeClient, [570])
     })
   })
 
