@@ -284,7 +284,7 @@ export function wineRegistryValueIsSet(
 }
 
 /** Which Wine registry file in the prefix holds this fix's hive. */
-export function registryFileFor(
+function registryFileFor(
   prefixDir: string,
   fix: ValidRegistryFix
 ): string | null {
@@ -303,7 +303,7 @@ export function registryFileFor(
   return null
 }
 
-export type RegistryFixRun = (
+type RegistryFixRun = (
   commandParts: string[],
   onSpawn: (child: ChildProcess) => void
 ) => Promise<{ code?: number | null } | undefined>
