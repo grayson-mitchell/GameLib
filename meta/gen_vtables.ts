@@ -1586,8 +1586,9 @@ function emitStubBody(
 // positions MOVE between versions (SteamController003 sret is at 9/12,
 // SteamController006 at 13/16/25): a family-wide table would memset through
 // RDX on a slot where RDX is an ordinary argument, a new crash. Sret slots
-// zero-fill structSize bytes and return RDX in RAX; every other slot is
-// vt_x64_null_object. REMAINING GAP: a version unknown to the pinned Proton
+// zero-fill structSize bytes and return RDX in RAX (quick-261027-ijs: each
+// (version, slot) has its own function that also reports its first call to the
+// helper, logged as NULLSRET); every other slot is vt_x64_null_object. REMAINING GAP: a version unknown to the pinned Proton
 // inventory (or one Proton ships without sret data) still gets this generic
 // all-zero object, so an sret call on such a version still reads through 0.
 // This generic 256-slot object is unchanged.
@@ -1661,25 +1662,68 @@ function emitX64NullSretObjects(
     kept.push([version, entry])
   }
 
-  const sizes = [
-    ...new Set(kept.flatMap(([, e]) => e.sret.map((s) => s.structSize)))
-  ].sort((a, b) => a - b)
+  // quick-261027-ijs: one function per (version, sret slot) so the first call
+  // of each site can be reported to the helper (NULLSRET). K is the row index
+  // in g_x64_null_sret_sites, in emission order (versions sorted, slots
+  // ascending).
+  const sites: { version: string; id: string; slot: number; size: number }[] =
+    []
+  for (const [version, entry] of kept) {
+    const id = version.toLowerCase().replace(/[^a-z0-9_]/g, '_')
+    for (const s of [...entry.sret].sort((a, b) => a.slot - b.slot)) {
+      sites.push({ version, id, slot: s.slot, size: s.structSize })
+    }
+  }
 
   let out = ''
-  for (const n of sizes) {
-    out += `static void *vt_x64_null_sret_${n}(void *self, void *ret) { (void)self; if (ret != NULL) memset(ret, 0, ${n}); return ret; }\n`
+  if (sites.length > 0) {
+    out +=
+      `#define GLIB_X64_NULL_SRET_SITES ${sites.length}\n` +
+      `static const struct { const char *version; uint32_t slot; uint32_t size; } g_x64_null_sret_sites[GLIB_X64_NULL_SRET_SITES] = {\n` +
+      sites
+        .map((s) => `  { "${s.version}", ${s.slot}, ${s.size} },`)
+        .join('\n') +
+      `\n};\n` +
+      `static volatile LONG g_x64_null_sret_reported[GLIB_X64_NULL_SRET_SITES];\n` +
+      `static volatile LONG g_x64_null_sret_attempts[GLIB_X64_NULL_SRET_SITES];\n` +
+      `// quick-261027-ijs: report the first call of site k to the helper (NULLSRET). One-shot per site via\n` +
+      `// the interlocked flag. The flag is reset when bridge_transact fails (e.g. before HELLO) so a later\n` +
+      `// call retries, bounded at 3 attempts per site. Never alters the caller's memset or return value;\n` +
+      `// holds no lock itself (bridge_transact takes g_bridge_lock).\n` +
+      `static void x64_null_sret_note(uint32_t k) {\n` +
+      `  uint8_t req[12 + 128];\n` +
+      `  uint8_t retbuf[1]; uint32_t retlen = 0;\n` +
+      `  uint32_t vlen, slot, size;\n` +
+      `  if (k >= GLIB_X64_NULL_SRET_SITES) return;\n` +
+      `  if (InterlockedCompareExchange(&g_x64_null_sret_reported[k], 1, 0) != 0) return;\n` +
+      `  if (InterlockedIncrement(&g_x64_null_sret_attempts[k]) > 3) return;\n` +
+      `  vlen = (uint32_t)strlen(g_x64_null_sret_sites[k].version);\n` +
+      `  if (vlen > 128) vlen = 128;\n` +
+      `  slot = g_x64_null_sret_sites[k].slot;\n` +
+      `  size = g_x64_null_sret_sites[k].size;\n` +
+      `  memcpy(req, &slot, 4);\n` +
+      `  memcpy(req + 4, &size, 4);\n` +
+      `  memcpy(req + 8, &vlen, 4);\n` +
+      `  memcpy(req + 12, g_x64_null_sret_sites[k].version, vlen);\n` +
+      `  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_NULL_SRET, req, 12 + vlen, retbuf, sizeof(retbuf), &retlen)) {\n` +
+      `    InterlockedExchange(&g_x64_null_sret_reported[k], 0);\n` +
+      `  }\n` +
+      `}\n`
+    sites.forEach((s, k) => {
+      out += `static void *vt_x64_null_sret_${s.id}_s${s.slot}(void *self, void *ret) { (void)self; if (ret != NULL) memset(ret, 0, ${s.size}); x64_null_sret_note(${k}); return ret; }\n`
+    })
   }
   const table: string[] = []
   for (const [version, entry] of kept) {
     const id = version.toLowerCase().replace(/[^a-z0-9_]/g, '_')
-    const bySlot = new Map(entry.sret.map((s) => [s.slot, s.structSize]))
+    const bySlot = new Set(entry.sret.map((s) => s.slot))
     out +=
       `// ${version} (${entry.family}, ${entry.slotCount} slots, sret at ` +
       `${entry.sret.map((s) => `${s.slot}:${s.name}`).join(', ')})\n` +
       `static vfn g_x64_null_${id}_vtbl[${entry.slotCount}] = {\n` +
       Array.from({ length: entry.slotCount }, (_, i) =>
         bySlot.has(i)
-          ? `  (vfn)vt_x64_null_sret_${bySlot.get(i)},`
+          ? `  (vfn)vt_x64_null_sret_${id}_s${i},`
           : '  (vfn)vt_x64_null_object,'
       ).join('\n') +
       `\n};\n` +
@@ -2830,6 +2874,8 @@ export function generateShimC(
 #define BRIDGE_CONTROL_SLOT_REPORT_INIT 5
 // Phase 55: SteamAPI_RunCallbacks drains queued Steam callbacks (168 only) from the helper; an old helper answers STATUS_ERR, which bridge_transact reports as 0 and the registry treats as empty.
 #define BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS 6
+// quick 261027-ijs: the first game call of each per-version x64 sret null-object slot is reported (the helper logs NULLSRET); an old helper answers STATUS_ERR, which is harmless.
+#define BRIDGE_CONTROL_SLOT_REPORT_NULL_SRET 7
 #define GAMELIB_INIT_FN_STEAMAPI_INIT 0
 #define GAMELIB_INIT_FN_STEAMINTERNAL_INIT 1
 #define GAMELIB_INIT_FN_STEAMAPI_INITSAFE 2
@@ -3221,7 +3267,8 @@ typedef void *vfn;
 // doc comment (meta/gen_vtables.ts) for why ONE generic zero-returning
 // function safely serves every slot's arity on this target. quick-261027-i4x:
 // versions Proton ships with sret slots get a per-EXACT-version null object
-// (sret slots zero-fill and return RDX); x64_null_object_for_version picks it,
+// (sret slots zero-fill and return RDX, and report their first call as NULLSRET);
+// x64_null_object_for_version picks it,
 // and falls back to the generic object for NULL or an unknown version.
 #if defined(__x86_64__)
 static void *vt_x64_null_object(void *self) { (void)self; return 0; }

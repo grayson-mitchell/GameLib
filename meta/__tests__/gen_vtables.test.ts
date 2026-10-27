@@ -1665,27 +1665,116 @@ describe('gen_vtables', () => {
           x64NullSretInventory: inv
         })
 
-      it('emits one sret function per used size and an ordered per-version vtable', () => {
+      it('emits one sret function per (version, slot) and an ordered per-version vtable', () => {
         const c = gen(synthetic)
-        for (const n of [2, 8, 16]) {
+        // No per-size function survives.
+        expect(c).not.toMatch(/vt_x64_null_sret_\d+\b/)
+        // Sites in emission order: versions sorted, slots ascending.
+        const sites = [
+          ['GameLibX86Only001', 'gamelibx86only001', 1, 8],
+          ['NullFam003', 'nullfam003', 1, 16],
+          ['NullFam003', 'nullfam003', 3, 2]
+        ] as const
+        sites.forEach(([ver, id, slot, size], k) => {
           const defs = c.match(
             new RegExp(
-              `static void \\*vt_x64_null_sret_${n}\\(void \\*self, void \\*ret\\)`,
+              `static void \\*vt_x64_null_sret_${id}_s${slot}\\(void \\*self, void \\*ret\\)`,
               'g'
             )
           )
           expect(defs).toHaveLength(1)
-          expect(c).toContain(`memset(ret, 0, ${n}); return ret;`)
-        }
+          expect(c).toContain(
+            `if (ret != NULL) memset(ret, 0, ${size}); x64_null_sret_note(${k}); return ret;`
+          )
+          expect(c).toContain(`{ "${ver}", ${slot}, ${size} },`)
+        })
+        expect(c).toContain('#define GLIB_X64_NULL_SRET_SITES 3')
         const m = c.match(
           /g_x64_null_nullfam003_vtbl\[4\] = \{\n([\s\S]*?)\n\};/
         )!
         expect(m[1].split('\n').map((l) => l.trim())).toEqual([
           '(vfn)vt_x64_null_object,',
-          '(vfn)vt_x64_null_sret_16,',
+          '(vfn)vt_x64_null_sret_nullfam003_s1,',
           '(vfn)vt_x64_null_object,',
-          '(vfn)vt_x64_null_sret_2,'
+          '(vfn)vt_x64_null_sret_nullfam003_s3,'
         ])
+      })
+
+      it('same-size sites in different versions get different functions', () => {
+        const inv: NullSretInventory = {
+          source: { kind: 'proton-lsteamclient', ref: 'unit test' },
+          versions: {
+            NullFamA001: entry(2, [{ slot: 1, name: 'A', structSize: 16 }]),
+            NullFamB001: entry(2, [{ slot: 1, name: 'B', structSize: 16 }])
+          }
+        }
+        const c = gen(inv)
+        expect(c).toContain('vt_x64_null_sret_nullfama001_s1(void *self')
+        expect(c).toContain('vt_x64_null_sret_nullfamb001_s1(void *self')
+        expect(c).toContain('x64_null_sret_note(0)')
+        expect(c).toContain('x64_null_sret_note(1)')
+      })
+
+      it('the one-shot reporter is interlocked, sends slot 7, ignores nothing it must retry on, and cannot alter the return', () => {
+        const c = gen(synthetic)
+        expect(c).toContain('#define BRIDGE_CONTROL_SLOT_REPORT_NULL_SRET 7')
+        const at = c.indexOf('static void x64_null_sret_note(uint32_t k) {')
+        expect(at).toBeGreaterThan(
+          c.indexOf('static int bridge_transact(uint16_t')
+        )
+        const body = c.slice(at, c.indexOf('\n}\n', at))
+        expect(body).toContain(
+          'InterlockedCompareExchange(&g_x64_null_sret_reported[k], 1, 0) != 0'
+        )
+        expect(body).toContain(
+          'BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_NULL_SRET'
+        )
+        // Orchestrator amendment: reset on transport failure, bounded at 3.
+        expect(body).toContain(
+          'if (InterlockedIncrement(&g_x64_null_sret_attempts[k]) > 3) return;'
+        )
+        expect(body).toMatch(
+          /if \(!bridge_transact\([^\n]*\)\) \{\n\s*InterlockedExchange\(&g_x64_null_sret_reported\[k\], 0\);\n\s*\}/
+        )
+        expect(body).not.toMatch(/\breturn [^;]/)
+      })
+
+      it('every site row K: the function at its vtable slot memsets the row size and calls note(K)', () => {
+        const c = generateShimC(real, { x64NullSretInventory: realInventory })
+        const rows = [
+          ...c.matchAll(/^  \{ "([^"]+)", (\d+), (\d+) \},$/gm)
+        ].filter((r) => !r[1].includes(' '))
+        const n = Number(/#define GLIB_X64_NULL_SRET_SITES (\d+)/.exec(c)![1])
+        // The inventory holds 189 sret slots; versions an x64 manifest serves get
+        // a real proxy instead of a null object, so only the rest are sites.
+        const served = new Set(
+          real.filter((m) => m.arches.includes('x64')).map((m) => m.interface)
+        )
+        const expected = Object.entries(realInventory.versions)
+          .filter(([v]) => !served.has(v))
+          .reduce((a, [, e]) => a + e.sret.length, 0)
+        expect(expected).toBeGreaterThan(0)
+        expect(n).toBe(expected)
+        const siteRows = rows.slice(-n)
+        expect(siteRows).toHaveLength(n)
+        siteRows.forEach(([, ver, slot, size], k) => {
+          const id = ver.toLowerCase().replace(/[^a-z0-9_]/g, '_')
+          const fn = `vt_x64_null_sret_${id}_s${slot}`
+          expect(c).toContain(
+            `static void *${fn}(void *self, void *ret) { (void)self; if (ret != NULL) memset(ret, 0, ${size}); x64_null_sret_note(${k}); return ret; }`
+          )
+          const vt = new RegExp(
+            `g_x64_null_${id}_vtbl\\[\\d+\\] = \\{\\n([\\s\\S]*?)\\n\\};`
+          ).exec(c)!
+          expect(vt[1].split('\n')[Number(slot)].trim()).toBe(`(vfn)${fn},`)
+        })
+        const defs = c.match(
+          /^static void \*vt_x64_null_sret_[a-z0-9_]+_s\d+\(void \*self, void \*ret\)/gm
+        )
+        expect(new Set(defs).size).toBe(expected)
+        expect(defs).toHaveLength(expected)
+        expect(c).toContain('vt_x64_null_sret_steamcontroller003_s9(')
+        expect(c).toContain('vt_x64_null_sret_steamcontroller003_s12(')
       })
 
       it('skips versions an x64 manifest serves but keeps x86-only ones', () => {
@@ -1725,6 +1814,8 @@ describe('gen_vtables', () => {
           expect(c).not.toContain('g_x64_null_sret_objects')
           expect(c).toContain('static void *x64_null_object_for_version')
           expect(c).not.toContain('vt_x64_null_sret_')
+          expect(c).not.toContain('x64_null_sret_note')
+          expect(c).not.toContain('g_x64_null_sret_sites')
         }
       })
 
@@ -1771,9 +1862,9 @@ describe('gen_vtables', () => {
         lines.forEach((l, i) => {
           const want =
             i === 9
-              ? '(vfn)vt_x64_null_sret_2,'
+              ? '(vfn)vt_x64_null_sret_steamcontroller003_s9,'
               : i === 12
-                ? '(vfn)vt_x64_null_sret_16,'
+                ? '(vfn)vt_x64_null_sret_steamcontroller003_s12,'
                 : '(vfn)vt_x64_null_object,'
           expect(l).toBe(want)
         })

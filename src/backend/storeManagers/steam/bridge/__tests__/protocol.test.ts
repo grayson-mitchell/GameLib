@@ -217,6 +217,29 @@ describe('protocol -- CONTROL_SLOT.drainCallbacks (Phase 55)', () => {
   })
 })
 
+describe('protocol -- CONTROL_SLOT.reportNullSret (quick 261027-ijs)', () => {
+  it('is 7 and equals the shim and helper #define values', () => {
+    expect(CONTROL_SLOT.reportNullSret).toBe(7)
+    const root = join(__dirname, '..', '..', '..', '..', '..', '..')
+    const shim = readFileSync(
+      join(root, 'native/steam-bridge/generated/steam_api_shim.c'),
+      'utf-8'
+    )
+    const helper = readFileSync(
+      join(root, 'native/steam-bridge/helper/bridge_helper.c'),
+      'utf-8'
+    )
+    const shimValue = /#define BRIDGE_CONTROL_SLOT_REPORT_NULL_SRET (\d+)/.exec(
+      shim
+    )
+    const helperValue = /#define CONTROL_SLOT_REPORT_NULL_SRET (\d+)/.exec(
+      helper
+    )
+    expect(Number(shimValue![1])).toBe(CONTROL_SLOT.reportNullSret)
+    expect(Number(helperValue![1])).toBe(CONTROL_SLOT.reportNullSret)
+  })
+})
+
 describe('protocol -- WR-03 secret/role constants match the shim and helper', () => {
   const root = join(__dirname, '..', '..', '..', '..', '..', '..')
   const shim = readFileSync(

@@ -105,9 +105,10 @@ const FIXTURE_MANIFEST: InterfaceManifestV2 = {
 const TARGET_FUNC = 'vt_GameLibAbiGate001_GetFixtureID_TESTONLY'
 const FRIEND_NAME_FUNC = 'vt_GameLibAbiGate001_GetFixtureFriendName_TESTONLY'
 const NULL_OBJECT_FUNC = 'vt_x64_null_object'
-const NULL_SRET_FUNC = 'vt_x64_null_sret_16'
+const NULL_SRET_FUNC = 'vt_x64_null_sret_gamelibnullabi001_s1'
 // quick-261027-i4x: one unserved version with a 16-byte sret slot, so the
-// generated shim carries vt_x64_null_sret_16 for the x64 disassembly.
+// generated shim carries vt_x64_null_sret_gamelibnullabi001_s1 for the x64
+// disassembly (quick-261027-ijs: one function per (version, slot)).
 const NULL_SRET_INVENTORY = {
   source: { kind: 'proton-lsteamclient' as const, ref: 'unit test' },
   versions: {
@@ -367,14 +368,26 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
     expect(lastRet).not.toMatch(/\$0x/)
   }, 180000)
 
-  it('x64: the per-version sret null stub returns %rdx in %rax and ends in a plain retq', async () => {
+  it('x64: the per-(version, slot) sret null stub makes a call but still returns the incoming %rdx in %rax (via a callee-saved register) and ends in a plain retq', async () => {
     if (skipReason) {
       console.warn(`shimAbiGate SKIPPED: ${skipReason}`)
       return
     }
     const disasm = await compileAndDisasm('x86_64-windows-gnu', 'x64')
     const block = extractFunctionBlock(disasm, NULL_SRET_FUNC)
-    expect(block).toMatch(/\bmovq?\s+%rdx,\s*%rax\b/)
+    // The function now makes a call (the NULLSRET report), so at -O2 the
+    // incoming %rdx is parked in a callee-saved register (Win64: rbx, rsi, rdi,
+    // r12-r15, rbp) across it and moved to %rax afterwards. Prove the
+    // dataflow: direct rdx->rax, or rdx->R followed later by R->rax.
+    const direct = /\bmovq?\s+%rdx,\s*%rax\b/.test(block)
+    const parked =
+      /\bmovq?\s+%rdx,\s*%(rbx|rsi|rdi|rbp|r12|r13|r14|r15)\b/.exec(block)
+    const viaCalleeSaved =
+      parked !== null &&
+      new RegExp(`\\bmovq?\\s+%${parked[1]},\\s*%rax\\b`).test(
+        block.slice(parked.index + parked[0].length)
+      )
+    expect(direct || viaCalleeSaved).toBe(true)
     const lastRet = lastReturnInstruction(block)
     expect(lastRet).toMatch(/ret[a-z]*\s*$/)
     expect(lastRet).not.toMatch(/\$0x/)
