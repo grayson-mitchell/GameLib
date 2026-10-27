@@ -148,6 +148,14 @@ describe('getAnonymousPicsClient', () => {
 })
 
 describe('shutdown and close', () => {
+  it('a close during an in-flight connect discards the late logon', async () => {
+    const p = getAnonymousPicsClient('x')
+    closeAnonymousClient('logout')
+    fake.instances[0].emit('loggedOn')
+    expect(await p).toBeNull()
+    expect(fake.instances[0].logOff).toHaveBeenCalled()
+  })
+
   it('releaseAnonymousForShutdown logs off and every later call resolves null', async () => {
     const p = getAnonymousPicsClient('x')
     fake.instances[0].emit('loggedOn')
