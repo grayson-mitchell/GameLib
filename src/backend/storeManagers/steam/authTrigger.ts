@@ -25,6 +25,11 @@
  * `SteamLibraryManager.refresh()` may open a CM connection where it used to
  * skip. The probe itself reads the keyring only and never connects (D-21); a
  * signed-out account never notes the trigger and never unlocks.
+ *
+ * REVERSAL (Phase 54, ROADMAP SC1): the sticky gate no longer lets an automatic
+ * refresh log on. Only the one-shot grant below does, armed by an explicit
+ * Refresh or a sign-in dispatch, so the boot-probe/mount race cannot reach an
+ * authenticated logon (debug friends-signout-steam-user).
  */
 
 /**
@@ -68,15 +73,36 @@ const DELIBERATE_TRIGGERS: ReadonlySet<SteamAuthTrigger> = new Set([
  */
 const ORIGIN_TO_TRIGGER: Readonly<Record<string, SteamAuthTrigger>> = {
   'action-icons-refresh-button': 'user-refresh',
-  'nav-tabs-games-tab': 'user-refresh',
   'redeem-steam-key': 'user-refresh',
-  'game-status': 'user-refresh',
+  // The "Retry Steam sync" button: an explicit user Refresh.
+  'steam-sync-notice-retry': 'user-refresh',
+  // Settings > Clear cache: a deliberate action that may have emptied the
+  // list, so it must be able to repopulate it.
+  'clear-cache': 'user-refresh',
+  // The guided Go Offline dialog's retry.
+  'steam-go-offline-retry': 'user-refresh',
+  // Deliberately unmapped (-> 'startup'): 'game-status' (fires after every
+  // install/Play status change), 'nav-tabs-games-tab' (browsing) and
+  // 'login-screen' (navigation; a Steam sign-in already granted its own refresh
+  // via 'login-success' / 'steam-login'). Play and browse must never log on.
   'login-success': 'login',
   'steam-login': 'login'
 }
 
+/**
+ * The keyring gate (DELIBERATE_TRIGGERS, sticky) answers "may read the
+ * keyring"; this set answers "may this ONE refresh open an authenticated CM
+ * logon". 'boot-probe', 'game-page', 'user-play' and 'user-install' are
+ * deliberately absent (installs acquire their own lease in depot/games).
+ */
+const LOGON_GRANTING_TRIGGERS: ReadonlySet<SteamAuthTrigger> = new Set([
+  'user-refresh',
+  'login'
+])
+
 // ── Module-scoped, per-process state ────────────────────────────────────────
 
+let pendingRefreshLogonGrant: 'user-refresh' | 'login' | null = null
 let unlocked = false
 let lastTrigger: SteamAuthTrigger | undefined
 
@@ -120,6 +146,21 @@ export function currentTriggerLabel(): string {
 export function resetSteamAuthTrigger(): void {
   unlocked = false
   lastTrigger = undefined
+  pendingRefreshLogonGrant = null
+}
+
+/**
+ * Returns and clears the pending one-shot refresh logon grant. Called
+ * synchronously as `refresh()`'s first statement, so a grant armed by the
+ * dispatch that triggered this refresh is consumed by THIS refresh.
+ */
+export function consumeSteamRefreshLogonGrant():
+  | 'user-refresh'
+  | 'login'
+  | null {
+  const grant = pendingRefreshLogonGrant
+  pendingRefreshLogonGrant = null
+  return grant
 }
 
 /**
@@ -175,5 +216,12 @@ export function noteRefreshTrigger(
     runner === null ||
     runner === 'all'
   if (!steamInclusive) return
-  noteSteamAuthTrigger(mapRefreshOriginToTrigger(origin))
+  const trigger = mapRefreshOriginToTrigger(origin)
+  noteSteamAuthTrigger(trigger)
+  if (
+    (trigger === 'user-refresh' || trigger === 'login') &&
+    LOGON_GRANTING_TRIGGERS.has(trigger)
+  ) {
+    pendingRefreshLogonGrant = trigger
+  }
 }
