@@ -1742,7 +1742,7 @@ describe('gen_vtables', () => {
       it('every site row K: the function at its vtable slot memsets the row size and calls note(K)', () => {
         const c = generateShimC(real, { x64NullSretInventory: realInventory })
         const rows = [
-          ...c.matchAll(/^  \{ "([^"]+)", (\d+), (\d+) \},$/gm)
+          ...c.matchAll(/^ {2}\{ "([^"]+)", (\d+), (\d+) \},$/gm)
         ].filter((r) => !r[1].includes(' '))
         const n = Number(/#define GLIB_X64_NULL_SRET_SITES (\d+)/.exec(c)![1])
         // The inventory holds 189 sret slots; versions an x64 manifest serves get
