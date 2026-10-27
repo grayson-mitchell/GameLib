@@ -468,4 +468,4 @@ Honest caveat: the passing item 11 retry (launch 6) did NOT reproduce the slow m
 - Launch numbering 1-9 (item 10: 2, 3; item 11 first run: 4; item 10 repeat: 5; item 11 retry: 6; item 12: 7, 8; item 13: 8, 9), shifted against the contract because of the extra attempts.
 - Before launch 1 the shell terminal failed on a working-directory problem; environmental, no GameLib code involved.
 - Item 8 was extended into 8a (game running, dialog copy, Cancel) and 8b (CR-01 via the guided Continue). The install-folder half of CR-01 could not be tested live: the operator has one Steam library, so there is no folder dropdown.
-- Item 7: the operator verdict line for the offline Refresh was not logged in the session notes; the pass rests on the log and connection_log counts above.
+- Item 7: the operator confirmed in chat that Steam stayed offline after the Refresh ("refreshed, steam stayed offline"); the log and connection_log counts above corroborate it. The verdict was not copied into the session notes file.
