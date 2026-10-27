@@ -463,6 +463,15 @@
                 "notSignedIn": "Et ole kirjautunut Steamiin, joten latausta ei voitu aloittaa."
             }
         },
+        "goOffline": {
+            "title": "Aseta Steam offline-tilaan jatkaaksesi",
+            "body": "GameLibin täytyy kirjautua Steam-tilillesi tätä varten. Pitääkseen Steam-kaverilistasi kirjautuneena se kirjautuu sisään, kun Steam-sovellus on offline-tilassa, mutta Steam ei siirtynyt offline-tilaan, kun GameLib pyysi sitä. Näin voi käydä, kun Steam-peli on käynnissä.",
+            "steps": "Valitse Steam-sovelluksessa Steam > Go Offline ja paina Jatka. GameLib asettaa Steamin takaisin online-tilaan kirjauduttuaan.",
+            "continue": "Jatka",
+            "stillOnline": "Steam näkyy edelleen online-tilassa. Valitse Steam-sovelluksessa Steam > Go Offline ja paina Jatka uudelleen.",
+            "readyRedeem": "Steam on nyt offline-tilassa. Lunasta avain uudelleen jatkaaksesi.",
+            "error": "Jatkaminen ei onnistunut: {{error}}"
+        },
         "install": {
             "contentLightSingleLibraryNotice": "Tässä järjestelmässä on vain yksi Steam-kirjasto, niin tässä ei ole mitään valittavaa — GameLib asentaa tämän pelin siihen.",
             "forceWindowsHelp": "Tällä pelillä on natiivi macOS-versio, mutta voit asentaa sen sijaan Windows-version Wine-bottlen kautta — hyödyllistä, jos natiivista versiosta puuttuu ominaisuuksia tai se toimii heikommin.",

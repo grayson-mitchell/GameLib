@@ -477,6 +477,15 @@
                 "notSignedIn": "Nie ste prihlásený do Steam, takže toto sťahovanie sa nemohlo spustiť."
             }
         },
+        "goOffline": {
+            "title": "Ak chcete pokračovať, prepnite Steam do režimu offline",
+            "body": "GameLib sa na to musí prihlásiť do vášho účtu Steam. Aby zoznam priateľov Steam zostal prihlásený, prihlasuje sa, keď je aplikácia Steam offline, ale Steam sa neprepol do režimu offline, keď o to GameLib požiadal. To sa môže stať, keď beží hra zo Steamu.",
+            "steps": "V aplikácii Steam vyberte Steam > Go Offline a stlačte Pokračovať. GameLib po prihlásení prepne Steam späť do režimu online.",
+            "continue": "Pokračovať",
+            "stillOnline": "Steam sa stále zobrazuje ako online. V aplikácii Steam vyberte Steam > Go Offline a znova stlačte Pokračovať.",
+            "readyRedeem": "Steam je teraz offline. Ak chcete pokračovať, kľúč uplatnite znova.",
+            "error": "Nie je možné pokračovať: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib spravuje jeden zdieľaný bottle CrossOver pre Steam. Vytvorenie samostatného bottle pre každú hru zatiaľ nie je podporované.",
             "contentLightNotice": "Toto sa inštaluje priamo cez klienta Steam, takže tu nie je čo vyberať. Zapnite natívne inštalácie Steamu v Nastaveniach, aby ste mohli spravovať umiestnenie inštalácie a kompatibilitu s Windows priamo z GameLib.",

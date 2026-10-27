@@ -463,6 +463,15 @@
                 "notSignedIn": "Je bent niet aangemeld bij Steam, dus deze download kon niet starten."
             }
         },
+        "goOffline": {
+            "title": "Zet Steam offline om door te gaan",
+            "body": "GameLib moet hiervoor inloggen op je Steam-account. Om je Steam-vriendenlijst ingelogd te houden, logt het in terwijl de Steam-app offline is, maar Steam ging niet offline toen GameLib erom vroeg. Dit kan gebeuren terwijl er een Steam-game draait.",
+            "steps": "Kies in de Steam-app Steam > Go Offline en druk op Doorgaan. GameLib zet Steam weer online zodra het is ingelogd.",
+            "continue": "Doorgaan",
+            "stillOnline": "Steam staat nog steeds online. Kies Steam > Go Offline in de Steam-app en druk nogmaals op Doorgaan.",
+            "readyRedeem": "Steam is nu offline. Los de sleutel opnieuw in om door te gaan.",
+            "error": "Kan niet doorgaan: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib beheert één gedeelde CrossOver-bottle voor Steam. Een aparte bottle per game benoemen wordt nog niet ondersteund.",
             "contentLightNotice": "Dit installeert via Steams eigen client, dus hier valt niets te kiezen. Schakel native Steam-installaties in bij Instellingen om de installatielocatie en Windows-compatibiliteit vanuit GameLib te beheren.",

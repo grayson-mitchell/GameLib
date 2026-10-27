@@ -463,6 +463,15 @@
                 "notSignedIn": "您尚未登入 Steam，因此無法開始此下載。"
             }
         },
+        "goOffline": {
+            "title": "請將 Steam 設為離線以繼續",
+            "body": "GameLib 需要為此登入你的 Steam 帳號。為了讓你的 Steam 好友名單保持登入狀態，它會在 Steam 應用程式離線時登入，但 GameLib 要求時 Steam 並未進入離線狀態。Steam 遊戲執行中時可能會發生這種情況。",
+            "steps": "在 Steam 應用程式中選擇 Steam > Go Offline，然後按「繼續」。登入完成後，GameLib 會將 Steam 重新設為上線。",
+            "continue": "繼續",
+            "stillOnline": "Steam 仍顯示為上線。請在 Steam 應用程式中選擇 Steam > Go Offline，然後再次按「繼續」。",
+            "readyRedeem": "Steam 現已離線。請再次兌換金鑰以繼續。",
+            "error": "無法繼續：{{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib 為 Steam 管理一個共用的 CrossOver bottle。目前尚不支援為每個遊戲命名獨立的 bottle。",
             "contentLightNotice": "此安裝透過 Steam 自身的用戶端進行，因此這裡沒有可選項目。請在設定中開啟原生 Steam 安裝功能，以便由 GameLib 管理安裝位置與 Windows 相容性。",

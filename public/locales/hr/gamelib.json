@@ -470,6 +470,15 @@
                 "notSignedIn": "Niste prijavljeni na Steam, pa ovo preuzimanje nije moglo započeti."
             }
         },
+        "goOffline": {
+            "title": "Postavite Steam u izvanmrežni način za nastavak",
+            "body": "GameLib se u tu svrhu mora prijaviti na vaš Steam račun. Kako bi popis prijatelja na Steamu ostao prijavljen, prijavljuje se dok je aplikacija Steam izvan mreže, ali Steam nije prešao u izvanmrežni način kad je GameLib to zatražio. To se može dogoditi dok je pokrenuta Steam igra.",
+            "steps": "U aplikaciji Steam odaberite Steam > Go Offline i pritisnite Nastavi. GameLib će nakon prijave vratiti Steam na mrežu.",
+            "continue": "Nastavi",
+            "stillOnline": "Steam se i dalje prikazuje kao na mreži. Odaberite Steam > Go Offline u aplikaciji Steam i ponovno pritisnite Nastavi.",
+            "readyRedeem": "Steam je sada izvan mreže. Ponovno iskoristite ključ za nastavak.",
+            "error": "Nije moguće nastaviti: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib upravlja jednim zajedničkim CrossOver bottleom za Steam. Imenovanje zasebnog bottlea za svaku igru još nije podržano.",
             "contentLightNotice": "Ovo se instalira putem vlastitog Steam klijenta, pa ovdje nema ništa za birati. Uključite izvorne Steam instalacije u Postavkama kako biste upravljali lokacijom instalacije i Windows kompatibilnošću iz GameLib-a.",

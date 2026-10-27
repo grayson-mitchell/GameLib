@@ -470,6 +470,15 @@
                 "notSignedIn": "Nu ești autentificat în Steam, așa că această descărcare nu a putut începe."
             }
         },
+        "goOffline": {
+            "title": "Setați Steam pe offline pentru a continua",
+            "body": "GameLib trebuie să se conecteze la contul dvs. Steam pentru aceasta. Pentru a păstra conectată lista de prieteni Steam, se conectează cât timp aplicația Steam este offline, dar Steam nu a trecut în modul offline când a cerut GameLib. Se poate întâmpla cât timp rulează un joc Steam.",
+            "steps": "În aplicația Steam, alegeți Steam > Go Offline, apoi apăsați Continuă. GameLib repune Steam online după ce s-a conectat.",
+            "continue": "Continuă",
+            "stillOnline": "Steam apare în continuare online. Alegeți Steam > Go Offline în aplicația Steam, apoi apăsați din nou Continuă.",
+            "readyRedeem": "Steam este acum offline. Valorificați din nou cheia pentru a continua.",
+            "error": "Nu s-a putut continua: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib gestionează un singur bottle CrossOver comun pentru Steam. Denumirea unui bottle separat pentru fiecare joc nu este încă acceptată.",
             "contentLightNotice": "Aceasta se instalează prin propriul client Steam, deci nu ai nimic de ales aici. Activează instalările native Steam din Setări pentru a gestiona locația de instalare și compatibilitatea cu Windows din GameLib.",

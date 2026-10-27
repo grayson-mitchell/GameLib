@@ -362,6 +362,15 @@
                 "title": "Steam-DRM-Prüfung könnte fehlschlagen"
             }
         },
+        "goOffline": {
+            "title": "Steam offline schalten, um fortzufahren",
+            "body": "GameLib muss sich dafür bei deinem Steam-Konto anmelden. Damit deine Steam-Freundesliste angemeldet bleibt, meldet es sich an, während die Steam-App offline ist. Steam wurde aber nicht offline geschaltet, als GameLib darum gebeten hat. Das kann passieren, während ein Steam-Spiel läuft.",
+            "steps": "Wähle in der Steam-App Steam > Go Offline und drücke dann auf Weiter. GameLib schaltet Steam wieder online, sobald die Anmeldung erfolgt ist.",
+            "continue": "Weiter",
+            "stillOnline": "Steam wird weiterhin als online angezeigt. Wähle in der Steam-App Steam > Go Offline und drücke dann erneut auf Weiter.",
+            "readyRedeem": "Steam ist jetzt offline. Löse den Schlüssel erneut ein, um fortzufahren.",
+            "error": "Fortfahren nicht möglich: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib verwaltet eine gemeinsame CrossOver-Bottle für Steam. Eine separate Bottle pro Spiel zu benennen wird noch nicht unterstützt.",
             "contentLightNotice": "Dies wird über Steams eigenen Client installiert, daher gibt es hier nichts auszuwählen. Aktivieren Sie native Steam-Installationen in den Einstellungen, um Installationsort und Windows-Kompatibilität über GameLib zu verwalten.",

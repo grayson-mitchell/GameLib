@@ -463,6 +463,15 @@
                 "notSignedIn": "Anda belum masuk ke akun Steam, sehingga unduhan ini tidak dapat dimulai."
             }
         },
+        "goOffline": {
+            "title": "Setel Steam ke mode offline untuk melanjutkan",
+            "body": "GameLib perlu masuk ke akun Steam Anda untuk ini. Agar daftar teman Steam Anda tetap masuk, GameLib masuk saat aplikasi Steam offline, tetapi Steam tidak beralih ke offline saat GameLib memintanya. Hal ini bisa terjadi saat game Steam sedang berjalan.",
+            "steps": "Di aplikasi Steam, pilih Steam > Go Offline, lalu tekan Lanjutkan. GameLib akan mengembalikan Steam ke online setelah berhasil masuk.",
+            "continue": "Lanjutkan",
+            "stillOnline": "Steam masih terlihat online. Pilih Steam > Go Offline di aplikasi Steam, lalu tekan Lanjutkan lagi.",
+            "readyRedeem": "Steam sekarang offline. Tukarkan kunci lagi untuk melanjutkan.",
+            "error": "Tidak dapat melanjutkan: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib mengelola satu bottle CrossOver bersama untuk Steam. Memberi nama bottle terpisah per game belum didukung.",
             "contentLightNotice": "Ini terpasang melalui klien Steam sendiri, jadi tidak ada yang perlu dipilih di sini. Aktifkan instalasi Steam native di Pengaturan untuk mengelola lokasi instalasi dan kompatibilitas Windows dari GameLib.",

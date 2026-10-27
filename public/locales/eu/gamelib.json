@@ -463,6 +463,15 @@
                 "notSignedIn": "Ez zaude Steam-en saioa hasita, beraz deskarga hau ezin izan da hasi."
             }
         },
+        "goOffline": {
+            "title": "Jarri Steam lineaz kanpo jarraitzeko",
+            "body": "GameLib-ek zure Steam kontuan saioa hasi behar du horretarako. Zure Steam lagunen zerrendak saioa hasita izan dezan, Steam aplikazioa lineaz kanpo dagoenean hasten du saioa, baina Steam ez zen lineaz kanpo jarri GameLib-ek eskatu zuenean. Hau Steam joko bat martxan dagoenean gerta daiteke.",
+            "steps": "Steam aplikazioan, aukeratu Steam > Go Offline eta sakatu Jarraitu. GameLib-ek Steam berriro linean jarriko du saioa hasi ondoren.",
+            "continue": "Jarraitu",
+            "stillOnline": "Steam oraindik linean agertzen da. Aukeratu Steam > Go Offline Steam aplikazioan eta sakatu Jarraitu berriro.",
+            "readyRedeem": "Steam lineaz kanpo dago orain. Trukatu gakoa berriro jarraitzeko.",
+            "error": "Ezin izan da jarraitu: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib-ek Steam-erako partekatutako CrossOver bottle bakarra kudeatzen du. Joko bakoitzeko bottle bereizi bati izena jartzea ez da oraindik onartzen.",
             "contentLightNotice": "Hau Steam-en bezero propioaren bidez instalatzen da, beraz ez dago hemen ezer aukeratzeko. Aktibatu Steam instalazio natiboak Ezarpenetan instalazio-kokalekua eta Windows bateragarritasuna GameLib-etik kudeatzeko.",

@@ -463,6 +463,15 @@
                 "notSignedIn": "Steam'de oturum açmadığınız için bu indirme başlatılamadı."
             }
         },
+        "goOffline": {
+            "title": "Devam etmek için Steam'i çevrimdışı yapın",
+            "body": "GameLib'in bunun için Steam hesabınızda oturum açması gerekiyor. Steam arkadaş listenizin oturumda kalması için Steam uygulaması çevrimdışıyken oturum açar, ancak GameLib istediğinde Steam çevrimdışı olmadı. Bu, bir Steam oyunu çalışırken olabilir.",
+            "steps": "Steam uygulamasında Steam > Go Offline seçeneğini seçin ve Devam'a basın. GameLib oturum açtıktan sonra Steam'i yeniden çevrimiçi yapar.",
+            "continue": "Devam",
+            "stillOnline": "Steam hâlâ çevrimiçi görünüyor. Steam uygulamasında Steam > Go Offline seçeneğini seçin ve Devam'a tekrar basın.",
+            "readyRedeem": "Steam artık çevrimdışı. Devam etmek için anahtarı yeniden kullanın.",
+            "error": "Devam edilemedi: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib, Steam için tek bir paylaşılan CrossOver bottle'ını yönetir. Oyun başına ayrı bir bottle adlandırma henüz desteklenmiyor.",
             "contentLightNotice": "Bu, Steam'in kendi istemcisi üzerinden yüklenir, bu yüzden burada seçilecek bir şey yok. Yükleme konumunu ve Windows uyumluluğunu GameLib üzerinden yönetmek için Ayarlar'dan yerel Steam yüklemelerini etkinleştirin.",

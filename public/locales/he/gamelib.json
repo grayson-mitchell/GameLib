@@ -470,6 +470,15 @@
                 "notSignedIn": "אינך מחובר ל-Steam, ולכן לא ניתן היה להתחיל את ההורדה."
             }
         },
+        "goOffline": {
+            "title": "הגדר את Steam למצב לא מקוון כדי להמשיך",
+            "body": "GameLib צריך להתחבר לחשבון Steam שלך לשם כך. כדי לשמור על רשימת החברים שלך ב-Steam מחוברת, הוא מתחבר בזמן שאפליקציית Steam במצב לא מקוון, אך Steam לא עבר למצב לא מקוון כש-GameLib ביקש זאת. זה יכול לקרות בזמן שמשחק של Steam פועל.",
+            "steps": "באפליקציית Steam, בחר Steam > Go Offline ולחץ על המשך. GameLib יחזיר את Steam למצב מקוון לאחר ההתחברות.",
+            "continue": "המשך",
+            "stillOnline": "Steam עדיין מופיע כמקוון. בחר Steam > Go Offline באפליקציית Steam ולחץ שוב על המשך.",
+            "readyRedeem": "Steam במצב לא מקוון כעת. מימוש המפתח שוב כדי להמשיך.",
+            "error": "לא ניתן להמשיך: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib מנהל bottle משותף אחד של CrossOver עבור Steam. מתן שם ל-bottle נפרד לכל משחק עדיין אינו נתמך.",
             "contentLightNotice": "ההתקנה מתבצעת דרך הלקוח של Steam עצמו, כך שאין כאן מה לבחור. הפעל התקנות Steam מובנות בהגדרות כדי לנהל את מיקום ההתקנה ואת התאימות ל-Windows מתוך GameLib.",

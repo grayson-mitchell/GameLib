@@ -368,6 +368,15 @@
                 "title": "La vérification DRM de Steam risque d'échouer"
             }
         },
+        "goOffline": {
+            "title": "Passez Steam hors ligne pour continuer",
+            "body": "GameLib doit se connecter à votre compte Steam pour cela. Pour que votre liste d'amis Steam reste connectée, il se connecte pendant que l'application Steam est hors ligne, mais Steam n'est pas passé hors ligne quand GameLib l'a demandé. Cela peut arriver pendant qu'un jeu Steam est en cours d'exécution.",
+            "steps": "Dans l'application Steam, choisissez Steam > Go Offline, puis appuyez sur Continuer. GameLib remet Steam en ligne une fois connecté.",
+            "continue": "Continuer",
+            "stillOnline": "Steam apparaît toujours en ligne. Choisissez Steam > Go Offline dans l'application Steam, puis appuyez de nouveau sur Continuer.",
+            "readyRedeem": "Steam est maintenant hors ligne. Échangez de nouveau la clé pour continuer.",
+            "error": "Impossible de continuer : {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib gère une seule bouteille CrossOver partagée pour Steam. Nommer une bouteille distincte par jeu n'est pas encore pris en charge.",
             "contentLightNotice": "Ceci s'installe via le client Steam lui-même, il n'y a donc rien à choisir ici. Activez les installations Steam natives dans les Paramètres pour gérer l'emplacement d'installation et la compatibilité Windows depuis GameLib.",

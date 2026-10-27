@@ -433,6 +433,15 @@
                 "notSignedIn": "Sa ei ole Steami sisse loginud, seega ei saanud see allalaadimine alata."
             }
         },
+        "goOffline": {
+            "title": "Jätkamiseks lülita Steam võrguühenduseta režiimi",
+            "body": "GameLib peab selleks sisse logima sinu Steami kontole. Et sinu Steami sõbraloend püsiks sisse logitud, logib see sisse siis, kui Steami rakendus on võrguühenduseta, kuid Steam ei läinud võrguühenduseta režiimi, kui GameLib seda palus. See võib juhtuda, kui Steami mäng töötab.",
+            "steps": "Vali Steami rakenduses Steam > Go Offline ja vajuta nuppu Jätka. GameLib lülitab Steami pärast sisselogimist uuesti võrku.",
+            "continue": "Jätka",
+            "stillOnline": "Steam on endiselt võrgus. Vali Steami rakenduses Steam > Go Offline ja vajuta uuesti nuppu Jätka.",
+            "readyRedeem": "Steam on nüüd võrguühenduseta. Jätkamiseks lunasta võti uuesti.",
+            "error": "Jätkamine ebaõnnestus: {{error}}"
+        },
         "install": {
             "libraryPrimarySuffix": "vaikimisi",
             "withOptionsLabel": "Paigalda valikutega…",

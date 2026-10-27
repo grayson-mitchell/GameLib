@@ -463,6 +463,15 @@
                 "notSignedIn": "Steam-də daxil olmamısınız, ona görə bu yükləmə başlaya bilmədi."
             }
         },
+        "goOffline": {
+            "title": "Davam etmək üçün Steam-i oflayn edin",
+            "body": "GameLib bunun üçün Steam hesabınıza daxil olmalıdır. Steam dost siyahınızın daxil olmuş qalması üçün Steam tətbiqi oflayn olarkən daxil olur, lakin GameLib xahiş etdikdə Steam oflayn olmadı. Bu, Steam oyunu işləyərkən baş verə bilər.",
+            "steps": "Steam tətbiqində Steam > Go Offline seçin və Davam et düyməsinə basın. GameLib daxil olduqdan sonra Steam-i yenidən onlayn edir.",
+            "continue": "Davam et",
+            "stillOnline": "Steam hələ də onlayn görünür. Steam tətbiqində Steam > Go Offline seçin və yenidən Davam et düyməsinə basın.",
+            "readyRedeem": "Steam indi oflayndır. Davam etmək üçün açarı yenidən aktivləşdirin.",
+            "error": "Davam etmək mümkün olmadı: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib Steam üçün bir paylaşılan CrossOver bottle-ı idarə edir. Hər oyun üçün ayrı bottle adlandırmaq hələ dəstəklənmir.",
             "contentLightNotice": "Bu, Steam-in öz klienti vasitəsilə quraşdırılır, ona görə burada seçiləcək heç nə yoxdur. Quraşdırma yerini və Windows uyğunluğunu GameLib-dən idarə etmək üçün Ayarlar-da native Steam quraşdırmalarını aktivləşdirin.",

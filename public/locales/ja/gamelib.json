@@ -463,6 +463,15 @@
                 "notSignedIn": "Steamにサインインしていないため、このダウンロードを開始できませんでした。"
             }
         },
+        "goOffline": {
+            "title": "続行するには Steam をオフラインにしてください",
+            "body": "この操作では、GameLib が Steam アカウントにサインインする必要があります。Steam のフレンドリストをサインインしたままにするため、Steam アプリがオフラインの間にサインインしますが、GameLib が要求したときに Steam はオフラインになりませんでした。Steam のゲームが起動中の場合に起こることがあります。",
+            "steps": "Steam アプリで Steam > Go Offline を選び、「続行」を押してください。サインインが完了すると、GameLib が Steam をオンラインに戻します。",
+            "continue": "続行",
+            "stillOnline": "Steam はまだオンラインと表示されています。Steam アプリで Steam > Go Offline を選び、もう一度「続行」を押してください。",
+            "readyRedeem": "Steam がオフラインになりました。続行するには、もう一度キーを引き換えてください。",
+            "error": "続行できませんでした: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLibはSteam用に1つの共有CrossOverボトルを管理しています。ゲームごとに別々のボトルに名前を付けることはまだサポートされていません。",
             "contentLightNotice": "これはSteam自身のクライアントを通じてインストールされるため、ここで選択する項目はありません。インストール先とWindows互換性をGameLibから管理するには、設定でネイティブSteamインストールをオンにしてください。",

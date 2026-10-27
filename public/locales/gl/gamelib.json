@@ -463,6 +463,15 @@
                 "notSignedIn": "Non iniciaches sesión en Steam, polo que esta descarga non puido comezar."
             }
         },
+        "goOffline": {
+            "title": "Pon Steam sen conexión para continuar",
+            "body": "GameLib necesita iniciar sesión na túa conta de Steam para isto. Para manter iniciada a sesión da túa lista de amizades de Steam, inicia sesión mentres a aplicación de Steam está sen conexión, pero Steam non se puxo sen conexión cando GameLib o solicitou. Isto pode acontecer mentres se executa un xogo de Steam.",
+            "steps": "Na aplicación de Steam, escolle Steam > Go Offline e preme Continuar. GameLib volve poñer Steam en liña cando inicie sesión.",
+            "continue": "Continuar",
+            "stillOnline": "Steam segue aparecendo en liña. Escolle Steam > Go Offline na aplicación de Steam e preme Continuar de novo.",
+            "readyRedeem": "Steam está sen conexión agora. Canxea a clave de novo para continuar.",
+            "error": "Non se puido continuar: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib xestiona unha única botella de CrossOver compartida para Steam. Aínda non se admite nomear unha botella separada por xogo.",
             "contentLightNotice": "Isto instálase a través do propio cliente de Steam, así que aquí non hai nada que escoller. Activa as instalacións nativas de Steam en Configuración para xestionar a localización de instalación e a compatibilidade con Windows desde GameLib.",

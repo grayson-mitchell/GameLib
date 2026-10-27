@@ -484,6 +484,15 @@
                 "notSignedIn": "N'oc'h ket kevreet ouzh Steam, ne oa ket tro da loc'hañ ar pellgargañ-mañ."
             }
         },
+        "goOffline": {
+            "title": "Lakait Steam diouzh linenn evit kenderc'hel",
+            "body": "Ret eo da GameLib kevreañ ouzh ho kont Steam evit se. Evit derc'hel ho roll mignoned Steam kevreet, e kevre pa vez ar poellad Steam diouzh linenn, met n'eo ket aet Steam diouzh linenn pa'z eus goulennet GameLib. Gallout a ra c'hoarvezout pa vez o treiñ ur c'hoari Steam.",
+            "steps": "E poellad Steam, diuzit Steam > Go Offline, goude-se pouezit war Kenderc'hel. GameLib a laka Steam war linenn en-dro p'en deus kevreet.",
+            "continue": "Kenderc'hel",
+            "stillOnline": "Steam a gaver c'hoazh war linenn. Diuzit Steam > Go Offline er poellad Steam, goude-se pouezit war Kenderc'hel en-dro.",
+            "readyRedeem": "Steam zo diouzh linenn bremañ. Eilgemerit an alc'hwez evit kenderc'hel.",
+            "error": "N'eus ket bet gallet kenderc'hel: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib a ren ur voutailh CrossOver rannet evit Steam. N'eo ket skoret c'hoazh ober ur voutailh dishañvel evit pep c'hoarigell.",
             "contentLightNotice": "Staliet e vez dre arval Steam e-unan, evel-se n'eus netra da zibab amañ. Enaouit staliadurioù Steam orin er Arventennoù evit ren lec'h ar staliañ hag heñvelder Windows diwar GameLib.",

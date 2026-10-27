@@ -470,6 +470,15 @@
                 "notSignedIn": "Non hai effettuato l'accesso a Steam, quindi questo download non può iniziare."
             }
         },
+        "goOffline": {
+            "title": "Imposta Steam offline per continuare",
+            "body": "GameLib deve accedere al tuo account Steam per questa operazione. Per mantenere connessa la tua lista amici di Steam, accede mentre l'app Steam è offline, ma Steam non è passato offline quando GameLib lo ha richiesto. Può succedere mentre è in esecuzione un gioco Steam.",
+            "steps": "Nell'app Steam scegli Steam > Go Offline, poi premi Continua. GameLib rimette Steam online dopo l'accesso.",
+            "continue": "Continua",
+            "stillOnline": "Steam risulta ancora online. Scegli Steam > Go Offline nell'app Steam, poi premi di nuovo Continua.",
+            "readyRedeem": "Steam è ora offline. Riscatta di nuovo la chiave per continuare.",
+            "error": "Impossibile continuare: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib gestisce un'unica bottle CrossOver condivisa per Steam. Assegnare un nome a una bottle separata per ogni gioco non è ancora supportato.",
             "contentLightNotice": "L'installazione avviene tramite il client di Steam, quindi qui non c'è nulla da scegliere. Attiva le installazioni Steam native nelle Impostazioni per gestire la posizione di installazione e la compatibilità Windows da GameLib.",

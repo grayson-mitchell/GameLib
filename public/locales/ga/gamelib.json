@@ -484,6 +484,15 @@
                 "notSignedIn": "Níl tú sínithe isteach i Steam, mar sin níorbh fhéidir an íoslódáil seo a thosú."
             }
         },
+        "goOffline": {
+            "title": "Socraigh Steam as líne chun leanúint ar aghaidh",
+            "body": "Ní mór do GameLib logáil isteach i do chuntas Steam chun seo a dhéanamh. Chun do liosta cairde Steam a choinneáil logáilte isteach, logálann sé isteach agus an aip Steam as líne, ach níor chuaigh Steam as líne nuair a d'iarr GameLib air. Is féidir é seo tarlú agus cluiche Steam ag rith.",
+            "steps": "San aip Steam, roghnaigh Steam > Go Offline, ansin brúigh Lean ar aghaidh. Cuireann GameLib Steam ar líne arís nuair atá sé logáilte isteach.",
+            "continue": "Lean ar aghaidh",
+            "stillOnline": "Taispeántar Steam ar líne fós. Roghnaigh Steam > Go Offline san aip Steam, ansin brúigh Lean ar aghaidh arís.",
+            "readyRedeem": "Tá Steam as líne anois. Fuascail an eochair arís chun leanúint ar aghaidh.",
+            "error": "Níorbh fhéidir leanúint ar aghaidh: {{error}}"
+        },
         "install": {
             "bottleNameReadonlyHelper": "Bainistíonn GameLib buidéal CrossOver amháin a roinntear le haghaidh Steam. Ní thacaítear fós le buidéal ar leith in aghaidh an chluiche a ainmniú.",
             "contentLightNotice": "Suiteáiltear é seo trí chliant Steam féin, mar sin níl aon rud le roghnú anseo. Cuir suiteálacha dúchasach Steam ar siúl sna Socruithe chun an suíomh suiteála agus comhoiriúnacht Windows a bhainistiú ó GameLib.",
