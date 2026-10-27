@@ -505,6 +505,22 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
       fire(button2, 'onClick')
       expect(libraryContextValue.setSortDirection).toHaveBeenCalledWith('asc')
     })
+
+    it('the direction button has a stable accessible name and exposes descending via aria-pressed (WR-03)', () => {
+      const buttonFor = (sortDirection: 'asc' | 'desc'): AnyElement => {
+        libraryContextValue = makeLibraryContextValue({ sortDirection })
+        return collectElements(
+          findByDataTour(topLevelChildren(renderHeader())[1], 'library-sort')[0]
+            .props.children
+        ).find((el) => el.type === 'button') as AnyElement
+      }
+      const asc = buttonFor('asc')
+      const desc = buttonFor('desc')
+      expect(asc.props['aria-label']).toBe('Sort Descending')
+      expect(desc.props['aria-label']).toBe(asc.props['aria-label'])
+      expect(asc.props['aria-pressed']).toBe(false)
+      expect(desc.props['aria-pressed']).toBe(true)
+    })
   })
 
   it('Header__utilities holds exactly four controls in the locked D-01 order, and no FormControl element survives anywhere in the tree', () => {

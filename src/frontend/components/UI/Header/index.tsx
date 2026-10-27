@@ -283,7 +283,15 @@ export default function Header({ list, totalGames }: Props) {
           <button
             type="button"
             className="Header__utilityButton Header__sortDirection"
-            aria-label={directionLabel}
+            // Review 261027-jjz WR-03: a toggle's accessible name names the
+            // control and never changes; the state rides on aria-pressed
+            // (pressed = descending), so "Sort Descending, toggle button, not
+            // pressed" cannot be misheard as an instruction. Reuses the
+            // existing `library.sortDescending` string rather than adding a
+            // new key to all 49 catalogs. The title stays stateful for
+            // sighted hover.
+            aria-label={t('library.sortDescending', 'Sort Descending')}
+            aria-pressed={sortDirection === 'desc'}
             title={directionLabel}
             onClick={() =>
               setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
