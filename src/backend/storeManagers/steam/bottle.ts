@@ -32,7 +32,8 @@ import {
   logWarning,
   LogPrefix
 } from 'backend/logger'
-import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
+import { checkWineBeforeLaunch, spawnAsync } from 'backend/utils'
+import { downloadSetupPayload } from './setupDownloads'
 // NOTE: `runWineCommand` is imported LAZILY (dynamic import inside the two
 // async functions that use it) rather than statically. Importing it at module
 // load pulls in backend/launcher -> the full storeManagers barrel (sideload ->
@@ -916,7 +917,10 @@ export async function provisionBottle(opts?: {
   mkdirSync(steamSetupDir, { recursive: true })
   if (!existsSync(steamSetupExePath)) {
     try {
-      await downloadFile({ url: STEAM_SETUP_EXE_URL, dest: steamSetupExePath })
+      await downloadSetupPayload('steam-bottle', {
+        url: STEAM_SETUP_EXE_URL,
+        dest: steamSetupExePath
+      })
     } catch (error) {
       logError(
         ['provisionBottle: failed to download SteamSetup.exe', error],

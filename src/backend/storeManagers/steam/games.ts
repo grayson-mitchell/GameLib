@@ -1342,7 +1342,10 @@ export default class SteamGame implements Game {
         // "successful" here means it reported status:'done' and finalized
         // the ACF, not merely that it was dispatched.
         const bottleNativeResult = await this.installBottleNative(args)
-        if (bottleNativeResult.status === 'done') {
+        if (
+          bottleNativeResult.status === 'done' &&
+          !bottleNativeResult.deferredToSetup
+        ) {
           // debug/steam-bottle-uninstall-reverts: persisted for EVERY
           // committed installBottleNative() completion (not gated on
           // forceWindowsViaBottle like the D-17 flag below) — uninstall()
@@ -1667,6 +1670,13 @@ export default class SteamGame implements Game {
       pollerSource: 'bridge'
     })
 
+    // quick 261027-tot: a deferred install (Steam client not installed /
+    // never launched) is a precondition, not a bridge failure -- no
+    // markBridgeFailedThisSession, and nothing was downloaded to place a
+    // shim on. Pass it through untouched.
+    if (downloadResult.deferredToSetup) {
+      return downloadResult
+    }
     if (downloadResult.status !== 'done') {
       markBridgeFailedThisSession(this.appId)
       return downloadResult
@@ -2138,6 +2148,24 @@ export default class SteamGame implements Game {
         return { status: 'abort' }
       }
       if (!clientReady.ready) {
+        // quick 261027-tot: a missing / never-launched Steam client is a
+        // precondition, not a failure. ensureSteamClientReady already sent
+        // steamClientSetupRequired, so the guided-setup consent UI is up.
+        // Defer (same contract as the bottle-not-provisioned diversion,
+        // 261024-cjq) so the queue records no finished-error entry and no
+        // "Installation Failed" dialog covers that UI. A reported `error`
+        // (e.g. a non-numeric appId, T-21-05) is a real error and stays one.
+        if (
+          clientReady.error === undefined &&
+          (clientReady.status === 'needs-install' ||
+            clientReady.status === 'needs-launch')
+        ) {
+          logInfo(
+            `SteamGame: appId ${this.appId} Steam client not ready (${clientReady.status}) — guided setup requested, deferring install`,
+            LogPrefix.Steam
+          )
+          return { status: 'done', deferredToSetup: true }
+        }
         return {
           status: 'error',
           error:

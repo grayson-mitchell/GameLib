@@ -4021,6 +4021,42 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     expect(result).toEqual({ status: 'done' })
   })
 
+  it.each(['needs-install', 'needs-launch'] as const)(
+    'quick 261027-tot: ensureSteamClientReady %s (no error) defers the install -- done+deferredToSetup, no downloadSteamDepots, no polling',
+    async (status) => {
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+      ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({
+        status,
+        ready: false
+      })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(result).toEqual({ status: 'done', deferredToSetup: true })
+      expect(downloadSteamDepots).not.toHaveBeenCalled()
+      expect(startInstallPollingSpy).not.toHaveBeenCalled()
+    }
+  )
+
+  it('quick 261027-tot: a not-ready result that carries an error (non-numeric appId, T-21-05) is still an error, not a deferral', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({
+      status: 'needs-install',
+      ready: false,
+      error: 'Invalid appId: "../x"'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(result).toEqual({
+      status: 'error',
+      error: 'Invalid appId: "../x"'
+    })
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+  })
+
   it("23.2-04: a downloadSteamDepots outcome carrying skippedDepots threads through to startInstallPolling's options object", async () => {
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
@@ -4871,6 +4907,22 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     expect(result).toEqual({ status: 'done' })
   })
 
+  it('quick 261027-tot: opt-in ON + bottle-eligible + Steam client not ready defers the install (done+deferredToSetup), no depot download, no polling', async () => {
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({
+      status: 'needs-launch',
+      ready: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(startInstallPollingSpy).not.toHaveBeenCalled()
+  })
+
   it('opt-in ON + bottle-eligible + ready: install() does NOT dispatch to the bottled Steam client (no Wine dispatch for the download itself)', async () => {
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
@@ -5038,6 +5090,32 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       })
     )
     expect(result).toEqual({ status: 'done' })
+  })
+
+  it('quick 261027-tot: bridge route + Steam client not ready defers the install -- no markBridgeFailedThisSession (bridge stays eligible), no launch-exe resolve, no shim, no setup-required', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({
+      status: 'needs-install',
+      ready: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(resolveBridgeLaunchExe).not.toHaveBeenCalled()
+    expect(placeShimForGame).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      expect.anything()
+    )
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    // not marked bridge-failed: a second install() still routes to the bridge
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
+    await new SteamGame(APP_ID).install({} as any)
+    expect(downloadSteamDepots).toHaveBeenCalledTimes(1)
   })
 
   it("quick 261023-oq7: placeShimForGame's 'placed-miss' status completes the install as a bridge install -- verdict persisted, bottle kept, breaker not armed, no setup-required, userRoute not cleared, no bottled dispatch", async () => {

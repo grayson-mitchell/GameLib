@@ -33,6 +33,9 @@ export const steamRemoveAllCopies = makeHandlerInvoker('steamRemoveAllCopies')
 export const steamFinishBottledInstall = makeHandlerInvoker('steamFinishBottledInstall')
 // One-way push (17-05 emits, 17-06 subscribes) — no handler, listener only.
 export const handleSteamBottleSetupRequired = frontendListenerSlot('steamBottleSetupRequired')
+// quick 261027-tot: one-way push (setupDownloads.ts emits, SteamSetupDownloads.ts
+// subscribes). Omitting this slot fails silently -- see the 'highest-risk omission' note.
+export const handleSteamSetupDownloadProgress = frontendListenerSlot('steamSetupDownloadProgress')
 // Phase 51 Plan 13 (D-51-08/11): one-way push -- games.ts's install() emits,
 // Task 3's SteamBridgeRouteNotice.ts subscribes. No handler, listener only.
 export const handleSteamBridgeRouteNotice = frontendListenerSlot('steamBridgeRouteNotice')
