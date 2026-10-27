@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 228 |
-| Ported to sidecar | 73 |
+| Unique channels | 229 |
+| Ported to sidecar | 74 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -619,6 +619,20 @@ no Electron leg, so `Ported to sidecar` rises along with `Unique channels`. The 
 both numbers moved together by +1 and `Unported` (159) is unchanged.
 
 `steamGoOfflineRetry`
+
+## Phase 54 review fix WR-05 — guided Go Offline cancel (1 channel) — **PORTED**
+
+Added 2026-10-28 by Phase 54's code-review fix WR-05 (`6ffff959b`). The channel is BRAND NEW,
+invoke-kind (`makeHandlerInvoker`, `src/preload/api/steam.ts`), and registered only in the
+sidecar, in `steamAuthFlowRegistration.ts` (body: `payAbandonedGuidedOffline('cancel')`,
+`macSteamOffline.ts`). There is no Electron leg, so `Ported to sidecar` rises along with
+`Unique channels`. It went unlisted at `6ffff959b` and `preload-surface-gate.py` was the only
+thing that caught it.
+
+**Unique channels raised 228 → 229, Ported to sidecar raised 73 → 74 (fast fix, 2026-10-28):**
+both numbers moved together by +1 and `Unported` (159) is unchanged.
+
+`steamGoOfflineCancel`
 
 ## Not an IPC channel, but blocks Phase 35
 
