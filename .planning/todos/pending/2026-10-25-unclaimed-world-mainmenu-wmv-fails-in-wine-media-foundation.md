@@ -87,10 +87,17 @@ from ProtonDB does not work under CrossOver: the game still loads a WMA8 music t
 (`MusicEnabled=false` makes no difference).
 
 Remaining, hence `ready: human` (product decisions before code):
-1. How the payload reaches users: bundled with GameLib, or downloaded on demand with a pinned sha.
-   The upstream pkg is unsigned; its only integrity check is a same-server sha256.
-2. LGPL obligations for ffmpeg and gst-libav (notice plus source offer), and the WMV/WMA patent
-   position.
+1. **Decided 2026-10-27 (operator): GameLib-hosted on-demand download.** The thinned 19 MB x86_64
+   set is published as a release asset on `grayson-mitchell/GameLib`, fetched only when a profile
+   needs it, and verified against a sha256 pinned in GameLib's code, never one fetched from the
+   same host. Rejected: bundling, because every macOS install would pay 19 MB for a few titles and
+   the dylibs would need signing for notarization. Also rejected: fetching the upstream
+   freedesktop.org pkg directly, because 1.24.4 has already been removed from that server and
+   1.24.13 can go the same way.
+2. LGPL obligations follow from 1, because GameLib is now the distributor. Publish the licence
+   texts and the exact upstream source tarballs (gst-libav 1.24.13 and its ffmpeg) beside the
+   asset, and add a notice to GameLib's licences page. The binaries are unmodified and dynamically
+   loaded. **Still open: the WMV/WMA patent position**, which is the operator's call.
 3. Then build the tier-2 `overlays` plugin-directory target kind: place the sha-pinned payload in a
    GameLib-owned directory (never the game folder or the bottle) and add `GST_PLUGIN_PATH` at
    launch, appending rather than replacing. Give 284100's profile the entry. The fix is generic, so
