@@ -110,5 +110,7 @@ not a shipped fix; the done-when above is unchanged.
 
 Relaunch from the moved payload confirmed by the operator, 2026-10-27: the game reached the main
 menu. Both overlay launches (spike 042 and this one) paused for about a minute before the game
-appeared. The cause is unknown. Rule out a GStreamer plugin-registry rescan on every launch before
-designing the tier-2 target, because the shipped fix would inherit that cost.
+appeared. Resolved by quick 261027-m1m: the cause was not the overlay. Each launch spent two extra
+cold Wine sessions rewriting the WMP registry marker, and CrossOver can stall about 80 s in
+`wineboot --init` on a cold session start. Values already present are now skipped, and three
+live launches came up in 1-2 s.
