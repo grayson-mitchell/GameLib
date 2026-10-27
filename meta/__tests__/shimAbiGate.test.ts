@@ -105,6 +105,19 @@ const FIXTURE_MANIFEST: InterfaceManifestV2 = {
 const TARGET_FUNC = 'vt_GameLibAbiGate001_GetFixtureID_TESTONLY'
 const FRIEND_NAME_FUNC = 'vt_GameLibAbiGate001_GetFixtureFriendName_TESTONLY'
 const NULL_OBJECT_FUNC = 'vt_x64_null_object'
+const NULL_SRET_FUNC = 'vt_x64_null_sret_16'
+// quick-261027-i4x: one unserved version with a 16-byte sret slot, so the
+// generated shim carries vt_x64_null_sret_16 for the x64 disassembly.
+const NULL_SRET_INVENTORY = {
+  source: { kind: 'proton-lsteamclient' as const, ref: 'unit test' },
+  versions: {
+    GameLibNullAbi001: {
+      family: 'GameLibNullAbi',
+      slotCount: 2,
+      sret: [{ slot: 1, name: 'GetBig_TESTONLY', structSize: 16 }]
+    }
+  }
+}
 
 /**
  * Turns ONE named `static ... FUNC(...)` function definition into
@@ -237,7 +250,9 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
     mkdirSync(buildDir, { recursive: true })
 
     let source = exportSymbolForDisasm(
-      generateShimC([FIXTURE_MANIFEST]),
+      generateShimC([FIXTURE_MANIFEST], {
+        x64NullSretInventory: NULL_SRET_INVENTORY
+      }),
       TARGET_FUNC
     )
     source = exportSymbolForDisasm(source, FRIEND_NAME_FUNC)
@@ -246,6 +261,7 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
     // needed) when compiling for the x64 target.
     if (zigTarget === 'x86_64-windows-gnu') {
       source = exportSymbolForDisasm(source, NULL_OBJECT_FUNC)
+      source = exportSymbolForDisasm(source, NULL_SRET_FUNC)
     }
     const defSource = generateDefFile([FIXTURE_MANIFEST], defArch)
 
@@ -346,6 +362,19 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
     }
     const disasm = await compileAndDisasm('x86_64-windows-gnu', 'x64')
     const block = extractFunctionBlock(disasm, NULL_OBJECT_FUNC)
+    const lastRet = lastReturnInstruction(block)
+    expect(lastRet).toMatch(/ret[a-z]*\s*$/)
+    expect(lastRet).not.toMatch(/\$0x/)
+  }, 180000)
+
+  it('x64: the per-version sret null stub returns %rdx in %rax and ends in a plain retq', async () => {
+    if (skipReason) {
+      console.warn(`shimAbiGate SKIPPED: ${skipReason}`)
+      return
+    }
+    const disasm = await compileAndDisasm('x86_64-windows-gnu', 'x64')
+    const block = extractFunctionBlock(disasm, NULL_SRET_FUNC)
+    expect(block).toMatch(/\bmovq?\s+%rdx,\s*%rax\b/)
     const lastRet = lastReturnInstruction(block)
     expect(lastRet).toMatch(/ret[a-z]*\s*$/)
     expect(lastRet).not.toMatch(/\$0x/)

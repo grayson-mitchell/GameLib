@@ -40,7 +40,13 @@
  */
 
 import { createHash } from 'node:crypto'
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync
+} from 'node:fs'
 import { join } from 'node:path'
 
 import {
@@ -1230,7 +1236,7 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
     'void *SteamInternal_CreateInterface(const char *pszVersion) {\n' +
     '  void *resolved = resolve_iface_by_exact_version(pszVersion);\n' +
     '  if (resolved != NULL) return resolved;\n' +
-    '  return (void *)&g_x64_null_object_instance;\n' +
+    '  return x64_null_object_for_version(pszVersion);\n' +
     '}',
   // 51-15: the bridge speaks exactly one pipe/user pair per per-appId
   // helper (D-51-01) -- there is no real multi-pipe/multi-user concept to
@@ -1278,7 +1284,7 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
     '  (void)hSteamUser;\n' +
     '  void *resolved = resolve_iface_by_exact_version(pszVersion);\n' +
     '  if (resolved != NULL) return resolved;\n' +
-    '  return (void *)&g_x64_null_object_instance;\n' +
+    '  return x64_null_object_for_version(pszVersion);\n' +
     '}',
   // SDK: void *SteamInternal_FindOrCreateGameServerInterface(HSteamUser, const
   // char *pszVersion). Same lookup as SteamInternal_CreateInterface.
@@ -1287,7 +1293,7 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
     '  (void)hSteamUser;\n' +
     '  void *resolved = resolve_iface_by_exact_version(pszVersion);\n' +
     '  if (resolved != NULL) return resolved;\n' +
-    '  return (void *)&g_x64_null_object_instance;\n' +
+    '  return x64_null_object_for_version(pszVersion);\n' +
     '}',
   // SDK: ESteamAPIInitResult SteamInternal_GameServer_Init_V2(uint32 unIP,
   // uint16 usGamePort, uint16 usQueryPort, EServerMode, const char
@@ -1569,9 +1575,136 @@ function emitStubBody(
 // (CR-03) the fallback is reached only via runtime interface lookup
 // (SteamInternal_CreateInterface / ISteamClient::GetISteamXxx), never a bare
 // accessor, which narrows but does not close this. A correct fix needs
-// per-family null objects whose sret slots zero-fill and return their second
-// argument, generated from the Proton inventory; it is not built yet.
+// per-VERSION null objects whose sret slots zero-fill and return their second
+// argument.
+//
+// quick-261027-i4x closes that for every version Proton ships with sret
+// slots: meta/sdk/x64-null-sret-inventory.json (Proton pinned SHA, written by
+// `pnpm extract-proton-inventory --null-sret-inventory`) feeds
+// emitX64NullSretObjects, which emits a per-version vtable keyed by the EXACT
+// version string. It is per version, never per family, because sret slot
+// positions MOVE between versions (SteamController003 sret is at 9/12,
+// SteamController006 at 13/16/25): a family-wide table would memset through
+// RDX on a slot where RDX is an ordinary argument, a new crash. Sret slots
+// zero-fill structSize bytes and return RDX in RAX; every other slot is
+// vt_x64_null_object. REMAINING GAP: a version unknown to the pinned Proton
+// inventory (or one Proton ships without sret data) still gets this generic
+// all-zero object, so an sret call on such a version still reads through 0.
+// This generic 256-slot object is unchanged.
 export const X64_NULL_OBJECT_SLOTS = 256
+
+/** One sret slot of a Proton-shipped interface version. */
+export interface NullSretSlot {
+  slot: number
+  name: string
+  structSize: number
+}
+
+/** A Proton-shipped interface version that carries at least one sret slot. */
+export interface NullSretVersionEntry {
+  family: string
+  slotCount: number
+  sret: NullSretSlot[]
+}
+
+/** Shape of meta/sdk/x64-null-sret-inventory.json. */
+export interface NullSretInventory {
+  source: { kind: 'proton-lsteamclient'; ref: string }
+  versions: Record<string, NullSretVersionEntry>
+}
+
+/**
+ * Emits the per-version sret-aware x64 null objects and the exact-string
+ * lookup `x64_null_object_for_version`. Versions an x64 manifest serves are
+ * skipped (their real proxy wins). Output goes inside the preamble's
+ * `#if defined(__x86_64__)` block, after g_x64_null_object_instance.
+ */
+function emitX64NullSretObjects(
+  manifests: readonly InterfaceManifest[],
+  inventory: NullSretInventory | undefined
+): string {
+  const kept: [string, NullSretVersionEntry][] = []
+  for (const version of Object.keys(inventory?.versions ?? {}).sort()) {
+    const entry = inventory!.versions[version]
+    if (entry.slotCount > X64_NULL_OBJECT_SLOTS) {
+      throw new Error(
+        `x64 null sret inventory: ${version} slotCount ${entry.slotCount} exceeds ${X64_NULL_OBJECT_SLOTS}`
+      )
+    }
+    const seen = new Set<number>()
+    for (const s of entry.sret) {
+      if (
+        !Number.isInteger(s.slot) ||
+        s.slot < 0 ||
+        s.slot >= entry.slotCount
+      ) {
+        throw new Error(
+          `x64 null sret inventory: ${version} sret slot ${s.slot} out of range (slotCount ${entry.slotCount})`
+        )
+      }
+      if (seen.has(s.slot)) {
+        throw new Error(
+          `x64 null sret inventory: ${version} duplicate sret slot ${s.slot}`
+        )
+      }
+      seen.add(s.slot)
+      if (!Number.isInteger(s.structSize) || s.structSize <= 0) {
+        throw new Error(
+          `x64 null sret inventory: ${version} slot ${s.slot} invalid structSize ${s.structSize}`
+        )
+      }
+    }
+    if (
+      manifests.some((m) => m.interface === version && m.arches.includes('x64'))
+    )
+      continue
+    kept.push([version, entry])
+  }
+
+  const sizes = [
+    ...new Set(kept.flatMap(([, e]) => e.sret.map((s) => s.structSize)))
+  ].sort((a, b) => a - b)
+
+  let out = ''
+  for (const n of sizes) {
+    out += `static void *vt_x64_null_sret_${n}(void *self, void *ret) { (void)self; if (ret != NULL) memset(ret, 0, ${n}); return ret; }\n`
+  }
+  const table: string[] = []
+  for (const [version, entry] of kept) {
+    const id = version.toLowerCase().replace(/[^a-z0-9_]/g, '_')
+    const bySlot = new Map(entry.sret.map((s) => [s.slot, s.structSize]))
+    out +=
+      `// ${version} (${entry.family}, ${entry.slotCount} slots, sret at ` +
+      `${entry.sret.map((s) => `${s.slot}:${s.name}`).join(', ')})\n` +
+      `static vfn g_x64_null_${id}_vtbl[${entry.slotCount}] = {\n` +
+      Array.from({ length: entry.slotCount }, (_, i) =>
+        bySlot.has(i)
+          ? `  (vfn)vt_x64_null_sret_${bySlot.get(i)},`
+          : '  (vfn)vt_x64_null_object,'
+      ).join('\n') +
+      `\n};\n` +
+      `static struct GLibX64NullObject g_x64_null_${id}_instance = { g_x64_null_${id}_vtbl };\n`
+    table.push(`  { "${version}", &g_x64_null_${id}_instance },`)
+  }
+  if (table.length > 0) {
+    out +=
+      `static const struct { const char *version; void *instance; } g_x64_null_sret_objects[] = {\n` +
+      table.join('\n') +
+      `\n};\n`
+  }
+  out += `static void *x64_null_object_for_version(const char *version) {\n`
+  if (table.length > 0) {
+    out +=
+      `  if (version != NULL) {\n` +
+      `    size_t i;\n` +
+      `    for (i = 0; i < sizeof(g_x64_null_sret_objects) / sizeof(g_x64_null_sret_objects[0]); i++) {\n` +
+      `      if (strcmp(version, g_x64_null_sret_objects[i].version) == 0) return g_x64_null_sret_objects[i].instance;\n` +
+      `    }\n` +
+      `  }\n`
+  }
+  out += `  return (void *)&g_x64_null_object_instance;\n}\n`
+  return out
+}
 
 /** Generator-stable family grouping key for ISteamClient (51-15) -- the
  * ONLY family whose GetISteamXxx accessor methods resolve by VERSION
@@ -1662,7 +1795,7 @@ function steamClientOffPathGate(
  * where `g_iface_table` is complete -- see `emitIfaceTableAndBareAccessors`
  * -- and forward-declared in the preamble so this function, emitted
  * earlier in the file as part of `vtableSections`, can call it) and falls
- * back to the x64 null-object instance on a miss. The real HSteamUser/
+ * back to a per-version x64 null object (x64_null_object_for_version) on a miss. The real HSteamUser/
  * HSteamPipe params are kept in the signature (so a caller's generated
  * code never corrupts its own stack/register expectations) but explicitly
  * ignored in the body -- there is no real multi-pipe/multi-user state to
@@ -1692,7 +1825,7 @@ function emitSteamClientVersionLookupStub(
     `  void *resolved = resolve_iface_by_exact_version(${versionParam.name});\n` +
     `  if (resolved != NULL) return resolved;\n` +
     `#if defined(__x86_64__)\n` +
-    `  return (void *)&g_x64_null_object_instance;\n` +
+    `  return x64_null_object_for_version(${versionParam.name});\n` +
     `#else\n` +
     `  return NULL;\n` +
     `#endif\n` +
@@ -1734,7 +1867,7 @@ function emitSteamClientForwardedLookup(
     `#if defined(__x86_64__)\n` +
     `  if (!g_bridge_steamstub_path_active) {\n` +
     `    void *local = resolve_iface_by_exact_version(${versionParam.name});\n` +
-    `    return local != NULL ? local : (void *)&g_x64_null_object_instance;\n` +
+    `    return local != NULL ? local : x64_null_object_for_version(${versionParam.name});\n` +
     `  }\n` +
     `#endif\n` +
     `${argBufDecl}\n` +
@@ -2623,7 +2756,10 @@ export function generateShimExportsTs(manifests: InterfaceManifest[]): string {
 
 export function generateShimC(
   manifests: InterfaceManifest[],
-  options: { unrepresentable?: readonly string[] } = {}
+  options: {
+    unrepresentable?: readonly string[]
+    x64NullSretInventory?: NullSretInventory
+  } = {}
 ): string {
   const sortedManifests = [...manifests].sort((a, b) => a.ordinal - b.ordinal)
 
@@ -3083,7 +3219,10 @@ typedef void *vfn;
 
 // 51-15: Win64 unknown-interface-version fallback -- see X64_NULL_OBJECT_SLOTS'
 // doc comment (meta/gen_vtables.ts) for why ONE generic zero-returning
-// function safely serves every slot's arity on this target.
+// function safely serves every slot's arity on this target. quick-261027-i4x:
+// versions Proton ships with sret slots get a per-EXACT-version null object
+// (sret slots zero-fill and return RDX); x64_null_object_for_version picks it,
+// and falls back to the generic object for NULL or an unknown version.
 #if defined(__x86_64__)
 static void *vt_x64_null_object(void *self) { (void)self; return 0; }
 static vfn g_x64_null_object_vtbl[${X64_NULL_OBJECT_SLOTS}] = {
@@ -3091,7 +3230,7 @@ ${Array.from({ length: X64_NULL_OBJECT_SLOTS }, () => '  (vfn)vt_x64_null_object
 };
 struct GLibX64NullObject { vfn *vptr; };
 static struct GLibX64NullObject g_x64_null_object_instance = { g_x64_null_object_vtbl };
-// CR-01: set only by GameLibBridge_CreateInterface (the SteamStub entry point,
+${emitX64NullSretObjects(manifests, options.x64NullSretInventory)}// CR-01: set only by GameLibBridge_CreateInterface (the SteamStub entry point,
 // reached only via steamclient64.dll). While clear, SteamClient GetISteam*
 // lookups take the pre-phase local path (proxy or null object).
 static volatile int g_bridge_steamstub_path_active = 0;
@@ -4239,7 +4378,18 @@ export function main(): void {
 
   mkdirSync(OUT_DIR, { recursive: true })
 
-  const shimC = generateShimC(manifests)
+  const nullSretPath = join(SDK_DIR, 'x64-null-sret-inventory.json')
+  if (!existsSync(nullSretPath)) {
+    throw new Error(
+      `gen_vtables: ${nullSretPath} is missing -- regenerate it with ` +
+        '`pnpm extract-proton-inventory --null-sret-inventory`'
+    )
+  }
+  const x64NullSretInventory = JSON.parse(
+    readFileSync(nullSretPath, 'utf-8')
+  ) as NullSretInventory
+
+  const shimC = generateShimC(manifests, { x64NullSretInventory })
   const defFile = generateDefFile(manifests, 'x86')
   const defFile64 = generateDefFile(manifests, 'x64')
   const dispatchHeader = generateDispatchHeader(manifests)

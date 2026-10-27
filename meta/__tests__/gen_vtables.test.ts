@@ -36,7 +36,8 @@ import {
   emitStringReturnEncodeLines,
   WIRE_LAYOUT_DOC,
   X64_NULL_OBJECT_SLOTS,
-  type InterfaceManifestV2
+  type InterfaceManifestV2,
+  type NullSretInventory
 } from '../gen_vtables'
 import {
   MSVC_CCALLBACKBASE_OFFSETS,
@@ -68,6 +69,14 @@ function loadAllManifests(): InterfaceManifestV2[] {
     .map((f) => JSON.parse(readFileSync(join(SDK_DIR, f), 'utf-8')))
     .filter((m) => m.schemaVersion === 2 && m.family)
 }
+
+const real = loadAllManifests()
+const realInventory = JSON.parse(
+  readFileSync(
+    join(__dirname, '..', 'sdk', 'x64-null-sret-inventory.json'),
+    'utf-8'
+  )
+) as NullSretInventory
 
 describe('gen_vtables', () => {
   describe('manifest inputs (D-09 -- never a vendored Valve .h)', () => {
@@ -1633,6 +1642,146 @@ describe('gen_vtables', () => {
       })
     })
 
+    describe('quick-261027-i4x: per-version sret-aware x64 null objects', () => {
+      const entry = (
+        slotCount: number,
+        sret: { slot: number; name: string; structSize: number }[]
+      ) => ({ family: 'NullFam', slotCount, sret })
+      const synthetic: NullSretInventory = {
+        source: { kind: 'proton-lsteamclient', ref: 'unit test' },
+        versions: {
+          NullFam003: entry(4, [
+            { slot: 1, name: 'A', structSize: 16 },
+            { slot: 3, name: 'B', structSize: 2 }
+          ]),
+          // served on x64 by x64OnlyManifest -> no null object
+          GameLibX64Only001: entry(2, [{ slot: 0, name: 'C', structSize: 8 }]),
+          // served only on x86 -> still gets one
+          GameLibX86Only001: entry(2, [{ slot: 1, name: 'D', structSize: 8 }])
+        }
+      }
+      const gen = (inv: NullSretInventory | undefined) =>
+        generateShimC([x86OnlyManifest, x64OnlyManifest], {
+          x64NullSretInventory: inv
+        })
+
+      it('emits one sret function per used size and an ordered per-version vtable', () => {
+        const c = gen(synthetic)
+        for (const n of [2, 8, 16]) {
+          const defs = c.match(
+            new RegExp(
+              `static void \\*vt_x64_null_sret_${n}\\(void \\*self, void \\*ret\\)`,
+              'g'
+            )
+          )
+          expect(defs).toHaveLength(1)
+          expect(c).toContain(`memset(ret, 0, ${n}); return ret;`)
+        }
+        const m = c.match(
+          /g_x64_null_nullfam003_vtbl\[4\] = \{\n([\s\S]*?)\n\};/
+        )!
+        expect(m[1].split('\n').map((l) => l.trim())).toEqual([
+          '(vfn)vt_x64_null_object,',
+          '(vfn)vt_x64_null_sret_16,',
+          '(vfn)vt_x64_null_object,',
+          '(vfn)vt_x64_null_sret_2,'
+        ])
+      })
+
+      it('skips versions an x64 manifest serves but keeps x86-only ones', () => {
+        const c = gen(synthetic)
+        expect(c).not.toContain('g_x64_null_gamelibx64only001_vtbl')
+        expect(c).toContain('g_x64_null_gamelibx86only001_vtbl[2]')
+      })
+
+      it('emits the exact-string lookup inside the x86_64 block, NULL-safe', () => {
+        const c = gen(synthetic)
+        const fnAt = c.indexOf('static void *x64_null_object_for_version')
+        expect(fnAt).toBeGreaterThan(c.indexOf('#if defined(__x86_64__)'))
+        expect(fnAt).toBeLessThan(
+          c.indexOf('g_bridge_steamstub_path_active = 0')
+        )
+        expect(c).toContain('if (version != NULL) {')
+        expect(c).toContain(
+          'strcmp(version, g_x64_null_sret_objects[i].version)'
+        )
+        expect(c).toContain(
+          '{ "NullFam003", &g_x64_null_nullfam003_instance },'
+        )
+      })
+
+      it('emits no zero-length table for an empty or fully served inventory', () => {
+        for (const inv of [
+          undefined,
+          { ...synthetic, versions: {} },
+          {
+            ...synthetic,
+            versions: {
+              GameLibX64Only001: synthetic.versions.GameLibX64Only001
+            }
+          }
+        ]) {
+          const c = gen(inv as NullSretInventory | undefined)
+          expect(c).not.toContain('g_x64_null_sret_objects')
+          expect(c).toContain('static void *x64_null_object_for_version')
+          expect(c).not.toContain('vt_x64_null_sret_')
+        }
+      })
+
+      it('routes every fallback site through the lookup; the generic instance is returned once', () => {
+        const c = generateShimC(real, { x64NullSretInventory: realInventory })
+        expect(
+          c.match(/return \(void \*\)&g_x64_null_object_instance;/g)
+        ).toHaveLength(1)
+        expect(c).not.toContain(': (void *)&g_x64_null_object_instance')
+        expect(
+          (c.match(/x64_null_object_for_version\(/g) ?? []).length
+        ).toBeGreaterThanOrEqual(6)
+      })
+
+      it('keeps the SteamStub forwarded path answering NULL on a miss (T-52-02)', () => {
+        const c = generateShimC(real, { x64NullSretInventory: realInventory })
+        expect(c).toContain('if (present == 0) return NULL;')
+      })
+
+      it('rejects malformed inventories', () => {
+        const bad = (e: ReturnType<typeof entry>) =>
+          expect(() =>
+            gen({ ...synthetic, versions: { NullFam003: e } })
+          ).toThrow()
+        bad(entry(2, [{ slot: 2, name: 'x', structSize: 8 }]))
+        bad(entry(X64_NULL_OBJECT_SLOTS + 1, []))
+        bad(entry(3, [{ slot: 1, name: 'x', structSize: 0 }]))
+        bad(entry(3, [{ slot: 1, name: 'x', structSize: 1.5 }]))
+        bad(
+          entry(3, [
+            { slot: 1, name: 'x', structSize: 8 },
+            { slot: 1, name: 'y', structSize: 8 }
+          ])
+        )
+      })
+
+      it('real data: SteamController003 sret slots 9/12 only; served versions get none', () => {
+        const c = generateShimC(real, { x64NullSretInventory: realInventory })
+        const m = c.match(
+          /g_x64_null_steamcontroller003_vtbl\[17\] = \{\n([\s\S]*?)\n\};/
+        )!
+        const lines = m[1].split('\n').map((l) => l.trim())
+        expect(lines).toHaveLength(17)
+        lines.forEach((l, i) => {
+          const want =
+            i === 9
+              ? '(vfn)vt_x64_null_sret_2,'
+              : i === 12
+                ? '(vfn)vt_x64_null_sret_16,'
+                : '(vfn)vt_x64_null_object,'
+          expect(l).toBe(want)
+        })
+        expect(c).not.toContain('g_x64_null_steamcontroller006_vtbl')
+        expect(c).not.toContain('g_x64_null_steamcontroller008_vtbl')
+      })
+    })
+
     describe("generateDefFile(manifests, 'x64')", () => {
       it('starts with LIBRARY steam_api64', () => {
         const def = generateDefFile([x64OnlyManifest], 'x64')
@@ -1701,7 +1850,7 @@ describe('gen_vtables', () => {
           /#if defined\(__x86_64__\)\nvoid \*SteamInternal_CreateInterface/
         )
         expect(c).toContain('resolve_iface_by_exact_version(pszVersion)')
-        expect(c).toContain('return (void *)&g_x64_null_object_instance;')
+        expect(c).toContain('return x64_null_object_for_version(pszVersion);')
       })
 
       it('SteamAPI_GetHSteamUser and SteamAPI_GetHSteamPipe both answer the constant handle 1', () => {
@@ -1896,7 +2045,7 @@ describe('gen_vtables', () => {
       ]) {
         const b = body(n)
         expect(b).toContain('resolve_iface_by_exact_version(')
-        expect(b).toContain('g_x64_null_object_instance')
+        expect(b).toContain('return x64_null_object_for_version(pszVersion);')
       }
     })
 
@@ -2046,7 +2195,7 @@ describe('gen_vtables', () => {
       expect(local).toContain('resolve_iface_by_exact_version(pchVersion)')
       expect(b.slice(0, flagAt)).toContain('#if defined(__x86_64__)')
       expect(local).toContain(
-        'return local != NULL ? local : (void *)&g_x64_null_object_instance;'
+        'return local != NULL ? local : x64_null_object_for_version(pchVersion);'
       )
       expect(b.slice(txAt)).toContain('if (present == 0) return NULL;')
     }
@@ -2171,7 +2320,7 @@ describe('gen_vtables', () => {
       ]) {
         const b = fnBody(committed, name)
         expect(b).toContain(FLAG)
-        expect(b).toContain('(void *)&g_x64_null_object_instance')
+        expect(b).toContain('x64_null_object_for_version(')
       }
     })
 
@@ -2192,7 +2341,7 @@ describe('gen_vtables', () => {
       delete m.helperFlat
       const out = generateShimC([stubbed])
       const b = fnBody(out, 'vt_SteamClient017_GetISteamUser')
-      expect(b).toContain('g_x64_null_object_instance')
+      expect(b).toContain('x64_null_object_for_version(')
       expect(b).not.toContain('g_bridge_steamstub_path_active')
       expect(b).not.toContain('bridge_transact(')
     })

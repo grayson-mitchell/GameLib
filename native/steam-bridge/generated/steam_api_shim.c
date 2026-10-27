@@ -710,7 +710,10 @@ typedef void *vfn;
 
 // 51-15: Win64 unknown-interface-version fallback -- see X64_NULL_OBJECT_SLOTS'
 // doc comment (meta/gen_vtables.ts) for why ONE generic zero-returning
-// function safely serves every slot's arity on this target.
+// function safely serves every slot's arity on this target. quick-261027-i4x:
+// versions Proton ships with sret slots get a per-EXACT-version null object
+// (sret slots zero-fill and return RDX); x64_null_object_for_version picks it,
+// and falls back to the generic object for NULL or an unknown version.
 #if defined(__x86_64__)
 static void *vt_x64_null_object(void *self) { (void)self; return 0; }
 static vfn g_x64_null_object_vtbl[256] = {
@@ -973,6 +976,1865 @@ static vfn g_x64_null_object_vtbl[256] = {
 };
 struct GLibX64NullObject { vfn *vptr; };
 static struct GLibX64NullObject g_x64_null_object_instance = { g_x64_null_object_vtbl };
+static void *vt_x64_null_sret_2(void *self, void *ret) { (void)self; if (ret != NULL) memset(ret, 0, 2); return ret; }
+static void *vt_x64_null_sret_8(void *self, void *ret) { (void)self; if (ret != NULL) memset(ret, 0, 8); return ret; }
+static void *vt_x64_null_sret_16(void *self, void *ret) { (void)self; if (ret != NULL) memset(ret, 0, 16); return ret; }
+static void *vt_x64_null_sret_20(void *self, void *ret) { (void)self; if (ret != NULL) memset(ret, 0, 20); return ret; }
+static void *vt_x64_null_sret_40(void *self, void *ret) { (void)self; if (ret != NULL) memset(ret, 0, 40); return ret; }
+// STEAMAPPS_INTERFACE_VERSION006 (SteamApps, 22 slots, sret at 20:GetAppOwner)
+static vfn g_x64_null_steamapps_interface_version006_vtbl[22] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamapps_interface_version006_instance = { g_x64_null_steamapps_interface_version006_vtbl };
+// STEAMREMOTEPLAY_INTERFACE_VERSION003 (SteamRemotePlay, 15 slots, sret at 2:GetSessionSteamID)
+static vfn g_x64_null_steamremoteplay_interface_version003_vtbl[15] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamremoteplay_interface_version003_instance = { g_x64_null_steamremoteplay_interface_version003_vtbl };
+// SteamController003 (SteamController, 17 slots, sret at 9:GetDigitalActionData, 12:GetAnalogActionData)
+static vfn g_x64_null_steamcontroller003_vtbl[17] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_2,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_16,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamcontroller003_instance = { g_x64_null_steamcontroller003_vtbl };
+// SteamController004 (SteamController, 22 slots, sret at 9:GetDigitalActionData, 12:GetAnalogActionData, 19:GetMotionData)
+static vfn g_x64_null_steamcontroller004_vtbl[22] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_2,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_16,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_40,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamcontroller004_instance = { g_x64_null_steamcontroller004_vtbl };
+// SteamController005 (SteamController, 26 slots, sret at 9:GetDigitalActionData, 12:GetAnalogActionData, 21:GetMotionData)
+static vfn g_x64_null_steamcontroller005_vtbl[26] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_2,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_16,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_40,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamcontroller005_instance = { g_x64_null_steamcontroller005_vtbl };
+// SteamController007 (SteamController, 34 slots, sret at 12:GetDigitalActionData, 15:GetAnalogActionData, 20:GetMotionData)
+static vfn g_x64_null_steamcontroller007_vtbl[34] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_2,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_16,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_40,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamcontroller007_instance = { g_x64_null_steamcontroller007_vtbl };
+// SteamFriends001 (SteamFriends, 27 slots, sret at 13:GetFriendByIndex)
+static vfn g_x64_null_steamfriends001_vtbl[27] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends001_instance = { g_x64_null_steamfriends001_vtbl };
+// SteamFriends002 (SteamFriends, 30 slots, sret at 5:GetFriendByIndex, 24:GetClanByIndex, 29:GetFriendFromSourceByIndex)
+static vfn g_x64_null_steamfriends002_vtbl[30] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends002_instance = { g_x64_null_steamfriends002_vtbl };
+// SteamFriends003 (SteamFriends, 20 slots, sret at 4:GetFriendByIndex, 13:GetClanByIndex, 16:GetFriendFromSourceByIndex)
+static vfn g_x64_null_steamfriends003_vtbl[20] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends003_instance = { g_x64_null_steamfriends003_vtbl };
+// SteamFriends004 (SteamFriends, 20 slots, sret at 4:GetFriendByIndex, 13:GetClanByIndex, 16:GetFriendFromSourceByIndex)
+static vfn g_x64_null_steamfriends004_vtbl[20] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends004_instance = { g_x64_null_steamfriends004_vtbl };
+// SteamFriends005 (SteamFriends, 24 slots, sret at 4:GetFriendByIndex, 13:GetClanByIndex, 16:GetFriendFromSourceByIndex)
+static vfn g_x64_null_steamfriends005_vtbl[24] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends005_instance = { g_x64_null_steamfriends005_vtbl };
+// SteamFriends006 (SteamFriends, 26 slots, sret at 4:GetFriendByIndex, 13:GetClanByIndex, 17:GetFriendFromSourceByIndex)
+static vfn g_x64_null_steamfriends006_vtbl[26] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends006_instance = { g_x64_null_steamfriends006_vtbl };
+// SteamFriends007 (SteamFriends, 28 slots, sret at 4:GetFriendByIndex, 12:GetClanByIndex, 16:GetFriendFromSourceByIndex)
+static vfn g_x64_null_steamfriends007_vtbl[28] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends007_instance = { g_x64_null_steamfriends007_vtbl };
+// SteamFriends008 (SteamFriends, 34 slots, sret at 4:GetFriendByIndex, 12:GetClanByIndex, 16:GetFriendFromSourceByIndex, 30:GetClanOwner, 32:GetClanOfficerByIndex)
+static vfn g_x64_null_steamfriends008_vtbl[34] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends008_instance = { g_x64_null_steamfriends008_vtbl };
+// SteamFriends009 (SteamFriends, 44 slots, sret at 4:GetFriendByIndex, 12:GetClanByIndex, 16:GetFriendFromSourceByIndex, 30:GetClanOwner, 32:GetClanOfficerByIndex, 41:GetCoplayFriend)
+static vfn g_x64_null_steamfriends009_vtbl[44] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends009_instance = { g_x64_null_steamfriends009_vtbl };
+// SteamFriends010 (SteamFriends, 59 slots, sret at 4:GetFriendByIndex, 12:GetClanByIndex, 18:GetFriendFromSourceByIndex, 32:GetClanOwner, 34:GetClanOfficerByIndex, 43:GetCoplayFriend, 49:GetChatMemberByIndex)
+static vfn g_x64_null_steamfriends010_vtbl[59] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends010_instance = { g_x64_null_steamfriends010_vtbl };
+// SteamFriends011 (SteamFriends, 63 slots, sret at 4:GetFriendByIndex, 12:GetClanByIndex, 18:GetFriendFromSourceByIndex, 32:GetClanOwner, 34:GetClanOfficerByIndex, 44:GetCoplayFriend, 50:GetChatMemberByIndex)
+static vfn g_x64_null_steamfriends011_vtbl[63] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends011_instance = { g_x64_null_steamfriends011_vtbl };
+// SteamFriends012 (SteamFriends, 63 slots, sret at 4:GetFriendByIndex, 12:GetClanByIndex, 18:GetFriendFromSourceByIndex, 32:GetClanOwner, 34:GetClanOfficerByIndex, 44:GetCoplayFriend, 50:GetChatMemberByIndex)
+static vfn g_x64_null_steamfriends012_vtbl[63] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends012_instance = { g_x64_null_steamfriends012_vtbl };
+// SteamFriends013 (SteamFriends, 63 slots, sret at 4:GetFriendByIndex, 12:GetClanByIndex, 18:GetFriendFromSourceByIndex, 32:GetClanOwner, 34:GetClanOfficerByIndex, 44:GetCoplayFriend, 50:GetChatMemberByIndex)
+static vfn g_x64_null_steamfriends013_vtbl[63] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends013_instance = { g_x64_null_steamfriends013_vtbl };
+// SteamFriends014 (SteamFriends, 64 slots, sret at 4:GetFriendByIndex, 13:GetClanByIndex, 19:GetFriendFromSourceByIndex, 33:GetClanOwner, 35:GetClanOfficerByIndex, 45:GetCoplayFriend, 51:GetChatMemberByIndex)
+static vfn g_x64_null_steamfriends014_vtbl[64] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamfriends014_instance = { g_x64_null_steamfriends014_vtbl };
+// SteamGameServer002 (SteamGameServer, 21 slots, sret at 13:GetSteamID)
+static vfn g_x64_null_steamgameserver002_vtbl[21] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamgameserver002_instance = { g_x64_null_steamgameserver002_vtbl };
+// SteamGameServer003 (SteamGameServer, 17 slots, sret at 4:GetSteamID)
+static vfn g_x64_null_steamgameserver003_vtbl[17] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamgameserver003_instance = { g_x64_null_steamgameserver003_vtbl };
+// SteamGameServer004 (SteamGameServer, 14 slots, sret at 4:GetSteamID, 6:CreateUnauthenticatedUserConnection)
+static vfn g_x64_null_steamgameserver004_vtbl[14] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamgameserver004_instance = { g_x64_null_steamgameserver004_vtbl };
+// SteamGameServer005 (SteamGameServer, 14 slots, sret at 4:GetSteamID, 6:CreateUnauthenticatedUserConnection)
+static vfn g_x64_null_steamgameserver005_vtbl[14] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamgameserver005_instance = { g_x64_null_steamgameserver005_vtbl };
+// SteamGameServer008 (SteamGameServer, 17 slots, sret at 4:GetSteamID, 6:CreateUnauthenticatedUserConnection)
+static vfn g_x64_null_steamgameserver008_vtbl[17] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamgameserver008_instance = { g_x64_null_steamgameserver008_vtbl };
+// SteamGameServer009 (SteamGameServer, 19 slots, sret at 4:GetSteamID, 6:CreateUnauthenticatedUserConnection)
+static vfn g_x64_null_steamgameserver009_vtbl[19] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamgameserver009_instance = { g_x64_null_steamgameserver009_vtbl };
+// SteamGameServer010 (SteamGameServer, 23 slots, sret at 4:GetSteamID, 6:CreateUnauthenticatedUserConnection)
+static vfn g_x64_null_steamgameserver010_vtbl[23] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamgameserver010_instance = { g_x64_null_steamgameserver010_vtbl };
+// SteamGameServer011 (SteamGameServer, 44 slots, sret at 10:GetSteamID, 25:CreateUnauthenticatedUserConnection)
+static vfn g_x64_null_steamgameserver011_vtbl[44] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamgameserver011_instance = { g_x64_null_steamgameserver011_vtbl };
+// SteamGameServer013 (SteamGameServer, 44 slots, sret at 10:GetSteamID, 25:CreateUnauthenticatedUserConnection, 36:GetPublicIP)
+static vfn g_x64_null_steamgameserver013_vtbl[44] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_20,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamgameserver013_instance = { g_x64_null_steamgameserver013_vtbl };
+// SteamInput001 (SteamInput, 35 slots, sret at 12:GetDigitalActionData, 15:GetAnalogActionData, 20:GetMotionData)
+static vfn g_x64_null_steaminput001_vtbl[35] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_2,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_16,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_40,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steaminput001_instance = { g_x64_null_steaminput001_vtbl };
+// SteamInput002 (SteamInput, 35 slots, sret at 12:GetDigitalActionData, 15:GetAnalogActionData, 20:GetMotionData)
+static vfn g_x64_null_steaminput002_vtbl[35] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_2,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_16,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_40,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steaminput002_instance = { g_x64_null_steaminput002_vtbl };
+// SteamInput005 (SteamInput, 47 slots, sret at 17:GetDigitalActionData, 21:GetAnalogActionData, 29:GetMotionData)
+static vfn g_x64_null_steaminput005_vtbl[47] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_2,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_16,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_40,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steaminput005_instance = { g_x64_null_steaminput005_vtbl };
+// SteamMatchMaking001 (SteamMatchmaking, 22 slots, sret at 8:GetLobbyByIndex, 14:GetLobbyMemberByIndex)
+static vfn g_x64_null_steammatchmaking001_vtbl[22] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steammatchmaking001_instance = { g_x64_null_steammatchmaking001_vtbl };
+// SteamMatchMaking002 (SteamMatchmaking, 20 slots, sret at 5:GetLobbyByIndex, 11:GetLobbyMemberByIndex)
+static vfn g_x64_null_steammatchmaking002_vtbl[20] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steammatchmaking002_instance = { g_x64_null_steammatchmaking002_vtbl };
+// SteamMatchMaking003 (SteamMatchmaking, 28 slots, sret at 8:GetLobbyByIndex, 14:GetLobbyMemberByIndex)
+static vfn g_x64_null_steammatchmaking003_vtbl[28] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steammatchmaking003_instance = { g_x64_null_steammatchmaking003_vtbl };
+// SteamMatchMaking004 (SteamMatchmaking, 27 slots, sret at 8:GetLobbyByIndex, 14:GetLobbyMemberByIndex)
+static vfn g_x64_null_steammatchmaking004_vtbl[27] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steammatchmaking004_instance = { g_x64_null_steammatchmaking004_vtbl };
+// SteamMatchMaking005 (SteamMatchmaking, 31 slots, sret at 9:GetLobbyByIndex, 15:GetLobbyMemberByIndex, 29:GetLobbyOwner)
+static vfn g_x64_null_steammatchmaking005_vtbl[31] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steammatchmaking005_instance = { g_x64_null_steammatchmaking005_vtbl };
+// SteamMatchMaking006 (SteamMatchmaking, 28 slots, sret at 8:GetLobbyByIndex, 14:GetLobbyMemberByIndex, 27:GetLobbyOwner)
+static vfn g_x64_null_steammatchmaking006_vtbl[28] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+};
+static struct GLibX64NullObject g_x64_null_steammatchmaking006_instance = { g_x64_null_steammatchmaking006_vtbl };
+// SteamMatchMaking007 (SteamMatchmaking, 34 slots, sret at 9:GetLobbyByIndex, 15:GetLobbyMemberByIndex, 32:GetLobbyOwner)
+static vfn g_x64_null_steammatchmaking007_vtbl[34] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steammatchmaking007_instance = { g_x64_null_steammatchmaking007_vtbl };
+// SteamMatchMaking008 (SteamMatchmaking, 36 slots, sret at 11:GetLobbyByIndex, 17:GetLobbyMemberByIndex, 34:GetLobbyOwner)
+static vfn g_x64_null_steammatchmaking008_vtbl[36] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steammatchmaking008_instance = { g_x64_null_steammatchmaking008_vtbl };
+// SteamUser004 (SteamUser, 26 slots, sret at 6:GetSteamID)
+static vfn g_x64_null_steamuser004_vtbl[26] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser004_instance = { g_x64_null_steamuser004_vtbl };
+// SteamUser005 (SteamUser, 39 slots, sret at 6:GetSteamID)
+static vfn g_x64_null_steamuser005_vtbl[39] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser005_instance = { g_x64_null_steamuser005_vtbl };
+// SteamUser006 (SteamUser, 12 slots, sret at 4:GetSteamID)
+static vfn g_x64_null_steamuser006_vtbl[12] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser006_instance = { g_x64_null_steamuser006_vtbl };
+// SteamUser007 (SteamUser, 13 slots, sret at 4:GetSteamID)
+static vfn g_x64_null_steamuser007_vtbl[13] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser007_instance = { g_x64_null_steamuser007_vtbl };
+// SteamUser008 (SteamUser, 7 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser008_vtbl[7] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser008_instance = { g_x64_null_steamuser008_vtbl };
+// SteamUser009 (SteamUser, 7 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser009_vtbl[7] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser009_instance = { g_x64_null_steamuser009_vtbl };
+// SteamUser010 (SteamUser, 6 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser010_vtbl[6] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser010_instance = { g_x64_null_steamuser010_vtbl };
+// SteamUser011 (SteamUser, 11 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser011_vtbl[11] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser011_instance = { g_x64_null_steamuser011_vtbl };
+// SteamUser012 (SteamUser, 16 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser012_vtbl[16] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser012_instance = { g_x64_null_steamuser012_vtbl };
+// SteamUser013 (SteamUser, 17 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser013_vtbl[17] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser013_instance = { g_x64_null_steamuser013_vtbl };
+// SteamUser014 (SteamUser, 21 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser014_vtbl[21] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser014_instance = { g_x64_null_steamuser014_vtbl };
+// SteamUser015 (SteamUser, 22 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser015_vtbl[22] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser015_instance = { g_x64_null_steamuser015_vtbl };
+// SteamUser016 (SteamUser, 22 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser016_vtbl[22] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser016_instance = { g_x64_null_steamuser016_vtbl };
+// SteamUser017 (SteamUser, 24 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser017_vtbl[24] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser017_instance = { g_x64_null_steamuser017_vtbl };
+// SteamUser020 (SteamUser, 31 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser020_vtbl[31] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser020_instance = { g_x64_null_steamuser020_vtbl };
+// SteamUser022 (SteamUser, 32 slots, sret at 2:GetSteamID)
+static vfn g_x64_null_steamuser022_vtbl[32] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_sret_8,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+static struct GLibX64NullObject g_x64_null_steamuser022_instance = { g_x64_null_steamuser022_vtbl };
+static const struct { const char *version; void *instance; } g_x64_null_sret_objects[] = {
+  { "STEAMAPPS_INTERFACE_VERSION006", &g_x64_null_steamapps_interface_version006_instance },
+  { "STEAMREMOTEPLAY_INTERFACE_VERSION003", &g_x64_null_steamremoteplay_interface_version003_instance },
+  { "SteamController003", &g_x64_null_steamcontroller003_instance },
+  { "SteamController004", &g_x64_null_steamcontroller004_instance },
+  { "SteamController005", &g_x64_null_steamcontroller005_instance },
+  { "SteamController007", &g_x64_null_steamcontroller007_instance },
+  { "SteamFriends001", &g_x64_null_steamfriends001_instance },
+  { "SteamFriends002", &g_x64_null_steamfriends002_instance },
+  { "SteamFriends003", &g_x64_null_steamfriends003_instance },
+  { "SteamFriends004", &g_x64_null_steamfriends004_instance },
+  { "SteamFriends005", &g_x64_null_steamfriends005_instance },
+  { "SteamFriends006", &g_x64_null_steamfriends006_instance },
+  { "SteamFriends007", &g_x64_null_steamfriends007_instance },
+  { "SteamFriends008", &g_x64_null_steamfriends008_instance },
+  { "SteamFriends009", &g_x64_null_steamfriends009_instance },
+  { "SteamFriends010", &g_x64_null_steamfriends010_instance },
+  { "SteamFriends011", &g_x64_null_steamfriends011_instance },
+  { "SteamFriends012", &g_x64_null_steamfriends012_instance },
+  { "SteamFriends013", &g_x64_null_steamfriends013_instance },
+  { "SteamFriends014", &g_x64_null_steamfriends014_instance },
+  { "SteamGameServer002", &g_x64_null_steamgameserver002_instance },
+  { "SteamGameServer003", &g_x64_null_steamgameserver003_instance },
+  { "SteamGameServer004", &g_x64_null_steamgameserver004_instance },
+  { "SteamGameServer005", &g_x64_null_steamgameserver005_instance },
+  { "SteamGameServer008", &g_x64_null_steamgameserver008_instance },
+  { "SteamGameServer009", &g_x64_null_steamgameserver009_instance },
+  { "SteamGameServer010", &g_x64_null_steamgameserver010_instance },
+  { "SteamGameServer011", &g_x64_null_steamgameserver011_instance },
+  { "SteamGameServer013", &g_x64_null_steamgameserver013_instance },
+  { "SteamInput001", &g_x64_null_steaminput001_instance },
+  { "SteamInput002", &g_x64_null_steaminput002_instance },
+  { "SteamInput005", &g_x64_null_steaminput005_instance },
+  { "SteamMatchMaking001", &g_x64_null_steammatchmaking001_instance },
+  { "SteamMatchMaking002", &g_x64_null_steammatchmaking002_instance },
+  { "SteamMatchMaking003", &g_x64_null_steammatchmaking003_instance },
+  { "SteamMatchMaking004", &g_x64_null_steammatchmaking004_instance },
+  { "SteamMatchMaking005", &g_x64_null_steammatchmaking005_instance },
+  { "SteamMatchMaking006", &g_x64_null_steammatchmaking006_instance },
+  { "SteamMatchMaking007", &g_x64_null_steammatchmaking007_instance },
+  { "SteamMatchMaking008", &g_x64_null_steammatchmaking008_instance },
+  { "SteamUser004", &g_x64_null_steamuser004_instance },
+  { "SteamUser005", &g_x64_null_steamuser005_instance },
+  { "SteamUser006", &g_x64_null_steamuser006_instance },
+  { "SteamUser007", &g_x64_null_steamuser007_instance },
+  { "SteamUser008", &g_x64_null_steamuser008_instance },
+  { "SteamUser009", &g_x64_null_steamuser009_instance },
+  { "SteamUser010", &g_x64_null_steamuser010_instance },
+  { "SteamUser011", &g_x64_null_steamuser011_instance },
+  { "SteamUser012", &g_x64_null_steamuser012_instance },
+  { "SteamUser013", &g_x64_null_steamuser013_instance },
+  { "SteamUser014", &g_x64_null_steamuser014_instance },
+  { "SteamUser015", &g_x64_null_steamuser015_instance },
+  { "SteamUser016", &g_x64_null_steamuser016_instance },
+  { "SteamUser017", &g_x64_null_steamuser017_instance },
+  { "SteamUser020", &g_x64_null_steamuser020_instance },
+  { "SteamUser022", &g_x64_null_steamuser022_instance },
+};
+static void *x64_null_object_for_version(const char *version) {
+  if (version != NULL) {
+    size_t i;
+    for (i = 0; i < sizeof(g_x64_null_sret_objects) / sizeof(g_x64_null_sret_objects[0]); i++) {
+      if (strcmp(version, g_x64_null_sret_objects[i].version) == 0) return g_x64_null_sret_objects[i].instance;
+    }
+  }
+  return (void *)&g_x64_null_object_instance;
+}
 // CR-01: set only by GameLibBridge_CreateInterface (the SteamStub entry point,
 // reached only via steamclient64.dll). While clear, SteamClient GetISteam*
 // lookups take the pre-phase local path (proxy or null object).
@@ -6223,7 +8085,7 @@ static void * THISCALL vt_SteamClient017_GetISteamUser(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6264,7 +8126,7 @@ static void * THISCALL vt_SteamClient017_GetISteamGameServer(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6310,7 +8172,7 @@ static void * THISCALL vt_SteamClient017_GetISteamFriends(void *self, int32_t hS
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6351,7 +8213,7 @@ static void * THISCALL vt_SteamClient017_GetISteamUtils(void *self, int32_t hSte
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4104];
@@ -6391,7 +8253,7 @@ static void * THISCALL vt_SteamClient017_GetISteamMatchmaking(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6432,7 +8294,7 @@ static void * THISCALL vt_SteamClient017_GetISteamMatchmakingServers(void *self,
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6473,7 +8335,7 @@ static void * THISCALL vt_SteamClient017_GetISteamGenericInterface(void *self, i
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6514,7 +8376,7 @@ static void * THISCALL vt_SteamClient017_GetISteamUserStats(void *self, int32_t 
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6555,7 +8417,7 @@ static void * THISCALL vt_SteamClient017_GetISteamGameServerStats(void *self, in
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6596,7 +8458,7 @@ static void * THISCALL vt_SteamClient017_GetISteamApps(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6637,7 +8499,7 @@ static void * THISCALL vt_SteamClient017_GetISteamNetworking(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6678,7 +8540,7 @@ static void * THISCALL vt_SteamClient017_GetISteamRemoteStorage(void *self, int3
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6719,7 +8581,7 @@ static void * THISCALL vt_SteamClient017_GetISteamScreenshots(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6802,7 +8664,7 @@ static void * THISCALL vt_SteamClient017_GetISteamHTTP(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6843,7 +8705,7 @@ static void * THISCALL vt_SteamClient017_DEPRECATED_GetISteamUnifiedMessages(voi
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6884,7 +8746,7 @@ static void * THISCALL vt_SteamClient017_GetISteamController(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6925,7 +8787,7 @@ static void * THISCALL vt_SteamClient017_GetISteamUGC(void *self, int32_t hSteam
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -6966,7 +8828,7 @@ static void * THISCALL vt_SteamClient017_GetISteamAppList(void *self, int32_t hS
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -7007,7 +8869,7 @@ static void * THISCALL vt_SteamClient017_GetISteamMusic(void *self, int32_t hSte
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -7048,7 +8910,7 @@ static void * THISCALL vt_SteamClient017_GetISteamMusicRemote(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -7089,7 +8951,7 @@ static void * THISCALL vt_SteamClient017_GetISteamHTMLSurface(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -7145,7 +9007,7 @@ static void * THISCALL vt_SteamClient017_GetISteamInventory(void *self, int32_t 
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -7186,7 +9048,7 @@ static void * THISCALL vt_SteamClient017_GetISteamVideo(void *self, int32_t hSte
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -7227,7 +9089,7 @@ static void * THISCALL vt_SteamClient017_GetISteamParentalSettings(void *self, i
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9140,7 +11002,7 @@ static void * THISCALL vt_SteamClient014_GetISteamUser(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9181,7 +11043,7 @@ static void * THISCALL vt_SteamClient014_GetISteamGameServer(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9227,7 +11089,7 @@ static void * THISCALL vt_SteamClient014_GetISteamFriends(void *self, int32_t hS
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9268,7 +11130,7 @@ static void * THISCALL vt_SteamClient014_GetISteamUtils(void *self, int32_t hSte
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4104];
@@ -9308,7 +11170,7 @@ static void * THISCALL vt_SteamClient014_GetISteamMatchmaking(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9349,7 +11211,7 @@ static void * THISCALL vt_SteamClient014_GetISteamMatchmakingServers(void *self,
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9390,7 +11252,7 @@ static void * THISCALL vt_SteamClient014_GetISteamGenericInterface(void *self, i
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9431,7 +11293,7 @@ static void * THISCALL vt_SteamClient014_GetISteamUserStats(void *self, int32_t 
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9472,7 +11334,7 @@ static void * THISCALL vt_SteamClient014_GetISteamGameServerStats(void *self, in
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9513,7 +11375,7 @@ static void * THISCALL vt_SteamClient014_GetISteamApps(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9554,7 +11416,7 @@ static void * THISCALL vt_SteamClient014_GetISteamNetworking(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9595,7 +11457,7 @@ static void * THISCALL vt_SteamClient014_GetISteamRemoteStorage(void *self, int3
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9636,7 +11498,7 @@ static void * THISCALL vt_SteamClient014_GetISteamScreenshots(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9719,7 +11581,7 @@ static void * THISCALL vt_SteamClient014_GetISteamHTTP(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9760,7 +11622,7 @@ static void * THISCALL vt_SteamClient014_GetISteamUnifiedMessages(void *self, in
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9801,7 +11663,7 @@ static void * THISCALL vt_SteamClient014_GetISteamController(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9842,7 +11704,7 @@ static void * THISCALL vt_SteamClient014_GetISteamUGC(void *self, int32_t hSteam
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9883,7 +11745,7 @@ static void * THISCALL vt_SteamClient014_GetISteamAppList(void *self, int32_t hS
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -9924,7 +11786,7 @@ static void * THISCALL vt_SteamClient014_GetISteamMusic(void *self, int32_t hSte
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -10668,7 +12530,7 @@ static void * THISCALL vt_SteamClient020_GetISteamUser(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -10709,7 +12571,7 @@ static void * THISCALL vt_SteamClient020_GetISteamGameServer(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -10755,7 +12617,7 @@ static void * THISCALL vt_SteamClient020_GetISteamFriends(void *self, int32_t hS
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -10796,7 +12658,7 @@ static void * THISCALL vt_SteamClient020_GetISteamUtils(void *self, int32_t hSte
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4104];
@@ -10836,7 +12698,7 @@ static void * THISCALL vt_SteamClient020_GetISteamMatchmaking(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -10877,7 +12739,7 @@ static void * THISCALL vt_SteamClient020_GetISteamMatchmakingServers(void *self,
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -10918,7 +12780,7 @@ static void * THISCALL vt_SteamClient020_GetISteamGenericInterface(void *self, i
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -10959,7 +12821,7 @@ static void * THISCALL vt_SteamClient020_GetISteamUserStats(void *self, int32_t 
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11000,7 +12862,7 @@ static void * THISCALL vt_SteamClient020_GetISteamGameServerStats(void *self, in
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11041,7 +12903,7 @@ static void * THISCALL vt_SteamClient020_GetISteamApps(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11082,7 +12944,7 @@ static void * THISCALL vt_SteamClient020_GetISteamNetworking(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11123,7 +12985,7 @@ static void * THISCALL vt_SteamClient020_GetISteamRemoteStorage(void *self, int3
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11164,7 +13026,7 @@ static void * THISCALL vt_SteamClient020_GetISteamScreenshots(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11207,7 +13069,7 @@ static void * THISCALL vt_SteamClient020_GetISteamGameSearch(void *self, int32_t
   void *resolved = resolve_iface_by_exact_version(pchVersion);
   if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  return (void *)&g_x64_null_object_instance;
+  return x64_null_object_for_version(pchVersion);
 #else
   return NULL;
 #endif
@@ -11261,7 +13123,7 @@ static void * THISCALL vt_SteamClient020_GetISteamHTTP(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11302,7 +13164,7 @@ static void * THISCALL vt_SteamClient020_DEPRECATED_GetISteamUnifiedMessages(voi
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11343,7 +13205,7 @@ static void * THISCALL vt_SteamClient020_GetISteamController(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11384,7 +13246,7 @@ static void * THISCALL vt_SteamClient020_GetISteamUGC(void *self, int32_t hSteam
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11425,7 +13287,7 @@ static void * THISCALL vt_SteamClient020_GetISteamAppList(void *self, int32_t hS
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11466,7 +13328,7 @@ static void * THISCALL vt_SteamClient020_GetISteamMusic(void *self, int32_t hSte
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11507,7 +13369,7 @@ static void * THISCALL vt_SteamClient020_GetISteamMusicRemote(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11548,7 +13410,7 @@ static void * THISCALL vt_SteamClient020_GetISteamHTMLSurface(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11604,7 +13466,7 @@ static void * THISCALL vt_SteamClient020_GetISteamInventory(void *self, int32_t 
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11645,7 +13507,7 @@ static void * THISCALL vt_SteamClient020_GetISteamVideo(void *self, int32_t hSte
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11686,7 +13548,7 @@ static void * THISCALL vt_SteamClient020_GetISteamParentalSettings(void *self, i
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11729,7 +13591,7 @@ static void * THISCALL vt_SteamClient020_GetISteamInput(void *self, int32_t hSte
   void *resolved = resolve_iface_by_exact_version(pchVersion);
   if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  return (void *)&g_x64_null_object_instance;
+  return x64_null_object_for_version(pchVersion);
 #else
   return NULL;
 #endif
@@ -11743,7 +13605,7 @@ static void * THISCALL vt_SteamClient020_GetISteamParties(void *self, int32_t hS
   void *resolved = resolve_iface_by_exact_version(pchVersion);
   if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  return (void *)&g_x64_null_object_instance;
+  return x64_null_object_for_version(pchVersion);
 #else
   return NULL;
 #endif
@@ -11757,7 +13619,7 @@ static void * THISCALL vt_SteamClient020_GetISteamRemotePlay(void *self, int32_t
   void *resolved = resolve_iface_by_exact_version(pchVersion);
   if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  return (void *)&g_x64_null_object_instance;
+  return x64_null_object_for_version(pchVersion);
 #else
   return NULL;
 #endif
@@ -11906,7 +13768,7 @@ static void * THISCALL vt_SteamClient021_GetISteamUser(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11947,7 +13809,7 @@ static void * THISCALL vt_SteamClient021_GetISteamGameServer(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -11993,7 +13855,7 @@ static void * THISCALL vt_SteamClient021_GetISteamFriends(void *self, int32_t hS
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12034,7 +13896,7 @@ static void * THISCALL vt_SteamClient021_GetISteamUtils(void *self, int32_t hSte
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4104];
@@ -12074,7 +13936,7 @@ static void * THISCALL vt_SteamClient021_GetISteamMatchmaking(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12115,7 +13977,7 @@ static void * THISCALL vt_SteamClient021_GetISteamMatchmakingServers(void *self,
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12156,7 +14018,7 @@ static void * THISCALL vt_SteamClient021_GetISteamGenericInterface(void *self, i
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12197,7 +14059,7 @@ static void * THISCALL vt_SteamClient021_GetISteamUserStats(void *self, int32_t 
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12238,7 +14100,7 @@ static void * THISCALL vt_SteamClient021_GetISteamGameServerStats(void *self, in
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12279,7 +14141,7 @@ static void * THISCALL vt_SteamClient021_GetISteamApps(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12320,7 +14182,7 @@ static void * THISCALL vt_SteamClient021_GetISteamNetworking(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12361,7 +14223,7 @@ static void * THISCALL vt_SteamClient021_GetISteamRemoteStorage(void *self, int3
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12402,7 +14264,7 @@ static void * THISCALL vt_SteamClient021_GetISteamScreenshots(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12445,7 +14307,7 @@ static void * THISCALL vt_SteamClient021_GetISteamGameSearch(void *self, int32_t
   void *resolved = resolve_iface_by_exact_version(pchVersion);
   if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  return (void *)&g_x64_null_object_instance;
+  return x64_null_object_for_version(pchVersion);
 #else
   return NULL;
 #endif
@@ -12499,7 +14361,7 @@ static void * THISCALL vt_SteamClient021_GetISteamHTTP(void *self, int32_t hStea
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12540,7 +14402,7 @@ static void * THISCALL vt_SteamClient021_GetISteamController(void *self, int32_t
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12581,7 +14443,7 @@ static void * THISCALL vt_SteamClient021_GetISteamUGC(void *self, int32_t hSteam
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12622,7 +14484,7 @@ static void * THISCALL vt_SteamClient021_GetISteamMusic(void *self, int32_t hSte
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12663,7 +14525,7 @@ static void * THISCALL vt_SteamClient021_GetISteamMusicRemote(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12704,7 +14566,7 @@ static void * THISCALL vt_SteamClient021_GetISteamHTMLSurface(void *self, int32_
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12760,7 +14622,7 @@ static void * THISCALL vt_SteamClient021_GetISteamInventory(void *self, int32_t 
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12801,7 +14663,7 @@ static void * THISCALL vt_SteamClient021_GetISteamVideo(void *self, int32_t hSte
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12842,7 +14704,7 @@ static void * THISCALL vt_SteamClient021_GetISteamParentalSettings(void *self, i
 #if defined(__x86_64__)
   if (!g_bridge_steamstub_path_active) {
     void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+    return local != NULL ? local : x64_null_object_for_version(pchVersion);
   }
 #endif
   uint8_t argbuf[4108];
@@ -12885,7 +14747,7 @@ static void * THISCALL vt_SteamClient021_GetISteamInput(void *self, int32_t hSte
   void *resolved = resolve_iface_by_exact_version(pchVersion);
   if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  return (void *)&g_x64_null_object_instance;
+  return x64_null_object_for_version(pchVersion);
 #else
   return NULL;
 #endif
@@ -12899,7 +14761,7 @@ static void * THISCALL vt_SteamClient021_GetISteamParties(void *self, int32_t hS
   void *resolved = resolve_iface_by_exact_version(pchVersion);
   if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  return (void *)&g_x64_null_object_instance;
+  return x64_null_object_for_version(pchVersion);
 #else
   return NULL;
 #endif
@@ -12913,7 +14775,7 @@ static void * THISCALL vt_SteamClient021_GetISteamRemotePlay(void *self, int32_t
   void *resolved = resolve_iface_by_exact_version(pchVersion);
   if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  return (void *)&g_x64_null_object_instance;
+  return x64_null_object_for_version(pchVersion);
 #else
   return NULL;
 #endif
@@ -24279,7 +26141,7 @@ static uintptr_t g_gamelib_context_counter = 1;
 void *SteamInternal_CreateInterface(const char *pszVersion) {
   void *resolved = resolve_iface_by_exact_version(pszVersion);
   if (resolved != NULL) return resolved;
-  return (void *)&g_x64_null_object_instance;
+  return x64_null_object_for_version(pszVersion);
 }
 int SteamAPI_GetHSteamUser(void) { return 1; }
 int SteamAPI_GetHSteamPipe(void) { return 1; }
@@ -24308,13 +26170,13 @@ void *SteamInternal_FindOrCreateUserInterface(int hSteamUser, const char *pszVer
   (void)hSteamUser;
   void *resolved = resolve_iface_by_exact_version(pszVersion);
   if (resolved != NULL) return resolved;
-  return (void *)&g_x64_null_object_instance;
+  return x64_null_object_for_version(pszVersion);
 }
 void *SteamInternal_FindOrCreateGameServerInterface(int hSteamUser, const char *pszVersion) {
   (void)hSteamUser;
   void *resolved = resolve_iface_by_exact_version(pszVersion);
   if (resolved != NULL) return resolved;
-  return (void *)&g_x64_null_object_instance;
+  return x64_null_object_for_version(pszVersion);
 }
 int SteamInternal_GameServer_Init_V2(uint32_t unIP, uint16_t usGamePort, uint16_t usQueryPort, int eServerMode, const char *pchVersionString, const char *pszInternalCheckInterfaceVersions, char *pOutErrMsg) {
   (void)unIP; (void)usGamePort; (void)usQueryPort; (void)eServerMode; (void)pchVersionString; (void)pszInternalCheckInterfaceVersions;
