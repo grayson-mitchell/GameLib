@@ -16,7 +16,6 @@
 import { execFile } from 'child_process'
 import { closeSync, fstatSync, openSync, readSync, statSync } from 'fs'
 import { join } from 'path'
-import { GlobalConfig } from 'backend/config'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { shell } from 'backend/platform'
 import type { SteamGoOfflineRetryResult } from 'common/types/steam'
@@ -65,6 +64,13 @@ export function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
   return {
     platform: process.platform,
     connectionLogPath: () => {
+      // Loaded on first use, not at module load: backend/config pulls in the
+      // whole backend graph (utils, GOG, Electron paths), and user.ts imports
+      // this module on every startup path and in every suite that touches it.
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const { GlobalConfig } =
+        require('backend/config') as typeof import('backend/config')
+      /* eslint-enable @typescript-eslint/no-require-imports */
       const { defaultSteamPath } = GlobalConfig.get().getSettings()
       return join(
         defaultSteamPath.replaceAll("'", ''),
