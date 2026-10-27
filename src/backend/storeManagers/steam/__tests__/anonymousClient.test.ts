@@ -147,6 +147,52 @@ describe('getAnonymousPicsClient', () => {
   })
 })
 
+describe('idle close with reads in flight (54-REVIEW WR-09)', () => {
+  it('a getProductInfo longer than the idle window is not cut off; the close comes 60 s after it settles', async () => {
+    const p = getAnonymousPicsClient('platform-capture')
+    const inst = fake.instances[0]
+    inst.emit('loggedOn')
+    const client = await p
+    let finish!: (v: unknown) => void
+    inst.getProductInfo.mockReturnValue(
+      new Promise((r) => {
+        finish = r
+      })
+    )
+    const read = client?.getProductInfo([1], [], true)
+    jest.advanceTimersByTime(ANON_IDLE_CLOSE_MS * 2)
+    expect(inst.logOff).not.toHaveBeenCalled()
+    finish({ apps: {} })
+    await read
+    jest.advanceTimersByTime(ANON_IDLE_CLOSE_MS - 1)
+    expect(inst.logOff).not.toHaveBeenCalled()
+    jest.advanceTimersByTime(1)
+    expect(inst.logOff).toHaveBeenCalledTimes(1)
+  })
+
+  it('a rejected read still releases the client for the idle close', async () => {
+    const p = getAnonymousPicsClient('x')
+    const inst = fake.instances[0]
+    inst.emit('loggedOn')
+    const client = await p
+    inst.getProductInfo.mockRejectedValue(new Error('timeout'))
+    await expect(client?.getProductInfo([1], [])).rejects.toThrow('timeout')
+    jest.advanceTimersByTime(ANON_IDLE_CLOSE_MS)
+    expect(inst.logOff).toHaveBeenCalledTimes(1)
+  })
+
+  it('logout still closes the client while a read is in flight', async () => {
+    const p = getAnonymousPicsClient('x')
+    const inst = fake.instances[0]
+    inst.emit('loggedOn')
+    const client = await p
+    inst.getProductInfo.mockReturnValue(new Promise(() => undefined))
+    void client?.getProductInfo([1], [])
+    closeAnonymousClient('logout')
+    expect(inst.logOff).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('shutdown and close', () => {
   it('a close during an in-flight connect discards the late logon', async () => {
     const p = getAnonymousPicsClient('x')

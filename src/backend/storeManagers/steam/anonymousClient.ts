@@ -11,7 +11,9 @@
  *
  * Sidecar exit contract: every timer here is `.unref?.()`'d, the connect is
  * bounded, and the client closes itself when idle, so nothing in this module
- * can hold the event loop open at stdin EOF.
+ * can hold the event loop open at stdin EOF. "Idle" counts in-flight reads
+ * (54-REVIEW WR-09): the close timer is armed only once none is running, so a
+ * bulk PICS read longer than ANON_IDLE_CLOSE_MS is never cut off mid-request.
  */
 import SteamUserLib from 'steam-user'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -34,6 +36,10 @@ interface AnonymousPicsClient {
 type RawClient = InstanceType<typeof SteamUserLib>
 
 let cached: RawClient | null = null
+// What callers receive for `cached`: a view whose getProductInfo counts reads
+// in flight, so the idle close waits for them (54-REVIEW WR-09).
+let cachedView: AnonymousPicsClient | null = null
+let inUse = 0
 let inflight: Promise<AnonymousPicsClient | null> | null = null
 let idleTimer: ReturnType<typeof setTimeout> | null = null
 let shuttingDown = false
@@ -48,8 +54,40 @@ function clearIdle(): void {
 
 function armIdle(): void {
   clearIdle()
-  idleTimer = setTimeout(() => closeAnonymousClient('idle'), ANON_IDLE_CLOSE_MS)
+  if (inUse > 0) return
+  idleTimer = setTimeout(() => {
+    idleTimer = null
+    if (inUse > 0) return
+    closeAnonymousClient('idle')
+  }, ANON_IDLE_CLOSE_MS)
   idleTimer.unref?.()
+}
+
+function viewFor(client: RawClient): AnonymousPicsClient {
+  const raw = client as unknown as AnonymousPicsClient
+  const done = (): void => {
+    // A read on a client that has since been closed or replaced does not
+    // count against the current one.
+    if (cached !== client) return
+    inUse = Math.max(0, inUse - 1)
+    if (inUse === 0) armIdle()
+  }
+  return {
+    getProductInfo: (apps, packages, inclTokens) => {
+      if (cached === client) {
+        inUse++
+        clearIdle()
+      }
+      let pending: ReturnType<AnonymousPicsClient['getProductInfo']>
+      try {
+        pending = raw.getProductInfo(apps, packages, inclTokens)
+      } catch (err) {
+        done()
+        throw err
+      }
+      return Promise.resolve(pending).finally(done)
+    }
+  }
 }
 
 function safeLogOff(client: RawClient): void {
@@ -108,6 +146,8 @@ function connect(reason: string): Promise<AnonymousPicsClient | null> {
             LogPrefix.Steam
           )
           cached = null
+          cachedView = null
+          inUse = 0
           inflight = null
           clearIdle()
         }
@@ -125,7 +165,9 @@ function connect(reason: string): Promise<AnonymousPicsClient | null> {
         return
       }
       cached = client
-      settle(client as unknown as AnonymousPicsClient)
+      cachedView = viewFor(client)
+      inUse = 0
+      settle(cachedView)
     })
 
     logInfo('[Steam] CM logon mode=anonymous reason=' + reason, LogPrefix.Steam)
@@ -137,9 +179,9 @@ export async function getAnonymousPicsClient(
   reason: string
 ): Promise<AnonymousPicsClient | null> {
   if (shuttingDown) return null
-  if (cached) {
+  if (cached && cachedView) {
     armIdle()
-    return cached as unknown as AnonymousPicsClient
+    return cachedView
   }
   if (!inflight) {
     const p: Promise<AnonymousPicsClient | null> = connect(reason).finally(
@@ -161,6 +203,8 @@ export function closeAnonymousClient(
   clearIdle()
   const client = cached
   cached = null
+  cachedView = null
+  inUse = 0
   inflight = null
   if (client) {
     safeLogOff(client)
@@ -195,6 +239,8 @@ export function isPublicOnlyEntry(entry: unknown): boolean {
 export function __resetAnonymousClientForTests(): void {
   clearIdle()
   cached = null
+  cachedView = null
+  inUse = 0
   inflight = null
   shuttingDown = false
   generation++
