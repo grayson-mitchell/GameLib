@@ -63,7 +63,12 @@
             "stopKeepFiles": "Leállítás és fájlok megtartása",
             "title": "Megszakítod a letöltést?"
         },
-        "progressPaused": "Szüneteltetve"
+        "progressPaused": "Szüneteltetve",
+        "setup": {
+            "steamBottle": "Steam a CrossOver számára",
+            "steamClient": "Steam-kliens telepítője",
+            "title": "Beállítás"
+        }
     },
     "edit-game": {
         "sgdb": {

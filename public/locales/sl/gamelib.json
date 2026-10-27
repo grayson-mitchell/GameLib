@@ -65,7 +65,12 @@
             "stopKeepFiles": "Ustavi in obdrži datoteke",
             "title": "Želite preklicati prenos?"
         },
-        "progressPaused": "Prekinjeno"
+        "progressPaused": "Prekinjeno",
+        "setup": {
+            "steamBottle": "Steam za CrossOver",
+            "steamClient": "Namestitveni program odjemalca Steam",
+            "title": "Namestitev"
+        }
     },
     "edit-game": {
         "sgdb": {

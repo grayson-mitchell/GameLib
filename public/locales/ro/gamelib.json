@@ -64,7 +64,12 @@
             "stopKeepFiles": "Oprește și păstrează fișierele",
             "title": "Anulezi descărcarea?"
         },
-        "progressPaused": "Pauzat"
+        "progressPaused": "Pauzat",
+        "setup": {
+            "steamBottle": "Steam pentru CrossOver",
+            "steamClient": "Programul de instalare a clientului Steam",
+            "title": "Configurare"
+        }
     },
     "edit-game": {
         "sgdb": {

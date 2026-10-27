@@ -1,0 +1,247 @@
+{
+  "en": {
+    "downloadManager.setup.steamBottle": "Steam for CrossOver",
+    "downloadManager.setup.steamClient": "Steam client installer",
+    "downloadManager.setup.title": "Setup"
+  },
+  "ar": {
+    "downloadManager.setup.steamBottle": "Steam لـ CrossOver",
+    "downloadManager.setup.steamClient": "مثبّت عميل Steam",
+    "downloadManager.setup.title": "الإعداد"
+  },
+  "az": {
+    "downloadManager.setup.steamBottle": "CrossOver üçün Steam",
+    "downloadManager.setup.steamClient": "Steam müştəri quraşdırıcısı",
+    "downloadManager.setup.title": "Quraşdırma"
+  },
+  "be": {
+    "downloadManager.setup.steamBottle": "Steam для CrossOver",
+    "downloadManager.setup.steamClient": "Усталёўшчык кліента Steam",
+    "downloadManager.setup.title": "Усталёўка"
+  },
+  "bg": {
+    "downloadManager.setup.steamBottle": "Steam за CrossOver",
+    "downloadManager.setup.steamClient": "Инсталатор на клиента на Steam",
+    "downloadManager.setup.title": "Настройка"
+  },
+  "br": {
+    "downloadManager.setup.steamBottle": "Steam evit CrossOver",
+    "downloadManager.setup.steamClient": "Stalier arval Steam",
+    "downloadManager.setup.title": "Staliadur"
+  },
+  "bs": {
+    "downloadManager.setup.steamBottle": "Steam za CrossOver",
+    "downloadManager.setup.steamClient": "Instalacijski program Steam klijenta",
+    "downloadManager.setup.title": "Postavljanje"
+  },
+  "ca": {
+    "downloadManager.setup.steamBottle": "Steam per a CrossOver",
+    "downloadManager.setup.steamClient": "Instal·lador del client de Steam",
+    "downloadManager.setup.title": "Configuració"
+  },
+  "cs": {
+    "downloadManager.setup.steamBottle": "Steam pro CrossOver",
+    "downloadManager.setup.steamClient": "Instalátor klienta Steam",
+    "downloadManager.setup.title": "Příprava"
+  },
+  "da": {
+    "downloadManager.setup.steamBottle": "Steam til CrossOver",
+    "downloadManager.setup.steamClient": "Installationsprogram til Steam-klienten",
+    "downloadManager.setup.title": "Opsætning"
+  },
+  "de": {
+    "downloadManager.setup.steamBottle": "Steam für CrossOver",
+    "downloadManager.setup.steamClient": "Steam-Client-Installer",
+    "downloadManager.setup.title": "Einrichtung"
+  },
+  "el": {
+    "downloadManager.setup.steamBottle": "Steam για CrossOver",
+    "downloadManager.setup.steamClient": "Πρόγραμμα εγκατάστασης του προγράμματος-πελάτη Steam",
+    "downloadManager.setup.title": "Ρύθμιση"
+  },
+  "es": {
+    "downloadManager.setup.steamBottle": "Steam para CrossOver",
+    "downloadManager.setup.steamClient": "Instalador del cliente de Steam",
+    "downloadManager.setup.title": "Configuración"
+  },
+  "et": {
+    "downloadManager.setup.steamBottle": "Steam CrossOver jaoks",
+    "downloadManager.setup.steamClient": "Steam kliendi installija",
+    "downloadManager.setup.title": "Seadistamine"
+  },
+  "eu": {
+    "downloadManager.setup.steamBottle": "Steam CrossOver-erako",
+    "downloadManager.setup.steamClient": "Steam bezeroaren instalatzailea",
+    "downloadManager.setup.title": "Konfigurazioa"
+  },
+  "fa": {
+    "downloadManager.setup.steamBottle": "Steam برای CrossOver",
+    "downloadManager.setup.steamClient": "نصب‌کننده کلاینت Steam",
+    "downloadManager.setup.title": "راه‌اندازی"
+  },
+  "fi": {
+    "downloadManager.setup.steamBottle": "Steam CrossOverille",
+    "downloadManager.setup.steamClient": "Steam-asiakasohjelman asennusohjelma",
+    "downloadManager.setup.title": "Asennus"
+  },
+  "fr": {
+    "downloadManager.setup.steamBottle": "Steam pour CrossOver",
+    "downloadManager.setup.steamClient": "Programme d'installation du client Steam",
+    "downloadManager.setup.title": "Configuration"
+  },
+  "ga": {
+    "downloadManager.setup.steamBottle": "Steam do CrossOver",
+    "downloadManager.setup.steamClient": "Suiteálaí chliant Steam",
+    "downloadManager.setup.title": "Socrú"
+  },
+  "gl": {
+    "downloadManager.setup.steamBottle": "Steam para CrossOver",
+    "downloadManager.setup.steamClient": "Instalador do cliente de Steam",
+    "downloadManager.setup.title": "Configuración"
+  },
+  "he": {
+    "downloadManager.setup.steamBottle": "Steam עבור CrossOver",
+    "downloadManager.setup.steamClient": "מתקין לקוח Steam",
+    "downloadManager.setup.title": "הגדרה"
+  },
+  "hr": {
+    "downloadManager.setup.steamBottle": "Steam za CrossOver",
+    "downloadManager.setup.steamClient": "Instalacijski program Steam klijenta",
+    "downloadManager.setup.title": "Postavljanje"
+  },
+  "hu": {
+    "downloadManager.setup.steamBottle": "Steam a CrossOver számára",
+    "downloadManager.setup.steamClient": "Steam-kliens telepítője",
+    "downloadManager.setup.title": "Beállítás"
+  },
+  "id": {
+    "downloadManager.setup.steamBottle": "Steam untuk CrossOver",
+    "downloadManager.setup.steamClient": "Penginstal klien Steam",
+    "downloadManager.setup.title": "Penyiapan"
+  },
+  "it": {
+    "downloadManager.setup.steamBottle": "Steam per CrossOver",
+    "downloadManager.setup.steamClient": "Programma di installazione del client Steam",
+    "downloadManager.setup.title": "Configurazione"
+  },
+  "ja": {
+    "downloadManager.setup.steamBottle": "CrossOver 用 Steam",
+    "downloadManager.setup.steamClient": "Steam クライアントのインストーラー",
+    "downloadManager.setup.title": "セットアップ"
+  },
+  "ka": {
+    "downloadManager.setup.steamBottle": "Steam CrossOver-ისთვის",
+    "downloadManager.setup.steamClient": "Steam კლიენტის ინსტალერი",
+    "downloadManager.setup.title": "დაყენება"
+  },
+  "ko": {
+    "downloadManager.setup.steamBottle": "CrossOver용 Steam",
+    "downloadManager.setup.steamClient": "Steam 클라이언트 설치 프로그램",
+    "downloadManager.setup.title": "초기 설정"
+  },
+  "lt": {
+    "downloadManager.setup.steamBottle": "Steam, skirta CrossOver",
+    "downloadManager.setup.steamClient": "Steam kliento diegimo programa",
+    "downloadManager.setup.title": "Sąranka"
+  },
+  "ml": {
+    "downloadManager.setup.steamBottle": "CrossOver-നുള്ള Steam",
+    "downloadManager.setup.steamClient": "Steam ക്ലയന്റ് ഇൻസ്റ്റാളർ",
+    "downloadManager.setup.title": "സജ്ജീകരണം"
+  },
+  "nb_NO": {
+    "downloadManager.setup.steamBottle": "Steam for CrossOver",
+    "downloadManager.setup.steamClient": "Installasjonsprogram for Steam-klienten",
+    "downloadManager.setup.title": "Oppsett"
+  },
+  "nl": {
+    "downloadManager.setup.steamBottle": "Steam voor CrossOver",
+    "downloadManager.setup.steamClient": "Installatieprogramma voor de Steam-client",
+    "downloadManager.setup.title": "Installatie"
+  },
+  "pl": {
+    "downloadManager.setup.steamBottle": "Steam dla CrossOver",
+    "downloadManager.setup.steamClient": "Instalator klienta Steam",
+    "downloadManager.setup.title": "Konfiguracja"
+  },
+  "pt": {
+    "downloadManager.setup.steamBottle": "Steam para CrossOver",
+    "downloadManager.setup.steamClient": "Instalador do cliente Steam",
+    "downloadManager.setup.title": "Configuração"
+  },
+  "pt_BR": {
+    "downloadManager.setup.steamBottle": "Steam para o CrossOver",
+    "downloadManager.setup.steamClient": "Instalador do cliente Steam",
+    "downloadManager.setup.title": "Configuração"
+  },
+  "ro": {
+    "downloadManager.setup.steamBottle": "Steam pentru CrossOver",
+    "downloadManager.setup.steamClient": "Programul de instalare a clientului Steam",
+    "downloadManager.setup.title": "Configurare"
+  },
+  "ru": {
+    "downloadManager.setup.steamBottle": "Steam для CrossOver",
+    "downloadManager.setup.steamClient": "Установщик клиента Steam",
+    "downloadManager.setup.title": "Настройка"
+  },
+  "sk": {
+    "downloadManager.setup.steamBottle": "Steam pre CrossOver",
+    "downloadManager.setup.steamClient": "Inštalátor klienta Steam",
+    "downloadManager.setup.title": "Nastavenie"
+  },
+  "sl": {
+    "downloadManager.setup.steamBottle": "Steam za CrossOver",
+    "downloadManager.setup.steamClient": "Namestitveni program odjemalca Steam",
+    "downloadManager.setup.title": "Namestitev"
+  },
+  "sr": {
+    "downloadManager.setup.steamBottle": "Steam за CrossOver",
+    "downloadManager.setup.steamClient": "Инсталер Steam клијента",
+    "downloadManager.setup.title": "Подешавање"
+  },
+  "sv": {
+    "downloadManager.setup.steamBottle": "Steam för CrossOver",
+    "downloadManager.setup.steamClient": "Installationsprogram för Steam-klienten",
+    "downloadManager.setup.title": "Installation"
+  },
+  "ta": {
+    "downloadManager.setup.steamBottle": "CrossOver-க்கான Steam",
+    "downloadManager.setup.steamClient": "Steam கிளையன்ட் நிறுவி",
+    "downloadManager.setup.title": "அமைவு"
+  },
+  "th": {
+    "downloadManager.setup.steamBottle": "Steam สำหรับ CrossOver",
+    "downloadManager.setup.steamClient": "ตัวติดตั้งไคลเอนต์ Steam",
+    "downloadManager.setup.title": "การตั้งค่า"
+  },
+  "tr": {
+    "downloadManager.setup.steamBottle": "CrossOver için Steam",
+    "downloadManager.setup.steamClient": "Steam istemcisi yükleyicisi",
+    "downloadManager.setup.title": "Kurulum"
+  },
+  "uk": {
+    "downloadManager.setup.steamBottle": "Steam для CrossOver",
+    "downloadManager.setup.steamClient": "Інсталятор клієнта Steam",
+    "downloadManager.setup.title": "Налаштування"
+  },
+  "uz": {
+    "downloadManager.setup.steamBottle": "CrossOver uchun Steam",
+    "downloadManager.setup.steamClient": "Steam mijoz oʻrnatuvchisi",
+    "downloadManager.setup.title": "Oʻrnatish"
+  },
+  "vi": {
+    "downloadManager.setup.steamBottle": "Steam cho CrossOver",
+    "downloadManager.setup.steamClient": "Trình cài đặt ứng dụng khách Steam",
+    "downloadManager.setup.title": "Thiết lập"
+  },
+  "zh_Hans": {
+    "downloadManager.setup.steamBottle": "适用于 CrossOver 的 Steam",
+    "downloadManager.setup.steamClient": "Steam 客户端安装程序",
+    "downloadManager.setup.title": "安装设置"
+  },
+  "zh_Hant": {
+    "downloadManager.setup.steamBottle": "適用於 CrossOver 的 Steam",
+    "downloadManager.setup.steamClient": "Steam 用戶端安裝程式",
+    "downloadManager.setup.title": "安裝設定"
+  }
+}

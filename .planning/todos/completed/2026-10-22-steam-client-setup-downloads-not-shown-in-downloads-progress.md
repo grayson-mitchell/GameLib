@@ -31,3 +31,10 @@ Fix direction: give Steam client/bottle setup a queue entry, or at minimum a pro
 a Steam/CrossOver label and byte progress, so first-run setup is visible in the same place as
 game downloads. Also check whether the `finished` entry for a diverted install should be dropped
 instead of recorded as finished.
+
+## Closed 2026-10-27 (quick 261027-tot)
+
+- Setup payload downloads (`steam-client`, and `steam-bottle` labelled "Steam for CrossOver") now push `steamSetupDownloadProgress` (kind, state, bytes, percent only; no url or path) and render in a Downloads "Setup" section with bytes and percent. The row disappears when the fetch finishes or fails and is never written to Completed.
+- The bottle-not-provisioned `finished` entry quoted above was already fixed by 261024-cjq (`0194f89ad`, after the 2026-10-22 log).
+- This task closed the remaining diversion: Steam client not installed / never launched used to be recorded as a finished error and raised "Installation Failed" over the guided-setup consent UI. It now resolves `{status: 'done', deferredToSetup: true}` on the native, bottle-native and bridge routes (a not-ready result carrying an error, e.g. a bad appId, stays an error).
+- Still an operator live gate: the visible Setup row on a Mac with no cached installer.

@@ -63,7 +63,12 @@
             "stopKeepFiles": "Gelditu eta gorde fitxategiak",
             "title": "Deskarga bertan behera utzi?"
         },
-        "progressPaused": "Pausatuta"
+        "progressPaused": "Pausatuta",
+        "setup": {
+            "steamBottle": "Steam CrossOver-erako",
+            "steamClient": "Steam bezeroaren instalatzailea",
+            "title": "Konfigurazioa"
+        }
     },
     "edit-game": {
         "sgdb": {

@@ -63,7 +63,12 @@
             "stopKeepFiles": "Peata ja hoia faile alles",
             "title": "Kas tühistada allalaadimine?"
         },
-        "progressPaused": "Peatatud"
+        "progressPaused": "Peatatud",
+        "setup": {
+            "steamBottle": "Steam CrossOver jaoks",
+            "steamClient": "Steam kliendi installija",
+            "title": "Seadistamine"
+        }
     },
     "edit-game": {
         "sgdb": {

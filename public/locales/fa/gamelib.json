@@ -63,7 +63,12 @@
             "stopKeepFiles": "توقف و نگه داشتن فایل‌ها",
             "title": "دانلود لغو شود؟"
         },
-        "progressPaused": "متوقف‌شده"
+        "progressPaused": "متوقف‌شده",
+        "setup": {
+            "steamBottle": "Steam برای CrossOver",
+            "steamClient": "نصب‌کننده کلاینت Steam",
+            "title": "راه‌اندازی"
+        }
     },
     "edit-game": {
         "sgdb": {

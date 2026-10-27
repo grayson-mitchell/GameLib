@@ -63,7 +63,12 @@
             "stopKeepFiles": "Dừng và giữ lại tệp",
             "title": "Hủy tải xuống?"
         },
-        "progressPaused": "Đã tạm dừng"
+        "progressPaused": "Đã tạm dừng",
+        "setup": {
+            "steamBottle": "Steam cho CrossOver",
+            "steamClient": "Trình cài đặt ứng dụng khách Steam",
+            "title": "Thiết lập"
+        }
     },
     "edit-game": {
         "sgdb": {

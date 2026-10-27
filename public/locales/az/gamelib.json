@@ -63,7 +63,12 @@
             "stopKeepFiles": "Dayandır və faylları saxla",
             "title": "Yükləmə ləğv edilsin?"
         },
-        "progressPaused": "Fasilədə"
+        "progressPaused": "Fasilədə",
+        "setup": {
+            "steamBottle": "CrossOver üçün Steam",
+            "steamClient": "Steam müştəri quraşdırıcısı",
+            "title": "Quraşdırma"
+        }
     },
     "edit-game": {
         "sgdb": {

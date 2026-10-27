@@ -63,7 +63,12 @@
             "stopKeepFiles": "Διακοπή και διατήρηση αρχείων",
             "title": "Ακύρωση λήψης;"
         },
-        "progressPaused": "Σε παύση"
+        "progressPaused": "Σε παύση",
+        "setup": {
+            "steamBottle": "Steam για CrossOver",
+            "steamClient": "Πρόγραμμα εγκατάστασης του προγράμματος-πελάτη Steam",
+            "title": "Ρύθμιση"
+        }
     },
     "edit-game": {
         "sgdb": {

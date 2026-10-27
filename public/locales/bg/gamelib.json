@@ -63,7 +63,12 @@
             "stopKeepFiles": "Спиране и запазване на файловете",
             "title": "Отмяна на изтеглянето?"
         },
-        "progressPaused": "На пауза"
+        "progressPaused": "На пауза",
+        "setup": {
+            "steamBottle": "Steam за CrossOver",
+            "steamClient": "Инсталатор на клиента на Steam",
+            "title": "Настройка"
+        }
     },
     "edit-game": {
         "sgdb": {

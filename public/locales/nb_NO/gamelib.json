@@ -63,7 +63,12 @@
             "stopKeepFiles": "Stopp og behold filer",
             "title": "Avbryte nedlastingen?"
         },
-        "progressPaused": "Pauset"
+        "progressPaused": "Pauset",
+        "setup": {
+            "steamBottle": "Steam for CrossOver",
+            "steamClient": "Installasjonsprogram for Steam-klienten",
+            "title": "Oppsett"
+        }
     },
     "edit-game": {
         "sgdb": {

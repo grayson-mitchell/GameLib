@@ -65,7 +65,12 @@
             "stopKeepFiles": "Sustabdyti ir pasilikti failus",
             "title": "Atšaukti atsisiuntimą?"
         },
-        "progressPaused": "Pristabdyta"
+        "progressPaused": "Pristabdyta",
+        "setup": {
+            "steamBottle": "Steam, skirta CrossOver",
+            "steamClient": "Steam kliento diegimo programa",
+            "title": "Sąranka"
+        }
     },
     "edit-game": {
         "sgdb": {

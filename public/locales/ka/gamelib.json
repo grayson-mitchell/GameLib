@@ -63,7 +63,12 @@
             "stopKeepFiles": "შეჩერება და ფაილების შენახვა",
             "title": "გაუქმდეს ჩამოტვირთვა?"
         },
-        "progressPaused": "შეჩერებულია"
+        "progressPaused": "შეჩერებულია",
+        "setup": {
+            "steamBottle": "Steam CrossOver-ისთვის",
+            "steamClient": "Steam კლიენტის ინსტალერი",
+            "title": "დაყენება"
+        }
     },
     "edit-game": {
         "sgdb": {
