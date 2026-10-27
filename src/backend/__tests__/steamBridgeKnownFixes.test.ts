@@ -583,7 +583,12 @@ describe('bundled 63000 profile', () => {
       'fix.wgl.hideExtensions=WGL_ARB_create_context*'
     ])
     expect(parsed.evidence).toContain('034-known-fixes-v2-hoard')
-    expect(fs.existsSync(path.join(fixesDir, '63000-steam.json'))).toBe(false)
+    // The tier-1 file holds only the macArch seed (quick 261027-bqe); the WGL
+    // fix stays in the profile alone.
+    const tier1 = JSON.parse(
+      fs.readFileSync(path.join(fixesDir, '63000-steam.json'), 'utf8')
+    )
+    expect(Object.keys(tier1).sort()).toEqual(['macArch', 'notes', 'title'])
   })
 })
 
