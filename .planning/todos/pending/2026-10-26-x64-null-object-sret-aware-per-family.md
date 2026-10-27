@@ -7,9 +7,11 @@ files:
   - meta/gen_vtables.ts
   - native/steam-bridge/generated/steam_api_shim.c
   - meta/__tests__/gen_vtables.test.ts
+  - meta/extractProtonInventory.ts
+  - meta/sdk/x64-null-sret-inventory.json
 severity: medium
 platform: macos
-ready: human
+ready: live-gate
 ---
 
 ## Problem
@@ -24,7 +26,17 @@ Recorded without choosing:
 - (b) Count sret-bearing unserved families as missing rather than stubbed. This re-routes titles like ELEX away from the bridge.
 - (c) The still-unmade D-51-02 option: add the risk to the stubbed-interface notice copy.
 
-`ready: human` because the choice between these, and the notice copy for (c), is a decision. A live Wine gate is also needed after the code.
+The choice between these was a decision; the user chose (a) on 2026-10-26 (see Progress). `ready: live-gate` because only the live Wine gate remains.
+
+## Progress
+
+Option (a) was chosen by the user on 2026-10-26 and implemented PER EXACT INTERFACE VERSION, not per family, because sret slot positions move between versions (SteamController003 sret is at 9/12, SteamController006 at 13/16/25) and a family-wide table would memset through RDX on a slot where RDX is an ordinary argument. Done in quick task 261027-i4x (commits 056a07e17 and 651debb69).
+
+- Inventory: `meta/sdk/x64-null-sret-inventory.json` (74 Proton versions, 189 sret slots, pinned SHA), regenerated with `pnpm extract-proton-inventory --null-sret-inventory`.
+- Generator: `emitX64NullSretObjects` emits per-size `vt_x64_null_sret_<N>` functions, per-version vtables, and the exact-string lookup `x64_null_object_for_version`. All 5 x64 fallback sites use it (SteamInternal_CreateInterface, FindOrCreateUserInterface, FindOrCreateGameServerInterface, the ISteamClient GetISteamXxx local path, and the forwarded-lookup local path). The SteamStub forwarded path still answers NULL on a miss.
+- ELEX: SteamController003 slots 9 (2 bytes) and 12 (16 bytes) are covered. Versions the bridge serves on x64 get no null object.
+- Remaining gap: a version unknown to the pinned Proton inventory still gets the all-zero generic object.
+- Still to do for "Done when": a live Wine gate on ELEX (411300) recording no sret crash.
 
 ## Done when
 
