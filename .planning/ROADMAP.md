@@ -546,7 +546,7 @@ Plans:
 6. On macOS every authenticated logon (Refresh, sign-in, depot install, and any reconnect or relog) runs inside the go-offline wrap: unit tests cover Steam already offline (no toggle, no `goonline`), LogOff seen, LogOff not seen (guided fallback, no logon), and logon failure (`goonline` still fires); `autoRelogin` is off. Mac UAT: an explicit Refresh and a depot install with Mac Steam online leave Friends signed in with status changeable.
 **Requirements**: TBD
 **Depends on:** Phase 53
-**Plans:** 8/11 plans executed
+**Plans:** 9/11 plans executed
 
 Plans:
 
@@ -572,7 +572,7 @@ Plans:
 
 **Wave 5** *(blocked on waves 1-4)*
 
-- [ ] 54-09-PLAN.md — steamAuthSessionPolicy source gate; STEAM-STACK.md and CLAUDE.md updated; full desk battery (ROADMAP-SC3, SC5)
+- [x] 54-09-PLAN.md — steamAuthSessionPolicy source gate; STEAM-STACK.md and CLAUDE.md updated; full desk battery (ROADMAP-SC3, SC5)
 
 **Wave 6** *(blocked on 54-09)*
 
