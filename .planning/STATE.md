@@ -446,6 +446,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | Humble Store | HSTORE-02: Read-only Humble bundle/deals listing in-app with "Buy on Humble" deep-links | Post-v0.3 | v0.3 requirements (separate data source; key management prioritized) |
 | v0.8 close 2026-10-16 | **Override closeout** — 429 items acknowledged via `audit-open acknowledge` (markers in the artifacts; verdict-preserving, self-invalidating), 140 evidence-table rows in five deferred-items.md ledgers left open because no row-level marker exists. 0 carried forward from a prior close. | override_closeout | 2026-10-16 (v0.8 close) |
 | fast | ELEX (411300) moved from bridge `knownBad` (does-not-run) to `seed`. Its loading-screen hang was the undelivered UserStatsReceived_t, fixed by 261027-k51. The live run reached the main menu with 529 s of play and game-originated stats calls. Seeded without `playVerified` because no UAT item records the run yet. Only the ELEX change was committed; the uncommitted Unclaimed World knownBad edit is left in the working tree. allowlist + games tests 425/425. | 2026-10-27 | `39ace9c19` | Done | — |
+| fast | Library-sorting todo closed. The operator ran live checks 1-3 for 261027-jjz (Last played re-sorts after a GOG/Epic session, cold start with Last played saved, Group by Store / Install status) and all passed. The todo moved to `completed/`. | 2026-10-27 | (this commit) | live gate PASS | — |
 
 ## Session Continuity
 

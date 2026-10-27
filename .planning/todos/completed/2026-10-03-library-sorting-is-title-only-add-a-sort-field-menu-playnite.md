@@ -153,12 +153,11 @@ Slice 1 as decided above:
 - Persist the choices in `localStorage` like today's toggles (default approach, not locked).
 - Resolve the Steam Last-played consequence under Corrections before shipping that field.
 
-## Status (2026-10-27): slice 1 implemented, live gate open
+## Status (2026-10-27): slice 1 implemented, live gate PASSED
 
 Quick task 261027-jjz built slice 1 (`librarySort.ts`, `useNonSteamLastPlayed.ts`, the Header
 sort/group controls, and 12 strings in all 49 catalogs). Its code-review fixes are in commits
-`e99bf4175`..`cd31cb0fa`. Desk checks pass. These live checks remain before this todo moves to
-`completed/`:
+`e99bf4175`..`cd31cb0fa`. Desk checks pass. The operator ran all three live checks on 2026-10-27 and each passed:
 
 1. Sort by Last played, launch a GOG or Epic game, quit, and confirm it moves to the top without a
    restart. This exercises the new `storeOnChanged` signal (review WR-05).
@@ -166,3 +165,6 @@ sort/group controls, and 12 strings in all 49 catalogs). Its code-review fixes a
    then reorder once (WR-02).
 3. Group by Store and by Install status. Confirm the order matches today's
    installed → installing → not installed behaviour.
+
+Result: check 1 passed, check 2 passed, check 3 passed. Closed. Release date (deferred) and Developer
+(fill rate unmeasured) remain possible follow-ups. Each would need its own todo.
