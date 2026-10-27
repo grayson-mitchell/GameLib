@@ -22,5 +22,5 @@ Known-fix registry values already present in the prefix's system.reg/user.reg (s
 ## Deferred / pre-existing
 - `steamBridgeKnownFixes.test.ts` "bundled 63000 profile" fails: it asserts `public/fixes/63000-steam.json` does not exist, but that file is tracked in git. Unrelated to this change; not fixed.
 
-## Pending: live check (operator)
-Restart `tauri dev` (sidecar is not rebuilt; check sidecar.js mtime), launch Unclaimed World (284100); gamelib.log should show two "already set ... skipping reg add" lines and no `reg add` Wine command before the game exe.
+## Live check: passed (operator, 2026-10-27)
+After a `tauri dev` restart, the operator launched Unclaimed World (284100) three times (16:32:52, 16:33:25, 16:33:38). Each launch logged both "already set in system.reg, skipping reg add" lines (/reg:32 and /reg:64), ran no `reg add` Wine command, and saw the game process 1-2 s after the exe started. Before the fix, slow launches took 53-66 s from the exe start to the game process, after 15 s registry timeouts.
