@@ -118,6 +118,7 @@ jest.mock('steam-user', () => {
   return FakeSteamUser
 })
 
+const mockRestoreMacSteamOnlineIfOwed = jest.fn()
 jest.mock('../macSteamOffline', () => {
   class GuidedOfflineRequiredError extends Error {
     cause: string
@@ -127,7 +128,12 @@ jest.mock('../macSteamOffline', () => {
       this.cause = cause
     }
   }
-  return { withMacSteamOffline: jest.fn(), GuidedOfflineRequiredError }
+  return {
+    withMacSteamOffline: jest.fn(),
+    GuidedOfflineRequiredError,
+    restoreMacSteamOnlineIfOwed: (...args: unknown[]) =>
+      mockRestoreMacSteamOnlineIfOwed(...args)
+  }
 })
 
 const mockReleaseAnonymousForShutdown = jest.fn()
@@ -171,6 +177,7 @@ beforeEach(() => {
   FakeLib.instances = []
   FakeLib.ctorOpts = []
   FakeLib.behaviour = 'loggedOn'
+  mockRestoreMacSteamOnlineIfOwed.mockImplementation(async () => 'not-owed')
   macMock.withMacSteamOffline.mockImplementation(
     async (connect: (wrap: string) => Promise<unknown>) => ({
       value: await connect('toggled'),
@@ -516,6 +523,37 @@ describe('authenticated session lease', () => {
   it('releaseForShutdown releases the anonymous client even with no authenticated client', () => {
     SteamUser.releaseForShutdown()
     expect(mockReleaseAnonymousForShutdown).toHaveBeenCalledTimes(1)
+  })
+
+  it('releaseForShutdown pays the owed goonline after logOff', async () => {
+    const a = await acquire()
+    a.release()
+    SteamUser.releaseForShutdown()
+    expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('shutdown')
+    expect(instances()[0].logOff.mock.invocationCallOrder[0]).toBeLessThan(
+      mockRestoreMacSteamOnlineIfOwed.mock.invocationCallOrder[0]
+    )
+  })
+
+  it('releaseForShutdown still restores exactly once with no authenticated client', () => {
+    SteamUser.releaseForShutdown()
+    expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledTimes(1)
+    expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('shutdown')
+  })
+
+  it('releaseForShutdown still restores when logOff throws', async () => {
+    const a = await acquire()
+    a.release()
+    instances()[0].logOff.mockImplementation(() => {
+      throw new Error('boom')
+    })
+    SteamUser.releaseForShutdown()
+    expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledTimes(1)
+  })
+
+  it('releaseForShutdown resolves to the restore outcome', async () => {
+    mockRestoreMacSteamOnlineIfOwed.mockImplementation(async () => 'restored')
+    await expect(SteamUser.releaseForShutdown()).resolves.toBe('restored')
   })
 
   it('getPersistedSteamId64 returns a numeric stored id and undefined otherwise', () => {
