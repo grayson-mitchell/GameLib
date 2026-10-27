@@ -373,3 +373,163 @@ describe('authenticated connect lifecycle', () => {
     expect(logInfoLines().join('\n')).not.toContain('secret-refresh-token')
   })
 })
+
+describe('authenticated session lease', () => {
+  const acquire = (
+    opts: Record<string, unknown> = { reason: 'user-install' }
+  ) => (SteamUser as any).acquireAuthenticated(opts)
+
+  it('two concurrent acquires share one client and one logOn', async () => {
+    const [a, b] = await Promise.all([acquire(), acquire()])
+    expect(a.ok).toBe(true)
+    expect(b.ok).toBe(true)
+    expect(a.client).toBe(b.client)
+    expect(instances()).toHaveLength(1)
+    expect(instances()[0].logOn).toHaveBeenCalledTimes(1)
+    expect(instances()[0].logOn).toHaveBeenCalledWith({
+      refreshToken: 'secret-refresh-token'
+    })
+  })
+
+  it('a wrap refusal returns go-offline-required and pushes the guided action once', async () => {
+    macMock.withMacSteamOffline.mockRejectedValue(
+      new macMock.GuidedOfflineRequiredError('logoff-not-seen')
+    )
+    const lease = await acquire({
+      reason: 'user-install',
+      guidedAction: 'install',
+      appName: '230070'
+    })
+    expect(lease).toEqual({ ok: false, reason: 'go-offline-required' })
+    expect(sendFrontendMessage).toHaveBeenCalledWith('steamGoOfflineRequired', {
+      action: 'install',
+      appName: '230070'
+    })
+    expect(sendFrontendMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it('a wrap refusal without a guidedAction pushes nothing', async () => {
+    macMock.withMacSteamOffline.mockRejectedValue(
+      new macMock.GuidedOfflineRequiredError('running-probe-failed')
+    )
+    const lease = await acquire({ reason: 'prescreen' })
+    expect(lease).toEqual({ ok: false, reason: 'go-offline-required' })
+    expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  it('callers sharing one in-flight refused connect push at most once each', async () => {
+    macMock.withMacSteamOffline.mockRejectedValue(
+      new macMock.GuidedOfflineRequiredError('logoff-not-seen')
+    )
+    await Promise.all([
+      acquire({ reason: 'user-install', guidedAction: 'install' }),
+      acquire({ reason: 'user-install', guidedAction: 'install' })
+    ])
+    const pushes = (sendFrontendMessage as jest.Mock).mock.calls.length
+    expect(pushes).toBeGreaterThanOrEqual(1)
+    expect(pushes).toBeLessThanOrEqual(2)
+  })
+
+  it('release is idempotent; the last release closes the session after 60000 ms idle', async () => {
+    const a = await acquire()
+    const b = await acquire()
+    const client = instances()[0]
+    a.release()
+    a.release()
+    b.release()
+    await jest.advanceTimersByTimeAsync(59999)
+    expect(client.logOff).not.toHaveBeenCalled()
+    await jest.advanceTimersByTimeAsync(1)
+    expect(client.logOff).toHaveBeenCalledTimes(1)
+    expect(SteamUser.getClient()).toBeNull()
+    expect(logInfoLines()).toContain(
+      '[Steam] CM session closed mode=authenticated cause=idle'
+    )
+  })
+
+  it('an acquire inside the grace window cancels the timer and does not log on again', async () => {
+    const a = await acquire()
+    a.release()
+    await jest.advanceTimersByTimeAsync(30000)
+    const b = await acquire()
+    expect(b.ok).toBe(true)
+    await jest.advanceTimersByTimeAsync(60000)
+    expect(instances()[0].logOff).not.toHaveBeenCalled()
+    expect(instances()[0].logOn).toHaveBeenCalledTimes(1)
+    expect(instances()).toHaveLength(1)
+  })
+
+  it('a refused acquire leaves the lease count unchanged', async () => {
+    mockConfigStore.get_nodefault.mockReturnValue(undefined)
+    expect(await acquire()).toEqual({ ok: false, reason: 'not-signed-in' })
+    expect(internals.leaseCount).toBe(0)
+
+    mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+      key === 'isLoggedIn' ? true : undefined
+    )
+    const ok = await acquire()
+    expect(internals.leaseCount).toBe(1)
+    ok.release()
+    expect(internals.leaseCount).toBe(0)
+    await jest.advanceTimersByTimeAsync(60000)
+    expect(instances()[0].logOff).toHaveBeenCalledTimes(1)
+  })
+
+  it('acquireOpenAuthenticated is null with no session and never reads the keyring or logs on', () => {
+    expect(SteamUser.acquireOpenAuthenticated('shared-redist')).toBeNull()
+    expect(mockReadTokenOutcome).not.toHaveBeenCalled()
+    expect(instances()).toHaveLength(0)
+  })
+
+  it('acquireOpenAuthenticated reuses an open session and cancels the idle timer', async () => {
+    const a = await acquire()
+    a.release()
+    const open = SteamUser.acquireOpenAuthenticated('shared-redist')
+    expect(open).not.toBeNull()
+    expect(open?.client).toBe(a.client)
+    await jest.advanceTimersByTimeAsync(120000)
+    expect(instances()[0].logOff).not.toHaveBeenCalled()
+    open?.release()
+    await jest.advanceTimersByTimeAsync(60000)
+    expect(instances()[0].logOff).toHaveBeenCalledTimes(1)
+    expect(instances()).toHaveLength(1)
+  })
+
+  it('a bare ensureConnected opens the session without arming an idle timer', async () => {
+    expect(await SteamUser.ensureConnected()).toBe(true)
+    await jest.advanceTimersByTimeAsync(120000)
+    expect(instances()[0].logOff).not.toHaveBeenCalled()
+    expect(SteamUser.getClient()).not.toBeNull()
+  })
+
+  it('releaseForShutdown closes both clients, clears the timer and refuses later acquires', async () => {
+    const a = await acquire()
+    a.release()
+    SteamUser.releaseForShutdown()
+    expect(instances()[0].logOff).toHaveBeenCalled()
+    expect(mockReleaseAnonymousForShutdown).toHaveBeenCalledTimes(1)
+    expect(internals.idleTimer).toBeNull()
+    expect(await acquire()).toEqual({ ok: false, reason: 'shutting-down' })
+    expect(instances()).toHaveLength(1)
+  })
+
+  it('releaseForShutdown releases the anonymous client even with no authenticated client', () => {
+    SteamUser.releaseForShutdown()
+    expect(mockReleaseAnonymousForShutdown).toHaveBeenCalledTimes(1)
+  })
+
+  it('getPersistedSteamId64 returns a numeric stored id and undefined otherwise', () => {
+    const store = (steamId: unknown) =>
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'userData' ? { username: 'x', steamId } : undefined
+      )
+    store('76561198000000000')
+    expect((SteamUser as any).getPersistedSteamId64()).toBe('76561198000000000')
+    store('')
+    expect((SteamUser as any).getPersistedSteamId64()).toBeUndefined()
+    store('not-a-number')
+    expect((SteamUser as any).getPersistedSteamId64()).toBeUndefined()
+    mockConfigStore.get_nodefault.mockReturnValue(undefined)
+    expect((SteamUser as any).getPersistedSteamId64()).toBeUndefined()
+  })
+})
