@@ -202,6 +202,14 @@ function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
 // 'Logged Off' restores it afterwards. Without it a user-chosen offline state
 // is never undone.
 let guidedArmedAt: number | null = null
+// 54-REVIEW WR-05: pays an abandoned guided step when its arm lapses unused.
+let guidedExpiryTimer: ReturnType<typeof setTimeout> | null = null
+
+function disarmGuided(): void {
+  guidedArmedAt = null
+  if (guidedExpiryTimer) clearTimeout(guidedExpiryTimer)
+  guidedExpiryTimer = null
+}
 
 // 54-REVIEW WR-01: bumped on every marker write, so a late goonline
 // confirmation clears only the marker it was fired for, never a newer one.
@@ -239,7 +247,7 @@ const restoreInFlight: {
 
 // ts-prune-ignore-next
 export function __resetMacSteamOfflineForTests(): void {
-  guidedArmedAt = null
+  disarmGuided()
   restoreInFlight.boot = null
   restoreInFlight.shutdown = null
   debtGeneration = 0
@@ -563,7 +571,7 @@ export async function withMacSteamOffline<T>(
     const guidedArmed =
       guidedArmedAt !== null &&
       deps.now() - guidedArmedAt < GUIDED_RESTORE_TTL_MS
-    guidedArmedAt = null
+    disarmGuided()
     let debtPresent = false
     if (isOnlineDebtOwed(deps)) {
       const debt = readOnlineDebt(deps)
@@ -865,7 +873,43 @@ export async function checkGuidedOfflineReady(
     const state = readMacSteamCmState(deps.connectionLogPath())
     if (state !== 'Logged Off') return { status: 'still-online' }
   }
-  if (running) recordOnlineDebt('guided', deps)
+  disarmGuided()
+  if (running) {
+    recordOnlineDebt('guided', deps)
+    // 54-REVIEW WR-05: if no wrapped logon consumes this arm in time (the
+    // retry failed before its logon, or a redeem is never retried), pay the
+    // goonline anyway. unref'd: it never holds the sidecar open.
+    guidedExpiryTimer = setTimeout(
+      () => payAbandonedGuidedOffline('expired', deps),
+      GUIDED_RESTORE_TTL_MS
+    )
+    guidedExpiryTimer.unref?.()
+  }
   guidedArmedAt = deps.now()
   return { status: 'ready' }
+}
+
+/**
+ * 54-REVIEW WR-05: the user left the guided Go Offline step (Cancel, close)
+ * or its arm lapsed, while Mac Steam is offline only because GameLib asked.
+ * Fires the goonline and clears the marker once Steam is confirmed online.
+ * A no-op unless the step is still armed and the marker is this process's own
+ * `guided` record, so it never undoes a wrap in flight or the user's choice.
+ */
+export function payAbandonedGuidedOffline(
+  cause: 'cancel' | 'expired',
+  deps: MacSteamOfflineDeps = defaultMacSteamOfflineDeps()
+): boolean {
+  const armed = guidedArmedAt !== null
+  disarmGuided()
+  if (deps.platform !== 'darwin' || !armed) return false
+  if (!isOnlineDebtOwed(deps)) return false
+  const debt = readOnlineDebt(deps)
+  if (debt.by !== 'guided' || debt.pid !== deps.selfPid) return false
+  logInfo(
+    `[Steam] go-offline guided step ${cause === 'cancel' ? 'cancelled' : 'expired'}: firing goonline`,
+    LogPrefix.Steam
+  )
+  fireGoOnlineAndConfirm(deps)
+  return true
 }

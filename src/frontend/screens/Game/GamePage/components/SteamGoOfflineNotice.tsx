@@ -16,7 +16,9 @@ import {
 // `steamGoOfflineRequired` push (the go-offline wrap did not see Mac Steam log
 // off). Continue never logs on: it asks the backend whether Mac Steam now reads
 // Logged Off and only then re-runs the blocked action, which goes back through
-// the backend's gated session entry point. Cancel dispatches nothing.
+// the backend's gated session entry point. Cancel (or closing the dialog)
+// re-runs nothing; it only asks the backend to set Steam back online if a
+// Continue had already armed the guided step (54-REVIEW WR-05).
 const SteamGoOfflineNotice = () => {
   const { t } = useTranslation('gamelib')
   const { refreshLibrary } = useContext(ContextProvider)
@@ -40,6 +42,19 @@ const SteamGoOfflineNotice = () => {
 
   if (!isOpen || !action) {
     return null
+  }
+
+  // 54-REVIEW WR-05: leaving the step after Continue reported "ready" would
+  // otherwise leave Steam offline until GameLib quits. The backend acts only
+  // when the guided step is still armed, so a Cancel before Continue, or
+  // after the retried action consumed the step, changes nothing.
+  const dismiss = () => {
+    window.api.steamGoOfflineCancel().catch((err: unknown) => {
+      window.api.logError(
+        `54 steamGoOfflineCancel failed: ${err instanceof Error ? err.message : String(err)}`
+      )
+    })
+    close()
   }
 
   const onContinue = async () => {
@@ -105,11 +120,11 @@ const SteamGoOfflineNotice = () => {
 
   return (
     <Dialog
-      onClose={close}
+      onClose={dismiss}
       showCloseButton
       className="steamGoOfflineNoticeDialog"
     >
-      <DialogHeader onClose={close}>
+      <DialogHeader onClose={dismiss}>
         {t('steam.goOffline.title', 'Set Steam offline to continue')}
       </DialogHeader>
       <DialogContent>
@@ -153,7 +168,7 @@ const SteamGoOfflineNotice = () => {
         >
           {t('steam.goOffline.continue', 'Continue')}
         </button>
-        <button onClick={close} className="button is-secondary outline">
+        <button onClick={dismiss} className="button is-secondary outline">
           {t('steam.bridge.routeNotice.cancel', 'Cancel')}
         </button>
       </DialogFooter>

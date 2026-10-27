@@ -370,6 +370,9 @@ interface AsyncIPCFunctions {
   // Phase 54: sidecar-only, registered by plan 07. The renderer's Continue
   // button on the guided Go Offline step; arms the one-shot guided restore.
   steamGoOfflineRetry: () => Promise<SteamGoOfflineRetryResult>
+  // 54-REVIEW WR-05: sidecar-only. The guided Go Offline step's Cancel/close;
+  // pays the goonline a ready-but-abandoned guided step owes.
+  steamGoOfflineCancel: () => Promise<void>
   // Phase 34.13 (34.13-07), D-14: persists the install form's chosen wine
   // engine into steamBottleConfigStore via bottle.ts's own
   // persistBottleWineVersion() primitive, after validating the untrusted

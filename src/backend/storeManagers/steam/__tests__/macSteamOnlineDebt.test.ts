@@ -31,6 +31,7 @@ jest.mock('backend/config', () => ({
 import { spawn } from 'child_process'
 import { logInfo, logWarning } from 'backend/logger'
 import {
+  GUIDED_RESTORE_TTL_MS,
   GuidedOfflineRequiredError,
   MAC_STEAM_LATE_LOGOFF_WINDOW_MS,
   MAC_STEAM_RESTORE_CONFIRM_MS,
@@ -40,6 +41,7 @@ import {
   __resetMacSteamOfflineForTests,
   checkGuidedOfflineReady,
   isOwnUserPidAlive,
+  payAbandonedGuidedOffline,
   readMacSteamCmStateSince,
   restoreMacSteamOnlineIfOwed,
   spawnOpenDetached,
@@ -654,6 +656,72 @@ describe('restoreMacSteamOnlineIfOwed', () => {
     await boot
     await wrap
     expect(connect).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('abandoned guided step (54-REVIEW WR-05)', () => {
+  const onlineDeps = () =>
+    makeDeps({
+      openUrlDetached: (url) => {
+        urls.push('detached:' + url)
+        fs.appendFileSync(logPath, onlineLine(clock))
+      }
+    })
+
+  it('Cancel after ready fires goonline and clears the guided marker once confirmed', async () => {
+    fs.writeFileSync(logPath, offlineLine(BASE - 1000))
+    const deps = onlineDeps()
+    expect(await checkGuidedOfflineReady(deps)).toEqual({ status: 'ready' })
+    expect(payAbandonedGuidedOffline('cancel', deps)).toBe(true)
+    await __macSteamOnlineConfirmForTests()
+    expect(urls).toEqual(['detached:' + STEAM_GO_ONLINE_URL])
+    expect(fs.existsSync(markerPath)).toBe(false)
+    // One-shot: the arm is gone, so a later wrap finds nothing to restore.
+    expect(payAbandonedGuidedOffline('cancel', deps)).toBe(false)
+  })
+
+  it('Cancel before Continue fires nothing', () => {
+    fs.writeFileSync(logPath, offlineLine(BASE - 1000))
+    expect(payAbandonedGuidedOffline('cancel', makeDeps())).toBe(false)
+    expect(urls).toEqual([])
+  })
+
+  it('Cancel after the retried logon consumed the step fires nothing more', async () => {
+    fs.writeFileSync(logPath, offlineLine(BASE - 1000))
+    const deps = onlineDeps()
+    await checkGuidedOfflineReady(deps)
+    await withMacSteamOffline(jest.fn().mockResolvedValue('v'), deps)
+    await __macSteamOnlineConfirmForTests()
+    urls.length = 0
+    expect(payAbandonedGuidedOffline('cancel', deps)).toBe(false)
+    expect(urls).toEqual([])
+  })
+
+  it('a marker another step rewrote is left alone', async () => {
+    fs.writeFileSync(logPath, offlineLine(BASE - 1000))
+    const deps = makeDeps()
+    await checkGuidedOfflineReady(deps)
+    writeMarker(undefined, { by: 'toggled' })
+    expect(payAbandonedGuidedOffline('cancel', deps)).toBe(false)
+    expect(urls).toEqual([])
+    expect(fs.existsSync(markerPath)).toBe(true)
+  })
+
+  it('an unused arm is paid when it lapses', async () => {
+    jest.useFakeTimers()
+    try {
+      fs.writeFileSync(logPath, offlineLine(BASE - 1000))
+      const deps = onlineDeps()
+      await checkGuidedOfflineReady(deps)
+      jest.advanceTimersByTime(GUIDED_RESTORE_TTL_MS - 1)
+      expect(urls).toEqual([])
+      jest.advanceTimersByTime(1)
+      expect(urls).toEqual(['detached:' + STEAM_GO_ONLINE_URL])
+    } finally {
+      jest.useRealTimers()
+    }
+    await __macSteamOnlineConfirmForTests()
+    expect(fs.existsSync(markerPath)).toBe(false)
   })
 })
 

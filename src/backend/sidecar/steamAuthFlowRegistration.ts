@@ -71,6 +71,8 @@
  *     finish" click for a bottle-route install parked at StateFlags 1026.
  *   - `steamGoOfflineRetry` -> `checkGuidedOfflineReady()` (`macSteamOffline.ts`),
  *     Phase 54 Plan 07 — the guided Go Offline dialog's Continue.
+ *   - `steamGoOfflineCancel` -> `payAbandonedGuidedOffline('cancel')`
+ *     (`macSteamOffline.ts`), 54-REVIEW WR-05 — the dialog's Cancel/close.
  *
  * Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04,
  * `ipcMain.handle`, `main.ts:958-961`):
@@ -150,7 +152,10 @@ import {
 } from '../storeManagers/steam/installFormIpc'
 import { removeAllSteamInstallCopies } from '../storeManagers/steam/removeAllCopies'
 import { startBottledSteamToFinishInstall } from '../storeManagers/steam/bottledHandoff'
-import { checkGuidedOfflineReady } from '../storeManagers/steam/macSteamOffline'
+import {
+  checkGuidedOfflineReady,
+  payAbandonedGuidedOffline
+} from '../storeManagers/steam/macSteamOffline'
 
 /**
  * Registers the QR-login trio, the credential/SteamGuard/TOTP login trio,
@@ -371,6 +376,13 @@ export function registerSteamAuthFlows(): void {
   // validate; it only reads Mac Steam's state and arms the one-shot guided
   // restore. It never logs on.
   ipcMain.handle('steamGoOfflineRetry', async () => checkGuidedOfflineReady())
+
+  // 54-REVIEW WR-05: sidecar-only, no renderer arguments. The guided dialog's
+  // Cancel/close: pays the goonline a ready-but-abandoned guided step owes.
+  // A no-op unless that step is still armed. It never logs on.
+  ipcMain.handle('steamGoOfflineCancel', async () => {
+    payAbandonedGuidedOffline('cancel')
+  })
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
   ipcMain.handle('steamClientSetupStart', async () => {
