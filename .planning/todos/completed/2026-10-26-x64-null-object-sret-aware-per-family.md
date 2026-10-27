@@ -46,3 +46,12 @@ Option (a) was chosen by the user on 2026-10-26 and implemented PER EXACT INTERF
 ## Done when
 
 The chosen option is implemented, gen_vtables tests pin it, and a live Wine gate on an affected title records no sret crash. If option (b) is chosen, the gate records the re-route.
+
+## Resolution
+
+Closed 2026-10-27 by user decision, accepting the unit and disassembly evidence instead of a live gate.
+
+- Code: quick 261027-i4x (056a07e17, 651debb69) builds per-version sret-aware x64 null objects from the Proton inventory. Quick 261027-ijs (d6f4ef20d, e2f073ba6) adds per-site NULLSRET first-call logging. Quick 261027-jgs (1292d1b10, 859a64ff0, d03c037df) adds per-slot null thunks with STUBCALL logging.
+- Evidence: gen_vtables pins the per-version tables and the fallback-site rewiring. shimAbiGate disassembles the zig-built x64 shim and proves RDX reaches RAX on the sret null functions and RAX=0 on the per-slot null thunks.
+- Why no live gate: ELEX, the motivating title, never touches ISteamController at runtime. Across four 2026-10-27 runs, including 529 s of play after the 261027-k51 stats fix, the log shows no SteamController003 STUBCALL and no NULLSRET; ELEX reads gamepads via XInput. Its loading-screen hang was a different bug (the undelivered UserStatsReceived_t, fixed by 261027-k51). The operator's only Mac pad (a PowerA Switch 2 wired pad, 20D6:A720) is not recognised by macOS GameController at all, so a controller run was not possible either.
+- Standing diagnostics: any future title that calls an unserved sret slot logs `NULLSRET <version> slot=<n> size=<bytes>` in the helper log. A crash right after such a line would reopen this.
