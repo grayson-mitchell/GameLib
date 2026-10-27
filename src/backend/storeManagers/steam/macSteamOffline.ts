@@ -46,6 +46,11 @@ export const STEAM_GO_ONLINE_URL = 'steam://open/goonline'
 // ts-prune-ignore-next
 export const MAC_STEAM_OFFLINE_OWED_FILE = 'mac-steam-offline-owed.json'
 export const MAC_STEAM_RESTORE_CONFIRM_MS = 10000
+// 54-REVIEW WR-02: a gooffline whose LogOff was not seen within
+// MAC_STEAM_LOGOFF_WAIT_MS can still land late. A user-initiated LogOff this
+// soon after the fire is taken as that late landing; a later one is the
+// user's own Go Offline, which GameLib must not undo.
+export const MAC_STEAM_LATE_LOGOFF_WINDOW_MS = 60000
 
 const STATE_READ_BYTES = 65536
 const STATE_LINE_RE = /^\[[^\]]+\] \[([A-Za-z ]+), -?\d+, -?\d+\]/
@@ -211,9 +216,12 @@ export function __macSteamOnlineConfirmForTests(): Promise<void> {
   return onlineConfirmInFlight ?? Promise.resolve()
 }
 
+type OnlineDebtBy = 'toggled' | 'guided' | 'toggled-unconfirmed'
+
 function recordOnlineDebt(
-  by: 'toggled' | 'guided',
-  deps: MacSteamOfflineDeps
+  by: OnlineDebtBy,
+  deps: MacSteamOfflineDeps,
+  sinceMs: number = deps.now()
 ): void {
   debtGeneration++
   try {
@@ -222,7 +230,7 @@ function recordOnlineDebt(
     writeFileSync(
       p,
       JSON.stringify({
-        since: new Date(deps.now()).toISOString(),
+        since: new Date(sinceMs).toISOString(),
         by,
         pid: deps.selfPid
       }),
@@ -256,26 +264,53 @@ function isOnlineDebtOwed(deps: MacSteamOfflineDeps): boolean {
 }
 
 // Best effort: presence is the debt, content is diagnostic only.
-function readOnlineDebt(deps: MacSteamOfflineDeps): {
+interface OnlineDebt {
   sinceMs?: number
   pid?: number
-} {
+  by?: string
+}
+
+function readOnlineDebt(deps: MacSteamOfflineDeps): OnlineDebt {
   try {
     const parsed: unknown = JSON.parse(
       readFileSync(deps.onlineDebtPath(), 'utf8')
     )
     if (typeof parsed !== 'object' || parsed === null) return {}
-    const { since, pid } = parsed as { since?: unknown; pid?: unknown }
-    const out: { sinceMs?: number; pid?: number } = {}
+    const { since, pid, by } = parsed as {
+      since?: unknown
+      pid?: unknown
+      by?: unknown
+    }
+    const out: OnlineDebt = {}
     if (typeof since === 'string') {
       const t = Date.parse(since)
       if (!Number.isNaN(t)) out.sinceMs = t
     }
     if (typeof pid === 'number') out.pid = pid
+    if (typeof by === 'string') out.by = by
     return out
   } catch {
     return {}
   }
+}
+
+/**
+ * 54-REVIEW WR-02: a `toggled-unconfirmed` marker (the wrap's LogOff was not
+ * seen) is owed only when connection_log shows a user-initiated LogOff within
+ * MAC_STEAM_LATE_LOGOFF_WINDOW_MS of the fire, i.e. the gooffline landed
+ * late. Every other marker is owed by its presence alone.
+ */
+function isUnconfirmedDebtStale(
+  debt: OnlineDebt,
+  logPath: () => string
+): boolean {
+  if (debt.by !== 'toggled-unconfirmed') return false
+  if (debt.sinceMs === undefined) return false
+  return !logoffSeenWithin(
+    logPath(),
+    debt.sinceMs,
+    debt.sinceMs + MAC_STEAM_LATE_LOGOFF_WINDOW_MS
+  )
 }
 
 function debtOwnedByOtherLiveProcess(
@@ -350,6 +385,43 @@ export function readMacSteamCmStateSince(
     return null
   } catch {
     return null
+  } finally {
+    if (fd !== null) closeSync(fd)
+  }
+}
+
+/**
+ * True when a timestamped user-initiated LogOff line in the last 64 KiB of
+ * connection_log.txt falls in [fromMs floored to the second, toMs].
+ */
+function logoffSeenWithin(path: string, fromMs: number, toMs: number): boolean {
+  const floor = Math.floor(fromMs / 1000) * 1000
+  let fd: number | null = null
+  try {
+    fd = openSync(path, 'r')
+    const size = fstatSync(fd).size
+    const len = Math.min(size, STATE_READ_BYTES)
+    if (len === 0) return false
+    const buf = Buffer.alloc(len)
+    readSync(fd, buf, 0, len, size - len)
+    for (const raw of buf.toString('utf8').split('\n')) {
+      const line = raw.replace(/\r$/, '')
+      if (!LOGOFF_EVIDENCE_RE.test(line)) continue
+      const m = STATE_LINE_TS_RE.exec(line)
+      if (!m) continue
+      const ts = new Date(
+        Number(m[1]),
+        Number(m[2]) - 1,
+        Number(m[3]),
+        Number(m[4]),
+        Number(m[5]),
+        Number(m[6])
+      ).getTime()
+      if (ts >= floor && ts <= toMs) return true
+    }
+    return false
+  } catch {
+    return false
   } finally {
     if (fd !== null) closeSync(fd)
   }
@@ -447,9 +519,23 @@ export async function withMacSteamOffline<T>(
       guidedArmedAt !== null &&
       deps.now() - guidedArmedAt < GUIDED_RESTORE_TTL_MS
     guidedArmedAt = null
-    const debtPresent =
-      isOnlineDebtOwed(deps) &&
-      !debtOwnedByOtherLiveProcess(readOnlineDebt(deps), deps)
+    let debtPresent = false
+    if (isOnlineDebtOwed(deps)) {
+      const debt = readOnlineDebt(deps)
+      if (!debtOwnedByOtherLiveProcess(debt, deps)) {
+        if (isUnconfirmedDebtStale(debt, () => logPath)) {
+          // The wrap's gooffline never landed: this Logged Off is the user's
+          // own choice, and the marker no longer means anything.
+          clearOnlineDebt(deps)
+          logInfo(
+            '[Steam] go-offline wrap: unconfirmed marker with no late LogOff, marker cleared',
+            LogPrefix.Steam
+          )
+        } else {
+          debtPresent = true
+        }
+      }
+    }
     const armed = guidedArmed || debtPresent
     if (!armed) {
       logInfo(
@@ -477,7 +563,8 @@ export async function withMacSteamOffline<T>(
     `[Steam] go-offline wrap: Mac Steam state=${state ?? 'unknown'}, firing gooffline`,
     LogPrefix.Steam
   )
-  recordOnlineDebt('toggled', deps)
+  const firedAt = deps.now()
+  recordOnlineDebt('toggled', deps, firedAt)
   // Watch BEFORE the verb so the start offset precedes any LogOff line.
   const seen = watchConnectionLog(
     logPath,
@@ -491,6 +578,11 @@ export async function withMacSteamOffline<T>(
       `[Steam] go-offline wrap: no user-initiated LogOff within ${MAC_STEAM_LOGOFF_WAIT_MS}ms, deferring to the guided Go Offline step (no logon)`,
       LogPrefix.Steam
     )
+    // 54-REVIEW WR-02: Steam has not gone offline, so nothing is owed yet.
+    // The marker is kept only as `toggled-unconfirmed`, owed if the gooffline
+    // lands late (isUnconfirmedDebtStale), so a later Go Offline the user
+    // chooses is never undone by it.
+    recordOnlineDebt('toggled-unconfirmed', deps, firedAt)
     throw new GuidedOfflineRequiredError('logoff-not-seen')
   }
   return {
@@ -589,6 +681,14 @@ async function runRestore(
         LogPrefix.Steam
       )
       return 'kept-owner-alive'
+    }
+    if (isUnconfirmedDebtStale(debt, deps.connectionLogPath)) {
+      clearOnlineDebt(deps)
+      logInfo(
+        '[Steam] go-offline restore: unconfirmed marker with no late LogOff, nothing owed, marker cleared',
+        LogPrefix.Steam
+      )
+      return 'not-owed'
     }
     let running: boolean
     try {

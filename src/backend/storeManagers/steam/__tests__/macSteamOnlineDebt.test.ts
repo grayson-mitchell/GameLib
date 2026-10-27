@@ -32,6 +32,7 @@ import { spawn } from 'child_process'
 import { logInfo, logWarning } from 'backend/logger'
 import {
   GuidedOfflineRequiredError,
+  MAC_STEAM_LATE_LOGOFF_WINDOW_MS,
   MAC_STEAM_RESTORE_CONFIRM_MS,
   STEAM_GO_OFFLINE_URL,
   STEAM_GO_ONLINE_URL,
@@ -266,11 +267,38 @@ describe('marker lifecycle in the wrap', () => {
     expect(fs.existsSync(markerPath)).toBe(false)
   })
 
-  it('LogOff not seen: GuidedOfflineRequiredError and the marker is kept', async () => {
+  it('LogOff not seen: GuidedOfflineRequiredError and the marker is kept as toggled-unconfirmed from the fire', async () => {
     fs.writeFileSync(logPath, onlineLine(BASE - 60000))
     const err = await withMacSteamOffline(jest.fn(), makeDeps()).catch((e) => e)
     expect(err).toBeInstanceOf(GuidedOfflineRequiredError)
     expect(fs.existsSync(markerPath)).toBe(true)
+    const parsed = JSON.parse(fs.readFileSync(markerPath, 'utf8'))
+    expect(parsed.by).toBe('toggled-unconfirmed')
+    expect(Date.parse(parsed.since)).toBe(BASE)
+  })
+
+  it("54-REVIEW WR-02: an unconfirmed marker never undoes the user's own later Go Offline", async () => {
+    fs.writeFileSync(logPath, onlineLine(BASE - 60000))
+    await withMacSteamOffline(jest.fn(), makeDeps()).catch(() => undefined)
+    // The user goes offline by hand well after the late-landing window.
+    clock = BASE + MAC_STEAM_LATE_LOGOFF_WINDOW_MS + 60000
+    fs.appendFileSync(logPath, offlineLine(clock))
+    const connect = jest.fn().mockResolvedValue('v')
+    const r = await withMacSteamOffline(connect, makeDeps())
+    expect(r.wrap).toBe('already-offline')
+    expect(urls.filter((u) => u.includes('goonline'))).toEqual([])
+    expect(fs.existsSync(markerPath)).toBe(false)
+  })
+
+  it('54-REVIEW WR-02: an unconfirmed marker is owed when the gooffline lands late', async () => {
+    fs.writeFileSync(logPath, onlineLine(BASE - 60000))
+    await withMacSteamOffline(jest.fn(), makeDeps()).catch(() => undefined)
+    clock = BASE + 20000
+    fs.appendFileSync(logPath, offlineLine(clock))
+    const connect = jest.fn().mockResolvedValue('v')
+    const r = await withMacSteamOffline(connect, makeDeps())
+    expect(r.wrap).toBe('guided-restore')
+    expect(urls).toContain('detached:' + STEAM_GO_ONLINE_URL)
   })
 
   it('running-probe failure writes no marker', async () => {
@@ -471,6 +499,30 @@ describe('restoreMacSteamOnlineIfOwed', () => {
     expect(urls).toEqual(['detached:' + STEAM_GO_ONLINE_URL])
     expect(sleep).not.toHaveBeenCalled()
     expect(fs.existsSync(markerPath)).toBe(false)
+  })
+
+  it.each(['boot', 'shutdown'] as const)(
+    '54-REVIEW WR-02 (%s): an unconfirmed marker with no late LogOff is not owed and is cleared, nothing fired',
+    async (trigger) => {
+      writeMarker(undefined, { by: 'toggled-unconfirmed' })
+      fs.writeFileSync(
+        logPath,
+        onlineLine(BASE + 1000) +
+          offlineLine(BASE + MAC_STEAM_LATE_LOGOFF_WINDOW_MS + 30000)
+      )
+      const r = await restoreMacSteamOnlineIfOwed(trigger, makeDeps())
+      expect(r).toBe('not-owed')
+      expect(urls).toEqual([])
+      expect(fs.existsSync(markerPath)).toBe(false)
+    }
+  )
+
+  it('54-REVIEW WR-02: an unconfirmed marker with a late LogOff is restored', async () => {
+    writeMarker(undefined, { by: 'toggled-unconfirmed' })
+    fs.writeFileSync(logPath, offlineLine(BASE + 8000))
+    const r = await restoreMacSteamOnlineIfOwed('shutdown', makeDeps())
+    expect(r).toBe('restored')
+    expect(urls).toEqual(['detached:' + STEAM_GO_ONLINE_URL])
   })
 
   it('a garbage marker still counts as owed', async () => {
