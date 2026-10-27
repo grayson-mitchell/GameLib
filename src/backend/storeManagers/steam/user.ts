@@ -14,7 +14,10 @@ import { captureSignInEpoch } from 'backend/signInProbe/sessionEpoch'
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { withTimeout } from './withTimeout'
 import { sendFrontendMessage } from '../../ipc'
-import { releaseAnonymousForShutdown } from './anonymousClient'
+import {
+  closeAnonymousClient,
+  releaseAnonymousForShutdown
+} from './anonymousClient'
 import {
   withMacSteamOffline,
   GuidedOfflineRequiredError,
@@ -458,10 +461,16 @@ export class SteamUser {
         if (this.client === client) this.endSession('stale-canary')
       }
     }
-    if (!this.isLoggedIn()) return 'not-signed-in'
+    // The sign-in path has just persisted the session itself and passes the
+    // token in memory, so it does not depend on the stored flag.
+    if (tokenOverride === undefined && !this.isLoggedIn()) {
+      return 'not-signed-in'
+    }
 
     let token = tokenOverride
-    if (token === undefined) {
+    // A connect already in flight is joined below without a second keyring
+    // read: the read can raise a real Keychain prompt and its token is unused.
+    if (token === undefined && !this.connectingPromise) {
       // quick-260814-r2d: branch on the three-state outcome instead of the
       // lossy getCredentials() collapse, so a keyring read that FAILED
       // (timeout, or a Keychain Deny) is never reported the same way as a
@@ -508,13 +517,20 @@ export class SteamUser {
     // token is refused by `applySignInVerdict` as stale (T-49-10).
     const epochAtStart = captureSignInEpoch('steam')
     const start = Date.now()
-    if (!this.connectingPromise) {
+    if (!this.connectingPromise && token !== undefined) {
+      if (this.client?.steamID) {
+        // Another caller finished connecting while the keyring was being read;
+        // logging on again would log that fresh session off.
+        this.reportLogonVerdict('healthy', epochAtStart)
+        return null
+      }
       this.connectingPromise = this.wrappedConnect(token, reason).finally(
         () => {
           this.connectingPromise = null
         }
       )
     }
+    if (!this.connectingPromise) return 'client-not-ready'
     const refusal = await this.connectingPromise
     // [Timing] debug/steam-install-slow-start: cold-connect / CM-login path.
     logInfo(
@@ -625,6 +641,8 @@ export class SteamUser {
    * handleExit())) — never a floating promise.
    */
   static async logout(): Promise<void> {
+    this.clearIdleTimer()
+    this.leaseCount = 0
     if (this.client) {
       try {
         this.client.logOff()
@@ -641,6 +659,7 @@ export class SteamUser {
     // reset all connection state).
     this.connectingPromise = null
     this.logonFailure = null
+    closeAnonymousClient('logout')
     this.session = null
     this.qrSessionState = { status: 'waiting' }
     this.qrLastLoggedStatus = null
@@ -729,27 +748,31 @@ export class SteamUser {
     } catch {
       // steamID is derived from the token; absence is not fatal here
     }
-    const refusal = await this.ensureAuthenticatedSession(
-      'login',
+    const lease = await this.acquireAuthenticatedWithToken(
+      { reason: 'login' },
       session.refreshToken
     )
-    const client = this.client
-    if (refusal === null && client?.steamID) {
-      steamId = steamId || client.steamID.getSteamID64()
+    if (lease.ok) {
       try {
-        const result = await withTimeout(
-          client.getPersonas([client.steamID]),
-          SIGN_IN_PERSONA_TIMEOUT_MS,
-          'sign-in getPersonas'
-        )
-        personaName =
-          result.personas[client.steamID.getSteamID64()]?.player_name ??
-          personaName
+        const client = lease.client
+        const id = client.steamID
+        if (id) {
+          steamId = steamId || id.getSteamID64()
+          const result = await withTimeout(
+            client.getPersonas([id]),
+            SIGN_IN_PERSONA_TIMEOUT_MS,
+            'sign-in getPersonas'
+          )
+          personaName =
+            result.personas[id.getSteamID64()]?.player_name ?? personaName
+        }
       } catch (err) {
         logWarning(
           ['getPersonas failed, using fallback username:', err],
           LogPrefix.Steam
         )
+      } finally {
+        lease.release()
       }
     }
     configStore.set('userData', { username: personaName, steamId })
@@ -1241,15 +1264,25 @@ export class SteamUser {
     store: 'steam',
     key: string
   ): Promise<RedeemKeyResult> {
-    const connected = await this.ensureConnected()
-    const client = this.getClient()
-    if (!connected || !client) {
+    const lease = await this.acquireAuthenticated({
+      reason: 'redeem',
+      guidedAction: 'redeem'
+    })
+    if (!lease.ok) {
       logWarning(
         'Steam redeemKey: not connected — skipping redeemKey call',
         LogPrefix.Steam
       )
-      return { store, outcome: 'error', message: 'not-connected' }
+      return {
+        store,
+        outcome: 'error',
+        message:
+          lease.reason === 'go-offline-required'
+            ? 'go-offline-required'
+            : 'not-connected'
+      }
     }
+    const client = lease.client
 
     try {
       const { purchaseResultDetails, packageList } = await client.redeemKey(key)
@@ -1298,6 +1331,8 @@ export class SteamUser {
         e.purchaseResultDetails,
         e.packageList ?? {}
       )
+    } finally {
+      lease.release()
     }
   }
 
