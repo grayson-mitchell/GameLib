@@ -4,7 +4,7 @@ title: Library sorting is title-only — add a sort-field menu, with Playnite's 
 area: ui
 severity: minor
 platform: any
-ready: code
+ready: live-gate
 found_by: "Operator question during quick-261002-b63 (asked whether the library could sort by date purchased), 2026-10-03"
 files:
   - src/frontend/screens/Library/index.tsx:489-501,864-883
@@ -152,3 +152,17 @@ Slice 1 as decided above:
   `install_size` string.
 - Persist the choices in `localStorage` like today's toggles (default approach, not locked).
 - Resolve the Steam Last-played consequence under Corrections before shipping that field.
+
+## Status (2026-10-27): slice 1 implemented, live gate open
+
+Quick task 261027-jjz built slice 1 (`librarySort.ts`, `useNonSteamLastPlayed.ts`, the Header
+sort/group controls, and 12 strings in all 49 catalogs). Its code-review fixes are in commits
+`e99bf4175`..`cd31cb0fa`. Desk checks pass. These live checks remain before this todo moves to
+`completed/`:
+
+1. Sort by Last played, launch a GOG or Epic game, quit, and confirm it moves to the top without a
+   restart. This exercises the new `storeOnChanged` signal (review WR-05).
+2. With Last played saved, cold-start the app. The grid should show A-Z for at most one round-trip,
+   then reorder once (WR-02).
+3. Group by Store and by Install status. Confirm the order matches today's
+   installed → installing → not installed behaviour.
