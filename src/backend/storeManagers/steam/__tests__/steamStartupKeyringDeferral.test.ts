@@ -265,7 +265,8 @@ jest.mock('../macSteamOffline', () => ({
     value: await connect('not-darwin'),
     wrap: 'not-darwin'
   }),
-  GuidedOfflineRequiredError: class GuidedOfflineRequiredError extends Error {}
+  GuidedOfflineRequiredError: class GuidedOfflineRequiredError extends Error {},
+  restoreMacSteamOnlineIfOwed: async () => 'not-owed'
 }))
 jest.mock('../anonymousClient', () => ({
   getAnonymousPicsClient: async () => null,

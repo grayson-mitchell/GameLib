@@ -159,7 +159,11 @@ jest.mock('../macSteamOffline', () => {
       this.cause = cause
     }
   }
-  return { withMacSteamOffline: jest.fn(), GuidedOfflineRequiredError }
+  return {
+    withMacSteamOffline: jest.fn(),
+    GuidedOfflineRequiredError,
+    restoreMacSteamOnlineIfOwed: async () => 'not-owed'
+  }
 })
 const mockCloseAnonymousClient = jest.fn()
 const mockReleaseAnonymousForShutdown = jest.fn()

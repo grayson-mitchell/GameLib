@@ -24,7 +24,10 @@ jest.mock('../../storeManagers/steam/user', () => ({
 import { releaseOnStdinEof } from '../stdinEofRelease'
 
 describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
-  beforeEach(() => jest.clearAllMocks())
+  beforeEach(() => {
+    jest.clearAllMocks()
+    release.mockImplementation(() => Promise.resolve('not-owed'))
+  })
 
   it('does nothing while stdin is open', () => {
     const input = new PassThrough()
