@@ -232,16 +232,21 @@ export function sortAndGroupLibrary(
   }
   const byTitle = (a: GameInfo, b: GameInfo) =>
     (titleKey.get(a) as string).localeCompare(titleKey.get(b) as string)
+  // Identical title keys (e.g. one game owned on Steam and GOG) fall back to a
+  // fixed, always-ascending identity order instead of library merge order.
+  const byIdentity = (a: GameInfo, b: GameInfo) =>
+    a.runner.localeCompare(b.runner) || a.app_name.localeCompare(b.app_name)
 
   const sorted = [...games].sort((a, b) => {
-    if (field === 'name') return sign * byTitle(a, b)
+    if (field === 'name') return sign * byTitle(a, b) || byIdentity(a, b)
     const av = numKey.get(a)
     const bv = numKey.get(b)
-    if (av === undefined && bv === undefined) return byTitle(a, b)
+    if (av === undefined && bv === undefined)
+      return byTitle(a, b) || byIdentity(a, b)
     if (av === undefined) return 1
     if (bv === undefined) return -1
     if (av !== bv) return sign * (av - bv)
-    return byTitle(a, b)
+    return byTitle(a, b) || byIdentity(a, b)
   })
 
   if (groupBy === 'none') return sorted

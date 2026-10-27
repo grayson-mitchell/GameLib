@@ -191,6 +191,33 @@ describe('sortAndGroupLibrary', () => {
     )
   })
 
+  it('identical titles break ties by runner then app_name, independent of input order and direction (IN-03)', () => {
+    const steam = game({ title: 'Portal', app_name: '400', runner: 'steam' })
+    const gog = game({ title: 'Portal', app_name: 'portal', runner: 'gog' })
+    const gogB = game({ title: 'Portal', app_name: 'portal2', runner: 'gog' })
+    const ids = (gs: GameInfo[]) => gs.map((g) => `${g.runner}:${g.app_name}`)
+    const expected = ['gog:portal', 'gog:portal2', 'steam:400']
+    for (const input of [
+      [steam, gog, gogB],
+      [gogB, steam, gog]
+    ]) {
+      for (const direction of ['asc', 'desc'] as const) {
+        expect(
+          ids(sortAndGroupLibrary(input, { ...baseOpts, direction }))
+        ).toEqual(expected)
+        expect(
+          ids(
+            sortAndGroupLibrary(input, {
+              ...baseOpts,
+              field: 'lastPlayed',
+              direction
+            })
+          )
+        ).toEqual(expected)
+      }
+    }
+  })
+
   it('groups by install status with sort inside each group', () => {
     const gs = [
       game({ title: 'A', is_installed: false }),
