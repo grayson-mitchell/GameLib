@@ -125,7 +125,11 @@ export const CONTROL_SLOT = {
   // result ({u32 fn, i32 ret}); the helper logs `GINIT`.
   reportInit: 5,
   // Phase 55: the shim's SteamAPI_RunCallbacks drains queued Steam callbacks (callback 168 today) from the helper; reply [u32 count][i32 iCallback][u32 cub][bytes].
-  drainCallbacks: 6
+  drainCallbacks: 6,
+  // quick 261027-ijs: the shim reports the first call of each per-version x64
+  // sret null-object slot; the helper logs `NULLSRET`. Nothing in the sidecar
+  // sends this; it exists for the parity and helper tests.
+  reportNullSret: 7
 } as const
 
 /** Env var carrying the per-spawn secret backend -> helper (never argv). */

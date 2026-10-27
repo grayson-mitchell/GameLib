@@ -856,6 +856,132 @@ describeDarwinOnly(
       }
     }, 15000)
 
+    // quick 261027-ijs: CONTROL REPORT_NULL_SRET (slot 7) logs NULLSRET for the
+    // first call of a per-version x64 sret null-object slot.
+    test('REPORT_NULL_SRET logs NULLSRET, rejects malformed frames, sanitises, caps at 64, never logs CALL', async () => {
+      const stageDir = mkdtempSync(join(profile.root, 'report-nullsret-'))
+      const child = spawn(
+        compiledHelperPath,
+        ['--appid', '480', '--port', '0'],
+        {
+          cwd: stageDir,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: authedEnv()
+        }
+      )
+      let stderr = ''
+      child.stderr?.on('data', (data: Buffer) => {
+        stderr += data.toString()
+      })
+      const rawFrame = (
+        requestId: number,
+        slot: number,
+        size: number,
+        vlen: number,
+        ver: Buffer
+      ) => {
+        const b = Buffer.alloc(12)
+        b.writeUInt32LE(slot, 0)
+        b.writeUInt32LE(size, 4)
+        b.writeUInt32LE(vlen, 8)
+        return encodeRequest(
+          requestId,
+          CONTROL_ORDINAL,
+          CONTROL_SLOT.reportNullSret,
+          Buffer.concat([b, ver])
+        )
+      }
+      const frame = (
+        requestId: number,
+        slot: number,
+        size: number,
+        v: string
+      ) => rawFrame(requestId, slot, size, Buffer.byteLength(v), Buffer.from(v))
+      try {
+        const port = await new Promise<number>((resolvePromise, reject) => {
+          const timeout = setTimeout(
+            () => reject(new Error(`no LISTEN line -- stderr: ${stderr}`)),
+            5000
+          )
+          const poll = setInterval(() => {
+            const m = /LISTEN 127\.0\.0\.1:(\d+)/.exec(stderr)
+            if (m) {
+              clearInterval(poll)
+              clearTimeout(timeout)
+              resolvePromise(Number(m[1]))
+            }
+          }, 25)
+        })
+        const socket = new Socket()
+        await new Promise<void>((res, rej) => {
+          socket.once('error', rej)
+          socket.connect(port, '127.0.0.1', () => res())
+        })
+        await authenticate(socket)
+        try {
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                frame(1, 12, 16, 'SteamController003')
+              )
+            ).status
+          ).toBe(STATUS_OK)
+          await new Promise((r) => setTimeout(r, 100))
+          expect(stderr).toMatch(
+            /NULLSRET SteamController003 slot=12 size=16\n/
+          )
+
+          const before = stderr.length
+          const bad = [
+            // argLen < 12
+            encodeRequest(
+              2,
+              CONTROL_ORDINAL,
+              CONTROL_SLOT.reportNullSret,
+              Buffer.alloc(8)
+            ),
+            rawFrame(3, 1, 16, 0, Buffer.alloc(0)),
+            rawFrame(4, 1, 16, 129, Buffer.alloc(129, 0x41)),
+            // vlen larger than the bytes supplied
+            rawFrame(5, 1, 16, 10, Buffer.from('abc')),
+            frame(6, 256, 16, 'Bad'),
+            frame(7, 1, 0, 'Bad'),
+            frame(8, 1, 4097, 'Bad')
+          ]
+          for (const f of bad) {
+            expect((await sendFrameOnSocket(socket, f)).status).toBe(STATUS_ERR)
+          }
+          await new Promise((r) => setTimeout(r, 100))
+          expect(stderr.slice(before)).not.toMatch(/NULLSRET/)
+
+          // Control bytes in the version never reach the log raw.
+          expect(
+            (await sendFrameOnSocket(socket, frame(9, 3, 8, 'Evil\nFAKE  x')))
+              .status
+          ).toBe(STATUS_OK)
+          await new Promise((r) => setTimeout(r, 100))
+          expect(stderr).toMatch(/NULLSRET Evil\?FAKE {2}x slot=3 size=8\n/)
+          expect(stderr).not.toContain('Evil\nFAKE')
+
+          for (let i = 0; i < 80; i++) {
+            const res = await sendFrameOnSocket(
+              socket,
+              frame(20 + i, 5, 8, 'V')
+            )
+            expect(res.status).toBe(STATUS_OK)
+          }
+        } finally {
+          socket.destroy()
+        }
+        await new Promise((r) => setTimeout(r, 100))
+        expect(stderr.match(/NULLSRET /g)).toHaveLength(64)
+        expect(stderr).not.toMatch(/CALL/)
+      } finally {
+        child.kill()
+      }
+    }, 20000)
+
     // Phase 55 (55-03, P55-5): CONTROL DRAIN (slot 6) answers OK count 0 with
     // no Steam, rejects args, and fabricates nothing.
     test('DRAIN answers OK count 0 when not inited, rejects args, and fabricates nothing (P55-5)', async () => {
@@ -993,10 +1119,15 @@ describeDarwinOnly(
             Buffer.from([4, 0, 0, 0]),
             Buffer.from('abcd')
           ])
+          const nullSretBlob = Buffer.concat([
+            Buffer.from([1, 0, 0, 0, 16, 0, 0, 0, 4, 0, 0, 0]),
+            Buffer.from('abcd')
+          ])
           for (const [id, slot, blob] of [
             [4, CONTROL_SLOT.createInterface, nameBlob],
             [5, CONTROL_SLOT.reportVersion, nameBlob],
-            [6, CONTROL_SLOT.reportInit, Buffer.alloc(8)]
+            [6, CONTROL_SLOT.reportInit, Buffer.alloc(8)],
+            [9, CONTROL_SLOT.reportNullSret, nullSretBlob]
           ] as const) {
             expect(
               (
@@ -1019,7 +1150,7 @@ describeDarwinOnly(
         }
         await settle()
         const added = h.getStderr().slice(before)
-        expect(added).not.toMatch(/CALL|NOVER|GINIT|FWD/)
+        expect(added).not.toMatch(/CALL|NOVER|GINIT|FWD|NULLSRET/)
         expect(added).toMatch(/AUTH {1,}refused/)
         expect(h.getStderr()).not.toContain(TEST_SECRET)
       } finally {

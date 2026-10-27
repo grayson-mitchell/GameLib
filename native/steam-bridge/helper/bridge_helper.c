@@ -80,7 +80,8 @@
  * AUTHENTICATION (Phase 55 WR-03): the loopback listener is reachable by any
  * local user, and the callback ring can hold a Steam web-API auth ticket.
  * HEALTH and HELLO are the ONLY slots served on an unauthenticated
- * connection. WHOAMI, CREATE_INTERFACE, REPORT_VERSION, REPORT_INIT, DRAIN and
+ * connection. WHOAMI, CREATE_INTERFACE, REPORT_VERSION, REPORT_INIT,
+ * REPORT_NULL_SRET, DRAIN and
  * every interface ordinal answer STATUS_ERR (empty ret, connection kept
  * open) until a matching HELLO. The ring is bound to the launch secret, NOT to
  * a socket: it is never cleared on accept or close, because the shim
@@ -96,6 +97,13 @@
  *     logged as `GINIT` (fn name from a closed table, ints only, max 8).
  *     GINIT is written only from this wire handler: this helper's own
  *     in-process InitFlat logs under `INIT`, so it can never emit GINIT.
+ *
+ *   - REPORT_NULL_SRET (slot 7, quick 261027-ijs): argBlob is
+ *     {u32 slot, u32 structSize, u32 vlen, vlen bytes of version}, sent by the
+ *     shim the first time the GAME calls a per-version x64 sret null-object
+ *     slot. Authenticated only; logged as `NULLSRET <ver> slot=<n> size=<n>`
+ *     (version sanitised, max 64 lines). NULLSRET is written only from this
+ *     wire handler, which only the in-game shim drives.
  *
  *   - CREATE_INTERFACE (slot 3, Phase 52 / ROADMAP Scope 1): argBlob is a
  *     4-byte LE length + interface-version bytes (e.g. "SteamClient017").
@@ -181,6 +189,8 @@
 #define CONTROL_SLOT_REPORT_INIT 5
 // Phase 55: the shim drains queued Steam callbacks (only 168 today) from RunCallbacks; pull-only, one message per round trip.
 #define CONTROL_SLOT_DRAIN_CALLBACKS 6
+// quick 261027-ijs: the shim reports the first call of each per-version x64 sret null-object slot, logged as NULLSRET.
+#define CONTROL_SLOT_REPORT_NULL_SRET 7
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
@@ -579,6 +589,10 @@ static void log_auth_refused(uint16_t ordinal, uint16_t slot) {
 }
 // D-53-15 (T-kax-04): cap on GINIT lines per process.
 static unsigned g_ginit_logged = 0;
+// quick 261027-ijs (T-ijs-03): cap on NULLSRET lines per process. 189 sites
+// exist, the shim is one-shot per site, and a game touches only a handful.
+#define NULLSRET_LOG_MAX 64
+static unsigned g_nullsret_logged = 0;
 
 // T-52-09: bound to 128 chars and replace non-printable bytes so a
 // game-controlled version string cannot inject log lines.
@@ -759,6 +773,41 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       snprintf(imsg, sizeof imsg, "fn=%s ret=%d ok=%d session=%d",
                k_init_names[code], (int)ret, ok, g_inited ? 1 : 0);
       logts("GINIT", imsg);
+      send_response(fd, requestId, STATUS_OK, NULL, 0);
+      return;
+    }
+    if (slot == CONTROL_SLOT_REPORT_NULL_SRET) {
+      // quick 261027-ijs: answered regardless of g_inited (null objects are
+      // handed out exactly when Steam did not serve a version). T-ijs-01:
+      // every bound is checked before the copy into the fixed buffer.
+      // T-ijs-02: sanitized before logging. Never pumps or dispatches.
+      if (argBlob == NULL || argLen < 12) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      uint32_t nslot, nsize, nvlen;
+      memcpy(&nslot, argBlob, 4);
+      memcpy(&nsize, argBlob + 4, 4);
+      memcpy(&nvlen, argBlob + 8, 4);
+      if (nslot >= 256 || nsize == 0 || nsize > 4096 || nvlen == 0 ||
+          nvlen > 128 || (uint64_t)12 + nvlen > argLen) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      if (g_nullsret_logged >= NULLSRET_LOG_MAX) {
+        send_response(fd, requestId, STATUS_OK, NULL, 0);
+        return;
+      }
+      g_nullsret_logged++;
+      char nver[129];
+      memcpy(nver, argBlob + 12, nvlen);
+      nver[nvlen] = '\0';
+      char nsafe[132];
+      sanitize_ver(nver, nsafe, sizeof nsafe);
+      char nmsg[192];
+      snprintf(nmsg, sizeof nmsg, "%s slot=%u size=%u", nsafe, (unsigned)nslot,
+               (unsigned)nsize);
+      logts("NULLSRET", nmsg);
       send_response(fd, requestId, STATUS_OK, NULL, 0);
       return;
     }
