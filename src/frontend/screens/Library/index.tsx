@@ -47,11 +47,7 @@ import { renderableActiveFilters } from './components/FilterChipRow/chipLabels'
 import FilterZeroResult from './components/FilterZeroResult'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalContext'
-import {
-  configStore,
-  steamConfigStore,
-  timestampStore
-} from 'frontend/helpers/electronStores'
+import { configStore, steamConfigStore } from 'frontend/helpers/electronStores'
 import {
   defaultDirectionFor,
   readLibrarySortPrefs,
@@ -85,6 +81,7 @@ import {
   collectionIsStale
 } from './engineWiring'
 import { applyLibraryTileWidth, readLibraryTileWidth } from './libraryTileSize'
+import { useNonSteamLastPlayed } from './useNonSteamLastPlayed'
 
 const storage = window.localStorage
 
@@ -860,32 +857,16 @@ export default React.memo(function Library(): JSX.Element {
 
   const gamesForAlphabetFilter = gridPipeline.games
 
-  // Last played for non-Steam runners comes from GameLib's timestamp store
-  // (ISO). It is a LAZY store: a synchronous read before hydration returns
-  // undefined, so wait for hydration, then read each game ONCE into a map.
-  // Steam never reads this store (it uses extra.steamLastPlayed). A launch
-  // refreshes recentAppNames, which re-runs this effect.
-  const [nonSteamLastPlayedIso, setNonSteamLastPlayedIso] = useState<
-    Record<string, string | undefined>
-  >({})
-  useEffect(() => {
-    if (sortField !== 'lastPlayed') return
-    let cancelled = false
-    void window.api.storeEnsureHydrated('timestampStore').then(() => {
-      if (cancelled) return
-      const map: Record<string, string | undefined> = {}
-      for (const game of gamesForAlphabetFilter) {
-        if (game.runner === 'steam') continue
-        map[game.app_name] = timestampStore.get_nodefault(
-          game.app_name
-        )?.lastPlayed
-      }
-      setNonSteamLastPlayedIso(map)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [sortField, gamesForAlphabetFilter, recentAppNames])
+  // Last played for non-Steam runners comes from GameLib's lazy timestamp
+  // store. Built over the UNFILTERED union so a filter change neither rebuilds
+  // it nor leaves newly visible games unmapped (review 261027-jjz WR-02); null
+  // until the store has hydrated -- see the hook's header for the retry and
+  // re-read triggers (WR-01, WR-05).
+  const nonSteamLastPlayedIso = useNonSteamLastPlayed(
+    sortField === 'lastPlayed',
+    libraryUnion,
+    recentAppNames
+  )
 
   // select library
   const libraryToShow = useMemo(() => {
@@ -910,12 +891,17 @@ export default React.memo(function Library(): JSX.Element {
       })
     }
 
+    // Not hydrated yet is NOT "never played": rather than rank every
+    // non-Steam game last for the round-trip, show a plain Name A-Z order
+    // until the real last-played order can be computed (WR-02).
+    const lastPlayedPending =
+      sortField === 'lastPlayed' && nonSteamLastPlayedIso === null
     return sortAndGroupLibrary(library, {
-      field: sortField,
-      direction: sortDirection,
+      field: lastPlayedPending ? 'name' : sortField,
+      direction: lastPlayedPending ? 'asc' : sortDirection,
       groupBy,
       installing,
-      nonSteamLastPlayedIso
+      nonSteamLastPlayedIso: nonSteamLastPlayedIso ?? {}
     })
   }, [
     gamesForAlphabetFilter,
