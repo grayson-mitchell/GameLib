@@ -14,6 +14,70 @@ Only `MobileApp` (and, via cookies, `WebBrowser`) refresh tokens can mint web ac
 
 **Primary recommendation:** Build Track A (certain): an anonymous-CM `AnonymousSteam` module for all public PICS reads, plus a refcounted `AuthenticatedSession` for installs and key redeem, with no authenticated logon on boot, game-page open, Play, or sync. Build Track B (library list) as cache-first at launch, with a Wave-0 operator spike to prove a MobileApp-token Web API path (Option B1) before committing to it. The cached list and local ACF state are already pushed by `init()`.
 
+## Addendum 2026-10-27: spike 046, the go-offline wrap is in scope
+
+This addendum supersedes the parts of this research that accept a Friends sign-out on authenticated
+work (Finding 5's "accepted by the phase", A7, Open Question 4, UAT item 4). The Web API half
+(Track B) was already dropped on 2026-10-26; see the debug session's "Follow-up 2026-10-26".
+Sources: `.planning/spikes/046a-steam-url-offline-toggle/`, `046b-wrap-around-logon/`,
+`046c-reconnect-reflip/` and the debug session's "Verdict 2026-10-27".
+
+### Finding 10: GameLib can drive Mac Steam offline/online around its logon
+
+- **Mechanism:** `shell.openExternal('steam://open/gooffline')` and
+  `('steam://open/goonline')`. These are undocumented verbs in `steamui.dylib`'s native
+  `steam://open/` table; Valve's own JS uses `steam://open/goonline`. LogOff lands in ≤0.25 s
+  with the same `not auto reconnecting due to user initiated logoff` line as the menu's Go
+  Offline. Logon completes ≈1.3-1.5 s after `goonline`, on the same `steam_osx` process, with
+  no dialog and no permission prompt. Both verbs are no-ops when Steam is already in that state
+  (0 log lines). [VERIFIED: 046a, n=4]
+- **The wrap keeps Friends clean:** `gooffline` → GameLib cold logon (971 ms) → `goonline` 2 s
+  later. GameLib's 385-game fetch completed across Mac Steam rejoining, with no disconnect or
+  relog, and Friends stayed signed in with status changeable. [VERIFIED: 046b, operator, n=1
+  automated + n=2 manual on 2026-10-26]
+- **Reconnects flip (expected, not live):** `steam-user`'s `autoRelogin` defaults to `true`
+  (`resources/default_options.js:27`), and `user.ts:615` doesn't override it. On a non-fatal
+  drop, `_handleLogOff` (`09-logon.js:631-686`) calls `logOn(true)` after a 1 s backoff, a full
+  `CMsgClientLogon`. The canary's `client.relog()` (`user.ts:287`) takes the same path.
+  [VERIFIED: source; flip ASSUMED by mechanism, 046c]
+- **Untested:** a running Mac Steam game during `gooffline` (Settings → Internet refuses then
+  with `#UserManagement_OfflineMode_MustCloseGames`; the URL path is unknown), and Windows/Linux
+  Steam (verbs probably shared, Friends behaviour unmeasured). Wrap on macOS only.
+
+### Pattern 3: the wrap inside the authenticated entry point
+
+The wrap lives inside `acquireAuthenticated` (Pattern 2), around the first acquire's cold
+connect, so the refcount and the source gate cover it for free:
+
+```typescript
+// Sketch: macOS only; the other platforms call connect() directly
+async function withMacSteamOffline<T>(connect: () => Promise<T>): Promise<T> {
+  const state = readMacSteamCmState()        // last [State, …] in connection_log.txt; null if Steam not running
+  if (state !== 'Logged On') return connect() // not running or already offline: no toggle, no goonline
+  const logOff = watchConnectionLog(/user initiated logoff/, 5000) // offset taken BEFORE firing
+  await shell.openExternal('steam://open/gooffline')
+  if (!(await logOff)) throw new GuidedOfflineRequired() // UI shows the guided "Go Offline" step
+  try {
+    return await connect()
+  } finally {
+    await shell.openExternal('steam://open/goonline') // only reached when the wrap took Steam offline
+  }
+}
+```
+
+- The evidence gate is mandatory: a blind `gooffline` is indistinguishable from a no-op when
+  Steam refuses (a running game?) or a Steam update renames the verb.
+- **Own every logon:** construct the client with `autoRelogin: false`. Treat `disconnected` as
+  session ended (null `this.client`, release waiters). The canary's stale-socket path re-enters
+  `acquireAuthenticated` instead of calling `relog()`. A mid-install drop then costs a fresh
+  wrapped logon rather than a silent flip.
+- The session may stay open after `goonline` (046b), so the idle grace in Pattern 2 is
+  unaffected.
+- `connection_log.txt` lives at `~/Library/Application Support/Steam/logs/`. Read from a byte
+  offset taken before firing; the lines carry a trailing CR.
+- Sidecar exit contract: the log watcher's poll timer is `unref?.()`'d and bounded (5 s).
+- Pitfall: never fire `goonline` when the user had Steam offline on purpose.
+
 ## Architectural Responsibility Map
 
 | Capability | Primary Tier | Secondary Tier | Rationale |
@@ -137,7 +201,7 @@ Note: `library.ts` uses `getUserOwnedApps`, not `getOwnedApps()` as `STEAM-STACK
 - Needs the user's logon: `client.licenses` (package-level ownership, `depot.ts:527-540`, `select.ts` ownership selection), `getDepotDecryptionKey` (`depot.ts:692`), manifest request codes / `getRawManifest`, and CDN auth (`depot/cdnAuth.ts`). All are exercised per install by `buildDepotPlan` and `downloadDepotFiles`. Anonymous logon can fetch only free/public depots; do not route owned-game installs there. [VERIFIED: code comments `depot.ts:521-525`; CITED: spike 001/002 in `spike-findings-gamelib`]
 - Design: add to `user.ts` `SteamUser.acquireAuthenticated(reason): Promise<release>` (refcounted). First acquire does what `ensureConnected()` does today (keyring read, cold connect, verdict reporting); last release schedules `logOff()` after an idle grace (about 30-60 s so prescreen -> install -> shim resolve -> shared-redist does not thrash; timer `unref`'d). Keep `ensureConnected()` private/internal.
 - Hold the acquisition for the whole install: `runNativeDepotDownload` (`games.ts:2213`) through finalize, `prescreenBridgeDepots`, `downloadSharedRedistDepots`, `resumeInterruptedSteamInstall`. Release in `finally`. Concurrent installs share one session via the refcount. `AbortSignal` cancel must still release.
-- Friends sign-out during an install is accepted by the phase. **Unknown, measure in UAT:** whether Friends recovers by itself after `logOff()` (the todo says untested; the debug session says the user can sign back in by hand). Do not promise recovery in any user-facing copy.
+- **Superseded 2026-10-27 (Finding 10):** the install's logon runs inside the go-offline wrap, so a sign-out is no longer accepted. Original text: Friends sign-out during an install is accepted by the phase. **Unknown, measure in UAT:** whether Friends recovers by itself after `logOff()` (the todo says untested; the debug session says the user can sign back in by hand). Do not promise recovery in any user-facing copy.
 - `ensureConnected` internals (canary, `relog`, `credentialsMissing` verdict reporting via `applySignInVerdict`) are reusable as-is inside the authenticated path.
 
 ### Finding 6: how the keyring gate interacts
@@ -316,7 +380,7 @@ Edit `.planning/research/STEAM-STACK.md` (and the short "Technology Stack (Steam
 | A4 | Public profile XML exposes the nickname for private profiles | Finding 8 | Use `session.accountName` as the display name |
 | A5 | A second `LoginSession` can be approved with one extra QR scan / guard code (no repeat restriction) | Finding 1 | Sign-in UX cost higher than estimated |
 | A6 | `skip_unvetted_apps` defaults to true on the Web API as it does in the proto | Finding 3 | Pass it explicitly (`true`) to keep parity either way |
-| A7 | Friends may or may not recover by itself after `logOff()` | Finding 5 | UAT measures it; copy must not promise it |
+| A7 | Friends may or may not recover by itself after `logOff()` | Finding 5 | Moot (2026-10-27): the debug session ruled out recovery short of a restart, and the go-offline wrap (Finding 10) prevents the flip |
 
 ## Open Questions (RESOLVE BEFORE PLANNING)
 
@@ -326,7 +390,7 @@ Edit `.planning/research/STEAM-STACK.md` (and the short "Technology Stack (Steam
    - Recommendation: ask the user. If B1, the phase is no longer backend-only (sign-in UI gains a step) and Rust keyring work is possible. If no answer is available, plan B2 as the guaranteed-deliverable base and add B1 behind the Wave-0 spike result.
 2. **Does the phase scope include the sign-in-time persona logon (Finding 8)?** Recommend yes; small, same defect.
 3. **Does startup auto-refresh need to exist at all under B2?** If launch never syncs, a stale list persists until the user presses Refresh. Consider a "last synced N days ago" note (UI, out of backend-only scope).
-4. **Does Friends recover after `logOff()`?** Unknown until UAT.
+4. **Does Friends recover after `logOff()`?** Resolved 2026-10-27: no (debug session); prevented instead by the go-offline wrap (Finding 10).
 
 ## Environment Availability
 
@@ -371,7 +435,7 @@ Rebuild the sidecar first (memory: `tauri dev` does not rebuild it; check `sidec
 1. Mac Steam running, Friends signed in and status changeable. Launch GameLib signed in. Wait 90 s. expected: Friends still signed in and status changeable; `gamelib.log` shows no `mode=authenticated` logon and no `SteamUser.loggedOn` for the account.
 2. Library renders (cached or fresh) and a Play on an installed title works with Friends still signed in.
 3. Open a game page and trigger a platform capture. expected: Friends unchanged; log shows `mode=anonymous`.
-4. Start an install. expected: log shows one authenticated logon; Friends may sign out (accepted); after the install and the grace window the log shows `logOff`. Record whether Friends recovers on its own (resolves A7).
+4. With Mac Steam online, start an install, then separately press Refresh. expected: Mac Steam `connection_log.txt` shows a user-initiated `LogOff()` before each authenticated logon and a completed logon after it; Friends stays signed in with status changeable; after the install and the grace window `gamelib.log` shows `logOff`. Also: with Mac Steam set offline by hand, Refresh logs on and leaves Steam offline.
 5. (B1 only) sign-in with the second approval; library count equals the previous `getUserOwnedApps` count.
 
 ### Wave 0 Gaps
@@ -379,6 +443,7 @@ Rebuild the sidecar first (memory: `tauri dev` does not rebuild it; check `sidec
 - [ ] `src/backend/storeManagers/steam/__tests__/anonymousClient.test.ts` (P54-SC3)
 - [ ] `src/backend/storeManagers/steam/__tests__/authSessionLifecycle.test.ts` (P54-SC4)
 - [ ] `ownedGamesWebApi.test.ts` and `webApiToken.test.ts` (B1 only)
+- [ ] `src/backend/storeManagers/steam/__tests__/macSteamOfflineWrap.test.ts`: already offline (no toggle), LogOff seen, LogOff not seen (guided fallback, no logon), logon throws (`goonline` still fires), non-macOS passthrough, `autoRelogin: false` on the constructed client (ROADMAP success criterion 6)
 - [ ] `54-UAT.md` with the five items above
 - [ ] **Operator spike `checkpoint:human-verify`:** (a) on the stored SteamClient token run `LoginSession(SteamClient).refreshAccessToken()` and record the EResult (expects AccessDenied); (b) sign in once with a `MobileApp` `LoginSession`, `refreshAccessToken()`, call `GetOwnedGames` with `access_token`, compare `game_count` to the current sync's count. Do this with a throwaway script under a fake HOME (`createFakeHomeProfile()` if it spawns anything), with token values redacted from any capture.
 
