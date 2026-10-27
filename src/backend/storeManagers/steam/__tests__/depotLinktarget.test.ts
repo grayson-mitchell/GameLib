@@ -44,6 +44,7 @@ import {
   SYMLINK_FLAG
 } from '../depot'
 import { SteamUser } from '../user'
+import { mockLeaseOk } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
 import { fetchChunk } from '../depot/decompress'
@@ -60,7 +61,7 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-// ── SteamUser mock — controls ensureConnected()/getClient() return values ──
+// ── SteamUser mock — controls acquireAuthenticated()/getClient() return values ──
 jest.mock('../user')
 
 // ── backend/utils mock — see depot.test.ts's identical header for why this
@@ -149,7 +150,7 @@ const KEY = createHash('sha256').update('fixture-depot-key').digest()
  *  `files` (as returned by the mocked content_manifest `parse()`). */
 function wireSingleDepot(files: Array<Record<string, unknown>>): void {
   const fakeClient = makeFakeClient()
-  jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+  mockLeaseOk()
   jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
   jest.mocked(selectAllDepots).mockReturnValue([
     {

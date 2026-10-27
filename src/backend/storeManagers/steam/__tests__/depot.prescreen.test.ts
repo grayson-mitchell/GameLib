@@ -23,6 +23,7 @@ import {
   type DepotPlanFile
 } from '../depot'
 import { SteamUser } from '../user'
+import { mockLeaseOk, mockLeaseRefused } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
 import { fetchChunk } from '../depot/decompress'
@@ -45,7 +46,7 @@ jest.mock('backend/utils', () => ({
   sendProgressUpdate: jest.fn()
 }))
 
-// ── SteamUser mock — controls ensureConnected()/getClient() return values ────
+// ── SteamUser mock — controls acquireAuthenticated()/getClient() return values ────
 jest.mock('../user')
 
 // ── depot/select mock — selectAllDepots is a jest.fn(); dlcAppIds stays real ─
@@ -132,7 +133,7 @@ function makeDepotFile(filename: string): DepotPlanFile {
  *  setupPlanPlumbing helper. The returned file list is whatever
  *  `content_manifest.parse` is configured to return per-test. */
 function setupPlanPlumbing(fakeClient: ReturnType<typeof makeFakeClient>) {
-  jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+  mockLeaseOk()
   jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
   jest
     .mocked(selectAllDepots)
@@ -280,7 +281,7 @@ describe('screenDepotPlanForSteamApi — pure file-list classifier', () => {
 
 describe('prescreenBridgeDepots — guarded second plan-build, never throws', () => {
   it("resolves 'unknown' (never rejects) when buildDepotPlan throws because there is no CM connection", async () => {
-    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(false)
+    mockLeaseRefused()
 
     const result = await prescreenBridgeDepots(APP_ID, BASE_OPTS)
 
@@ -300,7 +301,19 @@ describe('prescreenBridgeDepots — guarded second plan-build, never throws', ()
     // Aborted before even the connection check — ensureConnected is never
     // reached (mirrors buildDepotPlan's own already-aborted test in
     // depot.test.ts).
-    expect(jest.mocked(SteamUser.ensureConnected)).not.toHaveBeenCalled()
+    expect(jest.mocked(SteamUser.acquireAuthenticated)).not.toHaveBeenCalled()
+  })
+
+  it("acquires its lease with reason 'prescreen' and still resolves a result", async () => {
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+    jest.mocked(selectAllDepots).mockReturnValue([])
+
+    await prescreenBridgeDepots(APP_ID, BASE_OPTS)
+
+    expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: 'prescreen' })
+    )
   })
 
   it("forwards os 'windows' to buildDepotPlan's depot selection regardless of the caller's own opts.os", async () => {

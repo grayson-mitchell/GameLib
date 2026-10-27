@@ -40,6 +40,7 @@ import { tmpdir } from 'node:os'
 import { join, relative, sep } from 'node:path'
 import { downloadSteamDepots, DIRECTORY_FLAG, EXECUTABLE_FLAG } from '../depot'
 import { SteamUser } from '../user'
+import { mockLeaseOk } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
 import { fetchChunk } from '../depot/decompress'
@@ -60,7 +61,7 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-// ── SteamUser mock — controls ensureConnected()/getClient() return values ────
+// ── SteamUser mock — controls acquireAuthenticated()/getClient() return values ────
 jest.mock('../user')
 
 // ── backend/utils mock — provides getFileSize() plus the bottle.ts imports
@@ -182,7 +183,7 @@ function sha1Hex(buf: Buffer): string {
 /** Wires the PICS/manifest-fetch plumbing every test in this file shares —
  *  a single owned depot, single file (depot.test.ts's established pattern). */
 function setupPlanPlumbing(fakeClient: ReturnType<typeof makeFakeClient>) {
-  jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+  mockLeaseOk()
   jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
   jest
     .mocked(selectAllDepots)
@@ -262,6 +263,57 @@ describe('D-UAT-09 (21-17): abort-aware finalize — cancel can never write Stat
     const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
     expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
     expect(acfText).not.toMatch(/"StateFlags"\s+"4"/)
+  })
+
+  describe('Phase 54: LastOwner comes from the persisted SteamID, not the live client', () => {
+    async function finalizeCancelled() {
+      const content = Buffer.from('game-bytes')
+      const fakeClient = makeFakeClient()
+      setupPlanPlumbing(fakeClient)
+      const controller = new AbortController()
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
+      )
+      jest.mocked(contentManifest.parse).mockReturnValue({
+        files: [
+          {
+            filename: 'enc-game',
+            size: String(content.length),
+            sha_content: sha1Hex(content),
+            chunks: [
+              { sha: 'chunk-sha', cb_original: content.length, offset: 0 }
+            ]
+          }
+        ]
+      })
+      jest.mocked(fetchChunk).mockImplementation(async () => {
+        controller.abort()
+        // The session closed while the download ran: no live client at finalize.
+        jest.mocked(SteamUser.getClient).mockReturnValue(null as never)
+        return content
+      })
+      await downloadSteamDepots('12345', {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        os: 'windows',
+        signal: controller.signal
+      })
+      return readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    }
+
+    it('writes the persisted SteamID64 when the session is already closed', async () => {
+      jest
+        .mocked(SteamUser.getPersistedSteamId64)
+        .mockReturnValue('76561198000000000')
+      const acfText = await finalizeCancelled()
+      expect(acfText).toMatch(/"LastOwner"\s+"76561198000000000"/)
+    })
+
+    it("keeps manifest.ts's '0' default when nothing is persisted", async () => {
+      jest.mocked(SteamUser.getPersistedSteamId64).mockReturnValue(undefined)
+      const acfText = await finalizeCancelled()
+      expect(acfText).toMatch(/"LastOwner"\s+"0"/)
+    })
   })
 
   it('Test C: signal.aborted === true finalizes 1026 and returns cancelled even when the download-result inputs would otherwise satisfy canWriteFullOwnership', async () => {
@@ -898,7 +950,7 @@ describe('Task 3 (23.2-03, G-23-01): a skipped depot still earns StateFlags=4, a
     fakeClient: ReturnType<typeof makeFakeClient>,
     corruptDepotId?: string
   ) {
-    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+    mockLeaseOk()
     jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
     jest.mocked(selectAllDepots).mockReturnValue(ALL_DEPOT_DESCRIPTORS)
 

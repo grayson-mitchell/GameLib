@@ -66,6 +66,7 @@ import {
   type RawContentServer
 } from '../depot'
 import { SteamUser } from '../user'
+import { mockLeaseOk, mockLeaseRefused } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
 import {
@@ -97,7 +98,7 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-// ── SteamUser mock — controls ensureConnected()/getClient() return values ────
+// ── SteamUser mock — controls acquireAuthenticated()/getClient() return values ────
 jest.mock('../user')
 
 // ── backend/utils mock — provides getFileSize() (prevents pulling in the
@@ -295,11 +296,11 @@ describe('buildDepotPlan', () => {
         buildDepotPlan('12345; rm -rf /', BASE_OPTS)
       ).rejects.toThrow(/non-numeric/i)
 
-      expect(jest.mocked(SteamUser.ensureConnected)).not.toHaveBeenCalled()
+      expect(jest.mocked(SteamUser.acquireAuthenticated)).not.toHaveBeenCalled()
     })
 
     it('throws cleanly when the CM connection is not authenticated', async () => {
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(false)
+      mockLeaseRefused()
 
       await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow(
         /no authenticated steam cm connection/i
@@ -309,9 +310,69 @@ describe('buildDepotPlan', () => {
       expect(jest.mocked(logWarning)).toHaveBeenCalled()
     })
 
+    it('Phase 54: a refused acquire keeps the not-signed-in copy and names the appId', async () => {
+      mockLeaseRefused('go-offline-required')
+
+      const err = await buildDepotPlan(APP_ID, BASE_OPTS).catch((e) => e)
+
+      expect(String(err.message)).toContain(
+        `no authenticated Steam CM connection available for appId ${APP_ID}`
+      )
+      expect(classifyDepotError(err).key).toBe(
+        'steam.download.error.notSignedIn'
+      )
+    })
+
+    it('Phase 54: acquires one user-install lease and releases it once on success', async () => {
+      const fakeClient = makeFakeClient()
+      const release = mockLeaseOk()
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue([])
+
+      await buildDepotPlan(APP_ID, BASE_OPTS)
+
+      expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledTimes(
+        1
+      )
+      expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledWith({
+        reason: 'user-install',
+        guidedAction: 'install',
+        appName: APP_ID
+      })
+      expect(release).toHaveBeenCalledTimes(1)
+    })
+
+    it('Phase 54: releases the lease once when a step throws', async () => {
+      const fakeClient = makeFakeClient()
+      const release = mockLeaseOk()
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockImplementation(() => {
+        throw new Error('select exploded')
+      })
+
+      await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow(
+        /select exploded/
+      )
+
+      expect(release).toHaveBeenCalledTimes(1)
+    })
+
+    it('Phase 54: releases the lease once when the signal aborts after acquire', async () => {
+      const fakeClient = makeFakeClient()
+      const controller = new AbortController()
+      const release = mockLeaseOk(() => controller.abort())
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+
+      await expect(
+        buildDepotPlan(APP_ID, { ...BASE_OPTS, signal: controller.signal })
+      ).rejects.toThrow(/aborted/i)
+
+      expect(release).toHaveBeenCalledTimes(1)
+    })
+
     it('calls selectAllDepots with the caller-supplied os, not a hardcoded default', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([])
 
@@ -344,7 +405,7 @@ describe('buildDepotPlan', () => {
   describe('manifest + total', () => {
     it('fetches, parses, and decrypts filenames for a two-depot app, summing REAL total bytes across BOTH depots (D-03/D-14)', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
 
       jest.mocked(selectAllDepots).mockReturnValue([
@@ -479,7 +540,7 @@ describe('buildDepotPlan', () => {
       // `jest.mocked(SteamUser.method)`: the latter references the static
       // unbound and trips @typescript-eslint/unbound-method against the
       // repo's --max-warnings ceiling.
-      jest.mocked(SteamUser).ensureConnected.mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser).getClient.mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
         {
@@ -553,7 +614,7 @@ describe('buildDepotPlan', () => {
 
     it('produces the same shape for a single-depot app (N=1 case)', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
 
       jest.mocked(selectAllDepots).mockReturnValue([
@@ -621,7 +682,7 @@ describe('buildDepotPlan', () => {
   })
 
   describe('D-UAT-05: abort signal during plan-build', () => {
-    it('an already-aborted signal throws before ensureConnected() is even called', async () => {
+    it('an already-aborted signal throws before acquireAuthenticated() is even called', async () => {
       const controller = new AbortController()
       controller.abort()
 
@@ -629,12 +690,12 @@ describe('buildDepotPlan', () => {
         buildDepotPlan(APP_ID, { ...BASE_OPTS, signal: controller.signal })
       ).rejects.toThrow(/aborted/i)
 
-      expect(jest.mocked(SteamUser.ensureConnected)).not.toHaveBeenCalled()
+      expect(jest.mocked(SteamUser.acquireAuthenticated)).not.toHaveBeenCalled()
     })
 
     it('aborting mid-loop (after the first of two depots) stops before fetching the second depot manifest', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
         {
@@ -699,9 +760,9 @@ describe('buildDepotPlan', () => {
   })
 
   describe('D-UAT-06: reconnect+retry-on-drop during plan-build', () => {
-    it('a CM drop on the first attempt at a depot manifest fetch triggers ensureConnected() + retry, and the plan still completes', async () => {
+    it('a CM drop on the first attempt at a depot manifest fetch triggers acquireAuthenticated() + retry, and the plan still completes', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
         {
@@ -762,12 +823,18 @@ describe('buildDepotPlan', () => {
       expect(keyCalls).toBe(2)
       // Initial connect (1, top of buildDepotPlan) + one mid-loop reconnect
       // triggered by the retry wrapper after the drop (1) = 2.
-      expect(jest.mocked(SteamUser.ensureConnected)).toHaveBeenCalledTimes(2)
+      expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledTimes(
+        2
+      )
+      // The retry's lease is a plan-retry with no guided action.
+      expect(
+        jest.mocked(SteamUser.acquireAuthenticated)
+      ).toHaveBeenNthCalledWith(2, { reason: 'plan-retry' })
     })
 
     it('exhausts PLAN_BUILD_MAX_ATTEMPTS on a PERSISTENT drop and rejects — never retries unboundedly', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
         {
@@ -796,14 +863,14 @@ describe('buildDepotPlan', () => {
         PLAN_BUILD_MAX_ATTEMPTS
       )
       // 1 initial connect + (PLAN_BUILD_MAX_ATTEMPTS - 1) retry-reconnects.
-      expect(jest.mocked(SteamUser.ensureConnected)).toHaveBeenCalledTimes(
+      expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledTimes(
         PLAN_BUILD_MAX_ATTEMPTS
       )
     })
 
     it('a cancel that lands the instant a plan-build step fails short-circuits the retry — never proceeds to a second attempt or waits out the backoff', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
         {
@@ -842,7 +909,7 @@ describe('buildDepotPlan', () => {
   describe('D-UAT-08: depot decryption key requested with the owning appId', () => {
     it('requests getDepotDecryptionKey/getRawManifest with a DLC/sub-app descriptor.ownerAppId, NOT the base appId, when they differ', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       // Descriptor enumerated from a DLC/sub-app (ownerAppId 54321) — as
       // Cyberpunk 2077's macOS depots (1460472/2224089) were, per the field
@@ -914,7 +981,7 @@ describe('buildDepotPlan', () => {
 
     it('requests getDepotDecryptionKey with the BASE appId for a base-app depot (including one gated by dlcappid) — unchanged from before', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
         {
@@ -988,7 +1055,7 @@ describe('buildDepotPlan', () => {
 
     it('a terminal EResult (FileNotFound=9) fails FAST — never burns all PLAN_BUILD_MAX_ATTEMPTS retries on an error that will recur identically', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
         {
@@ -1029,7 +1096,7 @@ describe('buildDepotPlan', () => {
 
     it('23.2-03 (G-23-01, D-01/T-23.2-16): a Blocked (eresult=40) depot-key rejection on the ONLY selected depot still logs a warning naming the depot id, owning appId, and EResult at the failure site, then fails plan-build via the all-skipped guard (not the raw decryption-key error) because zero depots remain', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
         {
@@ -1078,7 +1145,7 @@ describe('buildDepotPlan', () => {
 
     it('a non-terminal error (no eresult / not in the terminal set) still retries normally — non-retryable classification does not over-broaden', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
         {
@@ -1139,7 +1206,7 @@ describe('buildDepotPlan', () => {
       const dir = mkdtempSync(join(tmpdir(), 'gamelib-honest-error-test-'))
       try {
         const fakeClient = makeFakeClient()
-        jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+        mockLeaseOk()
         jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
         jest.mocked(selectAllDepots).mockReturnValue([
           {
@@ -1201,7 +1268,7 @@ describe('buildDepotPlan', () => {
     it('a never-settling getProductInfo makes buildDepotPlan REJECT within the bounded window instead of hanging', async () => {
       jest.useFakeTimers()
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       // fetchAppInfo (the first withPlanBuildRetry step in buildDepotPlan)
       // never settles on every attempt — simulates a CM socket that is
@@ -1232,7 +1299,7 @@ describe('buildDepotPlan', () => {
       // transparent on the healthy path with real timers, protecting the
       // Electron build's install flow.
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([])
 
@@ -1244,7 +1311,7 @@ describe('buildDepotPlan', () => {
     it('EXTENDED coverage (checker finding #3): a never-settling getDepotDecryptionKey on the fetchDepotPlanEntry path also produces a bounded reject, NOT a hang — a socket going stale MID-buildDepotPlan is bounded too', async () => {
       jest.useFakeTimers()
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       // getProductInfo (fetchAppInfo/getOwnedSets/fetchDlcInfos) resolves
       // normally so execution actually REACHES the depot-manifest fetch —
@@ -1319,7 +1386,7 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
 
     it('23.2-03 (D-01): a Blocked (eresult=40) getDepotDecryptionKey rejection on ONE of several owned depots skips only that depot — the other three remain, and totalBytes sums only the KEPT depots', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue(FOUR_DEPOTS)
 
@@ -1372,7 +1439,7 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
 
     it('23.2-03 (D-01): a Blocked (eresult=40) getRawManifest rejection on ONE of several owned depots also skips it — both wrapDepotKeyError reject paths (key AND manifest) must skip, or a future refactor could silently lose half the behaviour', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue(FOUR_DEPOTS)
 
@@ -1434,7 +1501,7 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
       '23.2-03 (D-01) RED-PROOF: EResult %i still aborts the whole plan build — never silently skipped',
       async (eresult) => {
         const fakeClient = makeFakeClient()
-        jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+        mockLeaseOk()
         jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
         jest.mocked(selectAllDepots).mockReturnValue(FOUR_DEPOTS)
 
@@ -1483,7 +1550,7 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
 
     it('23.2-03: a transient ECONNRESET on the first key attempt for a depot is still RETRIED into success — produces a complete four-depot plan with an empty skippedDepots, proving the skip did not swallow the existing withPlanBuildRetry recovery', async () => {
       const fakeClient = makeFakeClient()
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue(FOUR_DEPOTS)
 
@@ -1557,7 +1624,7 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
         ownerAppId: string
       }>
     ) {
-      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      mockLeaseOk()
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue(depots)
       jest
@@ -2414,7 +2481,7 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
    *  a single owned depot, single file. Each test configures its own
    *  content_manifest.parse()/fetchChunk() outcome for its scenario. */
   function setupPlanPlumbing(fakeClient: ReturnType<typeof makeFakeClient>) {
-    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+    mockLeaseOk()
     jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
     jest.mocked(selectAllDepots).mockReturnValue([
       {
@@ -2753,13 +2820,10 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     setupPlanPlumbing(fakeClient)
 
     const controller = new AbortController()
-    // Simulate a stop()/cancel() click that lands while ensureConnected()
+    // Simulate a stop()/cancel() click that lands while acquireAuthenticated()
     // is still resolving — the CM-reconnect-on-restart window this bug was
     // observed in.
-    jest.mocked(SteamUser.ensureConnected).mockImplementation(async () => {
-      controller.abort()
-      return true
-    })
+    mockLeaseOk(() => controller.abort())
 
     const result = await downloadSteamDepots('12345', {
       targetSteamappsDir: dir,

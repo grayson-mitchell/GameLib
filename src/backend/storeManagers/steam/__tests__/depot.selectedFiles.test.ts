@@ -10,6 +10,7 @@ import { join } from 'path'
 
 import { downloadSelectedDepotFiles, type DepotPlan } from '../depot'
 import { SteamUser } from '../user'
+import { mockLeaseOk, mockLeaseRefused } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
 
@@ -135,7 +136,7 @@ beforeEach(() => {
     }
   ]
   const client = makeClient()
-  jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+  mockLeaseOk()
   jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
   jest
     .mocked(selectAllDepots)
@@ -189,10 +190,32 @@ describe('downloadSelectedDepotFiles', () => {
   })
 
   it('resolves error (never throws) when the CM is not connected', async () => {
-    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(false)
+    mockLeaseRefused()
     const r = await call(jest.fn())
     expect(r.status).toBe('error')
     expect(r.error).toBeTruthy()
+  })
+
+  it('Phase 54: holds an original-restore lease across the download and releases it once', async () => {
+    const release = mockLeaseOk()
+    const dl = jest.fn().mockImplementation(async () => {
+      expect(release).not.toHaveBeenCalled()
+      return ok
+    })
+    await call(dl)
+    expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledWith({
+      reason: 'original-restore',
+      guidedAction: 'install',
+      appName: '12345'
+    })
+    expect(release).toHaveBeenCalledTimes(2) // outer restore lease + plan lease
+  })
+
+  it('Phase 54: a thrown download still releases every lease', async () => {
+    const release = mockLeaseOk()
+    const r = await call(jest.fn().mockRejectedValue(new Error('boom')))
+    expect(r.status).toBe('error')
+    expect(release).toHaveBeenCalledTimes(2)
   })
 
   it('resolves cancelled for an aborted signal', async () => {
