@@ -41,6 +41,7 @@ import {
   setBridgeNoticeAcknowledged,
   markBridgeLimitedNoticeShown,
   setBridgeIdentityFallback,
+  setBridgeLaunchTarget,
   writeBridgeDrmVerdict
 } from '../bridgeVerdict'
 
@@ -332,6 +333,43 @@ describe('setBridgeIdentityFallback', () => {
     setBridgeIdentityFallback(APP_ID, true)
 
     expect(readBridgeVerdict(APP_ID)?.identityFallback).toBe(true)
+  })
+})
+
+describe('setBridgeLaunchTarget', () => {
+  it('round-trips the launch target through readBridgeVerdict', () => {
+    setBridgeLaunchTarget(APP_ID, {
+      executable: 'Binaries\\Win32\\Game.exe',
+      installdir: 'Game'
+    })
+
+    expect(readBridgeVerdict(APP_ID)?.launchTarget).toEqual({
+      executable: 'Binaries\\Win32\\Game.exe',
+      installdir: 'Game'
+    })
+  })
+
+  it('rejects a non-numeric appId without touching the store', () => {
+    setBridgeLaunchTarget(NON_NUMERIC_APP_ID, {
+      executable: 'a.exe',
+      installdir: 'a'
+    })
+
+    expect(mockedStore.get(NON_NUMERIC_APP_ID)).toBeUndefined()
+  })
+
+  it.each([
+    ['empty executable', { executable: '', installdir: 'a' }],
+    ['empty installdir', { executable: 'a.exe', installdir: '' }],
+    ['overlong executable', { executable: 'x'.repeat(513), installdir: 'a' }],
+    [
+      'overlong installdir',
+      { executable: 'a.exe', installdir: 'x'.repeat(513) }
+    ]
+  ])('rejects %s', (_label, target) => {
+    setBridgeLaunchTarget(APP_ID, target)
+
+    expect(readBridgeVerdict(APP_ID)?.launchTarget).toBeUndefined()
   })
 })
 
