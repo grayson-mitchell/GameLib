@@ -37,6 +37,7 @@ Option (a) was chosen by the user on 2026-10-26 and implemented PER EXACT INTERF
 - ELEX: SteamController003 slots 9 (2 bytes) and 12 (16 bytes) are covered. Versions the bridge serves on x64 get no null object.
 - Remaining gap: a version unknown to the pinned Proton inventory still gets the all-zero generic object.
 - Still to do for "Done when": a live Wine gate on ELEX (411300) recording no sret crash.
+- 2026-10-27 (quick 261027-ijs, e2f073ba6): NULLSRET instrumentation landed. The helper logs NULLSRET <version> slot=<n> size=<bytes> on the first call of each per-version sret null slot. ELEX (411300) rerun pending: restart pnpm tauri dev, launch ELEX, grep the helper log for NULLSRET SteamController003.
 
 ## Done when
 
