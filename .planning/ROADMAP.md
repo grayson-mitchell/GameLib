@@ -546,10 +546,38 @@ Plans:
 6. On macOS every authenticated logon (Refresh, sign-in, depot install, and any reconnect or relog) runs inside the go-offline wrap: unit tests cover Steam already offline (no toggle, no `goonline`), LogOff seen, LogOff not seen (guided fallback, no logon), and logon failure (`goonline` still fires); `autoRelogin` is off. Mac UAT: an explicit Refresh and a depot install with Mac Steam online leave Friends signed in with status changeable.
 **Requirements**: TBD
 **Depends on:** Phase 53
-**Plans:** 0 plans
+**Plans:** 11 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 54 to break down)
+
+**Wave 1**
+
+- [ ] 54-01-PLAN.md — go-offline wrap (macSteamOffline.ts), shared anonymous PICS client, guided-step IPC types (ROADMAP-SC2, SC6)
+- [ ] 54-02-PLAN.md — guided Go Offline strings in all 49 gamelib catalogs (ROADMAP-SC6)
+
+**Wave 2** *(blocked on 54-01)*
+
+- [ ] 54-03-PLAN.md — SteamUser.acquireAuthenticated: one gated, refcounted, wrapped session; autoRelogin off; no relog; sign-in and redeem through it (ROADMAP-SC3, SC6)
+
+**Wave 3** *(blocked on 54-03)*
+
+- [ ] 54-04-PLAN.md — one-shot refresh logon grant; launch never logs on under either ordering; Refresh holds a lease, captures platforms anonymously (ROADMAP-SC1, SC2)
+- [ ] 54-05-PLAN.md — depot path on the lease; persisted LastOwner; shared redists log on only at install time (ROADMAP-SC3, SC6)
+- [ ] 54-06-PLAN.md — install location and bridge launch target on the anonymous session, persisted launch-target fallback (ROADMAP-SC2)
+- [ ] 54-07-PLAN.md — guided Go Offline dialog, retry invoke, preload and store wiring (ROADMAP-SC6)
+
+**Wave 4** *(blocked on 54-04, 54-05, 54-06)*
+
+- [ ] 54-08-PLAN.md — game page and Play open no session; install paths hold one wrapped lease; refusals defer to the guided step (ROADMAP-SC2, SC3, SC6)
+
+**Wave 5** *(blocked on waves 1-4)*
+
+- [ ] 54-09-PLAN.md — steamAuthSessionPolicy source gate; STEAM-STACK.md and CLAUDE.md updated; full desk battery (ROADMAP-SC3, SC5)
+- [ ] 54-10-PLAN.md — author the Mac live-gate contract with Structural Reachability Review and pending 54-UAT.md (ROADMAP-SC4, SC6)
+
+**Wave 6** *(blocked on 54-09, 54-10)*
+
+- [ ] 54-11-PLAN.md — run the Mac gate (operator checkpoint) and score 54-UAT.md (ROADMAP-SC4, SC6)
 
 ### Phase 55: Steam bridge callback delivery for the web-API auth ticket
 
