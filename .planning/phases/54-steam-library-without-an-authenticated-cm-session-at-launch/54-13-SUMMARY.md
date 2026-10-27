@@ -49,3 +49,7 @@ None.
 None.
 
 ## Self-Check: PASSED
+
+## Orchestrator follow-up: smoke:sidecar
+
+The executor skipped `pnpm smoke:sidecar` because it runs against the real HOME. The orchestrator confirmed that the real `~/Library/Application Support/GameLib/mac-steam-offline-owed.json` was absent and that `loginusers.vdf` had `WantsOfflineMode` 0. With no marker the boot restore is a no-op (no pgrep, no spawn), so the orchestrator ran the smoke. Result: PASS, exit 0, the sidecar drained on stdin EOF, no marker was created, and no new LogOff/Logged Off line appeared in connection_log.txt.
