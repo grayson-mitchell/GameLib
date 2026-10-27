@@ -19,6 +19,7 @@ import type { InstallArgs } from 'common/types'
 import { getSteamLibraries } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from './user'
+import { getAnonymousPicsClient, isPublicOnlyEntry } from './anonymousClient'
 import {
   withTimeout,
   STEAM_PICS_TIMEOUT_MS,
@@ -225,13 +226,15 @@ export function sanitizeInstalldir(
 }
 
 /**
- * Reads appinfo.config.installdir via PICS over the already-authenticated CM
- * connection (never opens a second logon — T-21-11, same discipline as
- * depot.ts's getDepotClient). Never throws: a missing client, non-numeric
- * appId, or PICS failure all fall back to `undefined`, which
- * sanitizeInstalldir turns into a safe appId-derived name — an install
- * location lookup must not hard-fail the whole install over a cosmetic
- * directory-name mismatch.
+ * Reads appinfo.config.installdir via PICS. Phase 54 (ROADMAP SC2): the read
+ * goes over the shared ANONYMOUS client first, which can never sign Mac
+ * Steam's Friends session out. License-gated apps answer anonymously with a
+ * `public_only` subset that has no `config`; for those (or when the anonymous
+ * connect fails) the lookup falls back to an authenticated session ONLY if one
+ * is already open (`acquireOpenAuthenticated`, which never logs on). With
+ * neither, it returns `undefined` and sanitizeInstalldir turns that into a safe
+ * appId-derived name. Never throws: an install-location lookup must not
+ * hard-fail the whole install over a cosmetic directory-name mismatch.
  */
 async function fetchInstalldir(appId: string): Promise<string | undefined> {
   if (!NUMERIC_APP_ID.test(appId)) {
@@ -242,71 +245,88 @@ async function fetchInstalldir(appId: string): Promise<string | undefined> {
     return undefined
   }
 
-  let client = SteamUser.getClient()
-  if (!client) {
-    // quick-260909-pym (root cause confirmed): a null client here used to
-    // return undefined immediately, moving the installdir decision to
-    // BEFORE the data needed to name it existed — buildDepotPlan.fetchAppInfo
-    // pays this exact PICS round-trip 232ms later regardless, and
-    // ensureConnected pays its own cold-connect cost regardless, so the old
-    // early-return saved nothing while guaranteeing the app_<appid> fallback
-    // on every session's first install. Await the SAME connection
-    // buildDepotPlan would pay anyway, bounded well under the outer WR-01
-    // deadline (see STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS's docstring), then
-    // retry getClient(). A connect failure, rejection, or timeout all fall
-    // through to the existing `return undefined` below (hard constraint 2 —
-    // never hard-fail the install over a cosmetic directory name).
-    try {
-      await withTimeout(
-        SteamUser.ensureConnected(),
-        STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS,
-        'fetchInstalldir ensureConnected'
-      )
-    } catch (err) {
-      logWarning(
-        `SteamGame: ensureConnected timed out/failed while resolving installdir for appId ${appId}: ${String(err)}`,
+  const numericAppId = Number(appId)
+  const start = Date.now()
+
+  let anonymous: Awaited<ReturnType<typeof getAnonymousPicsClient>> = null
+  try {
+    anonymous = await withTimeout(
+      getAnonymousPicsClient('installdir'),
+      STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS,
+      'fetchInstalldir anonymous connect'
+    )
+  } catch (err) {
+    logWarning(
+      `SteamGame: anonymous connect failed while resolving installdir for appId ${appId}: ${String(err)}`,
+      LogPrefix.Steam
+    )
+  }
+
+  if (anonymous) {
+    const answer = await queryInstalldir(anonymous, numericAppId, appId)
+    if (answer.installdir !== undefined && !answer.publicOnly) {
+      logInfo(
+        `[Timing] fetchInstalldir: anonymous getProductInfo for appId ${appId} took ${Date.now() - start}ms`,
         LogPrefix.Steam
       )
-    }
-    client = SteamUser.getClient()
-    if (!client) {
-      return undefined
+      return answer.installdir
     }
   }
 
-  // [Timing] debug/steam-install-slow-start: this getProductInfo call is a
-  // network round-trip for the SAME appId buildDepotPlan.fetchAppInfo fetches
-  // again moments later — a redundant-but-necessary PICS call: this is what
-  // lets a cold session's FIRST install resolve the real installdir instead
-  // of the app_<appid> fallback (quick-260909-pym).
-  const start = Date.now()
+  const open = SteamUser.acquireOpenAuthenticated('user-install')
+  if (open) {
+    try {
+      const answer = await queryInstalldir(open.client, numericAppId, appId)
+      return answer.installdir
+    } finally {
+      open.release()
+    }
+  }
+
+  logInfo(
+    `SteamGame: installdir for appId ${appId} unavailable anonymously (public_only) and no open Steam session, using the fallback name`,
+    LogPrefix.Steam
+  )
+  return undefined
+}
+
+interface InstalldirAnswer {
+  installdir?: string
+  publicOnly: boolean
+}
+
+/** One bounded PICS read; a reject or timeout counts as public-only. */
+async function queryInstalldir(
+  client: {
+    getProductInfo(
+      apps: number[],
+      packages: number[],
+      inclTokens?: boolean
+    ): Promise<{ apps?: Record<number, unknown> }>
+  },
+  numericAppId: number,
+  appId: string
+): Promise<InstalldirAnswer> {
   try {
-    const numericAppId = Number(appId)
     // G-30-02 (30-07): bounded so a stale-but-present CM socket rejects
-    // within STEAM_PICS_TIMEOUT_MS instead of parking this await forever —
-    // the catch below already turns any reject into a benign `undefined`.
+    // within STEAM_PICS_TIMEOUT_MS instead of parking this await forever.
     const { apps } = await withTimeout(
       client.getProductInfo([numericAppId], [], true),
       STEAM_PICS_TIMEOUT_MS,
       'fetchInstalldir getProductInfo'
     )
-    const entry = apps?.[numericAppId]
-    const appinfo = entry?.appinfo as unknown as AppInstallDirInfo | undefined
-    logInfo(
-      `[Timing] fetchInstalldir: getProductInfo for appId ${appId} took ${Date.now() - start}ms`,
-      LogPrefix.Steam
-    )
-    return appinfo?.config?.installdir
+    const entry = apps?.[numericAppId] as { appinfo?: unknown } | undefined
+    const appinfo = entry?.appinfo as AppInstallDirInfo | undefined
+    return {
+      installdir: appinfo?.config?.installdir,
+      publicOnly: isPublicOnlyEntry(entry)
+    }
   } catch (err) {
     logWarning(
       `SteamGame: failed to read PICS installdir for appId ${appId}: ${String(err)}`,
       LogPrefix.Steam
     )
-    logInfo(
-      `[Timing] fetchInstalldir: getProductInfo for appId ${appId} FAILED after ${Date.now() - start}ms`,
-      LogPrefix.Steam
-    )
-    return undefined
+    return { publicOnly: true }
   }
 }
 
