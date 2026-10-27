@@ -4,7 +4,7 @@
  * module under test exports nothing test-only.
  */
 
-import { gzipSync } from 'zlib'
+import { gunzipSync, gzipSync } from 'zlib'
 import { buildOverlayTarGz, readOverlayTarGz } from '../knownFixOverlayArchive'
 
 interface HeaderOpts {
@@ -84,7 +84,7 @@ describe('buildOverlayTarGz', () => {
     const arc = buildOverlayTarGz(files)
     expect(arc.readUInt32LE(4)).toBe(0)
     expect(arc[9]).toBe(0x03)
-    const tar = require('zlib').gunzipSync(arc) as Buffer
+    const tar = gunzipSync(arc)
     expect(tar.length % 10240).toBe(0)
     const h = tar.subarray(0, 512)
     expect(h.subarray(0, 11).toString()).toBe('lib/a.dylib')

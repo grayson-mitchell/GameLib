@@ -8,6 +8,7 @@ import {
   existsSync,
   mkdtempSync,
   readdirSync,
+  renameSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -83,7 +84,7 @@ afterEach(() => rmSync(root, { recursive: true, force: true }))
 
 const okFetch = () =>
   jest.fn<ReturnType<OverlayArchiveFetch>, Parameters<OverlayArchiveFetch>>(
-    async () => goodArchive
+    () => Promise.resolve(goodArchive)
   )
 
 const leftovers = () => readdirSync(root).filter((n) => n.startsWith('.'))
@@ -149,7 +150,7 @@ describe('ensureOverlayInstalled', () => {
       'lib/ being a symlink',
       (d: string) => {
         const moved = join(root, 'lib-moved')
-        require('fs').renameSync(join(d, 'lib'), moved)
+        renameSync(join(d, 'lib'), moved)
         symlinkSync(moved, join(d, 'lib'))
       }
     ]
@@ -211,7 +212,7 @@ describe('ensureOverlayInstalled', () => {
     const hostile = tarOf('../x')
     const out = await ensureOverlayInstalled(entryFor(payload, hostile), ctx, {
       overlaysRoot: root,
-      fetchArchive: async () => hostile
+      fetchArchive: () => Promise.resolve(hostile)
     })
     expect(out).toBeNull()
     expect(mockLogWarning).toHaveBeenCalled()
@@ -222,9 +223,7 @@ describe('ensureOverlayInstalled', () => {
   it('fails open when the fetch rejects', async () => {
     const out = await ensureOverlayInstalled(entry, ctx, {
       overlaysRoot: root,
-      fetchArchive: async () => {
-        throw new Error('HTTP 500')
-      }
+      fetchArchive: () => Promise.reject(new Error('HTTP 500'))
     })
     expect(out).toBeNull()
     expect(mockLogWarning.mock.calls[0][0]).toMatch(/HTTP 500/)

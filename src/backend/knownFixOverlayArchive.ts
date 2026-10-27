@@ -17,7 +17,7 @@ const BLOCK = 512
 const RECORD = 10240
 const MAX_NAME_BYTES = 99
 
-export interface OverlayArchiveFile {
+interface OverlayArchiveFile {
   path: string
   data: Buffer
 }
@@ -26,7 +26,6 @@ function checkPath(path: string): string | null {
   if (path === '') return 'empty path'
   if (path.startsWith('/')) return 'absolute path'
   if (path.includes('\\')) return 'backslash in path'
-  // eslint-disable-next-line no-control-regex
   if (!/^[\x20-\x7e]+$/.test(path)) return 'non-ASCII path'
   if (Buffer.byteLength(path) > MAX_NAME_BYTES) return 'path too long'
   for (const seg of path.split('/')) {

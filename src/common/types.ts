@@ -1177,7 +1177,7 @@ export interface GamelibFixStatus {
  * (decisions 1 and 6, quick 261025-vnf).
  */
 /** Tier-2 `overlays` entry: names a GameLib catalogue id, never a URL. */
-export interface KnownFixOverlayEntry {
+interface KnownFixOverlayEntry {
   id: string
   // Keep in sync with KnownFixOverlayTarget in common/knownFixOverlayCatalogue.
   target: 'gstreamer-plugin-path'

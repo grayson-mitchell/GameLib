@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Dialog, DialogContent, DialogHeader } from '../Dialog'
 import GameLibIcon from 'frontend/assets/gamelib-icon.png'
+import { KNOWN_FIX_OVERLAY_NOTICES_URL } from 'common/knownFixOverlayCatalogue'
 import './index.scss'
 
 const PROJECT_URL = 'https://github.com/grayson-mitchell/GameLib'
@@ -74,6 +75,13 @@ export default function AboutDialog({ onClose }: AboutDialogProps) {
           {t('about.license', 'License: GPL V3')}
         </p>
         <p className="AboutDialog__meta">{PROJECT_URL}</p>
+        <p className="AboutDialog__meta">
+          {t(
+            'about.thirdPartyNotices',
+            'Some games download extra components that GameLib distributes under their own licences: gst-libav and FFmpeg (LGPL-2.1-or-later), zlib and bzip2. They are unmodified and loaded at run time. Licences and source code: {{url}}',
+            { url: KNOWN_FIX_OVERLAY_NOTICES_URL }
+          )}
+        </p>
       </DialogContent>
     </Dialog>
   )

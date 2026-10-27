@@ -122,3 +122,5 @@ appeared. Resolved by quick 261027-m1m: the cause was not the overlay. Each laun
 cold Wine sessions rewriting the WMP registry marker, and CrossOver can stall about 80 s in
 `wineboot --init` on a cold session start. Values already present are now skipped, and three
 live launches came up in 1-2 s.
+
+Built by quick 261027-n77: tier-2 `overlays` (gstreamer-plugin-path) with catalogue id `gst-libav-1.24.13`, shipped in `284100-steam.profile.json`; asset not yet published — operator publish + live gate per `doc/releases/overlay-gst-libav-1.24.13-x86_64.md`.

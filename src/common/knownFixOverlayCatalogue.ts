@@ -11,7 +11,7 @@
  * imports the notice URL from here.
  */
 
-export type KnownFixOverlayTarget = 'gstreamer-plugin-path'
+type KnownFixOverlayTarget = 'gstreamer-plugin-path'
 
 export interface KnownFixOverlayCatalogueEntry {
   id: string
@@ -128,7 +128,7 @@ export function overlayArchiveUrl(entry: KnownFixOverlayCatalogueEntry) {
   return `https://github.com/${repo}/releases/download/${tag}/${asset}`
 }
 
-export function overlayReleasePageUrl(entry: KnownFixOverlayCatalogueEntry) {
+function overlayReleasePageUrl(entry: KnownFixOverlayCatalogueEntry) {
   const { repo, tag } = entry.release
   return `https://github.com/${repo}/releases/tag/${tag}`
 }

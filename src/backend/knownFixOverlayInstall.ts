@@ -35,7 +35,7 @@ import {
 } from 'backend/utils/aborthandler/aborthandler'
 import { readOverlayTarGz } from './knownFixOverlayArchive'
 
-export const OVERLAY_DOWNLOAD_TIMEOUT_MS = 120_000
+const OVERLAY_DOWNLOAD_TIMEOUT_MS = 120_000
 const ID_PATTERN = /^[a-z0-9][a-z0-9.-]{0,63}$/
 const EXTRA_UNCOMPRESSED_BYTES = 1024 * 1024
 
@@ -55,7 +55,7 @@ interface OverlayLogContext {
   logPrefix: LogPrefix
 }
 
-export function overlayInstallDir(
+function overlayInstallDir(
   entry: KnownFixOverlayCatalogueEntry,
   root: string = knownFixOverlaysPath
 ): string {

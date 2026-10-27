@@ -181,6 +181,16 @@ describe('AboutDialog', () => {
     expect(textOf(renderDialog())).toContain('Version: unknown')
   })
 
+  it('states the third-party (LGPL) notice with the release-page URL', () => {
+    const text = textOf(renderDialog()).join('\n')
+
+    expect(text).toContain('LGPL-2.1-or-later')
+    expect(text).toContain(
+      'https://github.com/grayson-mitchell/GameLib/releases/tag/overlay-gst-libav-1.24.13-x86_64'
+    )
+    expect(text).not.toContain('{{url}}')
+  })
+
   it('gives the decorative icon an empty alt, the product name being adjacent text', () => {
     const img = collectElements(renderDialog()).find((el) => el.type === 'img')
 
