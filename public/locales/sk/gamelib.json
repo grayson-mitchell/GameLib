@@ -1,6 +1,7 @@
 {
     "about": {
         "license": "Licencia: GPL V3",
+        "thirdPartyNotices": "Niektoré hry sťahujú ďalšie súčasti, ktoré GameLib distribuuje pod ich vlastnými licenciami: gst-libav a FFmpeg (LGPL-2.1-or-later), zlib a bzip2. Sú nezmenené a načítavajú sa za behu. Licencie a zdrojový kód: {{url}}",
         "title": "O aplikácii GameLib",
         "version": "Verzia: {{version}}",
         "versionUnknown": "neznáma",

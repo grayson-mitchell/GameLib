@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Buruz",
         "license": "Lizentzia: GPL V3",
+        "thirdPartyNotices": "Joko batzuek GameLib-ek haien lizentzia propioekin banatzen dituen osagai gehigarriak deskargatzen dituzte: gst-libav eta FFmpeg (LGPL-2.1-or-later), zlib eta bzip2. Aldatu gabeak dira eta exekuzioan kargatzen dira. Lizentziak eta iturburu-kodea: {{url}}",
         "title": "GameLib-i buruz",
         "version": "Bertsioa: {{version}}",
         "versionUnknown": "ezezaguna"

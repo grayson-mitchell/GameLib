@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Om",
         "license": "Licens: GPL V3",
+        "thirdPartyNotices": "Vissa spel laddar ned extra komponenter som GameLib distribuerar under deras egna licenser: gst-libav och FFmpeg (LGPL-2.1-or-later), zlib och bzip2. De är oförändrade och läses in vid körning. Licenser och källkod: {{url}}",
         "title": "Om GameLib",
         "version": "Version: {{version}}",
         "versionUnknown": "okänd"

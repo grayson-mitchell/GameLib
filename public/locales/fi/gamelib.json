@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Tietoja",
         "license": "Lisenssi: GPL V3",
+        "thirdPartyNotices": "Jotkin pelit lataavat lisäkomponentteja, joita GameLib jakaa niiden omilla lisensseillä: gst-libav ja FFmpeg (LGPL-2.1-or-later), zlib ja bzip2. Ne ovat muokkaamattomia ja ladataan suorituksen aikana. Lisenssit ja lähdekoodi: {{url}}",
         "title": "Tietoja GameLibistä",
         "version": "Versio: {{version}}",
         "versionUnknown": "tuntematon"

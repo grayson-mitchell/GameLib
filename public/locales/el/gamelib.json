@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Περί",
         "license": "Άδεια χρήσης: GPL V3",
+        "thirdPartyNotices": "Ορισμένα παιχνίδια κατεβάζουν πρόσθετα στοιχεία που το GameLib διανέμει με τις δικές τους άδειες: gst-libav και FFmpeg (LGPL-2.1-or-later), zlib και bzip2. Είναι αμετάβλητα και φορτώνονται κατά την εκτέλεση. Άδειες και πηγαίος κώδικας: {{url}}",
         "title": "Σχετικά με το GameLib",
         "version": "Έκδοση: {{version}}",
         "versionUnknown": "άγνωστη"

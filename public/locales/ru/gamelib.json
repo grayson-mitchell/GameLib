@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "О программе",
         "license": "Лицензия: GPL V3",
+        "thirdPartyNotices": "Некоторые игры загружают дополнительные компоненты, которые GameLib распространяет под их собственными лицензиями: gst-libav и FFmpeg (LGPL-2.1-or-later), zlib и bzip2. Они не изменены и загружаются во время выполнения. Лицензии и исходный код: {{url}}",
         "title": "О GameLib",
         "version": "Версия: {{version}}",
         "versionUnknown": "неизвестно"

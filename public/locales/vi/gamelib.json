@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Giới Thiệu",
         "license": "Giấy phép: GPL V3",
+        "thirdPartyNotices": "Một số trò chơi tải xuống các thành phần bổ sung mà GameLib phân phối theo giấy phép riêng của chúng: gst-libav và FFmpeg (LGPL-2.1-or-later), zlib và bzip2. Chúng không bị sửa đổi và được tải khi chạy. Giấy phép và mã nguồn: {{url}}",
         "title": "Giới thiệu về GameLib",
         "version": "Phiên bản: {{version}}",
         "versionUnknown": "không xác định"

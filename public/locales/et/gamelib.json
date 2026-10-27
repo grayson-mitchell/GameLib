@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Info",
         "license": "Litsents: GPL V3",
+        "thirdPartyNotices": "Mõned mängud laadivad alla lisakomponente, mida GameLib levitab nende enda litsentside all: gst-libav ja FFmpeg (LGPL-2.1-or-later), zlib ja bzip2. Need on muutmata ja laaditakse käitusajal. Litsentsid ja lähtekood: {{url}}",
         "title": "GameLib teave",
         "version": "Versioon: {{version}}",
         "versionUnknown": "teadmata"

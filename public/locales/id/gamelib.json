@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Tentang",
         "license": "Lisensi: GPL V3",
+        "thirdPartyNotices": "Beberapa gim mengunduh komponen tambahan yang didistribusikan GameLib di bawah lisensinya masing-masing: gst-libav dan FFmpeg (LGPL-2.1-or-later), zlib dan bzip2. Komponen ini tidak dimodifikasi dan dimuat saat dijalankan. Lisensi dan kode sumber: {{url}}",
         "title": "Tentang GameLib",
         "version": "Versi: {{version}}",
         "versionUnknown": "tidak diketahui"

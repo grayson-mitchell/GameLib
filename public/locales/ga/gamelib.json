@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Maidir",
         "license": "Ceadúnas: GPL V3",
+        "thirdPartyNotices": "Íoslódálann roinnt cluichí comhpháirteanna breise a dháileann GameLib faoina gceadúnais féin: gst-libav agus FFmpeg (LGPL-2.1-or-later), zlib agus bzip2. Níl siad athraithe agus luchtaítear iad ag am rite. Ceadúnais agus cód foinseach: {{url}}",
         "title": "Maidir le GameLib",
         "version": "Leagan: {{version}}",
         "versionUnknown": "anaithnid"

@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Diwar-об",
         "license": "Lañvaz: GPL V3",
+        "thirdPartyNotices": "Lod c'hoarioù a zisklêr elfennoù ouzhpenn a zistag GameLib dindan o c'hevreadennoù dezho: gst-libav ha FFmpeg (LGPL-2.1-or-later), zlib ha bzip2. Chomet int hep cheñch ha karget e vezont p'emañ o treiñ. Aotreoù ha boneg mammenn: {{url}}",
         "title": "Diwar-benn GameLib",
         "version": "Handelv: {{version}}",
         "versionUnknown": "dianav"

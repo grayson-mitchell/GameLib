@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Névjegy",
         "license": "Licenc: GPL V3",
+        "thirdPartyNotices": "Egyes játékok további összetevőket töltenek le, amelyeket a GameLib a saját licenceik alatt terjeszt: gst-libav és FFmpeg (LGPL-2.1-or-later), zlib és bzip2. Módosítatlanok, és futásidőben töltődnek be. Licencek és forráskód: {{url}}",
         "title": "A GameLib névjegye",
         "version": "Verzió: {{version}}",
         "versionUnknown": "ismeretlen"

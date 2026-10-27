@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Quant a",
         "license": "Llicència: GPL V3",
+        "thirdPartyNotices": "Alguns jocs baixen components addicionals que GameLib distribueix amb les seves pròpies llicències: gst-libav i FFmpeg (LGPL-2.1-or-later), zlib i bzip2. No estan modificats i es carreguen en temps d'execució. Llicències i codi font: {{url}}",
         "title": "Quant a GameLib",
         "version": "Versió: {{version}}",
         "versionUnknown": "desconeguda"

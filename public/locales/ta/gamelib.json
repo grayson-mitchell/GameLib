@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "இதனை பற்றி",
         "license": "உரிமம்: GPL V3",
+        "thirdPartyNotices": "சில கேம்கள் GameLib அவற்றின் சொந்த உரிமங்களின் கீழ் விநியோகிக்கும் கூடுதல் கூறுகளைப் பதிவிறக்குகின்றன: gst-libav மற்றும் FFmpeg (LGPL-2.1-or-later), zlib மற்றும் bzip2. அவை மாற்றப்படாதவை, இயக்கத்தின் போது ஏற்றப்படுகின்றன. உரிமங்களும் மூலக் குறியீடும்: {{url}}",
         "title": "GameLib பற்றி",
         "version": "பதிப்பு: {{version}}",
         "versionUnknown": "தெரியவில்லை"

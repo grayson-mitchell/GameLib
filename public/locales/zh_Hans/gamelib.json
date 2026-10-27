@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "关于",
         "license": "许可证：GPL V3",
+        "thirdPartyNotices": "部分游戏会下载额外组件，GameLib 按其各自的许可证分发：gst-libav 和 FFmpeg（LGPL-2.1-or-later）、zlib 和 bzip2。这些组件未经修改，并在运行时加载。许可证和源代码：{{url}}",
         "title": "关于 GameLib",
         "version": "版本：{{version}}",
         "versionUnknown": "未知"

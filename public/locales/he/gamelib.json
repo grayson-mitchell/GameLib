@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "אודות",
         "license": "רישיון: GPL V3",
+        "thirdPartyNotices": "חלק מהמשחקים מורידים רכיבים נוספים ש-GameLib מפיץ תחת הרישיונות שלהם: gst-libav ו-FFmpeg ‏(LGPL-2.1-or-later), zlib ו-bzip2. הם לא שונו ונטענים בזמן ריצה. רישיונות וקוד מקור: {{url}}",
         "title": "אודות GameLib",
         "version": "גרסה: {{version}}",
         "versionUnknown": "לא ידוע"

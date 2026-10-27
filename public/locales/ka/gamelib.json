@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "შესახებ",
         "license": "ლიცენზია: GPL V3",
+        "thirdPartyNotices": "ზოგიერთი თამაში ჩამოტვირთავს დამატებით კომპონენტებს, რომლებსაც GameLib თავიანთი ლიცენზიებით ავრცელებს: gst-libav და FFmpeg (LGPL-2.1-or-later), zlib და bzip2. ისინი შეუცვლელია და სრულდებისას იტვირთება. ლიცენზიები და საწყისი კოდი: {{url}}",
         "title": "GameLib-ის შესახებ",
         "version": "ვერსია: {{version}}",
         "versionUnknown": "უცნობია"

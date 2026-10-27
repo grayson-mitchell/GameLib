@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Over",
         "license": "Licentie: GPL V3",
+        "thirdPartyNotices": "Sommige games downloaden extra onderdelen die GameLib onder hun eigen licenties verspreidt: gst-libav en FFmpeg (LGPL-2.1-or-later), zlib en bzip2. Ze zijn ongewijzigd en worden tijdens het uitvoeren geladen. Licenties en broncode: {{url}}",
         "title": "Over GameLib",
         "version": "Versie: {{version}}",
         "versionUnknown": "onbekend"

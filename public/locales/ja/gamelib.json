@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "GameLibについて",
         "license": "ライセンス: GPL V3",
+        "thirdPartyNotices": "一部のゲームは、GameLib がそれぞれのライセンスの下で配布する追加コンポーネントをダウンロードします。gst-libav と FFmpeg (LGPL-2.1-or-later)、zlib、bzip2 です。これらは改変されておらず、実行時に読み込まれます。ライセンスとソースコード: {{url}}",
         "title": "GameLib について",
         "version": "バージョン: {{version}}",
         "versionUnknown": "不明"

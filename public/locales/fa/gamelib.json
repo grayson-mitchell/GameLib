@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "درباره",
         "license": "مجوز: GPL V3",
+        "thirdPartyNotices": "برخی بازی‌ها مؤلفه‌های اضافی را دانلود می‌کنند که GameLib تحت مجوزهای خودشان توزیع می‌کند: gst-libav و FFmpeg (LGPL-2.1-or-later)، zlib و bzip2. آن‌ها تغییر نکرده‌اند و هنگام اجرا بارگذاری می‌شوند. مجوزها و کد منبع: {{url}}",
         "title": "درباره GameLib",
         "version": "نسخه: {{version}}",
         "versionUnknown": "نامشخص"

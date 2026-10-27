@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Hakkında",
         "license": "Lisans: GPL V3",
+        "thirdPartyNotices": "Bazı oyunlar, GameLib'in kendi lisansları altında dağıttığı ek bileşenleri indirir: gst-libav ve FFmpeg (LGPL-2.1-or-later), zlib ve bzip2. Bunlar değiştirilmemiştir ve çalışma zamanında yüklenir. Lisanslar ve kaynak kodu: {{url}}",
         "title": "GameLib Hakkında",
         "version": "Sürüm: {{version}}",
         "versionUnknown": "bilinmiyor"

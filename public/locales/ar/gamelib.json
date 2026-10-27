@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "عن",
         "license": "الترخيص: GPL V3",
+        "thirdPartyNotices": "تقوم بعض الألعاب بتنزيل مكونات إضافية يوزعها GameLib بموجب تراخيصها الخاصة: gst-libav وFFmpeg (LGPL-2.1-or-later) وzlib وbzip2. وهي غير معدلة وتُحمَّل أثناء التشغيل. التراخيص والشيفرة المصدرية: {{url}}",
         "title": "حول GameLib",
         "version": "الإصدار: {{version}}",
         "versionUnknown": "غير معروف"

@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "О томе",
         "license": "Licenca: GPL V3",
+        "thirdPartyNotices": "Неке игре преузимају додатне компоненте које GameLib дистрибуира под њиховим сопственим лиценцама: gst-libav и FFmpeg (LGPL-2.1-or-later), zlib и bzip2. Нису измењене и учитавају се током извршавања. Лиценце и изворни код: {{url}}",
         "title": "O aplikaciji GameLib",
         "version": "Verzija: {{version}}",
         "versionUnknown": "nepoznato"

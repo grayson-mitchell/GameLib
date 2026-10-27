@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "關於",
         "license": "授權條款：GPL V3",
+        "thirdPartyNotices": "部分遊戲會下載額外元件，GameLib 依其各自的授權條款散布：gst-libav 與 FFmpeg（LGPL-2.1-or-later）、zlib 與 bzip2。這些元件未經修改，並於執行時載入。授權條款與原始碼：{{url}}",
         "title": "關於 GameLib",
         "version": "版本：{{version}}",
         "versionUnknown": "未知"

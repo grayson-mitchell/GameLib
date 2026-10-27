@@ -5,6 +5,7 @@
   "keys": [
     "about.license",
     "about.navLabel",
+    "about.thirdPartyNotices",
     "about.title",
     "about.version",
     "about.versionUnknown",

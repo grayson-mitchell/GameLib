@@ -2,6 +2,7 @@
     "about": {
         "navLabel": "Apie",
         "license": "Licencija: GPL V3",
+        "thirdPartyNotices": "Kai kurie žaidimai atsisiunčia papildomus komponentus, kuriuos GameLib platina pagal jų licencijas: gst-libav ir FFmpeg (LGPL-2.1-or-later), zlib ir bzip2. Jie nekeisti ir įkeliami vykdymo metu. Licencijos ir šaltinio kodas: {{url}}",
         "title": "Apie GameLib",
         "version": "Versija: {{version}}",
         "versionUnknown": "nežinoma"
