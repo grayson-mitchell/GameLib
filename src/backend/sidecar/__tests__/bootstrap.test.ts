@@ -66,11 +66,19 @@ jest.mock('../../online_monitor', () => ({
   onConnectivityChange: jest.fn()
 }))
 
+const mockRestoreMacSteamOnlineIfOwed = jest.fn()
+jest.mock('../../storeManagers/steam/macSteamOffline', () => ({
+  ...jest.requireActual('../../storeManagers/steam/macSteamOffline'),
+  restoreMacSteamOnlineIfOwed: (...args: unknown[]) =>
+    mockRestoreMacSteamOnlineIfOwed(...args)
+}))
+
 import { tmpdir } from 'os'
 import { isAbsolute, join, relative, resolve } from 'path'
 import { mkdtempSync } from 'node:fs'
 import { PassThrough } from 'node:stream'
 import { init } from '../bootstrap'
+import * as platformModule from '../../platform'
 import { handlerRegistry } from '../../platform'
 import { getLogFilePath } from '../../logger/paths'
 import * as loggerModule from '../../logger'
@@ -138,6 +146,36 @@ describe('sidecar bootstrap (headless boot)', () => {
   // (electron absent) reaches READY without an uncaught exception --
   // proves paths.ts's app.getPath() and electron_store.ts's `new Store()`
   // import-time walls (spike 009) are shimmed before backend code sees them.
+  describe('boot-time owed Mac Steam goonline (54-13)', () => {
+    beforeEach(() => {
+      mockRestoreMacSteamOnlineIfOwed.mockReset()
+      mockRestoreMacSteamOnlineIfOwed.mockImplementation(async () => 'not-owed')
+    })
+
+    it("init() pays a stale owed goonline once with the 'boot' trigger, after bindTransport", () => {
+      const order: string[] = []
+      const realBind = platformModule.bindTransport
+      const bindSpy = jest
+        .spyOn(platformModule, 'bindTransport')
+        .mockImplementation((...args) => {
+          order.push('bindTransport')
+          return realBind(...args)
+        })
+      mockRestoreMacSteamOnlineIfOwed.mockImplementation(async () => {
+        order.push('restore')
+        return 'not-owed'
+      })
+      try {
+        init(new PassThrough(), new PassThrough())
+      } finally {
+        bindSpy.mockRestore()
+      }
+      expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledTimes(1)
+      expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('boot')
+      expect(order).toEqual(['bindTransport', 'restore'])
+    })
+  })
+
   it('reaches READY under bare node without an uncaught exception', () => {
     const input = new PassThrough()
     const output = new PassThrough()

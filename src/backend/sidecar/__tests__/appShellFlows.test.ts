@@ -102,6 +102,15 @@ jest.mock('../sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
 
+// ── macSteamOffline — PARTIAL mock (54-13): real module, scriptable restore, so a quit
+// reaches the owed-goonline restore without firing any steam:// URL ──────────
+const mockRestoreMacSteamOnlineIfOwed = jest.fn()
+jest.mock('../../storeManagers/steam/macSteamOffline', () => ({
+  ...jest.requireActual('../../storeManagers/steam/macSteamOffline'),
+  restoreMacSteamOnlineIfOwed: (...args: unknown[]) =>
+    mockRestoreMacSteamOnlineIfOwed(...args)
+}))
+
 // ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
 // electronStub's `net.isOnline()` returns `true` -- immediately calls the real `pingSites()`,
@@ -337,6 +346,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     mockedCallAllAbortControllers.mockClear()
     mockedShutdownLongLivedChildren.mockClear()
     mockRequestRustInvoke.mockReset().mockResolvedValue(undefined)
+    mockRestoreMacSteamOnlineIfOwed
+      .mockReset()
+      .mockImplementation(async () => 'not-owed')
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
@@ -483,6 +495,21 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_APP_EXIT, [])
   })
 
+  it("54-13 quit (send) pays the owed Mac Steam goonline ('shutdown') before app_exit", async () => {
+    const { input } = startSidecar()
+    writeSend(input, 'quit-owed-1', 'quit', [])
+    await flush()
+
+    expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('shutdown')
+    const exitOrder = mockRequestRustInvoke.mock.calls.findIndex(
+      ([channel]) => channel === RUST_APP_EXIT
+    )
+    expect(exitOrder).toBeGreaterThanOrEqual(0)
+    expect(
+      mockRestoreMacSteamOnlineIfOwed.mock.invocationCallOrder[0]
+    ).toBeLessThan(mockRequestRustInvoke.mock.invocationCallOrder[exitOrder])
+  })
+
   it("quit (send) logs the '[GAMELIB_SIDECAR_SEND_HANDLER] quit' marker, the live gate's sidecar-side proof that the shell's frame landed (todo 2026-10-05 cmd-q-and-red-x)", async () => {
     const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
     try {
@@ -627,6 +654,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         )
       ).toBe(true)
       expect(mockedShutdownLongLivedChildren).not.toHaveBeenCalled()
+      expect(mockRestoreMacSteamOnlineIfOwed).not.toHaveBeenCalled()
     })
   })
 
