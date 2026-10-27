@@ -161,7 +161,7 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(() => bridgeAllowlistSchema.parse(JSON.parse(raw))).not.toThrow()
   })
 
-  test('the bundled bridge-allowlist.json is version 2 with Unclaimed World as its evidence-backed knownBad entries (51-19, 51-27, debug/unclaimed-world-wmv-mf)', () => {
+  test('the bundled bridge-allowlist.json is version 2 with no knownBad entries (all evidence-backed entries lifted)', () => {
     const raw = readFileSync(
       join(__dirname, '..', 'bridge-allowlist.json'),
       'utf-8'
@@ -169,13 +169,13 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     const parsed = JSON.parse(raw)
 
     expect(parsed.version).toBe(2)
-    expect(parsed.knownBad.map((e: { appId: string }) => e.appId)).toEqual([
-      '284100'
-    ])
+    expect(parsed.knownBad).toEqual([])
   })
 
-  test('Unclaimed World (284100) is does-not-run: CrossOver GStreamer has no WMV3/WMA9 decoder (debug/unclaimed-world-wmv-mf)', () => {
-    expect(bridgeAllowlist.knownBadReason('284100')).toBe('does-not-run')
+  // Evidence: quick 261027-n77 live gate (2026-10-27): the shipped gst-libav
+  // overlay downloaded, GST_PLUGIN_PATH applied, main menu reached.
+  test('Unclaimed World (284100) is no longer known-bad: its shipped gst-libav overlay profile makes it run (quick 261027-n77 live gate)', () => {
+    expect(bridgeAllowlist.knownBadReason('284100')).toBeNull()
   })
 
   // Evidence: 261026-ng9 SUMMARY "Live retest: packaged debug build" (2026-10-26):

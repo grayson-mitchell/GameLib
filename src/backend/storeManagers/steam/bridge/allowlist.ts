@@ -21,7 +21,8 @@
  * + bounded array schemas, parsed once at module load. Unlike the
  * 1000+-entry CrossOver index, `seed` is small and developer-curated
  * (`.min(1)`, not `.min(1000)`); `knownBad` holds only
- * evidence-backed entries (Unclaimed World 284100 so far; ELEX 411300 was lifted into seed by quick 261027-k51 once the bridge delivered its UserStatsReceived_t; XCOM 200510 moved to its
+ * evidence-backed entries (none today: Unclaimed World 284100 was lifted once its
+ * shipped gst-libav overlay profile reached the main menu, quick 261027-n77; ELEX 411300 was lifted into seed by quick 261027-k51 once the bridge delivered its UserStatsReceived_t; XCOM 200510 moved to its
  * known-fix `drm: "ceg"` key, public/fixes/200510-steam.json, after quick 261027-gtd; Hoard 63000
  * was lifted by quick 261026-ous once its bundled known-fix profile made it
  * run) and may legitimately be empty, so it has no `.min()` floor. A

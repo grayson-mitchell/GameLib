@@ -1,8 +1,10 @@
 # Publish checklist: overlay `gst-libav-1.24.13` (macOS x86_64)
 
-Operator steps. Nothing here has been done: the build task that produced this
-file fetched none of the sources below, and published, pushed and tagged
-nothing. GameLib downloads the archive from the URL pinned in
+**Published 2026-10-27**
+(https://github.com/grayson-mitchell/GameLib/releases/tag/overlay-gst-libav-1.24.13-x86_64,
+prerelease, 13 assets plus `SHA256SUMS`). The live gate passed the same day:
+284100 downloaded the overlay and reached its main menu. Keep these steps for
+re-publishing or for the next overlay. GameLib downloads the archive from the URL pinned in
 `src/common/knownFixOverlayCatalogue.ts`, so the asset must exist at exactly:
 
 https://github.com/grayson-mitchell/GameLib/releases/download/overlay-gst-libav-1.24.13-x86_64/gst-libav-1.24.13-macos-x86_64.tar.gz
@@ -34,12 +36,15 @@ https://github.com/grayson-mitchell/GameLib/releases/download/overlay-gst-libav-
    - `gst-libav-1.24.13.tar.xz` from
      https://gstreamer.freedesktop.org/src/gst-libav/gst-libav-1.24.13.tar.xz ,
      checked against the `.sha256sum` beside it
-   - the FFmpeg corresponding source: GStreamer's meson port
-     https://gitlab.freedesktop.org/gstreamer/meson-ports/ffmpeg at the commit
-     whose short id is `6b6d772` (the recipe gives the full hash), plus
-     cerbero's recipes and patches at tag 1.24.13:
-     https://gitlab.freedesktop.org/gstreamer/cerbero/-/tree/1.24.13/recipes
-     (`ffmpeg.recipe`, `gst-libav-1.0.recipe` and any patches they list)
+   - the FFmpeg corresponding source. Cerbero 1.24.13 builds FFmpeg 6.0 from
+     the ffmpeg.org tarball plus one patch, not from a meson-port commit (the
+     `6b6d772` in THIRD-PARTY-NOTICES.md is the build id the binaries report):
+     `ffmpeg-6.0.tar.xz` from https://ffmpeg.org/releases/ffmpeg-6.0.tar.xz
+     (sha256 `57be87c2…37082`, the recipe's `tarball_checksum`), plus
+     `recipes/ffmpeg/0001-Add-Meson-build.patch`, `recipes/ffmpeg.recipe` and
+     `recipes/gst-libav-1.0.recipe` from
+     https://gitlab.freedesktop.org/gstreamer/cerbero/-/tree/1.24.13/recipes ,
+     uploaded with a `cerbero-1.24.13-` prefix
    - zlib 1.2.12: https://zlib.net/fossils/zlib-1.2.12.tar.gz
    - bzip2 1.0.8: https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
    - for provenance, the original package URL

@@ -124,3 +124,14 @@ cold Wine sessions rewriting the WMP registry marker, and CrossOver can stall ab
 live launches came up in 1-2 s.
 
 Built by quick 261027-n77: tier-2 `overlays` (gstreamer-plugin-path) with catalogue id `gst-libav-1.24.13`, shipped in `284100-steam.profile.json`; asset not yet published — operator publish + live gate per `doc/releases/overlay-gst-libav-1.24.13-x86_64.md`.
+
+## Resolution (2026-10-27)
+
+Done. The overlay asset was published as prerelease `overlay-gst-libav-1.24.13-x86_64` on
+`grayson-mitchell/GameLib`, and the URL serves the pinned archive (sha256 `57e5f74b…7cced`, 8279592
+bytes). For the live gate, the hand-copied payload and `fixes/local/284100-steam.json` were moved
+aside and `tauri dev` was restarted. The 20:56 launch logged "overlay gst-libav-1.24.13 downloaded
+and installed" and "known-fix env applied: GST_PLUGIN_PATH=…/overlays/gst-libav-1.24.13/lib/gstreamer-1.0
+(overlay)", then HELLO and `GINIT SteamAPI_InitSafe ok=1`, and the operator confirmed the main menu.
+The installed files match the spike payload's per-file sums. The local workaround and the
+hand-copied payload are deleted, and the knownBad entry is lifted from `bridge-allowlist.json`.
