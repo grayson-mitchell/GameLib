@@ -696,3 +696,43 @@ describe('sign-out during a wrapped logon (54-REVIEW WR-07)', () => {
     lease.release()
   })
 })
+
+describe('stale canary with other leases held (54-REVIEW WR-08)', () => {
+  const acquire = (
+    opts: Record<string, unknown> = { reason: 'user-install' }
+  ) => (SteamUser as any).acquireAuthenticated(opts)
+
+  it('refuses the new acquire and keeps the session for the holders', async () => {
+    const held = await acquire()
+    expect(held.ok).toBe(true)
+    const first = instances()[0]
+    first.getProductInfo.mockRejectedValue(new Error('stale'))
+
+    expect(await acquire({ reason: 'redeem' })).toEqual({
+      ok: false,
+      reason: 'client-not-ready'
+    })
+    expect(await SteamUser.ensureConnected()).toBe(false)
+
+    expect(first.logOff).not.toHaveBeenCalled()
+    expect(SteamUser.getClient()).toBe(first)
+    expect(instances()).toHaveLength(1)
+    expect(internals.leaseCount).toBe(1)
+    expect(logInfoLines()).not.toContain(
+      '[Steam] CM session closed mode=authenticated cause=stale-canary'
+    )
+    held.release()
+  })
+
+  it('with no other holder, a stale canary still ends the session and reconnects through the wrap', async () => {
+    const first = await acquire()
+    first.release()
+    const inst = instances()[0]
+    inst.getProductInfo.mockRejectedValue(new Error('stale'))
+    const second = await acquire()
+    expect(second.ok).toBe(true)
+    expect(inst.logOff).toHaveBeenCalled()
+    expect(instances()).toHaveLength(2)
+    second.release()
+  })
+})

@@ -379,7 +379,7 @@ export class SteamUser {
     this.clearIdleTimer()
     let refusal: AuthSessionRefusal | null
     try {
-      refusal = await this.ensureAuthenticatedSession(opts.reason, token)
+      refusal = await this.ensureAuthenticatedSession(opts.reason, token, 1)
     } catch (err) {
       this.leaseCount--
       this.armIdleTimer()
@@ -462,11 +462,13 @@ export class SteamUser {
   /**
    * The one body that may open an authenticated CM logon. null = connected.
    * `tokenOverride` is the sign-in path: the token is already in memory, so
-   * the keyring is not read again.
+   * the keyring is not read again. `callerLeases` is how many of the current
+   * leases the caller itself holds (acquireInternal counts its own first).
    */
   private static async ensureAuthenticatedSession(
     reason: AuthSessionReason,
-    tokenOverride?: string
+    tokenOverride?: string,
+    callerLeases = 0
   ): Promise<AuthSessionRefusal | null> {
     if (this.shuttingDown) return 'shutting-down'
     if (this.client?.steamID) {
@@ -504,6 +506,19 @@ export class SteamUser {
           ],
           LogPrefix.Steam
         )
+        // 54-REVIEW WR-08: other holders (a long download, a bridge install's
+        // shim and redist steps) still use this client. Ending it would log
+        // it off under them, and a replacement logon on the same account
+        // would replace their session anyway. Refuse this acquire only; the
+        // last release's idle close or a CM drop ends the session.
+        const othersHolding = this.leaseCount - callerLeases
+        if (othersHolding > 0 && this.client === client) {
+          logWarning(
+            `Steam: ensureConnected canary failed while ${othersHolding} other lease(s) hold the session; keeping it for them and refusing this caller`,
+            LogPrefix.Steam
+          )
+          return 'client-not-ready'
+        }
         // Phase 54: never client.relog(). A relog is an authenticated logon
         // outside the go-offline wrap (spike 046c), so the stale session is
         // ended and the cold path below opens the replacement.
