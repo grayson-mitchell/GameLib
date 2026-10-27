@@ -9,11 +9,14 @@ import DownloadHero from './components/DownloadHero'
 import { downloadManagerStore } from 'frontend/helpers/electronStores'
 import { DMQueue } from 'frontend/types'
 import DownloadManagerItem from './components/DownloadManagerItem'
+import SetupDownloadItem from './components/SetupDownloadItem'
+import { useSteamSetupDownloads } from 'frontend/state/SteamSetupDownloads'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 
 export default React.memo(function DownloadManager(): JSX.Element | null {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
+  const setupRows = useSteamSetupDownloads()
   const [refreshing, setRefreshing] = useState(false)
   const [state, setState] = useState<DownloadManagerState>('idle')
   const [plannendElements, setPlannendElements] = useState<DMQueueElement[]>([])
@@ -104,6 +107,21 @@ export default React.memo(function DownloadManager(): JSX.Element | null {
         element={currentElement}
         state={state}
       />
+      {setupRows.length > 0 && (
+        <section className="dmSection">
+          <header className="dmSection__header">
+            <h5 className="dmSection__title">
+              {tGamelib('gamelib:downloadManager.setup.title', 'Setup')}
+              <span className="dmSection__count">{`(${setupRows.length})`}</span>
+            </h5>
+          </header>
+          <div className="dmSection__list">
+            {setupRows.map((row) => (
+              <SetupDownloadItem key={row.kind} row={row} />
+            ))}
+          </div>
+        </section>
+      )}
       {plannendElements.length > 0 && (
         <section className="dmSection">
           <header className="dmSection__header">

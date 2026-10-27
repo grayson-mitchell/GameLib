@@ -63,7 +63,12 @@
             "stopKeepFiles": "Durdur ve Dosyaları Sakla",
             "title": "İndirme iptal edilsin mi?"
         },
-        "progressPaused": "Duraklatıldı"
+        "progressPaused": "Duraklatıldı",
+        "setup": {
+            "steamBottle": "CrossOver için Steam",
+            "steamClient": "Steam istemcisi yükleyicisi",
+            "title": "Kurulum"
+        }
     },
     "edit-game": {
         "sgdb": {

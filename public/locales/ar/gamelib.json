@@ -67,7 +67,12 @@
             "stopKeepFiles": "إيقاف والاحتفاظ بالملفات",
             "title": "هل تريد إلغاء التنزيل؟"
         },
-        "progressPaused": "متوقف مؤقتًا"
+        "progressPaused": "متوقف مؤقتًا",
+        "setup": {
+            "steamBottle": "Steam لـ CrossOver",
+            "steamClient": "مثبّت عميل Steam",
+            "title": "الإعداد"
+        }
     },
     "edit-game": {
         "sgdb": {

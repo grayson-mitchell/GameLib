@@ -72,6 +72,7 @@ import type {
   SteamGoOfflinePayload,
   SteamGoOfflineRetryResult,
   SteamBridgeRouteVerdict,
+  SteamSetupDownloadProgress,
   SteamUserData
 } from './steam'
 import type {
@@ -768,6 +769,8 @@ interface FrontendMessages {
   // bottle-eligible game is un-provisioned; the global listener (17-06)
   // subscribes to this to drive the guided-setup flow.
   steamBottleSetupRequired: (payload: { appName: string }) => void
+  // quick 261027-tot: progress of a first-run Steam setup payload download.
+  steamSetupDownloadProgress: (payload: SteamSetupDownloadProgress) => void
   // Phase 24 (24-06), D-05/D-06: pushed by helperProcess.ts's
   // ensureBridgeHelperReady() when the shared native Steam-bridge helper is
   // not ready (unreachable within the poll budget, or up but not inited

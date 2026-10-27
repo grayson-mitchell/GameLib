@@ -63,7 +63,12 @@
             "stopKeepFiles": "중지하고 파일 유지",
             "title": "다운로드를 취소할까요?"
         },
-        "progressPaused": "일시중지됨"
+        "progressPaused": "일시중지됨",
+        "setup": {
+            "steamBottle": "CrossOver용 Steam",
+            "steamClient": "Steam 클라이언트 설치 프로그램",
+            "title": "초기 설정"
+        }
     },
     "edit-game": {
         "sgdb": {

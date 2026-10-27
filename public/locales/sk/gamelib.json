@@ -65,7 +65,12 @@
             "stopKeepFiles": "Zastaviť a ponechať súbory",
             "title": "Zrušiť sťahovanie?"
         },
-        "progressPaused": "Pozastavené"
+        "progressPaused": "Pozastavené",
+        "setup": {
+            "steamBottle": "Steam pre CrossOver",
+            "steamClient": "Inštalátor klienta Steam",
+            "title": "Nastavenie"
+        }
     },
     "edit-game": {
         "sgdb": {

@@ -64,7 +64,12 @@
             "stopKeepFiles": "Detener y conservar archivos",
             "title": "¿Cancelar la descarga?"
         },
-        "progressPaused": "Pausado"
+        "progressPaused": "Pausado",
+        "setup": {
+            "steamBottle": "Steam para CrossOver",
+            "steamClient": "Instalador del cliente de Steam",
+            "title": "Configuración"
+        }
     },
     "edit-game": {
         "sgdb": {

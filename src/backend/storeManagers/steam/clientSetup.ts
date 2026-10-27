@@ -27,10 +27,11 @@ import { join } from 'path'
 import { existsSync, mkdirSync } from 'graceful-fs'
 import { GlobalConfig } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { downloadFile, openUrlOrFile, spawnAsync } from 'backend/utils'
+import { openUrlOrFile, spawnAsync } from 'backend/utils'
 import { isMac, isLinux } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
 import { SteamUser } from './user'
+import { downloadSetupPayload } from './setupDownloads'
 import {
   STEAM_DOWNLOAD_URL,
   STEAM_SETUP_EXE_URL,
@@ -202,7 +203,10 @@ export async function startGuidedClientInstall(): Promise<StartGuidedInstallResu
   try {
     mkdirSync(destDir, { recursive: true })
     if (!existsSync(destPath)) {
-      await downloadFile({ url: installerUrl, dest: destPath })
+      await downloadSetupPayload('steam-client', {
+        url: installerUrl,
+        dest: destPath
+      })
     }
   } catch (error) {
     logError(

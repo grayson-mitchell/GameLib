@@ -106,6 +106,12 @@ jest.mock('backend/launcher', () => ({
   runWineCommand: jest.fn()
 }))
 
+// quick 261027-tot: setupDownloads.ts (the SteamSetup.exe fetch wrapper) emits
+// its progress push through ipc; mocked so the real ipc module never loads.
+jest.mock('../../../ipc', () => ({
+  sendFrontendMessage: jest.fn()
+}))
+
 // quick/261016-t3e: the 'launch' verb now lazily imports this module to
 // start a process monitor fire-and-forget — mocked so the launch-verb
 // wiring assertion below can observe the call without exercising the real

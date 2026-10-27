@@ -63,7 +63,12 @@
             "stopKeepFiles": "Hentikan & Simpan File",
             "title": "Batalkan unduhan?"
         },
-        "progressPaused": "Dijeda"
+        "progressPaused": "Dijeda",
+        "setup": {
+            "steamBottle": "Steam untuk CrossOver",
+            "steamClient": "Penginstal klien Steam",
+            "title": "Penyiapan"
+        }
     },
     "edit-game": {
         "sgdb": {

@@ -63,7 +63,12 @@
             "stopKeepFiles": "Pysäytä ja säilytä tiedostot",
             "title": "Peruutetaanko lataus?"
         },
-        "progressPaused": "Keskeytetty"
+        "progressPaused": "Keskeytetty",
+        "setup": {
+            "steamBottle": "Steam CrossOverille",
+            "steamClient": "Steam-asiakasohjelman asennusohjelma",
+            "title": "Asennus"
+        }
     },
     "edit-game": {
         "sgdb": {

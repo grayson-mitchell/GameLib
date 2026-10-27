@@ -63,7 +63,12 @@
             "stopKeepFiles": "நிறுத்தி கோப்புகளை வைத்திரு",
             "title": "பதிவிறக்கத்தை ரத்து செய்யவா?"
         },
-        "progressPaused": "இடைநிறுத்தப்பட்டது"
+        "progressPaused": "இடைநிறுத்தப்பட்டது",
+        "setup": {
+            "steamBottle": "CrossOver-க்கான Steam",
+            "steamClient": "Steam கிளையன்ட் நிறுவி",
+            "title": "அமைவு"
+        }
     },
     "edit-game": {
         "sgdb": {

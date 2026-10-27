@@ -23,7 +23,12 @@
             "stopKeepFiles": "Stoppen und Dateien behalten",
             "title": "Download abbrechen?"
         },
-        "progressPaused": "Pausiert"
+        "progressPaused": "Pausiert",
+        "setup": {
+            "steamBottle": "Steam für CrossOver",
+            "steamClient": "Steam-Client-Installer",
+            "title": "Einrichtung"
+        }
     },
     "gamepage": {
         "appleRatingUnrated": "Nicht bewertet",

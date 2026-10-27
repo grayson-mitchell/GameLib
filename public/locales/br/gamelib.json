@@ -66,7 +66,12 @@
             "stopKeepFiles": "Paouez ha mirout ar restroù",
             "title": "Nullañ ar pellgargañ ?"
         },
-        "progressPaused": "Ehanet"
+        "progressPaused": "Ehanet",
+        "setup": {
+            "steamBottle": "Steam evit CrossOver",
+            "steamClient": "Stalier arval Steam",
+            "title": "Staliadur"
+        }
     },
     "edit-game": {
         "sgdb": {

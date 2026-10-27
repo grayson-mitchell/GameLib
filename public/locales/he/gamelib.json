@@ -64,7 +64,12 @@
             "stopKeepFiles": "עצור ושמור קבצים",
             "title": "לבטל את ההורדה?"
         },
-        "progressPaused": "מושהה"
+        "progressPaused": "מושהה",
+        "setup": {
+            "steamBottle": "Steam עבור CrossOver",
+            "steamClient": "מתקין לקוח Steam",
+            "title": "הגדרה"
+        }
     },
     "edit-game": {
         "sgdb": {

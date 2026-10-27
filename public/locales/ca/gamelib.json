@@ -64,7 +64,12 @@
             "stopKeepFiles": "Atura i conserva els fitxers",
             "title": "Cancel·lar la baixada?"
         },
-        "progressPaused": "En pausa"
+        "progressPaused": "En pausa",
+        "setup": {
+            "steamBottle": "Steam per a CrossOver",
+            "steamClient": "Instal·lador del client de Steam",
+            "title": "Configuració"
+        }
     },
     "edit-game": {
         "sgdb": {

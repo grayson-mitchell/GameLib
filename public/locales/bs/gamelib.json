@@ -64,7 +64,12 @@
             "stopKeepFiles": "Zaustavi i zadrži datoteke",
             "title": "Otkazati preuzimanje?"
         },
-        "progressPaused": "Pauzirano"
+        "progressPaused": "Pauzirano",
+        "setup": {
+            "steamBottle": "Steam za CrossOver",
+            "steamClient": "Instalacijski program Steam klijenta",
+            "title": "Postavljanje"
+        }
     },
     "edit-game": {
         "sgdb": {

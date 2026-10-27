@@ -63,7 +63,12 @@
             "stopKeepFiles": "To'xtatish va fayllarni saqlash",
             "title": "Yuklash bekor qilinsinmi?"
         },
-        "progressPaused": "To'xtatildi"
+        "progressPaused": "To'xtatildi",
+        "setup": {
+            "steamBottle": "CrossOver uchun Steam",
+            "steamClient": "Steam mijoz oʻrnatuvchisi",
+            "title": "Oʻrnatish"
+        }
     },
     "edit-game": {
         "sgdb": {

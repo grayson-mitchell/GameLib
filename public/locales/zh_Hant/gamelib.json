@@ -63,7 +63,12 @@
             "stopKeepFiles": "停止並保留檔案",
             "title": "取消下載？"
         },
-        "progressPaused": "已暫停"
+        "progressPaused": "已暫停",
+        "setup": {
+            "steamBottle": "適用於 CrossOver 的 Steam",
+            "steamClient": "Steam 用戶端安裝程式",
+            "title": "安裝設定"
+        }
     },
     "edit-game": {
         "sgdb": {

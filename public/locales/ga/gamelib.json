@@ -66,7 +66,12 @@
             "stopKeepFiles": "Stop agus coinnigh comhaid",
             "title": "An bhfuil tú ag iarraidh an íoslódáil a chealú?"
         },
-        "progressPaused": "Ar Sos"
+        "progressPaused": "Ar Sos",
+        "setup": {
+            "steamBottle": "Steam do CrossOver",
+            "steamClient": "Suiteálaí chliant Steam",
+            "title": "Socrú"
+        }
     },
     "edit-game": {
         "sgdb": {

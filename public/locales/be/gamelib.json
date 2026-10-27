@@ -65,7 +65,12 @@
             "stopKeepFiles": "Спыніць і захаваць файлы",
             "title": "Скасаваць загрузку?"
         },
-        "progressPaused": "Прыпынена"
+        "progressPaused": "Прыпынена",
+        "setup": {
+            "steamBottle": "Steam для CrossOver",
+            "steamClient": "Усталёўшчык кліента Steam",
+            "title": "Усталёўка"
+        }
     },
     "edit-game": {
         "sgdb": {

@@ -207,3 +207,16 @@ export interface SteamGoOfflinePayload {
 export type SteamGoOfflineRetryResult = {
   status: 'ready' | 'still-online' | 'not-macos'
 }
+
+// quick 261027-tot: first-run Steam setup payload downloads (the native Steam
+// client installer, and SteamSetup.exe going into the CrossOver bottle) are
+// not DM-queue work; they push this shape so the Downloads view can show them.
+// Deliberately carries no url/dest -- progress only.
+export type SteamSetupDownloadKind = 'steam-client' | 'steam-bottle'
+
+export interface SteamSetupDownloadProgress {
+  kind: SteamSetupDownloadKind
+  state: 'running' | 'done' | 'error'
+  bytes: number
+  percent: number
+}

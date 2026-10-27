@@ -63,7 +63,12 @@
             "stopKeepFiles": "Stoppen en bestanden bewaren",
             "title": "Download annuleren?"
         },
-        "progressPaused": "Gepauzeerd"
+        "progressPaused": "Gepauzeerd",
+        "setup": {
+            "steamBottle": "Steam voor CrossOver",
+            "steamClient": "Installatieprogramma voor de Steam-client",
+            "title": "Installatie"
+        }
     },
     "edit-game": {
         "sgdb": {

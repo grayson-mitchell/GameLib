@@ -63,7 +63,12 @@
             "stopKeepFiles": "停止してファイルを保持",
             "title": "ダウンロードをキャンセルしますか？"
         },
-        "progressPaused": "一時停止中"
+        "progressPaused": "一時停止中",
+        "setup": {
+            "steamBottle": "CrossOver 用 Steam",
+            "steamClient": "Steam クライアントのインストーラー",
+            "title": "セットアップ"
+        }
     },
     "edit-game": {
         "sgdb": {

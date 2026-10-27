@@ -63,7 +63,12 @@
             "stopKeepFiles": "നിർത്തി ഫയലുകൾ സൂക്ഷിക്കുക",
             "title": "ഡൗൺലോഡ് റദ്ദാക്കണോ?"
         },
-        "progressPaused": "താൽക്കാലികമായി നിർത്തി"
+        "progressPaused": "താൽക്കാലികമായി നിർത്തി",
+        "setup": {
+            "steamBottle": "CrossOver-നുള്ള Steam",
+            "steamClient": "Steam ക്ലയന്റ് ഇൻസ്റ്റാളർ",
+            "title": "സജ്ജീകരണം"
+        }
     },
     "edit-game": {
         "sgdb": {
