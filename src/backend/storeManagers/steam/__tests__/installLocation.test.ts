@@ -23,6 +23,7 @@ import {
 } from '../installLocation'
 import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { SteamUser } from '../user'
+import { getAnonymousPicsClient } from '../anonymousClient'
 import { classifyDepotError } from '../depotErrors'
 import { readAcfInstalldir } from '../acfInstalldir'
 
@@ -41,6 +42,11 @@ jest.mock('backend/utils', () => ({
 }))
 
 jest.mock('../user')
+
+jest.mock('../anonymousClient', () => ({
+  ...jest.requireActual('../anonymousClient'),
+  getAnonymousPicsClient: jest.fn()
+}))
 
 // ── i18next mock — returns the fallback string for classifyDepotError
 //    assertions (depot.test.ts/library.test.ts's established pattern) ──────
@@ -107,7 +113,7 @@ describe('listSteamLibraryTargets', () => {
 describe('resolveSteamInstallTarget', () => {
   it('with one registered library, defaults to that library, no override needed', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'MyGame')
       }) as never
@@ -128,7 +134,7 @@ describe('resolveSteamInstallTarget', () => {
     jest
       .mocked(getSteamLibraries)
       .mockResolvedValue(['/lib/primary', '/lib/secondary'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'MyGame')
       }) as never
@@ -146,7 +152,7 @@ describe('resolveSteamInstallTarget', () => {
     jest
       .mocked(getSteamLibraries)
       .mockResolvedValue(['/lib/primary', '/lib/secondary'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'MyGame')
       }) as never
@@ -163,7 +169,7 @@ describe('resolveSteamInstallTarget', () => {
 
   it('D-02/D-04: a hostile PICS installdir (traversal) ABORTS resolveSteamInstallTarget — REWRITTEN from the old "sanitized to a safe fallback" assertion, which is wrong under D-04 (a containment violation is a security event, not a silent fallback)', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(12345, '../../etc/passwd')
       }) as never
@@ -185,7 +191,7 @@ describe('resolveSteamInstallTarget', () => {
 
   it('D-02/D-04: a hostile PICS installdir (path separator) ABORTS resolveSteamInstallTarget — REWRITTEN from the old "sanitized to a safe fallback" assertion', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'foo/bar')
       }) as never
@@ -207,7 +213,7 @@ describe('resolveSteamInstallTarget', () => {
 
   it('falls back to a safe appId-derived installdir when PICS returns nothing', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(12345, undefined)
       }) as never
@@ -229,7 +235,7 @@ describe('resolveSteamInstallTarget', () => {
     jest.useFakeTimers()
     try {
       jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-      jest.mocked(SteamUser.getClient).mockReturnValue(
+      jest.mocked(getAnonymousPicsClient).mockResolvedValue(
         makeFakeClient({
           // Simulates a stale-but-present CM socket: the installdir PICS
           // lookup never answers. fetchInstalldir's OWN withTimeout must bound
@@ -262,7 +268,7 @@ describe('resolveSteamInstallTarget', () => {
   it('T-21-05: rejects a non-numeric appId before any PICS lookup, still resolves via fallback installdir', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
     const fakeClient = makeFakeClient()
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(fakeClient as never)
 
     const result = await resolveSteamInstallTarget('12345; rm -rf /', {
       path: '',
@@ -277,7 +283,7 @@ describe('resolveSteamInstallTarget', () => {
 
   it('WR-04/D-02/D-04: a quote-containing installdir ABORTS resolveSteamInstallTarget — REWRITTEN from the old "sanitized to a safe fallback" assertion; quote stays denylisted as defense-in-depth against VDF injection even though downstream manifest.ts already escapes it', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'Foo"bar')
       }) as never
@@ -293,7 +299,7 @@ describe('resolveSteamInstallTarget', () => {
 
   it('WR-04/D-02/D-04: a control-char/newline-containing installdir ABORTS resolveSteamInstallTarget — REWRITTEN from the old "sanitized to a safe fallback" assertion; control chars are part of D-02\'s literal denylist', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'Foo\nBar')
       }) as never
@@ -309,7 +315,7 @@ describe('resolveSteamInstallTarget', () => {
 
   it('WR-04/D-02/D-04: a Windows drive-relative installdir (colon, no separator) ABORTS resolveSteamInstallTarget — REWRITTEN from the old "sanitized to a safe fallback" assertion; colon stays denylisted as defense-in-depth against the Windows drive-relative escape (path.win32.resolve semantics), which the POSIX containment check alone cannot catch in this environment', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'C:foo')
       }) as never
@@ -325,7 +331,7 @@ describe('resolveSteamInstallTarget', () => {
 
   it('WR-04: a well-formed installdir with spaces/dots/dashes/underscores passes through unchanged', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'Half-Life 2')
       }) as never
@@ -344,7 +350,7 @@ describe('resolveSteamInstallTarget', () => {
 
   it('D-02/D-04/T-37-03: resolveSteamInstallTarget REJECTS with UnsafeInstalldirError for a traversal installdir, rather than resolving to a safe fallback', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(12345, '../../etc/passwd')
       }) as never
@@ -361,33 +367,29 @@ describe('resolveSteamInstallTarget', () => {
   // ── quick-260909-pym RED tests (Task 1) — all three EXPECTED TO FAIL
   //    against current HEAD; Task 2 makes them pass. ─────────────────────
 
-  it('RED-1 (cold session): a cold-session resolve awaits ensureConnected and reads the real PICS installdir, instead of returning app_<appid> in 1ms', async () => {
+  it('RED-1 (cold session): a cold-session resolve connects the anonymous client and reads the real PICS installdir, never ensureConnected', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
     const client = makeFakeClient({
       getProductInfo: mockProductInfo(12345, 'Avadon The Black Fortress')
     })
-    jest
-      .mocked(SteamUser.getClient)
-      .mockReturnValueOnce(null as never)
-      .mockReturnValue(client as never)
-    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(client as never)
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '',
       platformToInstall: 'Windows'
     })
 
-    // At HEAD this fails with Received: "app_12345" and zero
-    // ensureConnected calls — the getClient() null-guard returns
-    // `undefined` from fetchInstalldir before ever awaiting a connection.
     expect(result.installdir).toBe('Avadon The Black Fortress')
     expect(result.installdirFallbackUsed).toBeUndefined()
-    expect(jest.mocked(SteamUser.ensureConnected)).toHaveBeenCalled()
+    expect(jest.mocked(SteamUser.ensureConnected)).not.toHaveBeenCalled()
+    expect(
+      jest.mocked(SteamUser.acquireOpenAuthenticated)
+    ).not.toHaveBeenCalled()
   })
 
   it('RED-2 (ACF precedence): an existing on-disk ACF wins over PICS, so a reinstall/resume never creates a second directory beside a live install', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(
           12345,
@@ -412,8 +414,7 @@ describe('resolveSteamInstallTarget', () => {
     const client = makeFakeClient({
       getProductInfo: mockProductInfo(12345, 'Baldurs Gate II Enhanced Edition')
     })
-    jest.mocked(SteamUser.getClient).mockReturnValue(null as never)
-    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
     jest.mocked(readAcfInstalldir).mockReturnValue('app_257350')
 
     const result = await resolveSteamInstallTarget(APP_ID, {
@@ -425,14 +426,13 @@ describe('resolveSteamInstallTarget', () => {
     // getProductInfo was never reachable anyway) — assert the installdir
     // too so it is non-vacuous once Task 2 wires the ACF-first branch.
     expect(result.installdir).toBe('app_257350')
-    expect(jest.mocked(SteamUser.ensureConnected)).not.toHaveBeenCalled()
+    expect(jest.mocked(getAnonymousPicsClient)).not.toHaveBeenCalled()
     expect(client.getProductInfo).not.toHaveBeenCalled()
   })
 
-  it('negative control: getClient() null AND ensureConnected resolves false still resolves (never rejects) with the safe app_<id> fallback — keeps RED-1 honest, passes at HEAD and after Task 2', async () => {
+  it('negative control: anonymous client null and no open session still resolves (never rejects) with the safe app_<id> fallback — keeps RED-1 honest, passes at HEAD and after Task 2', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(SteamUser.getClient).mockReturnValue(null as never)
-    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(false)
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '',
@@ -663,5 +663,93 @@ describe('37-REVIEW C-01: games.ts classifies UnsafeInstalldirError itself', () 
     )
     expect(shippedDefect).toMatch(/error:\s*err\.message/)
     expect(shippedDefect).not.toContain('classifyDepotError(err).message')
+  })
+})
+
+describe('resolveSteamInstallTarget — anonymous PICS with open-session fallback (Phase 54, 54-06)', () => {
+  const publicOnly = jest.fn().mockResolvedValue({
+    apps: {
+      12345: {
+        appinfo: { appid: 12345, public_only: '1', common: { name: 'X' } },
+        missingToken: true
+      }
+    }
+  })
+
+  beforeEach(() => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
+    jest.mocked(readAcfInstalldir).mockReturnValue(undefined)
+    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReset()
+    jest.mocked(SteamUser.ensureConnected).mockClear()
+  })
+
+  const target = () =>
+    resolveSteamInstallTarget(APP_ID, {
+      path: '',
+      platformToInstall: 'Windows'
+    })
+
+  it('public_only with an open session queries the session and releases the lease once', async () => {
+    jest
+      .mocked(getAnonymousPicsClient)
+      .mockResolvedValue(
+        makeFakeClient({ getProductInfo: publicOnly }) as never
+      )
+    const release = jest.fn()
+    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue({
+      client: makeFakeClient({
+        getProductInfo: mockProductInfo(12345, 'GatedGame')
+      }),
+      release
+    } as never)
+
+    const result = await target()
+
+    expect(result.installdir).toBe('GatedGame')
+    expect(release).toHaveBeenCalledTimes(1)
+    expect(SteamUser.ensureConnected).not.toHaveBeenCalled()
+  })
+
+  it('public_only with no open session falls back to app_<id> without throwing or logging on', async () => {
+    jest
+      .mocked(getAnonymousPicsClient)
+      .mockResolvedValue(
+        makeFakeClient({ getProductInfo: publicOnly }) as never
+      )
+    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
+
+    const result = await target()
+
+    expect(result.installdir).toBe(`app_${APP_ID}`)
+    expect(SteamUser.ensureConnected).not.toHaveBeenCalled()
+  })
+
+  it('anonymous client null with an open session falls back to the session', async () => {
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
+    const release = jest.fn()
+    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue({
+      client: makeFakeClient({
+        getProductInfo: mockProductInfo(12345, 'FromSession')
+      }),
+      release
+    } as never)
+
+    const result = await target()
+
+    expect(result.installdir).toBe('FromSession')
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+
+  it('an anonymous getProductInfo rejection falls back like public_only', async () => {
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
+      makeFakeClient({
+        getProductInfo: jest.fn().mockRejectedValue(new Error('cm down'))
+      }) as never
+    )
+    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
+
+    const result = await target()
+
+    expect(result.installdir).toBe(`app_${APP_ID}`)
   })
 })
