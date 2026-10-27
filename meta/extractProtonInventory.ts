@@ -32,6 +32,13 @@
  * never reassigned), applies `meta/sdk/wire-policy.json`'s per-(family,
  * method) wire/stub overlay, and runs `npx prettier --write` on every file
  * it touched (manifests + ordinals.json).
+ *
+ * Run with `pnpm extract-proton-inventory --null-sret-inventory` to instead
+ * scan EVERY lsteamclient family file at the pinned SHA and write
+ * `meta/sdk/x64-null-sret-inventory.json`: each Proton interface version with
+ * at least one sret slot (family, slotCount, sret[{slot,name,structSize}]).
+ * meta/gen_vtables.ts reads it to emit per-version sret-aware x64 null
+ * objects (quick-261027-i4x). Manifests and ordinals.json are left untouched.
  */
 
 import { spawn } from 'node:child_process'
@@ -42,6 +49,8 @@ import type {
   ArchToken,
   InterfaceManifestV2,
   MethodSignature,
+  NullSretInventory,
+  NullSretVersionEntry,
   ParamKind,
   ParamSignature,
   ReturnKind
@@ -657,6 +666,96 @@ export function manifestFilenameFor(version: string, family: string): string {
   return `i${family.toLowerCase()}${digits}.manifest.json`
 }
 
+/**
+ * Every `lsteamclient/winI<Family>.c` family file at PINNED_PROTON_SHA (a
+ * fact of the pinned tree). Scanned in full so the sret-bearing set is
+ * decided from data, not guessed.
+ */
+export const PROTON_LSTEAMCLIENT_FAMILIES: readonly string[] = [
+  'SteamAppList',
+  'SteamAppTicket',
+  'SteamApps',
+  'SteamClient',
+  'SteamController',
+  'SteamFriends',
+  'SteamGameCoordinator',
+  'SteamGameSearch',
+  'SteamGameServer',
+  'SteamGameServerStats',
+  'SteamGameStats',
+  'SteamHTMLSurface',
+  'SteamHTTP',
+  'SteamInput',
+  'SteamInventory',
+  'SteamMasterServerUpdater',
+  'SteamMatchmaking',
+  'SteamMatchmakingServers',
+  'SteamMusic',
+  'SteamMusicRemote',
+  'SteamNetworking',
+  'SteamNetworkingFakeUDPPort',
+  'SteamNetworkingMessages',
+  'SteamNetworkingSockets',
+  'SteamNetworkingSocketsSerialized',
+  'SteamNetworkingUtils',
+  'SteamParentalSettings',
+  'SteamParties',
+  'SteamRemotePlay',
+  'SteamRemoteStorage',
+  'SteamScreenshots',
+  'SteamTimeline',
+  'SteamUGC',
+  'SteamUnifiedMessages',
+  'SteamUser',
+  'SteamUserStats',
+  'SteamUtils',
+  'SteamVideo'
+]
+
+/**
+ * Pure: for each family source text, finds every Proton interface version
+ * whose thunks include at least one sret (`_ret`) method and records its
+ * slot count and sret slots. Errors from parseProtonThunks propagate.
+ */
+export function buildNullSretInventory(
+  sources: Record<string, string>
+): NullSretInventory {
+  const found: Record<string, NullSretVersionEntry> = {}
+  for (const family of Object.keys(sources).sort()) {
+    const text = sources[family]
+    const headerRe = new RegExp(`__ASM_VTABLE\\(winI${family}_(\\w+),`, 'g')
+    const versions = new Set<string>()
+    let m: RegExpExecArray | null
+    while ((m = headerRe.exec(text)) !== null) versions.add(m[1])
+    for (const version of versions) {
+      const sretRe = new RegExp(
+        `winI${family}_${version}_\\w+\\(struct w_steam_iface \\*_this, [^,)]*\\*_ret[,)]`
+      )
+      if (!sretRe.test(text)) continue
+      const methods = parseProtonThunks(text, family, version)
+      const sret = methods
+        .filter((x) => x.returnKind === 'class')
+        .map((x) => ({
+          slot: x.slot,
+          name: x.name,
+          structSize: x.structSize as number
+        }))
+      if (sret.length === 0) {
+        throw new Error(
+          `buildNullSretInventory: ${family} ${version} matched an _ret thunk but parsed no sret method`
+        )
+      }
+      found[version] = { family, slotCount: methods.length, sret }
+    }
+  }
+  const versions: Record<string, NullSretVersionEntry> = {}
+  for (const key of Object.keys(found).sort()) versions[key] = found[key]
+  return {
+    source: { kind: 'proton-lsteamclient', ref: PINNED_PROTON_SHA },
+    versions
+  }
+}
+
 function protonFileFor(family: string): string {
   return `lsteamclient/winI${family}.c`
 }
@@ -694,6 +793,23 @@ function runPrettierWrite(paths: string[]): Promise<void> {
 
 export async function main(): Promise<void> {
   const argv = process.argv.slice(2)
+  if (argv.includes('--null-sret-inventory')) {
+    const sources: Record<string, string> = {}
+    for (const family of PROTON_LSTEAMCLIENT_FAMILIES) {
+      sources[family] = await fetchProtonSource(family)
+    }
+    const inventory = buildNullSretInventory(sources)
+    const outPath = join(SDK_DIR, 'x64-null-sret-inventory.json')
+    writeFileSync(outPath, JSON.stringify(inventory, null, 2) + '\n')
+    await runPrettierWrite([outPath])
+    const entries = Object.values(inventory.versions)
+    console.log(
+      `Wrote ${outPath}: ${entries.length} versions, ` +
+        `${entries.reduce((a, e) => a + e.sret.length, 0)} sret slots, ` +
+        `${entries.reduce((a, e) => a + e.slotCount, 0)} total slots`
+    )
+    return
+  }
   const acceptanceVersions = loadAcceptanceVersions()
   const requestedVersions =
     parseArgvVersions(argv) ?? Object.keys(acceptanceVersions)

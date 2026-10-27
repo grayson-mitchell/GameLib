@@ -11,11 +11,13 @@ import { join } from 'path'
 
 import {
   applyWirePolicy,
+  buildNullSretInventory,
   classifyProtonReturn,
   computeFlatAccessor,
   manifestFilenameFor,
   mapProtonCType,
   parseProtonThunks,
+  PINNED_PROTON_SHA,
   resolveOrdinal,
   splitProtonParam,
   type WirePolicy
@@ -313,5 +315,36 @@ describe('53-12: struct-pointer returns never emit pointer + synthetic _ret', ()
     )
     expect(m.returnKind).toBe('pointer')
     expect(m.params).toHaveLength(2)
+  })
+})
+
+describe('buildNullSretInventory (synthetic fixture, D-09)', () => {
+  it('records the one sret version with its slot count and sret slots', () => {
+    const inv = buildNullSretInventory({ AbiFamily: fixtureText })
+    expect(Object.keys(inv.versions)).toEqual(['AbiFamily002'])
+    expect(inv.versions.AbiFamily002).toEqual({
+      family: 'AbiFamily',
+      slotCount: 3,
+      sret: [{ slot: 1, name: 'GetWidgetID', structSize: 8 }]
+    })
+    expect(inv.source.ref).toBe(PINNED_PROTON_SHA)
+  })
+
+  it('yields no entry for a version without any _ret thunk param', () => {
+    const text = [
+      'DEFINE_THISCALL_WRAPPER(winIAbiFamily_AbiFamily003_GetCount, 4)',
+      'int32_t __thiscall winIAbiFamily_AbiFamily003_GetCount(struct w_steam_iface *_this)',
+      '{',
+      '}',
+      '__ASM_VTABLE(winIAbiFamily_AbiFamily003,',
+      '    VTABLE_ADD_FUNC(winIAbiFamily_AbiFamily003_GetCount));'
+    ].join('\n')
+    expect(buildNullSretInventory({ AbiFamily: text }).versions).toEqual({})
+  })
+
+  it('emits version keys in sorted order', () => {
+    const inv = buildNullSretInventory({ AbiFamily: fixtureText })
+    const keys = Object.keys(inv.versions)
+    expect(keys).toEqual([...keys].sort())
   })
 })

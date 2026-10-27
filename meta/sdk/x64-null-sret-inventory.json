@@ -1,0 +1,1397 @@
+{
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468"
+  },
+  "versions": {
+    "STEAMAPPS_INTERFACE_VERSION006": {
+      "family": "SteamApps",
+      "slotCount": 22,
+      "sret": [
+        {
+          "slot": 20,
+          "name": "GetAppOwner",
+          "structSize": 8
+        }
+      ]
+    },
+    "STEAMAPPS_INTERFACE_VERSION007": {
+      "family": "SteamApps",
+      "slotCount": 24,
+      "sret": [
+        {
+          "slot": 20,
+          "name": "GetAppOwner",
+          "structSize": 8
+        }
+      ]
+    },
+    "STEAMAPPS_INTERFACE_VERSION008": {
+      "family": "SteamApps",
+      "slotCount": 33,
+      "sret": [
+        {
+          "slot": 20,
+          "name": "GetAppOwner",
+          "structSize": 8
+        }
+      ]
+    },
+    "STEAMREMOTEPLAY_INTERFACE_VERSION001": {
+      "family": "SteamRemotePlay",
+      "slotCount": 7,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSessionSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "STEAMREMOTEPLAY_INTERFACE_VERSION002": {
+      "family": "SteamRemotePlay",
+      "slotCount": 8,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSessionSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "STEAMREMOTEPLAY_INTERFACE_VERSION003": {
+      "family": "SteamRemotePlay",
+      "slotCount": 15,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSessionSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamController003": {
+      "family": "SteamController",
+      "slotCount": 17,
+      "sret": [
+        {
+          "slot": 9,
+          "name": "GetDigitalActionData",
+          "structSize": 2
+        },
+        {
+          "slot": 12,
+          "name": "GetAnalogActionData",
+          "structSize": 16
+        }
+      ]
+    },
+    "SteamController004": {
+      "family": "SteamController",
+      "slotCount": 22,
+      "sret": [
+        {
+          "slot": 9,
+          "name": "GetDigitalActionData",
+          "structSize": 2
+        },
+        {
+          "slot": 12,
+          "name": "GetAnalogActionData",
+          "structSize": 16
+        },
+        {
+          "slot": 19,
+          "name": "GetMotionData",
+          "structSize": 40
+        }
+      ]
+    },
+    "SteamController005": {
+      "family": "SteamController",
+      "slotCount": 26,
+      "sret": [
+        {
+          "slot": 9,
+          "name": "GetDigitalActionData",
+          "structSize": 2
+        },
+        {
+          "slot": 12,
+          "name": "GetAnalogActionData",
+          "structSize": 16
+        },
+        {
+          "slot": 21,
+          "name": "GetMotionData",
+          "structSize": 40
+        }
+      ]
+    },
+    "SteamController006": {
+      "family": "SteamController",
+      "slotCount": 31,
+      "sret": [
+        {
+          "slot": 13,
+          "name": "GetDigitalActionData",
+          "structSize": 2
+        },
+        {
+          "slot": 16,
+          "name": "GetAnalogActionData",
+          "structSize": 16
+        },
+        {
+          "slot": 25,
+          "name": "GetMotionData",
+          "structSize": 40
+        }
+      ]
+    },
+    "SteamController007": {
+      "family": "SteamController",
+      "slotCount": 34,
+      "sret": [
+        {
+          "slot": 12,
+          "name": "GetDigitalActionData",
+          "structSize": 2
+        },
+        {
+          "slot": 15,
+          "name": "GetAnalogActionData",
+          "structSize": 16
+        },
+        {
+          "slot": 20,
+          "name": "GetMotionData",
+          "structSize": 40
+        }
+      ]
+    },
+    "SteamController008": {
+      "family": "SteamController",
+      "slotCount": 34,
+      "sret": [
+        {
+          "slot": 12,
+          "name": "GetDigitalActionData",
+          "structSize": 2
+        },
+        {
+          "slot": 15,
+          "name": "GetAnalogActionData",
+          "structSize": 16
+        },
+        {
+          "slot": 20,
+          "name": "GetMotionData",
+          "structSize": 40
+        }
+      ]
+    },
+    "SteamFriends001": {
+      "family": "SteamFriends",
+      "slotCount": 27,
+      "sret": [
+        {
+          "slot": 13,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends002": {
+      "family": "SteamFriends",
+      "slotCount": 30,
+      "sret": [
+        {
+          "slot": 5,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 24,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 29,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends003": {
+      "family": "SteamFriends",
+      "slotCount": 20,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 13,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 16,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends004": {
+      "family": "SteamFriends",
+      "slotCount": 20,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 13,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 16,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends005": {
+      "family": "SteamFriends",
+      "slotCount": 24,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 13,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 16,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends006": {
+      "family": "SteamFriends",
+      "slotCount": 26,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 13,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 17,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends007": {
+      "family": "SteamFriends",
+      "slotCount": 28,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 12,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 16,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends008": {
+      "family": "SteamFriends",
+      "slotCount": 34,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 12,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 16,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 30,
+          "name": "GetClanOwner",
+          "structSize": 8
+        },
+        {
+          "slot": 32,
+          "name": "GetClanOfficerByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends009": {
+      "family": "SteamFriends",
+      "slotCount": 44,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 12,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 16,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 30,
+          "name": "GetClanOwner",
+          "structSize": 8
+        },
+        {
+          "slot": 32,
+          "name": "GetClanOfficerByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 41,
+          "name": "GetCoplayFriend",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends010": {
+      "family": "SteamFriends",
+      "slotCount": 59,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 12,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 18,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 32,
+          "name": "GetClanOwner",
+          "structSize": 8
+        },
+        {
+          "slot": 34,
+          "name": "GetClanOfficerByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 43,
+          "name": "GetCoplayFriend",
+          "structSize": 8
+        },
+        {
+          "slot": 49,
+          "name": "GetChatMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends011": {
+      "family": "SteamFriends",
+      "slotCount": 63,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 12,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 18,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 32,
+          "name": "GetClanOwner",
+          "structSize": 8
+        },
+        {
+          "slot": 34,
+          "name": "GetClanOfficerByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 44,
+          "name": "GetCoplayFriend",
+          "structSize": 8
+        },
+        {
+          "slot": 50,
+          "name": "GetChatMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends012": {
+      "family": "SteamFriends",
+      "slotCount": 63,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 12,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 18,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 32,
+          "name": "GetClanOwner",
+          "structSize": 8
+        },
+        {
+          "slot": 34,
+          "name": "GetClanOfficerByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 44,
+          "name": "GetCoplayFriend",
+          "structSize": 8
+        },
+        {
+          "slot": 50,
+          "name": "GetChatMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends013": {
+      "family": "SteamFriends",
+      "slotCount": 63,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 12,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 18,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 32,
+          "name": "GetClanOwner",
+          "structSize": 8
+        },
+        {
+          "slot": 34,
+          "name": "GetClanOfficerByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 44,
+          "name": "GetCoplayFriend",
+          "structSize": 8
+        },
+        {
+          "slot": 50,
+          "name": "GetChatMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends014": {
+      "family": "SteamFriends",
+      "slotCount": 64,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 13,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 19,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 33,
+          "name": "GetClanOwner",
+          "structSize": 8
+        },
+        {
+          "slot": 35,
+          "name": "GetClanOfficerByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 45,
+          "name": "GetCoplayFriend",
+          "structSize": 8
+        },
+        {
+          "slot": 51,
+          "name": "GetChatMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends015": {
+      "family": "SteamFriends",
+      "slotCount": 72,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 19,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 25,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 39,
+          "name": "GetClanOwner",
+          "structSize": 8
+        },
+        {
+          "slot": 41,
+          "name": "GetClanOfficerByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 51,
+          "name": "GetCoplayFriend",
+          "structSize": 8
+        },
+        {
+          "slot": 57,
+          "name": "GetChatMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends017": {
+      "family": "SteamFriends",
+      "slotCount": 80,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 19,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 25,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 39,
+          "name": "GetClanOwner",
+          "structSize": 8
+        },
+        {
+          "slot": 41,
+          "name": "GetClanOfficerByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 51,
+          "name": "GetCoplayFriend",
+          "structSize": 8
+        },
+        {
+          "slot": 57,
+          "name": "GetChatMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamFriends018": {
+      "family": "SteamFriends",
+      "slotCount": 78,
+      "sret": [
+        {
+          "slot": 3,
+          "name": "GetFriendByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 18,
+          "name": "GetClanByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 24,
+          "name": "GetFriendFromSourceByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 38,
+          "name": "GetClanOwner",
+          "structSize": 8
+        },
+        {
+          "slot": 40,
+          "name": "GetClanOfficerByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 49,
+          "name": "GetCoplayFriend",
+          "structSize": 8
+        },
+        {
+          "slot": 55,
+          "name": "GetChatMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamGameServer002": {
+      "family": "SteamGameServer",
+      "slotCount": 21,
+      "sret": [
+        {
+          "slot": 13,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamGameServer003": {
+      "family": "SteamGameServer",
+      "slotCount": 17,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamGameServer004": {
+      "family": "SteamGameServer",
+      "slotCount": 14,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetSteamID",
+          "structSize": 8
+        },
+        {
+          "slot": 6,
+          "name": "CreateUnauthenticatedUserConnection",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamGameServer005": {
+      "family": "SteamGameServer",
+      "slotCount": 14,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetSteamID",
+          "structSize": 8
+        },
+        {
+          "slot": 6,
+          "name": "CreateUnauthenticatedUserConnection",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamGameServer008": {
+      "family": "SteamGameServer",
+      "slotCount": 17,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetSteamID",
+          "structSize": 8
+        },
+        {
+          "slot": 6,
+          "name": "CreateUnauthenticatedUserConnection",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamGameServer009": {
+      "family": "SteamGameServer",
+      "slotCount": 19,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetSteamID",
+          "structSize": 8
+        },
+        {
+          "slot": 6,
+          "name": "CreateUnauthenticatedUserConnection",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamGameServer010": {
+      "family": "SteamGameServer",
+      "slotCount": 23,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetSteamID",
+          "structSize": 8
+        },
+        {
+          "slot": 6,
+          "name": "CreateUnauthenticatedUserConnection",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamGameServer011": {
+      "family": "SteamGameServer",
+      "slotCount": 44,
+      "sret": [
+        {
+          "slot": 10,
+          "name": "GetSteamID",
+          "structSize": 8
+        },
+        {
+          "slot": 25,
+          "name": "CreateUnauthenticatedUserConnection",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamGameServer012": {
+      "family": "SteamGameServer",
+      "slotCount": 44,
+      "sret": [
+        {
+          "slot": 10,
+          "name": "GetSteamID",
+          "structSize": 8
+        },
+        {
+          "slot": 25,
+          "name": "CreateUnauthenticatedUserConnection",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamGameServer013": {
+      "family": "SteamGameServer",
+      "slotCount": 44,
+      "sret": [
+        {
+          "slot": 10,
+          "name": "GetSteamID",
+          "structSize": 8
+        },
+        {
+          "slot": 25,
+          "name": "CreateUnauthenticatedUserConnection",
+          "structSize": 8
+        },
+        {
+          "slot": 36,
+          "name": "GetPublicIP",
+          "structSize": 20
+        }
+      ]
+    },
+    "SteamGameServer014": {
+      "family": "SteamGameServer",
+      "slotCount": 44,
+      "sret": [
+        {
+          "slot": 10,
+          "name": "GetSteamID",
+          "structSize": 8
+        },
+        {
+          "slot": 33,
+          "name": "GetPublicIP",
+          "structSize": 20
+        },
+        {
+          "slot": 39,
+          "name": "CreateUnauthenticatedUserConnection",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamGameServer015": {
+      "family": "SteamGameServer",
+      "slotCount": 44,
+      "sret": [
+        {
+          "slot": 10,
+          "name": "GetSteamID",
+          "structSize": 8
+        },
+        {
+          "slot": 33,
+          "name": "GetPublicIP",
+          "structSize": 20
+        },
+        {
+          "slot": 39,
+          "name": "CreateUnauthenticatedUserConnection",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamInput001": {
+      "family": "SteamInput",
+      "slotCount": 35,
+      "sret": [
+        {
+          "slot": 12,
+          "name": "GetDigitalActionData",
+          "structSize": 2
+        },
+        {
+          "slot": 15,
+          "name": "GetAnalogActionData",
+          "structSize": 16
+        },
+        {
+          "slot": 20,
+          "name": "GetMotionData",
+          "structSize": 40
+        }
+      ]
+    },
+    "SteamInput002": {
+      "family": "SteamInput",
+      "slotCount": 35,
+      "sret": [
+        {
+          "slot": 12,
+          "name": "GetDigitalActionData",
+          "structSize": 2
+        },
+        {
+          "slot": 15,
+          "name": "GetAnalogActionData",
+          "structSize": 16
+        },
+        {
+          "slot": 20,
+          "name": "GetMotionData",
+          "structSize": 40
+        }
+      ]
+    },
+    "SteamInput005": {
+      "family": "SteamInput",
+      "slotCount": 47,
+      "sret": [
+        {
+          "slot": 17,
+          "name": "GetDigitalActionData",
+          "structSize": 2
+        },
+        {
+          "slot": 21,
+          "name": "GetAnalogActionData",
+          "structSize": 16
+        },
+        {
+          "slot": 29,
+          "name": "GetMotionData",
+          "structSize": 40
+        }
+      ]
+    },
+    "SteamInput006": {
+      "family": "SteamInput",
+      "slotCount": 48,
+      "sret": [
+        {
+          "slot": 17,
+          "name": "GetDigitalActionData",
+          "structSize": 2
+        },
+        {
+          "slot": 21,
+          "name": "GetAnalogActionData",
+          "structSize": 16
+        },
+        {
+          "slot": 29,
+          "name": "GetMotionData",
+          "structSize": 40
+        }
+      ]
+    },
+    "SteamMatchMaking001": {
+      "family": "SteamMatchmaking",
+      "slotCount": 22,
+      "sret": [
+        {
+          "slot": 8,
+          "name": "GetLobbyByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 14,
+          "name": "GetLobbyMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamMatchMaking002": {
+      "family": "SteamMatchmaking",
+      "slotCount": 20,
+      "sret": [
+        {
+          "slot": 5,
+          "name": "GetLobbyByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 11,
+          "name": "GetLobbyMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamMatchMaking003": {
+      "family": "SteamMatchmaking",
+      "slotCount": 28,
+      "sret": [
+        {
+          "slot": 8,
+          "name": "GetLobbyByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 14,
+          "name": "GetLobbyMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamMatchMaking004": {
+      "family": "SteamMatchmaking",
+      "slotCount": 27,
+      "sret": [
+        {
+          "slot": 8,
+          "name": "GetLobbyByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 14,
+          "name": "GetLobbyMemberByIndex",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamMatchMaking005": {
+      "family": "SteamMatchmaking",
+      "slotCount": 31,
+      "sret": [
+        {
+          "slot": 9,
+          "name": "GetLobbyByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 15,
+          "name": "GetLobbyMemberByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 29,
+          "name": "GetLobbyOwner",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamMatchMaking006": {
+      "family": "SteamMatchmaking",
+      "slotCount": 28,
+      "sret": [
+        {
+          "slot": 8,
+          "name": "GetLobbyByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 14,
+          "name": "GetLobbyMemberByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 27,
+          "name": "GetLobbyOwner",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamMatchMaking007": {
+      "family": "SteamMatchmaking",
+      "slotCount": 34,
+      "sret": [
+        {
+          "slot": 9,
+          "name": "GetLobbyByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 15,
+          "name": "GetLobbyMemberByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 32,
+          "name": "GetLobbyOwner",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamMatchMaking008": {
+      "family": "SteamMatchmaking",
+      "slotCount": 36,
+      "sret": [
+        {
+          "slot": 11,
+          "name": "GetLobbyByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 17,
+          "name": "GetLobbyMemberByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 34,
+          "name": "GetLobbyOwner",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamMatchMaking009": {
+      "family": "SteamMatchmaking",
+      "slotCount": 38,
+      "sret": [
+        {
+          "slot": 12,
+          "name": "GetLobbyByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 18,
+          "name": "GetLobbyMemberByIndex",
+          "structSize": 8
+        },
+        {
+          "slot": 35,
+          "name": "GetLobbyOwner",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser004": {
+      "family": "SteamUser",
+      "slotCount": 26,
+      "sret": [
+        {
+          "slot": 6,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser005": {
+      "family": "SteamUser",
+      "slotCount": 39,
+      "sret": [
+        {
+          "slot": 6,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser006": {
+      "family": "SteamUser",
+      "slotCount": 12,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser007": {
+      "family": "SteamUser",
+      "slotCount": 13,
+      "sret": [
+        {
+          "slot": 4,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser008": {
+      "family": "SteamUser",
+      "slotCount": 7,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser009": {
+      "family": "SteamUser",
+      "slotCount": 7,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser010": {
+      "family": "SteamUser",
+      "slotCount": 6,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser011": {
+      "family": "SteamUser",
+      "slotCount": 11,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser012": {
+      "family": "SteamUser",
+      "slotCount": 16,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser013": {
+      "family": "SteamUser",
+      "slotCount": 17,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser014": {
+      "family": "SteamUser",
+      "slotCount": 21,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser015": {
+      "family": "SteamUser",
+      "slotCount": 22,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser016": {
+      "family": "SteamUser",
+      "slotCount": 22,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser017": {
+      "family": "SteamUser",
+      "slotCount": 24,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser018": {
+      "family": "SteamUser",
+      "slotCount": 25,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser019": {
+      "family": "SteamUser",
+      "slotCount": 29,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser020": {
+      "family": "SteamUser",
+      "slotCount": 31,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser021": {
+      "family": "SteamUser",
+      "slotCount": 32,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser022": {
+      "family": "SteamUser",
+      "slotCount": 32,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    },
+    "SteamUser023": {
+      "family": "SteamUser",
+      "slotCount": 33,
+      "sret": [
+        {
+          "slot": 2,
+          "name": "GetSteamID",
+          "structSize": 8
+        }
+      ]
+    }
+  }
+}
