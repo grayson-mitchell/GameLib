@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "Aseta Steam offline-tilaan jatkaaksesi",
             "body": "GameLibin täytyy kirjautua Steam-tilillesi tätä varten. Pitääkseen Steam-kaverilistasi kirjautuneena se kirjautuu sisään, kun Steam-sovellus on offline-tilassa, mutta Steam ei siirtynyt offline-tilaan, kun GameLib pyysi sitä. Näin voi käydä, kun Steam-peli on käynnissä.",
-            "steps": "Valitse Steam-sovelluksessa Steam > Go Offline ja paina Jatka. GameLib asettaa Steamin takaisin online-tilaan kirjauduttuaan.",
+            "steps": "Jos Steam-peli on käynnissä, sulje se ensin: Steam ei huomioi Go Offline -valintaa pelin ollessa käynnissä. Valitse Steam-sovelluksessa Steam > Go Offline ja paina Jatka. GameLib asettaa Steamin takaisin online-tilaan kirjauduttuaan.",
             "continue": "Jatka",
-            "stillOnline": "Steam näkyy edelleen online-tilassa. Valitse Steam-sovelluksessa Steam > Go Offline ja paina Jatka uudelleen.",
+            "stillOnline": "Steam näkyy edelleen online-tilassa. Jos Steam-peli on yhä käynnissä, sulje se ensin. Valitse Steam-sovelluksessa Steam > Go Offline ja paina Jatka uudelleen.",
             "readyRedeem": "Steam on nyt offline-tilassa. Lunasta avain uudelleen jatkaaksesi.",
             "error": "Jatkaminen ei onnistunut: {{error}}"
         },

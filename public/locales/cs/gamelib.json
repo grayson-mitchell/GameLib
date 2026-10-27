@@ -480,9 +480,9 @@
         "goOffline": {
             "title": "Pro pokračování přepněte Steam do režimu offline",
             "body": "GameLib se k tomu musí přihlásit k vašemu účtu Steam. Aby seznam přátel Steam zůstal přihlášený, přihlašuje se, když je aplikace Steam offline, ale Steam se do režimu offline nepřepnul, když o to GameLib požádal. To se může stát, když běží hra ze Steamu.",
-            "steps": "V aplikaci Steam zvolte Steam > Go Offline a stiskněte Pokračovat. GameLib po přihlášení přepne Steam zpět do režimu online.",
+            "steps": "Pokud běží hra ze Steamu, nejprve ji ukončete: Steam během běžící hry příkaz Go Offline ignoruje. V aplikaci Steam zvolte Steam > Go Offline a stiskněte Pokračovat. GameLib po přihlášení přepne Steam zpět do režimu online.",
             "continue": "Pokračovat",
-            "stillOnline": "Steam se stále zobrazuje jako online. V aplikaci Steam zvolte Steam > Go Offline a znovu stiskněte Pokračovat.",
+            "stillOnline": "Steam se stále zobrazuje jako online. Pokud hra ze Steamu stále běží, nejprve ji ukončete. V aplikaci Steam zvolte Steam > Go Offline a znovu stiskněte Pokračovat.",
             "readyRedeem": "Steam je nyní offline. Pro pokračování klíč uplatněte znovu.",
             "error": "Nelze pokračovat: {{error}}"
         },

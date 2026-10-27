@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "Devam etmek için Steam'i çevrimdışı yapın",
             "body": "GameLib'in bunun için Steam hesabınızda oturum açması gerekiyor. Steam arkadaş listenizin oturumda kalması için Steam uygulaması çevrimdışıyken oturum açar, ancak GameLib istediğinde Steam çevrimdışı olmadı. Bu, bir Steam oyunu çalışırken olabilir.",
-            "steps": "Steam uygulamasında Steam > Go Offline seçeneğini seçin ve Devam'a basın. GameLib oturum açtıktan sonra Steam'i yeniden çevrimiçi yapar.",
+            "steps": "Bir Steam oyunu çalışıyorsa önce oyundan çıkın: Steam, bir oyun çalışırken Go Offline komutunu yok sayar. Steam uygulamasında Steam > Go Offline seçeneğini seçin ve Devam'a basın. GameLib oturum açtıktan sonra Steam'i yeniden çevrimiçi yapar.",
             "continue": "Devam",
-            "stillOnline": "Steam hâlâ çevrimiçi görünüyor. Steam uygulamasında Steam > Go Offline seçeneğini seçin ve Devam'a tekrar basın.",
+            "stillOnline": "Steam hâlâ çevrimiçi görünüyor. Bir Steam oyunu hâlâ çalışıyorsa önce oyundan çıkın. Steam uygulamasında Steam > Go Offline seçeneğini seçin ve Devam'a tekrar basın.",
             "readyRedeem": "Steam artık çevrimdışı. Devam etmek için anahtarı yeniden kullanın.",
             "error": "Devam edilemedi: {{error}}"
         },

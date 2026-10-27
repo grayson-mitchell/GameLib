@@ -137,14 +137,14 @@ const SteamGoOfflineNotice = () => {
         <p>
           {t(
             'steam.goOffline.steps',
-            'In the Steam app, choose Steam > Go Offline, then press Continue. GameLib sets Steam back online once it has signed in.'
+            'If a Steam game is running, quit it first: Steam ignores Go Offline while a game runs. In the Steam app, choose Steam > Go Offline, then press Continue. GameLib sets Steam back online once it has signed in.'
           )}
         </p>
         {status === 'still-online' ? (
           <p>
             {t(
               'steam.goOffline.stillOnline',
-              'Steam still shows as online. Choose Steam > Go Offline in the Steam app, then press Continue again.'
+              'Steam still shows as online. If a Steam game is still running, quit it first. Choose Steam > Go Offline in the Steam app, then press Continue again.'
             )}
           </p>
         ) : null}

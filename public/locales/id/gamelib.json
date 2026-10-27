@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "Setel Steam ke mode offline untuk melanjutkan",
             "body": "GameLib perlu masuk ke akun Steam Anda untuk ini. Agar daftar teman Steam Anda tetap masuk, GameLib masuk saat aplikasi Steam offline, tetapi Steam tidak beralih ke offline saat GameLib memintanya. Hal ini bisa terjadi saat game Steam sedang berjalan.",
-            "steps": "Di aplikasi Steam, pilih Steam > Go Offline, lalu tekan Lanjutkan. GameLib akan mengembalikan Steam ke online setelah berhasil masuk.",
+            "steps": "Jika game Steam sedang berjalan, tutup dulu game tersebut: Steam mengabaikan Go Offline selama game berjalan. Di aplikasi Steam, pilih Steam > Go Offline, lalu tekan Lanjutkan. GameLib akan mengembalikan Steam ke online setelah berhasil masuk.",
             "continue": "Lanjutkan",
-            "stillOnline": "Steam masih terlihat online. Pilih Steam > Go Offline di aplikasi Steam, lalu tekan Lanjutkan lagi.",
+            "stillOnline": "Steam masih terlihat online. Jika game Steam masih berjalan, tutup dulu game tersebut. Pilih Steam > Go Offline di aplikasi Steam, lalu tekan Lanjutkan lagi.",
             "readyRedeem": "Steam sekarang offline. Tukarkan kunci lagi untuk melanjutkan.",
             "error": "Tidak dapat melanjutkan: {{error}}"
         },

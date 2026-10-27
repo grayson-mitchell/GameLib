@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "Davom etish uchun Steam'ni oflayn qiling",
             "body": "GameLib buning uchun Steam hisobingizga kirishi kerak. Steam do'stlar ro'yxatingiz kirgan holda qolishi uchun u Steam ilovasi oflayn bo'lganda kiradi, ammo GameLib so'raganida Steam oflayn bo'lmadi. Bu Steam o'yini ishlayotganda yuz berishi mumkin.",
-            "steps": "Steam ilovasida Steam > Go Offline ni tanlang va Davom etish tugmasini bosing. GameLib kirgandan so'ng Steam'ni yana onlayn qiladi.",
+            "steps": "Agar Steam o'yini ishlayotgan bo'lsa, avval undan chiqing: o'yin ishlayotganda Steam Go Offline buyrug'ini e'tiborsiz qoldiradi. Steam ilovasida Steam > Go Offline ni tanlang va Davom etish tugmasini bosing. GameLib kirgandan so'ng Steam'ni yana onlayn qiladi.",
             "continue": "Davom etish",
-            "stillOnline": "Steam hali ham onlayn ko'rinmoqda. Steam ilovasida Steam > Go Offline ni tanlang va Davom etish tugmasini yana bosing.",
+            "stillOnline": "Steam hali ham onlayn ko'rinmoqda. Agar Steam o'yini hali ham ishlayotgan bo'lsa, avval undan chiqing. Steam ilovasida Steam > Go Offline ni tanlang va Davom etish tugmasini yana bosing.",
             "readyRedeem": "Steam endi oflayn. Davom etish uchun kalitni qayta faollashtiring.",
             "error": "Davom etib bo'lmadi: {{error}}"
         },

@@ -514,9 +514,9 @@
         "goOffline": {
             "title": "Set Steam offline to continue",
             "body": "GameLib needs to sign in to your Steam account for this. To keep your Steam Friends list signed in, it signs in while the Steam app is offline, but Steam did not go offline when GameLib asked. This can happen while a Steam game is running.",
-            "steps": "In the Steam app, choose Steam > Go Offline, then press Continue. GameLib sets Steam back online once it has signed in.",
+            "steps": "If a Steam game is running, quit it first: Steam ignores Go Offline while a game runs. In the Steam app, choose Steam > Go Offline, then press Continue. GameLib sets Steam back online once it has signed in.",
             "continue": "Continue",
-            "stillOnline": "Steam still shows as online. Choose Steam > Go Offline in the Steam app, then press Continue again.",
+            "stillOnline": "Steam still shows as online. If a Steam game is still running, quit it first. Choose Steam > Go Offline in the Steam app, then press Continue again.",
             "readyRedeem": "Steam is offline now. Redeem the key again to continue.",
             "error": "Could not continue: {{error}}"
         },

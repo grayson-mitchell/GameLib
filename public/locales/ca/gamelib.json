@@ -473,9 +473,9 @@
         "goOffline": {
             "title": "Posa Steam fora de línia per continuar",
             "body": "GameLib necessita iniciar la sessió al teu compte de Steam per fer-ho. Per mantenir la sessió de la teva llista d'amics de Steam, l'inicia mentre l'aplicació de Steam està fora de línia, però Steam no s'ha posat fora de línia quan GameLib ho ha demanat. Això pot passar mentre s'executa un joc de Steam.",
-            "steps": "A l'aplicació de Steam, tria Steam > Go Offline i prem Continua. GameLib torna a posar Steam en línia quan hagi iniciat la sessió.",
+            "steps": "Si s'està executant un joc de Steam, tanca'l primer: Steam ignora Go Offline mentre s'executa un joc. A l'aplicació de Steam, tria Steam > Go Offline i prem Continua. GameLib torna a posar Steam en línia quan hagi iniciat la sessió.",
             "continue": "Continua",
-            "stillOnline": "Steam encara apareix en línia. Tria Steam > Go Offline a l'aplicació de Steam i prem Continua de nou.",
+            "stillOnline": "Steam encara apareix en línia. Si encara s'està executant un joc de Steam, tanca'l primer. Tria Steam > Go Offline a l'aplicació de Steam i prem Continua de nou.",
             "readyRedeem": "Steam és fora de línia ara. Bescanvia la clau de nou per continuar.",
             "error": "No s'ha pogut continuar: {{error}}"
         },

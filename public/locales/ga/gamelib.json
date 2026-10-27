@@ -487,9 +487,9 @@
         "goOffline": {
             "title": "Socraigh Steam as líne chun leanúint ar aghaidh",
             "body": "Ní mór do GameLib logáil isteach i do chuntas Steam chun seo a dhéanamh. Chun do liosta cairde Steam a choinneáil logáilte isteach, logálann sé isteach agus an aip Steam as líne, ach níor chuaigh Steam as líne nuair a d'iarr GameLib air. Is féidir é seo tarlú agus cluiche Steam ag rith.",
-            "steps": "San aip Steam, roghnaigh Steam > Go Offline, ansin brúigh Lean ar aghaidh. Cuireann GameLib Steam ar líne arís nuair atá sé logáilte isteach.",
+            "steps": "Má tá cluiche Steam ar siúl, scoir de ar dtús: déanann Steam neamhaird de Go Offline fad atá cluiche ar siúl. San aip Steam, roghnaigh Steam > Go Offline, ansin brúigh Lean ar aghaidh. Cuireann GameLib Steam ar líne arís nuair atá sé logáilte isteach.",
             "continue": "Lean ar aghaidh",
-            "stillOnline": "Taispeántar Steam ar líne fós. Roghnaigh Steam > Go Offline san aip Steam, ansin brúigh Lean ar aghaidh arís.",
+            "stillOnline": "Taispeántar Steam ar líne fós. Má tá cluiche Steam fós ar siúl, scoir de ar dtús. Roghnaigh Steam > Go Offline san aip Steam, ansin brúigh Lean ar aghaidh arís.",
             "readyRedeem": "Tá Steam as líne anois. Fuascail an eochair arís chun leanúint ar aghaidh.",
             "error": "Níorbh fhéidir leanúint ar aghaidh: {{error}}"
         },

@@ -480,9 +480,9 @@
         "goOffline": {
             "title": "Przełącz Steam w tryb offline, aby kontynuować",
             "body": "GameLib musi w tym celu zalogować się na Twoje konto Steam. Aby lista znajomych Steam pozostała zalogowana, loguje się, gdy aplikacja Steam jest w trybie offline, ale Steam nie przeszedł w tryb offline, gdy GameLib o to poprosił. Może się to zdarzyć, gdy uruchomiona jest gra ze Steam.",
-            "steps": "W aplikacji Steam wybierz Steam > Go Offline, a następnie naciśnij Kontynuuj. GameLib ponownie przełączy Steam w tryb online po zalogowaniu.",
+            "steps": "Jeśli działa gra ze Steam, najpierw ją zamknij: Steam ignoruje Go Offline, dopóki gra jest uruchomiona. W aplikacji Steam wybierz Steam > Go Offline, a następnie naciśnij Kontynuuj. GameLib ponownie przełączy Steam w tryb online po zalogowaniu.",
             "continue": "Kontynuuj",
-            "stillOnline": "Steam nadal jest widoczny jako online. Wybierz Steam > Go Offline w aplikacji Steam, a następnie ponownie naciśnij Kontynuuj.",
+            "stillOnline": "Steam nadal jest widoczny jako online. Jeśli gra ze Steam nadal działa, najpierw ją zamknij. Wybierz Steam > Go Offline w aplikacji Steam, a następnie ponownie naciśnij Kontynuuj.",
             "readyRedeem": "Steam jest teraz offline. Zrealizuj klucz ponownie, aby kontynuować.",
             "error": "Nie można kontynuować: {{error}}"
         },

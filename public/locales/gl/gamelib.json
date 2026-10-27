@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "Pon Steam sen conexión para continuar",
             "body": "GameLib necesita iniciar sesión na túa conta de Steam para isto. Para manter iniciada a sesión da túa lista de amizades de Steam, inicia sesión mentres a aplicación de Steam está sen conexión, pero Steam non se puxo sen conexión cando GameLib o solicitou. Isto pode acontecer mentres se executa un xogo de Steam.",
-            "steps": "Na aplicación de Steam, escolle Steam > Go Offline e preme Continuar. GameLib volve poñer Steam en liña cando inicie sesión.",
+            "steps": "Se hai un xogo de Steam en execución, péchao primeiro: Steam ignora Go Offline mentres se executa un xogo. Na aplicación de Steam, escolle Steam > Go Offline e preme Continuar. GameLib volve poñer Steam en liña cando inicie sesión.",
             "continue": "Continuar",
-            "stillOnline": "Steam segue aparecendo en liña. Escolle Steam > Go Offline na aplicación de Steam e preme Continuar de novo.",
+            "stillOnline": "Steam segue aparecendo en liña. Se aínda hai un xogo de Steam en execución, péchao primeiro. Escolle Steam > Go Offline na aplicación de Steam e preme Continuar de novo.",
             "readyRedeem": "Steam está sen conexión agora. Canxea a clave de novo para continuar.",
             "error": "Non se puido continuar: {{error}}"
         },

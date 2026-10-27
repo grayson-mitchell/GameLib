@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "Davam etmək üçün Steam-i oflayn edin",
             "body": "GameLib bunun üçün Steam hesabınıza daxil olmalıdır. Steam dost siyahınızın daxil olmuş qalması üçün Steam tətbiqi oflayn olarkən daxil olur, lakin GameLib xahiş etdikdə Steam oflayn olmadı. Bu, Steam oyunu işləyərkən baş verə bilər.",
-            "steps": "Steam tətbiqində Steam > Go Offline seçin və Davam et düyməsinə basın. GameLib daxil olduqdan sonra Steam-i yenidən onlayn edir.",
+            "steps": "Steam oyunu işləyirsə, əvvəlcə ondan çıxın: oyun işləyərkən Steam Go Offline əmrinə məhəl qoymur. Steam tətbiqində Steam > Go Offline seçin və Davam et düyməsinə basın. GameLib daxil olduqdan sonra Steam-i yenidən onlayn edir.",
             "continue": "Davam et",
-            "stillOnline": "Steam hələ də onlayn görünür. Steam tətbiqində Steam > Go Offline seçin və yenidən Davam et düyməsinə basın.",
+            "stillOnline": "Steam hələ də onlayn görünür. Steam oyunu hələ də işləyirsə, əvvəlcə ondan çıxın. Steam tətbiqində Steam > Go Offline seçin və yenidən Davam et düyməsinə basın.",
             "readyRedeem": "Steam indi oflayndır. Davam etmək üçün açarı yenidən aktivləşdirin.",
             "error": "Davam etmək mümkün olmadı: {{error}}"
         },

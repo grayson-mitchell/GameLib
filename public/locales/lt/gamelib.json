@@ -480,9 +480,9 @@
         "goOffline": {
             "title": "Norėdami tęsti, nustatykite Steam kaip neprisijungusį",
             "body": "Tam GameLib turi prisijungti prie jūsų Steam paskyros. Kad jūsų Steam draugų sąrašas liktų prisijungęs, jis prisijungia, kol Steam programa yra neprisijungusi, bet Steam nepersijungė į neprisijungusį režimą, kai to paprašė GameLib. Taip gali nutikti, kai veikia Steam žaidimas.",
-            "steps": "Steam programoje pasirinkite Steam > Go Offline ir paspauskite Tęsti. Prisijungęs GameLib vėl perjungs Steam į prisijungusį režimą.",
+            "steps": "Jei veikia Steam žaidimas, pirmiausia jį uždarykite: kol veikia žaidimas, Steam nepaiso Go Offline. Steam programoje pasirinkite Steam > Go Offline ir paspauskite Tęsti. Prisijungęs GameLib vėl perjungs Steam į prisijungusį režimą.",
             "continue": "Tęsti",
-            "stillOnline": "Steam vis dar rodomas kaip prisijungęs. Steam programoje pasirinkite Steam > Go Offline ir dar kartą paspauskite Tęsti.",
+            "stillOnline": "Steam vis dar rodomas kaip prisijungęs. Jei Steam žaidimas vis dar veikia, pirmiausia jį uždarykite. Steam programoje pasirinkite Steam > Go Offline ir dar kartą paspauskite Tęsti.",
             "readyRedeem": "Steam dabar neprisijungęs. Norėdami tęsti, dar kartą aktyvuokite raktą.",
             "error": "Nepavyko tęsti: {{error}}"
         },

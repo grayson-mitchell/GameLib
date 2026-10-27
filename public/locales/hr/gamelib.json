@@ -473,9 +473,9 @@
         "goOffline": {
             "title": "Postavite Steam u izvanmrežni način za nastavak",
             "body": "GameLib se u tu svrhu mora prijaviti na vaš Steam račun. Kako bi popis prijatelja na Steamu ostao prijavljen, prijavljuje se dok je aplikacija Steam izvan mreže, ali Steam nije prešao u izvanmrežni način kad je GameLib to zatražio. To se može dogoditi dok je pokrenuta Steam igra.",
-            "steps": "U aplikaciji Steam odaberite Steam > Go Offline i pritisnite Nastavi. GameLib će nakon prijave vratiti Steam na mrežu.",
+            "steps": "Ako je pokrenuta igra na Steamu, prvo je zatvorite: Steam zanemaruje Go Offline dok igra radi. U aplikaciji Steam odaberite Steam > Go Offline i pritisnite Nastavi. GameLib će nakon prijave vratiti Steam na mrežu.",
             "continue": "Nastavi",
-            "stillOnline": "Steam se i dalje prikazuje kao na mreži. Odaberite Steam > Go Offline u aplikaciji Steam i ponovno pritisnite Nastavi.",
+            "stillOnline": "Steam se i dalje prikazuje kao na mreži. Ako je igra na Steamu još pokrenuta, prvo je zatvorite. Odaberite Steam > Go Offline u aplikaciji Steam i ponovno pritisnite Nastavi.",
             "readyRedeem": "Steam je sada izvan mreže. Ponovno iskoristite ključ za nastavak.",
             "error": "Nije moguće nastaviti: {{error}}"
         },

@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "계속하려면 Steam을 오프라인으로 설정하세요",
             "body": "이 작업을 위해 GameLib가 Steam 계정에 로그인해야 합니다. Steam 친구 목록의 로그인 상태를 유지하기 위해 Steam 앱이 오프라인인 동안 로그인하지만, GameLib가 요청했을 때 Steam이 오프라인이 되지 않았습니다. Steam 게임이 실행 중일 때 이런 일이 생길 수 있습니다.",
-            "steps": "Steam 앱에서 Steam > Go Offline을 선택한 다음 계속을 누르세요. 로그인이 끝나면 GameLib가 Steam을 다시 온라인으로 전환합니다.",
+            "steps": "Steam 게임이 실행 중이라면 먼저 종료하세요. 게임이 실행되는 동안 Steam은 Go Offline을 무시합니다. Steam 앱에서 Steam > Go Offline을 선택한 다음 계속을 누르세요. 로그인이 끝나면 GameLib가 Steam을 다시 온라인으로 전환합니다.",
             "continue": "계속",
-            "stillOnline": "Steam이 아직 온라인으로 표시됩니다. Steam 앱에서 Steam > Go Offline을 선택한 다음 계속을 다시 누르세요.",
+            "stillOnline": "Steam이 아직 온라인으로 표시됩니다. Steam 게임이 아직 실행 중이라면 먼저 종료하세요. Steam 앱에서 Steam > Go Offline을 선택한 다음 계속을 다시 누르세요.",
             "readyRedeem": "Steam이 이제 오프라인입니다. 계속하려면 키를 다시 등록하세요.",
             "error": "계속할 수 없습니다: {{error}}"
         },

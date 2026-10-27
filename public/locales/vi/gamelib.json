@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "Đặt Steam ở chế độ ngoại tuyến để tiếp tục",
             "body": "GameLib cần đăng nhập vào tài khoản Steam của bạn để thực hiện việc này. Để giữ danh sách bạn bè Steam luôn đăng nhập, GameLib đăng nhập khi ứng dụng Steam ở chế độ ngoại tuyến, nhưng Steam đã không chuyển sang ngoại tuyến khi GameLib yêu cầu. Điều này có thể xảy ra khi một trò chơi Steam đang chạy.",
-            "steps": "Trong ứng dụng Steam, chọn Steam > Go Offline rồi nhấn Tiếp tục. GameLib sẽ đặt Steam trở lại trực tuyến sau khi đăng nhập xong.",
+            "steps": "Nếu một trò chơi Steam đang chạy, hãy thoát trò chơi đó trước: Steam bỏ qua Go Offline khi trò chơi đang chạy. Trong ứng dụng Steam, chọn Steam > Go Offline rồi nhấn Tiếp tục. GameLib sẽ đặt Steam trở lại trực tuyến sau khi đăng nhập xong.",
             "continue": "Tiếp tục",
-            "stillOnline": "Steam vẫn hiển thị là trực tuyến. Chọn Steam > Go Offline trong ứng dụng Steam rồi nhấn Tiếp tục lần nữa.",
+            "stillOnline": "Steam vẫn hiển thị là trực tuyến. Nếu trò chơi Steam vẫn đang chạy, hãy thoát trò chơi đó trước. Chọn Steam > Go Offline trong ứng dụng Steam rồi nhấn Tiếp tục lần nữa.",
             "readyRedeem": "Steam hiện đã ngoại tuyến. Hãy đổi lại khóa để tiếp tục.",
             "error": "Không thể tiếp tục: {{error}}"
         },

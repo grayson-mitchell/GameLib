@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "Sett Steam offline for å fortsette",
             "body": "GameLib må logge inn på Steam-kontoen din for dette. For å holde Steam-vennelisten din innlogget logger det inn mens Steam-appen er offline, men Steam gikk ikke offline da GameLib ba om det. Dette kan skje mens et Steam-spill kjører.",
-            "steps": "Velg Steam > Go Offline i Steam-appen, og trykk på Fortsett. GameLib setter Steam online igjen når det har logget inn.",
+            "steps": "Hvis et Steam-spill kjører, avslutter du det først: Steam ignorerer Go Offline mens et spill kjører. Velg Steam > Go Offline i Steam-appen, og trykk på Fortsett. GameLib setter Steam online igjen når det har logget inn.",
             "continue": "Fortsett",
-            "stillOnline": "Steam vises fortsatt som online. Velg Steam > Go Offline i Steam-appen, og trykk på Fortsett igjen.",
+            "stillOnline": "Steam vises fortsatt som online. Hvis et Steam-spill fortsatt kjører, avslutter du det først. Velg Steam > Go Offline i Steam-appen, og trykk på Fortsett igjen.",
             "readyRedeem": "Steam er offline nå. Løs inn nøkkelen på nytt for å fortsette.",
             "error": "Kunne ikke fortsette: {{error}}"
         },

@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "Jarri Steam lineaz kanpo jarraitzeko",
             "body": "GameLib-ek zure Steam kontuan saioa hasi behar du horretarako. Zure Steam lagunen zerrendak saioa hasita izan dezan, Steam aplikazioa lineaz kanpo dagoenean hasten du saioa, baina Steam ez zen lineaz kanpo jarri GameLib-ek eskatu zuenean. Hau Steam joko bat martxan dagoenean gerta daiteke.",
-            "steps": "Steam aplikazioan, aukeratu Steam > Go Offline eta sakatu Jarraitu. GameLib-ek Steam berriro linean jarriko du saioa hasi ondoren.",
+            "steps": "Steam joko bat martxan badago, itxi lehenik: Steam-ek ez dio Go Offline-ri kasurik egiten joko bat martxan dagoen bitartean. Steam aplikazioan, aukeratu Steam > Go Offline eta sakatu Jarraitu. GameLib-ek Steam berriro linean jarriko du saioa hasi ondoren.",
             "continue": "Jarraitu",
-            "stillOnline": "Steam oraindik linean agertzen da. Aukeratu Steam > Go Offline Steam aplikazioan eta sakatu Jarraitu berriro.",
+            "stillOnline": "Steam oraindik linean agertzen da. Steam joko bat oraindik martxan badago, itxi lehenik. Aukeratu Steam > Go Offline Steam aplikazioan eta sakatu Jarraitu berriro.",
             "readyRedeem": "Steam lineaz kanpo dago orain. Trukatu gakoa berriro jarraitzeko.",
             "error": "Ezin izan da jarraitu: {{error}}"
         },

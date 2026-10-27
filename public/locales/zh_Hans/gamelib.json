@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "请将 Steam 设为离线以继续",
             "body": "GameLib 需要为此登录你的 Steam 账户。为了让你的 Steam 好友列表保持登录状态，它会在 Steam 应用离线时登录，但 GameLib 请求时 Steam 并没有进入离线状态。Steam 游戏正在运行时可能会出现这种情况。",
-            "steps": "在 Steam 应用中选择 Steam > Go Offline，然后点击“继续”。登录完成后，GameLib 会将 Steam 重新设为在线。",
+            "steps": "如果有 Steam 游戏正在运行，请先退出游戏：游戏运行期间，Steam 会忽略 Go Offline。在 Steam 应用中选择 Steam > Go Offline，然后点击“继续”。登录完成后，GameLib 会将 Steam 重新设为在线。",
             "continue": "继续",
-            "stillOnline": "Steam 仍显示为在线。请在 Steam 应用中选择 Steam > Go Offline，然后再次点击“继续”。",
+            "stillOnline": "Steam 仍显示为在线。如果 Steam 游戏仍在运行，请先退出游戏。请在 Steam 应用中选择 Steam > Go Offline，然后再次点击“继续”。",
             "readyRedeem": "Steam 现已离线。请再次兑换密钥以继续。",
             "error": "无法继续：{{error}}"
         },

@@ -436,9 +436,9 @@
         "goOffline": {
             "title": "Jätkamiseks lülita Steam võrguühenduseta režiimi",
             "body": "GameLib peab selleks sisse logima sinu Steami kontole. Et sinu Steami sõbraloend püsiks sisse logitud, logib see sisse siis, kui Steami rakendus on võrguühenduseta, kuid Steam ei läinud võrguühenduseta režiimi, kui GameLib seda palus. See võib juhtuda, kui Steami mäng töötab.",
-            "steps": "Vali Steami rakenduses Steam > Go Offline ja vajuta nuppu Jätka. GameLib lülitab Steami pärast sisselogimist uuesti võrku.",
+            "steps": "Kui Steami mäng töötab, sulge see kõigepealt: Steam eirab Go Offline käsku, kuni mäng töötab. Vali Steami rakenduses Steam > Go Offline ja vajuta nuppu Jätka. GameLib lülitab Steami pärast sisselogimist uuesti võrku.",
             "continue": "Jätka",
-            "stillOnline": "Steam on endiselt võrgus. Vali Steami rakenduses Steam > Go Offline ja vajuta uuesti nuppu Jätka.",
+            "stillOnline": "Steam on endiselt võrgus. Kui Steami mäng veel töötab, sulge see kõigepealt. Vali Steami rakenduses Steam > Go Offline ja vajuta uuesti nuppu Jätka.",
             "readyRedeem": "Steam on nüüd võrguühenduseta. Jätkamiseks lunasta võti uuesti.",
             "error": "Jätkamine ebaõnnestus: {{error}}"
         },

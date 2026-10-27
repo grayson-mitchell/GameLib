@@ -473,9 +473,9 @@
         "goOffline": {
             "title": "Setați Steam pe offline pentru a continua",
             "body": "GameLib trebuie să se conecteze la contul dvs. Steam pentru aceasta. Pentru a păstra conectată lista de prieteni Steam, se conectează cât timp aplicația Steam este offline, dar Steam nu a trecut în modul offline când a cerut GameLib. Se poate întâmpla cât timp rulează un joc Steam.",
-            "steps": "În aplicația Steam, alegeți Steam > Go Offline, apoi apăsați Continuă. GameLib repune Steam online după ce s-a conectat.",
+            "steps": "Dacă rulează un joc Steam, închideți-l mai întâi: Steam ignoră Go Offline cât timp rulează un joc. În aplicația Steam, alegeți Steam > Go Offline, apoi apăsați Continuă. GameLib repune Steam online după ce s-a conectat.",
             "continue": "Continuă",
-            "stillOnline": "Steam apare în continuare online. Alegeți Steam > Go Offline în aplicația Steam, apoi apăsați din nou Continuă.",
+            "stillOnline": "Steam apare în continuare online. Dacă un joc Steam încă rulează, închideți-l mai întâi. Alegeți Steam > Go Offline în aplicația Steam, apoi apăsați din nou Continuă.",
             "readyRedeem": "Steam este acum offline. Valorificați din nou cheia pentru a continua.",
             "error": "Nu s-a putut continua: {{error}}"
         },

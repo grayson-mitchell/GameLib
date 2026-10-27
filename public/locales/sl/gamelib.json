@@ -480,9 +480,9 @@
         "goOffline": {
             "title": "Za nadaljevanje preklopite Steam v način brez povezave",
             "body": "GameLib se mora za to prijaviti v vaš račun Steam. Da ostane vaš seznam prijateljev Steam prijavljen, se prijavi, ko je aplikacija Steam brez povezave, vendar Steam ni prešel v način brez povezave, ko je GameLib to zahteval. To se lahko zgodi, ko teče igra iz Steama.",
-            "steps": "V aplikaciji Steam izberite Steam > Go Offline in pritisnite Nadaljuj. GameLib po prijavi Steam znova preklopi v način s povezavo.",
+            "steps": "Če se izvaja igra Steam, jo najprej zaprite: Steam med izvajanjem igre ne upošteva ukaza Go Offline. V aplikaciji Steam izberite Steam > Go Offline in pritisnite Nadaljuj. GameLib po prijavi Steam znova preklopi v način s povezavo.",
             "continue": "Nadaljuj",
-            "stillOnline": "Steam je še vedno prikazan kot povezan. V aplikaciji Steam izberite Steam > Go Offline in znova pritisnite Nadaljuj.",
+            "stillOnline": "Steam je še vedno prikazan kot povezan. Če se igra Steam še izvaja, jo najprej zaprite. V aplikaciji Steam izberite Steam > Go Offline in znova pritisnite Nadaljuj.",
             "readyRedeem": "Steam je zdaj brez povezave. Za nadaljevanje ključ ponovno unovčite.",
             "error": "Ni mogoče nadaljevati: {{error}}"
         },

@@ -466,9 +466,9 @@
         "goOffline": {
             "title": "Állítsd offline módba a Steamet a folytatáshoz",
             "body": "A GameLibnek ehhez be kell jelentkeznie a Steam-fiókodba. Hogy a Steam-barátlistád bejelentkezve maradjon, akkor jelentkezik be, amikor a Steam alkalmazás offline módban van, de a Steam nem váltott offline módba, amikor a GameLib kérte. Ez akkor fordulhat elő, ha egy Steam-játék fut.",
-            "steps": "A Steam alkalmazásban válaszd a Steam > Go Offline lehetőséget, majd nyomd meg a Folytatás gombot. A GameLib a bejelentkezés után visszaállítja a Steamet online módba.",
+            "steps": "Ha fut egy Steam-játék, előbb lépj ki belőle: amíg játék fut, a Steam figyelmen kívül hagyja a Go Offline parancsot. A Steam alkalmazásban válaszd a Steam > Go Offline lehetőséget, majd nyomd meg a Folytatás gombot. A GameLib a bejelentkezés után visszaállítja a Steamet online módba.",
             "continue": "Folytatás",
-            "stillOnline": "A Steam még mindig online állapotot mutat. Válaszd a Steam > Go Offline lehetőséget a Steam alkalmazásban, majd nyomd meg újra a Folytatás gombot.",
+            "stillOnline": "A Steam még mindig online állapotot mutat. Ha még fut egy Steam-játék, előbb lépj ki belőle. Válaszd a Steam > Go Offline lehetőséget a Steam alkalmazásban, majd nyomd meg újra a Folytatás gombot.",
             "readyRedeem": "A Steam most offline módban van. A folytatáshoz váltsd be újra a kulcsot.",
             "error": "Nem sikerült folytatni: {{error}}"
         },

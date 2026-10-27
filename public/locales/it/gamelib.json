@@ -473,9 +473,9 @@
         "goOffline": {
             "title": "Imposta Steam offline per continuare",
             "body": "GameLib deve accedere al tuo account Steam per questa operazione. Per mantenere connessa la tua lista amici di Steam, accede mentre l'app Steam è offline, ma Steam non è passato offline quando GameLib lo ha richiesto. Può succedere mentre è in esecuzione un gioco Steam.",
-            "steps": "Nell'app Steam scegli Steam > Go Offline, poi premi Continua. GameLib rimette Steam online dopo l'accesso.",
+            "steps": "Se è in esecuzione un gioco Steam, chiudilo prima: Steam ignora Go Offline mentre un gioco è in esecuzione. Nell'app Steam scegli Steam > Go Offline, poi premi Continua. GameLib rimette Steam online dopo l'accesso.",
             "continue": "Continua",
-            "stillOnline": "Steam risulta ancora online. Scegli Steam > Go Offline nell'app Steam, poi premi di nuovo Continua.",
+            "stillOnline": "Steam risulta ancora online. Se un gioco Steam è ancora in esecuzione, chiudilo prima. Scegli Steam > Go Offline nell'app Steam, poi premi di nuovo Continua.",
             "readyRedeem": "Steam è ora offline. Riscatta di nuovo la chiave per continuare.",
             "error": "Impossibile continuare: {{error}}"
         },
