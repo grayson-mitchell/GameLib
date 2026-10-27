@@ -1,0 +1,394 @@
+{
+  "en": {
+    "downloadManager.cancelDialog.deleteFiles": "Delete Files",
+    "downloadManager.cancelDialog.keepDownloading": "Keep Downloading",
+    "downloadManager.cancelDialog.message": "{{title}} is partly downloaded. Keep the downloaded files to resume later, or delete them to free up disk space.",
+    "downloadManager.cancelDialog.stopDownload": "Stop Download",
+    "downloadManager.cancelDialog.stopKeepFiles": "Stop & Keep Files",
+    "downloadManager.cancelDialog.title": "Cancel download?"
+  },
+  "ar": {
+    "downloadManager.cancelDialog.deleteFiles": "حذف الملفات",
+    "downloadManager.cancelDialog.keepDownloading": "متابعة التنزيل",
+    "downloadManager.cancelDialog.message": "تم تنزيل جزء من {{title}}. احتفظ بالملفات التي تم تنزيلها لاستئناف التنزيل لاحقًا، أو احذفها لتحرير مساحة على القرص.",
+    "downloadManager.cancelDialog.stopDownload": "إيقاف التنزيل",
+    "downloadManager.cancelDialog.stopKeepFiles": "إيقاف والاحتفاظ بالملفات",
+    "downloadManager.cancelDialog.title": "هل تريد إلغاء التنزيل؟"
+  },
+  "az": {
+    "downloadManager.cancelDialog.deleteFiles": "Faylları sil",
+    "downloadManager.cancelDialog.keepDownloading": "Yükləməyə davam et",
+    "downloadManager.cancelDialog.message": "{{title}} qismən yüklənib. Sonra davam etmək üçün yüklənmiş faylları saxlayın və ya disk yerini boşaltmaq üçün silin.",
+    "downloadManager.cancelDialog.stopDownload": "Yükləməni dayandır",
+    "downloadManager.cancelDialog.stopKeepFiles": "Dayandır və faylları saxla",
+    "downloadManager.cancelDialog.title": "Yükləmə ləğv edilsin?"
+  },
+  "be": {
+    "downloadManager.cancelDialog.deleteFiles": "Выдаліць файлы",
+    "downloadManager.cancelDialog.keepDownloading": "Працягнуць загрузку",
+    "downloadManager.cancelDialog.message": "Гульня {{title}} часткова загружана. Захавайце загружаныя файлы, каб працягнуць пазней, або выдаліце іх, каб вызваліць месца на дыску.",
+    "downloadManager.cancelDialog.stopDownload": "Спыніць загрузку",
+    "downloadManager.cancelDialog.stopKeepFiles": "Спыніць і захаваць файлы",
+    "downloadManager.cancelDialog.title": "Скасаваць загрузку?"
+  },
+  "bg": {
+    "downloadManager.cancelDialog.deleteFiles": "Изтриване на файловете",
+    "downloadManager.cancelDialog.keepDownloading": "Продължаване на изтеглянето",
+    "downloadManager.cancelDialog.message": "{{title}} е изтеглена частично. Запазете изтеглените файлове, за да продължите по-късно, или ги изтрийте, за да освободите място на диска.",
+    "downloadManager.cancelDialog.stopDownload": "Спиране на изтеглянето",
+    "downloadManager.cancelDialog.stopKeepFiles": "Спиране и запазване на файловете",
+    "downloadManager.cancelDialog.title": "Отмяна на изтеглянето?"
+  },
+  "br": {
+    "downloadManager.cancelDialog.deleteFiles": "Dilemel ar restroù",
+    "downloadManager.cancelDialog.keepDownloading": "Kenderc'hel da pellgargañ",
+    "downloadManager.cancelDialog.message": "Pellgarget eo bet ul lodenn eus {{title}}. Mirit ar restroù pellgarget evit kenderc'hel diwezhatoc'h, pe dilemit anezho evit prennañ egor war ar bladenn.",
+    "downloadManager.cancelDialog.stopDownload": "Paouez gant ar pellgargañ",
+    "downloadManager.cancelDialog.stopKeepFiles": "Paouez ha mirout ar restroù",
+    "downloadManager.cancelDialog.title": "Nullañ ar pellgargañ ?"
+  },
+  "bs": {
+    "downloadManager.cancelDialog.deleteFiles": "Izbriši datoteke",
+    "downloadManager.cancelDialog.keepDownloading": "Nastavi preuzimanje",
+    "downloadManager.cancelDialog.message": "{{title}} je djelimično preuzet. Zadržite preuzete datoteke da nastavite kasnije ili ih izbrišite da oslobodite prostor na disku.",
+    "downloadManager.cancelDialog.stopDownload": "Zaustavi preuzimanje",
+    "downloadManager.cancelDialog.stopKeepFiles": "Zaustavi i zadrži datoteke",
+    "downloadManager.cancelDialog.title": "Otkazati preuzimanje?"
+  },
+  "ca": {
+    "downloadManager.cancelDialog.deleteFiles": "Suprimeix els fitxers",
+    "downloadManager.cancelDialog.keepDownloading": "Continua la baixada",
+    "downloadManager.cancelDialog.message": "{{title}} s'ha baixat parcialment. Conserva els fitxers baixats per reprendre-ho més tard o suprimeix-los per alliberar espai al disc.",
+    "downloadManager.cancelDialog.stopDownload": "Atura la baixada",
+    "downloadManager.cancelDialog.stopKeepFiles": "Atura i conserva els fitxers",
+    "downloadManager.cancelDialog.title": "Cancel·lar la baixada?"
+  },
+  "cs": {
+    "downloadManager.cancelDialog.deleteFiles": "Smazat soubory",
+    "downloadManager.cancelDialog.keepDownloading": "Pokračovat ve stahování",
+    "downloadManager.cancelDialog.message": "Hra {{title}} je stažena jen částečně. Stažené soubory si ponechte a pokračujte později, nebo je smažte a uvolněte místo na disku.",
+    "downloadManager.cancelDialog.stopDownload": "Zastavit stahování",
+    "downloadManager.cancelDialog.stopKeepFiles": "Zastavit a ponechat soubory",
+    "downloadManager.cancelDialog.title": "Zrušit stahování?"
+  },
+  "da": {
+    "downloadManager.cancelDialog.deleteFiles": "Slet filer",
+    "downloadManager.cancelDialog.keepDownloading": "Fortsæt download",
+    "downloadManager.cancelDialog.message": "{{title}} er delvist downloadet. Behold de downloadede filer for at fortsætte senere, eller slet dem for at frigøre diskplads.",
+    "downloadManager.cancelDialog.stopDownload": "Stop download",
+    "downloadManager.cancelDialog.stopKeepFiles": "Stop og behold filer",
+    "downloadManager.cancelDialog.title": "Annuller download?"
+  },
+  "de": {
+    "downloadManager.cancelDialog.deleteFiles": "Dateien löschen",
+    "downloadManager.cancelDialog.keepDownloading": "Download fortsetzen",
+    "downloadManager.cancelDialog.message": "{{title}} wurde teilweise heruntergeladen. Behalte die heruntergeladenen Dateien, um später fortzufahren, oder lösche sie, um Speicherplatz freizugeben.",
+    "downloadManager.cancelDialog.stopDownload": "Download stoppen",
+    "downloadManager.cancelDialog.stopKeepFiles": "Stoppen und Dateien behalten",
+    "downloadManager.cancelDialog.title": "Download abbrechen?"
+  },
+  "el": {
+    "downloadManager.cancelDialog.deleteFiles": "Διαγραφή αρχείων",
+    "downloadManager.cancelDialog.keepDownloading": "Συνέχεια λήψης",
+    "downloadManager.cancelDialog.message": "Το {{title}} έχει ληφθεί εν μέρει. Κρατήστε τα ληφθέντα αρχεία για να συνεχίσετε αργότερα ή διαγράψτε τα για να ελευθερώσετε χώρο στο δίσκο.",
+    "downloadManager.cancelDialog.stopDownload": "Διακοπή λήψης",
+    "downloadManager.cancelDialog.stopKeepFiles": "Διακοπή και διατήρηση αρχείων",
+    "downloadManager.cancelDialog.title": "Ακύρωση λήψης;"
+  },
+  "es": {
+    "downloadManager.cancelDialog.deleteFiles": "Eliminar archivos",
+    "downloadManager.cancelDialog.keepDownloading": "Seguir descargando",
+    "downloadManager.cancelDialog.message": "{{title}} está descargado parcialmente. Conserva los archivos descargados para reanudar más tarde o elimínalos para liberar espacio en disco.",
+    "downloadManager.cancelDialog.stopDownload": "Detener descarga",
+    "downloadManager.cancelDialog.stopKeepFiles": "Detener y conservar archivos",
+    "downloadManager.cancelDialog.title": "¿Cancelar la descarga?"
+  },
+  "et": {
+    "downloadManager.cancelDialog.deleteFiles": "Kustuta failid",
+    "downloadManager.cancelDialog.keepDownloading": "Jätka allalaadimist",
+    "downloadManager.cancelDialog.message": "{{title}} on osaliselt alla laaditud. Hoia allalaaditud failid, et hiljem jätkata, või kustuta need, et vabastada kettaruumi.",
+    "downloadManager.cancelDialog.stopDownload": "Peata allalaadimine",
+    "downloadManager.cancelDialog.stopKeepFiles": "Peata ja hoia faile alles",
+    "downloadManager.cancelDialog.title": "Kas tühistada allalaadimine?"
+  },
+  "eu": {
+    "downloadManager.cancelDialog.deleteFiles": "Ezabatu fitxategiak",
+    "downloadManager.cancelDialog.keepDownloading": "Jarraitu deskargatzen",
+    "downloadManager.cancelDialog.message": "{{title}} partzialki deskargatu da. Gorde deskargatutako fitxategiak geroago jarraitzeko, edo ezabatu itzazu diskoko lekua askatzeko.",
+    "downloadManager.cancelDialog.stopDownload": "Gelditu deskarga",
+    "downloadManager.cancelDialog.stopKeepFiles": "Gelditu eta gorde fitxategiak",
+    "downloadManager.cancelDialog.title": "Deskarga bertan behera utzi?"
+  },
+  "fa": {
+    "downloadManager.cancelDialog.deleteFiles": "حذف فایل‌ها",
+    "downloadManager.cancelDialog.keepDownloading": "ادامه دانلود",
+    "downloadManager.cancelDialog.message": "بخشی از {{title}} دانلود شده است. فایل‌های دانلودشده را برای ادامه در زمانی دیگر نگه دارید، یا برای آزاد کردن فضای دیسک آن‌ها را حذف کنید.",
+    "downloadManager.cancelDialog.stopDownload": "توقف دانلود",
+    "downloadManager.cancelDialog.stopKeepFiles": "توقف و نگه داشتن فایل‌ها",
+    "downloadManager.cancelDialog.title": "دانلود لغو شود؟"
+  },
+  "fi": {
+    "downloadManager.cancelDialog.deleteFiles": "Poista tiedostot",
+    "downloadManager.cancelDialog.keepDownloading": "Jatka lataamista",
+    "downloadManager.cancelDialog.message": "{{title}} on ladattu osittain. Säilytä ladatut tiedostot jatkaaksesi myöhemmin tai poista ne vapauttaaksesi levytilaa.",
+    "downloadManager.cancelDialog.stopDownload": "Pysäytä lataus",
+    "downloadManager.cancelDialog.stopKeepFiles": "Pysäytä ja säilytä tiedostot",
+    "downloadManager.cancelDialog.title": "Peruutetaanko lataus?"
+  },
+  "fr": {
+    "downloadManager.cancelDialog.deleteFiles": "Supprimer les fichiers",
+    "downloadManager.cancelDialog.keepDownloading": "Continuer le téléchargement",
+    "downloadManager.cancelDialog.message": "{{title}} est partiellement téléchargé. Conservez les fichiers téléchargés pour reprendre plus tard, ou supprimez-les pour libérer de l'espace disque.",
+    "downloadManager.cancelDialog.stopDownload": "Arrêter le téléchargement",
+    "downloadManager.cancelDialog.stopKeepFiles": "Arrêter et conserver les fichiers",
+    "downloadManager.cancelDialog.title": "Annuler le téléchargement ?"
+  },
+  "ga": {
+    "downloadManager.cancelDialog.deleteFiles": "Scrios comhaid",
+    "downloadManager.cancelDialog.keepDownloading": "Lean ar aghaidh ag íoslódáil",
+    "downloadManager.cancelDialog.message": "Tá cuid de {{title}} íoslódáilte. Coinnigh na comhaid íoslódáilte le leanúint ar aghaidh níos déanaí, nó scrios iad chun spás diosca a shaoradh.",
+    "downloadManager.cancelDialog.stopDownload": "Stop an íoslódáil",
+    "downloadManager.cancelDialog.stopKeepFiles": "Stop agus coinnigh comhaid",
+    "downloadManager.cancelDialog.title": "An bhfuil tú ag iarraidh an íoslódáil a chealú?"
+  },
+  "gl": {
+    "downloadManager.cancelDialog.deleteFiles": "Eliminar ficheiros",
+    "downloadManager.cancelDialog.keepDownloading": "Seguir descargando",
+    "downloadManager.cancelDialog.message": "{{title}} está descargado parcialmente. Conserva os ficheiros descargados para retomalo máis tarde ou elimínaos para liberar espazo no disco.",
+    "downloadManager.cancelDialog.stopDownload": "Deter descarga",
+    "downloadManager.cancelDialog.stopKeepFiles": "Deter e conservar ficheiros",
+    "downloadManager.cancelDialog.title": "Cancelar a descarga?"
+  },
+  "he": {
+    "downloadManager.cancelDialog.deleteFiles": "מחק קבצים",
+    "downloadManager.cancelDialog.keepDownloading": "המשך הורדה",
+    "downloadManager.cancelDialog.message": "{{title}} הורד באופן חלקי. שמור את הקבצים שהורדו כדי להמשיך מאוחר יותר, או מחק אותם כדי לפנות מקום בדיסק.",
+    "downloadManager.cancelDialog.stopDownload": "עצור הורדה",
+    "downloadManager.cancelDialog.stopKeepFiles": "עצור ושמור קבצים",
+    "downloadManager.cancelDialog.title": "לבטל את ההורדה?"
+  },
+  "hr": {
+    "downloadManager.cancelDialog.deleteFiles": "Izbriši datoteke",
+    "downloadManager.cancelDialog.keepDownloading": "Nastavi preuzimanje",
+    "downloadManager.cancelDialog.message": "{{title}} je djelomično preuzet. Zadrži preuzete datoteke kako bi nastavio kasnije ili ih izbriši da oslobodiš prostor na disku.",
+    "downloadManager.cancelDialog.stopDownload": "Zaustavi preuzimanje",
+    "downloadManager.cancelDialog.stopKeepFiles": "Zaustavi i zadrži datoteke",
+    "downloadManager.cancelDialog.title": "Otkazati preuzimanje?"
+  },
+  "hu": {
+    "downloadManager.cancelDialog.deleteFiles": "Fájlok törlése",
+    "downloadManager.cancelDialog.keepDownloading": "Letöltés folytatása",
+    "downloadManager.cancelDialog.message": "A(z) {{title}} részben le van töltve. Tartsd meg a letöltött fájlokat, hogy később folytathasd, vagy töröld őket a lemezterület felszabadításához.",
+    "downloadManager.cancelDialog.stopDownload": "Letöltés leállítása",
+    "downloadManager.cancelDialog.stopKeepFiles": "Leállítás és fájlok megtartása",
+    "downloadManager.cancelDialog.title": "Megszakítod a letöltést?"
+  },
+  "id": {
+    "downloadManager.cancelDialog.deleteFiles": "Hapus File",
+    "downloadManager.cancelDialog.keepDownloading": "Lanjutkan Mengunduh",
+    "downloadManager.cancelDialog.message": "{{title}} sebagian sudah diunduh. Simpan file yang sudah diunduh untuk melanjutkan nanti, atau hapus untuk mengosongkan ruang disk.",
+    "downloadManager.cancelDialog.stopDownload": "Hentikan Unduhan",
+    "downloadManager.cancelDialog.stopKeepFiles": "Hentikan & Simpan File",
+    "downloadManager.cancelDialog.title": "Batalkan unduhan?"
+  },
+  "it": {
+    "downloadManager.cancelDialog.deleteFiles": "Elimina i file",
+    "downloadManager.cancelDialog.keepDownloading": "Continua il download",
+    "downloadManager.cancelDialog.message": "{{title}} è stato scaricato solo in parte. Conserva i file scaricati per riprendere più tardi oppure eliminali per liberare spazio sul disco.",
+    "downloadManager.cancelDialog.stopDownload": "Interrompi il download",
+    "downloadManager.cancelDialog.stopKeepFiles": "Interrompi e conserva i file",
+    "downloadManager.cancelDialog.title": "Annullare il download?"
+  },
+  "ja": {
+    "downloadManager.cancelDialog.deleteFiles": "ファイルを削除",
+    "downloadManager.cancelDialog.keepDownloading": "ダウンロードを続行",
+    "downloadManager.cancelDialog.message": "{{title}} は一部のみダウンロードされています。後で再開できるようダウンロード済みのファイルを保持するか、ディスク容量を空けるために削除してください。",
+    "downloadManager.cancelDialog.stopDownload": "ダウンロードを停止",
+    "downloadManager.cancelDialog.stopKeepFiles": "停止してファイルを保持",
+    "downloadManager.cancelDialog.title": "ダウンロードをキャンセルしますか？"
+  },
+  "ka": {
+    "downloadManager.cancelDialog.deleteFiles": "ფაილების წაშლა",
+    "downloadManager.cancelDialog.keepDownloading": "ჩამოტვირთვის გაგრძელება",
+    "downloadManager.cancelDialog.message": "{{title}} ნაწილობრივ არის ჩამოტვირთული. შეინახეთ ჩამოტვირთული ფაილები, რომ მოგვიანებით გააგრძელოთ, ან წაშალეთ ისინი დისკზე ადგილის გასათავისუფლებლად.",
+    "downloadManager.cancelDialog.stopDownload": "ჩამოტვირთვის შეჩერება",
+    "downloadManager.cancelDialog.stopKeepFiles": "შეჩერება და ფაილების შენახვა",
+    "downloadManager.cancelDialog.title": "გაუქმდეს ჩამოტვირთვა?"
+  },
+  "ko": {
+    "downloadManager.cancelDialog.deleteFiles": "파일 삭제",
+    "downloadManager.cancelDialog.keepDownloading": "계속 다운로드",
+    "downloadManager.cancelDialog.message": "{{title}}이(가) 일부만 다운로드되었습니다. 나중에 이어서 받으려면 다운로드한 파일을 유지하고, 디스크 공간을 확보하려면 삭제하세요.",
+    "downloadManager.cancelDialog.stopDownload": "다운로드 중지",
+    "downloadManager.cancelDialog.stopKeepFiles": "중지하고 파일 유지",
+    "downloadManager.cancelDialog.title": "다운로드를 취소할까요?"
+  },
+  "lt": {
+    "downloadManager.cancelDialog.deleteFiles": "Ištrinti failus",
+    "downloadManager.cancelDialog.keepDownloading": "Tęsti atsisiuntimą",
+    "downloadManager.cancelDialog.message": "{{title}} atsisiųsta tik iš dalies. Pasilikite atsisiųstus failus, kad galėtumėte tęsti vėliau, arba ištrinkite juos, kad atlaisvintumėte vietos diske.",
+    "downloadManager.cancelDialog.stopDownload": "Sustabdyti atsisiuntimą",
+    "downloadManager.cancelDialog.stopKeepFiles": "Sustabdyti ir pasilikti failus",
+    "downloadManager.cancelDialog.title": "Atšaukti atsisiuntimą?"
+  },
+  "ml": {
+    "downloadManager.cancelDialog.deleteFiles": "ഫയലുകൾ ഇല്ലാതാക്കുക",
+    "downloadManager.cancelDialog.keepDownloading": "ഡൗൺലോഡ് തുടരുക",
+    "downloadManager.cancelDialog.message": "{{title}} ഭാഗികമായി ഡൗൺലോഡ് ചെയ്തിട്ടുണ്ട്. പിന്നീട് തുടരാൻ ഡൗൺലോഡ് ചെയ്ത ഫയലുകൾ സൂക്ഷിക്കുക, അല്ലെങ്കിൽ ഡിസ്ക് സ്ഥലം ലഭ്യമാക്കാൻ അവ ഇല്ലാതാക്കുക.",
+    "downloadManager.cancelDialog.stopDownload": "ഡൗൺലോഡ് നിർത്തുക",
+    "downloadManager.cancelDialog.stopKeepFiles": "നിർത്തി ഫയലുകൾ സൂക്ഷിക്കുക",
+    "downloadManager.cancelDialog.title": "ഡൗൺലോഡ് റദ്ദാക്കണോ?"
+  },
+  "nb_NO": {
+    "downloadManager.cancelDialog.deleteFiles": "Slett filer",
+    "downloadManager.cancelDialog.keepDownloading": "Fortsett nedlastingen",
+    "downloadManager.cancelDialog.message": "{{title}} er delvis lastet ned. Behold de nedlastede filene for å fortsette senere, eller slett dem for å frigjøre diskplass.",
+    "downloadManager.cancelDialog.stopDownload": "Stopp nedlastingen",
+    "downloadManager.cancelDialog.stopKeepFiles": "Stopp og behold filer",
+    "downloadManager.cancelDialog.title": "Avbryte nedlastingen?"
+  },
+  "nl": {
+    "downloadManager.cancelDialog.deleteFiles": "Bestanden verwijderen",
+    "downloadManager.cancelDialog.keepDownloading": "Doorgaan met downloaden",
+    "downloadManager.cancelDialog.message": "{{title}} is gedeeltelijk gedownload. Bewaar de gedownloade bestanden om later te hervatten, of verwijder ze om schijfruimte vrij te maken.",
+    "downloadManager.cancelDialog.stopDownload": "Download stoppen",
+    "downloadManager.cancelDialog.stopKeepFiles": "Stoppen en bestanden bewaren",
+    "downloadManager.cancelDialog.title": "Download annuleren?"
+  },
+  "pl": {
+    "downloadManager.cancelDialog.deleteFiles": "Usuń pliki",
+    "downloadManager.cancelDialog.keepDownloading": "Kontynuuj pobieranie",
+    "downloadManager.cancelDialog.message": "Gra {{title}} została pobrana tylko częściowo. Zachowaj pobrane pliki, aby wznowić później, lub usuń je, aby zwolnić miejsce na dysku.",
+    "downloadManager.cancelDialog.stopDownload": "Zatrzymaj pobieranie",
+    "downloadManager.cancelDialog.stopKeepFiles": "Zatrzymaj i zachowaj pliki",
+    "downloadManager.cancelDialog.title": "Anulować pobieranie?"
+  },
+  "pt": {
+    "downloadManager.cancelDialog.deleteFiles": "Eliminar ficheiros",
+    "downloadManager.cancelDialog.keepDownloading": "Continuar a transferir",
+    "downloadManager.cancelDialog.message": "{{title}} foi transferido parcialmente. Mantenha os ficheiros transferidos para retomar mais tarde ou elimine-os para libertar espaço no disco.",
+    "downloadManager.cancelDialog.stopDownload": "Parar transferência",
+    "downloadManager.cancelDialog.stopKeepFiles": "Parar e manter ficheiros",
+    "downloadManager.cancelDialog.title": "Cancelar a transferência?"
+  },
+  "pt_BR": {
+    "downloadManager.cancelDialog.deleteFiles": "Excluir arquivos",
+    "downloadManager.cancelDialog.keepDownloading": "Continuar baixando",
+    "downloadManager.cancelDialog.message": "{{title}} foi baixado parcialmente. Mantenha os arquivos baixados para retomar depois ou exclua-os para liberar espaço em disco.",
+    "downloadManager.cancelDialog.stopDownload": "Parar download",
+    "downloadManager.cancelDialog.stopKeepFiles": "Parar e manter arquivos",
+    "downloadManager.cancelDialog.title": "Cancelar o download?"
+  },
+  "ro": {
+    "downloadManager.cancelDialog.deleteFiles": "Șterge fișierele",
+    "downloadManager.cancelDialog.keepDownloading": "Continuă descărcarea",
+    "downloadManager.cancelDialog.message": "{{title}} este descărcat parțial. Păstrează fișierele descărcate pentru a continua mai târziu sau șterge-le pentru a elibera spațiu pe disc.",
+    "downloadManager.cancelDialog.stopDownload": "Oprește descărcarea",
+    "downloadManager.cancelDialog.stopKeepFiles": "Oprește și păstrează fișierele",
+    "downloadManager.cancelDialog.title": "Anulezi descărcarea?"
+  },
+  "ru": {
+    "downloadManager.cancelDialog.deleteFiles": "Удалить файлы",
+    "downloadManager.cancelDialog.keepDownloading": "Продолжить загрузку",
+    "downloadManager.cancelDialog.message": "Игра {{title}} загружена частично. Сохраните загруженные файлы, чтобы продолжить позже, или удалите их, чтобы освободить место на диске.",
+    "downloadManager.cancelDialog.stopDownload": "Остановить загрузку",
+    "downloadManager.cancelDialog.stopKeepFiles": "Остановить и сохранить файлы",
+    "downloadManager.cancelDialog.title": "Отменить загрузку?"
+  },
+  "sk": {
+    "downloadManager.cancelDialog.deleteFiles": "Odstrániť súbory",
+    "downloadManager.cancelDialog.keepDownloading": "Pokračovať v sťahovaní",
+    "downloadManager.cancelDialog.message": "Hra {{title}} je stiahnutá iba čiastočne. Stiahnuté súbory si ponechajte a pokračujte neskôr, alebo ich odstráňte a uvoľnite miesto na disku.",
+    "downloadManager.cancelDialog.stopDownload": "Zastaviť sťahovanie",
+    "downloadManager.cancelDialog.stopKeepFiles": "Zastaviť a ponechať súbory",
+    "downloadManager.cancelDialog.title": "Zrušiť sťahovanie?"
+  },
+  "sl": {
+    "downloadManager.cancelDialog.deleteFiles": "Izbriši datoteke",
+    "downloadManager.cancelDialog.keepDownloading": "Nadaljuj prenos",
+    "downloadManager.cancelDialog.message": "{{title}} je delno prenesen. Obdržite prenesene datoteke za nadaljevanje pozneje ali jih izbrišite, da sprostite prostor na disku.",
+    "downloadManager.cancelDialog.stopDownload": "Ustavi prenos",
+    "downloadManager.cancelDialog.stopKeepFiles": "Ustavi in obdrži datoteke",
+    "downloadManager.cancelDialog.title": "Želite preklicati prenos?"
+  },
+  "sr": {
+    "downloadManager.cancelDialog.deleteFiles": "Обриши датотеке",
+    "downloadManager.cancelDialog.keepDownloading": "Настави преузимање",
+    "downloadManager.cancelDialog.message": "{{title}} је делимично преузет. Задржите преузете датотеке да бисте наставили касније или их обришите да бисте ослободили простор на диску.",
+    "downloadManager.cancelDialog.stopDownload": "Заустави преузимање",
+    "downloadManager.cancelDialog.stopKeepFiles": "Заустави и задржи датотеке",
+    "downloadManager.cancelDialog.title": "Отказати преузимање?"
+  },
+  "sv": {
+    "downloadManager.cancelDialog.deleteFiles": "Ta bort filer",
+    "downloadManager.cancelDialog.keepDownloading": "Fortsätt ladda ned",
+    "downloadManager.cancelDialog.message": "{{title}} är delvis nedladdat. Behåll de nedladdade filerna för att återuppta senare, eller ta bort dem för att frigöra diskutrymme.",
+    "downloadManager.cancelDialog.stopDownload": "Stoppa nedladdningen",
+    "downloadManager.cancelDialog.stopKeepFiles": "Stoppa och behåll filer",
+    "downloadManager.cancelDialog.title": "Avbryta nedladdningen?"
+  },
+  "ta": {
+    "downloadManager.cancelDialog.deleteFiles": "கோப்புகளை நீக்கு",
+    "downloadManager.cancelDialog.keepDownloading": "பதிவிறக்கத்தைத் தொடர்",
+    "downloadManager.cancelDialog.message": "{{title}} பகுதியளவு பதிவிறக்கப்பட்டுள்ளது. பின்னர் தொடர பதிவிறக்கிய கோப்புகளை வைத்திருக்கவும், அல்லது வட்டு இடத்தை விடுவிக்க அவற்றை நீக்கவும்.",
+    "downloadManager.cancelDialog.stopDownload": "பதிவிறக்கத்தை நிறுத்து",
+    "downloadManager.cancelDialog.stopKeepFiles": "நிறுத்தி கோப்புகளை வைத்திரு",
+    "downloadManager.cancelDialog.title": "பதிவிறக்கத்தை ரத்து செய்யவா?"
+  },
+  "th": {
+    "downloadManager.cancelDialog.deleteFiles": "ลบไฟล์",
+    "downloadManager.cancelDialog.keepDownloading": "ดาวน์โหลดต่อ",
+    "downloadManager.cancelDialog.message": "{{title}} ดาวน์โหลดไปบางส่วนแล้ว เก็บไฟล์ที่ดาวน์โหลดไว้เพื่อดำเนินการต่อภายหลัง หรือลบเพื่อเพิ่มพื้นที่ว่างบนดิสก์",
+    "downloadManager.cancelDialog.stopDownload": "หยุดดาวน์โหลด",
+    "downloadManager.cancelDialog.stopKeepFiles": "หยุดและเก็บไฟล์ไว้",
+    "downloadManager.cancelDialog.title": "ยกเลิกการดาวน์โหลดหรือไม่?"
+  },
+  "tr": {
+    "downloadManager.cancelDialog.deleteFiles": "Dosyaları Sil",
+    "downloadManager.cancelDialog.keepDownloading": "İndirmeye Devam Et",
+    "downloadManager.cancelDialog.message": "{{title}} kısmen indirildi. Daha sonra devam etmek için indirilen dosyaları saklayın veya disk alanı açmak için silin.",
+    "downloadManager.cancelDialog.stopDownload": "İndirmeyi Durdur",
+    "downloadManager.cancelDialog.stopKeepFiles": "Durdur ve Dosyaları Sakla",
+    "downloadManager.cancelDialog.title": "İndirme iptal edilsin mi?"
+  },
+  "uk": {
+    "downloadManager.cancelDialog.deleteFiles": "Видалити файли",
+    "downloadManager.cancelDialog.keepDownloading": "Продовжити завантаження",
+    "downloadManager.cancelDialog.message": "Гру {{title}} завантажено частково. Збережіть завантажені файли, щоб продовжити пізніше, або видаліть їх, щоб звільнити місце на диску.",
+    "downloadManager.cancelDialog.stopDownload": "Зупинити завантаження",
+    "downloadManager.cancelDialog.stopKeepFiles": "Зупинити й зберегти файли",
+    "downloadManager.cancelDialog.title": "Скасувати завантаження?"
+  },
+  "uz": {
+    "downloadManager.cancelDialog.deleteFiles": "Fayllarni o'chirish",
+    "downloadManager.cancelDialog.keepDownloading": "Yuklashni davom ettirish",
+    "downloadManager.cancelDialog.message": "{{title}} qisman yuklab olingan. Keyinroq davom ettirish uchun yuklab olingan fayllarni saqlab qoling yoki disk joyini bo'shatish uchun ularni o'chiring.",
+    "downloadManager.cancelDialog.stopDownload": "Yuklashni to'xtatish",
+    "downloadManager.cancelDialog.stopKeepFiles": "To'xtatish va fayllarni saqlash",
+    "downloadManager.cancelDialog.title": "Yuklash bekor qilinsinmi?"
+  },
+  "vi": {
+    "downloadManager.cancelDialog.deleteFiles": "Xóa tệp",
+    "downloadManager.cancelDialog.keepDownloading": "Tiếp tục tải xuống",
+    "downloadManager.cancelDialog.message": "{{title}} mới được tải xuống một phần. Hãy giữ lại các tệp đã tải để tiếp tục sau, hoặc xóa chúng để giải phóng dung lượng ổ đĩa.",
+    "downloadManager.cancelDialog.stopDownload": "Dừng tải xuống",
+    "downloadManager.cancelDialog.stopKeepFiles": "Dừng và giữ lại tệp",
+    "downloadManager.cancelDialog.title": "Hủy tải xuống?"
+  },
+  "zh_Hans": {
+    "downloadManager.cancelDialog.deleteFiles": "删除文件",
+    "downloadManager.cancelDialog.keepDownloading": "继续下载",
+    "downloadManager.cancelDialog.message": "{{title}} 仅下载了一部分。保留已下载的文件以便稍后继续，或将其删除以释放磁盘空间。",
+    "downloadManager.cancelDialog.stopDownload": "停止下载",
+    "downloadManager.cancelDialog.stopKeepFiles": "停止并保留文件",
+    "downloadManager.cancelDialog.title": "取消下载？"
+  },
+  "zh_Hant": {
+    "downloadManager.cancelDialog.deleteFiles": "刪除檔案",
+    "downloadManager.cancelDialog.keepDownloading": "繼續下載",
+    "downloadManager.cancelDialog.message": "{{title}} 僅下載了一部分。保留已下載的檔案以便稍後繼續，或將其刪除以釋放磁碟空間。",
+    "downloadManager.cancelDialog.stopDownload": "停止下載",
+    "downloadManager.cancelDialog.stopKeepFiles": "停止並保留檔案",
+    "downloadManager.cancelDialog.title": "取消下載？"
+  }
+}

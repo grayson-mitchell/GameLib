@@ -57,6 +57,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Выдаліць файлы",
+            "keepDownloading": "Працягнуць загрузку",
+            "message": "Гульня {{title}} часткова загружана. Захавайце загружаныя файлы, каб працягнуць пазней, або выдаліце іх, каб вызваліць месца на дыску.",
+            "stopDownload": "Спыніць загрузку",
+            "stopKeepFiles": "Спыніць і захаваць файлы",
+            "title": "Скасаваць загрузку?"
+        },
         "progressPaused": "Прыпынена"
     },
     "edit-game": {

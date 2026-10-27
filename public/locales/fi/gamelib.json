@@ -55,6 +55,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Poista tiedostot",
+            "keepDownloading": "Jatka lataamista",
+            "message": "{{title}} on ladattu osittain. Säilytä ladatut tiedostot jatkaaksesi myöhemmin tai poista ne vapauttaaksesi levytilaa.",
+            "stopDownload": "Pysäytä lataus",
+            "stopKeepFiles": "Pysäytä ja säilytä tiedostot",
+            "title": "Peruutetaanko lataus?"
+        },
         "progressPaused": "Keskeytetty"
     },
     "edit-game": {

@@ -57,6 +57,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Ištrinti failus",
+            "keepDownloading": "Tęsti atsisiuntimą",
+            "message": "{{title}} atsisiųsta tik iš dalies. Pasilikite atsisiųstus failus, kad galėtumėte tęsti vėliau, arba ištrinkite juos, kad atlaisvintumėte vietos diske.",
+            "stopDownload": "Sustabdyti atsisiuntimą",
+            "stopKeepFiles": "Sustabdyti ir pasilikti failus",
+            "title": "Atšaukti atsisiuntimą?"
+        },
         "progressPaused": "Pristabdyta"
     },
     "edit-game": {

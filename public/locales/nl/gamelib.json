@@ -55,6 +55,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Bestanden verwijderen",
+            "keepDownloading": "Doorgaan met downloaden",
+            "message": "{{title}} is gedeeltelijk gedownload. Bewaar de gedownloade bestanden om later te hervatten, of verwijder ze om schijfruimte vrij te maken.",
+            "stopDownload": "Download stoppen",
+            "stopKeepFiles": "Stoppen en bestanden bewaren",
+            "title": "Download annuleren?"
+        },
         "progressPaused": "Gepauzeerd"
     },
     "edit-game": {

@@ -57,6 +57,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Izbriši datoteke",
+            "keepDownloading": "Nadaljuj prenos",
+            "message": "{{title}} je delno prenesen. Obdržite prenesene datoteke za nadaljevanje pozneje ali jih izbrišite, da sprostite prostor na disku.",
+            "stopDownload": "Ustavi prenos",
+            "stopKeepFiles": "Ustavi in obdrži datoteke",
+            "title": "Želite preklicati prenos?"
+        },
         "progressPaused": "Prekinjeno"
     },
     "edit-game": {

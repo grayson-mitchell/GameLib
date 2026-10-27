@@ -55,6 +55,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Xóa tệp",
+            "keepDownloading": "Tiếp tục tải xuống",
+            "message": "{{title}} mới được tải xuống một phần. Hãy giữ lại các tệp đã tải để tiếp tục sau, hoặc xóa chúng để giải phóng dung lượng ổ đĩa.",
+            "stopDownload": "Dừng tải xuống",
+            "stopKeepFiles": "Dừng và giữ lại tệp",
+            "title": "Hủy tải xuống?"
+        },
         "progressPaused": "Đã tạm dừng"
     },
     "edit-game": {

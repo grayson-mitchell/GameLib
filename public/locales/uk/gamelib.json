@@ -57,6 +57,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Видалити файли",
+            "keepDownloading": "Продовжити завантаження",
+            "message": "Гру {{title}} завантажено частково. Збережіть завантажені файли, щоб продовжити пізніше, або видаліть їх, щоб звільнити місце на диску.",
+            "stopDownload": "Зупинити завантаження",
+            "stopKeepFiles": "Зупинити й зберегти файли",
+            "title": "Скасувати завантаження?"
+        },
         "progressPaused": "Призупинено"
     },
     "edit-game": {

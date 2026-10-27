@@ -56,6 +56,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Șterge fișierele",
+            "keepDownloading": "Continuă descărcarea",
+            "message": "{{title}} este descărcat parțial. Păstrează fișierele descărcate pentru a continua mai târziu sau șterge-le pentru a elibera spațiu pe disc.",
+            "stopDownload": "Oprește descărcarea",
+            "stopKeepFiles": "Oprește și păstrează fișierele",
+            "title": "Anulezi descărcarea?"
+        },
         "progressPaused": "Pauzat"
     },
     "edit-game": {

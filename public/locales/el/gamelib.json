@@ -55,6 +55,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Διαγραφή αρχείων",
+            "keepDownloading": "Συνέχεια λήψης",
+            "message": "Το {{title}} έχει ληφθεί εν μέρει. Κρατήστε τα ληφθέντα αρχεία για να συνεχίσετε αργότερα ή διαγράψτε τα για να ελευθερώσετε χώρο στο δίσκο.",
+            "stopDownload": "Διακοπή λήψης",
+            "stopKeepFiles": "Διακοπή και διατήρηση αρχείων",
+            "title": "Ακύρωση λήψης;"
+        },
         "progressPaused": "Σε παύση"
     },
     "edit-game": {

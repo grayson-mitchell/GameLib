@@ -58,6 +58,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Dilemel ar restroù",
+            "keepDownloading": "Kenderc'hel da pellgargañ",
+            "message": "Pellgarget eo bet ul lodenn eus {{title}}. Mirit ar restroù pellgarget evit kenderc'hel diwezhatoc'h, pe dilemit anezho evit prennañ egor war ar bladenn.",
+            "stopDownload": "Paouez gant ar pellgargañ",
+            "stopKeepFiles": "Paouez ha mirout ar restroù",
+            "title": "Nullañ ar pellgargañ ?"
+        },
         "progressPaused": "Ehanet"
     },
     "edit-game": {

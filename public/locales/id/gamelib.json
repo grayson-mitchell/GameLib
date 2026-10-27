@@ -55,6 +55,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Hapus File",
+            "keepDownloading": "Lanjutkan Mengunduh",
+            "message": "{{title}} sebagian sudah diunduh. Simpan file yang sudah diunduh untuk melanjutkan nanti, atau hapus untuk mengosongkan ruang disk.",
+            "stopDownload": "Hentikan Unduhan",
+            "stopKeepFiles": "Hentikan & Simpan File",
+            "title": "Batalkan unduhan?"
+        },
         "progressPaused": "Dijeda"
     },
     "edit-game": {

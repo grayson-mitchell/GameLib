@@ -56,6 +56,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Suprimeix els fitxers",
+            "keepDownloading": "Continua la baixada",
+            "message": "{{title}} s'ha baixat parcialment. Conserva els fitxers baixats per reprendre-ho més tard o suprimeix-los per alliberar espai al disc.",
+            "stopDownload": "Atura la baixada",
+            "stopKeepFiles": "Atura i conserva els fitxers",
+            "title": "Cancel·lar la baixada?"
+        },
         "progressPaused": "En pausa"
     },
     "edit-game": {

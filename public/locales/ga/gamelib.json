@@ -58,6 +58,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Scrios comhaid",
+            "keepDownloading": "Lean ar aghaidh ag íoslódáil",
+            "message": "Tá cuid de {{title}} íoslódáilte. Coinnigh na comhaid íoslódáilte le leanúint ar aghaidh níos déanaí, nó scrios iad chun spás diosca a shaoradh.",
+            "stopDownload": "Stop an íoslódáil",
+            "stopKeepFiles": "Stop agus coinnigh comhaid",
+            "title": "An bhfuil tú ag iarraidh an íoslódáil a chealú?"
+        },
         "progressPaused": "Ar Sos"
     },
     "edit-game": {

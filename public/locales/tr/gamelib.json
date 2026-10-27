@@ -55,6 +55,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Dosyaları Sil",
+            "keepDownloading": "İndirmeye Devam Et",
+            "message": "{{title}} kısmen indirildi. Daha sonra devam etmek için indirilen dosyaları saklayın veya disk alanı açmak için silin.",
+            "stopDownload": "İndirmeyi Durdur",
+            "stopKeepFiles": "Durdur ve Dosyaları Sakla",
+            "title": "İndirme iptal edilsin mi?"
+        },
         "progressPaused": "Duraklatıldı"
     },
     "edit-game": {

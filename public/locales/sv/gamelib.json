@@ -55,6 +55,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Ta bort filer",
+            "keepDownloading": "Fortsätt ladda ned",
+            "message": "{{title}} är delvis nedladdat. Behåll de nedladdade filerna för att återuppta senare, eller ta bort dem för att frigöra diskutrymme.",
+            "stopDownload": "Stoppa nedladdningen",
+            "stopKeepFiles": "Stoppa och behåll filer",
+            "title": "Avbryta nedladdningen?"
+        },
         "progressPaused": "Pausad"
     },
     "edit-game": {

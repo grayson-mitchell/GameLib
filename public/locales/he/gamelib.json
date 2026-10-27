@@ -56,6 +56,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "מחק קבצים",
+            "keepDownloading": "המשך הורדה",
+            "message": "{{title}} הורד באופן חלקי. שמור את הקבצים שהורדו כדי להמשיך מאוחר יותר, או מחק אותם כדי לפנות מקום בדיסק.",
+            "stopDownload": "עצור הורדה",
+            "stopKeepFiles": "עצור ושמור קבצים",
+            "title": "לבטל את ההורדה?"
+        },
         "progressPaused": "מושהה"
     },
     "edit-game": {

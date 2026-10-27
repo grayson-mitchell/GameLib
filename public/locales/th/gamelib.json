@@ -55,6 +55,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "ลบไฟล์",
+            "keepDownloading": "ดาวน์โหลดต่อ",
+            "message": "{{title}} ดาวน์โหลดไปบางส่วนแล้ว เก็บไฟล์ที่ดาวน์โหลดไว้เพื่อดำเนินการต่อภายหลัง หรือลบเพื่อเพิ่มพื้นที่ว่างบนดิสก์",
+            "stopDownload": "หยุดดาวน์โหลด",
+            "stopKeepFiles": "หยุดและเก็บไฟล์ไว้",
+            "title": "ยกเลิกการดาวน์โหลดหรือไม่?"
+        },
         "progressPaused": "หยุดชั่วคราว"
     },
     "edit-game": {

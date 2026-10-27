@@ -55,6 +55,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Ezabatu fitxategiak",
+            "keepDownloading": "Jarraitu deskargatzen",
+            "message": "{{title}} partzialki deskargatu da. Gorde deskargatutako fitxategiak geroago jarraitzeko, edo ezabatu itzazu diskoko lekua askatzeko.",
+            "stopDownload": "Gelditu deskarga",
+            "stopKeepFiles": "Gelditu eta gorde fitxategiak",
+            "title": "Deskarga bertan behera utzi?"
+        },
         "progressPaused": "Pausatuta"
     },
     "edit-game": {

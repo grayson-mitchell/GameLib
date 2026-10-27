@@ -55,6 +55,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Fájlok törlése",
+            "keepDownloading": "Letöltés folytatása",
+            "message": "A(z) {{title}} részben le van töltve. Tartsd meg a letöltött fájlokat, hogy később folytathasd, vagy töröld őket a lemezterület felszabadításához.",
+            "stopDownload": "Letöltés leállítása",
+            "stopKeepFiles": "Leállítás és fájlok megtartása",
+            "title": "Megszakítod a letöltést?"
+        },
         "progressPaused": "Szüneteltetve"
     },
     "edit-game": {

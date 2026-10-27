@@ -15,6 +15,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Dateien löschen",
+            "keepDownloading": "Download fortsetzen",
+            "message": "{{title}} wurde teilweise heruntergeladen. Behalte die heruntergeladenen Dateien, um später fortzufahren, oder lösche sie, um Speicherplatz freizugeben.",
+            "stopDownload": "Download stoppen",
+            "stopKeepFiles": "Stoppen und Dateien behalten",
+            "title": "Download abbrechen?"
+        },
         "progressPaused": "Pausiert"
     },
     "gamepage": {

@@ -55,6 +55,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "刪除檔案",
+            "keepDownloading": "繼續下載",
+            "message": "{{title}} 僅下載了一部分。保留已下載的檔案以便稍後繼續，或將其刪除以釋放磁碟空間。",
+            "stopDownload": "停止下載",
+            "stopKeepFiles": "停止並保留檔案",
+            "title": "取消下載？"
+        },
         "progressPaused": "已暫停"
     },
     "edit-game": {

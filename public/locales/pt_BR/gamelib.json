@@ -56,6 +56,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Excluir arquivos",
+            "keepDownloading": "Continuar baixando",
+            "message": "{{title}} foi baixado parcialmente. Mantenha os arquivos baixados para retomar depois ou exclua-os para liberar espaço em disco.",
+            "stopDownload": "Parar download",
+            "stopKeepFiles": "Parar e manter arquivos",
+            "title": "Cancelar o download?"
+        },
         "progressPaused": "Pausado"
     },
     "edit-game": {

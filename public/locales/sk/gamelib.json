@@ -57,6 +57,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Odstrániť súbory",
+            "keepDownloading": "Pokračovať v sťahovaní",
+            "message": "Hra {{title}} je stiahnutá iba čiastočne. Stiahnuté súbory si ponechajte a pokračujte neskôr, alebo ich odstráňte a uvoľnite miesto na disku.",
+            "stopDownload": "Zastaviť sťahovanie",
+            "stopKeepFiles": "Zastaviť a ponechať súbory",
+            "title": "Zrušiť sťahovanie?"
+        },
         "progressPaused": "Pozastavené"
     },
     "edit-game": {

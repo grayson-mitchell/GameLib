@@ -56,6 +56,14 @@
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
     "downloadManager": {
+        "cancelDialog": {
+            "deleteFiles": "Обриши датотеке",
+            "keepDownloading": "Настави преузимање",
+            "message": "{{title}} је делимично преузет. Задржите преузете датотеке да бисте наставили касније или их обришите да бисте ослободили простор на диску.",
+            "stopDownload": "Заустави преузимање",
+            "stopKeepFiles": "Заустави и задржи датотеке",
+            "title": "Отказати преузимање?"
+        },
         "progressPaused": "Паузирано"
     },
     "edit-game": {
