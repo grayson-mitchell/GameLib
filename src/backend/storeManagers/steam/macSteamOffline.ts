@@ -32,6 +32,7 @@ import {
   statSync,
   writeFileSync
 } from 'fs'
+import { uptime } from 'os'
 import { dirname, join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { shell } from 'backend/platform'
@@ -100,6 +101,24 @@ export interface MacSteamOfflineDeps {
   openUrlDetached: (url: string) => void
   isPidAlive: (pid: number) => boolean
   selfPid: number
+  /** 54-REVIEW WR-03: wall-clock ms of the last system boot. A marker written
+   *  before it belongs to a process that cannot still be alive, whatever now
+   *  holds its PID. Optional so injected test deps can leave it out. */
+  systemBootMs?: () => number
+}
+
+/**
+ * 54-REVIEW WR-03: true only for a live process this user owns. A GameLib
+ * sidecar always runs as the same user, so EPERM (a root or other-user
+ * process that reused the PID) is not ours.
+ */
+export function isOwnUserPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -172,15 +191,9 @@ function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
       return join(appFolder, MAC_STEAM_OFFLINE_OWED_FILE)
     },
     openUrlDetached: spawnOpenDetached,
-    isPidAlive: (pid) => {
-      try {
-        process.kill(pid, 0)
-        return true
-      } catch (err) {
-        return (err as NodeJS.ErrnoException).code === 'EPERM'
-      }
-    },
-    selfPid: process.pid
+    isPidAlive: isOwnUserPidAlive,
+    selfPid: process.pid,
+    systemBootMs: () => Date.now() - uptime() * 1000
   }
 }
 
@@ -314,14 +327,21 @@ function isUnconfirmedDebtStale(
 }
 
 function debtOwnedByOtherLiveProcess(
-  debt: { pid?: number },
+  debt: OnlineDebt,
   deps: MacSteamOfflineDeps
 ): boolean {
-  return (
-    typeof debt.pid === 'number' &&
-    debt.pid !== deps.selfPid &&
-    deps.isPidAlive(debt.pid)
-  )
+  if (typeof debt.pid !== 'number' || debt.pid === deps.selfPid) return false
+  // 54-REVIEW WR-03: the marker survives a reboot with the dead sidecar's PID,
+  // which a system daemon may now hold. A marker older than this boot is never
+  // owned by a live process.
+  if (debt.sinceMs !== undefined && deps.systemBootMs) {
+    try {
+      if (debt.sinceMs < deps.systemBootMs()) return false
+    } catch {
+      // fall through to the PID probe
+    }
+  }
+  return deps.isPidAlive(debt.pid)
 }
 
 /**

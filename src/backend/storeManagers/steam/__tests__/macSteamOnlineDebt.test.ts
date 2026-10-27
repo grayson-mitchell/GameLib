@@ -39,6 +39,7 @@ import {
   __macSteamOnlineConfirmForTests,
   __resetMacSteamOfflineForTests,
   checkGuidedOfflineReady,
+  isOwnUserPidAlive,
   readMacSteamCmStateSince,
   restoreMacSteamOnlineIfOwed,
   spawnOpenDetached,
@@ -586,6 +587,33 @@ describe('restoreMacSteamOnlineIfOwed', () => {
     }
   )
 
+  it('54-REVIEW WR-03: a marker older than this boot is never owned by a live pid', async () => {
+    writeMarker(undefined, { pid: 9999 })
+    const r = await restoreMacSteamOnlineIfOwed(
+      'boot',
+      makeDeps({
+        isPidAlive: () => true,
+        systemBootMs: () => BASE + 1000,
+        openUrlDetached: (url) => {
+          urls.push('detached:' + url)
+          fs.appendFileSync(logPath, onlineLine(clock))
+        }
+      })
+    )
+    expect(r).toBe('restored')
+    expect(fs.existsSync(markerPath)).toBe(false)
+  })
+
+  it('54-REVIEW WR-03: a marker written since this boot still honours a live owner', async () => {
+    writeMarker(undefined, { pid: 9999 })
+    const r = await restoreMacSteamOnlineIfOwed(
+      'boot',
+      makeDeps({ isPidAlive: () => true, systemBootMs: () => BASE - 1000 })
+    )
+    expect(r).toBe('kept-owner-alive')
+    expect(urls).toEqual([])
+  })
+
   it('a dead owner is restored', async () => {
     writeMarker(undefined, { pid: 9999 })
     const r = await restoreMacSteamOnlineIfOwed(
@@ -626,6 +654,26 @@ describe('restoreMacSteamOnlineIfOwed', () => {
     await boot
     await wrap
     expect(connect).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('isOwnUserPidAlive (54-REVIEW WR-03)', () => {
+  const kill = (code?: string) =>
+    jest.spyOn(process, 'kill').mockImplementation(() => {
+      if (code === undefined) return true
+      throw Object.assign(new Error(code), { code })
+    })
+
+  afterEach(() => jest.restoreAllMocks())
+
+  it('a live process of this user is alive', () => {
+    kill()
+    expect(isOwnUserPidAlive(9999)).toBe(true)
+  })
+
+  it.each(['EPERM', 'ESRCH'])('%s is not ours', (code) => {
+    kill(code)
+    expect(isOwnUserPidAlive(9999)).toBe(false)
   })
 })
 
