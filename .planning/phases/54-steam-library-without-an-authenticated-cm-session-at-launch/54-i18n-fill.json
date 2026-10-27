@@ -1,0 +1,443 @@
+{
+  "en": {
+    "steam.goOffline.title": "Set Steam offline to continue",
+    "steam.goOffline.body": "GameLib needs to sign in to your Steam account for this. To keep your Steam Friends list signed in, it signs in while the Steam app is offline, but Steam did not go offline when GameLib asked. This can happen while a Steam game is running.",
+    "steam.goOffline.steps": "In the Steam app, choose Steam > Go Offline, then press Continue. GameLib sets Steam back online once it has signed in.",
+    "steam.goOffline.continue": "Continue",
+    "steam.goOffline.stillOnline": "Steam still shows as online. Choose Steam > Go Offline in the Steam app, then press Continue again.",
+    "steam.goOffline.readyRedeem": "Steam is offline now. Redeem the key again to continue.",
+    "steam.goOffline.error": "Could not continue: {{error}}"
+  },
+  "de": {
+    "steam.goOffline.title": "Steam offline schalten, um fortzufahren",
+    "steam.goOffline.body": "GameLib muss sich dafür bei deinem Steam-Konto anmelden. Damit deine Steam-Freundesliste angemeldet bleibt, meldet es sich an, während die Steam-App offline ist. Steam wurde aber nicht offline geschaltet, als GameLib darum gebeten hat. Das kann passieren, während ein Steam-Spiel läuft.",
+    "steam.goOffline.steps": "Wähle in der Steam-App Steam > Go Offline und drücke dann auf Weiter. GameLib schaltet Steam wieder online, sobald die Anmeldung erfolgt ist.",
+    "steam.goOffline.continue": "Weiter",
+    "steam.goOffline.stillOnline": "Steam wird weiterhin als online angezeigt. Wähle in der Steam-App Steam > Go Offline und drücke dann erneut auf Weiter.",
+    "steam.goOffline.readyRedeem": "Steam ist jetzt offline. Löse den Schlüssel erneut ein, um fortzufahren.",
+    "steam.goOffline.error": "Fortfahren nicht möglich: {{error}}"
+  },
+  "fr": {
+    "steam.goOffline.title": "Passez Steam hors ligne pour continuer",
+    "steam.goOffline.body": "GameLib doit se connecter à votre compte Steam pour cela. Pour que votre liste d'amis Steam reste connectée, il se connecte pendant que l'application Steam est hors ligne, mais Steam n'est pas passé hors ligne quand GameLib l'a demandé. Cela peut arriver pendant qu'un jeu Steam est en cours d'exécution.",
+    "steam.goOffline.steps": "Dans l'application Steam, choisissez Steam > Go Offline, puis appuyez sur Continuer. GameLib remet Steam en ligne une fois connecté.",
+    "steam.goOffline.continue": "Continuer",
+    "steam.goOffline.stillOnline": "Steam apparaît toujours en ligne. Choisissez Steam > Go Offline dans l'application Steam, puis appuyez de nouveau sur Continuer.",
+    "steam.goOffline.readyRedeem": "Steam est maintenant hors ligne. Échangez de nouveau la clé pour continuer.",
+    "steam.goOffline.error": "Impossible de continuer : {{error}}"
+  },
+  "es": {
+    "steam.goOffline.title": "Pon Steam sin conexión para continuar",
+    "steam.goOffline.body": "GameLib necesita iniciar sesión en tu cuenta de Steam para esto. Para mantener abierta la sesión de tu lista de amigos de Steam, inicia sesión mientras la aplicación de Steam está sin conexión, pero Steam no se puso sin conexión cuando GameLib lo solicitó. Esto puede ocurrir mientras se ejecuta un juego de Steam.",
+    "steam.goOffline.steps": "En la aplicación de Steam, elige Steam > Go Offline y pulsa Continuar. GameLib vuelve a poner Steam en línea cuando haya iniciado sesión.",
+    "steam.goOffline.continue": "Continuar",
+    "steam.goOffline.stillOnline": "Steam sigue apareciendo en línea. Elige Steam > Go Offline en la aplicación de Steam y pulsa Continuar de nuevo.",
+    "steam.goOffline.readyRedeem": "Steam está sin conexión ahora. Canjea la clave de nuevo para continuar.",
+    "steam.goOffline.error": "No se pudo continuar: {{error}}"
+  },
+  "it": {
+    "steam.goOffline.title": "Imposta Steam offline per continuare",
+    "steam.goOffline.body": "GameLib deve accedere al tuo account Steam per questa operazione. Per mantenere connessa la tua lista amici di Steam, accede mentre l'app Steam è offline, ma Steam non è passato offline quando GameLib lo ha richiesto. Può succedere mentre è in esecuzione un gioco Steam.",
+    "steam.goOffline.steps": "Nell'app Steam scegli Steam > Go Offline, poi premi Continua. GameLib rimette Steam online dopo l'accesso.",
+    "steam.goOffline.continue": "Continua",
+    "steam.goOffline.stillOnline": "Steam risulta ancora online. Scegli Steam > Go Offline nell'app Steam, poi premi di nuovo Continua.",
+    "steam.goOffline.readyRedeem": "Steam è ora offline. Riscatta di nuovo la chiave per continuare.",
+    "steam.goOffline.error": "Impossibile continuare: {{error}}"
+  },
+  "pt": {
+    "steam.goOffline.title": "Coloque o Steam offline para continuar",
+    "steam.goOffline.body": "O GameLib precisa iniciar sessão na sua conta Steam para isto. Para manter a sua lista de amigos do Steam com sessão iniciada, inicia sessão enquanto a aplicação Steam está offline, mas o Steam não ficou offline quando o GameLib o pediu. Isto pode acontecer enquanto um jogo Steam está em execução.",
+    "steam.goOffline.steps": "Na aplicação Steam, escolha Steam > Go Offline e prima Continuar. O GameLib volta a colocar o Steam online depois de iniciar sessão.",
+    "steam.goOffline.continue": "Continuar",
+    "steam.goOffline.stillOnline": "O Steam continua a aparecer online. Escolha Steam > Go Offline na aplicação Steam e prima Continuar novamente.",
+    "steam.goOffline.readyRedeem": "O Steam está offline agora. Resgate a chave novamente para continuar.",
+    "steam.goOffline.error": "Não foi possível continuar: {{error}}"
+  },
+  "pt_BR": {
+    "steam.goOffline.title": "Coloque o Steam offline para continuar",
+    "steam.goOffline.body": "O GameLib precisa entrar na sua conta Steam para isso. Para manter sua lista de amigos do Steam conectada, ele entra enquanto o app Steam está offline, mas o Steam não ficou offline quando o GameLib pediu. Isso pode acontecer enquanto um jogo da Steam está em execução.",
+    "steam.goOffline.steps": "No app Steam, escolha Steam > Go Offline e pressione Continuar. O GameLib volta a colocar o Steam online depois de entrar.",
+    "steam.goOffline.continue": "Continuar",
+    "steam.goOffline.stillOnline": "O Steam ainda aparece como online. Escolha Steam > Go Offline no app Steam e pressione Continuar novamente.",
+    "steam.goOffline.readyRedeem": "O Steam está offline agora. Resgate a chave novamente para continuar.",
+    "steam.goOffline.error": "Não foi possível continuar: {{error}}"
+  },
+  "nl": {
+    "steam.goOffline.title": "Zet Steam offline om door te gaan",
+    "steam.goOffline.body": "GameLib moet hiervoor inloggen op je Steam-account. Om je Steam-vriendenlijst ingelogd te houden, logt het in terwijl de Steam-app offline is, maar Steam ging niet offline toen GameLib erom vroeg. Dit kan gebeuren terwijl er een Steam-game draait.",
+    "steam.goOffline.steps": "Kies in de Steam-app Steam > Go Offline en druk op Doorgaan. GameLib zet Steam weer online zodra het is ingelogd.",
+    "steam.goOffline.continue": "Doorgaan",
+    "steam.goOffline.stillOnline": "Steam staat nog steeds online. Kies Steam > Go Offline in de Steam-app en druk nogmaals op Doorgaan.",
+    "steam.goOffline.readyRedeem": "Steam is nu offline. Los de sleutel opnieuw in om door te gaan.",
+    "steam.goOffline.error": "Kan niet doorgaan: {{error}}"
+  },
+  "sv": {
+    "steam.goOffline.title": "Ställ in Steam som offline för att fortsätta",
+    "steam.goOffline.body": "GameLib behöver logga in på ditt Steam-konto för detta. För att hålla din Steam-vänlista inloggad loggar det in medan Steam-appen är offline, men Steam gick inte offline när GameLib bad om det. Det kan hända medan ett Steam-spel körs.",
+    "steam.goOffline.steps": "Välj Steam > Go Offline i Steam-appen och tryck på Fortsätt. GameLib ställer Steam online igen när det har loggat in.",
+    "steam.goOffline.continue": "Fortsätt",
+    "steam.goOffline.stillOnline": "Steam visas fortfarande som online. Välj Steam > Go Offline i Steam-appen och tryck på Fortsätt igen.",
+    "steam.goOffline.readyRedeem": "Steam är offline nu. Lös in nyckeln igen för att fortsätta.",
+    "steam.goOffline.error": "Det gick inte att fortsätta: {{error}}"
+  },
+  "da": {
+    "steam.goOffline.title": "Sæt Steam offline for at fortsætte",
+    "steam.goOffline.body": "GameLib skal logge ind på din Steam-konto til dette. For at holde din Steam-venneliste logget ind logger det ind, mens Steam-appen er offline, men Steam gik ikke offline, da GameLib bad om det. Det kan ske, mens et Steam-spil kører.",
+    "steam.goOffline.steps": "Vælg Steam > Go Offline i Steam-appen, og tryk på Fortsæt. GameLib sætter Steam online igen, når det er logget ind.",
+    "steam.goOffline.continue": "Fortsæt",
+    "steam.goOffline.stillOnline": "Steam vises stadig som online. Vælg Steam > Go Offline i Steam-appen, og tryk på Fortsæt igen.",
+    "steam.goOffline.readyRedeem": "Steam er offline nu. Indløs nøglen igen for at fortsætte.",
+    "steam.goOffline.error": "Kunne ikke fortsætte: {{error}}"
+  },
+  "nb_NO": {
+    "steam.goOffline.title": "Sett Steam offline for å fortsette",
+    "steam.goOffline.body": "GameLib må logge inn på Steam-kontoen din for dette. For å holde Steam-vennelisten din innlogget logger det inn mens Steam-appen er offline, men Steam gikk ikke offline da GameLib ba om det. Dette kan skje mens et Steam-spill kjører.",
+    "steam.goOffline.steps": "Velg Steam > Go Offline i Steam-appen, og trykk på Fortsett. GameLib setter Steam online igjen når det har logget inn.",
+    "steam.goOffline.continue": "Fortsett",
+    "steam.goOffline.stillOnline": "Steam vises fortsatt som online. Velg Steam > Go Offline i Steam-appen, og trykk på Fortsett igjen.",
+    "steam.goOffline.readyRedeem": "Steam er offline nå. Løs inn nøkkelen på nytt for å fortsette.",
+    "steam.goOffline.error": "Kunne ikke fortsette: {{error}}"
+  },
+  "fi": {
+    "steam.goOffline.title": "Aseta Steam offline-tilaan jatkaaksesi",
+    "steam.goOffline.body": "GameLibin täytyy kirjautua Steam-tilillesi tätä varten. Pitääkseen Steam-kaverilistasi kirjautuneena se kirjautuu sisään, kun Steam-sovellus on offline-tilassa, mutta Steam ei siirtynyt offline-tilaan, kun GameLib pyysi sitä. Näin voi käydä, kun Steam-peli on käynnissä.",
+    "steam.goOffline.steps": "Valitse Steam-sovelluksessa Steam > Go Offline ja paina Jatka. GameLib asettaa Steamin takaisin online-tilaan kirjauduttuaan.",
+    "steam.goOffline.continue": "Jatka",
+    "steam.goOffline.stillOnline": "Steam näkyy edelleen online-tilassa. Valitse Steam-sovelluksessa Steam > Go Offline ja paina Jatka uudelleen.",
+    "steam.goOffline.readyRedeem": "Steam on nyt offline-tilassa. Lunasta avain uudelleen jatkaaksesi.",
+    "steam.goOffline.error": "Jatkaminen ei onnistunut: {{error}}"
+  },
+  "pl": {
+    "steam.goOffline.title": "Przełącz Steam w tryb offline, aby kontynuować",
+    "steam.goOffline.body": "GameLib musi w tym celu zalogować się na Twoje konto Steam. Aby lista znajomych Steam pozostała zalogowana, loguje się, gdy aplikacja Steam jest w trybie offline, ale Steam nie przeszedł w tryb offline, gdy GameLib o to poprosił. Może się to zdarzyć, gdy uruchomiona jest gra ze Steam.",
+    "steam.goOffline.steps": "W aplikacji Steam wybierz Steam > Go Offline, a następnie naciśnij Kontynuuj. GameLib ponownie przełączy Steam w tryb online po zalogowaniu.",
+    "steam.goOffline.continue": "Kontynuuj",
+    "steam.goOffline.stillOnline": "Steam nadal jest widoczny jako online. Wybierz Steam > Go Offline w aplikacji Steam, a następnie ponownie naciśnij Kontynuuj.",
+    "steam.goOffline.readyRedeem": "Steam jest teraz offline. Zrealizuj klucz ponownie, aby kontynuować.",
+    "steam.goOffline.error": "Nie można kontynuować: {{error}}"
+  },
+  "cs": {
+    "steam.goOffline.title": "Pro pokračování přepněte Steam do režimu offline",
+    "steam.goOffline.body": "GameLib se k tomu musí přihlásit k vašemu účtu Steam. Aby seznam přátel Steam zůstal přihlášený, přihlašuje se, když je aplikace Steam offline, ale Steam se do režimu offline nepřepnul, když o to GameLib požádal. To se může stát, když běží hra ze Steamu.",
+    "steam.goOffline.steps": "V aplikaci Steam zvolte Steam > Go Offline a stiskněte Pokračovat. GameLib po přihlášení přepne Steam zpět do režimu online.",
+    "steam.goOffline.continue": "Pokračovat",
+    "steam.goOffline.stillOnline": "Steam se stále zobrazuje jako online. V aplikaci Steam zvolte Steam > Go Offline a znovu stiskněte Pokračovat.",
+    "steam.goOffline.readyRedeem": "Steam je nyní offline. Pro pokračování klíč uplatněte znovu.",
+    "steam.goOffline.error": "Nelze pokračovat: {{error}}"
+  },
+  "sk": {
+    "steam.goOffline.title": "Ak chcete pokračovať, prepnite Steam do režimu offline",
+    "steam.goOffline.body": "GameLib sa na to musí prihlásiť do vášho účtu Steam. Aby zoznam priateľov Steam zostal prihlásený, prihlasuje sa, keď je aplikácia Steam offline, ale Steam sa neprepol do režimu offline, keď o to GameLib požiadal. To sa môže stať, keď beží hra zo Steamu.",
+    "steam.goOffline.steps": "V aplikácii Steam vyberte Steam > Go Offline a stlačte Pokračovať. GameLib po prihlásení prepne Steam späť do režimu online.",
+    "steam.goOffline.continue": "Pokračovať",
+    "steam.goOffline.stillOnline": "Steam sa stále zobrazuje ako online. V aplikácii Steam vyberte Steam > Go Offline a znova stlačte Pokračovať.",
+    "steam.goOffline.readyRedeem": "Steam je teraz offline. Ak chcete pokračovať, kľúč uplatnite znova.",
+    "steam.goOffline.error": "Nie je možné pokračovať: {{error}}"
+  },
+  "sl": {
+    "steam.goOffline.title": "Za nadaljevanje preklopite Steam v način brez povezave",
+    "steam.goOffline.body": "GameLib se mora za to prijaviti v vaš račun Steam. Da ostane vaš seznam prijateljev Steam prijavljen, se prijavi, ko je aplikacija Steam brez povezave, vendar Steam ni prešel v način brez povezave, ko je GameLib to zahteval. To se lahko zgodi, ko teče igra iz Steama.",
+    "steam.goOffline.steps": "V aplikaciji Steam izberite Steam > Go Offline in pritisnite Nadaljuj. GameLib po prijavi Steam znova preklopi v način s povezavo.",
+    "steam.goOffline.continue": "Nadaljuj",
+    "steam.goOffline.stillOnline": "Steam je še vedno prikazan kot povezan. V aplikaciji Steam izberite Steam > Go Offline in znova pritisnite Nadaljuj.",
+    "steam.goOffline.readyRedeem": "Steam je zdaj brez povezave. Za nadaljevanje ključ ponovno unovčite.",
+    "steam.goOffline.error": "Ni mogoče nadaljevati: {{error}}"
+  },
+  "hr": {
+    "steam.goOffline.title": "Postavite Steam u izvanmrežni način za nastavak",
+    "steam.goOffline.body": "GameLib se u tu svrhu mora prijaviti na vaš Steam račun. Kako bi popis prijatelja na Steamu ostao prijavljen, prijavljuje se dok je aplikacija Steam izvan mreže, ali Steam nije prešao u izvanmrežni način kad je GameLib to zatražio. To se može dogoditi dok je pokrenuta Steam igra.",
+    "steam.goOffline.steps": "U aplikaciji Steam odaberite Steam > Go Offline i pritisnite Nastavi. GameLib će nakon prijave vratiti Steam na mrežu.",
+    "steam.goOffline.continue": "Nastavi",
+    "steam.goOffline.stillOnline": "Steam se i dalje prikazuje kao na mreži. Odaberite Steam > Go Offline u aplikaciji Steam i ponovno pritisnite Nastavi.",
+    "steam.goOffline.readyRedeem": "Steam je sada izvan mreže. Ponovno iskoristite ključ za nastavak.",
+    "steam.goOffline.error": "Nije moguće nastaviti: {{error}}"
+  },
+  "bs": {
+    "steam.goOffline.title": "Postavite Steam u offline način za nastavak",
+    "steam.goOffline.body": "GameLib se u tu svrhu mora prijaviti na vaš Steam račun. Kako bi lista prijatelja na Steamu ostala prijavljena, prijavljuje se dok je aplikacija Steam offline, ali Steam nije prešao u offline način kada je GameLib to zatražio. To se može desiti dok je pokrenuta Steam igra.",
+    "steam.goOffline.steps": "U aplikaciji Steam odaberite Steam > Go Offline i pritisnite Nastavi. GameLib će nakon prijave vratiti Steam online.",
+    "steam.goOffline.continue": "Nastavi",
+    "steam.goOffline.stillOnline": "Steam se i dalje prikazuje kao online. Odaberite Steam > Go Offline u aplikaciji Steam i ponovo pritisnite Nastavi.",
+    "steam.goOffline.readyRedeem": "Steam je sada offline. Ponovo iskoristite ključ za nastavak.",
+    "steam.goOffline.error": "Nije moguće nastaviti: {{error}}"
+  },
+  "sr": {
+    "steam.goOffline.title": "Подесите Steam на офлајн да бисте наставили",
+    "steam.goOffline.body": "GameLib се у ту сврху мора пријавити на ваш Steam налог. Да би листа пријатеља на Steam-у остала пријављена, пријављује се док је Steam апликација офлајн, али Steam није прешао у офлајн режим када је GameLib то затражио. То се може догодити док је покренута Steam игра.",
+    "steam.goOffline.steps": "У Steam апликацији изаберите Steam > Go Offline, а затим притисните Настави. GameLib ће након пријаве вратити Steam на онлајн.",
+    "steam.goOffline.continue": "Настави",
+    "steam.goOffline.stillOnline": "Steam се и даље приказује као онлајн. Изаберите Steam > Go Offline у Steam апликацији, а затим поново притисните Настави.",
+    "steam.goOffline.readyRedeem": "Steam је сада офлајн. Поново искористите кључ да бисте наставили.",
+    "steam.goOffline.error": "Није могуће наставити: {{error}}"
+  },
+  "bg": {
+    "steam.goOffline.title": "Задайте Steam като офлайн, за да продължите",
+    "steam.goOffline.body": "За това GameLib трябва да влезе в акаунта ви в Steam. За да остане списъкът ви с приятели в Steam влязъл, то влиза, докато приложението Steam е офлайн, но Steam не премина в офлайн режим, когато GameLib го поиска. Това може да се случи, докато върви игра от Steam.",
+    "steam.goOffline.steps": "В приложението Steam изберете Steam > Go Offline и натиснете Продължи. GameLib връща Steam онлайн, след като влезе.",
+    "steam.goOffline.continue": "Продължи",
+    "steam.goOffline.stillOnline": "Steam все още се показва като онлайн. Изберете Steam > Go Offline в приложението Steam и натиснете Продължи отново.",
+    "steam.goOffline.readyRedeem": "Steam вече е офлайн. Осребрете ключа отново, за да продължите.",
+    "steam.goOffline.error": "Не може да се продължи: {{error}}"
+  },
+  "ru": {
+    "steam.goOffline.title": "Переведите Steam в офлайн, чтобы продолжить",
+    "steam.goOffline.body": "Для этого GameLib нужно войти в вашу учётную запись Steam. Чтобы список друзей Steam оставался в сети, вход выполняется, пока приложение Steam находится в офлайн-режиме, но Steam не перешёл в офлайн, когда GameLib об этом попросил. Такое может случиться, пока запущена игра Steam.",
+    "steam.goOffline.steps": "В приложении Steam выберите Steam > Go Offline и нажмите «Продолжить». GameLib вернёт Steam в онлайн после входа.",
+    "steam.goOffline.continue": "Продолжить",
+    "steam.goOffline.stillOnline": "Steam по-прежнему отображается как онлайн. Выберите Steam > Go Offline в приложении Steam и снова нажмите «Продолжить».",
+    "steam.goOffline.readyRedeem": "Steam теперь в офлайне. Активируйте ключ ещё раз, чтобы продолжить.",
+    "steam.goOffline.error": "Не удалось продолжить: {{error}}"
+  },
+  "uk": {
+    "steam.goOffline.title": "Переведіть Steam в офлайн, щоб продовжити",
+    "steam.goOffline.body": "Для цього GameLib потрібно увійти у ваш обліковий запис Steam. Щоб список друзів Steam залишався в мережі, вхід виконується, поки застосунок Steam перебуває в офлайн-режимі, але Steam не перейшов в офлайн, коли GameLib про це попросив. Таке може статися, поки запущена гра Steam.",
+    "steam.goOffline.steps": "У застосунку Steam виберіть Steam > Go Offline і натисніть «Продовжити». GameLib поверне Steam в онлайн після входу.",
+    "steam.goOffline.continue": "Продовжити",
+    "steam.goOffline.stillOnline": "Steam досі відображається як онлайн. Виберіть Steam > Go Offline у застосунку Steam і знову натисніть «Продовжити».",
+    "steam.goOffline.readyRedeem": "Steam тепер в офлайні. Активуйте ключ ще раз, щоб продовжити.",
+    "steam.goOffline.error": "Не вдалося продовжити: {{error}}"
+  },
+  "be": {
+    "steam.goOffline.title": "Пераключыце Steam у афлайн, каб працягнуць",
+    "steam.goOffline.body": "Для гэтага GameLib трэба ўвайсці ў ваш уліковы запіс Steam. Каб спіс сяброў Steam заставаўся ў сетцы, уваход выконваецца, пакуль праграма Steam у афлайн-рэжыме, але Steam не перайшоў у афлайн, калі GameLib папрасіў пра гэта. Такое можа здарыцца, пакуль запушчана гульня Steam.",
+    "steam.goOffline.steps": "У праграме Steam абярыце Steam > Go Offline і націсніце «Працягнуць». GameLib вернецца ў анлайн пасля ўваходу.",
+    "steam.goOffline.continue": "Працягнуць",
+    "steam.goOffline.stillOnline": "Steam па-ранейшаму паказваецца як анлайн. Абярыце Steam > Go Offline у праграме Steam і зноў націсніце «Працягнуць».",
+    "steam.goOffline.readyRedeem": "Steam цяпер у афлайне. Актывуйце ключ яшчэ раз, каб працягнуць.",
+    "steam.goOffline.error": "Не атрымалася працягнуць: {{error}}"
+  },
+  "el": {
+    "steam.goOffline.title": "Θέστε το Steam εκτός σύνδεσης για να συνεχίσετε",
+    "steam.goOffline.body": "Το GameLib πρέπει να συνδεθεί στον λογαριασμό σας Steam για αυτό. Για να παραμείνει συνδεδεμένη η λίστα φίλων σας στο Steam, συνδέεται ενώ η εφαρμογή Steam είναι εκτός σύνδεσης, αλλά το Steam δεν τέθηκε εκτός σύνδεσης όταν το ζήτησε το GameLib. Αυτό μπορεί να συμβεί ενώ εκτελείται ένα παιχνίδι Steam.",
+    "steam.goOffline.steps": "Στην εφαρμογή Steam, επιλέξτε Steam > Go Offline και πατήστε Συνέχεια. Το GameLib θέτει ξανά το Steam σε σύνδεση μόλις συνδεθεί.",
+    "steam.goOffline.continue": "Συνέχεια",
+    "steam.goOffline.stillOnline": "Το Steam εμφανίζεται ακόμη ως συνδεδεμένο. Επιλέξτε Steam > Go Offline στην εφαρμογή Steam και πατήστε ξανά Συνέχεια.",
+    "steam.goOffline.readyRedeem": "Το Steam είναι τώρα εκτός σύνδεσης. Εξαργυρώστε ξανά το κλειδί για να συνεχίσετε.",
+    "steam.goOffline.error": "Δεν ήταν δυνατή η συνέχεια: {{error}}"
+  },
+  "tr": {
+    "steam.goOffline.title": "Devam etmek için Steam'i çevrimdışı yapın",
+    "steam.goOffline.body": "GameLib'in bunun için Steam hesabınızda oturum açması gerekiyor. Steam arkadaş listenizin oturumda kalması için Steam uygulaması çevrimdışıyken oturum açar, ancak GameLib istediğinde Steam çevrimdışı olmadı. Bu, bir Steam oyunu çalışırken olabilir.",
+    "steam.goOffline.steps": "Steam uygulamasında Steam > Go Offline seçeneğini seçin ve Devam'a basın. GameLib oturum açtıktan sonra Steam'i yeniden çevrimiçi yapar.",
+    "steam.goOffline.continue": "Devam",
+    "steam.goOffline.stillOnline": "Steam hâlâ çevrimiçi görünüyor. Steam uygulamasında Steam > Go Offline seçeneğini seçin ve Devam'a tekrar basın.",
+    "steam.goOffline.readyRedeem": "Steam artık çevrimdışı. Devam etmek için anahtarı yeniden kullanın.",
+    "steam.goOffline.error": "Devam edilemedi: {{error}}"
+  },
+  "hu": {
+    "steam.goOffline.title": "Állítsd offline módba a Steamet a folytatáshoz",
+    "steam.goOffline.body": "A GameLibnek ehhez be kell jelentkeznie a Steam-fiókodba. Hogy a Steam-barátlistád bejelentkezve maradjon, akkor jelentkezik be, amikor a Steam alkalmazás offline módban van, de a Steam nem váltott offline módba, amikor a GameLib kérte. Ez akkor fordulhat elő, ha egy Steam-játék fut.",
+    "steam.goOffline.steps": "A Steam alkalmazásban válaszd a Steam > Go Offline lehetőséget, majd nyomd meg a Folytatás gombot. A GameLib a bejelentkezés után visszaállítja a Steamet online módba.",
+    "steam.goOffline.continue": "Folytatás",
+    "steam.goOffline.stillOnline": "A Steam még mindig online állapotot mutat. Válaszd a Steam > Go Offline lehetőséget a Steam alkalmazásban, majd nyomd meg újra a Folytatás gombot.",
+    "steam.goOffline.readyRedeem": "A Steam most offline módban van. A folytatáshoz váltsd be újra a kulcsot.",
+    "steam.goOffline.error": "Nem sikerült folytatni: {{error}}"
+  },
+  "ro": {
+    "steam.goOffline.title": "Setați Steam pe offline pentru a continua",
+    "steam.goOffline.body": "GameLib trebuie să se conecteze la contul dvs. Steam pentru aceasta. Pentru a păstra conectată lista de prieteni Steam, se conectează cât timp aplicația Steam este offline, dar Steam nu a trecut în modul offline când a cerut GameLib. Se poate întâmpla cât timp rulează un joc Steam.",
+    "steam.goOffline.steps": "În aplicația Steam, alegeți Steam > Go Offline, apoi apăsați Continuă. GameLib repune Steam online după ce s-a conectat.",
+    "steam.goOffline.continue": "Continuă",
+    "steam.goOffline.stillOnline": "Steam apare în continuare online. Alegeți Steam > Go Offline în aplicația Steam, apoi apăsați din nou Continuă.",
+    "steam.goOffline.readyRedeem": "Steam este acum offline. Valorificați din nou cheia pentru a continua.",
+    "steam.goOffline.error": "Nu s-a putut continua: {{error}}"
+  },
+  "ca": {
+    "steam.goOffline.title": "Posa Steam fora de línia per continuar",
+    "steam.goOffline.body": "GameLib necessita iniciar la sessió al teu compte de Steam per fer-ho. Per mantenir la sessió de la teva llista d'amics de Steam, l'inicia mentre l'aplicació de Steam està fora de línia, però Steam no s'ha posat fora de línia quan GameLib ho ha demanat. Això pot passar mentre s'executa un joc de Steam.",
+    "steam.goOffline.steps": "A l'aplicació de Steam, tria Steam > Go Offline i prem Continua. GameLib torna a posar Steam en línia quan hagi iniciat la sessió.",
+    "steam.goOffline.continue": "Continua",
+    "steam.goOffline.stillOnline": "Steam encara apareix en línia. Tria Steam > Go Offline a l'aplicació de Steam i prem Continua de nou.",
+    "steam.goOffline.readyRedeem": "Steam és fora de línia ara. Bescanvia la clau de nou per continuar.",
+    "steam.goOffline.error": "No s'ha pogut continuar: {{error}}"
+  },
+  "gl": {
+    "steam.goOffline.title": "Pon Steam sen conexión para continuar",
+    "steam.goOffline.body": "GameLib necesita iniciar sesión na túa conta de Steam para isto. Para manter iniciada a sesión da túa lista de amizades de Steam, inicia sesión mentres a aplicación de Steam está sen conexión, pero Steam non se puxo sen conexión cando GameLib o solicitou. Isto pode acontecer mentres se executa un xogo de Steam.",
+    "steam.goOffline.steps": "Na aplicación de Steam, escolle Steam > Go Offline e preme Continuar. GameLib volve poñer Steam en liña cando inicie sesión.",
+    "steam.goOffline.continue": "Continuar",
+    "steam.goOffline.stillOnline": "Steam segue aparecendo en liña. Escolle Steam > Go Offline na aplicación de Steam e preme Continuar de novo.",
+    "steam.goOffline.readyRedeem": "Steam está sen conexión agora. Canxea a clave de novo para continuar.",
+    "steam.goOffline.error": "Non se puido continuar: {{error}}"
+  },
+  "eu": {
+    "steam.goOffline.title": "Jarri Steam lineaz kanpo jarraitzeko",
+    "steam.goOffline.body": "GameLib-ek zure Steam kontuan saioa hasi behar du horretarako. Zure Steam lagunen zerrendak saioa hasita izan dezan, Steam aplikazioa lineaz kanpo dagoenean hasten du saioa, baina Steam ez zen lineaz kanpo jarri GameLib-ek eskatu zuenean. Hau Steam joko bat martxan dagoenean gerta daiteke.",
+    "steam.goOffline.steps": "Steam aplikazioan, aukeratu Steam > Go Offline eta sakatu Jarraitu. GameLib-ek Steam berriro linean jarriko du saioa hasi ondoren.",
+    "steam.goOffline.continue": "Jarraitu",
+    "steam.goOffline.stillOnline": "Steam oraindik linean agertzen da. Aukeratu Steam > Go Offline Steam aplikazioan eta sakatu Jarraitu berriro.",
+    "steam.goOffline.readyRedeem": "Steam lineaz kanpo dago orain. Trukatu gakoa berriro jarraitzeko.",
+    "steam.goOffline.error": "Ezin izan da jarraitu: {{error}}"
+  },
+  "ga": {
+    "steam.goOffline.title": "Socraigh Steam as líne chun leanúint ar aghaidh",
+    "steam.goOffline.body": "Ní mór do GameLib logáil isteach i do chuntas Steam chun seo a dhéanamh. Chun do liosta cairde Steam a choinneáil logáilte isteach, logálann sé isteach agus an aip Steam as líne, ach níor chuaigh Steam as líne nuair a d'iarr GameLib air. Is féidir é seo tarlú agus cluiche Steam ag rith.",
+    "steam.goOffline.steps": "San aip Steam, roghnaigh Steam > Go Offline, ansin brúigh Lean ar aghaidh. Cuireann GameLib Steam ar líne arís nuair atá sé logáilte isteach.",
+    "steam.goOffline.continue": "Lean ar aghaidh",
+    "steam.goOffline.stillOnline": "Taispeántar Steam ar líne fós. Roghnaigh Steam > Go Offline san aip Steam, ansin brúigh Lean ar aghaidh arís.",
+    "steam.goOffline.readyRedeem": "Tá Steam as líne anois. Fuascail an eochair arís chun leanúint ar aghaidh.",
+    "steam.goOffline.error": "Níorbh fhéidir leanúint ar aghaidh: {{error}}"
+  },
+  "br": {
+    "steam.goOffline.title": "Lakait Steam diouzh linenn evit kenderc'hel",
+    "steam.goOffline.body": "Ret eo da GameLib kevreañ ouzh ho kont Steam evit se. Evit derc'hel ho roll mignoned Steam kevreet, e kevre pa vez ar poellad Steam diouzh linenn, met n'eo ket aet Steam diouzh linenn pa'z eus goulennet GameLib. Gallout a ra c'hoarvezout pa vez o treiñ ur c'hoari Steam.",
+    "steam.goOffline.steps": "E poellad Steam, diuzit Steam > Go Offline, goude-se pouezit war Kenderc'hel. GameLib a laka Steam war linenn en-dro p'en deus kevreet.",
+    "steam.goOffline.continue": "Kenderc'hel",
+    "steam.goOffline.stillOnline": "Steam a gaver c'hoazh war linenn. Diuzit Steam > Go Offline er poellad Steam, goude-se pouezit war Kenderc'hel en-dro.",
+    "steam.goOffline.readyRedeem": "Steam zo diouzh linenn bremañ. Eilgemerit an alc'hwez evit kenderc'hel.",
+    "steam.goOffline.error": "N'eus ket bet gallet kenderc'hel: {{error}}"
+  },
+  "et": {
+    "steam.goOffline.title": "Jätkamiseks lülita Steam võrguühenduseta režiimi",
+    "steam.goOffline.body": "GameLib peab selleks sisse logima sinu Steami kontole. Et sinu Steami sõbraloend püsiks sisse logitud, logib see sisse siis, kui Steami rakendus on võrguühenduseta, kuid Steam ei läinud võrguühenduseta režiimi, kui GameLib seda palus. See võib juhtuda, kui Steami mäng töötab.",
+    "steam.goOffline.steps": "Vali Steami rakenduses Steam > Go Offline ja vajuta nuppu Jätka. GameLib lülitab Steami pärast sisselogimist uuesti võrku.",
+    "steam.goOffline.continue": "Jätka",
+    "steam.goOffline.stillOnline": "Steam on endiselt võrgus. Vali Steami rakenduses Steam > Go Offline ja vajuta uuesti nuppu Jätka.",
+    "steam.goOffline.readyRedeem": "Steam on nüüd võrguühenduseta. Jätkamiseks lunasta võti uuesti.",
+    "steam.goOffline.error": "Jätkamine ebaõnnestus: {{error}}"
+  },
+  "lt": {
+    "steam.goOffline.title": "Norėdami tęsti, nustatykite Steam kaip neprisijungusį",
+    "steam.goOffline.body": "Tam GameLib turi prisijungti prie jūsų Steam paskyros. Kad jūsų Steam draugų sąrašas liktų prisijungęs, jis prisijungia, kol Steam programa yra neprisijungusi, bet Steam nepersijungė į neprisijungusį režimą, kai to paprašė GameLib. Taip gali nutikti, kai veikia Steam žaidimas.",
+    "steam.goOffline.steps": "Steam programoje pasirinkite Steam > Go Offline ir paspauskite Tęsti. Prisijungęs GameLib vėl perjungs Steam į prisijungusį režimą.",
+    "steam.goOffline.continue": "Tęsti",
+    "steam.goOffline.stillOnline": "Steam vis dar rodomas kaip prisijungęs. Steam programoje pasirinkite Steam > Go Offline ir dar kartą paspauskite Tęsti.",
+    "steam.goOffline.readyRedeem": "Steam dabar neprisijungęs. Norėdami tęsti, dar kartą aktyvuokite raktą.",
+    "steam.goOffline.error": "Nepavyko tęsti: {{error}}"
+  },
+  "id": {
+    "steam.goOffline.title": "Setel Steam ke mode offline untuk melanjutkan",
+    "steam.goOffline.body": "GameLib perlu masuk ke akun Steam Anda untuk ini. Agar daftar teman Steam Anda tetap masuk, GameLib masuk saat aplikasi Steam offline, tetapi Steam tidak beralih ke offline saat GameLib memintanya. Hal ini bisa terjadi saat game Steam sedang berjalan.",
+    "steam.goOffline.steps": "Di aplikasi Steam, pilih Steam > Go Offline, lalu tekan Lanjutkan. GameLib akan mengembalikan Steam ke online setelah berhasil masuk.",
+    "steam.goOffline.continue": "Lanjutkan",
+    "steam.goOffline.stillOnline": "Steam masih terlihat online. Pilih Steam > Go Offline di aplikasi Steam, lalu tekan Lanjutkan lagi.",
+    "steam.goOffline.readyRedeem": "Steam sekarang offline. Tukarkan kunci lagi untuk melanjutkan.",
+    "steam.goOffline.error": "Tidak dapat melanjutkan: {{error}}"
+  },
+  "vi": {
+    "steam.goOffline.title": "Đặt Steam ở chế độ ngoại tuyến để tiếp tục",
+    "steam.goOffline.body": "GameLib cần đăng nhập vào tài khoản Steam của bạn để thực hiện việc này. Để giữ danh sách bạn bè Steam luôn đăng nhập, GameLib đăng nhập khi ứng dụng Steam ở chế độ ngoại tuyến, nhưng Steam đã không chuyển sang ngoại tuyến khi GameLib yêu cầu. Điều này có thể xảy ra khi một trò chơi Steam đang chạy.",
+    "steam.goOffline.steps": "Trong ứng dụng Steam, chọn Steam > Go Offline rồi nhấn Tiếp tục. GameLib sẽ đặt Steam trở lại trực tuyến sau khi đăng nhập xong.",
+    "steam.goOffline.continue": "Tiếp tục",
+    "steam.goOffline.stillOnline": "Steam vẫn hiển thị là trực tuyến. Chọn Steam > Go Offline trong ứng dụng Steam rồi nhấn Tiếp tục lần nữa.",
+    "steam.goOffline.readyRedeem": "Steam hiện đã ngoại tuyến. Hãy đổi lại khóa để tiếp tục.",
+    "steam.goOffline.error": "Không thể tiếp tục: {{error}}"
+  },
+  "th": {
+    "steam.goOffline.title": "ตั้งค่า Steam เป็นออฟไลน์เพื่อดำเนินการต่อ",
+    "steam.goOffline.body": "GameLib ต้องลงชื่อเข้าใช้บัญชี Steam ของคุณเพื่อดำเนินการนี้ เพื่อให้รายชื่อเพื่อน Steam ของคุณยังคงลงชื่อเข้าใช้อยู่ GameLib จะลงชื่อเข้าใช้ขณะที่แอป Steam ออฟไลน์ แต่ Steam ไม่ได้เปลี่ยนเป็นออฟไลน์เมื่อ GameLib ร้องขอ ซึ่งอาจเกิดขึ้นได้ขณะที่เกม Steam กำลังทำงานอยู่",
+    "steam.goOffline.steps": "ในแอป Steam ให้เลือก Steam > Go Offline แล้วกดดำเนินการต่อ GameLib จะตั้งค่า Steam กลับเป็นออนไลน์หลังจากลงชื่อเข้าใช้แล้ว",
+    "steam.goOffline.continue": "ดำเนินการต่อ",
+    "steam.goOffline.stillOnline": "Steam ยังแสดงเป็นออนไลน์อยู่ เลือก Steam > Go Offline ในแอป Steam แล้วกดดำเนินการต่ออีกครั้ง",
+    "steam.goOffline.readyRedeem": "ตอนนี้ Steam ออฟไลน์แล้ว แลกคีย์อีกครั้งเพื่อดำเนินการต่อ",
+    "steam.goOffline.error": "ไม่สามารถดำเนินการต่อได้: {{error}}"
+  },
+  "ja": {
+    "steam.goOffline.title": "続行するには Steam をオフラインにしてください",
+    "steam.goOffline.body": "この操作では、GameLib が Steam アカウントにサインインする必要があります。Steam のフレンドリストをサインインしたままにするため、Steam アプリがオフラインの間にサインインしますが、GameLib が要求したときに Steam はオフラインになりませんでした。Steam のゲームが起動中の場合に起こることがあります。",
+    "steam.goOffline.steps": "Steam アプリで Steam > Go Offline を選び、「続行」を押してください。サインインが完了すると、GameLib が Steam をオンラインに戻します。",
+    "steam.goOffline.continue": "続行",
+    "steam.goOffline.stillOnline": "Steam はまだオンラインと表示されています。Steam アプリで Steam > Go Offline を選び、もう一度「続行」を押してください。",
+    "steam.goOffline.readyRedeem": "Steam がオフラインになりました。続行するには、もう一度キーを引き換えてください。",
+    "steam.goOffline.error": "続行できませんでした: {{error}}"
+  },
+  "ko": {
+    "steam.goOffline.title": "계속하려면 Steam을 오프라인으로 설정하세요",
+    "steam.goOffline.body": "이 작업을 위해 GameLib가 Steam 계정에 로그인해야 합니다. Steam 친구 목록의 로그인 상태를 유지하기 위해 Steam 앱이 오프라인인 동안 로그인하지만, GameLib가 요청했을 때 Steam이 오프라인이 되지 않았습니다. Steam 게임이 실행 중일 때 이런 일이 생길 수 있습니다.",
+    "steam.goOffline.steps": "Steam 앱에서 Steam > Go Offline을 선택한 다음 계속을 누르세요. 로그인이 끝나면 GameLib가 Steam을 다시 온라인으로 전환합니다.",
+    "steam.goOffline.continue": "계속",
+    "steam.goOffline.stillOnline": "Steam이 아직 온라인으로 표시됩니다. Steam 앱에서 Steam > Go Offline을 선택한 다음 계속을 다시 누르세요.",
+    "steam.goOffline.readyRedeem": "Steam이 이제 오프라인입니다. 계속하려면 키를 다시 등록하세요.",
+    "steam.goOffline.error": "계속할 수 없습니다: {{error}}"
+  },
+  "zh_Hans": {
+    "steam.goOffline.title": "请将 Steam 设为离线以继续",
+    "steam.goOffline.body": "GameLib 需要为此登录你的 Steam 账户。为了让你的 Steam 好友列表保持登录状态，它会在 Steam 应用离线时登录，但 GameLib 请求时 Steam 并没有进入离线状态。Steam 游戏正在运行时可能会出现这种情况。",
+    "steam.goOffline.steps": "在 Steam 应用中选择 Steam > Go Offline，然后点击“继续”。登录完成后，GameLib 会将 Steam 重新设为在线。",
+    "steam.goOffline.continue": "继续",
+    "steam.goOffline.stillOnline": "Steam 仍显示为在线。请在 Steam 应用中选择 Steam > Go Offline，然后再次点击“继续”。",
+    "steam.goOffline.readyRedeem": "Steam 现已离线。请再次兑换密钥以继续。",
+    "steam.goOffline.error": "无法继续：{{error}}"
+  },
+  "zh_Hant": {
+    "steam.goOffline.title": "請將 Steam 設為離線以繼續",
+    "steam.goOffline.body": "GameLib 需要為此登入你的 Steam 帳號。為了讓你的 Steam 好友名單保持登入狀態，它會在 Steam 應用程式離線時登入，但 GameLib 要求時 Steam 並未進入離線狀態。Steam 遊戲執行中時可能會發生這種情況。",
+    "steam.goOffline.steps": "在 Steam 應用程式中選擇 Steam > Go Offline，然後按「繼續」。登入完成後，GameLib 會將 Steam 重新設為上線。",
+    "steam.goOffline.continue": "繼續",
+    "steam.goOffline.stillOnline": "Steam 仍顯示為上線。請在 Steam 應用程式中選擇 Steam > Go Offline，然後再次按「繼續」。",
+    "steam.goOffline.readyRedeem": "Steam 現已離線。請再次兌換金鑰以繼續。",
+    "steam.goOffline.error": "無法繼續：{{error}}"
+  },
+  "ar": {
+    "steam.goOffline.title": "اضبط Steam على وضع عدم الاتصال للمتابعة",
+    "steam.goOffline.body": "يحتاج GameLib إلى تسجيل الدخول إلى حسابك على Steam لهذا الغرض. للحفاظ على تسجيل دخول قائمة أصدقائك في Steam، يسجّل الدخول بينما يكون تطبيق Steam في وضع عدم الاتصال، لكن Steam لم ينتقل إلى وضع عدم الاتصال عندما طلب GameLib ذلك. قد يحدث هذا أثناء تشغيل لعبة من Steam.",
+    "steam.goOffline.steps": "في تطبيق Steam، اختر Steam > Go Offline ثم اضغط متابعة. سيعيد GameLib Steam إلى وضع الاتصال بعد تسجيل الدخول.",
+    "steam.goOffline.continue": "متابعة",
+    "steam.goOffline.stillOnline": "ما يزال Steam يظهر متصلًا. اختر Steam > Go Offline في تطبيق Steam ثم اضغط متابعة مرة أخرى.",
+    "steam.goOffline.readyRedeem": "Steam في وضع عدم الاتصال الآن. استرد المفتاح مرة أخرى للمتابعة.",
+    "steam.goOffline.error": "تعذّرت المتابعة: {{error}}"
+  },
+  "fa": {
+    "steam.goOffline.title": "برای ادامه، Steam را آفلاین کنید",
+    "steam.goOffline.body": "GameLib برای این کار باید وارد حساب Steam شما شود. برای اینکه فهرست دوستان Steam شما وارد شده بماند، وقتی برنامه Steam آفلاین است وارد می‌شود، اما وقتی GameLib درخواست کرد، Steam آفلاین نشد. این ممکن است زمانی رخ دهد که یک بازی Steam در حال اجراست.",
+    "steam.goOffline.steps": "در برنامه Steam گزینه Steam > Go Offline را انتخاب کنید و سپس ادامه را بزنید. GameLib پس از ورود، Steam را دوباره آنلاین می‌کند.",
+    "steam.goOffline.continue": "ادامه",
+    "steam.goOffline.stillOnline": "Steam هنوز آنلاین نشان داده می‌شود. در برنامه Steam گزینه Steam > Go Offline را انتخاب کنید و دوباره ادامه را بزنید.",
+    "steam.goOffline.readyRedeem": "Steam اکنون آفلاین است. برای ادامه، کلید را دوباره فعال کنید.",
+    "steam.goOffline.error": "ادامه ممکن نشد: {{error}}"
+  },
+  "he": {
+    "steam.goOffline.title": "הגדר את Steam למצב לא מקוון כדי להמשיך",
+    "steam.goOffline.body": "GameLib צריך להתחבר לחשבון Steam שלך לשם כך. כדי לשמור על רשימת החברים שלך ב-Steam מחוברת, הוא מתחבר בזמן שאפליקציית Steam במצב לא מקוון, אך Steam לא עבר למצב לא מקוון כש-GameLib ביקש זאת. זה יכול לקרות בזמן שמשחק של Steam פועל.",
+    "steam.goOffline.steps": "באפליקציית Steam, בחר Steam > Go Offline ולחץ על המשך. GameLib יחזיר את Steam למצב מקוון לאחר ההתחברות.",
+    "steam.goOffline.continue": "המשך",
+    "steam.goOffline.stillOnline": "Steam עדיין מופיע כמקוון. בחר Steam > Go Offline באפליקציית Steam ולחץ שוב על המשך.",
+    "steam.goOffline.readyRedeem": "Steam במצב לא מקוון כעת. מימוש המפתח שוב כדי להמשיך.",
+    "steam.goOffline.error": "לא ניתן להמשיך: {{error}}"
+  },
+  "az": {
+    "steam.goOffline.title": "Davam etmək üçün Steam-i oflayn edin",
+    "steam.goOffline.body": "GameLib bunun üçün Steam hesabınıza daxil olmalıdır. Steam dost siyahınızın daxil olmuş qalması üçün Steam tətbiqi oflayn olarkən daxil olur, lakin GameLib xahiş etdikdə Steam oflayn olmadı. Bu, Steam oyunu işləyərkən baş verə bilər.",
+    "steam.goOffline.steps": "Steam tətbiqində Steam > Go Offline seçin və Davam et düyməsinə basın. GameLib daxil olduqdan sonra Steam-i yenidən onlayn edir.",
+    "steam.goOffline.continue": "Davam et",
+    "steam.goOffline.stillOnline": "Steam hələ də onlayn görünür. Steam tətbiqində Steam > Go Offline seçin və yenidən Davam et düyməsinə basın.",
+    "steam.goOffline.readyRedeem": "Steam indi oflayndır. Davam etmək üçün açarı yenidən aktivləşdirin.",
+    "steam.goOffline.error": "Davam etmək mümkün olmadı: {{error}}"
+  },
+  "uz": {
+    "steam.goOffline.title": "Davom etish uchun Steam'ni oflayn qiling",
+    "steam.goOffline.body": "GameLib buning uchun Steam hisobingizga kirishi kerak. Steam do'stlar ro'yxatingiz kirgan holda qolishi uchun u Steam ilovasi oflayn bo'lganda kiradi, ammo GameLib so'raganida Steam oflayn bo'lmadi. Bu Steam o'yini ishlayotganda yuz berishi mumkin.",
+    "steam.goOffline.steps": "Steam ilovasida Steam > Go Offline ni tanlang va Davom etish tugmasini bosing. GameLib kirgandan so'ng Steam'ni yana onlayn qiladi.",
+    "steam.goOffline.continue": "Davom etish",
+    "steam.goOffline.stillOnline": "Steam hali ham onlayn ko'rinmoqda. Steam ilovasida Steam > Go Offline ni tanlang va Davom etish tugmasini yana bosing.",
+    "steam.goOffline.readyRedeem": "Steam endi oflayn. Davom etish uchun kalitni qayta faollashtiring.",
+    "steam.goOffline.error": "Davom etib bo'lmadi: {{error}}"
+  },
+  "ka": {
+    "steam.goOffline.title": "გასაგრძელებლად გადართეთ Steam ოფლაინ რეჟიმში",
+    "steam.goOffline.body": "ამისთვის GameLib-ს სჭირდება თქვენს Steam ანგარიშში შესვლა. იმისთვის, რომ თქვენი Steam მეგობრების სია შესული დარჩეს, ის შედის მაშინ, როცა Steam აპი ოფლაინ რეჟიმშია, მაგრამ Steam ოფლაინ რეჟიმში არ გადავიდა, როცა GameLib-მა ამის თხოვნა გამოაგზავნა. ეს შეიძლება მოხდეს Steam-ის თამაშის გაშვებისას.",
+    "steam.goOffline.steps": "Steam აპში აირჩიეთ Steam > Go Offline და დააჭირეთ გაგრძელებას. შესვლის შემდეგ GameLib Steam-ს კვლავ ონლაინ რეჟიმში დააბრუნებს.",
+    "steam.goOffline.continue": "გაგრძელება",
+    "steam.goOffline.stillOnline": "Steam კვლავ ონლაინ ჩანს. Steam აპში აირჩიეთ Steam > Go Offline და კვლავ დააჭირეთ გაგრძელებას.",
+    "steam.goOffline.readyRedeem": "Steam ახლა ოფლაინ რეჟიმშია. გასაგრძელებლად ხელახლა გამოიყენეთ გასაღები.",
+    "steam.goOffline.error": "გაგრძელება ვერ მოხერხდა: {{error}}"
+  },
+  "ml": {
+    "steam.goOffline.title": "തുടരാൻ Steam ഓഫ്‌ലൈൻ ആക്കുക",
+    "steam.goOffline.body": "ഇതിനായി GameLib നിങ്ങളുടെ Steam അക്കൗണ്ടിൽ സൈൻ ഇൻ ചെയ്യേണ്ടതുണ്ട്. നിങ്ങളുടെ Steam സുഹൃത്തുക്കളുടെ പട്ടിക സൈൻ ഇൻ ചെയ്ത നിലയിൽ നിലനിർത്താൻ, Steam ആപ്പ് ഓഫ്‌ലൈൻ ആയിരിക്കുമ്പോൾ അത് സൈൻ ഇൻ ചെയ്യുന്നു, എന്നാൽ GameLib ആവശ്യപ്പെട്ടപ്പോൾ Steam ഓഫ്‌ലൈൻ ആയില്ല. ഒരു Steam ഗെയിം പ്രവർത്തിക്കുമ്പോൾ ഇത് സംഭവിക്കാം.",
+    "steam.goOffline.steps": "Steam ആപ്പിൽ Steam > Go Offline തിരഞ്ഞെടുത്ത് തുടരുക അമർത്തുക. സൈൻ ഇൻ ചെയ്തശേഷം GameLib Steam-നെ വീണ്ടും ഓൺലൈൻ ആക്കും.",
+    "steam.goOffline.continue": "തുടരുക",
+    "steam.goOffline.stillOnline": "Steam ഇപ്പോഴും ഓൺലൈനായി കാണിക്കുന്നു. Steam ആപ്പിൽ Steam > Go Offline തിരഞ്ഞെടുത്ത് വീണ്ടും തുടരുക അമർത്തുക.",
+    "steam.goOffline.readyRedeem": "Steam ഇപ്പോൾ ഓഫ്‌ലൈനാണ്. തുടരാൻ കീ വീണ്ടും റിഡീം ചെയ്യുക.",
+    "steam.goOffline.error": "തുടരാനായില്ല: {{error}}"
+  },
+  "ta": {
+    "steam.goOffline.title": "தொடர Steam-ஐ ஆஃப்லைனில் அமைக்கவும்",
+    "steam.goOffline.body": "இதற்கு GameLib உங்கள் Steam கணக்கில் உள்நுழைய வேண்டும். உங்கள் Steam நண்பர்கள் பட்டியல் உள்நுழைந்த நிலையில் இருக்க, Steam பயன்பாடு ஆஃப்லைனில் இருக்கும்போது அது உள்நுழைகிறது, ஆனால் GameLib கேட்டபோது Steam ஆஃப்லைனுக்குச் செல்லவில்லை. Steam விளையாட்டு இயங்கும்போது இது நிகழலாம்.",
+    "steam.goOffline.steps": "Steam பயன்பாட்டில் Steam > Go Offline என்பதைத் தேர்ந்தெடுத்து தொடர் என்பதை அழுத்தவும். உள்நுழைந்ததும் GameLib Steam-ஐ மீண்டும் ஆன்லைனில் அமைக்கும்.",
+    "steam.goOffline.continue": "தொடர்",
+    "steam.goOffline.stillOnline": "Steam இன்னும் ஆன்லைனில் காட்டப்படுகிறது. Steam பயன்பாட்டில் Steam > Go Offline என்பதைத் தேர்ந்தெடுத்து மீண்டும் தொடர் என்பதை அழுத்தவும்.",
+    "steam.goOffline.readyRedeem": "Steam இப்போது ஆஃப்லைனில் உள்ளது. தொடர விசையை மீண்டும் மீட்டெடுக்கவும்.",
+    "steam.goOffline.error": "தொடர முடியவில்லை: {{error}}"
+  }
+}
