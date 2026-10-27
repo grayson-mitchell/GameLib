@@ -9,7 +9,7 @@ files:
   - src/backend/storeManagers/steam/bridge/bridge-allowlist.json
 severity: medium
 platform: macos
-ready: human
+ready: live-gate
 ---
 
 With the Steam path working (quick 261025-t7i, `4d26c70d1`), Unclaimed World 284100 gets through
@@ -86,7 +86,7 @@ copy of the payload, so nothing shippable exists yet. The `Options.xml` `PlayVid
 from ProtonDB does not work under CrossOver: the game still loads a WMA8 music track at startup
 (`MusicEnabled=false` makes no difference).
 
-Remaining, hence `ready: human` (product decisions before code):
+Decisions and remaining work (decisions closed 2026-10-27, so `ready: live-gate`):
 1. **Decided 2026-10-27 (operator): GameLib-hosted on-demand download.** The thinned 19 MB x86_64
    set is published as a release asset on `grayson-mitchell/GameLib`, fetched only when a profile
    needs it, and verified against a sha256 pinned in GameLib's code, never one fetched from the
@@ -97,7 +97,8 @@ Remaining, hence `ready: human` (product decisions before code):
 2. LGPL obligations follow from 1, because GameLib is now the distributor. Publish the licence
    texts and the exact upstream source tarballs (gst-libav 1.24.13 and its ffmpeg) beside the
    asset, and add a notice to GameLib's licences page. The binaries are unmodified and dynamically
-   loaded. **Still open: the WMV/WMA patent position**, which is the operator's call.
+   loaded. **Patent position decided 2026-10-27 (operator):** accepted for GameLib-hosted
+   distribution.
 3. Then build the tier-2 `overlays` plugin-directory target kind: place the sha-pinned payload in a
    GameLib-owned directory (never the game folder or the bottle) and add `GST_PLUGIN_PATH` at
    launch, appending rather than replacing. Give 284100's profile the entry. The fix is generic, so
