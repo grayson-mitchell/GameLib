@@ -1698,6 +1698,60 @@ describeDarwinOnly(
       }
     }, 20000)
 
+    const psEnvOf = (pid: number | undefined): string =>
+      execFileSync('/bin/ps', ['eww', '-o', 'command=', '-p', String(pid)], {
+        env: profile.childEnv(),
+        encoding: 'utf8'
+      })
+
+    test('WR-03: the env secret is scrubbed from the startup block -- ps eww shows no hex value after GAMELIB_BRIDGE_SECRET=', async () => {
+      const h = await startAuthHelper('wr03-ps-', authedEnv())
+      try {
+        const out = psEnvOf(h.child.pid)
+        // Non-vacuity: ps really printed this process's env block.
+        expect(out).toContain(`HOME=${profile.childEnv().HOME}`)
+        expect(out).not.toContain(TEST_SECRET)
+        expect(out).not.toMatch(/GAMELIB_BRIDGE_SECRET=[0-9a-fA-F]/)
+        // The copy into g_secret happened before the scrub.
+        const socket = await h.connect()
+        try {
+          await authenticate(socket)
+        } finally {
+          socket.destroy()
+        }
+      } finally {
+        h.child.kill()
+      }
+    }, 15000)
+
+    test('WR-03: a malformed longer-than-64 env secret is scrubbed over its full strlen too', async () => {
+      const h = await startAuthHelper('wr03-ps-long-', {
+        ...profile.childEnv(),
+        [BRIDGE_SECRET_ENV]: TEST_SECRET + 'ABCDEF'
+      })
+      try {
+        const out = psEnvOf(h.child.pid)
+        expect(out).toContain(`HOME=${profile.childEnv().HOME}`)
+        expect(out).not.toContain('ABCDEF')
+        expect(out).not.toContain(TEST_SECRET.slice(0, 16))
+        expect(out).not.toMatch(/GAMELIB_BRIDGE_SECRET=[0-9a-fA-F]/)
+      } finally {
+        h.child.kill()
+      }
+    }, 15000)
+
+    test('WR-03 source pin: the env secret is copied, then overwritten through a volatile pointer, then unset', () => {
+      const src = readFileSync(HELPER_SOURCE_PATH, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      const copy = src.indexOf('memcpy(g_secret, envSecret')
+      const scrub = src.indexOf('volatile char')
+      const unset = src.indexOf('unsetenv(BRIDGE_SECRET_ENV)')
+      expect(copy).toBeGreaterThan(-1)
+      expect(scrub).toBeGreaterThan(copy)
+      expect(unset).toBeGreaterThan(scrub)
+    })
+
     test('WR-03 source pins: the ring is never cleared on accept/close; the secret is unset after loading and never logged', () => {
       const src = readFileSync(HELPER_SOURCE_PATH, 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')

@@ -691,7 +691,7 @@ static uint8_t g_call_seen[BD_CALL_COUNT > 0 ? BD_CALL_COUNT : 1];
 // 53-13 WR-06: helper-side cap; the shim's 16-report cap (T-53-25) is not a trust boundary.
 static unsigned g_nover_logged = 0;
 
-// WR-03: the launch secret, copied from env at startup (then unsetenv'd).
+// WR-03: the launch secret, copied from env at startup, then scrubbed in place and unsetenv'd.
 static char g_secret[BRIDGE_SECRET_HEX_LEN];
 static int g_secret_set = 0;
 static unsigned g_auth_refused_logged = 0;
@@ -1196,11 +1196,18 @@ int main(int argc, char **argv) {
   // EPIPE like any other terminal send error.
   signal(SIGPIPE, SIG_IGN);
 
-  // WR-03: load the per-launch secret from env (never argv -- visible in ps),
-  // then unsetenv() so nothing the Steam dylib spawns inherits it. Missing or
-  // malformed -> fail closed: every authenticated slot is refused.
+  // WR-03: load the per-launch secret from env, never argv (argv is
+  // world-visible in `ps`). getenv() returns a pointer into the process's
+  // startup env block, which macOS serves to `ps eww` via KERN_PROCARGS2;
+  // unsetenv() only removes the libc `environ` entry and leaves that block
+  // untouched. So the string is overwritten in place (volatile, over its full
+  // strlen, whether valid or not) and only then unset, which also keeps it
+  // out of anything the Steam dylib spawns. Residual exposure: the same uid
+  // or root can still read the 0600 gamelib_bridge.cfg, so this closes the
+  // `ps` channel and nothing more. Missing or malformed -> fail closed: every
+  // authenticated slot is refused.
   {
-    const char *envSecret = getenv(BRIDGE_SECRET_ENV);
+    char *envSecret = getenv(BRIDGE_SECRET_ENV);
     int valid = envSecret != NULL && strlen(envSecret) == BRIDGE_SECRET_HEX_LEN;
     for (size_t i = 0; valid && i < BRIDGE_SECRET_HEX_LEN; i++) {
       char ch = envSecret[i];
@@ -1211,6 +1218,11 @@ int main(int argc, char **argv) {
       g_secret_set = 1;
     } else {
       logts("AUTH", "no valid secret in env -- authenticated slots refused (fail closed)");
+    }
+    if (envSecret != NULL) {
+      size_t n = strlen(envSecret);
+      volatile char *scrub = (volatile char *)envSecret;
+      for (size_t i = 0; i < n; i++) scrub[i] = 0;
     }
     unsetenv(BRIDGE_SECRET_ENV);
   }
