@@ -1129,6 +1129,10 @@ export interface DownloadSharedRedistOpts {
   onComponent?: (label: string) => void
   /** Test seam: defaults to {@link downloadDepotFiles}. */
   downloadFiles?: typeof downloadDepotFiles
+  /** Phase 54: true only from the bridge install path, which may open the
+   *  authenticated CM session. Play passes nothing, so a Play can reuse an
+   *  already-open session but never open one. */
+  allowLogon?: boolean
 }
 
 export interface SharedRedistDownloadResult {
@@ -1333,15 +1337,40 @@ export async function downloadSharedRedistDepots(
   opts: DownloadSharedRedistOpts
 ): Promise<SharedRedistDownloadResult> {
   assertNumericAppId(gameAppId)
-  const downloadFiles = opts.downloadFiles ?? downloadDepotFiles
 
-  if (!(await SteamUser.ensureConnected())) {
+  let release: (() => void) | null = null
+  if (opts.allowLogon) {
+    const lease = await SteamUser.acquireAuthenticated({
+      reason: 'shared-redist',
+      guidedAction: 'install',
+      appName: gameAppId
+    })
+    if (lease.ok) release = lease.release
+  } else {
+    release =
+      SteamUser.acquireOpenAuthenticated('shared-redist')?.release ?? null
+  }
+  if (!release) {
     logInfo(
-      `shared redists: Steam client offline, skipping for ${gameAppId}`,
+      `shared redists: Steam client offline, skipping for ${gameAppId}${
+        opts.allowLogon ? '' : ' (no open session and logon not allowed here)'
+      }`,
       LogPrefix.Steam
     )
     return { status: 'offline', depots: [], failed: [], skipped: [] }
   }
+  try {
+    return await downloadSharedRedistDepotsLeased(gameAppId, opts)
+  } finally {
+    release()
+  }
+}
+
+async function downloadSharedRedistDepotsLeased(
+  gameAppId: string,
+  opts: DownloadSharedRedistOpts
+): Promise<SharedRedistDownloadResult> {
+  const downloadFiles = opts.downloadFiles ?? downloadDepotFiles
 
   const gameInfo = await withPlanBuildRetry(
     opts.signal,

@@ -281,6 +281,7 @@ describe('downloadSharedRedistDepots', () => {
 
   it('Play time (no allowLogon) with no open session resolves offline and never logs on', async () => {
     jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(SteamUser.getClient).mockClear()
     const dl = fakeDownloader()
     const r = await downloadSharedRedistDepots(GAME, {
       cacheSteamappsDir: cacheDir,
@@ -350,7 +351,11 @@ describe('downloadSharedRedistDepots', () => {
         downloadFiles: fakeDownloader()
       })
     ).rejects.toThrow()
-    expect(release).toHaveBeenCalledTimes(1)
+    // Every acquire (the outer lease and each plan-retry lease) is released.
+    expect(release.mock.calls.length).toBe(
+      jest.mocked(SteamUser.acquireAuthenticated).mock.calls.length
+    )
+    expect(release).toHaveBeenCalled()
   })
 
   it("returns 'none' when no 228980 depots are declared and never fetches 228980", async () => {

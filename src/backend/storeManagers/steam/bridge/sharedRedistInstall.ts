@@ -45,6 +45,9 @@
  * still blocks settling, so the game keeps its CM round trip per launch but no longer pays a wine
  * spawn or a 5-minute installer timeout on every launch.
  *
+ * Phase 54: the CM session is opened only when the caller passes `allowLogon: true` (the end of a
+ * bridge install). Play passes nothing: it reuses an open session or defers like offline.
+ *
  * Never rejects: a timeout, non-success exit, offline client, CM error or any throw logs a
  * warning, marks nothing done and lets the game launch. Sidecar exit contract: every timer is
  * unref'd and cleared; every wine child is unref'd together with its stdin/stdout/stderr pipes
@@ -315,11 +318,12 @@ async function runBounded(
 export function installSteamBridgeSharedRedists(
   appId: string,
   bottleSettings: GameSettings,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  opts?: { allowLogon?: boolean }
 ): Promise<void> {
   const existing = inFlight.get(appId)
   if (existing) return existing
-  const p = run(appId, bottleSettings, signal)
+  const p = run(appId, bottleSettings, signal, opts)
     .catch((error: unknown) => {
       logWarning(
         `Steam ${appId}: shared redist step failed, launching anyway: ${String(error)}`,
@@ -370,7 +374,8 @@ function recordFailure(
 async function run(
   appId: string,
   bottleSettings: GameSettings,
-  signal: AbortSignal | undefined
+  signal: AbortSignal | undefined,
+  opts?: { allowLogon?: boolean }
 ): Promise<void> {
   const bottleDir = getBottleDir(bottleSettings.wineCrossoverBottle)
   const ledgerPath = join(bottleDir, LEDGER_FILE)
@@ -467,6 +472,7 @@ async function run(
     cacheSteamappsDir: join(steamSupportPath, 'sharedRedist', 'steamapps'),
     optInDepotIds: optIn,
     signal,
+    allowLogon: opts?.allowLogon,
     onComponent: (label) =>
       sendGameStatusUpdate({
         appName: appId,
@@ -477,7 +483,7 @@ async function run(
   })
   if (result.status === 'offline') {
     logInfo(
-      `Steam ${appId}: Steam client offline, shared redists deferred to next launch`,
+      `Steam ${appId}: Steam client offline or no Steam session at Play, shared redists deferred to next launch`,
       LogPrefix.Steam
     )
     return
