@@ -231,7 +231,51 @@ function ensureChangeListenerAttached(): void {
 
     applyFieldChange(snapshot[store], payload)
     changesDuringFetch.get(store)?.push(payload)
+    notifyStoreListeners(store)
   })
+}
+
+/**
+ * Renderer-side subscribers to "this store's snapshot just changed" (review 261027-jjz
+ * WR-05). Before this, a renderer component could only learn of a sidecar write through
+ * some unrelated push that happened to follow it -- the Library's Last-played sort re-read
+ * `timestampStore` on `recentGamesChanged`, which the backend sends after the
+ * `lastPlayed` write but over a separate push with no ordering guarantee against the
+ * `STORE_CHANGED_CHANNEL` frame that patches the snapshot. A listener here fires AFTER the
+ * snapshot reflects the change, so a read inside it can never see the pre-change value.
+ */
+const storeListeners = new Map<string, Set<() => void>>()
+
+function notifyStoreListeners(storeName: string): void {
+  const listeners = storeListeners.get(storeName)
+  if (!listeners) return
+  for (const listener of [...listeners]) {
+    // One throwing subscriber must not starve the others, nor escape into the shared
+    // push handler (SEAM Invariant B).
+    try {
+      listener()
+    } catch (error) {
+      console.error(`onStoreChanged: listener for "${storeName}" threw`, error)
+    }
+  }
+}
+
+/**
+ * Calls `callback` (with no arguments; re-read through the snapshot) every time
+ * `storeName`'s renderer snapshot changes: after a `STORE_CHANGED_CHANNEL` field patch, and
+ * after a successful (re-)hydrate -- which covers both a lazy store's first fetch and the
+ * re-fetch an `invalidated` push starts. Returns an unsubscribe function.
+ */
+export function onStoreChanged(storeName: string, callback: () => void): () => void {
+  let listeners = storeListeners.get(storeName)
+  if (!listeners) {
+    listeners = new Set()
+    storeListeners.set(storeName, listeners)
+  }
+  listeners.add(callback)
+  return () => {
+    listeners.delete(callback)
+  }
 }
 
 function applyFieldChange(target: Record<string, unknown>, change: StoreChangedPayload): void {
@@ -318,6 +362,7 @@ async function hydrateStore(storeName: string): Promise<void> {
       for (const change of buffered) applyFieldChange(fresh, change)
       snapshot[storeName] = fresh
       hydrated.add(storeName)
+      notifyStoreListeners(storeName)
     } catch (error) {
       console.error(
         `hydrateStore: fetch of "${storeName}" failed; leaving the snapshot degraded ` + 'for this store',

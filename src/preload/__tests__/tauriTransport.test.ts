@@ -47,7 +47,8 @@ import {
   hydrateStoreSnapshot,
   registerStore,
   send,
-  ensureStoreHydrated
+  ensureStoreHydrated,
+  onStoreChanged
 } from '../tauriTransport'
 import { STORE_FETCH_CHANNEL, STORE_CHANGED_CHANNEL, STORE_LAZY_MISS_MARKER } from 'common/types/sidecarTransport'
 
@@ -489,6 +490,65 @@ describe('change events', () => {
     await settle()
     expect(fetchCallCount()).toBe(2)
     expect(snapshotGet('configStore', 'theme')).toBe('after-second-invalidation')
+  })
+
+  // Review 261027-jjz WR-05: a renderer subscriber must observe the PATCHED snapshot, so it
+  // never depends on some other push arriving after the store change.
+  it('onStoreChanged fires after a field patch, reading the new value, and stops after unsubscribe', () => {
+    const seen: unknown[] = []
+    const unsubscribe = onStoreChanged('configStore', () => seen.push(snapshotGet('configStore', 'theme')))
+
+    storeChangedHandler!({
+      payload: { channel: STORE_CHANGED_CHANNEL, args: [{ store: 'configStore', key: 'theme', value: 'listener-a' }] }
+    })
+    // A change to a different store does not fire this subscriber.
+    storeChangedHandler!({
+      payload: { channel: STORE_CHANGED_CHANNEL, args: [{ store: 'migrationsStore', key: 'unrelated', value: 1 }] }
+    })
+    expect(seen).toEqual(['listener-a'])
+
+    unsubscribe()
+    storeChangedHandler!({
+      payload: { channel: STORE_CHANGED_CHANNEL, args: [{ store: 'configStore', key: 'theme', value: 'listener-b' }] }
+    })
+    expect(seen).toEqual(['listener-a'])
+  })
+
+  it('onStoreChanged fires once the re-fetch an `invalidated` push started has landed, not before', async () => {
+    const fetch = deferredFetch()
+    const seen: unknown[] = []
+    const unsubscribe = onStoreChanged('configStore', () => seen.push(snapshotGet('configStore', 'theme')))
+
+    storeChangedHandler!({
+      payload: { channel: STORE_CHANGED_CHANNEL, args: [{ store: 'configStore', key: '', invalidated: true }] }
+    })
+    await settle()
+    expect(seen).toEqual([])
+
+    fetch.resolve({ theme: 'refetched' })
+    await settle()
+    expect(seen).toEqual(['refetched'])
+    unsubscribe()
+  })
+
+  it('a throwing onStoreChanged subscriber neither escapes the push handler nor starves the others', () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const other = jest.fn()
+    const offA = onStoreChanged('configStore', () => {
+      throw new Error('boom')
+    })
+    const offB = onStoreChanged('configStore', other)
+
+    expect(() =>
+      storeChangedHandler!({
+        payload: { channel: STORE_CHANGED_CHANNEL, args: [{ store: 'configStore', key: 'theme', value: 'x' }] }
+      })
+    ).not.toThrow()
+    expect(other).toHaveBeenCalledTimes(1)
+    expect(errorSpy).toHaveBeenCalled()
+    offA()
+    offB()
+    errorSpy.mockRestore()
   })
 
   it('ensureStoreHydrated waits for the re-fetch an `invalidated` push started, then resolves true', async () => {

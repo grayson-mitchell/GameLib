@@ -119,6 +119,7 @@ import type { StoreOptions } from 'common/types/electron_store'
 import { isAllowedStoreField } from 'common/types/storePolicy'
 import {
   ensureStoreHydrated,
+  onStoreChanged,
   registerStore,
   snapshotGet,
   snapshotHas,
@@ -202,6 +203,8 @@ export const storeGet = (storeName: string, key: string, defaultValue?: unknown)
 }
 
 export const storeEnsureHydrated = (storeName: string) => ensureStoreHydrated(storeName)
+
+export const storeOnChanged = (storeName: string, callback: () => void) => onStoreChanged(storeName, callback)
 
 export const storeDelete = (storeName: string, key: string) => {
   snapshotDelete(storeName, key)
