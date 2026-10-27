@@ -40,3 +40,23 @@ A written verdict in the debug session: automatable (with the mechanism, its cos
 around `connectSteamUserClient`'s single `logOn`), or not (fall back to a guided step in the
 Refresh/install UI). Live evidence comes from Mac Steam `connection_log.txt` plus
 `~/Library/Logs/GameLib/gamelib.log`, the same pair used on 2026-10-26.
+
+## Resolution
+
+Answered 2026-10-27 by spikes 046a-c. The verdict is in `.planning/debug/friends-signout-steam-user.md`
+under "## Verdict 2026-10-27: go-offline wrap is automatable".
+
+1. Yes: `steam://open/gooffline` and `steam://open/goonline`. They are undocumented verbs in
+   steamui.dylib's native verb table (Valve's own UI uses `goonline`). LogOff takes ≤0.25 s,
+   logon ≈1.3-1.5 s, on the same process with no dialog or permission prompt, and both verbs are
+   idempotent (046a, n=4).
+2. and 3. Not needed (Accessibility, steamclient internals).
+4. Cost: an automated wrap drops Mac Steam's CM session and Friends chat for ≈3-4 s. The bare
+   toggle leaves Friends intact. Not covered: a running Mac Steam game during `gooffline` (the
+   Settings path refuses then).
+5. Expected yes, by mechanism, not observed live (046c): steam-user `autoRelogin` (default on)
+   and the canary `relog()` both send a full logon. The wrap must own every logon:
+   `autoRelogin: false`, with reconnects routed through the wrapped connect.
+
+The live wrap (046b) kept Friends signed in and changeable, and GameLib's session stayed alive
+across Mac Steam rejoining.

@@ -2,15 +2,15 @@
 status: root-cause-found
 trigger: "GameLib's steam-user logon signs the Mac Steam Friends list out (status stuck 'Offline') until Mac Steam is restarted — todo .planning/todos/pending/2026-10-24-friends-sign-out-steam-user-logon.md (src/backend/storeManagers/steam/user.ts client.logOn({ refreshToken }))"
 created: 2026-10-25
-updated: 2026-10-26
+updated: 2026-10-27
 ---
 
 ## Current Focus
 
 hypothesis: the damage happens at the moment an authenticated GameLib logon lands while Mac Steam's Friends is connected; nothing afterwards except a Mac Steam restart undoes it. Mac Steam being offline at the moment of GameLib's logon avoids it ("go-offline trick"); Mac Steam may come back online while GameLib's session stays open (n=2, see Evidence).
-test: can GameLib drive Mac Steam offline/online itself; does a GameLib re-logon (reconnect) while Mac Steam is online flip again
-expecting: re-logon while online flips (same mechanism)
-next_action: re-scope Phase 54 (deterministic no-logon launch, anonymous PICS, platform-routed installs, guided offline step around authenticated work; Web API library list dropped) — see "## Follow-up 2026-10-26"
+test: answered 2026-10-27 by spikes 046a-c: GameLib can drive Mac Steam offline/online itself (steam://open/gooffline, steam://open/goonline); the automated wrap kept Friends clean; a reconnect is expected to flip (mechanism, not live)
+expecting: n/a (see "## Verdict 2026-10-27: go-offline wrap is automatable")
+next_action: Phase 54 uses the automated wrap instead of a guided step around authenticated work, and owns every CM logon (autoRelogin off, reconnects and relog through the wrap); see the Verdict section
 reasoning_checkpoint:
 tdd_checkpoint:
 
@@ -126,6 +126,18 @@ step; do not attempt to log on to the real account autonomously.
   found: the post-logon symptom varies: sometimes Friends & Chat is signed out with status not stuck (a manual sign-in fixes it), sometimes signed in but stuck Offline (only a restart fixes it). No pattern found yet
   implication: any recovery UX must cover both states; the stuck-Offline state has no programmatic recovery found
 
+- checked: spike 046a (2026-10-27), steamui.dylib strings, steamui/sp.js, live probe against Mac Steam connection_log
+  found: `gooffline`/`goonline` sit in steamui.dylib's native steam://open/ verb table; Valve's JS calls steam://open/goonline. `open -g steam://open/gooffline` -> LogOff() in <=0.25 s with "not auto reconnecting due to user initiated logoff" (same line as the manual menu Go Offline); steam://open/goonline -> logon complete in ~1.3-1.5 s; same steam_osx PID; no dialog, no permission prompt; n=4; repeats are no-ops. Bare toggle on a freshly restarted Steam (13:41:58-13:42:07): operator confirmed Friends signed in, status changeable
+  implication: question 1 is answered: the toggle is a steam:// URL, no Accessibility or steamclient internals needed
+
+- checked: spike 046b (2026-10-27), wrap harness tailing connection_log + gamelib.log, Mac Steam restarted 13:40:38 as clean baseline
+  found: gooffline 13:42:50 -> GameLib launch logon SteamUser.loggedOn 13:43:14 (cold 971 ms) -> goonline 13:43:17 -> Mac Steam logon complete 13:43:18, same PID; GameLib's 385-game fetch completed across the rejoin with no disconnect/relog/LogonSessionReplaced; exactly one loggedOn in the log. Operator: Friends signed in, status changes fine
+  implication: the go-offline trick works when software drives it (n=1 automated, n=2 manual on 2026-10-26)
+
+- checked: spike 046c (2026-10-27), steam-user 5.3.0 09-logon.js _handleLogOff / relog, user.ts:287, user.ts:615
+  found: autoRelogin defaults true and GameLib does not override it; on a non-fatal drop steam-user emits 'disconnected' then logOn(true) after a 1 s backoff, a full CMsgClientLogon with the same token, logonID and chat_mode; the ensureConnected canary's client.relog() takes the same path
+  implication: a reconnect is an ordinary authenticated logon and is expected to flip Friends if Mac Steam is online (not observed live). The wrap must cover every logon site, not just connectSteamUserClient's logOn
+
 ## Follow-up 2026-10-26
 
 Recovery after the flip is ruled out short of a Mac Steam restart (steam://open/friends,
@@ -150,6 +162,45 @@ Open: can GameLib toggle Mac Steam offline/online; does a GameLib re-logon while
 online flip again; does an
 anonymous CM session leave Friends alone; Steam console `download_depot` as a logon-free
 replacement for native Windows-only installs (spike).
+
+## Verdict 2026-10-27: go-offline wrap is automatable
+
+Spikes 046a-c (`.planning/spikes/046a-steam-url-offline-toggle/`, `046b-wrap-around-logon/`,
+`046c-reconnect-reflip/`) answer the 2026-10-26 open question "can GameLib toggle Mac Steam
+offline/online".
+
+**Automatable.**
+
+- **Mechanism:** `shell.openExternal("steam://open/gooffline")` / `("steam://open/goonline")`.
+  The verbs are undocumented, but they come from steamui.dylib's native verb table and Valve's
+  own UI uses the online half. No Accessibility permission, no CEF debugging, no steamclient
+  internals.
+- **Cost:** Mac Steam's CM session (and so Friends chat) drops for about 3-4 s of an automated
+  wrap: offline at once, plus the GameLib cold connect (~1 s), plus a settle (2 s tested), plus
+  ~1.3 s for Mac Steam to log back on. The bare toggle does no damage to Friends. Untested: a
+  running Mac Steam game during `gooffline`. The Settings → Internet path refuses then
+  (`#UserManagement_OfflineMode_MustCloseGames`); the URL path's behaviour is unknown.
+- **Wrap shape** around `connectSteamUserClient` (`user.ts:605-691`):
+  1. Read Mac Steam's state first: not running, or the last `[State, …]` bracket in
+     `logs/connection_log.txt` is `Logged Off`, means it is safe to log on with no toggle. If it
+     is `Logged On`, fire `steam://open/gooffline` and **gate on evidence**: wait up to ~5 s for
+     `LogOff()` / `user initiated logoff` in the log. A blind fire can't serve as the check: the
+     verb writes nothing when Steam is already offline (046a). If the LogOff isn't seen (a
+     running game, an unknown verb after a Steam update), do not log on silently: fall back to
+     the guided step.
+  2. `client.logOn({ refreshToken })`, and wait for `loggedOn` or `error`/timeout.
+  3. If step 1 took Steam offline, fire `steam://open/goonline` in a `finally`, so a failed
+     logon never strands Mac Steam offline. If the user already had Steam offline, leave it
+     there: never pull a user who chose offline mode back online.
+  4. **Own every logon** (046c): construct the client with `autoRelogin: false`, treat
+     `disconnected` as session ended, and route the canary's `relog()` and any reconnect back
+     through this wrapped connect. Otherwise a silent reconnect while Mac Steam is online flips
+     Friends.
+- **Fallback:** the guided step in the Refresh/install UI ("Steam > Go Offline, then continue")
+  stays as the degraded path when step 1's gate fails.
+
+Residual: a running-game `gooffline` check, and a live reconnect repro (needs `pfctl`), are the
+untested edges.
 
 ## Resolution
 

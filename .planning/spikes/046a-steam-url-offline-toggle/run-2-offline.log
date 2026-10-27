@@ -1,0 +1,10 @@
+2026-10-27T00:07:40.903Z +    23ms [snapshot] steam_osx before {"pid":"81430","lstart":"Tue Oct 27 12:36:23 2026"}
+2026-10-27T00:07:40.904Z +    24ms [fire] open -g steam://open/gooffline {"logOffset":255738}
+2026-10-27T00:07:41.211Z +   331ms [hit] matched after 251 ms {"line":"[2026-10-27 13:07:40] [Logged On, 4, 19] [U:1:35601368] LogOff()"}
+2026-10-27T00:07:42.713Z +  1833ms [log] [2026-10-27 13:07:40] [Logged On, 4, 19] [U:1:35601368] LogOff()
+2026-10-27T00:07:42.713Z +  1833ms [log] [2026-10-27 13:07:40] [Logging Off, 4, 19] [U:1:35601368] AsyncDisconnect( bDontWaitOnTCPShutdown: false )
+2026-10-27T00:07:42.714Z +  1834ms [log] [2026-10-27 13:07:41] [Logged Off, 0, 0] [U:1:35601368] ConnectionDisconnected('Disconnected By Remote Host') : 'OK' (103.10.125.23:27018, WebSocket)
+2026-10-27T00:07:42.714Z +  1834ms [log] [2026-10-27 13:07:41] [Logged Off, 0, 0] [U:1:35601368] ConnectionDisconnected() not auto reconnecting due to user initiated logoff
+2026-10-27T00:07:42.714Z +  1834ms [log] [2026-10-27 13:07:41] [Logged Off, 0, 0] [U:1:35601368] Sending SteamServersDisconnected_t because we were logged on
+2026-10-27T00:07:42.738Z +  1858ms [snapshot] steam_osx after {"pid":"81430","lstart":"Tue Oct 27 12:36:23 2026","samePid":true}
+2026-10-27T00:07:42.738Z +  1858ms [verdict] TOGGLED

@@ -1,0 +1,8 @@
+    "latencyMs": 253,
+    "state": "Logged Off"
+  "verdict": "TOGGLED"
+2026-10-27T00:07:48Z second steam://open/gooffline -> 0 new connection_log lines
+    "latencyMs": 1511,
+    "state": "Logged On"
+  "verdict": "TOGGLED"
+2026-10-27T00:07:58Z second steam://open/goonline -> 0 new connection_log lines

@@ -1,0 +1,50 @@
+2026-10-27T00:42:50.362Z +     21ms [snapshot] steam_osx {"pid":"26961 Tue Oct 27 13:40:38 2026","settleMs":2000}
+2026-10-27T00:42:50.363Z +     22ms [fire] open -g steam://open/gooffline
+2026-10-27T00:42:50.411Z +     70ms [log] steam: [2026-10-27 13:42:50] [Logged On, 4, 11] [U:1:35601368] LogOff()
+2026-10-27T00:42:50.411Z +     70ms [state] Mac Steam offline after 0 ms. >>> OPERATOR: trigger the GameLib logon now (launch GameLib or press Refresh). Waiting up to 5 min.
+2026-10-27T00:43:14.273Z +  23932ms [log] gamelib: (13:43:14) [INFO]:    [Steam]:           Steam TokenStore implementation set to DevVaultTokenStore
+2026-10-27T00:43:14.273Z +  23932ms [log] gamelib: (13:43:14) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (the startup-flagged initQueue call) is ENABLED as of Phase 35 plan 11 and runs from appShellFlowRegistration.ts frontendReady, not f
+2026-10-27T00:43:14.274Z +  23933ms [log] gamelib: (13:43:14) [INFO]:    [Backend]:         [signInProbe] pass started stores=steam
+2026-10-27T00:43:14.274Z +  23933ms [log] gamelib: (13:43:14) [WARNING]: [Backend]:         [dev-secret-vault] read key=steam-refresh-token
+2026-10-27T00:43:14.274Z +  23933ms [log] gamelib: (13:43:14) [INFO]:    [Backend]:         [signInProbe] steam verdict=unchanged
+2026-10-27T00:43:14.274Z +  23933ms [log] gamelib: (13:43:14) [INFO]:    [Backend]:         [signInProbe] pass complete outcomes=steam:healthy
+2026-10-27T00:43:14.274Z +  23933ms [log] gamelib: (13:43:14) [INFO]:    [Backend]:         [signInProbe] steam outcome=healthy elapsed=0ms
+2026-10-27T00:43:14.274Z +  23933ms [log] gamelib: (13:43:14) [WARNING]: [Backend]:         [dev-secret-vault] read key=steam-refresh-token
+2026-10-27T00:43:15.028Z +  24687ms [log] gamelib: (13:43:14) [INFO]:    [Steam]:           [Timing] SteamUser.loggedOn: cellID=22 publicIP=114.23.167.2
+2026-10-27T00:43:15.028Z +  24687ms [hit] GameLib logon seen 24617 ms after offline {"line":"(13:43:14) [INFO]:    [Steam]:           [Timing] SteamUser.loggedOn: cellID=22 publicIP=114.23.167.2"}
+2026-10-27T00:43:17.029Z +  26688ms [fire] open -g steam://open/goonline
+2026-10-27T00:43:17.087Z +  26746ms [log] steam: [2026-10-27 13:42:50] [Logged Off, 0, 0] [U:1:35601368] ConnectionDisconnected('Disconnected By Remote Host') : 'OK' (103.10.125.22:27018, WebSocket)
+2026-10-27T00:43:17.087Z +  26746ms [log] steam: [2026-10-27 13:42:50] [Logged Off, 0, 0] [U:1:35601368] ConnectionDisconnected() not auto reconnecting due to user initiated logoff
+2026-10-27T00:43:17.088Z +  26747ms [log] steam: [2026-10-27 13:42:50] [Logged Off, 0, 0] [U:1:35601368] Sending SteamServersDisconnected_t because we were logged on
+2026-10-27T00:43:17.088Z +  26747ms [log] steam: [2026-10-27 13:43:17] [Logged Off, 0, 0] [U:1:35601368] CCMInterface::SetSteamID( [U:1:35601368] )
+2026-10-27T00:43:17.339Z +  26998ms [log] steam: [2026-10-27 13:43:17] [Logged Off, 4, 0] [U:1:35601368] LogOn() called; not connected yet, scheduling connection. Schedule init returned 1
+2026-10-27T00:43:17.339Z +  26998ms [log] steam: [2026-10-27 13:43:17] CCMInterface::YieldingConnect -- calling ISteamDirectory/GetCMListForConnect/?cellid=22&qoslevel=1
+2026-10-27T00:43:17.339Z +  26998ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-syd1.steamserver.net:443) starting...
+2026-10-27T00:43:17.339Z +  26998ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-syd1.steamserver.net:27018) starting...
+2026-10-27T00:43:17.339Z +  26998ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-syd1.steamserver.net:27018) starting...
+2026-10-27T00:43:17.339Z +  26998ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-lax1.steamserver.net:443) starting...
+2026-10-27T00:43:17.591Z +  27250ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-syd1.steamserver.net:27018) results: 85.3729ms + load 34.0000
+2026-10-27T00:43:17.591Z +  27250ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-lax1.steamserver.net:27018) starting...
+2026-10-27T00:43:17.591Z +  27250ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-syd1.steamserver.net:27018) results: 92.1478ms + load 34.0000
+2026-10-27T00:43:17.591Z +  27250ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-lax1.steamserver.net:27018) starting...
+2026-10-27T00:43:17.591Z +  27250ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-syd1.steamserver.net:443) results: 88.0432ms + load 35.0000
+2026-10-27T00:43:17.591Z +  27250ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-sea1.steamserver.net:27018) starting...
+2026-10-27T00:43:18.094Z +  27753ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-lax1.steamserver.net:443) results: 200.1495ms + load 6.0000
+2026-10-27T00:43:18.094Z +  27753ms [log] steam: [2026-10-27 13:43:17] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() stopping after 400.00ms timeout and using good enough host (cmp1-syd1.steamserver.net:27018)
+2026-10-27T00:43:18.094Z +  27753ms [log] steam: [2026-10-27 13:43:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-lax1.steamserver.net:27018) results: 194.8395ms + load 7.0000
+2026-10-27T00:43:18.094Z +  27753ms [log] steam: [2026-10-27 13:43:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-lax1.steamserver.net:27018) results: 189.9872ms + load 7.0000
+2026-10-27T00:43:18.094Z +  27753ms [log] steam: [2026-10-27 13:43:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-sea1.steamserver.net:27018) results: 187.6068ms + load 0.0000
+2026-10-27T00:43:18.094Z +  27753ms [log] steam: [2026-10-27 13:43:18] [Connecting, 4, 15] [U:1:35601368] Connect() starting connection (eNetQOSLevelLow, cmp1-syd1.steamserver.net:27018, WebSocket)
+2026-10-27T00:43:18.094Z +  27753ms [log] steam: [2026-10-27 13:43:18] [Logging On, 4, 15] [U:1:35601368] Using JWT 28868884007449688, persistence: 1, steamid: [U:1:35601368], issued: Tue Oct 27 12:40:16 2026, expiry: Wed May 26 01:24:28 2027
+2026-10-27T00:43:18.346Z +  28005ms [log] steam: [2026-10-27 13:43:18] [Logging On, 4, 15] [U:1:35601368] RecvMsgClientLogOnResponse() : [U:1:35601368] 'OK'
+2026-10-27T00:43:18.346Z +  28005ms [log] steam: [2026-10-27 13:43:18] [Logged On, 4, 15] [U:1:35601368] RecvMsgClientLogOnResponse() : processing complete
+2026-10-27T00:43:18.346Z +  28005ms [hit] Mac Steam logon complete 1259 ms after goonline
+2026-10-27T00:43:18.346Z +  28005ms [log] gamelib-after: (13:43:15) [INFO]:    [Steam]:           [Timing] SteamUser.ensureConnected: cold-connect path took 971ms
+2026-10-27T00:43:18.346Z +  28005ms [log] gamelib-after: (13:43:15) [INFO]:    [Backend]:         [signInProbe] steam verdict=unchanged
+2026-10-27T00:43:19.100Z +  28759ms [log] gamelib-after: (13:43:17) [INFO]:    [Steam]:           Steam: fetched 385 owned games
+2026-10-27T00:43:20.356Z +  30015ms [log] gamelib-after: (13:43:19) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1
+2026-10-27T00:43:20.356Z +  30015ms [log] gamelib-after: (13:43:19) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1 failed=false
+2026-10-27T00:43:20.356Z +  30015ms [log] gamelib-after: (13:43:20) [INFO]:    [Steam]:           Steam library sync complete: 385 games
+2026-10-27T00:43:38.444Z +  48103ms [after] no GameLib session event in 20 s after Mac Steam rejoined
+2026-10-27T00:43:38.468Z +  48127ms [snapshot] steam_osx {"pid":"26961 Tue Oct 27 13:40:38 2026","samePid":true}
+2026-10-27T00:43:38.468Z +  48127ms [verdict] WRAP_RAN. >>> OPERATOR: is Friends signed in, and can you change your status?

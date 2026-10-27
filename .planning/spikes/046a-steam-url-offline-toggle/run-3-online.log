@@ -1,0 +1,38 @@
+2026-10-27T00:07:48.913Z +    22ms [snapshot] steam_osx before {"pid":"81430","lstart":"Tue Oct 27 12:36:23 2026"}
+2026-10-27T00:07:48.914Z +    22ms [fire] open -g steam://open/goonline {"logOffset":256314}
+2026-10-27T00:07:50.481Z +  1589ms [hit] matched after 1509 ms {"line":"[2026-10-27 13:07:50] [Logged On, 4, 23] [U:1:35601368] RecvMsgClientLogOnResponse() : processing complete"}
+2026-10-27T00:07:51.983Z +  3091ms [log] [2026-10-27 13:07:48] [Logged Off, 0, 0] [U:1:35601368] CCMInterface::SetSteamID( [U:1:35601368] )
+2026-10-27T00:07:51.983Z +  3091ms [log] [2026-10-27 13:07:48] [Logged Off, 4, 0] [U:1:35601368] LogOn() called; not connected yet, scheduling connection. Schedule init returned 1
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:48] CCMInterface::YieldingConnect -- calling ISteamDirectory/GetCMListForConnect/?cellid=22&qoslevel=1
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] GetCMListForConnect -- got 1 Netfilter CMs and 15 WebSocket CMs
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] GetCMListForConnect -- DC 'syd1' count: 4
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] GetCMListForConnect -- DC 'lax1' count: 4
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] GetCMListForConnect -- DC 'sea1' count: 3
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] GetCMListForConnect -- DC 'ord1' count: 5
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] CM Directory list says 100% of connections should be websockets, we rolled 72 - using WebSockets as default.
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-syd1.steamserver.net:443) starting...
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-syd1.steamserver.net:27018) starting...
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-syd1.steamserver.net:27018) starting...
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-lax1.steamserver.net:27018) starting...
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-syd1.steamserver.net:27018) results: 53.9551ms + load 34.0000
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-lax1.steamserver.net:443) starting...
+2026-10-27T00:07:51.984Z +  3092ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-syd1.steamserver.net:27018) results: 85.3271ms + load 34.0000
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-syd1.steamserver.net:443) results: 91.7969ms + load 34.0000
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-lax1.steamserver.net:27018) starting...
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-ord1.steamserver.net:443) starting...
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-lax1.steamserver.net:27018) results: 197.6318ms + load 7.0000
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-sea1.steamserver.net:27018) starting...
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-lax1.steamserver.net:27018) results: 197.3877ms + load 7.0000
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() stopping after 400.00ms timeout and using good enough host (cmp1-syd1.steamserver.net:27018)
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-lax1.steamserver.net:443) results: 192.7490ms + load 7.0000
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-sea1.steamserver.net:27018) results: 194.3359ms + load 0.0000
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:49] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-ord1.steamserver.net:443) results: 190.1855ms + load 11.0000
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:49] [Connecting, 4, 23] [U:1:35601368] Connect() starting connection (eNetQOSLevelLow, cmp1-syd1.steamserver.net:27018, WebSocket)
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:50] [Connecting, 4, 23] [U:1:35601368] ConnectionCompleted() (103.10.125.22:27018, WebSocket) local address (10.10.1.78:56595)
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:50] [Connecting, 4, 23] [U:1:35601368] Client thinks it can connect via: UDP - yes, TCP - yes, WebSocket:443 - yes, WebSocket:Non443 - yes
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:50] [Connected, 4, 23] [U:1:35601368] Logging on [U:1:35601368]
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:50] [Logging On, 4, 23] [U:1:35601368] Using JWT 28868884007449688, persistence: 1, steamid: [U:1:35601368], issued: Tue Oct 27 12:40:16 2026, expiry: Wed May 26 01:24:28 2027
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:50] [Logging On, 4, 23] [U:1:35601368] RecvMsgClientLogOnResponse() : [U:1:35601368] 'OK'
+2026-10-27T00:07:51.985Z +  3093ms [log] [2026-10-27 13:07:50] [Logged On, 4, 23] [U:1:35601368] RecvMsgClientLogOnResponse() : processing complete
+2026-10-27T00:07:52.007Z +  3115ms [snapshot] steam_osx after {"pid":"81430","lstart":"Tue Oct 27 12:36:23 2026","samePid":true}
+2026-10-27T00:07:52.007Z +  3115ms [verdict] TOGGLED
