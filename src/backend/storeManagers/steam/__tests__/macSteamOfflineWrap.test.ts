@@ -246,6 +246,9 @@ describe('guided restore', () => {
     fs.writeFileSync(logPath, OFFLINE_LINE)
     const deps = makeDeps()
     await checkGuidedOfflineReady(deps)
+    // 54-12: the guided check now also records the owed-goonline marker, which
+    // independently arms the restore. Drop it to isolate the TTL flag.
+    fs.rmSync(join(dir, 'owed.json'), { force: true })
     clock += GUIDED_RESTORE_TTL_MS
     const r = await withMacSteamOffline(jest.fn().mockResolvedValue(1), deps)
     expect(r.wrap).toBe('already-offline')
