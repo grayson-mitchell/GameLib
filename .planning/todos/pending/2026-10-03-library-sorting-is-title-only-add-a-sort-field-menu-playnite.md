@@ -4,14 +4,14 @@ title: Library sorting is title-only — add a sort-field menu, with Playnite's 
 area: ui
 severity: minor
 platform: any
-ready: human
+ready: code
 found_by: "Operator question during quick-261002-b63 (asked whether the library could sort by date purchased), 2026-10-03"
 files:
-  - src/frontend/screens/Library/index.tsx:916-933
-  - src/frontend/components/UI/Header/index.tsx:232
-  - src/common/types.ts:184-195
-  - src/common/types/gog.ts:281-289
-  - src/backend/storeManagers/steam/depot.ts:496-526
+  - src/frontend/screens/Library/index.tsx:489-501,864-883
+  - src/frontend/components/UI/Header/index.tsx:234-263
+  - src/backend/launcher.ts:155-156,302-308
+  - src/frontend/helpers/electronStores.ts:190
+  - src/common/types.ts:411
 
 audit_acknowledged:
   milestone: v0.8
@@ -22,23 +22,49 @@ audit_acknowledged:
 
 The Games library offers exactly two sort knobs, both `localStorage` booleans:
 
-- `sortDescending` — title A–Z / Z–A, `localeCompare` with a leading `The ` stripped
-  (`Library/index.tsx:916-922`), toggled at `Header/index.tsx:232`
+- `sortDescending` — title A–Z / Z–A, `localeCompare` with a leading `THE ` stripped from the
+  upper-cased title (`Library/index.tsx:864-870`; state at `:489-493`), toggled at
+  `Header/index.tsx:234-241`
 - `sortInstalled` — regroups into installed → installing → not-installed
-  (`Library/index.tsx:931-933`), toggled at `Header/index.tsx:252`
+  (`Library/index.tsx:871-881`; state at `:497-501`), toggled at `Header/index.tsx:254-256`
 
 That is the whole sort surface. The operator asked for **date purchased** and noted Playnite offers
-far more. Playnite's sort-field list is the reference set worth working through, not just the one
-field that prompted this.
+far more. Playnite's sort-field list (verified below) is the reference set that was worked through,
+not just the one field that prompted this.
 
-**Purchase date exists nowhere in the data model.** `ExtraInfo` (`types.ts:184-195`) carries only
-`releaseDate`, `steamLastPlayed` and `steamPlaytimeMinutes`; `GameInfo` has no acquisition field at
-all. So this is not a UI-only task for most candidate sort keys — each one needs its data source
-established first.
+## Decisions (operator, 2026-10-27)
 
-## Data inventory, measured 2026-10-03
+All locked.
 
-Purchase/acquisition date, per store:
+- **Slice 1 has two controls.** A sort-field + direction control replaces `sortDescending`, with
+  fields **Name**, **Last played** and **Install size**. A SEPARATE group-by control replaces
+  `sortInstalled`, with **None / Install status / Store**. Unknown values (never launched, not
+  installed, unparseable size) sort LAST in both directions.
+- **Last played comes from GameLib's own `tsStore` / `timestampStore` `lastPlayed` ONLY.** The
+  operator's reasoning: it is a GameLib fact, "last launched from GameLib". Do NOT merge Steam's
+  `extra.steamLastPlayed`. The label should reflect GameLib launches if the UI has room; that is an
+  implementation detail, not locked. See the Steam consequence under Corrections.
+- **Won't do: Playtime.** `tsStore` `totalPlayed` only counts GameLib launches, so it would show a
+  false total for games played elsewhere. The operator rejected it.
+- **Won't do: Date purchased / Date added.** Only GOG has a real ownership date
+  (`GalaxyLibraryEntry.owned_since`). Epic and Amazon have none. Steam's only source is license
+  `time_created`, which is a grant date, not a purchase date, and sits on the slow bulk PICS path;
+  the operator declined that approximation. A "first seen by GameLib" stamp would be either a single
+  sync date for the whole existing library or blank for 4 of 5 runners. The question that started
+  this todo (sort by date purchased) is answered: it cannot be done faithfully across stores. The
+  evidence is the inventory table below.
+- **Deferred: Release date.** GOG and Epic only populate `extra.releaseDate` lazily, in
+  `getExtraInfo()` (GOG: `gog/games.ts:100`, value read at `:123-136`; Epic: `getExtraInfo()` at
+  `legendary/games.ts:299` calls `getExtraFromAPI()`, which sets it at `:191`), i.e. when a game
+  page is opened. Amazon (nile) populates it at library refresh (`nile/library.ts:73,110`). Steam
+  never sets it (no `releaseDate` anywhere under `storeManagers/steam/`). A sort on it would be
+  mostly blank. It needs refresh-time metadata first, which is separate work.
+- **Developer is not in slice 1.** The per-store fill rate of `GameInfo.developer`
+  (`types.ts:252`; set at e.g. `gog/library.ts:1141`, `nile/library.ts:106`) is unmeasured.
+
+### Purchase-date inventory, per store (measured 2026-10-03)
+
+Line citations below were measured on 2026-10-03; those files are no longer in `files:`.
 
 | Store | Available? | Where |
 | --- | --- | --- |
@@ -48,49 +74,75 @@ Purchase/acquisition date, per store:
 | Amazon (nile) | No | only `releaseDate` (`types/nile.ts:72`) |
 | Sideloaded | No such concept | would need a fallback (file mtime, or an "added" stamp written at sideload time) |
 
-Two traps to carry into any plan:
+## Corrections to the 2026-10-03 version
 
-1. **`InstalledInfo.install_size` is a `string`** (`types.ts:384`), not a number — a size sort needs a
-   parse, and an unparseable value must not sort as zero.
-2. **Cross-store "Last Played" does not exist as a date.** `RecentGame` (`types.ts:630-637`) carries no
-   timestamp, and `recent_games.ts` keeps an insertion-ordered list capped at **5** by default
-   (`recent_games.ts:9,15,44`). Last-played is therefore Steam-only, via `extra.steamLastPlayed`.
+- **Old trap 2 said cross-store last played does not exist. That was wrong for the non-Steam
+  runners.** Heroic's `tsStore` (`backend/constants/key_value_stores.ts:7`, store name `timestamp`)
+  records `firstPlayed` / `lastPlayed` / `totalPlayed` per appName in `launchEventCallback`
+  (`launcher.ts:113`; `firstPlayed` at `:155-156`, `lastPlayed` and `totalPlayed` at `:302-308`),
+  for Epic, GOG, Amazon, Zoom and sideloaded games. The frontend reads it via `timestampStore`
+  (`frontend/helpers/electronStores.ts:190`; used at `Game/TimeContainer/index.tsx:21`). It only
+  covers launches through GameLib.
+- **Steam consequence, measured 2026-10-27 — this contradicts the premise the decision was made on.**
+  Steam launches do NOT pass through `launchEventCallback`, so nothing writes `tsStore` for them.
+  `protocol.ts:206-217` routes `runner === 'steam'` to `dispatchSteamLaunch`
+  (`steam/launchDispatch.ts:43`), which calls `game.launch()` and `addRecentGame()` and never
+  touches `tsStore`; a grep for `tsStore|timestampStore` under `src/backend/storeManagers/` and
+  `src/backend/sidecar/` finds only the store registration. `Game/TimeContainer/index.tsx:64-67`
+  says the same: "GamerLib never records local timestamps for Steam titles". With the decision as
+  locked (tsStore only, no `steamLastPlayed` merge), every Steam game has an unknown Last played and
+  sorts last in both directions. That is consistent with the unknowns-last rule, but the Last
+  played field is then blank for the Steam library. Either confirm that outcome with the operator,
+  or have `dispatchSteamLaunch` write `firstPlayed` / `lastPlayed` to `tsStore` (no `totalPlayed`,
+  since the session end of a `steam://` handoff is unobserved). Do not silently merge
+  `extra.steamLastPlayed`.
+- The old "release date (partial coverage)" understated the gap. See Deferred above.
+- **Trap 1 stands:** `InstalledInfo.install_size` is a `string` (`types.ts:411`), not a number — a
+  size sort needs a parse, and an unparseable value must not sort as zero; it sorts last.
 
-## Playnite reference set — UNVERIFIED, verify before treating as a spec
+## Playnite reference set (VERIFIED 2026-10-27)
 
-Recorded from recollection, **not measured**. Verify against Playnite's own docs or source
-(`Playnite.SDK` sort-field enum) before any of this is treated as a requirement list. Marked here
-rather than omitted so the next session knows what to check, not what to trust:
+Source: `source/PlayniteSDK/Models/FilterPreset.cs` on JosefNemec/Playnite master, fetched via
+`gh api`. This replaces the 2026-10-03 UNVERIFIED recollection.
 
-Name · Platform · Library/Source · Categories · Last Played · Date Added · Date Modified ·
-Release Date · Genres · Developers · Publishers · Tags · Series · Age Rating · Region · Play Count ·
-Time Played · Completion Status · User Score · Critic Score · Community Score · Install Size ·
-Installation Status · Favorite · Hidden · Features · Install Directory · Version
+`SortOrder` has 31 members, in this order: Name, Platforms, Library, Categories, LastActivity,
+Genres, ReleaseDate, Developers, Publishers, Tags, Series, AgeRatings, Version, Regions, Source,
+PlayCount, Playtime, CompletionStatus, UserScore, CriticScore, CommunityScore, Added, Modified,
+IsInstalled, Hidden, Favorite, InstallDirectory, Features, InstallSize, RecentActivity, RomList.
 
-Cross-referenced against what GameLib has today: **title** (have), **installed status** (have),
-**developer** (`GameInfo.developer`, have), **genres** (`extra.genres`, have), **release date**
-(`extra.releaseDate`, partial coverage), **collections** (CategoriesManager, have), **favourite /
-hidden** (GlobalState, have), **install size** (have but string-typed, see trap 1), **playtime /
-last played** (Steam only). Everything else on the Playnite list — scores, completion status,
-play count, series, age rating, region, features, date modified — has **no source in this codebase
-at all** and would be new user-entered or new-API data, not a sort change.
+`SortOrderDirection` is Ascending / Descending.
+
+There is a SEPARATE `GroupableField` enum: None, Platform, Library, Category, LastActivity, Genre,
+ReleaseYear, Developer, Publisher, Tag, Series, AgeRating, Region, Source, PlayTime,
+CompletionStatus, UserScore, CriticScore, CommunityScore, Added, Modified, Feature,
+InstallationStatus, Name, InstallDrive, InstallSize, RecentActivity. This sort/group split is the
+model adopted for `sortInstalled`.
+
+Playnite's `Added` is the date a game was added to Playnite, not a purchase date.
+
+### Triage of all 31 `SortOrder` members
+
+| Disposition | Members |
+| --- | --- |
+| Slice 1 | Name; LastActivity and RecentActivity → "Last played"; InstallSize; IsInstalled and Library → group-by (Install status, Store) |
+| Won't do | Playtime, Added, PlayCount (for now) |
+| Deferred | ReleaseDate, Developers |
+| Skip, no data source | Publishers (no publisher field on `GameInfo`; the `publisher?` at `types.ts:882` belongs to an unrelated media type), Series, AgeRatings, Version, Regions, CompletionStatus, UserScore, CriticScore, CommunityScore, Modified, Features |
+| Skip, not meaningful for GameLib | Platforms (all PC), Source (= Library for us), RomList, InstallDirectory, Hidden (a filter) |
+| Skip, multi-value, better as filter facets | Categories, Genres, Tags |
+| Optional | Favorite (cheap but not chosen) |
 
 ## Solution
 
-TBD, needs a design decision — hence `ready: human`. The open question is not how to sort but what to
-do about **partial cross-store coverage**, since this is a unified library and a sort field that is
-blank for three of five runners is worse than absent. Options to weigh:
+Slice 1 as decided above:
 
-- Label it **"Date added"**, not "Date purchased", and sort unknowns last. Calling it "purchased"
-  when Steam supplies license-grant and three stores supply nothing is a shipped claim that is
-  false for most of the library.
-- Scope the control to the stores that have the field, and disable/hide it when the active store
-  filter has no coverage.
-- **GOG-only first slice** — the cheapest possible increment, one field already in the response —
-  then decide separately whether Steam's license-date approximation is good enough to add.
-- Replace the two boolean toggles with a real sort-field + direction control before adding fields,
-  so each new key is one list entry rather than another `localStorage` boolean. Note `sortInstalled`
-  is a *grouping*, not a sort key, and does not collapse into a single-field model without thought.
-
-Whichever is chosen, show the date's provenance per game (tooltip or detail row) so an
-approximation is visible rather than hidden.
+- A sort-field + direction control (Name / Last played / Install size) replaces the
+  `sortDescending` boolean, so each future key is one list entry rather than another `localStorage`
+  boolean.
+- A separate group-by control (None / Install status / Store) replaces `sortInstalled`.
+  `sortInstalled` is a *grouping*, not a sort key, and does not collapse into a single-field model;
+  the sort/group split matches Playnite's `SortOrder` / `GroupableField` design.
+- Unknown values sort last in both directions: never launched, not installed, unparseable
+  `install_size` string.
+- Persist the choices in `localStorage` like today's toggles (default approach, not locked).
+- Resolve the Steam Last-played consequence under Corrections before shipping that field.
