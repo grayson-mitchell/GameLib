@@ -209,6 +209,28 @@ let debtGeneration = 0
 // The in-session goonline confirmation still watching connection_log, if any.
 let onlineConfirmInFlight: Promise<void> | null = null
 
+// 54-REVIEW WR-04: wraps whose gooffline has been fired but whose LogOff has
+// not been seen yet. A shutdown restore in that window cannot know whether
+// the gooffline lands before or after its goonline, so it keeps the marker.
+let goofflinePending = 0
+// Resolved once the shutdown restore begins: the wrap then stops waiting on
+// unref'd timers (the LogOff watch, the settle) and fires its goonline at
+// once, before the event loop can drain.
+let shutdownBegun = false
+let signalShutdown: () => void = () => undefined
+let shutdownSignal: Promise<void> = newShutdownSignal()
+
+function newShutdownSignal(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    signalShutdown = resolve
+  })
+}
+
+function beginMacSteamShutdown(): void {
+  shutdownBegun = true
+  signalShutdown()
+}
+
 // One restore flight per trigger: a shutdown never waits on a boot's confirm window.
 const restoreInFlight: {
   boot: Promise<MacSteamRestoreOutcome> | null
@@ -222,6 +244,9 @@ export function __resetMacSteamOfflineForTests(): void {
   restoreInFlight.shutdown = null
   debtGeneration = 0
   onlineConfirmInFlight = null
+  goofflinePending = 0
+  shutdownBegun = false
+  shutdownSignal = newShutdownSignal()
 }
 
 // ts-prune-ignore-next
@@ -592,8 +617,23 @@ export async function withMacSteamOffline<T>(
     MAC_STEAM_LOGOFF_WAIT_MS,
     deps
   )
-  deps.openUrl(STEAM_GO_OFFLINE_URL)
-  if (!(await seen)) {
+  goofflinePending++
+  let sawLogoff: boolean
+  try {
+    deps.openUrl(STEAM_GO_OFFLINE_URL)
+    // 54-REVIEW WR-04: a shutdown cuts the watch short; the gooffline may
+    // still land, so the wrap goes straight on to its goonline below.
+    sawLogoff = await Promise.race([seen, shutdownSignal.then(() => true)])
+  } finally {
+    goofflinePending--
+  }
+  if (shutdownBegun) {
+    logInfo(
+      '[Steam] go-offline wrap: shutdown began during the LogOff watch, going back online',
+      LogPrefix.Steam
+    )
+  }
+  if (!sawLogoff) {
     logWarning(
       `[Steam] go-offline wrap: no user-initiated LogOff within ${MAC_STEAM_LOGOFF_WAIT_MS}ms, deferring to the guided Go Offline step (no logon)`,
       LogPrefix.Steam
@@ -623,7 +663,14 @@ async function runThenGoOnline<T>(
     ok = true
     return value
   } finally {
-    if (ok) await deps.sleep(MAC_STEAM_ONLINE_SETTLE_MS)
+    // 54-REVIEW WR-04: the settle sleep is unref'd, so at shutdown it is cut
+    // short; otherwise the loop could drain before the goonline fires.
+    if (ok && !shutdownBegun) {
+      await Promise.race([
+        deps.sleep(MAC_STEAM_ONLINE_SETTLE_MS),
+        shutdownSignal
+      ])
+    }
     logInfo('[Steam] go-offline wrap: firing goonline', LogPrefix.Steam)
     fireGoOnlineAndConfirm(deps)
   }
@@ -744,6 +791,16 @@ async function runRestore(
     )
     deps.openUrlDetached(STEAM_GO_ONLINE_URL)
     if (seen === null) {
+      if (goofflinePending > 0) {
+        // 54-REVIEW WR-04: a wrap's gooffline may still land after this
+        // goonline; the wrap fires its own goonline next, and the boot
+        // restore pays the marker if neither is confirmed.
+        logInfo(
+          `[Steam] go-offline restore trigger=${trigger}: a gooffline is still in flight, marker kept`,
+          LogPrefix.Steam
+        )
+        return 'restore-unconfirmed'
+      }
       clearOnlineDebt(deps)
       return 'restored'
     }
@@ -777,6 +834,7 @@ export function restoreMacSteamOnlineIfOwed(
   trigger: MacSteamRestoreTrigger,
   deps: MacSteamOfflineDeps = defaultMacSteamOfflineDeps()
 ): Promise<MacSteamRestoreOutcome> {
+  if (trigger === 'shutdown') beginMacSteamShutdown()
   const existing = restoreInFlight[trigger]
   if (existing) return existing
   const p: Promise<MacSteamRestoreOutcome> = runRestore(trigger, deps)

@@ -657,6 +657,68 @@ describe('restoreMacSteamOnlineIfOwed', () => {
   })
 })
 
+describe('shutdown during a wrap (54-REVIEW WR-04)', () => {
+  it('a shutdown during the LogOff watch fires goonline, keeps the marker, and the wrap goes back online at once', async () => {
+    fs.writeFileSync(logPath, onlineLine(BASE - 60000))
+    const never = new Promise<void>(() => undefined)
+    const deps = makeDeps({
+      openUrl: (url) => {
+        urls.push(url)
+      },
+      // Every poll and the settle hang: only the shutdown signal moves on.
+      sleep: () => never
+    })
+    const connect = jest.fn().mockResolvedValue('v')
+    const wrap = withMacSteamOffline(connect, deps)
+    await flush()
+    expect(urls).toEqual([STEAM_GO_OFFLINE_URL])
+    const r = await restoreMacSteamOnlineIfOwed('shutdown', deps)
+    expect(r).toBe('restore-unconfirmed')
+    expect(fs.existsSync(markerPath)).toBe(true)
+    const w = await wrap
+    expect(w.wrap).toBe('toggled')
+    expect(urls).toEqual([
+      STEAM_GO_OFFLINE_URL,
+      'detached:' + STEAM_GO_ONLINE_URL,
+      'detached:' + STEAM_GO_ONLINE_URL
+    ])
+    expect(fs.existsSync(markerPath)).toBe(true)
+  })
+
+  it('a shutdown during the connect cuts the settle short, and the restore still clears the marker', async () => {
+    fs.writeFileSync(logPath, onlineLine(BASE - 60000))
+    let finishConnect!: () => void
+    const connecting = new Promise<void>((r) => {
+      finishConnect = r
+    })
+    const deps = makeDeps({
+      openUrl: (url) => {
+        urls.push(url)
+        if (url === STEAM_GO_OFFLINE_URL)
+          fs.appendFileSync(logPath, offlineLine(clock))
+      },
+      sleep: async (ms) => {
+        if (ms === 2000) await new Promise<void>(() => undefined)
+        clock += ms
+      }
+    })
+    const wrap = withMacSteamOffline(async () => {
+      await connecting
+      return 'v'
+    }, deps)
+    await flush()
+    const r = await restoreMacSteamOnlineIfOwed('shutdown', deps)
+    expect(r).toBe('restored')
+    expect(fs.existsSync(markerPath)).toBe(false)
+    finishConnect()
+    const w = await wrap
+    expect(w.wrap).toBe('toggled')
+    expect(
+      urls.filter((u) => u === 'detached:' + STEAM_GO_ONLINE_URL)
+    ).toHaveLength(2)
+  })
+})
+
 describe('isOwnUserPidAlive (54-REVIEW WR-03)', () => {
   const kill = (code?: string) =>
     jest.spyOn(process, 'kill').mockImplementation(() => {
