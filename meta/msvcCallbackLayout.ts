@@ -123,3 +123,100 @@ export function parseMsvcCallbackLayoutDump(
   }
   return out
 }
+
+/**
+ * Byte layout of the Steamworks `UserStatsReceived_t` (k_iCallback 1101).
+ *
+ * MEASURED, never assumed, in the same way as the CCallbackBase values above:
+ * they come from the pinned zig 0.16.0 clang record-layout dumper run against
+ * the SDK-faithful fixture meta/__tests__/fixtures/steam_callback_structs.cpp
+ * (Windows under pack(8), Mac under pack(4)), committed raw as
+ * meta/__tests__/fixtures/steam_callback_structs.layout.txt. Both Windows
+ * arches agree (24 bytes, 0/8/16), so the helper repacks once into that wire
+ * form; the Mac struct is 20 bytes (0/8/12) because pack(4) drops the padding
+ * before the CSteamID. native/steam-bridge/helper/gamelib_cbqueue.h must equal
+ * these (cross-pinned in msvcCallbackBaseLayout.test.ts).
+ */
+export interface UserStatsReceivedLayout {
+  /** byte offset of uint64 m_nGameID */
+  gameID: number
+  /** byte offset of EResult m_eResult */
+  eResult: number
+  /** byte offset of CSteamID m_steamIDUser */
+  steamID: number
+  /** sizeof(UserStatsReceived_t) in bytes */
+  size: number
+}
+
+export const USER_STATS_RECEIVED_LAYOUT = {
+  x64: { gameID: 0, eResult: 8, steamID: 16, size: 24 },
+  x86: { gameID: 0, eResult: 8, steamID: 16, size: 24 },
+  mac: { gameID: 0, eResult: 8, steamID: 12, size: 20 }
+} as const satisfies Record<string, UserStatsReceivedLayout>
+
+export type UserStatsTriple =
+  | 'x86_64-pc-windows-msvc'
+  | 'i686-pc-windows-msvc'
+  | 'arm64-apple-macosx'
+
+const USER_STATS_TRIPLES: readonly UserStatsTriple[] = [
+  'x86_64-pc-windows-msvc',
+  'i686-pc-windows-msvc',
+  'arm64-apple-macosx'
+]
+
+function parseUserStatsSection(
+  section: string,
+  triple: string
+): UserStatsReceivedLayout {
+  const rec =
+    /Type: struct UserStatsReceived_t\n[\s\S]*?Size:(\d+)\n[\s\S]*?FieldOffsets: \[(\d+), (\d+), (\d+)\]/.exec(
+      section
+    )
+  if (!rec) {
+    throw new Error(
+      `${triple}: missing record layout (Size/FieldOffsets) for UserStatsReceived_t`
+    )
+  }
+  return {
+    gameID: Number(rec[2]) / 8,
+    eResult: Number(rec[3]) / 8,
+    steamID: Number(rec[4]) / 8,
+    size: Number(rec[1]) / 8
+  }
+}
+
+/**
+ * Parses dumper output sections introduced by `=== triple: <triple> ...`
+ * header lines. Throws (never defaults) when a triple or the record is missing.
+ */
+export function parseUserStatsReceivedLayoutDump(
+  text: string
+): Record<UserStatsTriple, UserStatsReceivedLayout> {
+  const sections = new Map<string, string>()
+  const re = /^=== triple: (\S+)[^\n]*\n/gm
+  const heads: { triple: string; start: number; bodyStart: number }[] = []
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) {
+    heads.push({
+      triple: m[1],
+      start: m.index,
+      bodyStart: m.index + m[0].length
+    })
+  }
+  heads.forEach((h, i) => {
+    const end = i + 1 < heads.length ? heads[i + 1].start : text.length
+    if (!sections.has(h.triple)) {
+      sections.set(h.triple, text.slice(h.bodyStart, end))
+    }
+  })
+  const out = {} as Record<UserStatsTriple, UserStatsReceivedLayout>
+  for (const triple of USER_STATS_TRIPLES) {
+    const section = sections.get(triple)
+    if (section === undefined) {
+      throw new Error(`${triple}: no section in dump (missing record layout)`)
+    }
+    out[triple] = parseUserStatsSection(section, triple)
+  }
+  return out
+}

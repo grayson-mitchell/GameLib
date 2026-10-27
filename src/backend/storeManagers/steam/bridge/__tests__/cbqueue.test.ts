@@ -27,6 +27,18 @@ const CASES = [
   'evicted-slot-zero',
   'small-cap-keeps-entry',
   'tiny-cap',
+  'usr-repack',
+  'reject-1101-mac-size',
+  'offer-1101-wire',
+  'pop-1101-layout',
+  'obs-first-forwards',
+  'obs-later-caches-only',
+  'obs-other-app',
+  'obs-bad-size',
+  'req-cached',
+  'req-already-queued',
+  'req-need-fetch',
+  'obs-after-pending',
   'offsets'
 ]
 

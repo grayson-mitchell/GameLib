@@ -81,6 +81,91 @@ int main(void) {
             ring.count == 1);
   CHECK("tiny-cap", gl_cbq_pop_encode(&ring, out, 3) == 0 && ring.count == 1);
 
+  /* ---- 1101 UserStatsReceived_t (quick k51) ---- */
+  {
+    uint8_t mac[20], win[24], ex[24];
+    uint64_t gid = 0x1122334455667788ull, sid = 0x0102030405060708ull;
+    int32_t er = 1;
+    memset(mac, 0xEE, sizeof mac);
+    memcpy(mac, &gid, 8);
+    memcpy(mac + 8, &er, 4);
+    memcpy(mac + 12, &sid, 8);
+    memset(win, 0xCC, sizeof win);
+    gl_cbq_repack_user_stats(mac, win);
+    memset(ex, 0, sizeof ex);
+    memcpy(ex, &gid, 8);
+    memcpy(ex + 8, &er, 4);
+    memcpy(ex + 16, &sid, 8);
+    CHECK("usr-repack", memcmp(win, ex, 24) == 0 && all_zero(win + 12, 4));
+
+    memset(&ring, 0, sizeof ring);
+    CHECK("reject-1101-mac-size",
+          gl_cbq_offer(&ring, 1101, mac, 20) == 0 && ring.dropped_filtered == 1 &&
+              ring.count == 0);
+    CHECK("offer-1101-wire", gl_cbq_offer(&ring, 1101, win, 24) == 1 && ring.count == 1);
+    n = gl_cbq_pop_encode(&ring, out, sizeof out);
+    CHECK("pop-1101-layout",
+          n == 12 + 24 && rd32(out) == 1 && rd32(out + 4) == 1101 &&
+              rd32(out + 8) == 24 && memcmp(out + 12, win, 24) == 0);
+
+    /* stats machine */
+    const uint64_t app = 411300;
+    gl_stats_fwd st;
+    uint8_t mine[20], other[20], cmp[24];
+    uint64_t g2 = 999;
+    memset(mine, 0, sizeof mine);
+    memcpy(mine, &app, 8);
+    memcpy(mine + 8, &er, 4);
+    memcpy(mine + 12, &sid, 8);
+    memset(other, 0, sizeof other);
+    memcpy(other, &g2, 8);
+    gl_cbq_repack_user_stats(mine, cmp);
+
+    memset(&st, 0, sizeof st);
+    memset(&ring, 0, sizeof ring);
+    CHECK("obs-first-forwards",
+          gl_stats_on_observed(&st, &ring, mine, 20, app) == GL_STATS_OBS_QUEUED &&
+              st.initial_forwarded == 1 && st.have_cached == 1 && ring.count == 1 &&
+              memcmp(ring.slots[ring.head].bytes, cmp, 24) == 0);
+    CHECK("obs-later-caches-only",
+          gl_stats_on_observed(&st, &ring, mine, 20, app) == GL_STATS_OBS_CACHED &&
+              ring.count == 1);
+
+    memset(&st, 0, sizeof st);
+    memset(&ring, 0, sizeof ring);
+    CHECK("obs-other-app",
+          gl_stats_on_observed(&st, &ring, other, 20, app) == GL_STATS_OBS_OTHER_APP &&
+              st.have_cached == 0 && ring.count == 0 && st.initial_forwarded == 0);
+    CHECK("obs-bad-size",
+          gl_stats_on_observed(&st, &ring, mine, 16, app) == GL_STATS_OBS_BAD &&
+              gl_stats_on_observed(&st, &ring, NULL, 20, app) == GL_STATS_OBS_BAD &&
+              st.have_cached == 0 && ring.count == 0 && st.initial_forwarded == 0);
+
+    /* request with cache and empty ring queues the cached bytes */
+    memset(&st, 0, sizeof st);
+    memset(&ring, 0, sizeof ring);
+    gl_stats_on_observed(&st, &ring, mine, 20, app);
+    gl_cbq_pop_encode(&ring, out, sizeof out); /* consumed by the game */
+    CHECK("req-cached",
+          gl_stats_on_request(&st, &ring) == GL_STATS_REQ_QUEUED_CACHED &&
+              ring.count == 1 && memcmp(ring.slots[ring.head].bytes, cmp, 24) == 0);
+    CHECK("req-already-queued",
+          gl_stats_on_request(&st, &ring) == GL_STATS_REQ_ALREADY_QUEUED &&
+              ring.count == 1);
+
+    memset(&st, 0, sizeof st);
+    memset(&ring, 0, sizeof ring);
+    st.pending_call = 77;
+    CHECK("req-need-fetch",
+          gl_stats_on_request(&st, &ring) == GL_STATS_REQ_NEED_FETCH && st.pending == 1 &&
+              st.pending_call == 77 && ring.count == 0);
+    /* the first own-app observe was already forwarded, so only pending forwards */
+    st.initial_forwarded = 1;
+    CHECK("obs-after-pending",
+          gl_stats_on_observed(&st, &ring, mine, 20, app) == GL_STATS_OBS_QUEUED &&
+              st.pending == 0 && st.pending_call == 0 && ring.count == 1);
+  }
+
 #if UINTPTR_MAX == 0xFFFFFFFFFFFFFFFFu
   CHECK("offsets", offsetof(gl_CallbackMsg_t, m_iCallback) == 4 &&
                        offsetof(gl_CallbackMsg_t, m_pubParam) == 8 &&
