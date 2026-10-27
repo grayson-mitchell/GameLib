@@ -122,6 +122,30 @@ running, and meets the strict bridge-verified criterion as defined for this mode
   reached menu / fails at step X) but do not block the phase. Ranch Simulator's exit-53 variant
   (spike 040) may be unrelated.
 
+### Planning-time rulings (user, 2026-10-28, after 56-RESEARCH.md)
+- **D-18:** The Steamworks-licensed `lsteamclient` component (PE `.dll` plus unsigned x86_64 `.so`)
+  ships as an on-demand release asset that is downloaded on the first DRM-mode launch, like the
+  `gst-libav` overlay. It is not in the signed and notarized `.app` bundle. This refines D-02
+  (research F6: Wine builtins don't load once codesigned).
+- **D-19:** D-01's build base is time-boxed. The first native task tries the CrossOver 26.3.0
+  source drop. If it fails inside the time box, the build falls back to stock Wine 11.15 headers
+  (NotProton upstream, what spike 044 proved) and records the D-01 amendment in a SUMMARY
+  (research F3).
+- **D-20:** D-14's removal includes the shim-side forwarder support: `GameLibBridge_CreateInterface`
+  and `g_bridge_steamstub_path_active` in `meta/gen_vtables.ts`, the helper's
+  `CONTROL_SLOT_CREATE_INTERFACE`, `native/steam-bridge/steamclient/` and the forwarder compile code
+  in `meta/buildSteamBridgeShims.ts`. Bump `SHIM_EXPORT_SET_VERSION`, which accepts one forced
+  rescan (research F9).
+- **D-21:** The ported helper omits NotProton's HKLM writes, which exist only for Ubisoft Connect.
+  It stays HKCU-only per D-07 and spike 036. If Grim Dawn fails at the live gate, one diagnostic
+  run with the HKLM writes is allowed, and the result is recorded (research F7).
+- **D-04 refinement (research F4):** the Valve package is the `steam_client_win64` manifest's
+  `bins_win64` node, which holds all three D-06 DLLs. `bins_misc_ubuntu12` has no tier0 or vstdlib.
+  The rest of D-04 is unchanged: follow the current manifest and verify against its `sha2`, with
+  no pinned sha.
+- **D-15/D-16 refinement (research F1):** the strict classifier is `meta/bridgeCensus.ts`
+  (`classifyBridgeEvidence`), not `bridgeVerdict.ts`. Trace lines carry `role=game|helper`.
+
 ### Claude's Discretion
 - How the progress state for the first-launch fetch (D-05) appears in the UI. Reuse an existing
   launch-progress surface rather than inventing one.
