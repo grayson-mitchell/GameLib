@@ -6,16 +6,16 @@
  * directly via runWineCommand"), so GameLib must resolve the game's own
  * launch target itself rather than reusing the bottled-Steam dispatch shape.
  *
- * Modeled directly on installLocation.ts's fetchInstalldir (the exact
- * precedent this task's <read_first> names): same numeric-appId guard ->
- * `SteamUser.getClient()`, reconnecting once via the sanctioned
- * `ensureConnected()` seam on a cold session (no second logon -- T-21-11;
- * `ensureConnected()` shares any in-flight attempt rather than opening a
- * new one; quick-260909-pym parity, Phase 51 Plan 01) -> `getProductInfo`
- * over the resulting CM connection -> never-throws-returns-undefined
- * discipline. A missing/absent Steam client, a non-numeric appId, or a PICS
- * failure all fall back to `undefined` -- a launch-exe lookup must not
- * hard-fail the caller's launch() flow.
+ * Phase 54 (ROADMAP SC2): the PICS read goes over the shared ANONYMOUS client
+ * first and never logs on, so Play cannot sign Mac Steam's Friends session
+ * out. A license-gated app answers anonymously with a `public_only` subset
+ * (no `config`); for those the lookup falls back, in order, to (1) an
+ * authenticated session that is ALREADY open (`acquireOpenAuthenticated`,
+ * which never logs on) and (2) the launch target persisted at the last
+ * successful resolve (`bridge.launchTarget`). The T-21-11 "no second logon"
+ * note becomes "no logon at all". A non-numeric appId or total absence of an
+ * answer yields `undefined` -- a launch-exe lookup must not hard-fail the
+ * caller's launch() flow.
  *
  * `appinfo.config.launch` is a real Steam PICS map keyed by numeric-string
  * index ("0", "1", ...), not a JS array -- iterated via Object.values().
@@ -32,13 +32,16 @@
  */
 
 import { join } from 'node:path'
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from '../user'
+import { getAnonymousPicsClient, isPublicOnlyEntry } from '../anonymousClient'
+import { readBridgeVerdict, setBridgeLaunchTarget } from './bridgeVerdict'
 import { sanitizeInstalldir } from '../installLocation'
 import { getBridgeBottleSettings, getBottleSteamappsDir } from '../bottle'
 import {
   withTimeout,
   STEAM_PICS_TIMEOUT_MS,
+  STEAM_PICS_BULK_TIMEOUT_MS,
   STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS
 } from '../withTimeout'
 
@@ -65,26 +68,91 @@ interface AppLaunchInfo {
   }
 }
 
+/** The Windows launch entry as PICS spells it (raw executable, installdir). */
+interface WindowsLaunch {
+  executable: string
+  installdir?: string
+}
+
+/**
+ * Prefer an explicit windows-tagged entry; fall back to a single untagged
+ * entry (no oslist) for Windows-only titles that don't tag it at all
+ * (D-UAT-24-03). Never fall back to a mac/linux-tagged entry.
+ */
+function pickWindowsLaunch(appinfo: unknown): WindowsLaunch | undefined {
+  const info = appinfo as AppLaunchInfo | undefined
+  const launchEntries = Object.values(info?.config?.launch ?? {})
+  const windowsEntry =
+    launchEntries.find(
+      (candidate) =>
+        candidate?.executable && candidate.config?.oslist === 'windows'
+    ) ??
+    launchEntries.find(
+      (candidate) =>
+        candidate?.executable &&
+        (candidate.config?.oslist == null || candidate.config.oslist === '')
+    )
+  if (!windowsEntry?.executable) return undefined
+  return {
+    executable: windowsEntry.executable,
+    installdir: info?.config?.installdir
+  }
+}
+
+interface PicsReader {
+  getProductInfo(
+    apps: number[],
+    packages: number[],
+    inclTokens?: boolean
+  ): Promise<{ apps?: Record<number, unknown> }>
+}
+
+interface LaunchAnswer {
+  launch?: WindowsLaunch
+  publicOnly: boolean
+}
+
+/** One bounded PICS read. A reject or timeout counts as public-only. */
+async function readLaunch(
+  client: PicsReader,
+  appId: string
+): Promise<LaunchAnswer> {
+  try {
+    const numericAppId = Number(appId)
+    // D-01a gap-audit fix (Phase 33-02): bounded so a stale-but-present CM
+    // socket rejects within STEAM_PICS_TIMEOUT_MS instead of parking the
+    // install/launch/uninstall caller forever.
+    const { apps } = await withTimeout(
+      client.getProductInfo([numericAppId], [], true),
+      STEAM_PICS_TIMEOUT_MS,
+      'resolveBridgeLaunchExe getProductInfo'
+    )
+    const entry = apps?.[numericAppId] as { appinfo?: unknown } | undefined
+    return {
+      launch: pickWindowsLaunch(entry?.appinfo),
+      publicOnly: isPublicOnlyEntry(entry)
+    }
+  } catch (error) {
+    logWarning(
+      [
+        `resolveBridgeLaunchExe: getProductInfo failed for appId ${appId}`,
+        error
+      ],
+      LogPrefix.Steam
+    )
+    return { publicOnly: true }
+  }
+}
+
 /**
  * Resolves the absolute path to a bridge-eligible game's Windows launch
  * executable, consumable directly as `runWineCommand`'s `commandParts[0]`.
- * Never throws: any guard failure, missing client, or PICS error logs a
+ * Never throws: any guard failure, missing answer, or PICS error logs a
  * warning and returns `undefined` -- the caller (games.ts launch() bridge
- * branch, Task 3) is responsible for surfacing an actual failure signal.
+ * branch) is responsible for surfacing an actual failure signal.
  *
- * Phase 51 Plan 01 (Task 3 live-tracer divergence, quick-260909-pym parity):
- * a cold session's first Play click reaches here before anything else has
- * paid for a CM connection -- `noteSteamAuthTrigger('user-play')` only
- * unlocks the keyring read, it does not block on a logon. The ORIGINAL
- * version of this function treated a null `getClient()` as terminal, so
- * every first-launch-of-the-session bridge attempt silently fell back to
- * the bottled-Steam path with no helper ever spawned (observed live:
- * Avernum 5/6, 2026-10-17). `installLocation.ts`'s `fetchInstalldir` hit
- * this exact shape and fixed it (quick-260909-pym) by awaiting
- * `SteamUser.ensureConnected()` (bounded, shares any in-flight attempt --
- * T-21-11's "never open a second logon" is unaffected since
- * `ensureConnected()` IS the sanctioned reconnect seam) and retrying
- * `getClient()` once before giving up. Mirrored here verbatim.
+ * Source order (Phase 54): anonymous PICS -> an already-open authenticated
+ * session -> the persisted `bridge.launchTarget`. Never a logon.
  */
 export async function resolveBridgeLaunchExe(
   appId: string
@@ -97,61 +165,66 @@ export async function resolveBridgeLaunchExe(
     return undefined
   }
 
-  let client = SteamUser.getClient()
-  if (!client) {
+  try {
+    let launch: WindowsLaunch | undefined
+    let fromPics = false
+
+    let anonymous: Awaited<ReturnType<typeof getAnonymousPicsClient>> = null
     try {
-      await withTimeout(
-        SteamUser.ensureConnected(),
+      anonymous = await withTimeout(
+        getAnonymousPicsClient('launch-target'),
         STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS,
-        'resolveBridgeLaunchExe ensureConnected'
+        'resolveBridgeLaunchExe anonymous connect'
       )
     } catch (err) {
       logWarning(
-        `resolveBridgeLaunchExe: ensureConnected timed out/failed while resolving launch exe for appId ${appId}: ${String(err)}`,
+        `resolveBridgeLaunchExe: anonymous connect failed for appId ${appId}: ${String(err)}`,
         LogPrefix.Steam
       )
     }
-    client = SteamUser.getClient()
-    if (!client) {
-      return undefined
+
+    if (anonymous) {
+      const answer = await readLaunch(anonymous, appId)
+      if (answer.launch && !answer.publicOnly) {
+        launch = answer.launch
+        fromPics = true
+      }
     }
-  }
 
-  try {
-    const numericAppId = Number(appId)
-    // D-01a gap-audit fix (Phase 33-02): this call is reached on the macOS
-    // bridge INSTALL path (games.ts installBridgeGame -> resolveBridgeLaunchExe,
-    // to place the launch shim post-download) as well as the launch/uninstall
-    // paths -- it was a bare, un-timed steam-user CM await identical in shape
-    // to the pre-30-07 install-hang bug (installLocation.ts's own
-    // fetchInstalldir already bounds the SAME getProductInfo call shape).
-    // Bounded here so a stale-but-present CM socket rejects within
-    // STEAM_PICS_TIMEOUT_MS instead of parking this await forever; the catch
-    // below already turns any reject into a benign `undefined`.
-    const { apps } = await withTimeout(
-      client.getProductInfo([numericAppId], [], true),
-      STEAM_PICS_TIMEOUT_MS,
-      'resolveBridgeLaunchExe getProductInfo'
-    )
-    const entry = apps?.[numericAppId]
-    const appinfo = entry?.appinfo as unknown as AppLaunchInfo | undefined
+    if (!launch) {
+      const open = SteamUser.acquireOpenAuthenticated('user-install')
+      if (open) {
+        try {
+          const answer = await readLaunch(open.client, appId)
+          if (answer.launch) {
+            launch = answer.launch
+            fromPics = true
+          }
+        } finally {
+          open.release()
+        }
+      }
+    }
 
-    const launchEntries = Object.values(appinfo?.config?.launch ?? {})
-    // Prefer an explicit windows-tagged entry; fall back to a single untagged
-    // entry (no oslist) for Windows-only titles that don't tag it at all
-    // (D-UAT-24-03). Never fall back to a mac/linux-tagged entry.
-    const windowsEntry =
-      launchEntries.find(
-        (candidate) =>
-          candidate?.executable && candidate.config?.oslist === 'windows'
-      ) ??
-      launchEntries.find(
-        (candidate) =>
-          candidate?.executable &&
-          (candidate.config?.oslist == null || candidate.config.oslist === '')
-      )
+    if (launch && fromPics && launch.installdir) {
+      setBridgeLaunchTarget(appId, {
+        executable: launch.executable,
+        installdir: launch.installdir
+      })
+    }
 
-    if (!windowsEntry?.executable) {
+    if (!launch) {
+      const stored = readBridgeVerdict(appId)?.launchTarget
+      if (stored) {
+        logInfo(
+          `resolveBridgeLaunchExe: PICS unavailable for appId ${appId}, using the stored launch target`,
+          LogPrefix.Steam
+        )
+        launch = stored
+      }
+    }
+
+    if (!launch) {
       logWarning(
         `resolveBridgeLaunchExe: no windows launch entry found for appId ${appId}`,
         LogPrefix.Steam
@@ -163,14 +236,11 @@ export async function resolveBridgeLaunchExe(
     // bottle rather than the shared zero-arg default.
     const bottleName = getBridgeBottleSettings(appId).wineCrossoverBottle
     const steamappsDir = getBottleSteamappsDir(bottleName)
-    // D-02/D-04 (37-10): sanitizeInstalldir now takes the steamapps dir as a
-    // third argument (containment check) and may THROW UnsafeInstalldirError
-    // on a denylist/containment violation — deliberately NOT caught here.
-    // This function's existing generic `catch (error)` below already
-    // satisfies its own "Never throws" contract for that case (logs a
-    // warning, returns undefined), same as any other guard failure.
+    // D-02/D-04 (37-10): sanitizeInstalldir may THROW UnsafeInstalldirError on
+    // a denylist/containment violation -- applied to every source (anonymous,
+    // session, stored record). The catch below keeps the never-throws contract.
     const installdir = sanitizeInstalldir(
-      appinfo?.config?.installdir,
+      launch.installdir,
       appId,
       steamappsDir
     )
@@ -179,15 +249,59 @@ export async function resolveBridgeLaunchExe(
     // PICS stores the executable with Windows separators (XCOM 200510:
     // `Binaries\Win32\XComGame.exe`). On macOS a backslash is a filename
     // character, so split it into segments or the joined path does not exist.
-    return join(gameInstallDir, ...windowsEntry.executable.split('\\'))
+    return join(gameInstallDir, ...launch.executable.split('\\'))
   } catch (error) {
     logWarning(
-      [
-        `resolveBridgeLaunchExe: getProductInfo failed for appId ${appId}`,
-        error
-      ],
+      [`resolveBridgeLaunchExe: failed for appId ${appId}`, error],
       LogPrefix.Steam
     )
     return undefined
+  }
+}
+
+/**
+ * Phase 54: records a launch target for every installed bridge appId that
+ * lacks one, from ONE bulk PICS call on a client the caller already holds
+ * (an authenticated lease held by Refresh or sign-in). Never opens or
+ * acquires a session itself and never throws. Returns the recorded count.
+ */
+export async function backfillBridgeLaunchTargets(
+  client: PicsReader,
+  appIds: string[]
+): Promise<number> {
+  const missing = appIds.filter(
+    (id) => NUMERIC_APP_ID.test(id) && !readBridgeVerdict(id)?.launchTarget
+  )
+  if (missing.length === 0) return 0
+
+  try {
+    const { apps } = await withTimeout(
+      client.getProductInfo(missing.map(Number), [], true),
+      STEAM_PICS_BULK_TIMEOUT_MS,
+      'backfillBridgeLaunchTargets getProductInfo'
+    )
+    let recorded = 0
+    for (const id of missing) {
+      const entry = apps?.[Number(id)] as { appinfo?: unknown } | undefined
+      const launch = pickWindowsLaunch(entry?.appinfo)
+      if (launch?.installdir) {
+        setBridgeLaunchTarget(id, {
+          executable: launch.executable,
+          installdir: launch.installdir
+        })
+        recorded++
+      }
+    }
+    logInfo(
+      `resolveBridgeLaunchExe: backfilled ${recorded} launch targets from the held Steam session`,
+      LogPrefix.Steam
+    )
+    return recorded
+  } catch (error) {
+    logWarning(
+      ['backfillBridgeLaunchTargets: bulk PICS read failed', error],
+      LogPrefix.Steam
+    )
+    return 0
   }
 }

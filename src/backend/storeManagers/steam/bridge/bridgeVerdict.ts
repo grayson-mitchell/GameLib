@@ -73,6 +73,13 @@ const bridgeVerdictSchema = z.object({
   noticeAcknowledgedFor: z.string().optional(),
   limitedNoticeShown: z.boolean().optional(),
   identityFallback: z.boolean().optional(),
+  // Phase 54: declared so the strip-on-read keeps the persisted launch target.
+  launchTarget: z
+    .object({
+      executable: z.string().min(1).max(512),
+      installdir: z.string().min(1).max(512)
+    })
+    .optional(),
   // Quick 261024-br4: without this key the non-strict object strips `drm`
   // on read and a detected CEG would be silently forgotten.
   drm: z.enum(['ceg']).optional(),
@@ -336,6 +343,45 @@ export function setBridgeIdentityFallback(
     bridge: {
       ...existing.bridge,
       identityFallback
+    }
+  })
+}
+
+/**
+ * Phase 54: records the Windows launch entry PICS resolved for this game, so a
+ * later Play for a license-gated app (anonymous PICS answers `public_only`)
+ * with no open Steam session can still resolve its exe. Stores the raw values;
+ * the path is rebuilt through sanitizeInstalldir on read.
+ */
+export function setBridgeLaunchTarget(
+  appId: string,
+  target: { executable: string; installdir: string }
+): void {
+  if (rejectNonNumeric('setBridgeLaunchTarget', appId)) return
+
+  const valid = (value: string): boolean =>
+    value.length > 0 && value.length <= 512
+  if (!valid(target.executable) || !valid(target.installdir)) {
+    logWarning(
+      `bridgeVerdict: setBridgeLaunchTarget rejected an empty or oversized launch target for appId ${appId}`,
+      LogPrefix.Steam
+    )
+    return
+  }
+
+  const existing = getOrCreateEntryForWrite(appId)
+  const current = existing.bridge?.launchTarget
+  if (
+    current?.executable === target.executable &&
+    current.installdir === target.installdir
+  ) {
+    return
+  }
+  steamMetadataStore.set(appId, {
+    ...existing,
+    bridge: {
+      ...existing.bridge,
+      launchTarget: { ...target }
     }
   })
 }

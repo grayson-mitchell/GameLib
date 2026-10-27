@@ -267,6 +267,11 @@ export interface SteamBridgeVerdict {
   /** D-51-04: true when the bridge helper fell back to AppID 480
    * identity-only for this game (real-AppID init failed). */
   identityFallback?: boolean
+  /** Phase 54: the last PICS-resolved Windows launch entry (raw `executable`
+   * with Windows separators, plus `installdir`). Used only when PICS cannot
+   * answer at Play (a license-gated app with no open Steam session); the
+   * absolute path is rebuilt through sanitizeInstalldir on every read. */
+  launchTarget?: { executable: string; installdir: string }
   /** Quick 261024-br4: Steam DRM detected in the game exe by the
    * post-install PE scan (`peSteamDrm.ts`). 'ceg' means the exe carries
    * Steam CEG resources, which only a Windows Steam client can serve, so the
