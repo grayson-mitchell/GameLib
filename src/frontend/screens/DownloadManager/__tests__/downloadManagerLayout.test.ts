@@ -94,6 +94,41 @@ describe('exactly one progress bar on the page', () => {
   })
 })
 
+describe('Setup section (quick 261027-tot)', () => {
+  const page = read('index.tsx')
+  const SETUP_ITEM_IN_SECTION =
+    /<section className="dmSection">(?:(?!<\/section>)[\s\S])*<SetupDownloadItem\b/
+
+  it('the page renders <SetupDownloadItem inside a dmSection', () => {
+    expect(page).toMatch(SETUP_ITEM_IN_SECTION)
+    expect(page).toContain('gamelib:downloadManager.setup.title')
+  })
+
+  it('SANITY: the in-section detector rejects an item outside any section', () => {
+    expect(
+      '<section className="dmSection"></section><SetupDownloadItem row={r} />'
+    ).not.toMatch(SETUP_ITEM_IN_SECTION)
+    expect(
+      '<section className="dmSection"><div><SetupDownloadItem row={r} /></div></section>'
+    ).toMatch(SETUP_ITEM_IN_SECTION)
+  })
+
+  it('SetupDownloadItem adds no second bar block and no --divider token', () => {
+    const item = read('components', 'SetupDownloadItem', 'index.tsx')
+    const css = read('components', 'SetupDownloadItem', 'index.css')
+    expect(item).not.toMatch(SECOND_BAR_PATTERN)
+    expect(css).not.toMatch(SECOND_BAR_PATTERN)
+    expect(css).not.toMatch(DIVIDER_TOKEN_PATTERN)
+    expect(css).not.toMatch(CSS_URL_ART_PATTERN)
+  })
+
+  it('SetupDownloadItem uses literal translation keys for both labels', () => {
+    const item = read('components', 'SetupDownloadItem', 'index.tsx')
+    expect(item).toContain('gamelib:downloadManager.setup.steamClient')
+    expect(item).toContain('gamelib:downloadManager.setup.steamBottle')
+  })
+})
+
 describe('DownloadHero stylesheet', () => {
   const css = read('components', 'DownloadHero', 'index.css')
 
