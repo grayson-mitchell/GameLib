@@ -105,6 +105,16 @@
  *     (version sanitised, max 64 lines). NULLSRET is written only from this
  *     wire handler, which only the in-game shim drives.
  *
+ *   - REPORT_STUB_CALL (slot 8, quick 261027-jgs): argBlob is
+ *     {u32 kind, u32 slot, u32 vlen, u32 mlen, vlen bytes version, mlen bytes
+ *     method} (no NULs), sent by the shim the first time the GAME calls a
+ *     method the shim answers locally. kind: 0 stub, 1 fallback, 2 offpath,
+ *     3 null (x64 null-object slot; method empty). Authenticated only; logged
+ *     as `STUBCALL <ver>.<method> slot=<n> kind=<k>` (`<ver> slot=<n> kind=null`
+ *     for kind 3), version and method sanitised, max 256 lines plus one cap
+ *     line. STUBCALL is written only from this wire handler, which only the
+ *     in-game shim drives.
+ *
  *   - CREATE_INTERFACE (slot 3, Phase 52 / ROADMAP Scope 1): argBlob is a
  *     4-byte LE length + interface-version bytes (e.g. "SteamClient017").
  *     Asks the genuine native client (SteamInternal_CreateInterface)
@@ -191,6 +201,8 @@
 #define CONTROL_SLOT_DRAIN_CALLBACKS 6
 // quick 261027-ijs: the shim reports the first call of each per-version x64 sret null-object slot, logged as NULLSRET.
 #define CONTROL_SLOT_REPORT_NULL_SRET 7
+// quick 261027-jgs: the shim reports the first call of each locally-answered method or x64 null-object slot, logged as STUBCALL.
+#define CONTROL_SLOT_REPORT_STUB_CALL 8
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
@@ -593,6 +605,13 @@ static unsigned g_ginit_logged = 0;
 // exist, the shim is one-shot per site, and a game touches only a handful.
 #define NULLSRET_LOG_MAX 64
 static unsigned g_nullsret_logged = 0;
+// quick 261027-jgs (T-jgs-03): cap on STUBCALL lines per process. About 2000
+// manifest stub sites exist and the shim is one-shot per site, but ELEX alone
+// stubs 16 interfaces, so the cap is higher than NULLSRET's.
+#define STUBCALL_LOG_MAX 256
+static unsigned g_stubcall_logged = 0;
+static int g_stubcall_cap_noted = 0;
+static const char *const k_stubcall_kind[4] = {"stub", "fallback", "offpath", "null"};
 
 // T-52-09: bound to 128 chars and replace non-printable bytes so a
 // game-controlled version string cannot inject log lines.
@@ -808,6 +827,55 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       snprintf(nmsg, sizeof nmsg, "%s slot=%u size=%u", nsafe, (unsigned)nslot,
                (unsigned)nsize);
       logts("NULLSRET", nmsg);
+      send_response(fd, requestId, STATUS_OK, NULL, 0);
+      return;
+    }
+    if (slot == CONTROL_SLOT_REPORT_STUB_CALL) {
+      // quick 261027-jgs: answered regardless of g_inited; behind the auth
+      // gate. T-jgs-01: every bound is checked before any copy into the fixed
+      // buffers. T-jgs-02: version and method sanitised. Never pumps or
+      // dispatches.
+      if (argBlob == NULL || argLen < 16) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      uint32_t skind, sslot, svlen, smlen;
+      memcpy(&skind, argBlob, 4);
+      memcpy(&sslot, argBlob + 4, 4);
+      memcpy(&svlen, argBlob + 8, 4);
+      memcpy(&smlen, argBlob + 12, 4);
+      if (skind >= 4 || sslot >= 256 || svlen == 0 || svlen > 128 ||
+          smlen > 128 || (uint64_t)16 + svlen + smlen > argLen ||
+          (skind == 3) != (smlen == 0)) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      if (g_stubcall_logged >= STUBCALL_LOG_MAX) {
+        if (!g_stubcall_cap_noted) {
+          g_stubcall_cap_noted = 1;
+          logts("STUBCALL", "cap of 256 reached; later first calls are not logged");
+        }
+        send_response(fd, requestId, STATUS_OK, NULL, 0);
+        return;
+      }
+      g_stubcall_logged++;
+      char sver[129], smeth[129];
+      memcpy(sver, argBlob + 16, svlen);
+      sver[svlen] = '\0';
+      memcpy(smeth, argBlob + 16 + svlen, smlen);
+      smeth[smlen] = '\0';
+      char sverSafe[132], smethSafe[132];
+      sanitize_ver(sver, sverSafe, sizeof sverSafe);
+      sanitize_ver(smeth, smethSafe, sizeof smethSafe);
+      char smsg[320];
+      if (skind == 3) {
+        snprintf(smsg, sizeof smsg, "%s slot=%u kind=%s", sverSafe,
+                 (unsigned)sslot, k_stubcall_kind[skind]);
+      } else {
+        snprintf(smsg, sizeof smsg, "%s.%s slot=%u kind=%s", sverSafe,
+                 smethSafe, (unsigned)sslot, k_stubcall_kind[skind]);
+      }
+      logts("STUBCALL", smsg);
       send_response(fd, requestId, STATUS_OK, NULL, 0);
       return;
     }

@@ -129,7 +129,11 @@ export const CONTROL_SLOT = {
   // quick 261027-ijs: the shim reports the first call of each per-version x64
   // sret null-object slot; the helper logs `NULLSRET`. Nothing in the sidecar
   // sends this; it exists for the parity and helper tests.
-  reportNullSret: 7
+  reportNullSret: 7,
+  // quick 261027-jgs: the shim reports the first call of each locally-answered
+  // method / x64 null-object slot; the helper logs `STUBCALL`. Nothing in the
+  // sidecar sends this; it exists for the parity and helper tests.
+  reportStubCall: 8
 } as const
 
 /** Env var carrying the per-spawn secret backend -> helper (never argv). */

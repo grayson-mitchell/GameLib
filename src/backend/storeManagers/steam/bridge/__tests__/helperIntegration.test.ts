@@ -119,6 +119,21 @@ const describeDarwinOnly = IS_DARWIN ? describe : describe.skip
 const TEST_SECRET = 'c0ffee'.repeat(10) + 'abcd'
 const WRONG_SECRET = '0123456789abcdef'.repeat(4)
 
+// quick 261027-jgs: REPORT_STUB_CALL argBlob {u32 kind, u32 slot, u32 vlen, u32 mlen, ver, method}.
+function stubCallBlob(
+  kind: number,
+  slot: number,
+  ver: string,
+  method: string
+): Buffer {
+  const b = Buffer.alloc(16)
+  b.writeUInt32LE(kind, 0)
+  b.writeUInt32LE(slot, 4)
+  b.writeUInt32LE(Buffer.byteLength(ver), 8)
+  b.writeUInt32LE(Buffer.byteLength(method), 12)
+  return Buffer.concat([b, Buffer.from(ver), Buffer.from(method)])
+}
+
 /**
  * Resolves once `port` refuses a connection (the helper has really
  * exited), or rejects after a bounded number of attempts -- never an
@@ -982,6 +997,183 @@ describeDarwinOnly(
       }
     }, 20000)
 
+    // quick 261027-jgs: CONTROL REPORT_STUB_CALL (slot 8) logs STUBCALL for the
+    // first call of each locally-answered method / x64 null-object slot.
+    test('REPORT_STUB_CALL logs STUBCALL, rejects malformed frames, sanitises, caps at 256 with one cap line, never logs CALL', async () => {
+      const STUBCALL_MAX = 256
+      const stageDir = mkdtempSync(join(profile.root, 'report-stubcall-'))
+      const child = spawn(
+        compiledHelperPath,
+        ['--appid', '480', '--port', '0'],
+        {
+          cwd: stageDir,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: authedEnv()
+        }
+      )
+      let stderr = ''
+      child.stderr?.on('data', (data: Buffer) => {
+        stderr += data.toString()
+      })
+      const rawBlob = (
+        kind: number,
+        slot: number,
+        vlen: number,
+        mlen: number,
+        tail: Buffer
+      ) => {
+        const b = Buffer.alloc(16)
+        b.writeUInt32LE(kind, 0)
+        b.writeUInt32LE(slot, 4)
+        b.writeUInt32LE(vlen, 8)
+        b.writeUInt32LE(mlen, 12)
+        return Buffer.concat([b, tail])
+      }
+      const req = (id: number, blob: Buffer) =>
+        encodeRequest(id, CONTROL_ORDINAL, CONTROL_SLOT.reportStubCall, blob)
+      const frame = (
+        id: number,
+        kind: number,
+        slot: number,
+        ver: string,
+        method: string
+      ) => req(id, stubCallBlob(kind, slot, ver, method))
+      try {
+        const port = await new Promise<number>((resolvePromise, reject) => {
+          const timeout = setTimeout(
+            () => reject(new Error(`no LISTEN line -- stderr: ${stderr}`)),
+            5000
+          )
+          const poll = setInterval(() => {
+            const m = /LISTEN 127\.0\.0\.1:(\d+)/.exec(stderr)
+            if (m) {
+              clearInterval(poll)
+              clearTimeout(timeout)
+              resolvePromise(Number(m[1]))
+            }
+          }, 25)
+        })
+        const socket = new Socket()
+        await new Promise<void>((res, rej) => {
+          socket.once('error', rej)
+          socket.connect(port, '127.0.0.1', () => res())
+        })
+        await authenticate(socket)
+        try {
+          const V = 'STEAMAPPS_INTERFACE_VERSION008'
+          for (const [i, kind, name] of [
+            [1, 0, 'stub'],
+            [2, 1, 'fallback'],
+            [3, 2, 'offpath']
+          ] as const) {
+            expect(
+              (
+                await sendFrameOnSocket(
+                  socket,
+                  frame(i, kind, 4, V, 'GetDLCCount')
+                )
+              ).status
+            ).toBe(STATUS_OK)
+            await new Promise((r) => setTimeout(r, 50))
+            expect(stderr).toContain(
+              ` STUBCALL ${V}.GetDLCCount slot=4 kind=${name}\n`
+            )
+          }
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                frame(4, 3, 12, 'STEAMREMOTESTORAGE_INTERFACE_VERSION014', '')
+              )
+            ).status
+          ).toBe(STATUS_OK)
+          await new Promise((r) => setTimeout(r, 50))
+          expect(stderr).toMatch(
+            /STUBCALL STEAMREMOTESTORAGE_INTERFACE_VERSION014 slot=12 kind=null\n/
+          )
+
+          const before = stderr.length
+          const ok = Buffer.from('Ver')
+          const meth = Buffer.from('Meth')
+          const bad = [
+            req(10, Buffer.alloc(15)),
+            req(11, rawBlob(4, 1, 3, 4, Buffer.concat([ok, meth]))),
+            req(12, rawBlob(0, 256, 3, 4, Buffer.concat([ok, meth]))),
+            req(13, rawBlob(0, 1, 0, 4, meth)),
+            req(
+              14,
+              rawBlob(
+                0,
+                1,
+                129,
+                4,
+                Buffer.concat([Buffer.alloc(129, 0x41), meth])
+              )
+            ),
+            req(
+              15,
+              rawBlob(
+                0,
+                1,
+                3,
+                129,
+                Buffer.concat([ok, Buffer.alloc(129, 0x41)])
+              )
+            ),
+            // vlen + mlen larger than the bytes supplied
+            req(
+              16,
+              rawBlob(0, 1, 3, 10, Buffer.concat([ok, Buffer.from('ab')]))
+            ),
+            // kind 3 must have an empty method
+            req(17, rawBlob(3, 1, 3, 4, Buffer.concat([ok, meth]))),
+            // kind 0-2 must carry a method
+            req(18, rawBlob(0, 1, 3, 0, ok)),
+            req(19, rawBlob(2, 1, 3, 0, ok))
+          ]
+          for (const f of bad) {
+            expect((await sendFrameOnSocket(socket, f)).status).toBe(STATUS_ERR)
+          }
+          await new Promise((r) => setTimeout(r, 100))
+          expect(stderr.slice(before)).not.toMatch(/STUBCALL/)
+
+          // Control bytes never reach the log raw.
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                frame(30, 0, 3, 'Evil\nFAKE  x', 'Me\nth')
+              )
+            ).status
+          ).toBe(STATUS_OK)
+          await new Promise((r) => setTimeout(r, 100))
+          expect(stderr).toMatch(
+            /STUBCALL Evil\?FAKE {2}x\.Me\?th slot=3 kind=stub\n/
+          )
+          expect(stderr).not.toContain('Evil\nFAKE')
+
+          for (let i = 0; i < STUBCALL_MAX + 5; i++) {
+            const res = await sendFrameOnSocket(
+              socket,
+              frame(100 + i, 0, 5, 'V', 'M')
+            )
+            expect(res.status).toBe(STATUS_OK)
+          }
+        } finally {
+          socket.destroy()
+        }
+        await new Promise((r) => setTimeout(r, 100))
+        const lines = stderr.split('\n').filter((l) => /STUBCALL /.test(l))
+        expect(lines).toHaveLength(STUBCALL_MAX + 1)
+        expect(lines[lines.length - 1]).toMatch(
+          /STUBCALL cap of 256 reached; later first calls are not logged$/
+        )
+        expect(stderr).not.toMatch(/\] CALL /)
+      } finally {
+        child.kill()
+      }
+    }, 30000)
+
     // Phase 55 (55-03, P55-5): CONTROL DRAIN (slot 6) answers OK count 0 with
     // no Steam, rejects args, and fabricates nothing.
     test('DRAIN answers OK count 0 when not inited, rejects args, and fabricates nothing (P55-5)', async () => {
@@ -1127,7 +1319,8 @@ describeDarwinOnly(
             [4, CONTROL_SLOT.createInterface, nameBlob],
             [5, CONTROL_SLOT.reportVersion, nameBlob],
             [6, CONTROL_SLOT.reportInit, Buffer.alloc(8)],
-            [9, CONTROL_SLOT.reportNullSret, nullSretBlob]
+            [9, CONTROL_SLOT.reportNullSret, nullSretBlob],
+            [10, CONTROL_SLOT.reportStubCall, stubCallBlob(0, 4, 'abcd', 'M')]
           ] as const) {
             expect(
               (
@@ -1150,7 +1343,7 @@ describeDarwinOnly(
         }
         await settle()
         const added = h.getStderr().slice(before)
-        expect(added).not.toMatch(/CALL|NOVER|GINIT|FWD|NULLSRET/)
+        expect(added).not.toMatch(/CALL|NOVER|GINIT|FWD|NULLSRET|STUBCALL/)
         expect(added).toMatch(/AUTH {1,}refused/)
         expect(h.getStderr()).not.toContain(TEST_SECRET)
       } finally {
