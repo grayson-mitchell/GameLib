@@ -61,7 +61,6 @@ export type MacSteamWrapKind =
 
 // ts-prune-ignore-next
 export type MacSteamRestoreTrigger = 'boot' | 'shutdown'
-// ts-prune-ignore-next
 export type MacSteamRestoreOutcome =
   | 'not-darwin'
   | 'not-owed'

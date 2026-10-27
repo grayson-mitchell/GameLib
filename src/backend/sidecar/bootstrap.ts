@@ -36,6 +36,7 @@ import { join } from 'node:path'
 import Backend from 'i18next-fs-backend'
 import i18next from 'i18next'
 import * as electronStub from '../platform'
+import { restoreMacSteamOnlineIfOwed } from '../storeManagers/steam/macSteamOffline'
 import { startInstalledJsonWatcher } from './installedJsonWatcher'
 import { releaseOnStdinEof } from './stdinEofRelease'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
@@ -1098,6 +1099,9 @@ export function init(
     openExternal: requestOpenExternal,
     pushFrontendMessage
   })
+  // Owed Mac Steam goonline, three layers: routed quit (handleExit), stdin EOF
+  // (releaseOnStdinEof), and this boot call. kill -9 of the sidecar is covered ONLY here.
+  void restoreMacSteamOnlineIfOwed('boot')
   // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
   // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
   // only fire from the RPC loop below, never at module-import time) so no handler ever

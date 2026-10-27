@@ -44,6 +44,7 @@ import {
 } from './storeManagers/gog/electronStores'
 import gogPresence from './storeManagers/gog/presence'
 import { libraryManagerMap } from './storeManagers'
+import { SteamUser } from './storeManagers/steam/user'
 import { resolveTitleForGame } from './utils/gameTitle'
 import {
   installStore as nileInstallStore,
@@ -323,6 +324,9 @@ async function handleExit() {
   }
 
   mainWindow?.hide()
+  // Routed-quit layer: log the CM client off and pay any owed Mac Steam goonline. It must finish
+  // before app.exit(), which leads to shutdown_child()'s group SIGTERM within milliseconds.
+  await SteamUser.releaseForShutdown()
   await gogPresence.deletePresence()
 
   // Quick task 260907-juv, Layer A: tear down every registered long-lived child

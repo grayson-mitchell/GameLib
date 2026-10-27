@@ -654,7 +654,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         )
       ).toBe(true)
       expect(mockedShutdownLongLivedChildren).not.toHaveBeenCalled()
-      expect(mockRestoreMacSteamOnlineIfOwed).not.toHaveBeenCalled()
+      expect(mockRestoreMacSteamOnlineIfOwed).not.toHaveBeenCalledWith(
+        'shutdown'
+      )
     })
   })
 
