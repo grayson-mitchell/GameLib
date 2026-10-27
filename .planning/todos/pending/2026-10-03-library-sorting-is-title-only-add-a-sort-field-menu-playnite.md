@@ -12,6 +12,7 @@ files:
   - src/backend/launcher.ts:155-156,302-308
   - src/frontend/helpers/electronStores.ts:190
   - src/common/types.ts:411
+  - src/backend/storeManagers/steam/library.ts:1237
 
 audit_acknowledged:
   milestone: v0.8
@@ -40,10 +41,16 @@ All locked.
   fields **Name**, **Last played** and **Install size**. A SEPARATE group-by control replaces
   `sortInstalled`, with **None / Install status / Store**. Unknown values (never launched, not
   installed, unparseable size) sort LAST in both directions.
-- **Last played comes from GameLib's own `tsStore` / `timestampStore` `lastPlayed` ONLY.** The
-  operator's reasoning: it is a GameLib fact, "last launched from GameLib". Do NOT merge Steam's
-  `extra.steamLastPlayed`. The label should reflect GameLib launches if the UI has room; that is an
-  implementation detail, not locked. See the Steam consequence under Corrections.
+- **Last played is sourced per runner (operator, 2026-10-27, revised).**
+  - **Non-Steam runners:** GameLib's own `tsStore` / `timestampStore` `lastPlayed` (ISO string).
+    This is a GameLib fact, "last launched from GameLib".
+  - **Steam:** `extra.steamLastPlayed` (Unix seconds, from `rtime_last_played`), which is Steam's
+    own "last played anywhere". Steam launches never write `tsStore` (see Corrections), so this is
+    the only source. `0` or `undefined` means never played and is an unknown value that sorts last.
+  - The two meanings differ, and the operator accepted that knowingly. Normalise both to epoch ms
+    before comparing. Do not also read `tsStore` for Steam, and do not add a `tsStore` write to
+    `dispatchSteamLaunch`; both were considered and declined.
+  - The label wording is an implementation detail, not locked.
 - **Won't do: Playtime.** `tsStore` `totalPlayed` only counts GameLib launches, so it would show a
   false total for games played elsewhere. The operator rejected it.
 - **Won't do: Date purchased / Date added.** Only GOG has a real ownership date
@@ -83,19 +90,18 @@ Line citations below were measured on 2026-10-03; those files are no longer in `
   for Epic, GOG, Amazon, Zoom and sideloaded games. The frontend reads it via `timestampStore`
   (`frontend/helpers/electronStores.ts:190`; used at `Game/TimeContainer/index.tsx:21`). It only
   covers launches through GameLib.
-- **Steam consequence, measured 2026-10-27 — this contradicts the premise the decision was made on.**
+- **Steam launches bypass `tsStore` (measured 2026-10-27). Resolved: Steam uses
+  `extra.steamLastPlayed`, as recorded under Decisions.** The original "tsStore only" decision was
+  made on the false premise that Steam launches write `tsStore`. The measurement that overturned it:
   Steam launches do NOT pass through `launchEventCallback`, so nothing writes `tsStore` for them.
   `protocol.ts:206-217` routes `runner === 'steam'` to `dispatchSteamLaunch`
   (`steam/launchDispatch.ts:43`), which calls `game.launch()` and `addRecentGame()` and never
   touches `tsStore`; a grep for `tsStore|timestampStore` under `src/backend/storeManagers/` and
   `src/backend/sidecar/` finds only the store registration. `Game/TimeContainer/index.tsx:64-67`
-  says the same: "GamerLib never records local timestamps for Steam titles". With the decision as
-  locked (tsStore only, no `steamLastPlayed` merge), every Steam game has an unknown Last played and
-  sorts last in both directions. That is consistent with the unknowns-last rule, but the Last
-  played field is then blank for the Steam library. Either confirm that outcome with the operator,
-  or have `dispatchSteamLaunch` write `firstPlayed` / `lastPlayed` to `tsStore` (no `totalPlayed`,
-  since the session end of a `steam://` handoff is unobserved). Do not silently merge
-  `extra.steamLastPlayed`.
+  says the same: "GamerLib never records local timestamps for Steam titles". Under "tsStore only",
+  Last played would have been blank for every Steam game. The operator weighed three options: a
+  `tsStore` write in `dispatchSteamLaunch`, Steam's own `steamLastPlayed`, or leaving Steam blank.
+  They chose `steamLastPlayed`.
 - The old "release date (partial coverage)" understated the gap. See Deferred above.
 - **Trap 1 stands:** `InstalledInfo.install_size` is a `string` (`types.ts:411`), not a number — a
   size sort needs a parse, and an unparseable value must not sort as zero; it sorts last.
