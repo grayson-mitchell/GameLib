@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-27 - Completed quick task 261027-m1r: Wine PE harness confirms x86 callback 168 thiscall dispatch
+Last activity: 2026-10-27 - Completed quick task 261027-nd3: bridge shared redists run under Wine's null display driver
 
 Progress: [██████████] 100%
 
@@ -433,6 +433,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast | Library-sorting todo: Last played for Steam uses `extra.steamLastPlayed` (operator option 2); non-Steam keeps `tsStore`. Closes the open Steam question from 261027-ish. | 2026-10-27 | `4587143e1` | planning-gates 12/12 | — |
 | fast | XCOM 200510's redundant `drm-wrapped` knownBad entry removed from `bridge-allowlist.json`; its known-fix `drm: "ceg"` (261027-gtd) routes it pre-download. The 51-UAT item 5/17 evidence moved into the known-fix drm note. Committed only these hunks; the uncommitted Unclaimed World 284100 entry was left in place | 2026-10-27 | 8048cab9b | Done | — |
 | fast | Phase 54 takes the go-offline wrap into scope (spike 046): ROADMAP success criterion 6 and 54-RESEARCH Finding 10 / Pattern 3 (`steam://open/gooffline` -> logOn -> `goonline`, LogOff-evidence gate, `autoRelogin` off); Finding 5 accepted-sign-out, A7, OQ4, UAT 4 superseded. | 2026-10-27 | bae44255a | Done | — |
+| 261027-nd3 | The bridge shared-redist step now runs its installers under Wine's null display driver, so the vcredists no longer flash Dock icons on a first launch. Just before the first real installer, `run()` switches this game's own bottle to `Graphics=null` and ends the session with `wineserver -k` (`endPerGameBridgeBottleSession`). A `finally` restores the exact prior value, checks it with a read-back and ends the session again. A ledger `displayDriver` marker lets the next launch repair a crashed or failed restore. The desk probe showed vcredist x86/x64 and DXSETUP install identically under the null driver and none of them registers with the Dock. The todo stays in `pending/` (live-gate). | 2026-10-27 | `51d26a695`, `2ac9d00e7` | steam jest 73 suites / 2850 tests (executor), touched suites 283/283 re-run by the orchestrator, tsc + scoped prettier clean. **Not live-gated:** a real 1363080 first launch with `lsappinfo`; the cost of the extra session ends is unmeasured. | [261027-nd3-run-bridge-shared-redist-step-under-wine](./quick/261027-nd3-run-bridge-shared-redist-step-under-wine/) |
 
 ## Deferred Items
 

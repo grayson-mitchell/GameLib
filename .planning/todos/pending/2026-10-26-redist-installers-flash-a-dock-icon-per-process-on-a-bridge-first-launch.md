@@ -41,7 +41,19 @@ icons per first launch.
 
 ## Solution
 
-TBD. The candidate, untested: switch the bottle to Wine's null display driver
+**Implemented 2026-10-27 in quick 261027-nd3 (`51d26a695`, `2ac9d00e7`). Only the live gate below
+remains.** Desk probe first: two fresh scratch win10_64 bottles. On the Mac driver, VC_redist x86
+and x64 each registered two `Foreground` apps. DXSETUP registered only a BackgroundOnly
+`explorer.exe`, so it was never one of the icons. On `Graphics=null`, none of the three
+registered any app, and all three installed identically: the vcredist logs read
+`WixBundleInstalled = 0`, `Exit code: 0x0`, with the same `msvcp140.dll`, and DXSETUP exited 0.
+Run times were unchanged. Point 1 passes. Points 2 and 3 are covered as follows. `run()` switches
+lazily, just before the first real installer, and only in `GameLibSteamBridge-<appId>`, ending
+the session with `wineserver -k`. A `finally` restores the exact prior value, checks it with a
+read-back and ends the session again. A ledger `displayDriver` marker heals a crashed or failed
+restore at the next launch. The cost is still unmeasured.
+
+The original candidate, as first written: switch the bottle to Wine's null display driver
 (`HKCU\Software\Wine\Drivers` `Graphics=null`) only for the redist step, and restore it before the
 game launches. Bridge bottles hold one game each, and the step already finishes before the
 monitor and game start (`fireBridgeWineLaunch`), so the window is clean. What must be proven:
