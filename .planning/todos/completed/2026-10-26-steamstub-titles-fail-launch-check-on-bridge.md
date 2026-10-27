@@ -46,3 +46,29 @@ Steam parity for new installs.
 
 Done-when: Grim Dawn either launches through the bridge or has a recorded reason it cannot, and
 items 2 and 3 each have a recorded decision (implemented or explicitly declined).
+
+## Resolution
+
+Closed 2026-10-27 by operator decision. Each item has a recorded outcome.
+
+- **1. Grim Dawn: recorded reason, follow-up is Phase 56.** The investigation this item asked for
+  is already done in spikes 040, 041 and 044. SteamStub 3.1 on Grim Dawn and Raft arms module
+  verification, and the stub checks that the file in `ActiveProcess\SteamClientDll64` is Valve's
+  signed client. GameLib's forwarder fails it (`Application load error 3:0000065432`, 041 a1),
+  however well it answers `CreateInterface`. The user's genuine `steamclient64.dll` passes the file
+  check, then looks for `Steam3Master_SharedMemLock` and falls back to `steam://run` (041 b1). No
+  change to the forwarder can satisfy this in-bottle. Spike 044 got Grim Dawn to its menu with a
+  genuine CDN-fetched client trampolined to `lsteamclient` under NotProton, which is 043's adoption
+  option 2. The user ruled it in bounds on 2026-10-27. Phase 56 (*Bridge steamclient-layer DRM mode
+  for SteamStub titles*) builds it. Raft and Ranch Simulator are targets there too.
+- **2. Never-withhold for DRM titles: declined.** A SteamStub title fails today whether the shim is
+  placed or withheld. Placed, it fails the file check above; withheld, it finds no Windows Steam
+  (the 15:58 run). Never-withhold would swap one failure for another. Under Phase 56's mode the
+  game's own `steam_api` runs behind the genuine client with no GameLib shim at all, so forcing
+  placement for DRM titles points the wrong way. `shimGenerate.ts` is unchanged, and 261026-mhg's
+  grep gate against a drmWrapper withhold rule stays.
+- **3. Skipping first-launch redists on bottles that already ran: declined.** The redist step is
+  gated by the per-bottle ledger `gamelib-shared-redists.json` and never re-runs once settled, so the
+  cost is once per bottle. On 2026-10-27, 13 of the 15 `GameLibSteamBridge-*` bottles on the dev
+  machine had a settled ledger; only 1119730 and 648410 had none. GameLib also has no reliable
+  "launched successfully before" signal to gate a skip on. Steam parity is kept for every bottle.
