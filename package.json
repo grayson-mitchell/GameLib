@@ -44,6 +44,7 @@
     "test": "jest",
     "test-watch": "jest --watch --maxWorkers=25%",
     "test:ci": "jest --maxWorkers=2 --silent",
+    "test:x86-callback-wine": "cross-env GAMELIB_REQUIRE_WINE_HARNESS=1 jest --selectProjects Meta --runTestsByPath meta/__tests__/x86CallbackWineHarness.test.ts",
     "lint": "node meta/lintScoped.cjs",
     "lint:src": "node meta/lintScoped.cjs --src",
     "lint:tests": "node meta/lintScoped.cjs --tests",
