@@ -50,6 +50,10 @@ Filled in by the planner/executor per task. Requirement → test anchors:
 | P54-SC4 | `depot.ts` uses persisted SteamID, not `client.steamID` | unit | `npx jest src/backend/storeManagers/steam/__tests__/depot.finalize.test.ts` | extend | ⬜ pending |
 | Roadmap SC6 | Go-offline wrap: already offline, LogOff seen, LogOff not seen (guided fallback, no logon), logon throws (`goonline` fires), non-macOS passthrough, `autoRelogin: false`, relog/reconnect re-enter the wrap | unit | `npx jest src/backend/storeManagers/steam/__tests__/macSteamOfflineWrap.test.ts` | ❌ W0 | ⬜ pending |
 | P54-SC7 | Sidecar exits on stdin EOF; new timers `unref`'d | smoke | `pnpm smoke:sidecar` | ✅ | ⬜ pending |
+| Gap (54-12) | Owed-goonline marker: written before gooffline, cleared after goonline, kept on LogOff-not-seen; owner pid (live non-self owner never acted on); per-trigger flights (shutdown never waits on boot confirm); stale `Logged On` older than `since` never clears; no marker means no spawn | unit | `npx jest src/backend/storeManagers/steam/__tests__/macSteamOnlineDebt.test.ts src/backend/storeManagers/steam/__tests__/macSteamOfflineWrap.test.ts` | ❌ 54-12 Task 1 | ⬜ pending |
+| Gap (54-13) | `releaseForShutdown` restores after `logOff` (incl. no client); stdin EOF voids it; `handleExit` awaits it before `app_exit`; `init()` fires the boot restore after `bindTransport` | unit | `npx jest src/backend/storeManagers/steam/__tests__/authSessionLifecycle.test.ts src/backend/sidecar/__tests__/appShellFlows.test.ts src/backend/sidecar/__tests__/bootstrap.test.ts src/backend/sidecar/__tests__/stdinEofRelease.test.ts` | extend | ⬜ pending |
+| Gap (54-13) | Boot restore adds no exit-blocking work with no marker | smoke | `pnpm smoke:sidecar` | ✅ | ⬜ pending |
+| Gap (54-14 -> 54-11) | Quit / shell kill / kill -9 mid-wrap leave Mac Steam online after the next launch (WantsOfflineMode 0); a user's own offline survives quit and relaunch | manual (live gate items 10-13) | see 54-LIVE-GATE.md items 10-13 | ❌ 54-14 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
