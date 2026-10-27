@@ -187,3 +187,17 @@ export type SteamBottleLaunchWaitingCause =
   | 'self-update'
   | 'login'
   | 'other-session'
+
+/** Phase 54: what the guided Go Offline step was asked for. */
+export type SteamGoOfflineAction = 'refresh' | 'install' | 'redeem'
+
+/** Phase 54: backend push (`steamGoOfflineRequired`) payload. */
+export interface SteamGoOfflinePayload {
+  action: SteamGoOfflineAction
+  appName?: string
+}
+
+/** Phase 54: result of the renderer's `steamGoOfflineRetry` invoke. */
+export type SteamGoOfflineRetryResult = {
+  status: 'ready' | 'still-online' | 'not-macos'
+}

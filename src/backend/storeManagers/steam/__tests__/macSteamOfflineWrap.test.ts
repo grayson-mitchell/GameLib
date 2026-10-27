@@ -6,6 +6,14 @@ import * as fs from 'fs'
 import * as os from 'os'
 import { join } from 'path'
 
+// fs namespace properties are non-configurable, so wrap the two calls the
+// fd-leak assertions need in jest.fn passthroughs.
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  openSync: jest.fn(),
+  closeSync: jest.fn()
+}))
+
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
@@ -69,6 +77,14 @@ function makeDeps(
 }
 
 beforeEach(() => {
+  // resetMocks: true wipes jest.fn implementations before every test.
+  const actualFs = jest.requireActual<typeof fs>('fs')
+  ;(fs.openSync as jest.Mock).mockImplementation(
+    (...a: Parameters<typeof fs.openSync>) => actualFs.openSync(...a)
+  )
+  ;(fs.closeSync as jest.Mock).mockImplementation(
+    (...a: Parameters<typeof fs.closeSync>) => actualFs.closeSync(...a)
+  )
   dir = fs.mkdtempSync(join(os.tmpdir(), 'gamelib-macsteam-'))
   logPath = join(dir, 'connection_log.txt')
   clock = 0
@@ -78,7 +94,6 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  jest.restoreAllMocks()
   fs.rmSync(dir, { recursive: true, force: true })
 })
 
@@ -194,7 +209,8 @@ describe('withMacSteamOffline', () => {
   it.each(['win32', 'linux'] as const)(
     '%s passes straight through: no URL, no fs read',
     async (platform) => {
-      const open = jest.spyOn(fs, 'openSync')
+      const open = fs.openSync as jest.Mock
+      open.mockClear()
       const connect = jest.fn().mockResolvedValue('v')
       const r = await withMacSteamOffline(connect, makeDeps({ platform }))
       expect(connect).toHaveBeenCalledWith('not-darwin')
@@ -248,8 +264,10 @@ describe('guided restore', () => {
 describe('watchConnectionLog', () => {
   it('closes every fd it opens and carries a partial last line across polls', async () => {
     fs.writeFileSync(logPath, ONLINE_LINE)
-    const openSpy = jest.spyOn(fs, 'openSync')
-    const closeSpy = jest.spyOn(fs, 'closeSync')
+    const openSpy = fs.openSync as jest.Mock
+    const closeSpy = fs.closeSync as jest.Mock
+    openSpy.mockClear()
+    closeSpy.mockClear()
     let polls = 0
     const deps = {
       now: () => clock,

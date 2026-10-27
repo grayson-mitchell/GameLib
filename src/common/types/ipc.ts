@@ -69,6 +69,8 @@ import type {
   SteamBottleLaunchWaitingCause,
   SteamBridgeKnownBadReason,
   SteamBridgeRouteReason,
+  SteamGoOfflinePayload,
+  SteamGoOfflineRetryResult,
   SteamBridgeRouteVerdict,
   SteamUserData
 } from './steam'
@@ -365,6 +367,9 @@ interface AsyncIPCFunctions {
   steamFinishBottledInstall: (
     appId: string
   ) => Promise<{ status: 'done' | 'error'; error?: string }>
+  // Phase 54: sidecar-only, registered by plan 07. The renderer's Continue
+  // button on the guided Go Offline step; arms the one-shot guided restore.
+  steamGoOfflineRetry: () => Promise<SteamGoOfflineRetryResult>
   // Phase 34.13 (34.13-07), D-14: persists the install form's chosen wine
   // engine into steamBottleConfigStore via bottle.ts's own
   // persistBottleWineVersion() primitive, after validating the untrusted
@@ -789,6 +794,9 @@ interface FrontendMessages {
   // informational notice (it used to be a bottle notice).
   // `userRoute` is sent back unchanged on acknowledgement so an existing
   // override is never wiped.
+  // Phase 54: user.ts acquireAuthenticated emits when the go-offline wrap did
+  // not see Mac Steam log off; SteamGoOfflineNotice.ts subscribes.
+  steamGoOfflineRequired: (payload: SteamGoOfflinePayload) => void
   steamBridgeRouteNotice: (payload: {
     appName: string
     reason: SteamBridgeRouteReason
