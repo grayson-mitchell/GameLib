@@ -37,7 +37,7 @@ export function releaseOnStdinEof(input: Readable): void {
     if (released) return
     released = true
     logInfo(
-      '[sidecar] stdin closed: releasing Steam CM session and aborting in-flight downloads',
+      '[sidecar] stdin closed: releasing Steam CM session, paying any owed Mac Steam goonline and aborting in-flight downloads',
       LogPrefix.Backend
     )
     try {
@@ -50,7 +50,7 @@ export function releaseOnStdinEof(input: Readable): void {
     } catch {
       // best-effort: still release the CM socket below
     }
-    SteamUser.releaseForShutdown()
+    void SteamUser.releaseForShutdown()
   }
   input.once('end', release)
   input.once('close', release)

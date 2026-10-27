@@ -21,6 +21,8 @@ import {
 import {
   withMacSteamOffline,
   GuidedOfflineRequiredError,
+  restoreMacSteamOnlineIfOwed,
+  type MacSteamRestoreOutcome,
   type MacSteamWrapKind
 } from './macSteamOffline'
 import { platform } from 'process'
@@ -803,21 +805,25 @@ export class SteamUser {
    * Measured (debug/sidecar-survives-force-quit): an anonymous-logged-on client keeps a bare
    * node process alive indefinitely; `logOff()` lets it drain in ~100ms. Called on stdin EOF.
    * Unlike logout() this clears no token and no stored session -- the user stays signed in.
+   * The release also pays any goonline the go-offline wrap owes, after logOff, so no GameLib
+   * logon can land once Mac Steam reconnects.
    */
-  static releaseForShutdown(): void {
+  static releaseForShutdown(): Promise<MacSteamRestoreOutcome> {
     this.shuttingDown = true
     this.clearIdleTimer()
     releaseAnonymousForShutdown()
     const client = this.client
-    if (!client) return
-    try {
-      client.logOff()
-    } catch (err) {
-      logWarning(
-        ['Steam client logOff error during shutdown release:', err],
-        LogPrefix.Steam
-      )
+    if (client) {
+      try {
+        client.logOff()
+      } catch (err) {
+        logWarning(
+          ['Steam client logOff error during shutdown release:', err],
+          LogPrefix.Steam
+        )
+      }
     }
+    return restoreMacSteamOnlineIfOwed('shutdown')
   }
 
   private static connectSteamUserClient(
