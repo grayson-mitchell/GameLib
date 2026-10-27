@@ -263,6 +263,50 @@ describe('protocol -- CONTROL_SLOT.reportStubCall (quick 261027-jgs)', () => {
   })
 })
 
+describe('protocol -- CONTROL_SLOT.requestCurrentStats (quick 261027-k51)', () => {
+  it('is 9 and equals the shim and helper #define values', () => {
+    expect(CONTROL_SLOT.requestCurrentStats).toBe(9)
+    const root = join(__dirname, '..', '..', '..', '..', '..', '..')
+    const shim = readFileSync(
+      join(root, 'native/steam-bridge/generated/steam_api_shim.c'),
+      'utf-8'
+    )
+    const helper = readFileSync(
+      join(root, 'native/steam-bridge/helper/bridge_helper.c'),
+      'utf-8'
+    )
+    const shimValue =
+      /#define BRIDGE_CONTROL_SLOT_REQUEST_CURRENT_STATS (\d+)/.exec(shim)
+    const helperValue = /#define CONTROL_SLOT_REQUEST_CURRENT_STATS (\d+)/.exec(
+      helper
+    )
+    expect(Number(shimValue![1])).toBe(CONTROL_SLOT.requestCurrentStats)
+    expect(Number(helperValue![1])).toBe(CONTROL_SLOT.requestCurrentStats)
+  })
+})
+
+describe('protocol -- CONTROL_SLOT.reportCbDispatch (quick 261027-k51)', () => {
+  it('is 10 and equals the shim and helper #define values', () => {
+    expect(CONTROL_SLOT.reportCbDispatch).toBe(10)
+    const root = join(__dirname, '..', '..', '..', '..', '..', '..')
+    const shim = readFileSync(
+      join(root, 'native/steam-bridge/generated/steam_api_shim.c'),
+      'utf-8'
+    )
+    const helper = readFileSync(
+      join(root, 'native/steam-bridge/helper/bridge_helper.c'),
+      'utf-8'
+    )
+    const shimValue =
+      /#define BRIDGE_CONTROL_SLOT_REPORT_CB_DISPATCH (\d+)/.exec(shim)
+    const helperValue = /#define CONTROL_SLOT_REPORT_CB_DISPATCH (\d+)/.exec(
+      helper
+    )
+    expect(Number(shimValue![1])).toBe(CONTROL_SLOT.reportCbDispatch)
+    expect(Number(helperValue![1])).toBe(CONTROL_SLOT.reportCbDispatch)
+  })
+})
+
 describe('protocol -- WR-03 secret/role constants match the shim and helper', () => {
   const root = join(__dirname, '..', '..', '..', '..', '..', '..')
   const shim = readFileSync(

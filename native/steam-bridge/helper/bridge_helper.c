@@ -81,7 +81,8 @@
  * local user, and the callback ring can hold a Steam web-API auth ticket.
  * HEALTH and HELLO are the ONLY slots served on an unauthenticated
  * connection. WHOAMI, CREATE_INTERFACE, REPORT_VERSION, REPORT_INIT,
- * REPORT_NULL_SRET, DRAIN and
+ * REPORT_NULL_SRET, REPORT_STUB_CALL, REQUEST_CURRENT_STATS,
+ * REPORT_CB_DISPATCH, DRAIN and
  * every interface ordinal answer STATUS_ERR (empty ret, connection kept
  * open) until a matching HELLO. The ring is bound to the launch secret, NOT to
  * a socket: it is never cleared on accept or close, because the shim
@@ -114,6 +115,25 @@
  *     for kind 3), version and method sanitised, max 256 lines plus one cap
  *     line. STUBCALL is written only from this wire handler, which only the
  *     in-game shim drives.
+ *
+ *   - REQUEST_CURRENT_STATS (slot 9, quick 261027-k51): empty argBlob, sent by
+ *     the shim on EVERY game call to ISteamUserStats::RequestCurrentStats (a
+ *     shim-local fallback, because the Mac libsteam_api has no such export).
+ *     Authenticated only; always answers STATUS_OK with an empty ret (the
+ *     game's fallback still returns 1). The helper pumps once, then queues the
+ *     cached UserStatsReceived_t (1101) if it has one, does nothing if a 1101
+ *     is already queued, and otherwise calls RequestUserStats for the local
+ *     user (at most one fetch in flight) and forwards the next own-app 1101.
+ *     Logged as `STATS  request ...` (integers and fixed words only, never a
+ *     SteamID, gameID or call handle; max 32 lines plus one cap line). Never
+ *     sleeps, never logs CALL.
+ *
+ *   - REPORT_CB_DISPATCH (slot 10, quick 261027-k51): argBlob is exactly 12
+ *     bytes {i32 iCallback, u32 ndispatched, u32 held}, sent by the shim for
+ *     each relayed callback it dispatched or held. Authenticated only; the id
+ *     must be allowlisted, ndispatched <= 512, held 0 or 1, else STATUS_ERR
+ *     with no log. Logged as `CBDISP iCallback=<id> targets=<n> held=<h>`
+ *     (max 32 lines plus one cap line). Never pumps, never logs CALL.
  *
  *   - CREATE_INTERFACE (slot 3, Phase 52 / ROADMAP Scope 1): argBlob is a
  *     4-byte LE length + interface-version bytes (e.g. "SteamClient017").
@@ -197,12 +217,16 @@
 // emitted ONLY from this wire handler, so this helper's own in-process
 // SteamAPI_InitFlat (logged as INIT) can never produce one.
 #define CONTROL_SLOT_REPORT_INIT 5
-// Phase 55: the shim drains queued Steam callbacks (only 168 today) from RunCallbacks; pull-only, one message per round trip.
+// Phase 55: the shim drains queued Steam callbacks (168 and 1101) from RunCallbacks; pull-only, one message per round trip.
 #define CONTROL_SLOT_DRAIN_CALLBACKS 6
 // quick 261027-ijs: the shim reports the first call of each per-version x64 sret null-object slot, logged as NULLSRET.
 #define CONTROL_SLOT_REPORT_NULL_SRET 7
 // quick 261027-jgs: the shim reports the first call of each locally-answered method or x64 null-object slot, logged as STUBCALL.
 #define CONTROL_SLOT_REPORT_STUB_CALL 8
+// quick 261027-k51: the game asked for its stats (RequestCurrentStats); the helper forwards a UserStatsReceived_t (1101).
+#define CONTROL_SLOT_REQUEST_CURRENT_STATS 9
+// quick 261027-k51: the shim reports each relayed callback it dispatched or held, logged as CBDISP.
+#define CONTROL_SLOT_REPORT_CB_DISPATCH 10
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
@@ -256,6 +280,23 @@ static int             g_manual_dispatch = 0;
 static int32_t         g_hpipe = 0;
 static gl_cbq_ring     g_cbq;
 static unsigned        g_cbq_logged = 0;
+
+// quick 261027-k51: UserStatsReceived_t (1101) forwarding. Both exports are
+// NULL-tolerant: a missing one degrades only the fetch path.
+typedef bool     (*MDGetAPICallResult_t)(int32_t, uint64_t, void *, int, int, bool *);
+typedef uint64_t (*RequestUserStats_t)(void *, uint64_t);
+static MDGetAPICallResult_t g_md_get_api_call_result;
+static RequestUserStats_t   g_request_user_stats;
+static gl_stats_fwd         g_stats;
+static uint64_t             g_appid_u64 = 0;
+static unsigned             g_cbq_stats_logged = 0;
+static unsigned             g_stats_logged = 0;
+static int                  g_stats_cap_noted = 0;
+static unsigned             g_cbdisp_logged = 0;
+static int                  g_cbdisp_cap_noted = 0;
+#define STATS_LOG_MAX 32
+#define CBDISP_LOG_MAX 32
+#define CBDISP_MAX_TARGETS 512
 
 // Phase 52: NULL-tolerant -- a Steam build without this export degrades
 // CREATE_INTERFACE to STATUS_ERR, never FATAL (T-52-10).
@@ -407,6 +448,13 @@ static int load_steam_api(void) {
   g_md_get_next    = (MDGetNext_t)dlsym(g_dylib_handle, "SteamAPI_ManualDispatch_GetNextCallback");
   g_md_free_last   = (MDFreeLast_t)dlsym(g_dylib_handle, "SteamAPI_ManualDispatch_FreeLastCallback");
   g_get_hsteampipe = (GetHSteamPipe_t)dlsym(g_dylib_handle, "SteamAPI_GetHSteamPipe");
+  g_md_get_api_call_result =
+      (MDGetAPICallResult_t)dlsym(g_dylib_handle, "SteamAPI_ManualDispatch_GetAPICallResult");
+  g_request_user_stats =
+      (RequestUserStats_t)dlsym(g_dylib_handle, "SteamAPI_ISteamUserStats_RequestUserStats");
+  if (!g_md_get_api_call_result || !g_request_user_stats) {
+    logts("WARN", "RequestUserStats/GetAPICallResult not exported -- 1101 can only be forwarded from a broadcast");
+  }
   if (!g_md_init || !g_md_run_frame || !g_md_get_next || !g_md_free_last || !g_get_hsteampipe) {
     logts("WARN", "manual dispatch exports missing -- DRAIN answers count 0");
   }
@@ -481,10 +529,38 @@ static void logts_f(const char *cat, const char *fmt, ...) {
   logts(cat, msg);
 }
 
+// quick 261027-k51: one CBQ line per observed own-app-candidate 1101. The
+// format is a literal at every call (T-55-08/T-k51-03): integers and fixed
+// words only, never the gameID, SteamID, call handle or payload.
+#define GL_LOG_STATS_OBS(srcword, appword, actword, res) \
+  logts_f("CBQ", "stats iCallback=1101 src=" srcword " result=%d app=" appword " action=" actword, (int)(res))
+
+static void gl_log_stats_obs(int from_callresult, int rc, int32_t result) {
+  if (g_cbq_stats_logged >= 32) return;
+  g_cbq_stats_logged++;
+  if (from_callresult) {
+    if (rc == GL_STATS_OBS_QUEUED) GL_LOG_STATS_OBS("callresult", "own", "queued", result);
+    else if (rc == GL_STATS_OBS_CACHED) GL_LOG_STATS_OBS("callresult", "own", "cached", result);
+    else if (rc == GL_STATS_OBS_OTHER_APP) GL_LOG_STATS_OBS("callresult", "other", "ignored", result);
+    else GL_LOG_STATS_OBS("callresult", "unknown", "bad", result);
+  } else {
+    if (rc == GL_STATS_OBS_QUEUED) GL_LOG_STATS_OBS("callback", "own", "queued", result);
+    else if (rc == GL_STATS_OBS_CACHED) GL_LOG_STATS_OBS("callback", "own", "cached", result);
+    else if (rc == GL_STATS_OBS_OTHER_APP) GL_LOG_STATS_OBS("callback", "other", "ignored", result);
+    else GL_LOG_STATS_OBS("callback", "unknown", "bad", result);
+  }
+}
+
 /* Runs one manual-dispatch frame and moves allowlisted callbacks into the
  * ring. Bounded to GL_CBQ_PUMP_MAX_MSGS messages. FreeLastCallback is ALWAYS
  * called after a true GetNextCallback (SDK contract). Never logs or copies
- * callback bytes anywhere but the ring. */
+ * callback bytes anywhere but the ring (and the 1101 cache, which carries no
+ * credential).
+ *
+ * 1101 (Mac struct: 20 bytes, pack 4) is NEVER offered raw: it goes through
+ * gl_stats_on_observed, which repacks it to the 24-byte wire form first. Our
+ * own RequestUserStats call result arrives as a 703 SteamAPICallCompleted_t
+ * and its payload is fetched BEFORE the (single, unconditional) free below. */
 static void gl_manual_pump_into_ring(void) {
   if (!g_manual_dispatch) return;
   g_md_run_frame(g_hpipe);
@@ -492,19 +568,56 @@ static void gl_manual_pump_into_ring(void) {
     gl_CallbackMsg_t msg;
     memset(&msg, 0, sizeof msg);
     if (!g_md_get_next(g_hpipe, &msg)) break;
-    int allowed = gl_cbq_allowed_size(msg.m_iCallback) != 0;
-    int queued = gl_cbq_offer(&g_cbq, msg.m_iCallback, msg.m_pubParam, msg.m_cubParam);
-    if (g_cbq_logged < 32) {
-      if (queued) {
-        int32_t eresult = 0;
-        memcpy(&eresult, msg.m_pubParam + 4, 4);
-        g_cbq_logged++;
-        logts_f("CBQ", "queued iCallback=%d result=%d cub=%d",
-                (int)msg.m_iCallback, (int)eresult, (int)msg.m_cubParam);
-      } else if (allowed) {
-        g_cbq_logged++;
-        logts_f("CBQ", "dropped iCallback=%d cub=%d",
-                (int)msg.m_iCallback, (int)msg.m_cubParam);
+    if (msg.m_iCallback == GL_CBQ_ID_USER_STATS_RECEIVED) {
+      int32_t result = 0;
+      if (msg.m_pubParam != NULL && msg.m_cubParam == GL_CBQ_USR_MAC_SIZE)
+        memcpy(&result, msg.m_pubParam + 8, 4);
+      int rc = gl_stats_on_observed(&g_stats, &g_cbq, msg.m_pubParam, msg.m_cubParam, g_appid_u64);
+      gl_log_stats_obs(0, rc, result);
+    } else if (msg.m_iCallback == GL_CBQ_ID_API_CALL_COMPLETED &&
+               msg.m_pubParam != NULL &&
+               msg.m_cubParam == (int32_t)sizeof(gl_SteamAPICallCompleted_t) &&
+               g_stats.pending_call != 0 && g_md_get_api_call_result != NULL) {
+      gl_SteamAPICallCompleted_t done;
+      memcpy(&done, msg.m_pubParam, sizeof done);
+      if (done.m_hAsyncCall == g_stats.pending_call &&
+          done.m_iCallback == GL_CBQ_ID_USER_STATS_RECEIVED &&
+          done.m_cubParam == GL_CBQ_USR_MAC_SIZE) {
+        uint8_t buf[GL_CBQ_USR_MAC_SIZE];
+        bool failed = false;
+        memset(buf, 0, sizeof buf);
+        bool got = g_md_get_api_call_result(g_hpipe, done.m_hAsyncCall, buf,
+                                            (int)sizeof buf, GL_CBQ_ID_USER_STATS_RECEIVED, &failed);
+        if (got && !failed) {
+          int32_t result = 0;
+          memcpy(&result, buf + 8, 4);
+          int rc = gl_stats_on_observed(&g_stats, &g_cbq, buf, (int32_t)sizeof buf, g_appid_u64);
+          gl_log_stats_obs(1, rc, result);
+        } else {
+          if (g_cbq_stats_logged < 32) {
+            g_cbq_stats_logged++;
+            logts_f("CBQ", "stats iCallback=1101 src=callresult failed=1");
+          }
+          // Leave `pending` set so a broadcast 1101 still satisfies the request.
+          g_stats.pending_call = 0;
+        }
+        gl_cbq_secure_zero(buf, sizeof buf);
+      }
+    } else {
+      int allowed = gl_cbq_allowed_size(msg.m_iCallback) != 0;
+      int queued = gl_cbq_offer(&g_cbq, msg.m_iCallback, msg.m_pubParam, msg.m_cubParam);
+      if (g_cbq_logged < 32) {
+        if (queued) {
+          int32_t eresult = 0;
+          memcpy(&eresult, msg.m_pubParam + 4, 4);
+          g_cbq_logged++;
+          logts_f("CBQ", "queued iCallback=%d result=%d cub=%d",
+                  (int)msg.m_iCallback, (int)eresult, (int)msg.m_cubParam);
+        } else if (allowed) {
+          g_cbq_logged++;
+          logts_f("CBQ", "dropped iCallback=%d cub=%d",
+                  (int)msg.m_iCallback, (int)msg.m_cubParam);
+        }
       }
     }
     g_md_free_last(g_hpipe);
@@ -879,6 +992,88 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       send_response(fd, requestId, STATUS_OK, NULL, 0);
       return;
     }
+    if (slot == CONTROL_SLOT_REQUEST_CURRENT_STATS) {
+      // quick 261027-k51 (T-k51-02/03/05): behind the auth gate; argLen must be
+      // 0; never sleeps; one RequestUserStats in flight; integer/fixed-word
+      // logging only, capped at STATS_LOG_MAX plus one cap line. The reply is
+      // always an empty STATUS_OK (the game's fallback ignores it).
+      if (argLen != 0) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      int logIt = 0;
+      if (g_stats_logged < STATS_LOG_MAX) {
+        g_stats_logged++;
+        logIt = 1;
+      } else if (!g_stats_cap_noted) {
+        g_stats_cap_noted = 1;
+        logts("STATS", "cap of 32 reached; later requests are not logged");
+      }
+      if (!g_inited || !g_manual_dispatch) {
+        if (logIt) logts_f("STATS", "request session=0");
+        send_response(fd, requestId, STATUS_OK, NULL, 0);
+        return;
+      }
+      if (g_bd_identity_only) {
+        // SteamUserStats is app-scoped and refused in identity-only mode (T-51-25).
+        if (logIt) logts_f("STATS", "request mode=identity-only");
+        send_response(fd, requestId, STATUS_OK, NULL, 0);
+        return;
+      }
+      // Pump first so an init-time 1101 still sitting in Steam's pipe reaches the cache.
+      gl_manual_pump_into_ring();
+      int rr = gl_stats_on_request(&g_stats, &g_cbq);
+      if (rr == GL_STATS_REQ_ALREADY_QUEUED) {
+        if (logIt) logts_f("STATS", "request action=already-queued");
+      } else if (rr == GL_STATS_REQ_QUEUED_CACHED) {
+        if (logIt) logts_f("STATS", "request action=queued-cached");
+      } else if (g_stats.pending_call != 0) {
+        if (logIt) logts_f("STATS", "request action=fetch call=inflight");
+      } else if (g_request_user_stats == NULL || g_bd_self_steamuserstats_interface_version013 == NULL ||
+                 g_bd_flat_SteamUser023_GetSteamID == NULL || g_bd_self_steamuser023 == NULL) {
+        if (logIt) logts_f("STATS", "request action=fetch call=unavailable");
+      } else {
+        uint64_t localUser = g_bd_flat_SteamUser023_GetSteamID(g_bd_self_steamuser023);
+        uint64_t call = g_request_user_stats(g_bd_self_steamuserstats_interface_version013, localUser);
+        if (call == 0) {
+          if (logIt) logts_f("STATS", "request action=fetch call=invalid");
+        } else {
+          g_stats.pending_call = call;
+          if (logIt) logts_f("STATS", "request action=fetch call=ok");
+        }
+      }
+      send_response(fd, requestId, STATUS_OK, NULL, 0);
+      return;
+    }
+    if (slot == CONTROL_SLOT_REPORT_CB_DISPATCH) {
+      // quick 261027-k51 (T-k51-01/08): behind the auth gate; exactly 12 bytes;
+      // id must be allowlisted; bounded counts. Never pumps or dispatches.
+      if (argBlob == NULL || argLen != 12) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      int32_t did;
+      uint32_t dn, dheld;
+      memcpy(&did, argBlob, 4);
+      memcpy(&dn, argBlob + 4, 4);
+      memcpy(&dheld, argBlob + 8, 4);
+      if (gl_cbq_allowed_size(did) == 0 || dn > CBDISP_MAX_TARGETS || dheld > 1) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      if (g_cbdisp_logged >= CBDISP_LOG_MAX) {
+        if (!g_cbdisp_cap_noted) {
+          g_cbdisp_cap_noted = 1;
+          logts("CBDISP", "cap of 32 reached; later reports are not logged");
+        }
+        send_response(fd, requestId, STATUS_OK, NULL, 0);
+        return;
+      }
+      g_cbdisp_logged++;
+      logts_f("CBDISP", "iCallback=%d targets=%u held=%u", (int)did, (unsigned)dn, (unsigned)dheld);
+      send_response(fd, requestId, STATUS_OK, NULL, 0);
+      return;
+    }
     if (slot == CONTROL_SLOT_DRAIN_CALLBACKS) {
       // Phase 55: answered regardless of g_inited, like HEALTH. Never sleeps (the shim
       // blocks in recv with no timeout while holding g_bridge_lock) and never
@@ -1064,6 +1259,7 @@ int main(int argc, char **argv) {
 
   strncpy(g_appid, appIdArg, MAX_APPID_DIGITS);
   g_appid[MAX_APPID_DIGITS] = '\0';
+  g_appid_u64 = strtoull(g_appid, NULL, 10); // validated digits-only above
 
   bridge_dispatch_set_identity_only(
     identityOnly, reportAppIdArg ? (uint32_t)strtoul(reportAppIdArg, NULL, 10) : 0

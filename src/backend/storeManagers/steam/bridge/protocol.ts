@@ -124,7 +124,7 @@ export const CONTROL_SLOT = {
   // D-53-15 (quick 261025-kax): the shim reports the game's own SteamAPI_Init
   // result ({u32 fn, i32 ret}); the helper logs `GINIT`.
   reportInit: 5,
-  // Phase 55: the shim's SteamAPI_RunCallbacks drains queued Steam callbacks (callback 168 today) from the helper; reply [u32 count][i32 iCallback][u32 cub][bytes].
+  // Phase 55: the shim's SteamAPI_RunCallbacks drains queued Steam callbacks (168 and 1101) from the helper; reply [u32 count][i32 iCallback][u32 cub][bytes].
   drainCallbacks: 6,
   // quick 261027-ijs: the shim reports the first call of each per-version x64
   // sret null-object slot; the helper logs `NULLSRET`. Nothing in the sidecar
@@ -133,7 +133,15 @@ export const CONTROL_SLOT = {
   // quick 261027-jgs: the shim reports the first call of each locally-answered
   // method / x64 null-object slot; the helper logs `STUBCALL`. Nothing in the
   // sidecar sends this; it exists for the parity and helper tests.
-  reportStubCall: 8
+  reportStubCall: 8,
+  // quick 261027-k51: the shim's RequestCurrentStats fallback tells the helper
+  // the game wants UserStatsReceived_t (1101); the helper queues the cached
+  // one or fetches it. Nothing in the sidecar sends this.
+  requestCurrentStats: 9,
+  // quick 261027-k51: the shim reports each relayed callback it dispatched or
+  // held ({i32 iCallback, u32 ndispatched, u32 held}); the helper logs
+  // `CBDISP`. Nothing in the sidecar sends this.
+  reportCbDispatch: 10
 } as const
 
 /** Env var carrying the per-spawn secret backend -> helper (never argv). */

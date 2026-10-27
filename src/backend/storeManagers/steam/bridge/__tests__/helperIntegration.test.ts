@@ -119,6 +119,15 @@ const describeDarwinOnly = IS_DARWIN ? describe : describe.skip
 const TEST_SECRET = 'c0ffee'.repeat(10) + 'abcd'
 const WRONG_SECRET = '0123456789abcdef'.repeat(4)
 
+// quick 261027-k51: REPORT_CB_DISPATCH argBlob {i32 iCallback, u32 ndispatched, u32 held}.
+function cbDispatchBlob(id: number, ndispatched: number, held: number) {
+  const b = Buffer.alloc(12)
+  b.writeInt32LE(id, 0)
+  b.writeUInt32LE(ndispatched, 4)
+  b.writeUInt32LE(held, 8)
+  return b
+}
+
 // quick 261027-jgs: REPORT_STUB_CALL argBlob {u32 kind, u32 slot, u32 vlen, u32 mlen, ver, method}.
 function stubCallBlob(
   kind: number,
@@ -523,10 +532,10 @@ describeDarwinOnly(
           )
           expect(huge.status).toBe(STATUS_ERR)
 
-          // Unknown CONTROL slot.
+          // Unknown CONTROL slot (9 and 10 became real slots in quick k51).
           const unknownSlot = await sendFrameOnSocket(
             socket,
-            encodeRequest(5, CONTROL_ORDINAL, 9)
+            encodeRequest(5, CONTROL_ORDINAL, 11)
           )
           expect(unknownSlot.status).toBe(STATUS_ERR)
         } finally {
@@ -1320,7 +1329,9 @@ describeDarwinOnly(
             [5, CONTROL_SLOT.reportVersion, nameBlob],
             [6, CONTROL_SLOT.reportInit, Buffer.alloc(8)],
             [9, CONTROL_SLOT.reportNullSret, nullSretBlob],
-            [10, CONTROL_SLOT.reportStubCall, stubCallBlob(0, 4, 'abcd', 'M')]
+            [10, CONTROL_SLOT.reportStubCall, stubCallBlob(0, 4, 'abcd', 'M')],
+            [11, CONTROL_SLOT.requestCurrentStats, Buffer.alloc(0)],
+            [12, CONTROL_SLOT.reportCbDispatch, cbDispatchBlob(1101, 1, 0)]
           ] as const) {
             expect(
               (
@@ -1343,13 +1354,195 @@ describeDarwinOnly(
         }
         await settle()
         const added = h.getStderr().slice(before)
-        expect(added).not.toMatch(/CALL|NOVER|GINIT|FWD|NULLSRET|STUBCALL/)
+        expect(added).not.toMatch(
+          /CALL|NOVER|GINIT|FWD|NULLSRET|STUBCALL|STATS|CBDISP/
+        )
         expect(added).toMatch(/AUTH {1,}refused/)
         expect(h.getStderr()).not.toContain(TEST_SECRET)
       } finally {
         h.child.kill()
       }
     }, 15000)
+
+    // quick 261027-k51: CONTROL REQUEST_CURRENT_STATS (slot 9) and
+    // REPORT_CB_DISPATCH (slot 10). The live 1101 path (a real Steam session
+    // yielding UserStatsReceived_t, RequestUserStats, the repack and the
+    // CBDISP report) needs a signed-in Steam and is proven by the operator
+    // run, not here; this covers the wire contract with no session.
+    test('REQUEST_CURRENT_STATS (slot 9): refused unauthenticated, rejects args, logs STATS session=0, caps at 32 plus one cap line, never logs CALL', async () => {
+      const h = await startAuthHelper('k51-stats-', authedEnv())
+      try {
+        const socket = await h.connect()
+        const req = (id: number, blob = Buffer.alloc(0)) =>
+          encodeRequest(
+            id,
+            CONTROL_ORDINAL,
+            CONTROL_SLOT.requestCurrentStats,
+            blob
+          )
+        try {
+          const refused = await sendFrameOnSocket(socket, req(1))
+          expect(refused.status).toBe(STATUS_ERR)
+          expect(refused.retBlob).toHaveLength(0)
+          await authenticate(socket)
+          const before = h.getStderr().length
+          expect(
+            (await sendFrameOnSocket(socket, req(2, Buffer.from([1])))).status
+          ).toBe(STATUS_ERR)
+          await settle()
+          expect(h.getStderr().slice(before)).not.toMatch(/STATS/)
+          const ok = await sendFrameOnSocket(socket, req(3))
+          expect(ok.status).toBe(STATUS_OK)
+          expect(ok.retBlob).toHaveLength(0)
+          await settle()
+          expect(h.getStderr()).toMatch(/ STATS {2,}request session=0\n/)
+          for (let i = 0; i < 40; i++) {
+            expect((await sendFrameOnSocket(socket, req(10 + i))).status).toBe(
+              STATUS_OK
+            )
+          }
+        } finally {
+          socket.destroy()
+        }
+        await settle()
+        const lines = h
+          .getStderr()
+          .split('\n')
+          .filter((l) => / STATS /.test(l))
+        expect(lines).toHaveLength(33)
+        expect(lines[32]).toMatch(/STATS {2,}cap of 32 reached/)
+        expect(h.getStderr()).not.toMatch(/\] CALL /)
+      } finally {
+        h.child.kill()
+      }
+    }, 30000)
+
+    test('REPORT_CB_DISPATCH (slot 10): refused unauthenticated, rejects malformed frames without logging, logs CBDISP, caps at 32 plus one cap line, never logs CALL', async () => {
+      const h = await startAuthHelper('k51-cbdisp-', authedEnv())
+      try {
+        const socket = await h.connect()
+        const req = (id: number, blob: Buffer) =>
+          encodeRequest(
+            id,
+            CONTROL_ORDINAL,
+            CONTROL_SLOT.reportCbDispatch,
+            blob
+          )
+        try {
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                req(1, cbDispatchBlob(1101, 1, 0))
+              )
+            ).status
+          ).toBe(STATUS_ERR)
+          await authenticate(socket)
+          const before = h.getStderr().length
+          const bad = [
+            req(2, Buffer.alloc(0)),
+            req(3, Buffer.alloc(11)),
+            req(4, Buffer.alloc(13)),
+            req(5, cbDispatchBlob(163, 1, 0)),
+            req(6, cbDispatchBlob(0, 1, 0)),
+            req(7, cbDispatchBlob(1101, 1, 2)),
+            req(8, cbDispatchBlob(1101, 513, 0))
+          ]
+          for (const f of bad) {
+            expect((await sendFrameOnSocket(socket, f)).status).toBe(STATUS_ERR)
+          }
+          await settle()
+          expect(h.getStderr().slice(before)).not.toMatch(/CBDISP/)
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                req(9, cbDispatchBlob(1101, 1, 0))
+              )
+            ).status
+          ).toBe(STATUS_OK)
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                req(10, cbDispatchBlob(1101, 0, 1))
+              )
+            ).status
+          ).toBe(STATUS_OK)
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                req(11, cbDispatchBlob(168, 2, 0))
+              )
+            ).status
+          ).toBe(STATUS_OK)
+          await settle()
+          const log = h.getStderr()
+          expect(log).toMatch(/ CBDISP iCallback=1101 targets=1 held=0\n/)
+          expect(log).toMatch(/ CBDISP iCallback=1101 targets=0 held=1\n/)
+          expect(log).toMatch(/ CBDISP iCallback=168 targets=2 held=0\n/)
+          for (let i = 0; i < 40; i++) {
+            expect(
+              (
+                await sendFrameOnSocket(
+                  socket,
+                  req(100 + i, cbDispatchBlob(1101, 1, 0))
+                )
+              ).status
+            ).toBe(STATUS_OK)
+          }
+        } finally {
+          socket.destroy()
+        }
+        await settle()
+        const lines = h
+          .getStderr()
+          .split('\n')
+          .filter((l) => / CBDISP /.test(l))
+        expect(lines).toHaveLength(33)
+        expect(lines[32]).toMatch(/CBDISP cap of 32 reached/)
+        expect(h.getStderr()).not.toMatch(/\] CALL /)
+      } finally {
+        h.child.kill()
+      }
+    }, 30000)
+
+    test('k51 source pins: 1101 routed to gl_stats_on_observed before the generic offer, GetAPICallResult only under the pending-handle check and before FreeLastCallback, no SteamID/gameID in log formats', () => {
+      const raw = readFileSync(HELPER_SOURCE_PATH, 'utf8')
+      const src = raw
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      expect(raw).toContain('#define CONTROL_SLOT_REQUEST_CURRENT_STATS 9')
+      expect(raw).toContain('#define CONTROL_SLOT_REPORT_CB_DISPATCH 10')
+      const pumpAt = src.indexOf('static void gl_manual_pump_into_ring(void) {')
+      const pump = src.slice(pumpAt, src.indexOf('\n}\n', pumpAt))
+      const observedAt = pump.indexOf('gl_stats_on_observed(')
+      const genericAt = pump.indexOf('gl_cbq_offer(')
+      expect(observedAt).toBeGreaterThan(-1)
+      expect(genericAt).toBeGreaterThan(observedAt)
+      expect(pump.indexOf('GL_CBQ_ID_USER_STATS_RECEIVED')).toBeLessThan(
+        observedAt
+      )
+      const getResAt = pump.indexOf('g_md_get_api_call_result(')
+      expect(getResAt).toBeGreaterThan(-1)
+      expect(pump.indexOf('g_md_get_api_call_result(', getResAt + 1)).toBe(-1)
+      expect(pump.slice(0, getResAt)).toMatch(/g_stats\.pending_call/)
+      expect(pump.slice(0, getResAt)).toMatch(/m_hAsyncCall/)
+      expect(getResAt).toBeLessThan(pump.indexOf('g_md_free_last('))
+      const newCalls = [
+        ...src.matchAll(/logts(?:_f)?\("(?:STATS|CBDISP|CBQ)",[^;]*;/g)
+      ]
+      expect(newCalls.length).toBeGreaterThan(0)
+      for (const call of newCalls) {
+        expect(call[0]).not.toMatch(
+          /%s|%x|%02x|%p|%llu|%lld|%lx|%ll|steamid|gameid|m_nGameID|m_steamID|pending_call|GetSteamID/i
+        )
+      }
+      expect(src).not.toMatch(
+        /logts(?:_f)?\([^;]*(?:GetSteamID|pending_call)[^;]*;/
+      )
+    })
 
     test('WR-03: wrong / empty HELLO is refused and DRAIN stays refused; a matching HELLO authenticates; a later wrong HELLO de-authenticates (D-D)', async () => {
       const h = await startAuthHelper('wr03-hello-', authedEnv())
