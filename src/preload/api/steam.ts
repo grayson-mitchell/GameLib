@@ -31,6 +31,12 @@ export const steamRemoveAllCopies = makeHandlerInvoker('steamRemoveAllCopies')
 // quick 261024-h5y: user-clicked "Start Steam to finish" for a bottle-route
 // 1026 handoff -- sidecar-only, backend refuses outside that state.
 export const steamFinishBottledInstall = makeHandlerInvoker('steamFinishBottledInstall')
+// Phase 54 Plan 07: Continue in the guided Go Offline dialog -- sidecar-only;
+// reports whether Mac Steam now reads Logged Off. Never logs on.
+export const steamGoOfflineRetry = makeHandlerInvoker('steamGoOfflineRetry')
+// Phase 54 Plan 07: one-way push -- user.ts acquireAuthenticated emits when the
+// go-offline wrap did not see Mac Steam log off; SteamGoOfflineNotice.ts subscribes.
+export const handleSteamGoOfflineRequired = frontendListenerSlot('steamGoOfflineRequired')
 // One-way push (17-05 emits, 17-06 subscribes) — no handler, listener only.
 export const handleSteamBottleSetupRequired = frontendListenerSlot('steamBottleSetupRequired')
 // Phase 51 Plan 13 (D-51-08/11): one-way push -- games.ts's install() emits,

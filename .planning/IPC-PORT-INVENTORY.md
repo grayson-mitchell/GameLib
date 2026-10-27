@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 227 |
-| Ported to sidecar | 72 |
+| Unique channels | 228 |
+| Ported to sidecar | 73 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -606,6 +606,19 @@ Electron leg, so `Ported to sidecar` rises along with `Unique channels`.
 both numbers moved together by +1 and `Unported` (159) is unchanged.
 
 `getGamelibFixStatus`
+
+## Phase 54 Plan 07 — guided Go Offline retry (1 channel) — **PORTED**
+
+Added 2026-10-27 by Phase 54 Plan 07. The channel is BRAND NEW, invoke-kind
+(`makeHandlerInvoker`, `src/preload/api/steam.ts`), and registered only in the sidecar, in
+`steamAuthFlowRegistration.ts` (body: `checkGuidedOfflineReady`, `macSteamOffline.ts`). There is
+no Electron leg, so `Ported to sidecar` rises along with `Unique channels`. The companion
+`steamGoOfflineRequired` is a one-way push (`frontendListenerSlot`) and is noted, not counted.
+
+**Unique channels raised 227 → 228, Ported to sidecar raised 72 → 73 (Phase 54 Plan 07, 2026-10-27):**
+both numbers moved together by +1 and `Unported` (159) is unchanged.
+
+`steamGoOfflineRetry`
 
 ## Not an IPC channel, but blocks Phase 35
 

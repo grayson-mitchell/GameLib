@@ -69,6 +69,8 @@
  *   - `steamFinishBottledInstall` -> `startBottledSteamToFinishInstall(args[0])`
  *     (`bottledHandoff.ts`), quick 261024-h5y — the explicit "Start Steam to
  *     finish" click for a bottle-route install parked at StateFlags 1026.
+ *   - `steamGoOfflineRetry` -> `checkGuidedOfflineReady()` (`macSteamOffline.ts`),
+ *     Phase 54 Plan 07 — the guided Go Offline dialog's Continue.
  *
  * Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04,
  * `ipcMain.handle`, `main.ts:958-961`):
@@ -148,6 +150,7 @@ import {
 } from '../storeManagers/steam/installFormIpc'
 import { removeAllSteamInstallCopies } from '../storeManagers/steam/removeAllCopies'
 import { startBottledSteamToFinishInstall } from '../storeManagers/steam/bottledHandoff'
+import { checkGuidedOfflineReady } from '../storeManagers/steam/macSteamOffline'
 
 /**
  * Registers the QR-login trio, the credential/SteamGuard/TOTP login trio,
@@ -363,6 +366,11 @@ export function registerSteamAuthFlows(): void {
       return startBottledSteamToFinishInstall(args[0])
     }
   )
+
+  // Phase 54: sidecar-only. Takes no renderer arguments, so there is nothing to
+  // validate; it only reads Mac Steam's state and arms the one-shot guided
+  // restore. It never logs on.
+  ipcMain.handle('steamGoOfflineRetry', async () => checkGuidedOfflineReady())
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
   ipcMain.handle('steamClientSetupStart', async () => {
