@@ -69,6 +69,7 @@ import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
 import { handleSteamBridgeRouteNoticeSignal } from './SteamBridgeRouteNotice'
+import { handleSteamGoOfflineRequiredSignal } from './SteamGoOfflineNotice'
 import {
   handleSteamBottleLaunchWaitingSignal,
   useBottleLaunchWaiting
@@ -1684,6 +1685,10 @@ class GlobalState extends PureComponent<Props> {
     // attempt for a known-bad / persisted-scan-miss / win64-no-shim route,
     // offering "Use bottled Steam" / "Try the bridge anyway" / "Cancel".
     window.api.handleSteamBridgeRouteNotice(handleSteamBridgeRouteNoticeSignal)
+
+    // Phase 54: opens the guided Go Offline step when the backend's go-offline
+    // wrap did not see Mac Steam log off; no logon happened.
+    window.api.handleSteamGoOfflineRequired(handleSteamGoOfflineRequiredSignal)
 
     // Phase 51 Plan 08 (D-51-16, folded todo): single global listener that
     // records a bottled-Steam launch's "waiting for Steam" classification --

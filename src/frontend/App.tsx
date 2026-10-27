@@ -35,6 +35,7 @@ import SteamBottleSetup from './screens/Game/GamePage/components/SteamBottleSetu
 import SteamClientSetup from './screens/Game/GamePage/components/SteamClientSetup'
 import SteamBridgeSetup from './screens/Game/GamePage/components/SteamBridgeSetup'
 import SteamBridgeRouteNotice from './screens/Game/GamePage/components/SteamBridgeRouteNotice'
+import SteamGoOfflineNotice from './screens/Game/GamePage/components/SteamGoOfflineNotice'
 import { buildMuiTheme } from './muiTheme'
 
 function Root() {
@@ -130,6 +131,7 @@ function Root() {
                   <SteamClientSetup />
                   <SteamBridgeSetup />
                   <SteamBridgeRouteNotice />
+                  <SteamGoOfflineNotice />
                   <SettingsModalWrapper />
                   <ExternalLinkDialog />
                   <AboutDialogHost />
