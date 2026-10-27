@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-27 - Completed quick task 261027-k51: forward UserStatsReceived_t (1101) to bridged games
+Last activity: 2026-10-27 - Completed quick task 261027-m1m: skip known-fix reg add when value already set; kill timed-out reg add
 
 Progress: [██████████] 100%
 
@@ -450,6 +450,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | fast | Unclaimed World (284100) committed as bridge `knownBad` does-not-run, with the debug/unclaimed-world-wmv-mf root cause (no WMV3/WMA9 decoder in CrossOver GStreamer) and the architecture note. Playable on the operator machine only, through a hand-applied local fix: spike 042 gst-libav payload moved to `~/Library/Application Support/gamelib/overlays/gst-libav-1.24.13/`, `fixes/local/284100-steam.json` repointed. Todo stays pending until a shipped tier-2 overlays profile. allowlist tests 32/32. | 2026-10-27 | `b3d46f6ff` | Done | — |
 | fast | Library-sorting todo closed. The operator ran live checks 1-3 for 261027-jjz (Last played re-sorts after a GOG/Epic session, cold start with Last played saved, Group by Store / Install status) and all passed. The todo moved to `completed/`. | 2026-10-27 | (this commit) | live gate PASS | — |
 | 261027-l61 | Bridge helper scrubs `GAMELIB_BRIDGE_SECRET` in place, through a volatile pointer over the full strlen, before `unsetenv()`. `ps eww` (KERN_PROCARGS2) no longer shows it. The WR-03 comment now names the residual same-uid exposure through the 0600 cfg. Live `ps eww` jest arms (valid and 70-char secret) went RED then GREEN. Todo closed. | 2026-10-27 | `d6918189c` | Done | [261027-l61-scrub-bridge-helper-secret-from-startup-](./quick/261027-l61-scrub-bridge-helper-secret-from-startup-/) |
+| 261027-m1m | Known-fix `registry` values already present in the prefix `system.reg`/`user.reg` (same type and data; REG_DWORD/REG_SZ, conservative reader, doubt re-runs) no longer spawn a `reg add` per launch, and a timed-out `reg add` is SIGKILLed instead of left running. Both callers (Steam bridge, non-Steam prefix). Cause: each cold Wine session can stall ~80 s in `wineboot --init`; Unclaimed World spent 2 extra sessions per launch. Tests 96/97 (one pre-existing 63000-profile failure, unrelated). Live check on 284100 pending. | 2026-10-27 | `dd0b27fd9` | Needs Review | [261027-m1m-known-fix-registry-skip-reg-add-when-val](./quick/261027-m1m-known-fix-registry-skip-reg-add-when-val/) |
 
 ## Session Continuity
 
