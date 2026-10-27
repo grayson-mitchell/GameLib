@@ -72,6 +72,12 @@ function makeDeps(
       clock += ms
     },
     now: () => clock,
+    onlineDebtPath: () => join(dir, 'owed.json'),
+    openUrlDetached: (url) => {
+      urls.push(url)
+    },
+    selfPid: 4242,
+    isPidAlive: () => false,
     ...overrides
   }
 }
