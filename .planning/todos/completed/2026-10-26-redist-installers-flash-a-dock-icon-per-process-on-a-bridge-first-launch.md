@@ -72,3 +72,32 @@ Done when: on a first launch that installs redists (reset as in 261026-jmm: move
 `gamelib-shared-redists.json` aside and `reg delete` its `CommonRedist` key), no Wine process
 registers as `Foreground` in `lsappinfo` before the game's own, every installer exits successfully
 with its HasRunKey written, and the game starts normally.
+
+## Resolution (2026-10-27, live gate passed)
+
+Live-gated on Manor Lords 1363080 (operator-driven `tauri dev`, sidecar rebuilt), with the bottle
+reset as above each time and the reset checked in `system.reg` before each launch.
+
+- First launch with the fix (17:10): no Dock icons, the game started on the Mac driver, and
+  `Graphics` was absent afterwards with no `displayDriver` marker. The vcredist x86 HasRunKey
+  `reg add` ran past the 15 s `REG_TIMEOUT_MS`, so the ledger did not settle (`markPending`),
+  although the value was in `system.reg`. The next launch (20:51) wrote the mark, settled, and
+  started the game a second later with no display switch.
+- A/B (21:02 and 21:07), the same reset each time. A: as shipped. B: switch disabled without a
+  code change by storing `Graphics`=`mac` as `REG_EXPAND_SZ`, which `parseRegQueryGraphics`
+  does not read, so `openNullDisplay` returns before switching.
+
+| step | A: null (shipped) | B: Mac driver |
+| ---- | ----------------- | ------------- |
+| Dock icons | none | yes |
+| vcredist x86 | 86 s | 88 s |
+| vcredist x64 | 68 s | 7 s |
+| DXSETUP | 23 s | 89 s |
+| a 15 s registry timeout | x64 query | dxsetup query |
+| step start to game start | 3 min 31 s | 3 min 40 s |
+
+The fix removes the icons. The slowness is present on both drivers, so it is not caused by the
+switch; it is filed separately as
+`2026-10-27-bridge-shared-redist-step-is-slow-inside-gamelib-launches.md`. The extra cost of the
+two session ends is within the noise of that slowness and was not isolated. Afterwards the
+bottle's `Graphics` value was deleted and its ledger settled with nothing pending.
