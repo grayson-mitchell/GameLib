@@ -1625,10 +1625,13 @@ function emitStubBody(
 // RDX on a slot where RDX is an ordinary argument, a new crash. Sret slots
 // zero-fill structSize bytes and return RDX in RAX (quick-261027-ijs: each
 // (version, slot) has its own function that also reports its first call to the
-// helper, logged as NULLSRET); every other slot is vt_x64_null_object. REMAINING GAP: a version unknown to the pinned Proton
-// inventory (or one Proton ships without sret data) still gets this generic
-// all-zero object, so an sret call on such a version still reads through 0.
-// This generic 256-slot object is unchanged.
+// helper, logged as NULLSRET); every other slot is a per-slot thunk
+// vt_x64_null_s<N> that reports its first call per (instance, slot) as STUBCALL
+// (quick-261027-jgs) and returns 0. Unknown versions now get a distinct pooled
+// instance (identification only; the behaviour is still all-zero). REMAINING
+// GAP: a version unknown to the pinned Proton inventory (or one Proton ships
+// without sret data) is still all-zero, so an sret call on such a version
+// still reads through 0.
 export const X64_NULL_OBJECT_SLOTS = 256
 
 /** One sret slot of a Proton-shipped interface version. */
@@ -1761,7 +1764,7 @@ function emitX64NullSretObjects(
       Array.from({ length: entry.slotCount }, (_, i) =>
         bySlot.has(i)
           ? `  (vfn)vt_x64_null_sret_${id}_s${i},`
-          : '  (vfn)vt_x64_null_object,'
+          : `  (vfn)vt_x64_null_s${i},`
       ).join('\n') +
       `\n};\n` +
       `static struct GLibX64NullObject g_x64_null_${id}_instance = { g_x64_null_${id}_vtbl };\n`
@@ -1773,17 +1776,91 @@ function emitX64NullSretObjects(
       table.join('\n') +
       `\n};\n`
   }
+
+  // quick-261027-jgs: identification tables for the per-slot null thunks. The
+  // named table lists every statically emitted instance (generic first); the
+  // pool hands unknown versions a distinct instance so the STUBCALL line can
+  // carry the exact version the game asked for.
+  const named = [
+    { ver: 'unknown', inst: '&g_x64_null_object_instance' },
+    ...kept.map(([version]) => ({
+      ver: version,
+      inst: `&g_x64_null_${version.toLowerCase().replace(/[^a-z0-9_]/g, '_')}_instance`
+    }))
+  ]
+  out +=
+    `// quick-261027-jgs: lock rule -- g_x64_null_pool_lock is a leaf lock, held only for the pool search and\n` +
+    `// insert, and never held across any call or bridge_transact.\n` +
+    `#define GLIB_X64_NULL_NAMED ${named.length}\n` +
+    `#define GLIB_X64_NULL_POOL 32\n` +
+    `static void *const g_x64_null_named[GLIB_X64_NULL_NAMED] = {\n` +
+    named.map((n) => `  ${n.inst},`).join('\n') +
+    `\n};\n` +
+    `static const char *const g_x64_null_named_ver[GLIB_X64_NULL_NAMED] = {\n` +
+    named.map((n) => `  "${n.ver}",`).join('\n') +
+    `\n};\n` +
+    `static struct GLibX64NullObject g_x64_null_pool[GLIB_X64_NULL_POOL] = {\n` +
+    Array.from({ length: 32 }, () => `  { g_x64_null_object_vtbl },`).join(
+      '\n'
+    ) +
+    `\n};\n` +
+    `static char g_x64_null_pool_ver[GLIB_X64_NULL_POOL][64];\n` +
+    `static unsigned g_x64_null_pool_used = 0;\n` +
+    `static SRWLOCK g_x64_null_pool_lock = SRWLOCK_INIT;\n` +
+    `static volatile LONG g_x64_null_call_state[GLIB_X64_NULL_NAMED + GLIB_X64_NULL_POOL][${X64_NULL_OBJECT_SLOTS}][2];\n` +
+    `// quick-261027-jgs: first call per (instance, slot) of a non-sret null slot -> STUBCALL kind=null. The\n` +
+    `// instance is identified by ADDRESS only (pool range + alignment, then the named table); self is never\n` +
+    `// dereferenced and an unrecognised self is not reported.\n` +
+    `__attribute__((noinline)) static void x64_null_call_note(void *self, uint32_t slot) {\n` +
+    `  size_t i;\n` +
+    `  size_t idx = (size_t)-1;\n` +
+    `  const char *ver = NULL;\n` +
+    `  if (slot >= ${X64_NULL_OBJECT_SLOTS}) return;\n` +
+    `  {\n` +
+    `    uintptr_t a = (uintptr_t)self;\n` +
+    `    uintptr_t b = (uintptr_t)g_x64_null_pool;\n` +
+    `    if (a >= b && a < b + sizeof(g_x64_null_pool) && ((a - b) % sizeof(struct GLibX64NullObject)) == 0) {\n` +
+    `      size_t k = (size_t)((a - b) / sizeof(struct GLibX64NullObject));\n` +
+    `      idx = GLIB_X64_NULL_NAMED + k;\n` +
+    `      ver = g_x64_null_pool_ver[k];\n` +
+    `    }\n` +
+    `  }\n` +
+    `  if (idx == (size_t)-1) {\n` +
+    `    for (i = 0; i < GLIB_X64_NULL_NAMED; i++) {\n` +
+    `      if (self == g_x64_null_named[i]) { idx = i; ver = g_x64_null_named_ver[i]; break; }\n` +
+    `    }\n` +
+    `  }\n` +
+    `  if (idx == (size_t)-1 || ver == NULL) return;\n` +
+    `  gamelib_stubcall_note(g_x64_null_call_state[idx][slot], ver, NULL, slot, GAMELIB_STUBCALL_KIND_NULL);\n` +
+    `}\n`
   out += `static void *x64_null_object_for_version(const char *version) {\n`
+  out += `  size_t i;\n  size_t vlen = 0;\n  void *found = NULL;\n`
+  out += `  if (version == NULL) return (void *)&g_x64_null_object_instance;\n`
   if (table.length > 0) {
     out +=
-      `  if (version != NULL) {\n` +
-      `    size_t i;\n` +
-      `    for (i = 0; i < sizeof(g_x64_null_sret_objects) / sizeof(g_x64_null_sret_objects[0]); i++) {\n` +
-      `      if (strcmp(version, g_x64_null_sret_objects[i].version) == 0) return g_x64_null_sret_objects[i].instance;\n` +
-      `    }\n` +
+      `  for (i = 0; i < sizeof(g_x64_null_sret_objects) / sizeof(g_x64_null_sret_objects[0]); i++) {\n` +
+      `    if (strcmp(version, g_x64_null_sret_objects[i].version) == 0) return g_x64_null_sret_objects[i].instance;\n` +
       `  }\n`
   }
-  out += `  return (void *)&g_x64_null_object_instance;\n}\n`
+  out +=
+    `  while (vlen < 64 && version[vlen] != '\\0') vlen++;\n` +
+    `  AcquireSRWLockExclusive(&g_x64_null_pool_lock);\n` +
+    `  for (i = 0; i < g_x64_null_pool_used; i++) {\n` +
+    `    if (strncmp(g_x64_null_pool_ver[i], version, 63) == 0 && (vlen > 63 || g_x64_null_pool_ver[i][vlen] == '\\0')) {\n` +
+    `      found = (void *)&g_x64_null_pool[i];\n` +
+    `      break;\n` +
+    `    }\n` +
+    `  }\n` +
+    `  if (found == NULL && g_x64_null_pool_used < GLIB_X64_NULL_POOL) {\n` +
+    `    size_t n = vlen > 63 ? 63 : vlen;\n` +
+    `    memcpy(g_x64_null_pool_ver[g_x64_null_pool_used], version, n);\n` +
+    `    g_x64_null_pool_ver[g_x64_null_pool_used][n] = '\\0';\n` +
+    `    found = (void *)&g_x64_null_pool[g_x64_null_pool_used];\n` +
+    `    g_x64_null_pool_used++;\n` +
+    `  }\n` +
+    `  ReleaseSRWLockExclusive(&g_x64_null_pool_lock);\n` +
+    `  if (found != NULL) return found;\n` +
+    `  return (void *)&g_x64_null_object_instance;\n}\n`
   return out
 }
 
@@ -3344,16 +3421,21 @@ ${generateCallbackRegistryC()}
 typedef void *vfn;
 
 // 51-15: Win64 unknown-interface-version fallback -- see X64_NULL_OBJECT_SLOTS'
-// doc comment (meta/gen_vtables.ts) for why ONE generic zero-returning
-// function safely serves every slot's arity on this target. quick-261027-i4x:
-// versions Proton ships with sret slots get a per-EXACT-version null object
-// (sret slots zero-fill and return RDX, and report their first call as NULLSRET);
-// x64_null_object_for_version picks it,
-// and falls back to the generic object for NULL or an unknown version.
+// doc comment (meta/gen_vtables.ts) for why a zero-returning function safely
+// serves every slot's arity on this target (Win64 is caller-cleans, so a
+// per-slot thunk is arity-safe). quick-261027-i4x: versions Proton ships with
+// sret slots get a per-EXACT-version null object (sret slots zero-fill and
+// return RDX, and report their first call as NULLSRET); x64_null_object_for_version
+// picks it, and any other version gets a pooled instance (or the generic one
+// for NULL / a full pool). quick-261027-jgs: every non-sret slot is a per-slot
+// thunk that reports its first call per (instance, slot) as STUBCALL kind=null
+// and still returns 0 in RAX. XMM0 for a float-returning null slot was never
+// set and is still unspecified.
 #if defined(__x86_64__)
-static void *vt_x64_null_object(void *self) { (void)self; return 0; }
+__attribute__((noinline)) static void x64_null_call_note(void *self, uint32_t slot);
+${Array.from({ length: X64_NULL_OBJECT_SLOTS }, (_, i) => `static void *vt_x64_null_s${i}(void *self) { x64_null_call_note(self, ${i}); return 0; }`).join('\n')}
 static vfn g_x64_null_object_vtbl[${X64_NULL_OBJECT_SLOTS}] = {
-${Array.from({ length: X64_NULL_OBJECT_SLOTS }, () => '  (vfn)vt_x64_null_object,').join('\n')}
+${Array.from({ length: X64_NULL_OBJECT_SLOTS }, (_, i) => `  (vfn)vt_x64_null_s${i},`).join('\n')}
 };
 struct GLibX64NullObject { vfn *vptr; };
 static struct GLibX64NullObject g_x64_null_object_instance = { g_x64_null_object_vtbl };

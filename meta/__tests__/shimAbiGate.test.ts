@@ -104,7 +104,7 @@ const FIXTURE_MANIFEST: InterfaceManifestV2 = {
 
 const TARGET_FUNC = 'vt_GameLibAbiGate001_GetFixtureID_TESTONLY'
 const FRIEND_NAME_FUNC = 'vt_GameLibAbiGate001_GetFixtureFriendName_TESTONLY'
-const NULL_OBJECT_FUNC = 'vt_x64_null_object'
+const NULL_OBJECT_FUNC = 'vt_x64_null_s0'
 const NULL_SRET_FUNC = 'vt_x64_null_sret_gamelibnullabi001_s1'
 // quick-261027-i4x: one unserved version with a 16-byte sret slot, so the
 // generated shim carries vt_x64_null_sret_gamelibnullabi001_s1 for the x64
@@ -334,7 +334,14 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
       return
     }
     const disasm = await compileAndDisasm('x86_64-windows-gnu', 'x64')
-    const block = extractFunctionBlock(disasm, TARGET_FUNC)
+    const whole = extractFunctionBlock(disasm, TARGET_FUNC)
+    // objdump labels only exports, so the block runs on into neighbouring
+    // statics (x64_null_call_note reads (%rcx)); the stub has a single
+    // epilogue, so cut at its first ret.
+    const wl = whole.split('\n')
+    const block = wl
+      .slice(0, wl.findIndex((l) => /\bret[a-z]*\b/.test(l.trim())) + 1)
+      .join('\n')
     // quick 261027-jgs: the stub now makes one call (the STUBCALL report), so
     // at -O2 the incoming %rdx (sretOut) may be parked in a callee-saved
     // register across it. The register roles are still asserted: sretOut
@@ -399,10 +406,37 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
       return
     }
     const disasm = await compileAndDisasm('x86_64-windows-gnu', 'x64')
-    const block = extractFunctionBlock(disasm, NULL_OBJECT_FUNC)
-    const lastRet = lastReturnInstruction(block)
+    const whole = extractFunctionBlock(disasm, NULL_OBJECT_FUNC)
+    // objdump labels only exports, so the block runs on into the neighbouring
+    // statics; the thunk has a single epilogue, so cut at its first ret.
+    const lines = whole.split('\n')
+    const firstRetIdx = lines.findIndex((l) => /\bret[a-z]*\b/.test(l.trim()))
+    const block = lines.slice(0, firstRetIdx + 1).join('\n')
+    const lastRet = firstReturnInstruction(block)
     expect(lastRet).toMatch(/ret[a-z]*\s*$/)
     expect(lastRet).not.toMatch(/\$0x/)
+    // quick 261027-jgs: the thunk reports its first call (x64_null_call_note)
+    // and must still return 0 in RAX: after the LAST call %eax is zeroed and
+    // nothing later writes %al/%ax/%eax/%rax.
+    const callIdx = lines
+      .slice(0, firstRetIdx + 1)
+      .map((l) => /\bcallq?\b/.test(l))
+      .lastIndexOf(true)
+    expect(callIdx).toBeGreaterThanOrEqual(0)
+    const after = lines.slice(callIdx + 1, firstRetIdx + 1).map((l) => l.trim())
+    const zeroAt = after.findIndex((l) =>
+      /\b(xor[a-z]*\s+%(eax|rax),\s*%\2|mov[a-z]*\s+\$0x0,\s*%(eax|rax|ax|al))\b/.test(
+        l
+      )
+    )
+    expect(zeroAt).toBeGreaterThanOrEqual(0)
+    const writesRax = (l: string): boolean =>
+      /^[0-9a-f]+:\s+(?:[0-9a-f]{2}\s+)+(?:lock\s+)?(?!cmp|test|push|ret|nop|call|j)[a-z]+\s+.*%(al|ax|eax|rax)\s*$/.test(
+        l
+      )
+    for (const l of after.slice(zeroAt + 1)) {
+      expect(writesRax(l)).toBe(false)
+    }
   }, 180000)
 
   it('x64: the per-(version, slot) sret null stub makes a call but still returns the incoming %rdx in %rax (via a callee-saved register) and ends in a plain retq', async () => {

@@ -1637,8 +1637,26 @@ describe('gen_vtables', () => {
         expect(c).toContain(
           `static vfn g_x64_null_object_vtbl[${X64_NULL_OBJECT_SLOTS}]`
         )
-        const entryCount = (c.match(/\(vfn\)vt_x64_null_object,/g) ?? []).length
-        expect(entryCount).toBe(X64_NULL_OBJECT_SLOTS)
+        // quick-261027-jgs: one reporting thunk per slot, no shared stub left.
+        expect(c).not.toMatch(/vt_x64_null_object\b/)
+        const thunkDefs = (
+          c.match(/^static void \*vt_x64_null_s\d+\(void \*self\) \{/gm) ?? []
+        ).length
+        expect(thunkDefs).toBe(X64_NULL_OBJECT_SLOTS)
+        const vtbl = c.match(
+          new RegExp(
+            `g_x64_null_object_vtbl\\[${X64_NULL_OBJECT_SLOTS}\\] = \\{\\n([\\s\\S]*?)\\n\\};`
+          )
+        )!
+        expect(vtbl[1].split('\n').map((l) => l.trim())).toEqual(
+          Array.from(
+            { length: X64_NULL_OBJECT_SLOTS },
+            (_, i) => `(vfn)vt_x64_null_s${i},`
+          )
+        )
+        expect(c).toContain(
+          'static void *vt_x64_null_s7(void *self) { x64_null_call_note(self, 7); return 0; }'
+        )
       })
     })
 
@@ -1693,9 +1711,9 @@ describe('gen_vtables', () => {
           /g_x64_null_nullfam003_vtbl\[4\] = \{\n([\s\S]*?)\n\};/
         )!
         expect(m[1].split('\n').map((l) => l.trim())).toEqual([
-          '(vfn)vt_x64_null_object,',
+          '(vfn)vt_x64_null_s0,',
           '(vfn)vt_x64_null_sret_nullfam003_s1,',
-          '(vfn)vt_x64_null_object,',
+          '(vfn)vt_x64_null_s2,',
           '(vfn)vt_x64_null_sret_nullfam003_s3,'
         ])
       })
@@ -1790,7 +1808,9 @@ describe('gen_vtables', () => {
         expect(fnAt).toBeLessThan(
           c.indexOf('g_bridge_steamstub_path_active = 0')
         )
-        expect(c).toContain('if (version != NULL) {')
+        expect(c).toContain(
+          'if (version == NULL) return (void *)&g_x64_null_object_instance;'
+        )
         expect(c).toContain(
           'strcmp(version, g_x64_null_sret_objects[i].version)'
         )
@@ -1819,11 +1839,11 @@ describe('gen_vtables', () => {
         }
       })
 
-      it('routes every fallback site through the lookup; the generic instance is returned once', () => {
+      it('routes every fallback site through the lookup; the generic instance is returned only for NULL or a full pool', () => {
         const c = generateShimC(real, { x64NullSretInventory: realInventory })
         expect(
           c.match(/return \(void \*\)&g_x64_null_object_instance;/g)
-        ).toHaveLength(1)
+        ).toHaveLength(2)
         expect(c).not.toContain(': (void *)&g_x64_null_object_instance')
         expect(
           (c.match(/x64_null_object_for_version\(/g) ?? []).length
@@ -1865,7 +1885,7 @@ describe('gen_vtables', () => {
               ? '(vfn)vt_x64_null_sret_steamcontroller003_s9,'
               : i === 12
                 ? '(vfn)vt_x64_null_sret_steamcontroller003_s12,'
-                : '(vfn)vt_x64_null_object,'
+                : `(vfn)vt_x64_null_s${i},`
           expect(l).toBe(want)
         })
         expect(c).not.toContain('g_x64_null_steamcontroller006_vtbl')
@@ -4007,5 +4027,80 @@ describe('quick 261027-jgs: STUBCALL first-call reporting in the shim', () => {
     for (const [, iface, method, slot] of sites) {
       expect(bySite.has(`${iface}.${method}:${slot}`)).toBe(true)
     }
+  })
+
+  describe('x64 null-object identification (per-slot thunks + pool)', () => {
+    const inv: NullSretInventory = {
+      source: { kind: 'proton-lsteamclient', ref: 'unit test' },
+      versions: {
+        NullFamA001: {
+          family: 'NullFamA',
+          slotCount: 3,
+          sret: [{ slot: 1, name: 'A', structSize: 16 }]
+        }
+      }
+    }
+    const cWith = generateShimC([abiExercise], { x64NullSretInventory: inv })
+    const cWithout = generateShimC([abiExercise])
+
+    it('emits the named table (generic first), pool, state array and noinline note even with no inventory', () => {
+      for (const c of [cWith, cWithout]) {
+        expect(c).toContain('#define GLIB_X64_NULL_POOL 32')
+        expect(c).toContain('static SRWLOCK g_x64_null_pool_lock')
+        expect(c).toMatch(
+          /g_x64_null_call_state\[GLIB_X64_NULL_NAMED \+ GLIB_X64_NULL_POOL\]\[256\]\[2\]/
+        )
+        expect(c).toContain(
+          '__attribute__((noinline)) static void x64_null_call_note(void *self, uint32_t slot) {'
+        )
+        expect(c).toMatch(
+          /g_x64_null_named\[GLIB_X64_NULL_NAMED\] = \{\n {2}&g_x64_null_object_instance,/
+        )
+        expect(c).toMatch(
+          /g_x64_null_named_ver\[GLIB_X64_NULL_NAMED\] = \{\n {2}"unknown",/
+        )
+      }
+      expect(cWith).toContain('#define GLIB_X64_NULL_NAMED 2')
+      expect(cWith).toContain('  &g_x64_null_nullfama001_instance,')
+      expect(cWith).toContain('  "NullFamA001",')
+      expect(cWithout).toContain('#define GLIB_X64_NULL_NAMED 1')
+      expect(cWithout).not.toContain('x64_null_sret_note')
+      expect(cWithout).not.toContain('vt_x64_null_sret_')
+    })
+
+    it('identifies self by address only and reports kind=null with a NULL method', () => {
+      const m = cWith.match(
+        /static void x64_null_call_note\(void \*self, uint32_t slot\) \{[\s\S]*?\n\}\n/
+      )!
+      expect(m).not.toBeNull()
+      expect(m[0]).not.toMatch(/\*\s*\(?\s*\(?(?:vfn|struct)[^)]*\)?\s*self/)
+      expect(m[0]).not.toContain('self->')
+      expect(m[0]).toContain('if (slot >= 256) return;')
+      expect(m[0]).toContain(
+        'gamelib_stubcall_note(g_x64_null_call_state[idx][slot], ver, NULL, slot, GAMELIB_STUBCALL_KIND_NULL);'
+      )
+    })
+
+    it('the lookup pools unknown versions under a leaf lock, releases it on every path, falls back to generic when full', () => {
+      const m = cWith.match(
+        /static void \*x64_null_object_for_version\(const char \*version\) \{[\s\S]*?\n\}\n/
+      )!
+      const f = m[0]
+      expect(f).toContain('AcquireSRWLockExclusive(&g_x64_null_pool_lock);')
+      expect(f.match(/AcquireSRWLockExclusive/g)).toHaveLength(1)
+      expect(f.match(/ReleaseSRWLockExclusive/g)).toHaveLength(1)
+      // No return between acquire and release.
+      const between = f.slice(
+        f.indexOf('AcquireSRWLockExclusive'),
+        f.indexOf('ReleaseSRWLockExclusive')
+      )
+      expect(between).not.toMatch(/\breturn\b/)
+      expect(between).not.toContain('bridge_transact')
+      expect(f).toContain('g_x64_null_pool_used < GLIB_X64_NULL_POOL')
+      expect(f).toContain("[n] = '\\0';")
+      expect(
+        f.trimEnd().endsWith('return (void *)&g_x64_null_object_instance;\n}')
+      ).toBe(true)
+    })
   })
 })
