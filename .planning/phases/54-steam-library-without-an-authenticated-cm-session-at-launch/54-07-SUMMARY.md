@@ -36,8 +36,8 @@ Backend-pushed `steamGoOfflineRequired` opens a dialog telling the user to choos
 
 ## Tasks
 
-1. IPC wiring and store, test-first: RED `ce6b1ec8e` is not recorded by hash here; see `git log --grep "54-07"`. GREEN `c22c12961`. Store and census tests green (census 22/1).
-2. Dialog, GlobalState registration, App mount: see `git log --grep "54-07"` (`feat(54-07): guided Go Offline dialog`).
+1. IPC wiring and store, test-first: RED `b535aeb71`. GREEN `c22c12961`. Store and census tests green (census 22/1).
+2. Dialog, GlobalState registration, App mount: `4825b34f5`.
 
 ## Behaviour
 
@@ -47,7 +47,7 @@ Backend-pushed `steamGoOfflineRequired` opens a dialog telling the user to choos
 
 ## Deviations from Plan
 
-None in behaviour. The RED commit hash was not copied into this summary; the commit exists under the `54-07` prefix.
+None - plan executed as written.
 
 ## Verification
 
