@@ -46,7 +46,8 @@ import {
   snapshotDelete,
   hydrateStoreSnapshot,
   registerStore,
-  send
+  send,
+  ensureStoreHydrated
 } from '../tauriTransport'
 import { STORE_FETCH_CHANNEL, STORE_CHANGED_CHANNEL, STORE_LAZY_MISS_MARKER } from 'common/types/sidecarTransport'
 
@@ -260,6 +261,56 @@ describe('lazy hydrate', () => {
   })
 })
 
+// Review 261027-jjz WR-01/WR-04: the Library's Last-played sort reads `timestampStore`
+// only after this resolves `true`; on `false` it retries instead of reading a cold store
+// (which would warn once per key and return `undefined` for every game).
+describe('ensureStoreHydrated', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  function fetchCalls(store: string): number {
+    return mockedInvoke.mock.calls.filter((call) => {
+      const p = call[1] as { channel?: string; args?: unknown[] } | undefined
+      return p?.channel === STORE_FETCH_CHANNEL && p.args?.[0] === store
+    }).length
+  }
+
+  it('resolves true after a successful fetch, and true again without re-fetching once hydrated', async () => {
+    mockedInvoke.mockResolvedValue({ game: { lastPlayed: '2026-01-01T00:00:00.000Z' } } as never)
+
+    await expect(ensureStoreHydrated('steamBottleConfigStore')).resolves.toBe(true)
+    expect(fetchCalls('steamBottleConfigStore')).toBe(1)
+
+    await expect(ensureStoreHydrated('steamBottleConfigStore')).resolves.toBe(true)
+    expect(fetchCalls('steamBottleConfigStore')).toBe(1)
+  })
+
+  it('de-dupes with a fetch already in flight: one fetch, both callers resolve true', async () => {
+    let resolveFetch: ((value: unknown) => void) | undefined
+    mockedInvoke.mockImplementation((() => new Promise((r) => (resolveFetch = r))) as never)
+
+    const first = ensureStoreHydrated('fontsStore')
+    const second = ensureStoreHydrated('fontsStore')
+    resolveFetch?.({})
+
+    await expect(Promise.all([first, second])).resolves.toEqual([true, true])
+    expect(fetchCalls('fontsStore')).toBe(1)
+  })
+
+  it('resolves false (never rejects) when the fetch fails, and a later call retries the fetch', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    mockedInvoke.mockRejectedValueOnce(new Error('sidecar unreachable'))
+
+    await expect(ensureStoreHydrated('downloadManager')).resolves.toBe(false)
+    expect(errorSpy).toHaveBeenCalled()
+
+    mockedInvoke.mockResolvedValueOnce({} as never)
+    await expect(ensureStoreHydrated('downloadManager')).resolves.toBe(true)
+    expect(fetchCalls('downloadManager')).toBe(2)
+  })
+})
+
 describe('change events', () => {
   let storeChangedHandler: ((event: { payload: { channel: string; args: unknown[] } }) => void) | undefined
 
@@ -438,6 +489,27 @@ describe('change events', () => {
     await settle()
     expect(fetchCallCount()).toBe(2)
     expect(snapshotGet('configStore', 'theme')).toBe('after-second-invalidation')
+  })
+
+  it('ensureStoreHydrated waits for the re-fetch an `invalidated` push started, then resolves true', async () => {
+    const fetch = deferredFetch()
+    storeChangedHandler!({
+      payload: {
+        channel: STORE_CHANGED_CHANNEL,
+        args: [{ store: 'configStore', key: '', invalidated: true }]
+      }
+    })
+
+    let settled: boolean | undefined
+    void ensureStoreHydrated('configStore').then((ok) => (settled = ok))
+    await settle()
+    expect(settled).toBeUndefined()
+
+    fetch.resolve({ theme: 'post-invalidation' })
+    await settle()
+    expect(settled).toBe(true)
+    expect(fetchCallCount()).toBe(1)
+    expect(snapshotGet('configStore', 'theme')).toBe('post-invalidation')
   })
 })
 
