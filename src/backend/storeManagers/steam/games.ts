@@ -1257,7 +1257,9 @@ export default class SteamGame implements Game {
         const prescreenLease = await SteamUser.acquireAuthenticated({
           reason: 'prescreen',
           guidedAction: 'install',
-          appName: this.appId
+          appName: this.appId,
+          installPath: args.path,
+          forceWindowsViaBottle: args.steamForceWindowsViaBottle
         })
         if (!prescreenLease.ok) {
           return this.installResultForRefusal(prescreenLease.reason)
@@ -1664,7 +1666,9 @@ export default class SteamGame implements Game {
     const lease = await SteamUser.acquireAuthenticated({
       reason: 'user-install',
       guidedAction: 'install',
-      appName: this.appId
+      appName: this.appId,
+      installPath: args.path,
+      forceWindowsViaBottle: args.steamForceWindowsViaBottle
     })
     if (!lease.ok) {
       return this.installResultForRefusal(lease.reason)
@@ -2195,7 +2199,9 @@ export default class SteamGame implements Game {
       const lease = await SteamUser.acquireAuthenticated({
         reason: 'user-install',
         guidedAction: 'install',
-        appName: this.appId
+        appName: this.appId,
+        installPath: args.path,
+        forceWindowsViaBottle: args.steamForceWindowsViaBottle
       })
       if (!lease.ok) {
         return this.installResultForRefusal(lease.reason)

@@ -4068,6 +4068,24 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     )
   })
 
+  it('54-REVIEW CR-01: the native install lease carries the install path and bottle choice for a guided retry', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    await new SteamGame(APP_ID).install({
+      path: '/Volumes/Games/SteamLibrary',
+      steamForceWindowsViaBottle: false
+    } as any)
+
+    expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: 'user-install',
+        installPath: '/Volumes/Games/SteamLibrary',
+        forceWindowsViaBottle: false
+      })
+    )
+  })
+
   it('Phase 54: the native lease is released on a depot error and on a resolve-target error', async () => {
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({

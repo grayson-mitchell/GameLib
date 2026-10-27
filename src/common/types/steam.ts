@@ -195,6 +195,12 @@ export type SteamGoOfflineAction = 'refresh' | 'install' | 'redeem'
 export interface SteamGoOfflinePayload {
   action: SteamGoOfflineAction
   appName?: string
+  /** 54-REVIEW CR-01: the refused install's own `InstallArgs.path` and
+   *  `steamForceWindowsViaBottle`, so the guided Continue replays the install
+   *  the user confirmed instead of the default library and route. Absent
+   *  when the backend never saw them. */
+  installPath?: string
+  forceWindowsViaBottle?: boolean
 }
 
 /** Phase 54: result of the renderer's `steamGoOfflineRetry` invoke. */

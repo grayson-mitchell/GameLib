@@ -89,6 +89,15 @@ interface AcquireAuthenticatedOpts {
   reason: AuthSessionReason
   guidedAction?: SteamGoOfflineAction
   appName?: string
+  // 54-REVIEW CR-01: the install's own target, carried into the guided Go
+  // Offline push so Continue replays the install the user confirmed.
+  installPath?: string
+  forceWindowsViaBottle?: boolean
+}
+
+interface GuidedInstallTarget {
+  installPath?: string
+  forceWindowsViaBottle?: boolean
 }
 
 type SteamUserClient = InstanceType<typeof SteamUserLib>
@@ -145,6 +154,11 @@ export class SteamUser {
   // release arms idleTimer; a bare ensureConnected() takes no lease.
   private static leaseCount = 0
   private static idleTimer: ReturnType<typeof setTimeout> | null = null
+  // 54-REVIEW CR-01: the last install target seen per appName. An install's
+  // first acquire (games.ts) carries it; a nested acquire for the same app
+  // (depot.ts) does not, so its guided push reads it from here. Without it a
+  // guided Continue would reinstall into the default library and route.
+  private static guidedInstallTargets = new Map<string, GuidedInstallTarget>()
   // True once releaseForShutdown() has run (stdin EOF: the shell is gone). A reconnect path
   // (ensureConnected's relog, a late login) must not open a NEW CM socket after that, or the
   // sidecar would hold the loop again.
@@ -342,6 +356,16 @@ export class SteamUser {
     token?: string
   ): Promise<AuthenticatedLease> {
     if (this.shuttingDown) return { ok: false, reason: 'shutting-down' }
+    if (
+      opts.appName &&
+      (opts.installPath !== undefined ||
+        opts.forceWindowsViaBottle !== undefined)
+    ) {
+      this.guidedInstallTargets.set(opts.appName, {
+        installPath: opts.installPath,
+        forceWindowsViaBottle: opts.forceWindowsViaBottle
+      })
+    }
     this.leaseCount++
     this.clearIdleTimer()
     let refusal: AuthSessionRefusal | null
@@ -359,9 +383,19 @@ export class SteamUser {
       this.armIdleTimer()
       const reason = refusal ?? 'client-not-ready'
       if (reason === 'go-offline-required' && opts.guidedAction) {
+        const target =
+          opts.guidedAction === 'install' && opts.appName
+            ? this.guidedInstallTargets.get(opts.appName)
+            : undefined
         sendFrontendMessage('steamGoOfflineRequired', {
           action: opts.guidedAction,
-          appName: opts.appName
+          appName: opts.appName,
+          ...(target?.installPath !== undefined
+            ? { installPath: target.installPath }
+            : {}),
+          ...(target?.forceWindowsViaBottle !== undefined
+            ? { forceWindowsViaBottle: target.forceWindowsViaBottle }
+            : {})
         })
       }
       return { ok: false, reason }
@@ -665,6 +699,7 @@ export class SteamUser {
     // reset all connection state).
     this.connectingPromise = null
     this.logonFailure = null
+    this.guidedInstallTargets.clear()
     closeAnonymousClient('logout')
     this.session = null
     this.qrSessionState = { status: 'waiting' }

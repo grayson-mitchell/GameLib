@@ -167,6 +167,7 @@ function resetSteamUserState(): void {
   internals.shuttingDown = false
   internals.logonFailure = null
   internals.leaseCount = 0
+  internals.guidedInstallTargets.clear()
   if (internals.idleTimer) clearTimeout(internals.idleTimer)
   internals.idleTimer = null
 }
@@ -413,6 +414,52 @@ describe('authenticated session lease', () => {
       appName: '230070'
     })
     expect(sendFrontendMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it('54-REVIEW CR-01: an install refusal carries the install target into the push', async () => {
+    macMock.withMacSteamOffline.mockRejectedValue(
+      new macMock.GuidedOfflineRequiredError('logoff-not-seen')
+    )
+    await acquire({
+      reason: 'user-install',
+      guidedAction: 'install',
+      appName: '230070',
+      installPath: '/Volumes/Games/SteamLibrary',
+      forceWindowsViaBottle: true
+    })
+    expect(sendFrontendMessage).toHaveBeenCalledWith('steamGoOfflineRequired', {
+      action: 'install',
+      appName: '230070',
+      installPath: '/Volumes/Games/SteamLibrary',
+      forceWindowsViaBottle: true
+    })
+  })
+
+  it('54-REVIEW CR-01: a nested acquire without a target reuses the one the install carried', async () => {
+    const outer = await acquire({
+      reason: 'user-install',
+      guidedAction: 'install',
+      appName: '230070',
+      installPath: '',
+      forceWindowsViaBottle: false
+    })
+    expect(outer.ok).toBe(true)
+    outer.release()
+    internals.client = null
+    macMock.withMacSteamOffline.mockRejectedValue(
+      new macMock.GuidedOfflineRequiredError('logoff-not-seen')
+    )
+    await acquire({
+      reason: 'user-install',
+      guidedAction: 'install',
+      appName: '230070'
+    })
+    expect(sendFrontendMessage).toHaveBeenCalledWith('steamGoOfflineRequired', {
+      action: 'install',
+      appName: '230070',
+      installPath: '',
+      forceWindowsViaBottle: false
+    })
   })
 
   it('a wrap refusal without a guidedAction pushes nothing', async () => {

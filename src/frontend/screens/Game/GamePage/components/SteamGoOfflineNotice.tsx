@@ -20,8 +20,16 @@ import {
 const SteamGoOfflineNotice = () => {
   const { t } = useTranslation('gamelib')
   const { refreshLibrary } = useContext(ContextProvider)
-  const { isOpen, action, appName, status, close, setStatus } =
-    useSteamGoOfflineNotice()
+  const {
+    isOpen,
+    action,
+    appName,
+    installPath,
+    forceWindowsViaBottle,
+    status,
+    close,
+    setStatus
+  } = useSteamGoOfflineNotice()
 
   const [error, setError] = useState<string>()
 
@@ -69,7 +77,14 @@ const SteamGoOfflineNotice = () => {
           )
           return
         }
-        await installSteamGame(appName, info)
+        // 54-REVIEW CR-01: replay the install the user confirmed (its
+        // library and bottle choice), not the default target.
+        await installSteamGame(
+          appName,
+          info,
+          installPath ?? '',
+          forceWindowsViaBottle ?? false
+        )
         close()
       } else {
         setStatus('ready')

@@ -13,6 +13,8 @@ const RESET_STATE = {
   isOpen: false,
   action: undefined,
   appName: undefined,
+  installPath: undefined,
+  forceWindowsViaBottle: undefined,
   status: 'idle' as const
 }
 
@@ -66,6 +68,22 @@ describe('handleSteamGoOfflineRequiredSignal', () => {
     expect(s.action).toBe('install')
     expect(s.appName).toBe('230070')
     expect(s.status).toBe('idle')
+  })
+
+  it('54-REVIEW CR-01: keeps the install target the backend carries, and close() drops it', () => {
+    handleSteamGoOfflineRequiredSignal({} as IpcRendererEvent, {
+      action: 'install',
+      appName: '230070',
+      installPath: '/Volumes/Games/SteamLibrary',
+      forceWindowsViaBottle: true
+    })
+    let s = useSteamGoOfflineNotice.getState()
+    expect(s.installPath).toBe('/Volumes/Games/SteamLibrary')
+    expect(s.forceWindowsViaBottle).toBe(true)
+    s.close()
+    s = useSteamGoOfflineNotice.getState()
+    expect(s.installPath).toBeUndefined()
+    expect(s.forceWindowsViaBottle).toBeUndefined()
   })
 
   it('a second signal while open replaces the payload and resets status', () => {

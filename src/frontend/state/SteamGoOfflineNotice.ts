@@ -11,6 +11,9 @@ interface SteamGoOfflineNoticeState {
   isOpen: boolean
   action?: SteamGoOfflineAction
   appName?: string
+  // 54-REVIEW CR-01: the refused install's own target, replayed by Continue.
+  installPath?: string
+  forceWindowsViaBottle?: boolean
   status: SteamGoOfflineStatus
   open: (payload: SteamGoOfflinePayload) => void
   close: () => void
@@ -27,14 +30,25 @@ export const useSteamGoOfflineNotice = create<SteamGoOfflineNoticeState>()(
     isOpen: false,
     action: undefined,
     appName: undefined,
+    installPath: undefined,
+    forceWindowsViaBottle: undefined,
     status: 'idle',
-    open: ({ action, appName }) =>
-      set({ isOpen: true, action, appName, status: 'idle' }),
+    open: ({ action, appName, installPath, forceWindowsViaBottle }) =>
+      set({
+        isOpen: true,
+        action,
+        appName,
+        installPath,
+        forceWindowsViaBottle,
+        status: 'idle'
+      }),
     close: () =>
       set({
         isOpen: false,
         action: undefined,
         appName: undefined,
+        installPath: undefined,
+        forceWindowsViaBottle: undefined,
         status: 'idle'
       }),
     setStatus: (status) => set({ status })
