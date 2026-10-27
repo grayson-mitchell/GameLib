@@ -19,8 +19,21 @@
  * bottle (and with it the ledger) is deleted.
  *
  * Accepted risk (T-rkj-09): runWineCommand exposes no kill, so a timed-out installer keeps running
- * in the bottle until it exits on its own. After a timeout no further entry runs in that launch,
- * so at most one stray installer exists per launch.
+ * in the bottle until it exits on its own, or until the null display window below ends the
+ * bottle's wineserver session (only when that window was opened). After a timeout no further
+ * entry runs in that launch, so at most one stray installer exists per launch.
+ *
+ * Null display window (quick 261027-nd3). Under Wine's Mac driver every VC_redist process
+ * registers as a Foreground app, which is one Dock icon per process. Under Graphics=null none
+ * register and the installers succeed unchanged. The driver is chosen per wineserver session, so
+ * the step sets HKCU\Software\Wine\Drivers Graphics=null and ends the session before the
+ * installers, then restores the exact prior value (or deletes it) and ends the session again, so
+ * the game starts a fresh Mac-driver session. It opens lazily just before the first real
+ * installer, only in this appId's per-game bridge bottle, and the restore runs in a finally. A
+ * `displayDriver` ledger marker is written before the switch and cleared only after a verified
+ * restore plus session end; a failed restore or a crash is therefore repaired at the top of the
+ * next run, even on a settled ledger. The bounded `wineserver -k` after the restore also reaps a
+ * stray timed-out installer, which narrows T-rkj-09.
  *
  * Bounded retry (WR-04). A failure is never recorded as done, but it is not retried blindly
  * either. An entry the containment rules reject is a fixed property of that manifest GID, so it
@@ -47,16 +60,24 @@ import type { GameSettings } from 'common/types'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { getBottleDir } from '../bottle'
+import {
+  bridgeBottleNameFor,
+  endPerGameBridgeBottleSession,
+  getBottleDir
+} from '../bottle'
 import { steamSupportPath } from '../constants'
 import {
   buildHasRunKeyAddParts,
   buildHasRunKeyQueryParts,
   buildRedistProcessCommandParts,
+  buildWineGraphicsDeleteParts,
+  buildWineGraphicsQueryParts,
+  buildWineGraphicsSetParts,
   entryAppliesToBottle,
   isRedistSuccessExit,
   normaliseSharedRedistOptIn,
   parseRegQueryDword,
+  parseRegQueryGraphics,
   sharedRedistLedgerKey,
   toBottleWindowsPath
 } from './sharedRedists'
@@ -64,6 +85,8 @@ import {
 /** Per installer process. DXSETUP is slow under CrossOver (RESEARCH A2, assumed). */
 export const REDIST_PROCESS_TIMEOUT_MS = 300_000
 const REG_TIMEOUT_MS = 15_000
+/** Bound on each `wineserver -k` that ends the bottle's session around the null display window. */
+const SESSION_END_TIMEOUT_MS = 20_000
 const LEDGER_FILE = 'gamelib-shared-redists.json'
 /** Consecutive failures of one entry at one GID before it is backed off (WR-04). */
 export const REDIST_FAILURE_BACKOFF_AFTER = 3
@@ -96,6 +119,12 @@ interface Ledger {
    * until it is written, so the ledger and the registry never disagree on a settled bottle.
    */
   markPending: Record<string, string>
+  /**
+   * Present while the bottle may be on Wine's null display driver (quick 261027-nd3). Written
+   * BEFORE the switch, cleared only after a verified restore plus session end. `prior` is the
+   * Graphics value to put back, null when it was absent.
+   */
+  displayDriver?: { prior: string | null; at: string }
   settled?: {
     optIn: string[]
     depotIds: string[]
@@ -178,6 +207,14 @@ async function readLedger(path: string, appId: string): Promise<Ledger> {
           ? parsed.markPending
           : {}
       }
+      const dd = parsed.displayDriver
+      if (
+        dd &&
+        typeof dd === 'object' &&
+        (typeof dd.prior === 'string' || dd.prior === null) &&
+        typeof dd.at === 'string'
+      )
+        ledger.displayDriver = { prior: dd.prior, at: dd.at }
       const s = parsed.settled
       if (
         s &&
@@ -342,6 +379,72 @@ async function run(
     readKnownFixProfile(appId, 'steam')?.steamSharedRedists
   ).sort()
 
+  const { runWineCommand } = await import('backend/launcher')
+
+  /**
+   * Put the Graphics value back (2 verified attempts), then always end the bottle's session so the
+   * game starts fresh on the restored driver. Clears the ledger marker only on full success.
+   * Never throws.
+   */
+  const restoreDisplay = async (prior: string | null): Promise<void> => {
+    let verified = false
+    for (let attempt = 0; attempt < 2 && !verified; attempt++) {
+      try {
+        await runBounded(
+          runWineCommand,
+          prior === null
+            ? buildWineGraphicsDeleteParts()
+            : buildWineGraphicsSetParts(prior),
+          bottleSettings,
+          REG_TIMEOUT_MS
+        )
+        const q = await runBounded(
+          runWineCommand,
+          buildWineGraphicsQueryParts(),
+          bottleSettings,
+          REG_TIMEOUT_MS
+        )
+        if (!q.timedOut) {
+          const current = parseRegQueryGraphics(q.stdout)
+          verified = prior === null ? current === null : current === prior
+        }
+      } catch {
+        // retried once below; the final warning covers a persistent failure
+      }
+    }
+    let sessionEnded = false
+    try {
+      sessionEnded = await endPerGameBridgeBottleSession(
+        appId,
+        bottleSettings.wineCrossoverBottle,
+        SESSION_END_TIMEOUT_MS
+      )
+    } catch {
+      // endPerGameBridgeBottleSession never throws; belt and braces
+    }
+    if (verified && sessionEnded) {
+      try {
+        delete ledger.displayDriver
+        await writeLedger(ledgerPath, bottleDir, ledger)
+      } catch {
+        // The marker may linger; the next launch repeats a harmless restore.
+      }
+      return
+    }
+    logWarning(
+      `Steam ${appId}: could not restore the Wine display driver in bottle ${bottleSettings.wineCrossoverBottle}; the bottle may still be on Wine's null display driver, so the game may start with no display. The restore will be retried next launch`,
+      LogPrefix.Steam
+    )
+  }
+
+  if (ledger.displayDriver) {
+    logInfo(
+      `Steam ${appId}: a previous run left the Wine display driver switched, restoring it first`,
+      LogPrefix.Steam
+    )
+    await restoreDisplay(ledger.displayDriver.prior)
+  }
+
   if (
     ledger.settled &&
     JSON.stringify([...ledger.settled.optIn].sort()) === JSON.stringify(optIn)
@@ -358,7 +461,6 @@ async function run(
     await writeLedger(ledgerPath, bottleDir, ledger)
   }
 
-  const { runWineCommand } = await import('backend/launcher')
   const { downloadSharedRedistDepots } = await import('../depot')
 
   const result = await downloadSharedRedistDepots(appId, {
@@ -399,172 +501,252 @@ async function run(
     }
   }
 
-  for (const depot of result.depots) {
-    if (stop) break
-    const installDirWin = toBottleWindowsPath(depot.installDirHost)
-    for (const entry of depot.entries) {
-      if (stop) break
-      if (signal?.aborted) {
-        logInfo(
-          `Steam ${appId}: shared redist step aborted, no further redists this launch`,
-          LogPrefix.Steam
-        )
-        stop = true
-        break
-      }
-      if (!entryAppliesToBottle(entry)) continue
-      const key = sharedRedistLedgerKey(
-        entry.hasRunKey,
-        entry.name,
-        depot.depotId
+  let windowTried = false
+  let windowPrior: { prior: string | null } | null = null
+
+  /** Lazily switch this appId's per-game bottle to Graphics=null; never throws or fails the launch. */
+  const openNullDisplay = async (): Promise<void> => {
+    if (windowTried) return
+    windowTried = true
+    let markerWritten = false
+    let prior: string | null = null
+    try {
+      if (bottleSettings.wineCrossoverBottle !== bridgeBottleNameFor(appId))
+        return
+      const q = await runBounded(
+        runWineCommand,
+        buildWineGraphicsQueryParts(),
+        bottleSettings,
+        REG_TIMEOUT_MS
       )
-      if (ledger.done[key]) {
-        if (ledger.markPending[key] && entry.hasRunKey) {
-          if (await writeMark(entry.hasRunKey, entry.name)) {
-            delete ledger.markPending[key]
-            await writeLedger(ledgerPath, bottleDir, ledger)
-          } else {
-            logWarning(
-              `Steam ${appId}: still could not write the HasRunKey mark for ${depot.label} (${entry.name})`,
-              LogPrefix.Steam
-            )
-          }
-        }
-        continue
-      }
-      if (ledger.rejected[key] === depot.gid) {
+      if (q.timedOut) {
         logInfo(
-          `Steam ${appId}: ${depot.label} (${entry.name}) was rejected by the containment rules at manifest ${depot.gid}, skipping`,
+          `Steam ${appId}: Graphics query timed out, redists run on the Mac driver`,
           LogPrefix.Steam
         )
-        continue
+        return
       }
-      const until = backoffUntil(ledger, key, depot.gid)
-      if (until !== null) {
+      if (q.code === 0) {
+        const parsed = parseRegQueryGraphics(q.stdout)
+        if (parsed === null) return
+        prior = parsed
+      }
+      const setNull = buildWineGraphicsSetParts('null')
+      if (prior !== null) buildWineGraphicsSetParts(prior) // throws on a value we could not replay
+      ledger.displayDriver = { prior, at: new Date().toISOString() }
+      await writeLedger(ledgerPath, bottleDir, ledger)
+      markerWritten = true
+      windowPrior = { prior }
+      const add = await runBounded(
+        runWineCommand,
+        setNull,
+        bottleSettings,
+        REG_TIMEOUT_MS
+      )
+      const ended =
+        !add.timedOut &&
+        add.code === 0 &&
+        (await endPerGameBridgeBottleSession(
+          appId,
+          bottleSettings.wineCrossoverBottle,
+          SESSION_END_TIMEOUT_MS
+        ))
+      if (!ended) {
         logWarning(
-          `Steam ${appId}: ${depot.label} (${entry.name}) failed ${ledger.failures[key].count} times in a row at manifest ${depot.gid}, skipping until ${new Date(until).toISOString()}`,
+          `Steam ${appId}: could not switch the bottle to the null display driver, redists run on the Mac driver (cosmetic: Dock icons only)`,
           LogPrefix.Steam
         )
-        anyFailed = true
-        continue
+        windowPrior = null
+        await restoreDisplay(prior)
       }
+    } catch (error) {
+      logWarning(
+        `Steam ${appId}: null display window failed: ${String(error)}`,
+        LogPrefix.Steam
+      )
+      if (markerWritten) {
+        windowPrior = null
+        await restoreDisplay(prior)
+      }
+    }
+  }
 
-      try {
-        if (entry.hasRunKey) {
-          const q = await runBounded(
-            runWineCommand,
-            buildHasRunKeyQueryParts(entry.hasRunKey, entry.name),
-            bottleSettings,
-            REG_TIMEOUT_MS
-          )
-          if (!q.timedOut) {
-            const value = parseRegQueryDword(q.stdout)
-            if (value !== null && value >= entry.minimumHasRunValue) {
-              logInfo(
-                `Steam ${appId}: ${depot.label} (${entry.name}) already marked in the bottle registry`,
-                LogPrefix.Steam
-              )
-              ledger.done[key] = depot.gid
-              await writeLedger(ledgerPath, bottleDir, ledger)
-              continue
-            }
-          }
-        }
-
-        if (entry.processes.length === 0) continue
-
-        sendGameStatusUpdate({
-          appName: appId,
-          runner: 'steam',
-          status: 'redist',
-          context: depot.label
-        })
-
-        // Build every process first, so a rejected entry runs none of its processes.
-        const allParts = entry.processes.map((proc) =>
-          buildRedistProcessCommandParts(proc, depot.kind, installDirWin)
-        )
-        if (allParts.some((parts) => parts === null)) {
-          logWarning(
-            `Steam ${appId}: ${depot.label} (${entry.name}) has an unsafe process entry, skipping it while depot ${depot.depotId} stays at manifest ${depot.gid}`,
+  try {
+    for (const depot of result.depots) {
+      if (stop) break
+      const installDirWin = toBottleWindowsPath(depot.installDirHost)
+      for (const entry of depot.entries) {
+        if (stop) break
+        if (signal?.aborted) {
+          logInfo(
+            `Steam ${appId}: shared redist step aborted, no further redists this launch`,
             LogPrefix.Steam
           )
-          ledger.rejected[key] = depot.gid
-          await writeLedger(ledgerPath, bottleDir, ledger)
+          stop = true
+          break
+        }
+        if (!entryAppliesToBottle(entry)) continue
+        const key = sharedRedistLedgerKey(
+          entry.hasRunKey,
+          entry.name,
+          depot.depotId
+        )
+        if (ledger.done[key]) {
+          if (ledger.markPending[key] && entry.hasRunKey) {
+            if (await writeMark(entry.hasRunKey, entry.name)) {
+              delete ledger.markPending[key]
+              await writeLedger(ledgerPath, bottleDir, ledger)
+            } else {
+              logWarning(
+                `Steam ${appId}: still could not write the HasRunKey mark for ${depot.label} (${entry.name})`,
+                LogPrefix.Steam
+              )
+            }
+          }
           continue
         }
-
-        let entryOk = true
-        for (const parts of allParts as string[][]) {
-          const r = await runBounded(
-            runWineCommand,
-            parts,
-            bottleSettings,
-            REDIST_PROCESS_TIMEOUT_MS
+        if (ledger.rejected[key] === depot.gid) {
+          logInfo(
+            `Steam ${appId}: ${depot.label} (${entry.name}) was rejected by the containment rules at manifest ${depot.gid}, skipping`,
+            LogPrefix.Steam
           )
-          if (r.timedOut) {
-            logWarning(
-              `Steam ${appId}: ${depot.label} (${entry.name}) installer timed out after ${REDIST_PROCESS_TIMEOUT_MS}ms; it may keep running in the bottle, no further redists this launch`,
-              LogPrefix.Steam
-            )
-            recordFailure(ledger, key, depot.gid, true)
-            await writeLedger(ledgerPath, bottleDir, ledger)
-            stop = true
-            entryOk = false
-            break
-          }
-          if (!isRedistSuccessExit(depot.kind, r.code)) {
-            const f = recordFailure(ledger, key, depot.gid, false)
-            await writeLedger(ledgerPath, bottleDir, ledger)
-            logWarning(
-              `Steam ${appId}: ${depot.label} (${entry.name}) installer exited with code ${String(r.code)} (consecutive failure ${f.count}), will retry`,
-              LogPrefix.Steam
-            )
-            entryOk = false
-            break
-          }
+          continue
         }
-        if (!entryOk) {
+        const until = backoffUntil(ledger, key, depot.gid)
+        if (until !== null) {
+          logWarning(
+            `Steam ${appId}: ${depot.label} (${entry.name}) failed ${ledger.failures[key].count} times in a row at manifest ${depot.gid}, skipping until ${new Date(until).toISOString()}`,
+            LogPrefix.Steam
+          )
           anyFailed = true
           continue
         }
 
-        // The installer succeeded, so the entry is done whatever happens to the mark; a failed
-        // mark is retried next launch and blocks settling (IN-01).
-        if (
-          entry.hasRunKey &&
-          !(await writeMark(entry.hasRunKey, entry.name))
-        ) {
-          logWarning(
-            `Steam ${appId}: could not write the HasRunKey mark for ${depot.label} (${entry.name}), will retry the mark next launch`,
+        try {
+          if (entry.hasRunKey) {
+            const q = await runBounded(
+              runWineCommand,
+              buildHasRunKeyQueryParts(entry.hasRunKey, entry.name),
+              bottleSettings,
+              REG_TIMEOUT_MS
+            )
+            if (!q.timedOut) {
+              const value = parseRegQueryDword(q.stdout)
+              if (value !== null && value >= entry.minimumHasRunValue) {
+                logInfo(
+                  `Steam ${appId}: ${depot.label} (${entry.name}) already marked in the bottle registry`,
+                  LogPrefix.Steam
+                )
+                ledger.done[key] = depot.gid
+                await writeLedger(ledgerPath, bottleDir, ledger)
+                continue
+              }
+            }
+          }
+
+          if (entry.processes.length === 0) continue
+
+          sendGameStatusUpdate({
+            appName: appId,
+            runner: 'steam',
+            status: 'redist',
+            context: depot.label
+          })
+
+          // Build every process first, so a rejected entry runs none of its processes.
+          const allParts = entry.processes.map((proc) =>
+            buildRedistProcessCommandParts(proc, depot.kind, installDirWin)
+          )
+          if (allParts.some((parts) => parts === null)) {
+            logWarning(
+              `Steam ${appId}: ${depot.label} (${entry.name}) has an unsafe process entry, skipping it while depot ${depot.depotId} stays at manifest ${depot.gid}`,
+              LogPrefix.Steam
+            )
+            ledger.rejected[key] = depot.gid
+            await writeLedger(ledgerPath, bottleDir, ledger)
+            continue
+          }
+
+          await openNullDisplay()
+
+          let entryOk = true
+          for (const parts of allParts as string[][]) {
+            const r = await runBounded(
+              runWineCommand,
+              parts,
+              bottleSettings,
+              REDIST_PROCESS_TIMEOUT_MS
+            )
+            if (r.timedOut) {
+              logWarning(
+                `Steam ${appId}: ${depot.label} (${entry.name}) installer timed out after ${REDIST_PROCESS_TIMEOUT_MS}ms; it may keep running in the bottle, no further redists this launch`,
+                LogPrefix.Steam
+              )
+              recordFailure(ledger, key, depot.gid, true)
+              await writeLedger(ledgerPath, bottleDir, ledger)
+              stop = true
+              entryOk = false
+              break
+            }
+            if (!isRedistSuccessExit(depot.kind, r.code)) {
+              const f = recordFailure(ledger, key, depot.gid, false)
+              await writeLedger(ledgerPath, bottleDir, ledger)
+              logWarning(
+                `Steam ${appId}: ${depot.label} (${entry.name}) installer exited with code ${String(r.code)} (consecutive failure ${f.count}), will retry`,
+                LogPrefix.Steam
+              )
+              entryOk = false
+              break
+            }
+          }
+          if (!entryOk) {
+            anyFailed = true
+            continue
+          }
+
+          // The installer succeeded, so the entry is done whatever happens to the mark; a failed
+          // mark is retried next launch and blocks settling (IN-01).
+          if (
+            entry.hasRunKey &&
+            !(await writeMark(entry.hasRunKey, entry.name))
+          ) {
+            logWarning(
+              `Steam ${appId}: could not write the HasRunKey mark for ${depot.label} (${entry.name}), will retry the mark next launch`,
+              LogPrefix.Steam
+            )
+            ledger.markPending[key] = depot.gid
+          } else {
+            delete ledger.markPending[key]
+          }
+          logInfo(
+            `Steam ${appId}: installed ${depot.label} (${entry.name}, depot ${depot.depotId})`,
             LogPrefix.Steam
           )
-          ledger.markPending[key] = depot.gid
-        } else {
-          delete ledger.markPending[key]
-        }
-        logInfo(
-          `Steam ${appId}: installed ${depot.label} (${entry.name}, depot ${depot.depotId})`,
-          LogPrefix.Steam
-        )
-        ledger.done[key] = depot.gid
-        delete ledger.timedOut[key]
-        delete ledger.failures[key]
-        delete ledger.rejected[key]
-        await writeLedger(ledgerPath, bottleDir, ledger)
-      } catch (error) {
-        logWarning(
-          `Steam ${appId}: ${depot.label} (${entry.name}) threw, will retry next launch: ${String(error)}`,
-          LogPrefix.Steam
-        )
-        anyFailed = true
-        try {
-          recordFailure(ledger, key, depot.gid, false)
+          ledger.done[key] = depot.gid
+          delete ledger.timedOut[key]
+          delete ledger.failures[key]
+          delete ledger.rejected[key]
           await writeLedger(ledgerPath, bottleDir, ledger)
-        } catch {
-          // The failure count is best effort; the entry already stays not-done and unsettled.
+        } catch (error) {
+          logWarning(
+            `Steam ${appId}: ${depot.label} (${entry.name}) threw, will retry next launch: ${String(error)}`,
+            LogPrefix.Steam
+          )
+          anyFailed = true
+          try {
+            recordFailure(ledger, key, depot.gid, false)
+            await writeLedger(ledgerPath, bottleDir, ledger)
+          } catch {
+            // The failure count is best effort; the entry already stays not-done and unsettled.
+          }
         }
       }
+    }
+  } finally {
+    if (windowPrior) {
+      const { prior } = windowPrior as { prior: string | null }
+      windowPrior = null
+      await restoreDisplay(prior)
     }
   }
 

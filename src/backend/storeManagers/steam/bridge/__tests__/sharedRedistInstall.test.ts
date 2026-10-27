@@ -33,7 +33,11 @@ import { downloadSharedRedistDepots } from '../../depot'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning } from 'backend/logger'
-import { getBottleDir } from '../../bottle'
+import {
+  bridgeBottleNameFor,
+  endPerGameBridgeBottleSession,
+  getBottleDir
+} from '../../bottle'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -45,7 +49,11 @@ jest.mock('backend/launcher', () => ({ runWineCommand: jest.fn() }))
 jest.mock('../../depot', () => ({ downloadSharedRedistDepots: jest.fn() }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 jest.mock('backend/knownFixes', () => ({ readKnownFixProfile: jest.fn() }))
-jest.mock('../../bottle', () => ({ getBottleDir: jest.fn() }))
+jest.mock('../../bottle', () => ({
+  getBottleDir: jest.fn(),
+  bridgeBottleNameFor: jest.fn(),
+  endPerGameBridgeBottleSession: jest.fn()
+}))
 // IN-05: a per-test mkdtemp dir, assigned in beforeEach before anything reads it.
 let mockSupportDir = ''
 jest.mock('../../constants', () => ({
@@ -60,6 +68,8 @@ const mockedFixes = readKnownFixProfile as jest.Mock
 const mockedStatus = sendGameStatusUpdate as jest.Mock
 const mockedWarn = logWarning as jest.Mock
 const mockedBottleDir = getBottleDir as jest.Mock
+const mockedBridgeName = bridgeBottleNameFor as jest.Mock
+const mockedEnd = endPerGameBridgeBottleSession as jest.Mock
 
 const APP = '12345'
 const SETTINGS = {
@@ -138,6 +148,13 @@ function defaultWine(
     }
   )
 }
+const DRIVERS = 'HKEY_CURRENT_USER\\Software\\Wine\\Drivers'
+/** Wine Graphics-value argv (query/add/delete against the Drivers key). */
+const graphicsCalls = () =>
+  mockedRun.mock.calls
+    .map(([a]) => a.commandParts as string[])
+    .filter((p) => p[2] === DRIVERS)
+const isGfx = (p: string[]) => p[2] === DRIVERS
 const installerCalls = () =>
   mockedRun.mock.calls
     .map(([a]) => a.commandParts as string[])
@@ -149,6 +166,10 @@ beforeEach(() => {
   mockSupportDir = mkdtempSync(join(tmpdir(), 'rkj-redist-support-'))
   mockedBottleDir.mockReturnValue(bottleDir)
   mockedFixes.mockReturnValue(null)
+  mockedEnd.mockResolvedValue(true)
+  mockedBridgeName.mockImplementation((id: string) =>
+    /^\d+$/.test(id) ? `GameLibSteamBridge-${id}` : null
+  )
   defaultWine()
 })
 
@@ -188,6 +209,19 @@ describe('installSteamBridgeSharedRedists', () => {
       'HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\DirectX\\Jun2010'
     expect(mockedRun.mock.calls.map(([a]) => a.commandParts)).toEqual([
       ['reg', 'query', key, '/v', 'dxsetup', '/reg:32'],
+      ['reg', 'query', DRIVERS, '/v', 'Graphics'],
+      [
+        'reg',
+        'add',
+        DRIVERS,
+        '/v',
+        'Graphics',
+        '/t',
+        'REG_SZ',
+        '/d',
+        'null',
+        '/f'
+      ],
       installerCalls()[0],
       [
         'reg',
@@ -201,8 +235,16 @@ describe('installSteamBridgeSharedRedists', () => {
         '1',
         '/reg:32',
         '/f'
-      ]
+      ],
+      ['reg', 'delete', DRIVERS, '/v', 'Graphics', '/f'],
+      ['reg', 'query', DRIVERS, '/v', 'Graphics']
     ])
+    expect(mockedEnd).toHaveBeenCalledTimes(2)
+    expect(mockedEnd).toHaveBeenCalledWith(
+      APP,
+      SETTINGS.wineCrossoverBottle,
+      20_000
+    )
     const l = ledger()
     expect(Object.keys(l.done)).toEqual([`${key.toLowerCase()}|dxsetup`])
     expect(l.settled).toMatchObject({
@@ -383,7 +425,9 @@ describe('installSteamBridgeSharedRedists', () => {
     expect(mockedWarn).toHaveBeenCalled()
     // No reg add for the failed x86 entry.
     expect(
-      mockedRun.mock.calls.filter(([a]) => a.commandParts[1] === 'add')
+      mockedRun.mock.calls.filter(
+        ([a]) => a.commandParts[1] === 'add' && !isGfx(a.commandParts)
+      )
     ).toHaveLength(1)
   })
 
@@ -586,7 +630,9 @@ describe('installSteamBridgeSharedRedists', () => {
     const DX_KEY =
       'hkey_local_machine\\software\\valve\\steam\\apps\\commonredist\\directx\\jun2010|dxsetup'
     const regAdds = () =>
-      mockedRun.mock.calls.filter(([a]) => a.commandParts[1] === 'add')
+      mockedRun.mock.calls.filter(
+        ([a]) => a.commandParts[1] === 'add' && !isGfx(a.commandParts)
+      )
 
     it.each([
       ['a non-zero exit', () => ({ code: 1, stdout: '', stderr: '' })],
@@ -693,8 +739,9 @@ describe('installSteamBridgeSharedRedists', () => {
         }
       )
       await installSteamBridgeSharedRedists(APP, SETTINGS)
-      // reg query, DXSETUP, reg add
-      expect(children).toHaveLength(3)
+      // HasRunKey query, Graphics query, Graphics add, DXSETUP, HasRunKey add,
+      // Graphics delete, Graphics verification query
+      expect(children).toHaveLength(7)
       for (const c of children)
         for (const h of [c, c.stdin, c.stdout, c.stderr])
           expect(h.unref).toHaveBeenCalledTimes(1)
@@ -753,6 +800,325 @@ describe('installSteamBridgeSharedRedists', () => {
       const l = ledger()
       expect(l.timedOut).toEqual({})
       expect(l.done[key]).toBe('gid-228990')
+    })
+  })
+
+  describe('null display window (261027-nd3)', () => {
+    /** Wine fake that tracks the Graphics value; query reports it as wine reg does. */
+    function gfxWine(
+      initial: string | null,
+      hooks: (p: string[]) => unknown = () => undefined
+    ) {
+      let value = initial
+      mockedRun.mockImplementation(
+        async ({ commandParts: p }: { commandParts: string[] }) => {
+          const h = hooks(p)
+          if (h !== undefined) return h
+          if (isGfx(p)) {
+            if (p[1] === 'add') value = p[8]
+            if (p[1] === 'delete') value = null
+            if (p[1] === 'query')
+              return value === null
+                ? { code: 1, stdout: '', stderr: '' }
+                : {
+                    code: 0,
+                    stdout: `${DRIVERS}\r\n    Graphics    REG_SZ    ${value}\r\n`,
+                    stderr: ''
+                  }
+            return { code: 0, stdout: '', stderr: '' }
+          }
+          if (p[0] === 'reg' && p[1] === 'query')
+            return { code: 1, stdout: '', stderr: '' }
+          return { code: 0, stdout: '', stderr: '' }
+        }
+      )
+      return () => value
+    }
+    const mutations = () => graphicsCalls().filter((p) => p[1] !== 'query')
+    const order = (fn: jest.Mock, i: number) => fn.mock.invocationCallOrder[i]
+
+    it('orders session ends around the installer', async () => {
+      mockedDownload.mockResolvedValue(ok([dx()]))
+      gfxWine(null)
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      const calls = mockedRun.mock.calls.map(
+        ([a]) => a.commandParts as string[]
+      )
+      const at = (pred: (p: string[]) => boolean) => calls.findIndex(pred)
+      const addIdx = at((p) => isGfx(p) && p[1] === 'add')
+      const instIdx = at((p) => p[0] !== 'reg')
+      const delIdx = at((p) => isGfx(p) && p[1] === 'delete')
+      const o = mockedRun.mock.invocationCallOrder
+      expect(mockedEnd).toHaveBeenCalledTimes(2)
+      expect(order(mockedEnd, 0)).toBeGreaterThan(o[addIdx])
+      expect(order(mockedEnd, 0)).toBeLessThan(o[instIdx])
+      expect(order(mockedEnd, 1)).toBeGreaterThan(o[delIdx + 1])
+      expect(ledger().displayDriver).toBeUndefined()
+      expect(ledger().settled).toBeDefined()
+    })
+
+    it('switches once for two entries', async () => {
+      mockedDownload.mockResolvedValue(ok([vc2010()]))
+      gfxWine(null)
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(installerCalls()).toHaveLength(2)
+      expect(mutations().map((p) => p[1])).toEqual(['add', 'delete'])
+    })
+
+    it('restores a pre-existing value with reg add', async () => {
+      mockedDownload.mockResolvedValue(ok([dx()]))
+      const get = gfxWine('mac')
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(mutations().map((p) => [p[1], p[8]])).toEqual([
+        ['add', 'null'],
+        ['add', 'mac']
+      ])
+      expect(get()).toBe('mac')
+      expect(ledger().displayDriver).toBeUndefined()
+    })
+
+    it.each([
+      [
+        'non-success exit',
+        (p: string[]) =>
+          p[0].endsWith('DXSETUP.exe')
+            ? { code: 5, stdout: '', stderr: '' }
+            : undefined
+      ],
+      [
+        'throw',
+        (p: string[]) => {
+          if (p[0].endsWith('DXSETUP.exe')) throw new Error('boom')
+          return undefined
+        }
+      ]
+    ])('restores after an installer %s', async (_n, hook) => {
+      mockedDownload.mockResolvedValue(ok([dx()]))
+      const get = gfxWine('mac', hook)
+      await expect(
+        installSteamBridgeSharedRedists(APP, SETTINGS)
+      ).resolves.toBeUndefined()
+      expect(get()).toBe('mac')
+      expect(mutations().pop()).toEqual(expect.arrayContaining(['add', 'mac']))
+      expect(mockedEnd).toHaveBeenCalledTimes(2)
+      expect(ledger().displayDriver).toBeUndefined()
+    })
+
+    it('restores after an abort between entries', async () => {
+      const ctl = new AbortController()
+      mockedDownload.mockResolvedValue(ok([vc2010(), dx()]))
+      const get = gfxWine(null, (p) => {
+        if (p[0].endsWith('vcredist_x86.exe')) ctl.abort()
+        return undefined
+      })
+      await installSteamBridgeSharedRedists(APP, SETTINGS, ctl.signal)
+      expect(get()).toBeNull()
+      expect(mutations().map((p) => p[1])).toEqual(['add', 'delete'])
+      expect(mockedEnd).toHaveBeenCalledTimes(2)
+    })
+
+    it('restores after an installer timeout', async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
+      mockedDownload.mockResolvedValue(ok([vc2010()]))
+      const get = gfxWine(null, (p) =>
+        p[0] !== 'reg' ? new Promise(() => undefined) : undefined
+      )
+      const pr = installSteamBridgeSharedRedists(APP, SETTINGS)
+      for (let i = 0; i < 500 && installerCalls().length === 0; i++)
+        await new Promise((r) => setImmediate(r))
+      await jest.advanceTimersByTimeAsync(REDIST_PROCESS_TIMEOUT_MS)
+      await pr
+      expect(get()).toBeNull()
+      expect(mutations().map((p) => p[1])).toEqual(['add', 'delete'])
+      expect(mockedEnd).toHaveBeenCalledTimes(2)
+      expect(ledger().displayDriver).toBeUndefined()
+    })
+
+    describe('no switch', () => {
+      const none = () => {
+        expect(graphicsCalls()).toEqual([])
+        expect(mockedEnd).not.toHaveBeenCalled()
+      }
+      it('settled fast path', async () => {
+        mockedDownload.mockResolvedValue(ok([]))
+        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        jest.clearAllMocks()
+        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        none()
+      })
+      it('offline', async () => {
+        mockedDownload.mockResolvedValue({
+          status: 'offline',
+          depots: [],
+          failed: [],
+          skipped: []
+        })
+        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        none()
+      })
+      it('every entry already marked', async () => {
+        mockedDownload.mockResolvedValue(ok([dx()]))
+        defaultWine((p) =>
+          p[1] === 'query'
+            ? {
+                code: 0,
+                stdout: '    dxsetup    REG_DWORD    0x1\r\n',
+                stderr: ''
+              }
+            : undefined
+        )
+        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        none()
+      })
+      it('rejected-only run', async () => {
+        const d = dx()
+        mockedDownload.mockResolvedValue(ok([d]))
+        writeFileSync(
+          ledgerPath(),
+          JSON.stringify({
+            version: 1,
+            done: {},
+            timedOut: {},
+            rejected: {
+              'hkey_local_machine\\software\\valve\\steam\\apps\\commonredist\\directx\\jun2010|dxsetup':
+                d.gid
+            }
+          })
+        )
+        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        none()
+      })
+      it('backed-off-only run', async () => {
+        const d = dx()
+        const k =
+          'hkey_local_machine\\software\\valve\\steam\\apps\\commonredist\\directx\\jun2010|dxsetup'
+        mockedDownload.mockResolvedValue(ok([d]))
+        writeFileSync(
+          ledgerPath(),
+          JSON.stringify({
+            version: 1,
+            done: {},
+            timedOut: {},
+            failures: {
+              [k]: {
+                gid: d.gid,
+                count: REDIST_FAILURE_BACKOFF_AFTER,
+                at: new Date().toISOString()
+              }
+            }
+          })
+        )
+        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        none()
+      })
+      it('shared bottle', async () => {
+        mockedDownload.mockResolvedValue(ok([dx()]))
+        await installSteamBridgeSharedRedists(APP, {
+          wineCrossoverBottle: 'GameLibSteamBridge'
+        } as GameSettings)
+        expect(installerCalls()).toHaveLength(1)
+        none()
+      })
+      it('Graphics query exits 0 with unparseable stdout', async () => {
+        mockedDownload.mockResolvedValue(ok([dx()]))
+        defaultWine((p) =>
+          isGfx(p) && p[1] === 'query'
+            ? { code: 0, stdout: 'garbage', stderr: '' }
+            : undefined
+        )
+        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        expect(mutations()).toEqual([])
+        expect(mockedEnd).not.toHaveBeenCalled()
+        expect(installerCalls()).toHaveLength(1)
+      })
+      it('Graphics query times out', async () => {
+        jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
+        mockedDownload.mockResolvedValue(ok([dx()]))
+        defaultWine((p) =>
+          isGfx(p) && p[1] === 'query'
+            ? new Promise(() => undefined)
+            : undefined
+        )
+        const pr = installSteamBridgeSharedRedists(APP, SETTINGS)
+        for (let i = 0; i < 500 && graphicsCalls().length === 0; i++)
+          await new Promise((r) => setImmediate(r))
+        await jest.advanceTimersByTimeAsync(15_000)
+        await pr
+        expect(mutations()).toEqual([])
+        expect(mockedEnd).not.toHaveBeenCalled()
+        expect(installerCalls()).toHaveLength(1)
+      })
+    })
+
+    it('add-null failure: warns, restores, installers still run', async () => {
+      mockedDownload.mockResolvedValue(ok([dx()]))
+      const get = gfxWine(null, (p) =>
+        isGfx(p) && p[1] === 'add' && p[8] === 'null'
+          ? { code: 1, stdout: '', stderr: '' }
+          : undefined
+      )
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(installerCalls()).toHaveLength(1)
+      expect(get()).toBeNull()
+      expect(Object.keys(ledger().done)).toHaveLength(1)
+      expect(ledger().displayDriver).toBeUndefined()
+      expect(mockedWarn).toHaveBeenCalledWith(
+        expect.stringContaining('null display driver'),
+        'Steam'
+      )
+    })
+
+    it('first session end false: restores immediately and continues', async () => {
+      mockedDownload.mockResolvedValue(ok([dx()]))
+      mockedEnd.mockResolvedValueOnce(false)
+      gfxWine(null)
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(mutations().map((p) => p[1])).toEqual(['add', 'delete'])
+      expect(installerCalls()).toHaveLength(1)
+      expect(mockedEnd).toHaveBeenCalledTimes(2)
+      expect(Object.keys(ledger().done)).toHaveLength(1)
+    })
+
+    it('restore failure: two attempts, loud warning, marker kept, next launch recovers', async () => {
+      mockedDownload.mockResolvedValue(ok([dx()]))
+      // The value stays "null" whatever the restore does.
+      defaultWine((p) => {
+        if (!isGfx(p)) return undefined
+        if (p[1] === 'query')
+          return {
+            code: 0,
+            stdout: `${DRIVERS}\r\n    Graphics    REG_SZ    ${mockedRun.mock.calls.some(([a]) => a.commandParts[8] === 'null') ? 'null' : 'x'}\r\n`,
+            stderr: ''
+          }
+        return { code: 0, stdout: '', stderr: '' }
+      })
+      // prior must be absent for the scenario: first query says code 1.
+      let first = true
+      const base = mockedRun.getMockImplementation()!
+      mockedRun.mockImplementation(async (a: { commandParts: string[] }) => {
+        if (isGfx(a.commandParts) && a.commandParts[1] === 'query' && first) {
+          first = false
+          return { code: 1, stdout: '', stderr: '' }
+        }
+        return base(a)
+      })
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(mutations().filter((p) => p[1] === 'delete')).toHaveLength(2)
+      expect(mockedWarn).toHaveBeenCalledWith(
+        expect.stringMatching(/may start with no display/),
+        'Steam'
+      )
+      expect(ledger().displayDriver).toMatchObject({ prior: null })
+
+      // Next launch: settled ledger plus marker restores first, no download.
+      jest.clearAllMocks()
+      mockedEnd.mockResolvedValue(true)
+      gfxWine(null)
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(mockedDownload).not.toHaveBeenCalled()
+      expect(mutations().map((p) => p[1])).toEqual(['delete'])
+      expect(mockedEnd).toHaveBeenCalledTimes(1)
+      expect(ledger().displayDriver).toBeUndefined()
     })
   })
 })
