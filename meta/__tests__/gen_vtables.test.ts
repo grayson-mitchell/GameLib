@@ -26,6 +26,7 @@ import {
   FLAT_EXPORTS_SUPERSET,
   generateCallbackRegistryC,
   CALLBACK_DRAIN_RESP_MAX_BYTES,
+  CALLBACK_HELD_MAX_BYTES,
   CALLBACK_RELAY_TABLE,
   GAMESERVER_FLAT_STUBS,
   MODERN_LOOKUP_FLAT_EXPORTS,
@@ -41,7 +42,8 @@ import {
 } from '../gen_vtables'
 import {
   MSVC_CCALLBACKBASE_OFFSETS,
-  MSVC_CCALLBACKBASE_VSLOT_RUN_1ARG
+  MSVC_CCALLBACKBASE_VSLOT_RUN_1ARG,
+  USER_STATS_RECEIVED_LAYOUT
 } from '../msvcCallbackLayout'
 import { CONTROL_SLOT } from '../../src/backend/storeManagers/steam/bridge/protocol'
 import { BARE_ACCESSOR_FAMILY } from '../../src/backend/storeManagers/steam/bridge/interfaceVersions'
@@ -3470,13 +3472,104 @@ describe('callback registry (P55-3) source pins', () => {
     expect(src).not.toContain('#include')
   })
 
-  it('mirrors the helper queue sizes and allowlist row', () => {
-    const max = Number(/#define GL_CBQ_MAX_PARAM_BYTES (\d+)/.exec(header)![1])
-    const id = Number(
-      /#define GL_CBQ_ID_GET_TICKET_FOR_WEB_API_RESPONSE (\d+)/.exec(header)![1]
-    )
+  it('mirrors the helper queue sizes and allowlist rows', () => {
+    const def = (name: string) =>
+      Number(new RegExp(`#define ${name} (\\d+)`).exec(header)![1])
+    const max = def('GL_CBQ_MAX_PARAM_BYTES')
+    const id = def('GL_CBQ_ID_GET_TICKET_FOR_WEB_API_RESPONSE')
+    const usrId = def('GL_CBQ_ID_USER_STATS_RECEIVED')
+    const usrSize = def('GL_CBQ_USR_WIN_SIZE')
     expect(CALLBACK_DRAIN_RESP_MAX_BYTES).toBe(12 + max)
-    expect(CALLBACK_RELAY_TABLE).toEqual([{ id, size: max }])
+    expect(CALLBACK_RELAY_TABLE).toEqual([
+      { id, size: max, hold: false },
+      { id: usrId, size: usrSize, hold: true }
+    ])
+    // one row serves both Windows DLLs: the measured sizes agree
+    expect(usrSize).toBe(USER_STATS_RECEIVED_LAYOUT.x64.size)
+    expect(usrSize).toBe(USER_STATS_RECEIVED_LAYOUT.x86.size)
+    // the helper allowlist carries the same two rows (wire sizes)
+    expect(header).toContain(
+      '{GL_CBQ_ID_GET_TICKET_FOR_WEB_API_RESPONSE, GL_CBQ_MAX_PARAM_BYTES}'
+    )
+    expect(header).toContain(
+      '{GL_CBQ_ID_USER_STATS_RECEIVED, GL_CBQ_USR_WIN_SIZE}'
+    )
+  })
+
+  it('never holds a credential-bearing id; the hold row fits the held slot', () => {
+    expect(CALLBACK_RELAY_TABLE.find((r) => r.id === 168)?.hold).toBe(false)
+    expect(src).toContain('{168, 2572u, 0}')
+    expect(src).toContain(`{1101, ${USER_STATS_RECEIVED_LAYOUT.x64.size}u, 1}`)
+    expect(CALLBACK_HELD_MAX_BYTES).toBeGreaterThanOrEqual(
+      USER_STATS_RECEIVED_LAYOUT.x64.size
+    )
+  })
+
+  it('reports through the embedder hook only (declared by the embedder, never defined here)', () => {
+    expect(src).toContain('gl_cb_report_dispatch(')
+    expect(src).not.toMatch(/static void gl_cb_report_dispatch\(/)
+  })
+})
+
+describe('quick k51: RequestCurrentStats notify and dispatch report (shim)', () => {
+  const c = generateShimC(loadAllManifests())
+  const fallbackBodies = [
+    ...c.matchAll(
+      /static [^\n]*THISCALL (vt_[A-Za-z0-9_]*_RequestCurrentStats)\([^\n]*\{\n[\s\S]*?\n\}\n/g
+    )
+  ]
+
+  it('defines slots 9 and 10 equal to CONTROL_SLOT', () => {
+    expect(c).toContain('#define BRIDGE_CONTROL_SLOT_REQUEST_CURRENT_STATS 9')
+    expect(c).toContain('#define BRIDGE_CONTROL_SLOT_REPORT_CB_DISPATCH 10')
+    expect(CONTROL_SLOT.requestCurrentStats).toBe(9)
+    expect(CONTROL_SLOT.reportCbDispatch).toBe(10)
+  })
+
+  it('every SteamUserStats RequestCurrentStats fallback calls the notify after the stubcall note and still returns 1', () => {
+    const wanted = real.filter(
+      (m) =>
+        m.family === 'SteamUserStats' &&
+        m.methods.some(
+          (x) => x.name === 'RequestCurrentStats' && x.helperFallback === true
+        )
+    )
+    expect(wanted.length).toBeGreaterThan(0)
+    expect(fallbackBodies).toHaveLength(wanted.length)
+    for (const m of fallbackBodies) {
+      const body = m[0]
+      const noteAt = body.indexOf('gamelib_stubcall_note(')
+      const notifyAt = body.indexOf('  gamelib_request_current_stats();')
+      expect(noteAt).toBeGreaterThan(-1)
+      expect(notifyAt).toBeGreaterThan(noteAt)
+      expect(body.indexOf('return 1;')).toBeGreaterThan(notifyAt)
+    }
+  })
+
+  it('nothing else calls gamelib_request_current_stats', () => {
+    const calls = [...c.matchAll(/gamelib_request_current_stats\(\)/g)]
+    // the definition is `(void)`, so only the call sites match: one per fallback body
+    expect(calls).toHaveLength(fallbackBodies.length)
+  })
+
+  it('the notify is declared before the first vtable stub and has no one-shot latch', () => {
+    const defAt = c.indexOf(
+      '__attribute__((noinline)) static void gamelib_request_current_stats(void) {'
+    )
+    expect(defAt).toBeGreaterThan(-1)
+    expect(defAt).toBeLessThan(c.indexOf(fallbackBodies[0][0]))
+    const def = c.slice(defAt, c.indexOf('\n}\n', defAt))
+    expect(def).toContain('BRIDGE_CONTROL_SLOT_REQUEST_CURRENT_STATS')
+    expect(def).not.toContain('Interlocked')
+  })
+
+  it('the embedder defines the report hook before the registry, capped at 16', () => {
+    const hookAt = c.indexOf('static void gl_cb_report_dispatch(')
+    expect(hookAt).toBeGreaterThan(-1)
+    expect(hookAt).toBeLessThan(c.indexOf('static void gl_cb_run_callbacks('))
+    const hook = c.slice(hookAt, c.indexOf('\n}\n', hookAt))
+    expect(hook).toContain('InterlockedIncrement(&g_gl_cb_reports) > 16')
+    expect(hook).toContain('BRIDGE_CONTROL_SLOT_REPORT_CB_DISPATCH')
   })
 })
 

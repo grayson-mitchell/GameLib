@@ -99,6 +99,27 @@ static int gl_cb_transport_drain(uint8_t *buf, uint32_t cap,
   }
 }
 
+/* quick k51: the embedder hook. Records every report and asserts the registry
+ * lock is NOT held when it is called. */
+#define MAXREP 32
+static struct {
+  int32_t id;
+  uint32_t nd;
+  uint32_t held;
+} g_rep[MAXREP];
+static int g_nrep;
+static void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched,
+                                  uint32_t held) {
+  int r = pthread_mutex_trylock(&g_reg);
+  CHECK(r == 0); /* report_hook_unlocked: registry lock must NOT be held */
+  pthread_mutex_unlock(&g_reg);
+  CHECK(g_nrep < MAXREP);
+  g_rep[g_nrep].id = id;
+  g_rep[g_nrep].nd = ndispatched;
+  g_rep[g_nrep].held = held;
+  g_nrep++;
+}
+
 #include "gl_cb_registry.c"
 
 typedef struct fobj {
@@ -109,13 +130,14 @@ typedef struct fobj {
   int calls;
   int payload_ok;
   int lock_free;
+  uint8_t got[24];
 } fobj;
 
 _Static_assert(offsetof(fobj, flags) == GL_CB_FLAGS_OFF, "flags offset");
 _Static_assert(offsetof(fobj, iCallback) == GL_CB_ICALLBACK_OFF,
                "iCallback offset");
 
-static fobj objA, objB, objG, objR, objS, objX;
+static fobj objA, objB, objG, objR, objS, objX, objU;
 static fobj bulk[520];
 
 static void trap(void *self) {
@@ -143,7 +165,12 @@ static void h_run1(void *self, void *param) {
   o->calls++;
   o->lock_free = (r == 0);
   if (r == 0) pthread_mutex_unlock(&g_reg);
-  if (param) o->payload_ok = (memcmp(param, g_expect, sizeof g_expect) == 0);
+  if (param && o->iCallback == 1101) {
+    memcpy(o->got, param, 24);
+    o->payload_ok = 1;
+  } else if (param) {
+    o->payload_ok = (memcmp(param, g_expect, sizeof g_expect) == 0);
+  }
   if (o == &objX) {
     /* WR-01: another thread unregisters this object while Run is in
      * flight; it must not return before Run does. */
@@ -173,6 +200,8 @@ static void reset(void) {
   gl_cb_fail_count = 0;
   gl_cb_overflow = 0;
   gl_cb_no_target = 0;
+  memset(gl_cb_held, 0, sizeof gl_cb_held);
+  g_nrep = 0;
   g_qhead = g_qtail = 0;
   g_tcalls = 0;
   g_lastbuf = NULL;
@@ -183,6 +212,7 @@ static void reset(void) {
   init_obj(&objR);
   init_obj(&objS);
   init_obj(&objX);
+  init_obj(&objU);
   for (i = 0; i < sizeof bulk / sizeof bulk[0]; i++) init_obj(&bulk[i]);
 }
 
@@ -207,6 +237,23 @@ static void push_msg(int32_t id, uint32_t count, uint32_t cub,
     tmp[12 + i] = i < 12 ? ((uint8_t *)hdr)[i] : 0xAB;
   }
   push_raw(1, tmp, 12 + bodylen);
+}
+
+/* [u32 1][i32 1101][u32 24][24 bytes all `seed`] */
+static void push_1101(uint8_t seed) {
+  uint8_t tmp[12 + 24];
+  uint32_t one = 1u, cub = 24u;
+  int32_t id = 1101;
+  memcpy(tmp, &one, 4);
+  memcpy(tmp + 4, &id, 4);
+  memcpy(tmp + 8, &cub, 4);
+  memset(tmp + 12, seed, 24);
+  push_raw(1, tmp, sizeof tmp);
+}
+
+static int held_valid(int32_t id) {
+  int row = gl_cb_relay_row_index(id);
+  return row >= 0 && gl_cb_held[row].valid;
 }
 
 #define PASS() printf("PASS %s\n", g_case)
@@ -472,6 +519,121 @@ static void case_buffer_zeroed(void) {
   PASS();
 }
 
+static void case_relay_1101_dispatch(void) {
+  uint8_t want[24];
+  g_case = "relay_1101_dispatch";
+  reset();
+  memset(want, 0x5A, sizeof want);
+  gl_cb_register(&objU, 1101);
+  push_1101(0x5A);
+  gl_cb_run_callbacks();
+  CHECK(objU.calls == 1);
+  CHECK(objU.payload_ok == 1);
+  CHECK(memcmp(objU.got, want, 24) == 0);
+  CHECK(objU.lock_free == 1);
+  CHECK(g_nrep == 1);
+  CHECK(g_rep[0].id == 1101 && g_rep[0].nd == 1 && g_rep[0].held == 0);
+  CHECK(!held_valid(1101));
+  PASS();
+}
+
+static void case_hold_1101_until_listener(void) {
+  uint8_t want[24];
+  g_case = "hold_1101_until_listener";
+  reset();
+  gl_cb_register(&objA, 168); /* keeps the drain running, but no 1101 listener */
+  push_1101(0x11);
+  gl_cb_run_callbacks();
+  CHECK(objA.calls == 0);
+  CHECK(gl_cb_no_target == 0); /* held, not dropped */
+  CHECK(held_valid(1101));
+  CHECK(g_nrep == 1);
+  CHECK(g_rep[0].id == 1101 && g_rep[0].nd == 0 && g_rep[0].held == 1);
+  /* a second held 1101 replaces the first (latest wins) */
+  push_1101(0x22);
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(held_valid(1101));
+  CHECK(gl_cb_no_target == 0);
+  CHECK(g_nrep == 2);
+  CHECK(g_rep[1].id == 1101 && g_rep[1].nd == 0 && g_rep[1].held == 1);
+  /* a listener registers: the next RunCallbacks dispatches the held bytes */
+  gl_cb_register(&objU, 1101);
+  g_now += 31;
+  gl_cb_run_callbacks();
+  memset(want, 0x22, sizeof want);
+  CHECK(objU.calls == 1);
+  CHECK(memcmp(objU.got, want, 24) == 0);
+  CHECK(!held_valid(1101));
+  CHECK(g_nrep == 3);
+  CHECK(g_rep[2].id == 1101 && g_rep[2].nd == 1 && g_rep[2].held == 0);
+  /* delivered once: not dispatched again */
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(objU.calls == 1);
+  PASS();
+}
+
+static void case_hold_dispatches_before_new_drain(void) {
+  uint8_t want[24];
+  g_case = "hold_dispatches_before_new_drain";
+  reset();
+  gl_cb_register(&objA, 168);
+  push_1101(0x33);
+  gl_cb_run_callbacks();
+  CHECK(held_valid(1101));
+  gl_cb_register(&objU, 1101);
+  push_1101(0x44); /* newer message waiting in the helper */
+  g_now += 31;
+  gl_cb_run_callbacks();
+  /* held 0x33 first, then the drained 0x44 */
+  CHECK(objU.calls == 2);
+  memset(want, 0x44, sizeof want);
+  CHECK(memcmp(objU.got, want, 24) == 0);
+  CHECK(g_nrep == 3);
+  CHECK(g_rep[1].nd == 1 && g_rep[1].held == 0);
+  CHECK(g_rep[2].nd == 1 && g_rep[2].held == 0);
+  PASS();
+}
+
+static void case_no_hold_168(void) {
+  int left = 0;
+  uint32_t i;
+  g_case = "no_hold_168";
+  reset();
+  objG.flags = 0x02; /* gameserver-only: no live target */
+  gl_cb_register(&objG, 168);
+  push_msg(168, 1, 2572, 2572);
+  gl_cb_run_callbacks();
+  CHECK(gl_cb_no_target == 1);
+  CHECK(!held_valid(168));
+  CHECK(g_nrep == 1);
+  CHECK(g_rep[0].id == 168 && g_rep[0].nd == 0 && g_rep[0].held == 0);
+  /* the held store never contains a 168 byte (ticket) */
+  for (i = 0; i < sizeof gl_cb_held; i++)
+    if (((uint8_t *)gl_cb_held)[i] != 0) left++;
+  CHECK(left == 0);
+  left = 0;
+  CHECK(g_lastbuf != NULL);
+  for (i = 0; i < CAP; i++)
+    if (g_lastbuf[i] == 0xAB) left++;
+  CHECK(left == 0);
+  PASS();
+}
+
+static void case_report_hook_unlocked(void) {
+  g_case = "report_hook_unlocked";
+  reset();
+  gl_cb_register(&objU, 1101);
+  gl_cb_register(&objA, 168);
+  push_1101(0x01);
+  push_msg(168, 1, 2572, 2572);
+  gl_cb_run_callbacks();
+  /* the hook CHECKs trylock==0 on every call */
+  CHECK(g_nrep == 2);
+  PASS();
+}
+
 int main(void) {
   pthread_mutexattr_t attr;
   uint32_t i;
@@ -498,5 +660,10 @@ int main(void) {
   case_capacity();
   case_clear_all();
   case_buffer_zeroed();
+  case_relay_1101_dispatch();
+  case_hold_1101_until_listener();
+  case_hold_dispatches_before_new_drain();
+  case_no_hold_168();
+  case_report_hook_unlocked();
   return 0;
 }

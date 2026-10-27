@@ -32,7 +32,12 @@ const CASES = [
   'malformed',
   'capacity',
   'clear_all',
-  'buffer_zeroed'
+  'buffer_zeroed',
+  'relay_1101_dispatch',
+  'hold_1101_until_listener',
+  'hold_dispatches_before_new_drain',
+  'no_hold_168',
+  'report_hook_unlocked'
 ]
 
 function spawnArgv(
