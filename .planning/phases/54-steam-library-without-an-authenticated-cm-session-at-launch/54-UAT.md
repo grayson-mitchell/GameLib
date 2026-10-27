@@ -4,7 +4,7 @@ phase: 54-steam-library-without-an-authenticated-cm-session-at-launch
 source:
   - 54-LIVE-GATE.md
 started: 2026-10-27T00:00:00Z
-updated: 2026-10-27T00:00:00Z
+updated: 2026-10-27T10:05:00Z
 ---
 
 Authored by plan 54-10, run by 54-11. The plan that authored this contract did not run any item of it.
@@ -66,3 +66,24 @@ Recorded behaviour changes (not items to pass or fail):
 
 ## Gaps
 
+
+- truth: "Mac Steam is never left offline by GameLib: every steam://open/gooffline the go-offline wrap fires is followed by steam://open/goonline, even if GameLib quits, crashes or is killed between the two"
+  status: failed
+  reason: "User reported: something seems wrong with steam, is opening offline. cant change to online"
+  severity: blocker
+  test: pre-gate (observed before item 1; no item 1-9 covers an exit mid-wrap)
+  root_cause: "withMacSteamOffline fires gooffline, then restores with goonline only in its own `finally`. Nothing restores Steam if the process exits in between: no shutdown hook, no on-disk marker, no boot-time restore. Mac Steam persists the user-initiated offline choice (loginusers.vdf WantsOfflineMode=1), so one interrupted wrap leaves Steam offline across every Steam restart. Evidence 2026-10-27: two short-lived gamelib-shell instances spawned at 21:37:07 and 21:37:11 (gamelib-shell.log), connection_log.txt LogOff() at 21:37:08 'not auto reconnecting due to user initiated logoff', no Logged On until a manual steam://open/goonline at 22:58:31 restored it (WantsOfflineMode back to 0). Which code those instances ran is unproven (their gamelib.log rotated away); the missing restore path is proven by source."
+  artifacts:
+    - path: "src/backend/storeManagers/steam/macSteamOffline.ts"
+      issue: "goonline only in withMacSteamOffline's finally (around line 290); no persistent record that GameLib took Steam offline"
+    - path: "src/backend/storeManagers/steam/user.ts"
+      issue: "releaseForShutdown does not restore Mac Steam online"
+    - path: ".planning/phases/54-steam-library-without-an-authenticated-cm-session-at-launch/54-LIVE-GATE.md"
+      issue: "no item exercises quit/kill between gooffline and goonline"
+  missing:
+    - "Persist an on-disk marker (e.g. under the GameLib config dir) BEFORE firing gooffline; clear it only after goonline is fired"
+    - "Fire goonline from the sidecar shutdown path (stdin EOF / releaseForShutdown) when the marker is set, honouring the sidecar exit contract (bounded, unref'd)"
+    - "At sidecar boot, if the marker is present (previous run died mid-wrap), fire goonline once and clear it; never fire goonline when GameLib did not take Steam offline (marker absent), so a user's own offline choice is respected"
+    - "Unit tests for: marker written before gooffline; cleared after goonline; boot-time restore when stale; no goonline at boot when absent; shutdown restore"
+    - "A new 54-LIVE-GATE.md / 54-UAT.md item: quit (and separately kill -9) GameLib between gooffline and goonline, then confirm Mac Steam is online after the next GameLib launch and loginusers.vdf WantsOfflineMode is 0"
+  debug_session: ""
