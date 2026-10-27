@@ -1703,7 +1703,16 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
 // describe that reaches fireBridgeWineLaunch keeps its pre-existing behaviour
 // (the applier returns the bridge settings untouched). Describe-level
 // beforeEach hooks run after this one and may override it.
+// Phase 54 plan 08: every install path acquires a lease; default to a granted
+// one so tests unrelated to the session policy keep their behaviour.
+let leaseRelease: jest.Mock
 beforeEach(() => {
+  leaseRelease = jest.fn()
+  ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+    ok: true,
+    client: {},
+    release: leaseRelease
+  })
   ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
     (_id: string, settings: unknown) => Promise.resolve(settings)
   )
@@ -4036,6 +4045,90 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     expect(result).toEqual({ status: 'done' })
   })
 
+  it('Phase 54: native install acquires one user-install lease before resolveSteamInstallTarget and the crash breadcrumb, and releases it once after the download settles', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    await new SteamGame(APP_ID).install({} as any)
+
+    expect(SteamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
+    expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith({
+      reason: 'user-install',
+      guidedAction: 'install',
+      appName: APP_ID
+    })
+    const acquireOrder = (SteamUser.acquireAuthenticated as jest.Mock).mock
+      .invocationCallOrder[0]
+    expect(acquireOrder).toBeLessThan(
+      (resolveSteamInstallTarget as jest.Mock).mock.invocationCallOrder[0]
+    )
+    expect(leaseRelease).toHaveBeenCalledTimes(1)
+    expect(leaseRelease.mock.invocationCallOrder[0]).toBeGreaterThan(
+      (downloadSteamDepots as jest.Mock).mock.invocationCallOrder[0]
+    )
+  })
+
+  it('Phase 54: the native lease is released on a depot error and on a resolve-target error', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+      status: 'error',
+      error: 'boom'
+    })
+    await new SteamGame(APP_ID).install({} as any)
+    expect(leaseRelease).toHaveBeenCalledTimes(1)
+
+    leaseRelease.mockClear()
+    ;(resolveSteamInstallTarget as jest.Mock).mockRejectedValue(
+      new Error('pics down')
+    )
+    await new SteamGame(APP_ID).install({} as any)
+    expect(leaseRelease).toHaveBeenCalledTimes(1)
+  })
+
+  it('Phase 54: the native lease is released when the download is cancelled', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+      status: 'cancelled'
+    })
+
+    const result = await new SteamGame(APP_ID).install({} as any)
+
+    expect(result).toEqual({ status: 'abort' })
+    expect(leaseRelease).toHaveBeenCalledTimes(1)
+  })
+
+  it('Phase 54: a go-offline-required refusal defers to the guided step -- no target resolution, no breadcrumb, no download', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+      ok: false,
+      reason: 'go-offline-required'
+    })
+
+    const result = await new SteamGame(APP_ID).install({} as any)
+
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+    expect(resolveSteamInstallTarget).not.toHaveBeenCalled()
+    expect(library.get(APP_ID)?.install?.steamResumePending).toBeFalsy()
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+  })
+
+  it('Phase 54: a token-absent refusal returns the classified not-signed-in error', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+      ok: false,
+      reason: 'token-absent'
+    })
+
+    const result = await new SteamGame(APP_ID).install({} as any)
+
+    expect(result.status).toBe('error')
+    expect((result as { error?: string }).error).toEqual(
+      expect.stringMatching(/\S/)
+    )
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(library.get(APP_ID)?.install?.steamResumePending).toBeFalsy()
+  })
+
   it("23.2-04: a downloadSteamDepots outcome carrying skippedDepots threads through to startInstallPolling's options object", async () => {
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
@@ -5055,6 +5148,75 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(result).toEqual({ status: 'done' })
   })
 
+  it('Phase 54: a bridge install holds one lease from download through the shared-redist step (allowLogon: true) and releases it once; provisioning holds none', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
+    ;(provisionBridgeBottle as jest.Mock).mockImplementation(() => {
+      expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
+      return Promise.resolve({ status: 'done' })
+    })
+
+    const result = await new SteamGame(APP_ID).install({} as any)
+
+    expect(result).toEqual({ status: 'done' })
+    expect(provisionBridgeBottle).toHaveBeenCalled()
+    const acquires = (SteamUser.acquireAuthenticated as jest.Mock).mock
+    expect(acquires.calls).toEqual([
+      [{ reason: 'user-install', guidedAction: 'install', appName: APP_ID }],
+      [{ reason: 'user-install', guidedAction: 'install', appName: APP_ID }]
+    ])
+    // the outer (bridge) lease is the first acquire; the inner one belongs to
+    // the native depot run. Both are released.
+    expect(leaseRelease).toHaveBeenCalledTimes(2)
+    expect(installSteamBridgeSharedRedists).toHaveBeenCalledWith(
+      APP_ID,
+      expect.anything(),
+      undefined,
+      { allowLogon: true }
+    )
+    const redistOrder = (installSteamBridgeSharedRedists as jest.Mock).mock
+      .invocationCallOrder[0]
+    expect(redistOrder).toBeGreaterThan(
+      (placeShimForGame as jest.Mock).mock.invocationCallOrder[0]
+    )
+    expect(Math.max(...leaseRelease.mock.invocationCallOrder)).toBeGreaterThan(
+      redistOrder
+    )
+  })
+
+  it('Phase 54: a rejecting install-time shared-redist step is logged and the install still completes', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(installSteamBridgeSharedRedists as jest.Mock).mockRejectedValue(
+      new Error('redist boom')
+    )
+
+    const result = await new SteamGame(APP_ID).install({} as any)
+
+    expect(result).toEqual({ status: 'done' })
+    const { logWarning } = jest.requireMock('backend/logger')
+    expect(logWarning).toHaveBeenCalledWith(
+      expect.stringContaining('redist boom'),
+      'Steam'
+    )
+  })
+
+  it('Phase 54: a go-offline refusal from the bridge download returns deferredToSetup untouched -- no shim, no redist step', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+      ok: false,
+      reason: 'go-offline-required'
+    })
+
+    const result = await new SteamGame(APP_ID).install({} as any)
+
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(placeShimForGame).not.toHaveBeenCalled()
+    expect(installSteamBridgeSharedRedists).not.toHaveBeenCalled()
+  })
+
   it("quick 261023-oq7: placeShimForGame's 'placed-miss' status completes the install as a bridge install -- verdict persisted, bottle kept, breaker not armed, no setup-required, userRoute not cleared, no bottled dispatch", async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
@@ -5873,6 +6035,66 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     afterEach(() => {
       setBridgeSteamApiPrescreenSpy.mockRestore()
+    })
+
+    it('Phase 54: the prescreen holds one short prescreen lease released before installBridgeGame runs', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+      ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(prescreenBridgeDepots as jest.Mock).mockResolvedValue('x64')
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+      const releases: jest.Mock[] = []
+      ;(SteamUser.acquireAuthenticated as jest.Mock).mockImplementation(() => {
+        const release = jest.fn()
+        releases.push(release)
+        return Promise.resolve({ ok: true, client: {}, release })
+      })
+
+      await new SteamGame(APP_ID).install({} as any)
+
+      expect(SteamUser.acquireAuthenticated).toHaveBeenNthCalledWith(1, {
+        reason: 'prescreen',
+        guidedAction: 'install',
+        appName: APP_ID
+      })
+      const prescreenOrder = (prescreenBridgeDepots as jest.Mock).mock
+        .invocationCallOrder[0]
+      expect(
+        (SteamUser.acquireAuthenticated as jest.Mock).mock
+          .invocationCallOrder[0]
+      ).toBeLessThan(prescreenOrder)
+      expect(releases[0]).toHaveBeenCalledTimes(1)
+      expect(releases[0].mock.invocationCallOrder[0]).toBeLessThan(
+        (downloadSteamDepots as jest.Mock).mock.invocationCallOrder[0]
+      )
+    })
+
+    it('Phase 54: a prescreen refusal returns the refusal result and never screens or persists', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+      ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+      ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+        ok: false,
+        reason: 'go-offline-required'
+      })
+
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(result).toEqual({ status: 'done', deferredToSetup: true })
+      expect(prescreenBridgeDepots).not.toHaveBeenCalled()
+      expect(setBridgeSteamApiPrescreenSpy).not.toHaveBeenCalled()
+      expect(downloadSteamDepots).not.toHaveBeenCalled()
+      expect(SteamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
     })
 
     it("x64 with no Win64 shim bundled: persists 'x64', route recomputes to bottle/win64-no-shim, notice fired, no download", async () => {

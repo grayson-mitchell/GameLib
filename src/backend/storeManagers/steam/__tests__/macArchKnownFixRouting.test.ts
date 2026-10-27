@@ -58,7 +58,8 @@ jest.mock('../user', () => ({
   SteamUser: {
     isLoggedIn: jest.fn(),
     getClient: jest.fn(),
-    ensureConnected: jest.fn().mockResolvedValue(true)
+    ensureConnected: jest.fn().mockResolvedValue(true),
+    acquireAuthenticated: jest.fn()
   }
 }))
 
@@ -213,6 +214,7 @@ import { library } from '../state'
 import { steamMetadataStore } from '../electronStores'
 import { downloadSteamDepots } from '../depot'
 import SteamGame from '../games'
+import { SteamUser } from '../user'
 
 const APP_ID = '63000'
 const store = new Map<string, Record<string, unknown>>()
@@ -224,6 +226,11 @@ const env = () =>
 
 beforeEach(() => {
   store.clear()
+  ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+    ok: true,
+    client: {},
+    release: jest.fn()
+  })
   store.set(APP_ID, {
     platformsCaptured: true,
     is_mac_native: true,

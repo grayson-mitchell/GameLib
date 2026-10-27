@@ -31,6 +31,7 @@ import * as libraryModule from '../library'
 import { library } from '../state'
 import { steamMetadataStore } from '../electronStores'
 import SteamGame from '../games'
+import { SteamUser } from '../user'
 import { removeAllSteamInstallCopies } from '../removeAllCopies'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
@@ -90,7 +91,8 @@ jest.mock('../user', () => ({
   SteamUser: {
     isLoggedIn: jest.fn(),
     getClient: jest.fn(),
-    ensureConnected: jest.fn().mockResolvedValue(true)
+    ensureConnected: jest.fn().mockResolvedValue(true),
+    acquireAuthenticated: jest.fn()
   }
 }))
 
@@ -316,6 +318,11 @@ const DOWNLOADING_FLAGS = '2'
 
 beforeEach(() => {
   resetFixture()
+  ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+    ok: true,
+    client: {},
+    release: jest.fn()
+  })
 })
 
 // ── Task 1: isAppleSiliconMac host gate ──────────────────────────────────────
