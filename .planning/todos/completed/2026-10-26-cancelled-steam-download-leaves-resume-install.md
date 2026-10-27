@@ -53,5 +53,5 @@ How each choice now behaves:
 Not done, left to explicit uninstall: Delete Files does not remove a freshly provisioned per-game
 bridge bottle (`GameLibSteamBridge-<appId>`); it removes only that app's install dir and ACF.
 
-Not live-retested on Dungeonmans (288120) or Fallout 2 (38410). Retest by cancelling with Delete
-Files and checking that the game page offers Install.
+Live-confirmed 2026-10-27 on Dungeonmans (288120): cancel with Delete Files leaves the game page on
+Install. Fallout 2 (38410) not retested.
