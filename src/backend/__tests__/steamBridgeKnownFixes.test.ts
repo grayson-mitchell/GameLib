@@ -40,6 +40,8 @@ const mockWinetricksInstall = jest.fn()
 const mockRunWineCommand = jest.fn()
 const mockSendGameStatusUpdate = jest.fn()
 const mockLogWarning = jest.fn()
+const mockLogInfo = jest.fn()
+let mockBottleRoot = '/mock/Bottles'
 
 jest.mock('backend/tools', () => ({
   Winetricks: {
@@ -55,10 +57,11 @@ jest.mock('backend/utils', () => ({
 }))
 jest.mock('backend/logger', () => ({
   logWarning: (...args: unknown[]) => mockLogWarning(...args),
+  logInfo: (...args: unknown[]) => mockLogInfo(...args),
   LogPrefix: { Steam: 'Steam' }
 }))
 jest.mock('../storeManagers/steam/bottle', () => ({
-  getBottleDir: (name: string) => `/mock/Bottles/${name}`
+  getBottleDir: (name: string) => `${mockBottleRoot}/${name}`
 }))
 
 import type { GameSettings } from 'common/types'
@@ -314,6 +317,39 @@ describe('registry fixes application', () => {
       expect(arg.wait).toBe(false)
       expect(arg.protonVerb).toBe('run')
       expect(arg.skipPrefixCheckIKnowWhatImDoing).toBe(true)
+      expect(typeof arg.onSpawn).toBe('function')
+    }
+  })
+
+  it('skips reg add for values already in the bottle system.reg', async () => {
+    const root = join(tmpdir(), `gamelib-bridge-bottles-${process.pid}`)
+    try {
+      const bottle = join(root, 'GameLibSteamBridge-480')
+      mkdirSync(bottle, { recursive: true })
+      const k64 = String.raw`Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}`
+      const k32 = k64.replace(
+        String.raw`Software\\`,
+        String.raw`Software\\Wow6432Node\\`
+      )
+      const sec = (k: string) =>
+        `[${k}] 1\n#time=1\n"IsInstalled"=dword:00000001\n\n`
+      writeFileSync(
+        join(bottle, 'system.reg'),
+        'WINE REGISTRY Version 2\n\n#arch=win64\n\n' + sec(k64) + sec(k32)
+      )
+      mockBottleRoot = root
+      writeBundled({ title: 't', registry: [WMP] })
+      await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      expect(
+        mockRunWineCommand.mock.calls.filter((c) =>
+          c[0].commandParts.includes('reg')
+        )
+      ).toHaveLength(0)
+      const infos = mockLogInfo.mock.calls.map((c) => c[0] as string)
+      expect(infos.filter((m) => m.includes('already set'))).toHaveLength(2)
+    } finally {
+      mockBottleRoot = '/mock/Bottles'
+      rmSync(root, { recursive: true, force: true })
     }
   })
 
@@ -398,11 +434,16 @@ describe('registry fixes application', () => {
   })
 
   it('times out a never-settling call after 15s and warns', async () => {
-    jest.useFakeTimers()
+    // The prefix .reg read is real async IO; keep setImmediate real so it can
+    // settle before the 15 s timer is armed.
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] })
     try {
       writeBundled({ title: 't', registry: [{ ...WMP, views: [32] }] })
       mockRunWineCommand.mockReturnValue(new Promise(() => undefined))
       const p = applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setImmediate(r))
+      }
       await jest.advanceTimersByTimeAsync(15_000)
       await p
       expect(mockLogWarning).toHaveBeenCalledWith(
