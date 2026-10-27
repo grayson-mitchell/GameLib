@@ -5,7 +5,7 @@ status: complete
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-10-26
-audited: 2026-10-26
+audited: 2026-10-28
 ---
 
 # Phase 55 — Validation Strategy
@@ -43,9 +43,9 @@ audited: 2026-10-26
 
 One row per task (`55-PP-TT` = plan PP, task TT). Every task carries an `<automated>` verify;
 55-07 rows are live-gate tasks whose automated command checks capture/scoring artifacts and never
-closes the gate on its own. P55-9 (Wine PE harness) is not built in this phase -- see the
-criterion map below and the 55-06 todo; its consequence is that x86 `__thiscall` dispatch is not
-executed anywhere in this phase.
+closes the gate on its own. P55-9 (Wine PE harness) was not built in this phase; it landed
+afterwards in quick `261027-m1r` (`6328396dc`, `c9a679272`), so x86 `__thiscall` dispatch is now
+executed under Wine -- see the criterion map below.
 
 | Task ID | Plan | Wave | Criterion | Threat Ref | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-----------|------------|-----------|-------------------|-------------|--------|
@@ -78,7 +78,8 @@ Criterion-level map:
 | P55-7 | x86 and x64 PE shims compile and link | — | build gate | `pnpm gen-vtables && pnpm build-steam-bridge` | ✅ | ✅ green |
 | P55-8 | Regeneration idempotent and committed | — | CI-style | `pnpm gen-vtables && git diff --exit-code native/steam-bridge/generated meta/sdk` | ✅ | ✅ green |
 | 55 WR-02 | `bridge_transact_once`: `respLen < 5` sets `*transportFailed` before subtraction; `retLen > retBufCap` closes the socket without flagging `*transportFailed` (no resend of a non-idempotent call) | ticket-stream desync | unit (source pin) | `npx jest meta/__tests__/gen_vtables.test.ts -t "55 WR-02"` | ✅ | ✅ green |
-| P55-9 | (optional) Wine PE harness dispatches a seeded 168 to an MSVC-layout callback object on x64 and x86 | — | semi-automated | not built in this phase (feasible via a fake loopback helper serving slot 6; tracked by the 55-06 x86 todo). Consequence: x86 thiscall dispatch is unexercised | n/a | deferred |
+| 55 WR-03 | Helper refuses DRAIN and every non-HEALTH slot on a socket until a HELLO carries the per-spawn launch secret; wrong HELLO de-authenticates; no env secret fails closed; secret scrubbed from the startup block; shim sends the secret on every socket | ticket disclosure to any local process | integration (darwin) + source pin + unit | `npx jest src/backend/storeManagers/steam/bridge/__tests__/helperIntegration.test.ts meta/__tests__/gen_vtables.test.ts -t "WR-03"; npx jest src/backend/storeManagers/steam/bridge/__tests__/bridgeConfig.test.ts src/backend/storeManagers/steam/bridge/__tests__/helperProcess.test.ts` | ✅ | ✅ green |
+| P55-9 | (optional) Wine PE harness dispatches a seeded 168 to an MSVC-layout callback object on x86 | — | integration (CrossOver Wine, x86 PE) | `pnpm test:x86-callback-wine` (real shim built with `buildShimCompileArgv`, fake loopback helper serving HELLO/DRAIN/CBDISP, ESP-balance check plus a no-callee-pop mutant as negative control; `GAMELIB_REQUIRE_WINE_HARNESS=1` makes it fail rather than skip). x64 PE dispatch is not run under Wine; the registry logic is host-tested by `callbackRegistryHost` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -91,7 +92,7 @@ Criterion-level map:
 - [x] Extend `protocol.test.ts` and `helperIntegration.test.ts` — P55-4, P55-5
 - [x] `native/steam-bridge/helper/gamelib_cbqueue.h` host-compile test `cbqueue.test.ts` (P55-5, 55-03 Task 1)
 - [x] `meta/__tests__/callbackRegistryHost.test.ts` + harness fixture (P55-3, 55-04 Task 1)
-- Wine PE harness (P55-9): not built in this phase (see map)
+- [x] Wine PE harness (P55-9): `meta/__tests__/x86CallbackWineHarness.test.ts` + `fixtures/x86_callback_pe_harness.c`, built after the phase in quick `261027-m1r`
 
 ---
 
@@ -110,7 +111,7 @@ Criterion-level map:
 - [x] Wave 0 covers all MISSING references
 - [x] No watch-mode flags
 - [x] Feedback latency < 10s (7 phase suites, 350 tests, 4.2 s)
-- [x] `nyquist_compliant: true` set in frontmatter (P55-9 deferred, not a task)
+- [x] `nyquist_compliant: true` set in frontmatter (P55-9 now automated via `pnpm test:x86-callback-wine`)
 
 **Approval:** approved 2026-10-26 (Nyquist audit)
 
@@ -138,3 +139,31 @@ Criterion-level map:
   todo), so there is no behavior to test yet.
 - P55-9 is still deferred (optional). x86 `__thiscall` dispatch is unexercised, tracked by the
   x86 todo. P55-LIVE is manual-only and passed.
+
+---
+
+## Validation Audit 2026-10-28
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+- Re-audit after 336 commits since the last audit (`553cc3c52`), several of which touch the
+  bridge (quick tasks k51, jgs, ijs, i4x, 9vr, m1r).
+- Re-ran the 7 phase suites: 454/454 pass, 0 skipped (up from 350; the extra tests came from
+  later bridge work in the same files). The host-clang and darwin-only arms ran.
+- Build gate: `pnpm gen-vtables` regen leaves no diff (P55-8). `pnpm build-steam-bridge` is
+  green (steam_api.dll 317440 B, steam_api64.dll 684544 B; bigger than before because of the
+  later STUBCALL/NULLSRET/1101 work).
+- P55-9 is no longer deferred. `pnpm test:x86-callback-wine` passes 12/12 under CrossOver Wine:
+  the x86 layout is written on register, `Run` gets the right `this`, payload and callback id,
+  ESP is balanced, and the no-callee-pop mutant fails the ESP check.
+- WR-03 (skipped in 55-REVIEW-FIX) was fixed in quick `261027-9vr` with a per-spawn HELLO launch
+  secret. It is covered by the WR-03 tests in helperIntegration and gen_vtables, plus
+  bridgeConfig, helperProcess and steam `games.test.ts` (479/479 pass). Live gate:
+  `30c6b2bd5`, all four checks pass.
+- P55-LIVE is still manual-only and passed. It was not re-run in this audit.
+- `55-VALIDATION.md` is prettier-ignored (`.planning` in `.prettierignore`), so no formatter
+  check applies to it.
