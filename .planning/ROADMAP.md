@@ -568,14 +568,17 @@ Plans:
 
 **Wave 4** *(blocked on 54-04, 54-05, 54-06)*
 
-- [ ] 54-08-PLAN.md — game page and Play open no session; install paths hold one wrapped lease; refusals defer to the guided step (ROADMAP-SC2, SC3, SC6)
+- [ ] 54-08-PLAN.md — game page and Play open no session; install paths hold one wrapped lease; refusals defer to the guided step; Refresh backfills bridge launch targets (ROADMAP-SC2, SC3, SC6)
 
 **Wave 5** *(blocked on waves 1-4)*
 
 - [ ] 54-09-PLAN.md — steamAuthSessionPolicy source gate; STEAM-STACK.md and CLAUDE.md updated; full desk battery (ROADMAP-SC3, SC5)
+
+**Wave 6** *(blocked on 54-09)*
+
 - [ ] 54-10-PLAN.md — author the Mac live-gate contract with Structural Reachability Review and pending 54-UAT.md (ROADMAP-SC4, SC6)
 
-**Wave 6** *(blocked on 54-09, 54-10)*
+**Wave 7** *(blocked on 54-09, 54-10)*
 
 - [ ] 54-11-PLAN.md — run the Mac gate (operator checkpoint) and score 54-UAT.md (ROADMAP-SC4, SC6)
 

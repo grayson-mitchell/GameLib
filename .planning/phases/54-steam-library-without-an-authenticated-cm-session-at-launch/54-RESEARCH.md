@@ -382,15 +382,18 @@ Edit `.planning/research/STEAM-STACK.md` (and the short "Technology Stack (Steam
 | A6 | `skip_unvetted_apps` defaults to true on the Web API as it does in the proto | Finding 3 | Pass it explicitly (`true`) to keep parity either way |
 | A7 | Friends may or may not recover by itself after `logOff()` | Finding 5 | Moot (2026-10-27): the debug session ruled out recovery short of a restart, and the go-offline wrap (Finding 10) prevents the flip |
 
-## Open Questions (RESOLVE BEFORE PLANNING)
+## Open Questions (RESOLVED)
 
 1. **How does the library list get a token? (user decision)**
    - Known: the SteamClient token cannot mint one without a CM logon (documented, 2025-04-30, still open in 2026).
    - Unclear: whether the user accepts a second sign-in approval (B1), or prefers cache-first with auth only on explicit Refresh (B2).
    - Recommendation: ask the user. If B1, the phase is no longer backend-only (sign-in UI gains a step) and Rust keyring work is possible. If no answer is available, plan B2 as the guaranteed-deliverable base and add B1 behind the Wave-0 spike result.
+   - **RESOLVED (2026-10-27):** Track B (Web API) is dropped per ROADMAP and the 2026-10-27 addendum. The design is cache-first at launch with an authenticated fetch only on explicit Refresh, sign-in and installs, wrapped in the go-offline toggle (plans 54-03, 54-04).
 2. **Does the phase scope include the sign-in-time persona logon (Finding 8)?** Recommend yes; small, same defect.
+   - **RESOLVED (2026-10-27):** yes. Sign-in still logs on (ROADMAP allows it) but only through the wrapped, refcounted lease; the steamId comes from `LoginSession.steamID` (plan 54-03).
 3. **Does startup auto-refresh need to exist at all under B2?** If launch never syncs, a stale list persists until the user presses Refresh. Consider a "last synced N days ago" note (UI, out of backend-only scope).
-4. **Does Friends recover after `logOff()`?** Resolved 2026-10-27: no (debug session); prevented instead by the go-offline wrap (Finding 10).
+   - **RESOLVED (2026-10-27):** no automatic sync logon. Launch shows the cached library and reconciles local install state only; the owned list is fetched on explicit Refresh or sign-in (plan 54-04).
+4. **Does Friends recover after `logOff()`?** **RESOLVED** 2026-10-27: no (debug session); prevented instead by the go-offline wrap (Finding 10).
 
 ## Environment Availability
 
