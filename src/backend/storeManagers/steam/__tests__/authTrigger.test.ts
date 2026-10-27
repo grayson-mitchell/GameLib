@@ -109,10 +109,10 @@ describe('mapRefreshOriginToTrigger', () => {
     expect(mapRefreshOriginToTrigger('steam-login')).toBe('login')
   })
 
-  it('maps nav-tabs-games-tab and redeem-steam-key and game-status to user-refresh', () => {
-    expect(mapRefreshOriginToTrigger('nav-tabs-games-tab')).toBe('user-refresh')
+  it('maps redeem-steam-key to user-refresh; game-status and nav-tabs-games-tab fall through to startup', () => {
     expect(mapRefreshOriginToTrigger('redeem-steam-key')).toBe('user-refresh')
-    expect(mapRefreshOriginToTrigger('game-status')).toBe('user-refresh')
+    expect(mapRefreshOriginToTrigger('game-status')).toBe('startup')
+    expect(mapRefreshOriginToTrigger('nav-tabs-games-tab')).toBe('startup')
   })
 
   it.each([
@@ -224,5 +224,72 @@ describe("'boot-probe' trigger (Phase 49 D-14)", () => {
   it("'startup' still never unlocks the gate", () => {
     noteSteamAuthTrigger('startup')
     expect(isSteamAuthUnlocked()).toBe(false)
+  })
+})
+
+describe('one-shot refresh logon grant (Phase 54)', () => {
+  it('an explicit Refresh grants user-refresh once', () => {
+    noteRefreshTrigger('steam', 'action-icons-refresh-button')
+    expect(consumeSteamRefreshLogonGrant()).toBe('user-refresh')
+    expect(consumeSteamRefreshLogonGrant()).toBeNull()
+  })
+
+  it.each([
+    [undefined, 'login-success', 'login'],
+    [null, 'steam-go-offline-retry', 'user-refresh'],
+    ['steam', 'redeem-steam-key', 'user-refresh'],
+    ['steam', 'steam-sync-notice-retry', 'user-refresh'],
+    [undefined, 'clear-cache', 'user-refresh'],
+    ['steam', 'steam-login', 'login']
+  ])('runner %s origin %s grants %s', (runner, origin, expected) => {
+    noteRefreshTrigger(runner, origin)
+    expect(consumeSteamRefreshLogonGrant()).toBe(expected)
+  })
+
+  it.each([
+    'mount',
+    'push',
+    'game-status',
+    'nav-tabs-games-tab',
+    'login-screen',
+    'boot-probe',
+    '__proto__',
+    null,
+    undefined
+  ])('origin %s grants nothing', (origin) => {
+    noteRefreshTrigger(null, origin as string | null | undefined)
+    expect(consumeSteamRefreshLogonGrant()).toBeNull()
+  })
+
+  it('login-screen maps to startup', () => {
+    expect(mapRefreshOriginToTrigger('login-screen')).toBe('startup')
+  })
+
+  it('boot-probe and user-install unlock the keyring gate but grant nothing', () => {
+    noteSteamAuthTrigger('boot-probe')
+    noteSteamAuthTrigger('user-install')
+    expect(isSteamAuthUnlocked()).toBe(true)
+    expect(consumeSteamRefreshLogonGrant()).toBeNull()
+  })
+
+  it('a named non-Steam runner grants nothing', () => {
+    noteRefreshTrigger('gog', 'login-success')
+    expect(consumeSteamRefreshLogonGrant()).toBeNull()
+  })
+
+  it('resetSteamAuthTrigger clears a pending grant', () => {
+    noteRefreshTrigger('steam', 'action-icons-refresh-button')
+    resetSteamAuthTrigger()
+    expect(consumeSteamRefreshLogonGrant()).toBeNull()
+  })
+
+  it('both orderings of boot-probe and mount grant nothing', () => {
+    noteSteamAuthTrigger('boot-probe')
+    noteRefreshTrigger(null, 'mount')
+    expect(consumeSteamRefreshLogonGrant()).toBeNull()
+    resetSteamAuthTrigger()
+    noteRefreshTrigger(null, 'mount')
+    noteSteamAuthTrigger('boot-probe')
+    expect(consumeSteamRefreshLogonGrant()).toBeNull()
   })
 })
