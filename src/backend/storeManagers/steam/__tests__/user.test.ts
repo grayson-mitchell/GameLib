@@ -245,6 +245,9 @@ describe('SteamUser', () => {
       su.shuttingDown = false
       su.logonFailure = null
       su.client = null
+      // 54-REVIEW WR-07: a hung wrap must not hold the next test's wrap.
+      su.wrapTail = Promise.resolve()
+      su.abandonPendingLogon = null
     }
 
     // Phase 54: re-arm the wrap double (resetMocks: true clears it every test).

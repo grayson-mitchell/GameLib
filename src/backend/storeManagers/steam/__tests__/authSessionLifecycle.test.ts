@@ -168,6 +168,8 @@ function resetSteamUserState(): void {
   internals.logonFailure = null
   internals.leaseCount = 0
   internals.guidedInstallTargets.clear()
+  internals.wrapTail = Promise.resolve()
+  internals.abandonPendingLogon = null
   if (internals.idleTimer) clearTimeout(internals.idleTimer)
   internals.idleTimer = null
 }
@@ -616,5 +618,81 @@ describe('authenticated session lease', () => {
     expect((SteamUser as any).getPersistedSteamId64()).toBeUndefined()
     mockConfigStore.get_nodefault.mockReturnValue(undefined)
     expect((SteamUser as any).getPersistedSteamId64()).toBeUndefined()
+  })
+})
+
+describe('sign-out during a wrapped logon (54-REVIEW WR-07)', () => {
+  const acquire = (
+    opts: Record<string, unknown> = { reason: 'user-refresh' }
+  ) => (SteamUser as any).acquireAuthenticated(opts)
+  const settle = async () => {
+    for (let i = 0; i < 20; i++) await Promise.resolve()
+  }
+
+  it('a sign-out before the wrap reaches connect issues no logOn and keeps no client', async () => {
+    let release!: () => void
+    const gate = new Promise<void>((r) => {
+      release = r
+    })
+    macMock.withMacSteamOffline.mockImplementation(
+      async (connect: (wrap: string) => Promise<unknown>) => {
+        await gate
+        return { value: await connect('toggled'), wrap: 'toggled' }
+      }
+    )
+    const lease = acquire()
+    await settle()
+    await SteamUser.logout()
+    release()
+    expect(await lease).toEqual({ ok: false, reason: 'not-signed-in' })
+    expect(instances()).toHaveLength(0)
+    expect(internals.client).toBeNull()
+  })
+
+  it('a sign-out while the logon is in flight abandons it at once, and a late loggedOn is logged off', async () => {
+    FakeLib.behaviour = 'hang'
+    const lease = acquire()
+    await settle()
+    expect(instances()).toHaveLength(1)
+    const inst = instances()[0]
+    expect(inst.logOn).toHaveBeenCalledTimes(1)
+    await SteamUser.logout()
+    // No timer advance: the wrap is released by the sign-out, not the bound.
+    expect(await lease).toEqual({ ok: false, reason: 'not-signed-in' })
+    expect(inst.logOff).toHaveBeenCalled()
+    inst.steamID = { getSteamID64: () => '76561198000000000' }
+    inst.emit('loggedOn')
+    expect(internals.client).toBeNull()
+    expect(SteamUser.acquireOpenAuthenticated('user-install')).toBeNull()
+  })
+
+  it("a sign-in after a sign-out mid-wrap does not start its wrap until the old one ends, and the old connect's cleanup leaves the new single-flight alone", async () => {
+    let release!: () => void
+    const gate = new Promise<void>((r) => {
+      release = r
+    })
+    let calls = 0
+    macMock.withMacSteamOffline.mockImplementation(
+      async (connect: (wrap: string) => Promise<unknown>) => {
+        calls++
+        if (calls === 1) await gate
+        return { value: await connect('toggled'), wrap: 'toggled' }
+      }
+    )
+    const old = acquire()
+    await settle()
+    await SteamUser.logout()
+    const fresh = acquire({ reason: 'login' })
+    await settle()
+    expect(calls).toBe(1)
+    const freshFlight = internals.connectingPromise
+    expect(freshFlight).not.toBeNull()
+    release()
+    await old
+    expect(internals.connectingPromise).toBe(freshFlight)
+    const lease = await fresh
+    expect(lease.ok).toBe(true)
+    expect(calls).toBe(2)
+    lease.release()
   })
 })

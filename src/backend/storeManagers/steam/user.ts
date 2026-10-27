@@ -163,6 +163,15 @@ export class SteamUser {
   // (ensureConnected's relog, a late login) must not open a NEW CM socket after that, or the
   // sidecar would hold the loop again.
   private static shuttingDown = false
+  // 54-REVIEW WR-07: bumped by logout(). A wrapped connect captures it, and a
+  // logon that started before a sign-out never opens (or keeps) a session.
+  private static sessionGeneration = 0
+  // 54-REVIEW WR-07: abandons the authenticated logon in flight, if any.
+  private static abandonPendingLogon: (() => void) | null = null
+  // 54-REVIEW WR-07: wraps run one at a time. Single-flight normally makes
+  // that true already; after a sign-out mid-wrap, a fresh sign-in's wrap must
+  // not overlap the old wrap's goonline.
+  private static wrapTail: Promise<unknown> = Promise.resolve()
   // steam-sync-false-failed-banner: the terminal 'error' the CM ended the most
   // recent logon attempt with (e.g. AccessDenied for a refresh token Steam no
   // longer accepts). Tagged with the client it belongs to so an error from a
@@ -564,11 +573,15 @@ export class SteamUser {
         this.reportLogonVerdict('healthy', epochAtStart)
         return null
       }
-      this.connectingPromise = this.wrappedConnect(token, reason).finally(
-        () => {
-          this.connectingPromise = null
-        }
-      )
+      const p: Promise<AuthSessionRefusal | null> = this.wrappedConnect(
+        token,
+        reason,
+        this.sessionGeneration
+      ).finally(() => {
+        // A sign-out mid-connect may have handed the slot to a newer connect.
+        if (this.connectingPromise === p) this.connectingPromise = null
+      })
+      this.connectingPromise = p
     }
     if (!this.connectingPromise) return 'client-not-ready'
     const refusal = await this.connectingPromise
@@ -618,13 +631,27 @@ export class SteamUser {
    * The cold connect, inside the Mac Steam go-offline wrap. A refusal from the
    * wrap (Mac Steam did not log off) means NO logOn call at all.
    */
-  private static async wrappedConnect(
+  private static wrappedConnect(
     token: string,
-    reason: AuthSessionReason
+    reason: AuthSessionReason,
+    generation: number
   ): Promise<AuthSessionRefusal | null> {
+    const run = this.wrapTail.then(() =>
+      this.wrappedConnectNow(token, reason, generation)
+    )
+    this.wrapTail = run.catch(() => undefined)
+    return run
+  }
+
+  private static async wrappedConnectNow(
+    token: string,
+    reason: AuthSessionReason,
+    generation: number
+  ): Promise<AuthSessionRefusal | null> {
+    if (generation !== this.sessionGeneration) return 'not-signed-in'
     try {
       await withMacSteamOffline((wrap) =>
-        this.connectSteamUserClient(token, { reason, wrap })
+        this.connectSteamUserClient(token, { reason, wrap, generation })
       )
     } catch (err) {
       if (err instanceof GuidedOfflineRequiredError) {
@@ -636,6 +663,7 @@ export class SteamUser {
       }
       throw err
     }
+    if (generation !== this.sessionGeneration) return 'not-signed-in'
     if (this.client?.steamID) return null
     if (this.getLogonFailure()) return 'logon-rejected'
     return 'client-not-ready'
@@ -683,6 +711,10 @@ export class SteamUser {
   static async logout(): Promise<void> {
     this.clearIdleTimer()
     this.leaseCount = 0
+    // 54-REVIEW WR-07: a wrapped logon already in flight must not open a
+    // session for the account being signed out.
+    this.sessionGeneration++
+    this.abandonPendingLogon?.()
     if (this.client) {
       try {
         this.client.logOff()
@@ -863,9 +895,20 @@ export class SteamUser {
 
   private static connectSteamUserClient(
     refreshToken: string,
-    opts: { reason: AuthSessionReason; wrap: MacSteamWrapKind }
+    opts: {
+      reason: AuthSessionReason
+      wrap: MacSteamWrapKind
+      generation: number
+    }
   ): Promise<void> {
     if (this.shuttingDown) return Promise.resolve()
+    if (opts.generation !== this.sessionGeneration) {
+      logInfo(
+        '[Steam] CM logon abandoned: signed out while the go-offline wrap was in flight',
+        LogPrefix.Steam
+      )
+      return Promise.resolve()
+    }
     if (this.client) {
       try {
         this.client.logOff()
@@ -918,14 +961,42 @@ export class SteamUser {
       }, AUTH_LOGON_BOUND_MS)
       bound.unref?.()
 
-      function settle(): void {
+      const settle = (): void => {
         if (settled) return
         settled = true
         clearTimeout(bound)
+        if (this.abandonPendingLogon === abandon) {
+          this.abandonPendingLogon = null
+        }
         resolve()
       }
 
+      // 54-REVIEW WR-07: logout() calls this so the wrap stops waiting on a
+      // logon for an account that is no longer signed in.
+      const abandon = (): void => {
+        if (settled) return
+        try {
+          client.logOff()
+        } catch {
+          // ignore
+        }
+        if (this.client === client) this.client = null
+        settle()
+      }
+      this.abandonPendingLogon = abandon
+
       client.once('loggedOn', () => {
+        if (opts.generation !== this.sessionGeneration) {
+          // Signed out while this logon was in flight: never keep it.
+          try {
+            client.logOff()
+          } catch {
+            // ignore
+          }
+          if (this.client === client) this.client = null
+          settle()
+          return
+        }
         // [Timing] debug/steam-install-slow-start diagnostic: region info
         // steam-user exposes post-logon (cellID drives which CDN edges the
         // content-server directory returns). Additive-only.
