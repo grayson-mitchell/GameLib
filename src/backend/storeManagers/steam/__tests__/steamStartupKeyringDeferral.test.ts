@@ -275,6 +275,7 @@ jest.mock('../anonymousClient', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { join } from 'path'
+import { EventEmitter } from 'events'
 import { sendFrontendMessage } from '../../../ipc'
 import SteamLibraryManager from '../library'
 import SteamGame from '../games'
@@ -283,6 +284,7 @@ import { setTokenStore, type TokenStore } from '../tokenStore'
 import { getSteamLibraries } from 'backend/utils'
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from '../state'
+import { captureOwnedAppPlatforms } from '../platformCapture'
 import {
   isSteamAuthUnlocked,
   resetSteamAuthTrigger,
@@ -474,9 +476,17 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
 
   beforeEach(() => {
     logOnSpy.mockReset()
+    // releaseForShutdown() in afterEach leaves the singleton shutting down.
+    const internals = SteamUser as unknown as Record<string, unknown>
+    internals.shuttingDown = false
+    internals.client = null
+    jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
+      scopedCount: 0,
+      capturedCount: 0,
+      skippedCount: 0,
+      failed: false
+    })
     MockSteamUserLib.mockImplementation(() => {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { EventEmitter } = require('events')
       const fake = new EventEmitter() as any
       fake.steamID = null
       fake.logOff = jest.fn()

@@ -23,10 +23,11 @@ import { notify } from '../../dialog/dialog'
 import i18next from 'i18next'
 import { SteamUser } from './user'
 import {
-  isSteamAuthUnlocked,
+  consumeSteamRefreshLogonGrant,
   currentTriggerLabel,
   noteSteamAuthTrigger
 } from './authTrigger'
+import { getAnonymousPicsClient } from './anonymousClient'
 import {
   steamLibraryStore,
   steamMetadataStore,
@@ -937,66 +938,113 @@ export default class SteamLibraryManager implements LibraryManager {
    * Fetch the full owned game list + playtime from Steam CM, merge local ACF
    * install state, push each game to the frontend, persist the list and sync
    * timestamp.  Falls back to the cached library if the CM call fails (D-09).
+   *
+   * Phase 54: an authenticated logon is opened ONLY for a granted refresh --
+   * an explicit Refresh or a sign-in dispatch arms a one-shot grant in
+   * authTrigger.ts that this method consumes as its first statement. An
+   * automatic refresh (startup, mount, push, Play) reuses an already-open
+   * session if one exists and otherwise reconciles install state from local
+   * ACF data and shows the cached library with no CM logon. Every path holds
+   * its session through a lease released in `finally`.
    */
   async refresh(): Promise<ExecResult | null> {
-    // quick-260817-d61: exit path 0 of the five now on this method — checked
-    // BEFORE the 'syncing' emit below, so an automatic (unattended) refresh
-    // never touches the keyring at all. `init()` has ALREADY pushed the
-    // cached library to the frontend by the time this can be reached from
-    // startup (see init() above), so emitting 'idle' here — rather than
-    // emitting nothing — renders a populated grid, never an empty one, and
-    // also clears any stale 'syncing' a prior run left behind. Deliberate
-    // Steam actions (Install/Play/game-page-open/explicit-Refresh/login) call
-    // `noteSteamAuthTrigger`/`noteRefreshTrigger` before reaching here, which
-    // unlocks the gate for the rest of this process's lifetime (sticky —
-    // see authTrigger.ts's own doc comment for why a non-sticky gate would be
-    // a worse bug than the one this plan fixes).
-    if (!isSteamAuthUnlocked()) {
+    // Synchronous and before any await, so a grant armed by the dispatch that
+    // triggered THIS call is consumed by this call (and by no other).
+    const grant = consumeSteamRefreshLogonGrant()
+
+    // Exit path 0: nothing to sync against. `init()` has ALREADY pushed the
+    // cached library to the frontend (RESEARCH Finding 9), so emitting 'idle'
+    // renders a populated grid and clears any stale 'syncing'.
+    const refuseDeferred = async (): Promise<null> => {
       logInfo(
-        `Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=${currentTriggerLabel()})`,
+        `Steam: library refresh deferred — no explicit Refresh and no open Steam session, showing the cached library with no CM logon (trigger=${currentTriggerLabel()})`,
         LogPrefix.Steam
       )
+      try {
+        await this.refreshInstallState()
+      } catch (err) {
+        logWarning(
+          ['Steam: local install-state reconcile failed:', err],
+          LogPrefix.Steam
+        )
+      }
       sendFrontendMessage('steamSyncStatus', { status: 'idle' })
       return null
     }
 
-    // 34.15 D-06/D-07: emitted as the very first statement of refresh() —
-    // this is what gives the Steam sync tri-state STRUCTURAL meaning ("a
-    // refresh is currently running"), a property the boolean this tri-state
-    // replaces (GlobalState.tsx's old background-refresh flag) never had —
-    // that flag defaulted true and was reset to true after every unscoped
-    // refresh, so it could never distinguish "running" from anything else.
-    sendFrontendMessage('steamSyncStatus', { status: 'syncing' })
-
-    // The steam-user client is in-memory and dies on app restart — reconnect
-    // from the persisted refresh token before syncing.
-    const connected = await SteamUser.ensureConnected()
-    const client = SteamUser.getClient()
-    if (!connected || !client || !client.steamID) {
-      // steam-sync-false-failed-banner: "not ready" is not one condition. When
-      // the CM answered the logon with a terminal error (AccessDenied for a
-      // refresh token Steam no longer accepts), steam-user has disconnected and
-      // schedules NO retry -- this is not a reconnect in flight, and repeating
-      // the sync replays the same refusal. Name it, so neither the log nor the
-      // payload reads as a readiness race (that misreading is what the
-      // "benign reconnect window" todo was filed on). Both branches stay on
-      // exit path 1 and emit exactly once: D-07's four-exit-path contract is
-      // unchanged, only the reason vocabulary gained a member.
-      const rejection = SteamUser.getLogonFailure()
-      logWarning(
-        rejection
-          ? `Steam rejected the stored-credential logon (${rejection.message}), skipping library refresh`
-          : 'Steam client not ready, skipping library refresh',
-        LogPrefix.Steam
-      )
-      // 34.15 D-07 exit path 1 of 4.
-      sendFrontendMessage('steamSyncStatus', {
-        status: 'failed',
-        reason: rejection ? 'logon-rejected' : 'client-not-ready'
+    let release: () => void
+    let client: NonNullable<ReturnType<typeof SteamUser.getClient>>
+    if (grant) {
+      const lease = await SteamUser.acquireAuthenticated({
+        reason: grant,
+        guidedAction: 'refresh'
       })
-      return null
+      if (!lease.ok) {
+        if (lease.reason === 'go-offline-required') {
+          // The guided dialog (pushed by acquireAuthenticated) is the surface,
+          // not the failed banner.
+          logInfo(
+            'Steam: library refresh waiting on the guided Go Offline step, no logon issued',
+            LogPrefix.Steam
+          )
+          sendFrontendMessage('steamSyncStatus', { status: 'idle' })
+          return null
+        }
+        // steam-sync-false-failed-banner: "not ready" is not one condition. A
+        // terminal CM rejection (AccessDenied) schedules no retry; name it.
+        const rejection =
+          lease.reason === 'logon-rejected' ? SteamUser.getLogonFailure() : null
+        logWarning(
+          rejection
+            ? `Steam rejected the stored-credential logon (${rejection.message}), skipping library refresh`
+            : `Steam client not ready (${lease.reason}), skipping library refresh`,
+          LogPrefix.Steam
+        )
+        // 34.15 D-07 exit path 1 of 4.
+        sendFrontendMessage('steamSyncStatus', {
+          status: 'failed',
+          reason:
+            lease.reason === 'logon-rejected'
+              ? 'logon-rejected'
+              : 'client-not-ready'
+        })
+        return null
+      }
+      release = lease.release
+      client = lease.client
+    } else {
+      const open = SteamUser.acquireOpenAuthenticated('user-refresh')
+      if (!open) return refuseDeferred()
+      release = open.release
+      client = open.client
     }
 
+    try {
+      if (!client.steamID) {
+        logWarning(
+          'Steam client not ready (no steamID), skipping library refresh',
+          LogPrefix.Steam
+        )
+        sendFrontendMessage('steamSyncStatus', {
+          status: 'failed',
+          reason: 'client-not-ready'
+        })
+        return null
+      }
+      // 34.15 D-06/D-07: 'syncing' is emitted only once a usable lease exists,
+      // which gives the Steam sync tri-state STRUCTURAL meaning ("a refresh is
+      // currently running").
+      sendFrontendMessage('steamSyncStatus', { status: 'syncing' })
+      return await this.syncOwnedLibrary(client)
+    } finally {
+      release()
+    }
+  }
+
+  private async syncOwnedLibrary(
+    client: NonNullable<ReturnType<typeof SteamUser.getClient>>
+  ): Promise<ExecResult | null> {
+    const steamID = client.steamID as NonNullable<typeof client.steamID>
     // ── Step 1: fetch owned games + playtime from Steam CM ────────────────
     let ownedApps: Array<{
       appid: number
@@ -1007,7 +1055,7 @@ export default class SteamLibraryManager implements LibraryManager {
       rtime_last_played?: number
     }> = []
     try {
-      const result = await client.getUserOwnedApps(client.steamID, {
+      const result = await client.getUserOwnedApps(steamID, {
         includePlayedFreeGames: true
       })
       ownedApps = result.apps
@@ -1055,14 +1103,41 @@ export default class SteamLibraryManager implements LibraryManager {
     // load-bearing and must not be weakened, removed, or "simplified" on the
     // grounds that the data is complete now.
     const appIds = ownedApps.map((app) => app.appid)
-    const captureSummary = await captureOwnedAppPlatforms(
-      client as unknown as PlatformCapturePicsClient,
-      appIds
-    )
-    logInfo(
-      `Steam bulk platform capture: scoped=${captureSummary.scopedCount} captured=${captureSummary.capturedCount} skipped=${captureSummary.skippedCount} failed=${captureSummary.failed}`,
-      LogPrefix.Steam
-    )
+    // Phase 54 (ROADMAP SC2): the anonymous client goes first; only apps it
+    // left uncaptured (public_only) or failed on get a second pass on the
+    // session this Refresh already holds. captureOwnedAppPlatforms scopes to
+    // still-uncaptured apps, so the second pass covers only that remainder.
+    const logCapture = (summary: {
+      scopedCount: number
+      capturedCount: number
+      skippedCount: number
+      failed: boolean
+    }) =>
+      logInfo(
+        `Steam bulk platform capture: scoped=${summary.scopedCount} captured=${summary.capturedCount} skipped=${summary.skippedCount} failed=${summary.failed}`,
+        LogPrefix.Steam
+      )
+    const heldClient = client as unknown as PlatformCapturePicsClient
+    const anonClient = await getAnonymousPicsClient('platform-capture')
+    if (anonClient) {
+      const anonSummary = await captureOwnedAppPlatforms(
+        anonClient as unknown as PlatformCapturePicsClient,
+        appIds
+      )
+      logCapture(anonSummary)
+      if (
+        anonSummary.failed ||
+        anonSummary.capturedCount < anonSummary.scopedCount
+      ) {
+        logInfo(
+          `Steam bulk platform capture: anonymous pass left ${anonSummary.scopedCount - anonSummary.capturedCount} uncaptured (public_only or failed), second pass on the held session`,
+          LogPrefix.Steam
+        )
+        logCapture(await captureOwnedAppPlatforms(heldClient, appIds))
+      }
+    } else {
+      logCapture(await captureOwnedAppPlatforms(heldClient, appIds))
+    }
 
     // 34.15 D-07 exit path 4 of 4 — the previously UNDOCUMENTED one. Steps 2-4
     // below carried NO try/catch at HEAD, so a hydration-loop exception (e.g.

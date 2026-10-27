@@ -1453,6 +1453,7 @@ describe('SteamLibraryManager', () => {
 
       // Second refresh — D-UAT-24-07: must NOT clobber the badge back to false.
       jest.mocked(sendFrontendMessage).mockClear()
+      noteRefreshTrigger('steam', 'action-icons-refresh-button')
       await manager.refresh()
 
       calls = jest.mocked(sendFrontendMessage).mock.calls

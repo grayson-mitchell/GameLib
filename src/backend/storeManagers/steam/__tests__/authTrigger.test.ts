@@ -14,6 +14,7 @@ import {
   resetSteamAuthTrigger,
   mapRefreshOriginToTrigger,
   noteRefreshTrigger,
+  consumeSteamRefreshLogonGrant,
   type SteamAuthTrigger
 } from '../authTrigger'
 
@@ -257,7 +258,7 @@ describe('one-shot refresh logon grant (Phase 54)', () => {
     null,
     undefined
   ])('origin %s grants nothing', (origin) => {
-    noteRefreshTrigger(null, origin as string | null | undefined)
+    noteRefreshTrigger(null, origin)
     expect(consumeSteamRefreshLogonGrant()).toBeNull()
   })
 
