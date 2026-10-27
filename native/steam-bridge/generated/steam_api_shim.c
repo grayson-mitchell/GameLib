@@ -67,6 +67,12 @@
 #define BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS 6
 // quick 261027-ijs: the first game call of each per-version x64 sret null-object slot is reported (the helper logs NULLSRET); an old helper answers STATUS_ERR, which is harmless.
 #define BRIDGE_CONTROL_SLOT_REPORT_NULL_SRET 7
+// quick 261027-jgs: the first game call of each locally-answered method or x64 null-object slot is reported (the helper logs STUBCALL); an old helper answers STATUS_ERR, which re-arms the site at most 3 times and is otherwise harmless.
+#define BRIDGE_CONTROL_SLOT_REPORT_STUB_CALL 8
+#define GAMELIB_STUBCALL_KIND_STUB 0
+#define GAMELIB_STUBCALL_KIND_FALLBACK 1
+#define GAMELIB_STUBCALL_KIND_OFFPATH 2
+#define GAMELIB_STUBCALL_KIND_NULL 3
 #define GAMELIB_INIT_FN_STEAMAPI_INIT 0
 #define GAMELIB_INIT_FN_STEAMINTERNAL_INIT 1
 #define GAMELIB_INIT_FN_STEAMAPI_INITSAFE 2
@@ -466,6 +472,33 @@ static void gamelib_report_init(uint32_t fn, int32_t ret) {
   memcpy(req, &fn, 4);
   memcpy(req + 4, &ret, 4);
   (void)bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_INIT, req, 8, retbuf, sizeof(retbuf), &retlen);
+}
+
+/* quick 261027-jgs: report the first call of a locally-answered site (STUBCALL
+ * in the helper log). st[0] = reported flag, st[1] = attempts. One-shot per
+ * site; the flag is re-armed when bridge_transact fails (no helper, before
+ * HELLO, old helper), bounded at 3 attempts per site. Holds no lock itself
+ * (bridge_transact takes g_bridge_lock), never touches the caller's return
+ * value or out-params, and is noinline because it is a cold path and to keep
+ * the ABI-gate shapes of every stub a simple "call, then set the return".
+ * A NULL method means mlen 0 (x64 null objects). Unguarded: x86 needs it too. */
+__attribute__((noinline)) static void gamelib_stubcall_note(volatile LONG *st, const char *ver, const char *method, uint32_t slot, uint32_t kind) {
+  uint8_t req[16 + 128 + 128];
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  uint32_t vlen = 0, mlen = 0;
+  if (InterlockedCompareExchange(&st[0], 1, 0) != 0) return;
+  if (InterlockedIncrement(&st[1]) > 3) return;
+  while (vlen < 128 && ver[vlen] != ' ') vlen++;
+  if (method != NULL) { while (mlen < 128 && method[mlen] != ' ') mlen++; }
+  memcpy(req, &kind, 4);
+  memcpy(req + 4, &slot, 4);
+  memcpy(req + 8, &vlen, 4);
+  memcpy(req + 12, &mlen, 4);
+  memcpy(req + 16, ver, vlen);
+  if (mlen > 0) memcpy(req + 16 + vlen, method, mlen);
+  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_STUB_CALL, req, 16 + vlen + mlen, retbuf, sizeof(retbuf), &retlen)) {
+    InterlockedExchange(&st[0], 0);
+  }
 }
 
 /* Phase 55: callback registry embedder. Lock rule: g_cb_registry_lock is never
@@ -3193,58 +3226,78 @@ static void * THISCALL vt_SteamUser023_GetSteamID(void *self, void *sretOut) {
 
 // slot 3: InitiateGameConnection_DEPRECATED(void* pAuthBlob, int32 cbMaxAuthBlob, CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer, bool bSecure) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamUser023_InitiateGameConnection_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "InitiateGameConnection_DEPRECATED", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: TerminateGameConnection_DEPRECATED(uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUser023_TerminateGameConnection_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "TerminateGameConnection_DEPRECATED", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: TrackAppUsageEvent(CGameID gameID, int32 eAppUsageEvent, const char* pchExtraInfo) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamUser023_TrackAppUsageEvent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "TrackAppUsageEvent", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUser023_GetUserDataFolder(void *self, char * pchBuffer, int32_t cubBuffer) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchBuffer != NULL && cubBuffer > 0) pchBuffer[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "GetUserDataFolder", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: StartVoiceRecording() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUser023_StartVoiceRecording(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "StartVoiceRecording", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: StopVoiceRecording() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUser023_StopVoiceRecording(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "StopVoiceRecording", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: GetAvailableVoice(uint32* pcbCompressed, uint32* pcbUncompressed_Deprecated, uint32 nUncompressedVoiceDesiredSampleRate_Deprecated) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser023_GetAvailableVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "GetAvailableVoice", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetVoice(bool bWantCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, bool bWantUncompressed_Deprecated, void* pUncompressedDestBuffer_Deprecated, uint32 cbUncompressedDestBufferSize_Deprecated, uint32* nUncompressBytesWritten_Deprecated, uint32 nUncompressedVoiceDesiredSampleRate_Deprecated) -> uint32 | __thiscall ret 36 (STUB)
 static uint32_t THISCALL vt_SteamUser023_GetVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "GetVoice", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: DecompressVoice(const void* pCompressed, uint32 cbCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, uint32 nDesiredSampleRate) -> uint32 | __thiscall ret 24 (STUB)
 static uint32_t THISCALL vt_SteamUser023_DecompressVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "DecompressVoice", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetVoiceOptimalSampleRate() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUser023_GetVoiceOptimalSampleRate(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "GetVoiceOptimalSampleRate", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -3317,13 +3370,17 @@ static uint32_t THISCALL vt_SteamUser023_GetAuthTicketForWebApi(void *self, cons
 
 // slot 15: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamUser023_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "BeginAuthSession", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUser023_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "EndAuthSession", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4
@@ -3338,90 +3395,120 @@ static void THISCALL vt_SteamUser023_CancelAuthTicket(void *self, uint32_t hAuth
 
 // slot 18: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser023_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "UserHasLicenseForApp", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: BIsBehindNAT() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser023_BIsBehindNAT(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "BIsBehindNAT", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: AdvertiseGame(CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamUser023_AdvertiseGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "AdvertiseGame", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 21: RequestEncryptedAppTicket(void* pDataToInclude, int32 cbDataToInclude) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamUser023_RequestEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "RequestEncryptedAppTicket", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 22: GetEncryptedAppTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUser023_GetEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "GetEncryptedAppTicket", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: GetGameBadgeLevel(int32 nSeries, bool bFoil) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamUser023_GetGameBadgeLevel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "GetGameBadgeLevel", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: GetPlayerSteamLevel() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamUser023_GetPlayerSteamLevel(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "GetPlayerSteamLevel", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: RequestStoreAuthURL(const char* pchRedirectURL) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamUser023_RequestStoreAuthURL(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "RequestStoreAuthURL", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 26: BIsPhoneVerified() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser023_BIsPhoneVerified(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "BIsPhoneVerified", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: BIsTwoFactorEnabled() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser023_BIsTwoFactorEnabled(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "BIsTwoFactorEnabled", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: BIsPhoneIdentifying() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser023_BIsPhoneIdentifying(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "BIsPhoneIdentifying", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: BIsPhoneRequiringVerification() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser023_BIsPhoneRequiringVerification(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "BIsPhoneRequiringVerification", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: GetMarketEligibility() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_SteamUser023_GetMarketEligibility(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "GetMarketEligibility", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 31: GetDurationControl() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_SteamUser023_GetDurationControl(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "GetDurationControl", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 32: BSetDurationControlOnlineState(uint32 eNewState) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamUser023_BSetDurationControlOnlineState(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser023", "BSetDurationControlOnlineState", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -3496,26 +3583,34 @@ static uint32_t THISCALL vt_SteamFriends018_GetPersonaState(void *self) {
 
 // slot 2: GetFriendCount(int32 iFriendFlags) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetFriendCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendCount", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: GetFriendByIndex(int32 iFriend, int32 iFriendFlags) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetFriendByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendByIndex", 3, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 4: GetFriendRelationship(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends018_GetFriendRelationship(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendRelationship", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: GetFriendPersonaState(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends018_GetFriendPersonaState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendPersonaState", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -3542,421 +3637,563 @@ static const char * THISCALL vt_SteamFriends018_GetFriendPersonaName(void *self,
 
 // slot 7: GetFriendGamePlayed(CSteamID steamIDFriend, FriendGameInfo_t* pFriendGameInfo) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends018_GetFriendGamePlayed(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendGamePlayed", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: GetFriendPersonaNameHistory(CSteamID steamIDFriend, int32 iPersonaName) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends018_GetFriendPersonaNameHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendPersonaNameHistory", 8, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 9: GetFriendSteamLevel(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetFriendSteamLevel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendSteamLevel", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetPlayerNickname(CSteamID steamIDPlayer) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends018_GetPlayerNickname(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetPlayerNickname", 10, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 11: GetFriendsGroupCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetFriendsGroupCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendsGroupCount", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetFriendsGroupIDByIndex(int32 iFG) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_SteamFriends018_GetFriendsGroupIDByIndex(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendsGroupIDByIndex", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetFriendsGroupName(uint32 friendsGroupID) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends018_GetFriendsGroupName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendsGroupName", 13, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 14: GetFriendsGroupMembersCount(uint32 friendsGroupID) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetFriendsGroupMembersCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendsGroupMembersCount", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: GetFriendsGroupMembersList(uint32 friendsGroupID, CSteamID* pOutSteamIDMembers, int32 nMembersCount) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends018_GetFriendsGroupMembersList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendsGroupMembersList", 15, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 16: HasFriend(CSteamID steamIDFriend, int32 iFriendFlags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends018_HasFriend(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "HasFriend", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: GetClanCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetClanCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetClanCount", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetClanByIndex(int32 iClan) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetClanByIndex(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetClanByIndex", 18, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 19: GetClanName(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends018_GetClanName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetClanName", 19, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 20: GetClanTag(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends018_GetClanTag(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetClanTag", 20, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 21: GetClanActivityCounts(CSteamID steamIDClan, int32* pnOnline, int32* pnInGame, int32* pnChatting) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamFriends018_GetClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetClanActivityCounts", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: DownloadClanActivityCounts(CSteamID* psteamIDClans, int32 cClansToRequest) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends018_DownloadClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "DownloadClanActivityCounts", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 23: GetFriendCountFromSource(CSteamID steamIDSource) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetFriendCountFromSource(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendCountFromSource", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: GetFriendFromSourceByIndex(CSteamID steamIDSource, int32 iFriend) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetFriendFromSourceByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendFromSourceByIndex", 24, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 25: IsUserInSource(CSteamID steamIDUser, CSteamID steamIDSource) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamFriends018_IsUserInSource(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "IsUserInSource", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: SetInGameVoiceSpeaking(CSteamID steamIDUser, bool bSpeaking) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends018_SetInGameVoiceSpeaking(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "SetInGameVoiceSpeaking", 26, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 27: ActivateGameOverlay(const char* pchDialog) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends018_ActivateGameOverlay(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "ActivateGameOverlay", 27, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 28: ActivateGameOverlayToUser(const char* pchDialog, CSteamID steamID) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends018_ActivateGameOverlayToUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "ActivateGameOverlayToUser", 28, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 29: ActivateGameOverlayToWebPage(const char* pchURL, uint32 eMode) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends018_ActivateGameOverlayToWebPage(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "ActivateGameOverlayToWebPage", 29, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 30: ActivateGameOverlayToStore(uint32 nAppID, uint32 eFlag) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends018_ActivateGameOverlayToStore(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "ActivateGameOverlayToStore", 30, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 31: SetPlayedWith(CSteamID steamIDUserPlayedWith) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends018_SetPlayedWith(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "SetPlayedWith", 31, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 32: ActivateGameOverlayInviteDialog(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends018_ActivateGameOverlayInviteDialog(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "ActivateGameOverlayInviteDialog", 32, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 33: GetSmallFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetSmallFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetSmallFriendAvatar", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: GetMediumFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetMediumFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetMediumFriendAvatar", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: GetLargeFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetLargeFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetLargeFriendAvatar", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: RequestUserInformation(CSteamID steamIDUser, bool bRequireNameOnly) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends018_RequestUserInformation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "RequestUserInformation", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: RequestClanOfficerList(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends018_RequestClanOfficerList(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "RequestClanOfficerList", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 38: GetClanOwner(CSteamID steamIDClan) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetClanOwner(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetClanOwner", 38, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 39: GetClanOfficerCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetClanOfficerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetClanOfficerCount", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: GetClanOfficerByIndex(CSteamID steamIDClan, int32 iOfficer) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetClanOfficerByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetClanOfficerByIndex", 40, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 41: SetRichPresence(const char* pchKey, const char* pchValue) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends018_SetRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "SetRichPresence", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 42: ClearRichPresence() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamFriends018_ClearRichPresence(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "ClearRichPresence", 42, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 43: GetFriendRichPresence(CSteamID steamIDFriend, const char* pchKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends018_GetFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendRichPresence", 43, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 44: GetFriendRichPresenceKeyCount(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetFriendRichPresenceKeyCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendRichPresenceKeyCount", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 45: GetFriendRichPresenceKeyByIndex(CSteamID steamIDFriend, int32 iKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends018_GetFriendRichPresenceKeyByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendRichPresenceKeyByIndex", 45, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 46: RequestFriendRichPresence(CSteamID steamIDFriend) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends018_RequestFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "RequestFriendRichPresence", 46, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 47: InviteUserToGame(CSteamID steamIDFriend, const char* pchConnectString) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends018_InviteUserToGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "InviteUserToGame", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 48: GetCoplayFriendCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetCoplayFriendCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetCoplayFriendCount", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 49: GetCoplayFriend(int32 iCoplayFriend) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetCoplayFriend(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetCoplayFriend", 49, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 50: GetFriendCoplayTime(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetFriendCoplayTime(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendCoplayTime", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 51: GetFriendCoplayGame(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends018_GetFriendCoplayGame(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendCoplayGame", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 52: JoinClanChatRoom(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends018_JoinClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "JoinClanChatRoom", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 53: LeaveClanChatRoom(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends018_LeaveClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "LeaveClanChatRoom", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 54: GetClanChatMemberCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetClanChatMemberCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetClanChatMemberCount", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 55: GetChatMemberByIndex(CSteamID steamIDClan, int32 iUser) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetChatMemberByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetChatMemberByIndex", 55, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 56: SendClanChatMessage(CSteamID steamIDClanChat, const char* pchText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends018_SendClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "SendClanChatMessage", 56, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 57: GetClanChatMessage(CSteamID steamIDClanChat, int32 iMessage, void* prgchText, int32 cchTextMax, uint32* peChatEntryType, CSteamID* psteamidChatter) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetClanChatMessage", 57, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 58: IsClanChatAdmin(CSteamID steamIDClanChat, CSteamID steamIDUser) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamFriends018_IsClanChatAdmin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "IsClanChatAdmin", 58, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 59: IsClanChatWindowOpenInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends018_IsClanChatWindowOpenInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "IsClanChatWindowOpenInSteam", 59, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 60: OpenClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends018_OpenClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "OpenClanChatWindowInSteam", 60, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 61: CloseClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends018_CloseClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "CloseClanChatWindowInSteam", 61, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 62: SetListenForFriendsMessages(bool bInterceptEnabled) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamFriends018_SetListenForFriendsMessages(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "SetListenForFriendsMessages", 62, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 63: ReplyToFriendMessage(CSteamID steamIDFriend, const char* pchMsgToSend) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends018_ReplyToFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "ReplyToFriendMessage", 63, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 64: GetFriendMessage(CSteamID steamIDFriend, int32 iMessageID, void* pvData, int32 cubData, uint32* peChatEntryType) -> int32 | __thiscall ret 24 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFriendMessage", 64, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 65: GetFollowerCount(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends018_GetFollowerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetFollowerCount", 65, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 66: IsFollowing(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends018_IsFollowing(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "IsFollowing", 66, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 67: EnumerateFollowingList(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamFriends018_EnumerateFollowingList(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "EnumerateFollowingList", 67, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 68: IsClanPublic(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends018_IsClanPublic(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "IsClanPublic", 68, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 69: IsClanOfficialGameGroup(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends018_IsClanOfficialGameGroup(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "IsClanOfficialGameGroup", 69, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 70: GetNumChatsWithUnreadPriorityMessages() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends018_GetNumChatsWithUnreadPriorityMessages(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetNumChatsWithUnreadPriorityMessages", 70, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 71: ActivateGameOverlayRemotePlayTogetherInviteDialog(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends018_ActivateGameOverlayRemotePlayTogetherInviteDialog(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "ActivateGameOverlayRemotePlayTogetherInviteDialog", 71, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 72: RegisterProtocolInOverlayBrowser(const char* pchProtocol) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamFriends018_RegisterProtocolInOverlayBrowser(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "RegisterProtocolInOverlayBrowser", 72, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 73: ActivateGameOverlayInviteDialogConnectString(const char* pchConnectString) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends018_ActivateGameOverlayInviteDialogConnectString(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "ActivateGameOverlayInviteDialogConnectString", 73, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 74: RequestEquippedProfileItems(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends018_RequestEquippedProfileItems(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "RequestEquippedProfileItems", 74, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 75: BHasEquippedProfileItem(CSteamID steamID, uint32 itemType) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends018_BHasEquippedProfileItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "BHasEquippedProfileItem", 75, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 76: GetProfileItemPropertyString(CSteamID steamID, uint32 itemType, uint32 prop) -> const char* | __thiscall ret 16 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends018_GetProfileItemPropertyString(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetProfileItemPropertyString", 76, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 77: GetProfileItemPropertyUint(CSteamID steamID, uint32 itemType, uint32 prop) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamFriends018_GetProfileItemPropertyUint(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends018", "GetProfileItemPropertyUint", 77, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -4081,109 +4318,147 @@ static void * THISCALL vt_SteamUser016_GetSteamID(void *self, void *sretOut) {
 
 // slot 3: InitiateGameConnection(void* pAuthBlob, int32 cbMaxAuthBlob, CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer, bool bSecure) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamUser016_InitiateGameConnection(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "InitiateGameConnection", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: TerminateGameConnection(uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUser016_TerminateGameConnection(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "TerminateGameConnection", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: TrackAppUsageEvent(CGameID gameID, int32 eAppUsageEvent, const char* pchExtraInfo) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamUser016_TrackAppUsageEvent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "TrackAppUsageEvent", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUser016_GetUserDataFolder(void *self, char * pchBuffer, int32_t cubBuffer) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchBuffer != NULL && cubBuffer > 0) pchBuffer[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "GetUserDataFolder", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: StartVoiceRecording() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUser016_StartVoiceRecording(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "StartVoiceRecording", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: StopVoiceRecording() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUser016_StopVoiceRecording(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "StopVoiceRecording", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: GetAvailableVoice(uint32* pcbCompressed, uint32* pcbUncompressed, uint32 nUncompressedVoiceDesiredSampleRate) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser016_GetAvailableVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "GetAvailableVoice", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetVoice(bool bWantCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, bool bWantUncompressed, void* pUncompressedDestBuffer, uint32 cbUncompressedDestBufferSize, uint32* nUncompressBytesWritten, uint32 nUncompressedVoiceDesiredSampleRate) -> uint32 | __thiscall ret 36 (STUB)
 static uint32_t THISCALL vt_SteamUser016_GetVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "GetVoice", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: DecompressVoice(const void* pCompressed, uint32 cbCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, uint32 nDesiredSampleRate) -> uint32 | __thiscall ret 24 (STUB)
 static uint32_t THISCALL vt_SteamUser016_DecompressVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "DecompressVoice", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetVoiceOptimalSampleRate() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUser016_GetVoiceOptimalSampleRate(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "GetVoiceOptimalSampleRate", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser016_GetAuthSessionTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "GetAuthSessionTicket", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamUser016_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "BeginAuthSession", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUser016_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "EndAuthSession", 15, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 16: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUser016_CancelAuthTicket(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "CancelAuthTicket", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser016_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "UserHasLicenseForApp", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: BIsBehindNAT() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser016_BIsBehindNAT(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "BIsBehindNAT", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: AdvertiseGame(CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamUser016_AdvertiseGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "AdvertiseGame", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 20: RequestEncryptedAppTicket(void* pDataToInclude, int32 cbDataToInclude) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamUser016_RequestEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "RequestEncryptedAppTicket", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 21: GetEncryptedAppTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUser016_GetEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser016", "GetEncryptedAppTicket", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -4239,7 +4514,9 @@ static const char * THISCALL vt_SteamFriends011_GetPersonaName(void *self) {
 
 // slot 1: SetPersonaName(const char* pchPersonaName) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends011_SetPersonaName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "SetPersonaName", 1, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 2: GetPersonaState() -> uint32 | __thiscall ret 0
@@ -4254,26 +4531,34 @@ static uint32_t THISCALL vt_SteamFriends011_GetPersonaState(void *self) {
 
 // slot 3: GetFriendCount(int32 iFriendFlags) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetFriendCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendCount", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: GetFriendByIndex(CSteamID* _ret, int32 iFriend) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends011_GetFriendByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendByIndex", 4, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 5: GetFriendRelationship(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends011_GetFriendRelationship(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendRelationship", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetFriendPersonaState(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends011_GetFriendPersonaState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendPersonaState", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -4300,328 +4585,438 @@ static const char * THISCALL vt_SteamFriends011_GetFriendPersonaName(void *self,
 
 // slot 8: GetFriendGamePlayed(CSteamID steamIDFriend, FriendGameInfo_t* pFriendGameInfo) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends011_GetFriendGamePlayed(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendGamePlayed", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetFriendPersonaNameHistory(CSteamID steamIDFriend, int32 iPersonaName) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends011_GetFriendPersonaNameHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendPersonaNameHistory", 9, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 10: HasFriend(CSteamID steamIDFriend, int32 iFriendFlags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends011_HasFriend(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "HasFriend", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetClanCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetClanCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetClanCount", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetClanByIndex(CSteamID* _ret) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends011_GetClanByIndex(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetClanByIndex", 12, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 13: GetClanName(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends011_GetClanName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetClanName", 13, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 14: GetClanTag(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends011_GetClanTag(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetClanTag", 14, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 15: GetClanActivityCounts(CSteamID steamIDClan, int32* pnOnline, int32* pnInGame, int32* pnChatting) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamFriends011_GetClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetClanActivityCounts", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: DownloadClanActivityCounts(CSteamID* psteamIDClans, int32 cClansToRequest) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends011_DownloadClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "DownloadClanActivityCounts", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 17: GetFriendCountFromSource(CSteamID steamIDSource) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetFriendCountFromSource(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendCountFromSource", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetFriendFromSourceByIndex(CSteamID* _ret, CSteamID steamIDSource) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends011_GetFriendFromSourceByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendFromSourceByIndex", 18, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 19: IsUserInSource(CSteamID steamIDUser, CSteamID steamIDSource) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamFriends011_IsUserInSource(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "IsUserInSource", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: SetInGameVoiceSpeaking(CSteamID steamIDUser, bool bSpeaking) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends011_SetInGameVoiceSpeaking(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "SetInGameVoiceSpeaking", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 21: ActivateGameOverlay(const char* pchDialog) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends011_ActivateGameOverlay(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "ActivateGameOverlay", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 22: ActivateGameOverlayToUser(const char* pchDialog, CSteamID steamID) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends011_ActivateGameOverlayToUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "ActivateGameOverlayToUser", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 23: ActivateGameOverlayToWebPage(const char* pchURL) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends011_ActivateGameOverlayToWebPage(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "ActivateGameOverlayToWebPage", 23, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 24: ActivateGameOverlayToStore(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends011_ActivateGameOverlayToStore(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "ActivateGameOverlayToStore", 24, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 25: SetPlayedWith(CSteamID steamIDUserPlayedWith) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends011_SetPlayedWith(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "SetPlayedWith", 25, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 26: ActivateGameOverlayInviteDialog(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends011_ActivateGameOverlayInviteDialog(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "ActivateGameOverlayInviteDialog", 26, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 27: GetSmallFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetSmallFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetSmallFriendAvatar", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: GetMediumFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetMediumFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetMediumFriendAvatar", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: GetLargeFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetLargeFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetLargeFriendAvatar", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: RequestUserInformation(CSteamID steamIDUser, bool bRequireNameOnly) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends011_RequestUserInformation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "RequestUserInformation", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: RequestClanOfficerList(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends011_RequestClanOfficerList(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "RequestClanOfficerList", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 32: GetClanOwner(CSteamID* _ret) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends011_GetClanOwner(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetClanOwner", 32, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 33: GetClanOfficerCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetClanOfficerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetClanOfficerCount", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: GetClanOfficerByIndex(CSteamID* _ret, CSteamID steamIDClan) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends011_GetClanOfficerByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetClanOfficerByIndex", 34, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 35: GetUserRestrictions() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamFriends011_GetUserRestrictions(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetUserRestrictions", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: SetRichPresence(const char* pchKey, const char* pchValue) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends011_SetRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "SetRichPresence", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: ClearRichPresence() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamFriends011_ClearRichPresence(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "ClearRichPresence", 37, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 38: GetFriendRichPresence(CSteamID steamIDFriend, const char* pchKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends011_GetFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendRichPresence", 38, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 39: GetFriendRichPresenceKeyCount(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetFriendRichPresenceKeyCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendRichPresenceKeyCount", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: GetFriendRichPresenceKeyByIndex(CSteamID steamIDFriend, int32 iKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends011_GetFriendRichPresenceKeyByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendRichPresenceKeyByIndex", 40, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 41: RequestFriendRichPresence(CSteamID steamIDFriend) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends011_RequestFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "RequestFriendRichPresence", 41, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 42: InviteUserToGame(CSteamID steamIDFriend, const char* pchConnectString) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends011_InviteUserToGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "InviteUserToGame", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: GetCoplayFriendCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetCoplayFriendCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetCoplayFriendCount", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 44: GetCoplayFriend(CSteamID* _ret) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends011_GetCoplayFriend(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetCoplayFriend", 44, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 45: GetFriendCoplayTime(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetFriendCoplayTime(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendCoplayTime", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 46: GetFriendCoplayGame(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends011_GetFriendCoplayGame(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendCoplayGame", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 47: JoinClanChatRoom(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends011_JoinClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "JoinClanChatRoom", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 48: LeaveClanChatRoom(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends011_LeaveClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "LeaveClanChatRoom", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 49: GetClanChatMemberCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetClanChatMemberCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetClanChatMemberCount", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 50: GetChatMemberByIndex(CSteamID* _ret, CSteamID steamIDClan) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends011_GetChatMemberByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetChatMemberByIndex", 50, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 51: SendClanChatMessage(CSteamID steamIDClanChat, const char* pchText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends011_SendClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "SendClanChatMessage", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 52: GetClanChatMessage(CSteamID steamIDClanChat, int32 iMessage, void* prgchText, int32 cchTextMax, uint32* _e, CSteamID* _f) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetClanChatMessage", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 53: IsClanChatAdmin(CSteamID steamIDClanChat, CSteamID steamIDUser) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamFriends011_IsClanChatAdmin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "IsClanChatAdmin", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 54: IsClanChatWindowOpenInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends011_IsClanChatWindowOpenInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "IsClanChatWindowOpenInSteam", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 55: OpenClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends011_OpenClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "OpenClanChatWindowInSteam", 55, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 56: CloseClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends011_CloseClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "CloseClanChatWindowInSteam", 56, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 57: SetListenForFriendsMessages(bool bInterceptEnabled) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamFriends011_SetListenForFriendsMessages(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "SetListenForFriendsMessages", 57, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 58: ReplyToFriendMessage(CSteamID steamIDFriend, const char* pchMsgToSend) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends011_ReplyToFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "ReplyToFriendMessage", 58, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 59: GetFriendMessage(CSteamID steamIDFriend, int32 iMessageID, void* pvData, int32 cubData, uint32* peChatEntryType) -> int32 | __thiscall ret 24 (STUB)
 static int32_t THISCALL vt_SteamFriends011_GetFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFriendMessage", 59, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 60: GetFollowerCount(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends011_GetFollowerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "GetFollowerCount", 60, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 61: IsFollowing(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends011_IsFollowing(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "IsFollowing", 61, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 62: EnumerateFollowingList(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamFriends011_EnumerateFollowingList(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends011", "EnumerateFollowingList", 62, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -4758,19 +5153,25 @@ static const char * THISCALL vt_SteamUtils005_GetIPCountry(void *self) {
 
 // slot 5: GetImageSize(int32 iImage, uint32* pnWidth, uint32* pnHeight) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils005_GetImageSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "GetImageSize", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetImageRGBA(int32 iImage, uint8_t* pubDest, int32 nDestBufferSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils005_GetImageRGBA(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "GetImageRGBA", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: GetCSERIPPort(uint32* unIP, uint16_t* usPort) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUtils005_GetCSERIPPort(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "GetCSERIPPort", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -4796,41 +5197,55 @@ static uint32_t THISCALL vt_SteamUtils005_GetAppID(void *self) {
 
 // slot 10: SetOverlayNotificationPosition(uint32 eNotificationPosition) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils005_SetOverlayNotificationPosition(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "SetOverlayNotificationPosition", 10, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 11: IsAPICallCompleted(uint64 hSteamAPICall, bool* pbFailed) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils005_IsAPICallCompleted(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "IsAPICallCompleted", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetAPICallFailureReason(uint64 hSteamAPICall) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamUtils005_GetAPICallFailureReason(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "GetAPICallFailureReason", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetAPICallResult(uint64 hSteamAPICall, void* pCallback, int32 cubCallback, int32 iCallbackExpected, bool* pbFailed) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamUtils005_GetAPICallResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "GetAPICallResult", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: RunFrame() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUtils005_RunFrame(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "RunFrame", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: GetIPCCallCount() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUtils005_GetIPCCallCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "GetIPCCallCount", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils005_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "SetWarningMessageHook", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: IsOverlayEnabled() -> bool | __thiscall ret 0
@@ -4845,32 +5260,42 @@ static int THISCALL vt_SteamUtils005_IsOverlayEnabled(void *self) {
 
 // slot 18: BOverlayNeedsPresent() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils005_BOverlayNeedsPresent(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "BOverlayNeedsPresent", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: CheckFileSignature(const char* szFileName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamUtils005_CheckFileSignature(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "CheckFileSignature", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 20: ShowGamepadTextInput(uint32 eInputMode, uint32 eLineInputMode, const char* pchDescription, uint32 unCharMax) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamUtils005_ShowGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "ShowGamepadTextInput", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: GetEnteredGamepadTextLength() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUtils005_GetEnteredGamepadTextLength(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "GetEnteredGamepadTextLength", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUtils005_GetEnteredGamepadTextInput(void *self, char * pchText, uint32_t cchText) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchText != NULL && cchText > 0) pchText[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils005", "GetEnteredGamepadTextInput", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -5042,19 +5467,25 @@ static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION004_GetDLCCount(void *self
 
 // slot 11: BGetDLCDataByIndex(int32 iDLC, uint32* pAppID, bool* pbAvailable, char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION004_BGetDLCDataByIndex(void *self, int32_t iDLC, uint32_t * pAppID, int * pbAvailable, char * pchName, int32_t cchNameBufferSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION004", "BGetDLCDataByIndex", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: InstallDLC(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION004_InstallDLC(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION004", "InstallDLC", 12, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 13: UninstallDLC(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION004_UninstallDLC(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION004", "UninstallDLC", 13, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steamapps_interface_version004_vtbl[14] = {
@@ -5082,7 +5513,9 @@ static struct FakeSTEAMAPPS_INTERFACE_VERSION004 g_steamapps_interface_version00
 
 // slot 0: RequestCurrentStats() -> bool | __thiscall ret 0 (HELPER FALLBACK)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_RequestCurrentStats(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "RequestCurrentStats", 0, GAMELIB_STUBCALL_KIND_FALLBACK);
   return 1;
 }
 
@@ -5432,7 +5865,9 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_StoreStats(void *self
 
 // slot 11: GetAchievementIcon(const char* pchName) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementIcon(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetAchievementIcon", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -5534,31 +5969,41 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_IndicateAchievementPr
 
 // slot 14: RequestUserStats(CSteamID steamIDUser) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_RequestUserStats(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "RequestUserStats", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 15: GetUserStat_2(CSteamID steamIDUser, const char* pchName, float* pData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetUserStat_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetUserStat_2", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: GetUserStat(CSteamID steamIDUser, const char* pchName, int32* pData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetUserStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetUserStat", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: GetUserAchievement(CSteamID steamIDUser, const char* pchName, bool* pbAchieved) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetUserAchievement", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetUserAchievementAndUnlockTime(CSteamID steamIDUser, const char* pchName, bool* pbAchieved, uint32* punUnlockTime) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetUserAchievementAndUnlockTime(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetUserAchievementAndUnlockTime", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -5576,129 +6021,171 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_ResetAllStats(void *s
 
 // slot 20: FindOrCreateLeaderboard(const char* pchLeaderboardName, uint32 eLeaderboardSortMethod, uint32 eLeaderboardDisplayType) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_FindOrCreateLeaderboard(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "FindOrCreateLeaderboard", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 21: FindLeaderboard(const char* pchLeaderboardName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_FindLeaderboard(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "FindLeaderboard", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 22: GetLeaderboardName(uint64 hSteamLeaderboard) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetLeaderboardName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetLeaderboardName", 22, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 23: GetLeaderboardEntryCount(uint64 hSteamLeaderboard) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetLeaderboardEntryCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetLeaderboardEntryCount", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: GetLeaderboardSortMethod(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetLeaderboardSortMethod(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetLeaderboardSortMethod", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: GetLeaderboardDisplayType(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetLeaderboardDisplayType(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetLeaderboardDisplayType", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: DownloadLeaderboardEntries(uint64 hSteamLeaderboard, uint32 eLeaderboardDataRequest, int32 nRangeStart, int32 nRangeEnd) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_DownloadLeaderboardEntries(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "DownloadLeaderboardEntries", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 27: DownloadLeaderboardEntriesForUsers(uint64 hSteamLeaderboard, CSteamID* prgUsers, int32 cUsers) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_DownloadLeaderboardEntriesForUsers(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "DownloadLeaderboardEntriesForUsers", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 28: GetDownloadedLeaderboardEntry(uint64 hSteamLeaderboardEntries, int32 index, w_LeaderboardEntry_t_111x* pLeaderboardEntry, int32* pDetails, int32 cDetailsMax) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetDownloadedLeaderboardEntry(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetDownloadedLeaderboardEntry", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: UploadLeaderboardScore(uint64 hSteamLeaderboard, uint32 eLeaderboardUploadScoreMethod, int32 nScore, const int32_t* pScoreDetails, int32 cScoreDetailsCount) -> uint64 | __thiscall ret 24 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_UploadLeaderboardScore(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "UploadLeaderboardScore", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 30: AttachLeaderboardUGC(uint64 hSteamLeaderboard, uint64 hUGC) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_AttachLeaderboardUGC(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "AttachLeaderboardUGC", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 31: GetNumberOfCurrentPlayers() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetNumberOfCurrentPlayers(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetNumberOfCurrentPlayers", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 32: RequestGlobalAchievementPercentages() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_RequestGlobalAchievementPercentages(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "RequestGlobalAchievementPercentages", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 33: GetMostAchievedAchievementInfo(char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 16 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetMostAchievedAchievementInfo(void *self, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetMostAchievedAchievementInfo", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: GetNextMostAchievedAchievementInfo(int32 iIteratorPrevious, char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 20 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetNextMostAchievedAchievementInfo(void *self, int32_t iIteratorPrevious, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetNextMostAchievedAchievementInfo", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: GetAchievementAchievedPercent(const char* pchName, float* pflPercent) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementAchievedPercent(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetAchievementAchievedPercent", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: RequestGlobalStats(int32 nHistoryDays) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_RequestGlobalStats(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "RequestGlobalStats", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 37: GetGlobalStat_2(const char* pchStatName, double* pData) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetGlobalStat_2(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetGlobalStat_2", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: GetGlobalStat(const char* pchStatName, int64_t* pData) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetGlobalStat(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetGlobalStat", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 39: GetGlobalStatHistory_2(const char* pchStatName, double* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetGlobalStatHistory_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetGlobalStatHistory_2", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: GetGlobalStatHistory(const char* pchStatName, int64_t* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetGlobalStatHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION010", "GetGlobalStatHistory", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -5773,7 +6260,9 @@ static const char * THISCALL vt_SteamFriends013_GetPersonaName(void *self) {
 
 // slot 1: SetPersonaName(const char* pchPersonaName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamFriends013_SetPersonaName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "SetPersonaName", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -5789,26 +6278,34 @@ static uint32_t THISCALL vt_SteamFriends013_GetPersonaState(void *self) {
 
 // slot 3: GetFriendCount(int32 iFriendFlags) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetFriendCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendCount", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: GetFriendByIndex(CSteamID* _ret, int32 iFriend) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends013_GetFriendByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendByIndex", 4, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 5: GetFriendRelationship(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends013_GetFriendRelationship(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendRelationship", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetFriendPersonaState(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends013_GetFriendPersonaState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendPersonaState", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -5835,328 +6332,438 @@ static const char * THISCALL vt_SteamFriends013_GetFriendPersonaName(void *self,
 
 // slot 8: GetFriendGamePlayed(CSteamID steamIDFriend, FriendGameInfo_t* pFriendGameInfo) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends013_GetFriendGamePlayed(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendGamePlayed", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetFriendPersonaNameHistory(CSteamID steamIDFriend, int32 iPersonaName) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends013_GetFriendPersonaNameHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendPersonaNameHistory", 9, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 10: HasFriend(CSteamID steamIDFriend, int32 iFriendFlags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends013_HasFriend(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "HasFriend", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetClanCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetClanCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetClanCount", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetClanByIndex(CSteamID* _ret) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends013_GetClanByIndex(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetClanByIndex", 12, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 13: GetClanName(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends013_GetClanName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetClanName", 13, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 14: GetClanTag(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends013_GetClanTag(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetClanTag", 14, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 15: GetClanActivityCounts(CSteamID steamIDClan, int32* pnOnline, int32* pnInGame, int32* pnChatting) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamFriends013_GetClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetClanActivityCounts", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: DownloadClanActivityCounts(CSteamID* psteamIDClans, int32 cClansToRequest) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends013_DownloadClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "DownloadClanActivityCounts", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 17: GetFriendCountFromSource(CSteamID steamIDSource) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetFriendCountFromSource(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendCountFromSource", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetFriendFromSourceByIndex(CSteamID* _ret, CSteamID steamIDSource) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends013_GetFriendFromSourceByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendFromSourceByIndex", 18, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 19: IsUserInSource(CSteamID steamIDUser, CSteamID steamIDSource) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamFriends013_IsUserInSource(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "IsUserInSource", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: SetInGameVoiceSpeaking(CSteamID steamIDUser, bool bSpeaking) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends013_SetInGameVoiceSpeaking(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "SetInGameVoiceSpeaking", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 21: ActivateGameOverlay(const char* pchDialog) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends013_ActivateGameOverlay(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "ActivateGameOverlay", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 22: ActivateGameOverlayToUser(const char* pchDialog, CSteamID steamID) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends013_ActivateGameOverlayToUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "ActivateGameOverlayToUser", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 23: ActivateGameOverlayToWebPage(const char* pchURL) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends013_ActivateGameOverlayToWebPage(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "ActivateGameOverlayToWebPage", 23, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 24: ActivateGameOverlayToStore(uint32 nAppID, uint32 eFlag) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends013_ActivateGameOverlayToStore(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "ActivateGameOverlayToStore", 24, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 25: SetPlayedWith(CSteamID steamIDUserPlayedWith) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends013_SetPlayedWith(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "SetPlayedWith", 25, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 26: ActivateGameOverlayInviteDialog(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends013_ActivateGameOverlayInviteDialog(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "ActivateGameOverlayInviteDialog", 26, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 27: GetSmallFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetSmallFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetSmallFriendAvatar", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: GetMediumFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetMediumFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetMediumFriendAvatar", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: GetLargeFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetLargeFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetLargeFriendAvatar", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: RequestUserInformation(CSteamID steamIDUser, bool bRequireNameOnly) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends013_RequestUserInformation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "RequestUserInformation", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: RequestClanOfficerList(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends013_RequestClanOfficerList(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "RequestClanOfficerList", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 32: GetClanOwner(CSteamID* _ret) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends013_GetClanOwner(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetClanOwner", 32, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 33: GetClanOfficerCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetClanOfficerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetClanOfficerCount", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: GetClanOfficerByIndex(CSteamID* _ret, CSteamID steamIDClan) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends013_GetClanOfficerByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetClanOfficerByIndex", 34, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 35: GetUserRestrictions() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamFriends013_GetUserRestrictions(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetUserRestrictions", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: SetRichPresence(const char* pchKey, const char* pchValue) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends013_SetRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "SetRichPresence", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: ClearRichPresence() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamFriends013_ClearRichPresence(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "ClearRichPresence", 37, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 38: GetFriendRichPresence(CSteamID steamIDFriend, const char* pchKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends013_GetFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendRichPresence", 38, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 39: GetFriendRichPresenceKeyCount(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetFriendRichPresenceKeyCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendRichPresenceKeyCount", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: GetFriendRichPresenceKeyByIndex(CSteamID steamIDFriend, int32 iKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends013_GetFriendRichPresenceKeyByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendRichPresenceKeyByIndex", 40, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 41: RequestFriendRichPresence(CSteamID steamIDFriend) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends013_RequestFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "RequestFriendRichPresence", 41, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 42: InviteUserToGame(CSteamID steamIDFriend, const char* pchConnectString) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends013_InviteUserToGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "InviteUserToGame", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: GetCoplayFriendCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetCoplayFriendCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetCoplayFriendCount", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 44: GetCoplayFriend(CSteamID* _ret) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends013_GetCoplayFriend(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetCoplayFriend", 44, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 45: GetFriendCoplayTime(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetFriendCoplayTime(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendCoplayTime", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 46: GetFriendCoplayGame(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends013_GetFriendCoplayGame(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendCoplayGame", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 47: JoinClanChatRoom(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends013_JoinClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "JoinClanChatRoom", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 48: LeaveClanChatRoom(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends013_LeaveClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "LeaveClanChatRoom", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 49: GetClanChatMemberCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetClanChatMemberCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetClanChatMemberCount", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 50: GetChatMemberByIndex(CSteamID* _ret, CSteamID steamIDClan) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends013_GetChatMemberByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetChatMemberByIndex", 50, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 51: SendClanChatMessage(CSteamID steamIDClanChat, const char* pchText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends013_SendClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "SendClanChatMessage", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 52: GetClanChatMessage(CSteamID steamIDClanChat, int32 iMessage, void* prgchText, int32 cchTextMax, uint32* _e, CSteamID* _f) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetClanChatMessage", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 53: IsClanChatAdmin(CSteamID steamIDClanChat, CSteamID steamIDUser) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamFriends013_IsClanChatAdmin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "IsClanChatAdmin", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 54: IsClanChatWindowOpenInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends013_IsClanChatWindowOpenInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "IsClanChatWindowOpenInSteam", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 55: OpenClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends013_OpenClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "OpenClanChatWindowInSteam", 55, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 56: CloseClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends013_CloseClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "CloseClanChatWindowInSteam", 56, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 57: SetListenForFriendsMessages(bool bInterceptEnabled) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamFriends013_SetListenForFriendsMessages(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "SetListenForFriendsMessages", 57, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 58: ReplyToFriendMessage(CSteamID steamIDFriend, const char* pchMsgToSend) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends013_ReplyToFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "ReplyToFriendMessage", 58, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 59: GetFriendMessage(CSteamID steamIDFriend, int32 iMessageID, void* pvData, int32 cubData, uint32* peChatEntryType) -> int32 | __thiscall ret 24 (STUB)
 static int32_t THISCALL vt_SteamFriends013_GetFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFriendMessage", 59, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 60: GetFollowerCount(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends013_GetFollowerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "GetFollowerCount", 60, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 61: IsFollowing(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends013_IsFollowing(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "IsFollowing", 61, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 62: EnumerateFollowingList(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamFriends013_EnumerateFollowingList(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends013", "EnumerateFollowingList", 62, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -6368,49 +6975,65 @@ static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetDLCCount(void *self
 
 // slot 11: BGetDLCDataByIndex(int32 iDLC, uint32* pAppID, bool* pbAvailable, char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_BGetDLCDataByIndex(void *self, int32_t iDLC, uint32_t * pAppID, int * pbAvailable, char * pchName, int32_t cchNameBufferSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION005", "BGetDLCDataByIndex", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: InstallDLC(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_InstallDLC(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION005", "InstallDLC", 12, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 13: UninstallDLC(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_UninstallDLC(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION005", "UninstallDLC", 13, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 14: RequestAppProofOfPurchaseKey(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_RequestAppProofOfPurchaseKey(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION005", "RequestAppProofOfPurchaseKey", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: GetCurrentBetaName(char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetCurrentBetaName(void *self, char * pchName, int32_t cchNameBufferSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION005", "GetCurrentBetaName", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: MarkContentCorrupt(bool bMissingFilesOnly) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_MarkContentCorrupt(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION005", "MarkContentCorrupt", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: GetInstalledDepots(uint32* pvecDepots, uint32 cMaxDepots) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetInstalledDepots(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION005", "GetInstalledDepots", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetAppInstallDir(uint32 appID, char* pchFolder, uint32 cchFolderBufferSize) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION005_GetAppInstallDir(void *self, uint32_t appID, char * pchFolder, uint32_t cchFolderBufferSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchFolder != NULL && cchFolderBufferSize > 0) pchFolder[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION005", "GetAppInstallDir", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -6456,7 +7079,9 @@ static struct FakeSTEAMAPPS_INTERFACE_VERSION005 g_steamapps_interface_version00
 
 // slot 0: RequestCurrentStats() -> bool | __thiscall ret 0 (HELPER FALLBACK)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_RequestCurrentStats(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "RequestCurrentStats", 0, GAMELIB_STUBCALL_KIND_FALLBACK);
   return 1;
 }
 
@@ -6806,7 +7431,9 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_StoreStats(void *self
 
 // slot 11: GetAchievementIcon(const char* pchName) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementIcon(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetAchievementIcon", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -6939,31 +7566,41 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchieveme
 
 // slot 16: RequestUserStats(CSteamID steamIDUser) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_RequestUserStats(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "RequestUserStats", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 17: GetUserStat_2(CSteamID steamIDUser, const char* pchName, float* pData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetUserStat_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetUserStat_2", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetUserStat(CSteamID steamIDUser, const char* pchName, int32* pData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetUserStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetUserStat", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: GetUserAchievement(CSteamID steamIDUser, const char* pchName, bool* pbAchieved) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetUserAchievement", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: GetUserAchievementAndUnlockTime(CSteamID steamIDUser, const char* pchName, bool* pbAchieved, uint32* punUnlockTime) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetUserAchievementAndUnlockTime(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetUserAchievementAndUnlockTime", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -6981,129 +7618,171 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_ResetAllStats(void *s
 
 // slot 22: FindOrCreateLeaderboard(const char* pchLeaderboardName, uint32 eLeaderboardSortMethod, uint32 eLeaderboardDisplayType) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_FindOrCreateLeaderboard(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "FindOrCreateLeaderboard", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 23: FindLeaderboard(const char* pchLeaderboardName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_FindLeaderboard(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "FindLeaderboard", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 24: GetLeaderboardName(uint64 hSteamLeaderboard) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetLeaderboardName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetLeaderboardName", 24, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 25: GetLeaderboardEntryCount(uint64 hSteamLeaderboard) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetLeaderboardEntryCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetLeaderboardEntryCount", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: GetLeaderboardSortMethod(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetLeaderboardSortMethod(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetLeaderboardSortMethod", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: GetLeaderboardDisplayType(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetLeaderboardDisplayType(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetLeaderboardDisplayType", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: DownloadLeaderboardEntries(uint64 hSteamLeaderboard, uint32 eLeaderboardDataRequest, int32 nRangeStart, int32 nRangeEnd) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_DownloadLeaderboardEntries(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "DownloadLeaderboardEntries", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 29: DownloadLeaderboardEntriesForUsers(uint64 hSteamLeaderboard, CSteamID* prgUsers, int32 cUsers) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_DownloadLeaderboardEntriesForUsers(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "DownloadLeaderboardEntriesForUsers", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 30: GetDownloadedLeaderboardEntry(uint64 hSteamLeaderboardEntries, int32 index, w_LeaderboardEntry_t_123* pLeaderboardEntry, int32* pDetails, int32 cDetailsMax) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetDownloadedLeaderboardEntry(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetDownloadedLeaderboardEntry", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: UploadLeaderboardScore(uint64 hSteamLeaderboard, uint32 eLeaderboardUploadScoreMethod, int32 nScore, const int32_t* pScoreDetails, int32 cScoreDetailsCount) -> uint64 | __thiscall ret 24 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_UploadLeaderboardScore(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "UploadLeaderboardScore", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 32: AttachLeaderboardUGC(uint64 hSteamLeaderboard, uint64 hUGC) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_AttachLeaderboardUGC(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "AttachLeaderboardUGC", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 33: GetNumberOfCurrentPlayers() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetNumberOfCurrentPlayers(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetNumberOfCurrentPlayers", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 34: RequestGlobalAchievementPercentages() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_RequestGlobalAchievementPercentages(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "RequestGlobalAchievementPercentages", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 35: GetMostAchievedAchievementInfo(char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 16 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetMostAchievedAchievementInfo(void *self, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetMostAchievedAchievementInfo", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: GetNextMostAchievedAchievementInfo(int32 iIteratorPrevious, char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 20 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetNextMostAchievedAchievementInfo(void *self, int32_t iIteratorPrevious, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetNextMostAchievedAchievementInfo", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: GetAchievementAchievedPercent(const char* pchName, float* pflPercent) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementAchievedPercent(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetAchievementAchievedPercent", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: RequestGlobalStats(int32 nHistoryDays) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_RequestGlobalStats(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "RequestGlobalStats", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 39: GetGlobalStat_2(const char* pchStatName, double* pData) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetGlobalStat_2(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetGlobalStat_2", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: GetGlobalStat(const char* pchStatName, int64_t* pData) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetGlobalStat(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetGlobalStat", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 41: GetGlobalStatHistory_2(const char* pchStatName, double* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetGlobalStatHistory_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetGlobalStatHistory_2", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 42: GetGlobalStatHistory(const char* pchStatName, int64_t* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetGlobalStatHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION011", "GetGlobalStatHistory", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -7160,186 +7839,248 @@ static struct FakeSTEAMUSERSTATS_INTERFACE_VERSION011 g_steamuserstats_interface
 
 // slot 0: FileWrite(const char* pchFile, const void* pvData, int32 cubData) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileWrite(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "FileWrite", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: FileRead(const char* pchFile, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "FileRead", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: FileForget(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileForget(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "FileForget", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: FileDelete(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileDelete(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "FileDelete", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: FileShare(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileShare(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "FileShare", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 5: SetSyncPlatforms(const char* pchFile, uint32 eRemoteStoragePlatform) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_SetSyncPlatforms(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "SetSyncPlatforms", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: FileExists(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileExists(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "FileExists", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: FilePersisted(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FilePersisted(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "FilePersisted", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: GetFileSize(const char* pchFile) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileSize(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "GetFileSize", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetFileTimestamp(const char* pchFile) -> int64 | __thiscall ret 4 (STUB)
 static int64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileTimestamp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "GetFileTimestamp", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 10: GetSyncPlatforms(const char* pchFile) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetSyncPlatforms(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "GetSyncPlatforms", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetFileCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "GetFileCount", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetFileNameAndSize(int32 iFile, int32* pnFileSizeInBytes) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileNameAndSize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "GetFileNameAndSize", 12, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 13: GetQuota(int32* pnTotalBytes, int32* puAvailableBytes) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetQuota(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "GetQuota", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: IsCloudEnabledForAccount() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_IsCloudEnabledForAccount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "IsCloudEnabledForAccount", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: IsCloudEnabledForApp() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_IsCloudEnabledForApp(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "IsCloudEnabledForApp", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: SetCloudEnabledForApp(bool bEnabled) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_SetCloudEnabledForApp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "SetCloudEnabledForApp", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: UGCDownload(uint64 hContent) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UGCDownload(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "UGCDownload", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 18: GetUGCDetails(uint64 hContent, uint32* pnAppID, char** ppchName, int32* pnFileSizeInBytes, CSteamID* pSteamIDOwner) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "GetUGCDetails", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: UGCRead(uint64 hContent, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 16 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UGCRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "UGCRead", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: GetCachedUGCCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetCachedUGCCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "GetCachedUGCCount", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: GetCachedUGCHandle(int32 iCachedContent) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetCachedUGCHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "GetCachedUGCHandle", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 22: PublishFile(const char* pchFile, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags) -> uint64 | __thiscall ret 28 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_PublishFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "PublishFile", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 23: PublishWorkshopFile(const char* pchFile, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, w_SteamParamStringArray_t* pTags) -> uint64 | __thiscall ret 24 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_PublishWorkshopFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "PublishWorkshopFile", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 24: UpdatePublishedFile(w_RemoteStorageUpdatePublishedFileRequest_t updatePublishedFileRequest) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UpdatePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8, uint32_t dummy9) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "UpdatePublishedFile", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 25: GetPublishedFileDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetPublishedFileDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "GetPublishedFileDetails", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 26: DeletePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_DeletePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "DeletePublishedFile", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 27: EnumerateUserPublishedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_EnumerateUserPublishedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "EnumerateUserPublishedFiles", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 28: SubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_SubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "SubscribePublishedFile", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 29: EnumerateUserSubscribedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_EnumerateUserSubscribedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "EnumerateUserSubscribedFiles", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 30: UnsubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UnsubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "UnsubscribePublishedFile", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -7384,223 +8125,299 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION005 g_steamremotestorage_i
 
 // slot 0: GetFavoriteGameCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamMatchMaking009_GetFavoriteGameCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetFavoriteGameCount", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: GetFavoriteGame(int32 iGame, uint32* pnAppID, uint32* pnIP, uint16_t* pnConnPort, uint16_t* pnQueryPort, uint32* punFlags, uint32* pRTime32LastPlayedOnServer) -> bool | __thiscall ret 28 (STUB)
 static int THISCALL vt_SteamMatchMaking009_GetFavoriteGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetFavoriteGame", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: AddFavoriteGame(uint32 nAppID, uint32 nIP, uint32 nConnPort, uint32 nQueryPort, uint32 unFlags, uint32 rTime32LastPlayedOnServer) -> int32 | __thiscall ret 24 (STUB)
 static int32_t THISCALL vt_SteamMatchMaking009_AddFavoriteGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddFavoriteGame", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: RemoveFavoriteGame(uint32 nAppID, uint32 nIP, uint32 nConnPort, uint32 nQueryPort, uint32 unFlags) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamMatchMaking009_RemoveFavoriteGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "RemoveFavoriteGame", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: RequestLobbyList() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_SteamMatchMaking009_RequestLobbyList(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "RequestLobbyList", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 5: AddRequestLobbyListStringFilter(const char* pchKeyToMatch, const char* pchValueToMatch, uint32 eComparisonType) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListStringFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListStringFilter", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: AddRequestLobbyListNumericalFilter(const char* pchKeyToMatch, int32 nValueToMatch, uint32 eComparisonType) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListNumericalFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListNumericalFilter", 6, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 7: AddRequestLobbyListNearValueFilter(const char* pchKeyToMatch, int32 nValueToBeCloseTo) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListNearValueFilter(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListNearValueFilter", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: AddRequestLobbyListFilterSlotsAvailable(int32 nSlotsAvailable) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListFilterSlotsAvailable(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListFilterSlotsAvailable", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: AddRequestLobbyListDistanceFilter(uint32 eLobbyDistanceFilter) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListDistanceFilter(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListDistanceFilter", 9, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 10: AddRequestLobbyListResultCountFilter(int32 cMaxResults) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListResultCountFilter(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListResultCountFilter", 10, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 11: AddRequestLobbyListCompatibleMembersFilter(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListCompatibleMembersFilter(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListCompatibleMembersFilter", 11, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 12: GetLobbyByIndex(int32 iLobby) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamMatchMaking009_GetLobbyByIndex(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyByIndex", 12, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 13: CreateLobby(uint32 eLobbyType, int32 cMaxMembers) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamMatchMaking009_CreateLobby(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "CreateLobby", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 14: JoinLobby(CSteamID steamIDLobby) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamMatchMaking009_JoinLobby(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "JoinLobby", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 15: LeaveLobby(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamMatchMaking009_LeaveLobby(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "LeaveLobby", 15, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 16: InviteUserToLobby(CSteamID steamIDLobby, CSteamID steamIDInvitee) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamMatchMaking009_InviteUserToLobby(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "InviteUserToLobby", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: GetNumLobbyMembers(CSteamID steamIDLobby) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamMatchMaking009_GetNumLobbyMembers(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetNumLobbyMembers", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetLobbyMemberByIndex(CSteamID steamIDLobby, int32 iMember) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamMatchMaking009_GetLobbyMemberByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyMemberByIndex", 18, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 19: GetLobbyData(CSteamID steamIDLobby, const char* pchKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamMatchMaking009_GetLobbyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyData", 19, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 20: SetLobbyData(CSteamID steamIDLobby, const char* pchKey, const char* pchValue) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamMatchMaking009_SetLobbyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyData", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: GetLobbyDataCount(CSteamID steamIDLobby) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyDataCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyDataCount", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: GetLobbyDataByIndex(CSteamID steamIDLobby, int32 iLobbyData, char* pchKey, int32 cchKeyBufferSize, char* pchValue, int32 cchValueBufferSize) -> bool | __thiscall ret 28 (STUB)
 static int THISCALL vt_SteamMatchMaking009_GetLobbyDataByIndex(void *self, uint64_t steamIDLobby, int32_t iLobbyData, char * pchKey, int32_t cchKeyBufferSize, char * pchValue, int32_t cchValueBufferSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchKey != NULL && cchKeyBufferSize > 0) pchKey[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyDataByIndex", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: DeleteLobbyData(CSteamID steamIDLobby, const char* pchKey) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamMatchMaking009_DeleteLobbyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "DeleteLobbyData", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: GetLobbyMemberData(CSteamID steamIDLobby, CSteamID steamIDUser, const char* pchKey) -> const char* | __thiscall ret 20 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamMatchMaking009_GetLobbyMemberData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyMemberData", 24, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 25: SetLobbyMemberData(CSteamID steamIDLobby, const char* pchKey, const char* pchValue) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamMatchMaking009_SetLobbyMemberData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyMemberData", 25, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 26: SendLobbyChatMsg(CSteamID steamIDLobby, const void* pvMsgBody, int32 cubMsgBody) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamMatchMaking009_SendLobbyChatMsg(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SendLobbyChatMsg", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: GetLobbyChatEntry(CSteamID steamIDLobby, int32 iChatID, CSteamID* pSteamIDUser, void* pvData, int32 cubData, uint32* peChatEntryType) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyChatEntry(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyChatEntry", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: RequestLobbyData(CSteamID steamIDLobby) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamMatchMaking009_RequestLobbyData(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "RequestLobbyData", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: SetLobbyGameServer(CSteamID steamIDLobby, uint32 unGameServerIP, uint32 unGameServerPort, CSteamID steamIDGameServer) -> void | __thiscall ret 24 (STUB)
 static void THISCALL vt_SteamMatchMaking009_SetLobbyGameServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyGameServer", 29, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 30: GetLobbyGameServer(CSteamID steamIDLobby, uint32* punGameServerIP, uint16_t* punGameServerPort, CSteamID* psteamIDGameServer) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamMatchMaking009_GetLobbyGameServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyGameServer", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: SetLobbyMemberLimit(CSteamID steamIDLobby, int32 cMaxMembers) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamMatchMaking009_SetLobbyMemberLimit(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyMemberLimit", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 32: GetLobbyMemberLimit(CSteamID steamIDLobby) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyMemberLimit(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyMemberLimit", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: SetLobbyType(CSteamID steamIDLobby, uint32 eLobbyType) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamMatchMaking009_SetLobbyType(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyType", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: SetLobbyJoinable(CSteamID steamIDLobby, bool bLobbyJoinable) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamMatchMaking009_SetLobbyJoinable(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyJoinable", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: GetLobbyOwner(CSteamID steamIDLobby) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamMatchMaking009_GetLobbyOwner(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyOwner", 35, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 36: SetLobbyOwner(CSteamID steamIDLobby, CSteamID steamIDNewOwner) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamMatchMaking009_SetLobbyOwner(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyOwner", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: SetLinkedLobby(CSteamID steamIDLobby, CSteamID steamIDLobbyDependent) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamMatchMaking009_SetLinkedLobby(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLinkedLobby", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -7651,99 +8468,133 @@ static struct FakeSteamMatchMaking009 g_steammatchmaking009_instance = { g_steam
 
 // slot 0: RequestInternetServerList(uint32 iApp, MatchMakingKeyValuePair_t** ppchFilters, uint32 nFilters, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 16 (STUB)
 static void * THISCALL vt_SteamMatchMakingServers002_RequestInternetServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "RequestInternetServerList", 0, GAMELIB_STUBCALL_KIND_STUB);
   return NULL;
 }
 
 // slot 1: RequestLANServerList(uint32 iApp, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 8 (STUB)
 static void * THISCALL vt_SteamMatchMakingServers002_RequestLANServerList(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "RequestLANServerList", 1, GAMELIB_STUBCALL_KIND_STUB);
   return NULL;
 }
 
 // slot 2: RequestFriendsServerList(uint32 iApp, MatchMakingKeyValuePair_t** ppchFilters, uint32 nFilters, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 16 (STUB)
 static void * THISCALL vt_SteamMatchMakingServers002_RequestFriendsServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "RequestFriendsServerList", 2, GAMELIB_STUBCALL_KIND_STUB);
   return NULL;
 }
 
 // slot 3: RequestFavoritesServerList(uint32 iApp, MatchMakingKeyValuePair_t** ppchFilters, uint32 nFilters, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 16 (STUB)
 static void * THISCALL vt_SteamMatchMakingServers002_RequestFavoritesServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "RequestFavoritesServerList", 3, GAMELIB_STUBCALL_KIND_STUB);
   return NULL;
 }
 
 // slot 4: RequestHistoryServerList(uint32 iApp, MatchMakingKeyValuePair_t** ppchFilters, uint32 nFilters, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 16 (STUB)
 static void * THISCALL vt_SteamMatchMakingServers002_RequestHistoryServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "RequestHistoryServerList", 4, GAMELIB_STUBCALL_KIND_STUB);
   return NULL;
 }
 
 // slot 5: RequestSpectatorServerList(uint32 iApp, MatchMakingKeyValuePair_t** ppchFilters, uint32 nFilters, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 16 (STUB)
 static void * THISCALL vt_SteamMatchMakingServers002_RequestSpectatorServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "RequestSpectatorServerList", 5, GAMELIB_STUBCALL_KIND_STUB);
   return NULL;
 }
 
 // slot 6: ReleaseRequest(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamMatchMakingServers002_ReleaseRequest(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "ReleaseRequest", 6, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 7: GetServerDetails(void* hRequest, int32 iServer) -> gameserveritem_t_105* | __thiscall ret 8 (STUB)
 static void * THISCALL vt_SteamMatchMakingServers002_GetServerDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "GetServerDetails", 7, GAMELIB_STUBCALL_KIND_STUB);
   return NULL;
 }
 
 // slot 8: CancelQuery(void* hRequest) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamMatchMakingServers002_CancelQuery(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "CancelQuery", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: RefreshQuery(void* hRequest) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamMatchMakingServers002_RefreshQuery(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "RefreshQuery", 9, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 10: IsRefreshing(void* hRequest) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamMatchMakingServers002_IsRefreshing(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "IsRefreshing", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetServerCount(void* hRequest) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamMatchMakingServers002_GetServerCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "GetServerCount", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: RefreshServer(void* hRequest, int32 iServer) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamMatchMakingServers002_RefreshServer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "RefreshServer", 12, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 13: PingServer(uint32 unIP, uint32 usPort, w_ISteamMatchmakingPingResponse* pRequestServersResponse) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_SteamMatchMakingServers002_PingServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "PingServer", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: PlayerDetails(uint32 unIP, uint32 usPort, w_ISteamMatchmakingPlayersResponse* pRequestServersResponse) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_SteamMatchMakingServers002_PlayerDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "PlayerDetails", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: ServerRules(uint32 unIP, uint32 usPort, w_ISteamMatchmakingRulesResponse* pRequestServersResponse) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_SteamMatchMakingServers002_ServerRules(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "ServerRules", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: CancelServerQuery(int32 hServerQuery) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamMatchMakingServers002_CancelServerQuery(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers002", "CancelServerQuery", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steammatchmakingservers002_vtbl[17] = {
@@ -7772,133 +8623,177 @@ static struct FakeSteamMatchMakingServers002 g_steammatchmakingservers002_instan
 
 // slot 0: SendP2PPacket(CSteamID steamIDRemote, const void* pubData, uint32 cubData, uint32 eP2PSendType, int32 nChannel) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamNetworking005_SendP2PPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "SendP2PPacket", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: IsP2PPacketAvailable(uint32* pcubMsgSize, int32 nChannel) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking005_IsP2PPacketAvailable(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "IsP2PPacketAvailable", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: ReadP2PPacket(void* pubDest, uint32 cubDest, uint32* pcubMsgSize, CSteamID* psteamIDRemote, int32 nChannel) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamNetworking005_ReadP2PPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "ReadP2PPacket", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: AcceptP2PSessionWithUser(CSteamID steamIDRemote) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking005_AcceptP2PSessionWithUser(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "AcceptP2PSessionWithUser", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: CloseP2PSessionWithUser(CSteamID steamIDRemote) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking005_CloseP2PSessionWithUser(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "CloseP2PSessionWithUser", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: CloseP2PChannelWithUser(CSteamID steamIDRemote, int32 nChannel) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamNetworking005_CloseP2PChannelWithUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "CloseP2PChannelWithUser", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetP2PSessionState(CSteamID steamIDRemote, P2PSessionState_t* pConnectionState) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamNetworking005_GetP2PSessionState(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "GetP2PSessionState", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: AllowP2PPacketRelay(bool bAllow) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamNetworking005_AllowP2PPacketRelay(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "AllowP2PPacketRelay", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: CreateListenSocket(int32 nVirtualP2PPort, uint32 nIP, uint32 nPort, bool bAllowUseOfPacketRelay) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamNetworking005_CreateListenSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "CreateListenSocket", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: CreateP2PConnectionSocket(CSteamID steamIDTarget, int32 nVirtualPort, int32 nTimeoutSec, bool bAllowUseOfPacketRelay) -> uint32 | __thiscall ret 20 (STUB)
 static uint32_t THISCALL vt_SteamNetworking005_CreateP2PConnectionSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "CreateP2PConnectionSocket", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: CreateConnectionSocket(uint32 nIP, uint32 nPort, int32 nTimeoutSec) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamNetworking005_CreateConnectionSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "CreateConnectionSocket", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: DestroySocket(uint32 hSocket, bool bNotifyRemoteEnd) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking005_DestroySocket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "DestroySocket", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: DestroyListenSocket(uint32 hSocket, bool bNotifyRemoteEnd) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking005_DestroyListenSocket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "DestroyListenSocket", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: SendDataOnSocket(uint32 hSocket, void* pubData, uint32 cubData, bool bReliable) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamNetworking005_SendDataOnSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "SendDataOnSocket", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: IsDataAvailableOnSocket(uint32 hSocket, uint32* pcubMsgSize) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking005_IsDataAvailableOnSocket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "IsDataAvailableOnSocket", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: RetrieveDataFromSocket(uint32 hSocket, void* pubDest, uint32 cubDest, uint32* pcubMsgSize) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamNetworking005_RetrieveDataFromSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "RetrieveDataFromSocket", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: IsDataAvailable(uint32 hListenSocket, uint32* pcubMsgSize, uint32* phSocket) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamNetworking005_IsDataAvailable(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "IsDataAvailable", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: RetrieveData(uint32 hListenSocket, void* pubDest, uint32 cubDest, uint32* pcubMsgSize, uint32* phSocket) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamNetworking005_RetrieveData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "RetrieveData", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetSocketInfo(uint32 hSocket, CSteamID* pSteamIDRemote, int32* peSocketStatus, uint32* punIPRemote, uint16_t* punPortRemote) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamNetworking005_GetSocketInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "GetSocketInfo", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: GetListenSocketInfo(uint32 hListenSocket, uint32* pnIP, uint16_t* pnPort) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamNetworking005_GetListenSocketInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "GetListenSocketInfo", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: GetSocketConnectionType(uint32 hSocket) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_SteamNetworking005_GetSocketConnectionType(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "GetSocketConnectionType", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: GetMaxPacketSize(uint32 hSocket) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamNetworking005_GetMaxPacketSize(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking005", "GetMaxPacketSize", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -7934,312 +8829,416 @@ static struct FakeSteamNetworking005 g_steamnetworking005_instance = { g_steamne
 
 // slot 0: FileWrite(const char* pchFile, const void* pvData, int32 cubData) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWrite(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "FileWrite", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: FileRead(const char* pchFile, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "FileRead", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: FileForget(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileForget(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "FileForget", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: FileDelete(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileDelete(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "FileDelete", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: FileShare(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileShare(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "FileShare", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 5: SetSyncPlatforms(const char* pchFile, uint32 eRemoteStoragePlatform) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SetSyncPlatforms(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "SetSyncPlatforms", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: FileWriteStreamOpen(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamOpen(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "FileWriteStreamOpen", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 7: FileWriteStreamWriteChunk(uint64 writeHandle, const void* pvData, int32 cubData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamWriteChunk(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "FileWriteStreamWriteChunk", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: FileWriteStreamClose(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamClose(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "FileWriteStreamClose", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: FileWriteStreamCancel(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamCancel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "FileWriteStreamCancel", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: FileExists(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileExists(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "FileExists", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: FilePersisted(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FilePersisted(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "FilePersisted", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetFileSize(const char* pchFile) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileSize(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetFileSize", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetFileTimestamp(const char* pchFile) -> int64 | __thiscall ret 4 (STUB)
 static int64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileTimestamp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetFileTimestamp", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 14: GetSyncPlatforms(const char* pchFile) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetSyncPlatforms(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetSyncPlatforms", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: GetFileCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetFileCount", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: GetFileNameAndSize(int32 iFile, int32* pnFileSizeInBytes) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileNameAndSize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetFileNameAndSize", 16, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 17: GetQuota(int32* pnTotalBytes, int32* puAvailableBytes) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetQuota(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetQuota", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: IsCloudEnabledForAccount() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_IsCloudEnabledForAccount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "IsCloudEnabledForAccount", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: IsCloudEnabledForApp() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_IsCloudEnabledForApp(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "IsCloudEnabledForApp", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: SetCloudEnabledForApp(bool bEnabled) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SetCloudEnabledForApp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "SetCloudEnabledForApp", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 21: UGCDownload(uint64 hContent, uint32 unPriority) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UGCDownload(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UGCDownload", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 22: GetUGCDownloadProgress(uint64 hContent, int32* pnBytesDownloaded, int32* pnBytesExpected) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetUGCDownloadProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetUGCDownloadProgress", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: GetUGCDetails(uint64 hContent, uint32* pnAppID, char** ppchName, int32* pnFileSizeInBytes, CSteamID* pSteamIDOwner) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetUGCDetails", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: UGCRead(uint64 hContent, void* pvData, int32 cubDataToRead, uint32 cOffset) -> int32 | __thiscall ret 20 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UGCRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UGCRead", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: GetCachedUGCCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetCachedUGCCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetCachedUGCCount", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: GetCachedUGCHandle(int32 iCachedContent) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetCachedUGCHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetCachedUGCHandle", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 27: PublishWorkshopFile(const char* pchFile, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags, uint32 eWorkshopFileType) -> uint64 | __thiscall ret 32 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_PublishWorkshopFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "PublishWorkshopFile", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 28: CreatePublishedFileUpdateRequest(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_CreatePublishedFileUpdateRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "CreatePublishedFileUpdateRequest", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 29: UpdatePublishedFileFile(uint64 updateHandle, const char* pchFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UpdatePublishedFileFile", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: UpdatePublishedFilePreviewFile(uint64 updateHandle, const char* pchPreviewFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFilePreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UpdatePublishedFilePreviewFile", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: UpdatePublishedFileTitle(uint64 updateHandle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UpdatePublishedFileTitle", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 32: UpdatePublishedFileDescription(uint64 updateHandle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UpdatePublishedFileDescription", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: UpdatePublishedFileVisibility(uint64 updateHandle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UpdatePublishedFileVisibility", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: UpdatePublishedFileTags(uint64 updateHandle, w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UpdatePublishedFileTags", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: CommitPublishedFileUpdate(uint64 updateHandle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_CommitPublishedFileUpdate(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "CommitPublishedFileUpdate", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 36: GetPublishedFileDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetPublishedFileDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetPublishedFileDetails", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 37: DeletePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_DeletePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "DeletePublishedFile", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 38: EnumerateUserPublishedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumerateUserPublishedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "EnumerateUserPublishedFiles", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 39: SubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "SubscribePublishedFile", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 40: EnumerateUserSubscribedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumerateUserSubscribedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "EnumerateUserSubscribedFiles", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 41: UnsubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UnsubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UnsubscribePublishedFile", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 42: UpdatePublishedFileSetChangeDescription(uint64 updateHandle, const char* pchChangeDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileSetChangeDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UpdatePublishedFileSetChangeDescription", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: GetPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetPublishedItemVoteDetails", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 44: UpdateUserPublishedItemVote(uint64 unPublishedFileId, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdateUserPublishedItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UpdateUserPublishedItemVote", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 45: GetUserPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetUserPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "GetUserPublishedItemVoteDetails", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 46: EnumerateUserSharedWorkshopFiles(CSteamID steamId, uint32 unStartIndex, w_SteamParamStringArray_t* pRequiredTags, w_SteamParamStringArray_t* pExcludedTags) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumerateUserSharedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "EnumerateUserSharedWorkshopFiles", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 47: PublishVideo(uint32 eVideoProvider, const char* pchVideoAccount, const char* pchVideoIdentifier, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags) -> uint64 | __thiscall ret 36 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_PublishVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "PublishVideo", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 48: SetUserPublishedFileAction(uint64 unPublishedFileId, uint32 eAction) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SetUserPublishedFileAction(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "SetUserPublishedFileAction", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 49: EnumeratePublishedFilesByUserAction(uint32 eAction, uint32 unStartIndex) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumeratePublishedFilesByUserAction(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "EnumeratePublishedFilesByUserAction", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 50: EnumeratePublishedWorkshopFiles(uint32 eEnumerationType, uint32 unStartIndex, uint32 unCount, uint32 unDays, w_SteamParamStringArray_t* pTags, w_SteamParamStringArray_t* pUserTags) -> uint64 | __thiscall ret 24 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumeratePublishedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "EnumeratePublishedWorkshopFiles", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 51: UGCDownloadToLocation(uint64 hContent, const char* pchLocation, uint32 unPriority) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UGCDownloadToLocation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "UGCDownloadToLocation", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -8308,7 +9307,11 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION010 g_steamremotestorage_i
 static int32_t THISCALL vt_SteamClient017_CreateSteamPipe(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 1; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 1;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -8321,7 +9324,11 @@ static int32_t THISCALL vt_SteamClient017_CreateSteamPipe(void *self) {
 static int THISCALL vt_SteamClient017_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -8336,7 +9343,11 @@ static int THISCALL vt_SteamClient017_BReleaseSteamPipe(void *self, int32_t hSte
 static int32_t THISCALL vt_SteamClient017_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 1; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 1;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -8351,7 +9362,11 @@ static int32_t THISCALL vt_SteamClient017_ConnectToGlobalUser(void *self, int32_
 static int32_t THISCALL vt_SteamClient017_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -8375,7 +9390,11 @@ static int32_t THISCALL vt_SteamClient017_CreateLocalUser(void *self, int32_t * 
 static void THISCALL vt_SteamClient017_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return;
+  }
 #endif
   uint8_t argbuf[8];
   uint32_t argOff = 0;
@@ -8469,7 +9488,9 @@ static void * THISCALL vt_SteamClient017_GetISteamGameServer(void *self, int32_t
 
 // slot 7: SetLocalIPBinding(uint32 unIP, uint32 usPort) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamClient017_SetLocalIPBinding(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "SetLocalIPBinding", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12
@@ -8926,7 +9947,11 @@ static void * THISCALL vt_SteamClient017_GetISteamScreenshots(void *self, int32_
 static void THISCALL vt_SteamClient017_RunFrame(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "RunFrame", 19, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[1]; uint32_t retlen = 0;
@@ -8937,7 +9962,11 @@ static void THISCALL vt_SteamClient017_RunFrame(void *self) {
 static uint32_t THISCALL vt_SteamClient017_GetIPCCallCount(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "GetIPCCallCount", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -8948,14 +9977,20 @@ static uint32_t THISCALL vt_SteamClient017_GetIPCCallCount(void *self) {
 
 // slot 21: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient017_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "SetWarningMessageHook", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 22: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
 static int THISCALL vt_SteamClient017_BShutdownIfAllPipesClosed(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "BShutdownIfAllPipesClosed", 22, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -9294,17 +10329,23 @@ static void * THISCALL vt_SteamClient017_GetISteamHTMLSurface(void *self, int32_
 
 // slot 31: DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient017_DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess", 31, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 32: DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient017_DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess", 32, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 33: Set_SteamAPI_CCheckCallbackRegisteredInProcess(void* func) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient017_Set_SteamAPI_CCheckCallbackRegisteredInProcess(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "Set_SteamAPI_CCheckCallbackRegisteredInProcess", 33, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 34: GetISteamInventory(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInventory*/* | __thiscall ret 12
@@ -9511,151 +10552,203 @@ static void * THISCALL vt_SteamUser019_GetSteamID(void *self, void *sretOut) {
 
 // slot 3: InitiateGameConnection(void* pAuthBlob, int32 cbMaxAuthBlob, CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer, bool bSecure) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamUser019_InitiateGameConnection(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "InitiateGameConnection", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: TerminateGameConnection(uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUser019_TerminateGameConnection(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "TerminateGameConnection", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: TrackAppUsageEvent(CGameID gameID, int32 eAppUsageEvent, const char* pchExtraInfo) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamUser019_TrackAppUsageEvent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "TrackAppUsageEvent", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUser019_GetUserDataFolder(void *self, char * pchBuffer, int32_t cubBuffer) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchBuffer != NULL && cubBuffer > 0) pchBuffer[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "GetUserDataFolder", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: StartVoiceRecording() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUser019_StartVoiceRecording(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "StartVoiceRecording", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: StopVoiceRecording() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUser019_StopVoiceRecording(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "StopVoiceRecording", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: GetAvailableVoice(uint32* pcbCompressed, uint32* pcbUncompressed_Deprecated, uint32 nUncompressedVoiceDesiredSampleRate_Deprecated) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser019_GetAvailableVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "GetAvailableVoice", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetVoice(bool bWantCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, bool bWantUncompressed_Deprecated, void* pUncompressedDestBuffer_Deprecated, uint32 cbUncompressedDestBufferSize_Deprecated, uint32* nUncompressBytesWritten_Deprecated, uint32 nUncompressedVoiceDesiredSampleRate_Deprecated) -> uint32 | __thiscall ret 36 (STUB)
 static uint32_t THISCALL vt_SteamUser019_GetVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "GetVoice", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: DecompressVoice(const void* pCompressed, uint32 cbCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, uint32 nDesiredSampleRate) -> uint32 | __thiscall ret 24 (STUB)
 static uint32_t THISCALL vt_SteamUser019_DecompressVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "DecompressVoice", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetVoiceOptimalSampleRate() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUser019_GetVoiceOptimalSampleRate(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "GetVoiceOptimalSampleRate", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser019_GetAuthSessionTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "GetAuthSessionTicket", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamUser019_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "BeginAuthSession", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUser019_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "EndAuthSession", 15, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 16: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUser019_CancelAuthTicket(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "CancelAuthTicket", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser019_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "UserHasLicenseForApp", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: BIsBehindNAT() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser019_BIsBehindNAT(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "BIsBehindNAT", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: AdvertiseGame(CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamUser019_AdvertiseGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "AdvertiseGame", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 20: RequestEncryptedAppTicket(void* pDataToInclude, int32 cbDataToInclude) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamUser019_RequestEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "RequestEncryptedAppTicket", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 21: GetEncryptedAppTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUser019_GetEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "GetEncryptedAppTicket", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: GetGameBadgeLevel(int32 nSeries, bool bFoil) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamUser019_GetGameBadgeLevel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "GetGameBadgeLevel", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: GetPlayerSteamLevel() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamUser019_GetPlayerSteamLevel(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "GetPlayerSteamLevel", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: RequestStoreAuthURL(const char* pchRedirectURL) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamUser019_RequestStoreAuthURL(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "RequestStoreAuthURL", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 25: BIsPhoneVerified() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser019_BIsPhoneVerified(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "BIsPhoneVerified", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: BIsTwoFactorEnabled() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser019_BIsTwoFactorEnabled(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "BIsTwoFactorEnabled", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: BIsPhoneIdentifying() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser019_BIsPhoneIdentifying(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "BIsPhoneIdentifying", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: BIsPhoneRequiringVerification() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser019_BIsPhoneRequiringVerification(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser019", "BIsPhoneRequiringVerification", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -9718,7 +10811,9 @@ static const char * THISCALL vt_SteamFriends015_GetPersonaName(void *self) {
 
 // slot 1: SetPersonaName(const char* pchPersonaName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamFriends015_SetPersonaName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "SetPersonaName", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -9734,26 +10829,34 @@ static uint32_t THISCALL vt_SteamFriends015_GetPersonaState(void *self) {
 
 // slot 3: GetFriendCount(int32 iFriendFlags) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetFriendCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendCount", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: GetFriendByIndex(int32 iFriend, int32 iFriendFlags) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends015_GetFriendByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendByIndex", 4, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 5: GetFriendRelationship(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends015_GetFriendRelationship(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendRelationship", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetFriendPersonaState(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends015_GetFriendPersonaState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendPersonaState", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -9780,381 +10883,509 @@ static const char * THISCALL vt_SteamFriends015_GetFriendPersonaName(void *self,
 
 // slot 8: GetFriendGamePlayed(CSteamID steamIDFriend, FriendGameInfo_t* pFriendGameInfo) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends015_GetFriendGamePlayed(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendGamePlayed", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetFriendPersonaNameHistory(CSteamID steamIDFriend, int32 iPersonaName) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends015_GetFriendPersonaNameHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendPersonaNameHistory", 9, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 10: GetFriendSteamLevel(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetFriendSteamLevel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendSteamLevel", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetPlayerNickname(CSteamID steamIDPlayer) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends015_GetPlayerNickname(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetPlayerNickname", 11, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 12: GetFriendsGroupCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetFriendsGroupCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendsGroupCount", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetFriendsGroupIDByIndex(int32 iFG) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_SteamFriends015_GetFriendsGroupIDByIndex(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendsGroupIDByIndex", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: GetFriendsGroupName(uint32 friendsGroupID) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends015_GetFriendsGroupName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendsGroupName", 14, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 15: GetFriendsGroupMembersCount(uint32 friendsGroupID) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetFriendsGroupMembersCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendsGroupMembersCount", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: GetFriendsGroupMembersList(uint32 friendsGroupID, CSteamID* pOutSteamIDMembers, int32 nMembersCount) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends015_GetFriendsGroupMembersList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendsGroupMembersList", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: HasFriend(CSteamID steamIDFriend, int32 iFriendFlags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends015_HasFriend(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "HasFriend", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetClanCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetClanCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetClanCount", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: GetClanByIndex(int32 iClan) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends015_GetClanByIndex(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetClanByIndex", 19, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 20: GetClanName(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends015_GetClanName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetClanName", 20, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 21: GetClanTag(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends015_GetClanTag(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetClanTag", 21, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 22: GetClanActivityCounts(CSteamID steamIDClan, int32* pnOnline, int32* pnInGame, int32* pnChatting) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamFriends015_GetClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetClanActivityCounts", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: DownloadClanActivityCounts(CSteamID* psteamIDClans, int32 cClansToRequest) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends015_DownloadClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "DownloadClanActivityCounts", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 24: GetFriendCountFromSource(CSteamID steamIDSource) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetFriendCountFromSource(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendCountFromSource", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: GetFriendFromSourceByIndex(CSteamID steamIDSource, int32 iFriend) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends015_GetFriendFromSourceByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendFromSourceByIndex", 25, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 26: IsUserInSource(CSteamID steamIDUser, CSteamID steamIDSource) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamFriends015_IsUserInSource(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "IsUserInSource", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: SetInGameVoiceSpeaking(CSteamID steamIDUser, bool bSpeaking) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends015_SetInGameVoiceSpeaking(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "SetInGameVoiceSpeaking", 27, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 28: ActivateGameOverlay(const char* pchDialog) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends015_ActivateGameOverlay(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "ActivateGameOverlay", 28, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 29: ActivateGameOverlayToUser(const char* pchDialog, CSteamID steamID) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends015_ActivateGameOverlayToUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "ActivateGameOverlayToUser", 29, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 30: ActivateGameOverlayToWebPage(const char* pchURL) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends015_ActivateGameOverlayToWebPage(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "ActivateGameOverlayToWebPage", 30, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 31: ActivateGameOverlayToStore(uint32 nAppID, uint32 eFlag) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends015_ActivateGameOverlayToStore(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "ActivateGameOverlayToStore", 31, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 32: SetPlayedWith(CSteamID steamIDUserPlayedWith) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends015_SetPlayedWith(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "SetPlayedWith", 32, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 33: ActivateGameOverlayInviteDialog(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends015_ActivateGameOverlayInviteDialog(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "ActivateGameOverlayInviteDialog", 33, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 34: GetSmallFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetSmallFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetSmallFriendAvatar", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: GetMediumFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetMediumFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetMediumFriendAvatar", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: GetLargeFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetLargeFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetLargeFriendAvatar", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: RequestUserInformation(CSteamID steamIDUser, bool bRequireNameOnly) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends015_RequestUserInformation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "RequestUserInformation", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: RequestClanOfficerList(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends015_RequestClanOfficerList(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "RequestClanOfficerList", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 39: GetClanOwner(CSteamID steamIDClan) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends015_GetClanOwner(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetClanOwner", 39, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 40: GetClanOfficerCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetClanOfficerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetClanOfficerCount", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 41: GetClanOfficerByIndex(CSteamID steamIDClan, int32 iOfficer) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends015_GetClanOfficerByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetClanOfficerByIndex", 41, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 42: GetUserRestrictions() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamFriends015_GetUserRestrictions(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetUserRestrictions", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: SetRichPresence(const char* pchKey, const char* pchValue) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends015_SetRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "SetRichPresence", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 44: ClearRichPresence() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamFriends015_ClearRichPresence(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "ClearRichPresence", 44, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 45: GetFriendRichPresence(CSteamID steamIDFriend, const char* pchKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends015_GetFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendRichPresence", 45, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 46: GetFriendRichPresenceKeyCount(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetFriendRichPresenceKeyCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendRichPresenceKeyCount", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 47: GetFriendRichPresenceKeyByIndex(CSteamID steamIDFriend, int32 iKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends015_GetFriendRichPresenceKeyByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendRichPresenceKeyByIndex", 47, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 48: RequestFriendRichPresence(CSteamID steamIDFriend) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends015_RequestFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "RequestFriendRichPresence", 48, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 49: InviteUserToGame(CSteamID steamIDFriend, const char* pchConnectString) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends015_InviteUserToGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "InviteUserToGame", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 50: GetCoplayFriendCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetCoplayFriendCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetCoplayFriendCount", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 51: GetCoplayFriend(int32 iCoplayFriend) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends015_GetCoplayFriend(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetCoplayFriend", 51, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 52: GetFriendCoplayTime(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetFriendCoplayTime(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendCoplayTime", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 53: GetFriendCoplayGame(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends015_GetFriendCoplayGame(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendCoplayGame", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 54: JoinClanChatRoom(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends015_JoinClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "JoinClanChatRoom", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 55: LeaveClanChatRoom(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends015_LeaveClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "LeaveClanChatRoom", 55, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 56: GetClanChatMemberCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetClanChatMemberCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetClanChatMemberCount", 56, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 57: GetChatMemberByIndex(CSteamID steamIDClan, int32 iUser) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends015_GetChatMemberByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetChatMemberByIndex", 57, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 58: SendClanChatMessage(CSteamID steamIDClanChat, const char* pchText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends015_SendClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "SendClanChatMessage", 58, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 59: GetClanChatMessage(CSteamID steamIDClanChat, int32 iMessage, void* prgchText, int32 cchTextMax, uint32* peChatEntryType, CSteamID* psteamidChatter) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetClanChatMessage", 59, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 60: IsClanChatAdmin(CSteamID steamIDClanChat, CSteamID steamIDUser) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamFriends015_IsClanChatAdmin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "IsClanChatAdmin", 60, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 61: IsClanChatWindowOpenInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends015_IsClanChatWindowOpenInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "IsClanChatWindowOpenInSteam", 61, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 62: OpenClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends015_OpenClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "OpenClanChatWindowInSteam", 62, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 63: CloseClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends015_CloseClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "CloseClanChatWindowInSteam", 63, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 64: SetListenForFriendsMessages(bool bInterceptEnabled) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamFriends015_SetListenForFriendsMessages(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "SetListenForFriendsMessages", 64, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 65: ReplyToFriendMessage(CSteamID steamIDFriend, const char* pchMsgToSend) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends015_ReplyToFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "ReplyToFriendMessage", 65, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 66: GetFriendMessage(CSteamID steamIDFriend, int32 iMessageID, void* pvData, int32 cubData, uint32* peChatEntryType) -> int32 | __thiscall ret 24 (STUB)
 static int32_t THISCALL vt_SteamFriends015_GetFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFriendMessage", 66, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 67: GetFollowerCount(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends015_GetFollowerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "GetFollowerCount", 67, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 68: IsFollowing(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends015_IsFollowing(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "IsFollowing", 68, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 69: EnumerateFollowingList(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamFriends015_EnumerateFollowingList(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "EnumerateFollowingList", 69, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 70: IsClanPublic(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends015_IsClanPublic(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "IsClanPublic", 70, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 71: IsClanOfficialGameGroup(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends015_IsClanOfficialGameGroup(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends015", "IsClanOfficialGameGroup", 71, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -10300,19 +11531,25 @@ static const char * THISCALL vt_SteamUtils008_GetIPCountry(void *self) {
 
 // slot 5: GetImageSize(int32 iImage, uint32* pnWidth, uint32* pnHeight) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils008_GetImageSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "GetImageSize", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetImageRGBA(int32 iImage, uint8_t* pubDest, int32 nDestBufferSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils008_GetImageRGBA(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "GetImageRGBA", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: GetCSERIPPort(uint32* unIP, uint16_t* usPort) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUtils008_GetCSERIPPort(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "GetCSERIPPort", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -10338,41 +11575,55 @@ static uint32_t THISCALL vt_SteamUtils008_GetAppID(void *self) {
 
 // slot 10: SetOverlayNotificationPosition(uint32 eNotificationPosition) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils008_SetOverlayNotificationPosition(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "SetOverlayNotificationPosition", 10, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 11: IsAPICallCompleted(uint64 hSteamAPICall, bool* pbFailed) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils008_IsAPICallCompleted(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "IsAPICallCompleted", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetAPICallFailureReason(uint64 hSteamAPICall) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamUtils008_GetAPICallFailureReason(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "GetAPICallFailureReason", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetAPICallResult(uint64 hSteamAPICall, void* pCallback, int32 cubCallback, int32 iCallbackExpected, bool* pbFailed) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamUtils008_GetAPICallResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "GetAPICallResult", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: RunFrame() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUtils008_RunFrame(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "RunFrame", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: GetIPCCallCount() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUtils008_GetIPCCallCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "GetIPCCallCount", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils008_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "SetWarningMessageHook", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: IsOverlayEnabled() -> bool | __thiscall ret 0
@@ -10387,32 +11638,42 @@ static int THISCALL vt_SteamUtils008_IsOverlayEnabled(void *self) {
 
 // slot 18: BOverlayNeedsPresent() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils008_BOverlayNeedsPresent(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "BOverlayNeedsPresent", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: CheckFileSignature(const char* szFileName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamUtils008_CheckFileSignature(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "CheckFileSignature", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 20: ShowGamepadTextInput(uint32 eInputMode, uint32 eLineInputMode, const char* pchDescription, uint32 unCharMax, const char* pchExistingText) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamUtils008_ShowGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "ShowGamepadTextInput", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: GetEnteredGamepadTextLength() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUtils008_GetEnteredGamepadTextLength(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "GetEnteredGamepadTextLength", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUtils008_GetEnteredGamepadTextInput(void *self, char * pchText, uint32_t cchText) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchText != NULL && cchText > 0) pchText[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "GetEnteredGamepadTextInput", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -10447,7 +11708,9 @@ static int THISCALL vt_SteamUtils008_IsSteamRunningInVR(void *self) {
 
 // slot 25: SetOverlayNotificationInset(int32 nHorizontalInset, int32 nVerticalInset) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUtils008_SetOverlayNotificationInset(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "SetOverlayNotificationInset", 25, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 26: IsSteamInBigPictureMode() -> bool | __thiscall ret 0
@@ -10462,7 +11725,9 @@ static int THISCALL vt_SteamUtils008_IsSteamInBigPictureMode(void *self) {
 
 // slot 27: StartVRDashboard() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUtils008_StartVRDashboard(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils008", "StartVRDashboard", 27, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steamutils008_vtbl[28] = {
@@ -10638,49 +11903,65 @@ static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetDLCCount(void *self
 
 // slot 11: BGetDLCDataByIndex(int32 iDLC, uint32* pAppID, bool* pbAvailable, char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BGetDLCDataByIndex(void *self, int32_t iDLC, uint32_t * pAppID, int * pbAvailable, char * pchName, int32_t cchNameBufferSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "BGetDLCDataByIndex", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: InstallDLC(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_InstallDLC(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "InstallDLC", 12, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 13: UninstallDLC(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_UninstallDLC(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "UninstallDLC", 13, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 14: RequestAppProofOfPurchaseKey(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_RequestAppProofOfPurchaseKey(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "RequestAppProofOfPurchaseKey", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: GetCurrentBetaName(char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentBetaName(void *self, char * pchName, int32_t cchNameBufferSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "GetCurrentBetaName", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: MarkContentCorrupt(bool bMissingFilesOnly) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_MarkContentCorrupt(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "MarkContentCorrupt", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: GetInstalledDepots(uint32 appID, uint32* pvecDepots, uint32 cMaxDepots) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetInstalledDepots(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "GetInstalledDepots", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetAppInstallDir(uint32 appID, char* pchFolder, uint32 cchFolderBufferSize) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetAppInstallDir(void *self, uint32_t appID, char * pchFolder, uint32_t cchFolderBufferSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchFolder != NULL && cchFolderBufferSize > 0) pchFolder[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "GetAppInstallDir", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -10711,13 +11992,17 @@ static void * THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner(void *self,
 
 // slot 21: GetLaunchQueryParam(const char* pchKey) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetLaunchQueryParam(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "GetLaunchQueryParam", 21, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 22: GetDlcDownloadProgress(uint32 nAppID, uint64* punBytesDownloaded, uint64* punBytesTotal) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetDlcDownloadProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "GetDlcDownloadProgress", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -10733,56 +12018,74 @@ static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId(void *se
 
 // slot 24: RequestAllProofOfPurchaseKeys() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_RequestAllProofOfPurchaseKeys(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "RequestAllProofOfPurchaseKeys", 24, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 25: GetFileDetails(const char* pszFileName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetFileDetails(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "GetFileDetails", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 26: GetLaunchCommandLine(char* pszCommandLine, int32 cubCommandLine) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetLaunchCommandLine(void *self, char * pszCommandLine, int32_t cubCommandLine) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pszCommandLine != NULL && cubCommandLine > 0) pszCommandLine[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "GetLaunchCommandLine", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: BIsSubscribedFromFamilySharing() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedFromFamilySharing(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "BIsSubscribedFromFamilySharing", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: BIsTimedTrial(uint32* punSecondsAllowed, uint32* punSecondsPlayed) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsTimedTrial(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "BIsTimedTrial", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: SetDlcContext(uint32 nAppID) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_SetDlcContext(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "SetDlcContext", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: GetNumBetas(int32* pnAvailable, int32* pnPrivate) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetNumBetas(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "GetNumBetas", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: GetBetaInfo(int32 iBetaIndex, uint32* punFlags, uint32* punBuildID, char* pchBetaName, int32 cchBetaName, char* pchDescription, int32 cchDescription) -> bool | __thiscall ret 28 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetBetaInfo(void *self, int32_t iBetaIndex, uint32_t * punFlags, uint32_t * punBuildID, char * pchBetaName, int32_t cchBetaName, char * pchDescription, int32_t cchDescription) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchBetaName != NULL && cchBetaName > 0) pchBetaName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "GetBetaInfo", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 32: SetActiveBeta(const char* pchBetaName) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_SetActiveBeta(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION008", "SetActiveBeta", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -10830,330 +12133,440 @@ static struct FakeSTEAMAPPS_INTERFACE_VERSION008 g_steamapps_interface_version00
 
 // slot 0: FileWrite(const char* pchFile, const void* pvData, int32 cubData) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileWrite(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileWrite", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: FileRead(const char* pchFile, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileRead", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: FileWriteAsync(const char* pchFile, const void* pvData, uint32 cubData) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileWriteAsync(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileWriteAsync", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 3: FileReadAsync(const char* pchFile, uint32 nOffset, uint32 cubToRead) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileReadAsync(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileReadAsync", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 4: FileReadAsyncComplete(uint64 hReadCall, void* pvBuffer, uint32 cubToRead) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileReadAsyncComplete(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileReadAsyncComplete", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: FileForget(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileForget(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileForget", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: FileDelete(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileDelete(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileDelete", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: FileShare(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileShare(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileShare", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 8: SetSyncPlatforms(const char* pchFile, uint32 eRemoteStoragePlatform) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_SetSyncPlatforms(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "SetSyncPlatforms", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: FileWriteStreamOpen(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileWriteStreamOpen(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileWriteStreamOpen", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 10: FileWriteStreamWriteChunk(uint64 writeHandle, const void* pvData, int32 cubData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileWriteStreamWriteChunk(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileWriteStreamWriteChunk", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: FileWriteStreamClose(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileWriteStreamClose(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileWriteStreamClose", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: FileWriteStreamCancel(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileWriteStreamCancel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileWriteStreamCancel", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: FileExists(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FileExists(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FileExists", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: FilePersisted(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_FilePersisted(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "FilePersisted", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: GetFileSize(const char* pchFile) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetFileSize(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetFileSize", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: GetFileTimestamp(const char* pchFile) -> int64 | __thiscall ret 4 (STUB)
 static int64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetFileTimestamp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetFileTimestamp", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 17: GetSyncPlatforms(const char* pchFile) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetSyncPlatforms(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetSyncPlatforms", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetFileCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetFileCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetFileCount", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: GetFileNameAndSize(int32 iFile, int32* pnFileSizeInBytes) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetFileNameAndSize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetFileNameAndSize", 19, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 20: GetQuota(int32* pnTotalBytes, int32* puAvailableBytes) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetQuota(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetQuota", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: IsCloudEnabledForAccount() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_IsCloudEnabledForAccount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "IsCloudEnabledForAccount", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: IsCloudEnabledForApp() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_IsCloudEnabledForApp(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "IsCloudEnabledForApp", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: SetCloudEnabledForApp(bool bEnabled) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_SetCloudEnabledForApp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "SetCloudEnabledForApp", 23, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 24: UGCDownload(uint64 hContent, uint32 unPriority) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UGCDownload(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UGCDownload", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 25: GetUGCDownloadProgress(uint64 hContent, int32* pnBytesDownloaded, int32* pnBytesExpected) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetUGCDownloadProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetUGCDownloadProgress", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: GetUGCDetails(uint64 hContent, uint32* pnAppID, char** ppchName, int32* pnFileSizeInBytes, CSteamID* pSteamIDOwner) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetUGCDetails", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: UGCRead(uint64 hContent, void* pvData, int32 cubDataToRead, uint32 cOffset, uint32 eAction) -> int32 | __thiscall ret 24 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UGCRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UGCRead", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: GetCachedUGCCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetCachedUGCCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetCachedUGCCount", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: GetCachedUGCHandle(int32 iCachedContent) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetCachedUGCHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetCachedUGCHandle", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 30: PublishWorkshopFile(const char* pchFile, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags, uint32 eWorkshopFileType) -> uint64 | __thiscall ret 32 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_PublishWorkshopFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "PublishWorkshopFile", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 31: CreatePublishedFileUpdateRequest(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_CreatePublishedFileUpdateRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "CreatePublishedFileUpdateRequest", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 32: UpdatePublishedFileFile(uint64 updateHandle, const char* pchFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UpdatePublishedFileFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UpdatePublishedFileFile", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: UpdatePublishedFilePreviewFile(uint64 updateHandle, const char* pchPreviewFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UpdatePublishedFilePreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UpdatePublishedFilePreviewFile", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: UpdatePublishedFileTitle(uint64 updateHandle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UpdatePublishedFileTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UpdatePublishedFileTitle", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: UpdatePublishedFileDescription(uint64 updateHandle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UpdatePublishedFileDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UpdatePublishedFileDescription", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: UpdatePublishedFileVisibility(uint64 updateHandle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UpdatePublishedFileVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UpdatePublishedFileVisibility", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: UpdatePublishedFileTags(uint64 updateHandle, w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UpdatePublishedFileTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UpdatePublishedFileTags", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: CommitPublishedFileUpdate(uint64 updateHandle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_CommitPublishedFileUpdate(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "CommitPublishedFileUpdate", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 39: GetPublishedFileDetails(uint64 unPublishedFileId, uint32 unMaxSecondsOld) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetPublishedFileDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetPublishedFileDetails", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 40: DeletePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_DeletePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "DeletePublishedFile", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 41: EnumerateUserPublishedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_EnumerateUserPublishedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "EnumerateUserPublishedFiles", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 42: SubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_SubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "SubscribePublishedFile", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 43: EnumerateUserSubscribedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_EnumerateUserSubscribedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "EnumerateUserSubscribedFiles", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 44: UnsubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UnsubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UnsubscribePublishedFile", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 45: UpdatePublishedFileSetChangeDescription(uint64 updateHandle, const char* pchChangeDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UpdatePublishedFileSetChangeDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UpdatePublishedFileSetChangeDescription", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 46: GetPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetPublishedItemVoteDetails", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 47: UpdateUserPublishedItemVote(uint64 unPublishedFileId, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UpdateUserPublishedItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UpdateUserPublishedItemVote", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 48: GetUserPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_GetUserPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "GetUserPublishedItemVoteDetails", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 49: EnumerateUserSharedWorkshopFiles(CSteamID steamId, uint32 unStartIndex, w_SteamParamStringArray_t* pRequiredTags, w_SteamParamStringArray_t* pExcludedTags) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_EnumerateUserSharedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "EnumerateUserSharedWorkshopFiles", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 50: PublishVideo(uint32 eVideoProvider, const char* pchVideoAccount, const char* pchVideoIdentifier, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags) -> uint64 | __thiscall ret 36 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_PublishVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "PublishVideo", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 51: SetUserPublishedFileAction(uint64 unPublishedFileId, uint32 eAction) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_SetUserPublishedFileAction(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "SetUserPublishedFileAction", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 52: EnumeratePublishedFilesByUserAction(uint32 eAction, uint32 unStartIndex) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_EnumeratePublishedFilesByUserAction(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "EnumeratePublishedFilesByUserAction", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 53: EnumeratePublishedWorkshopFiles(uint32 eEnumerationType, uint32 unStartIndex, uint32 unCount, uint32 unDays, w_SteamParamStringArray_t* pTags, w_SteamParamStringArray_t* pUserTags) -> uint64 | __thiscall ret 24 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_EnumeratePublishedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "EnumeratePublishedWorkshopFiles", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 54: UGCDownloadToLocation(uint64 hContent, const char* pchLocation, uint32 unPriority) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION013_UGCDownloadToLocation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION013", "UGCDownloadToLocation", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -11225,7 +12638,11 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION013 g_steamremotestorage_i
 static int32_t THISCALL vt_SteamClient014_CreateSteamPipe(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 1; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 1;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -11238,7 +12655,11 @@ static int32_t THISCALL vt_SteamClient014_CreateSteamPipe(void *self) {
 static int THISCALL vt_SteamClient014_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -11253,7 +12674,11 @@ static int THISCALL vt_SteamClient014_BReleaseSteamPipe(void *self, int32_t hSte
 static int32_t THISCALL vt_SteamClient014_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 1; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 1;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -11268,7 +12693,11 @@ static int32_t THISCALL vt_SteamClient014_ConnectToGlobalUser(void *self, int32_
 static int32_t THISCALL vt_SteamClient014_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -11292,7 +12721,11 @@ static int32_t THISCALL vt_SteamClient014_CreateLocalUser(void *self, int32_t * 
 static void THISCALL vt_SteamClient014_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return;
+  }
 #endif
   uint8_t argbuf[8];
   uint32_t argOff = 0;
@@ -11386,7 +12819,9 @@ static void * THISCALL vt_SteamClient014_GetISteamGameServer(void *self, int32_t
 
 // slot 7: SetLocalIPBinding(uint32 unIP, uint32 usPort) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamClient014_SetLocalIPBinding(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "SetLocalIPBinding", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12
@@ -11843,7 +13278,11 @@ static void * THISCALL vt_SteamClient014_GetISteamScreenshots(void *self, int32_
 static void THISCALL vt_SteamClient014_RunFrame(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "RunFrame", 19, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[1]; uint32_t retlen = 0;
@@ -11854,7 +13293,11 @@ static void THISCALL vt_SteamClient014_RunFrame(void *self) {
 static uint32_t THISCALL vt_SteamClient014_GetIPCCallCount(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "GetIPCCallCount", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -11865,14 +13308,20 @@ static uint32_t THISCALL vt_SteamClient014_GetIPCCallCount(void *self) {
 
 // slot 21: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient014_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "SetWarningMessageHook", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 22: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
 static int THISCALL vt_SteamClient014_BShutdownIfAllPipesClosed(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "BShutdownIfAllPipesClosed", 22, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -12167,133 +13616,177 @@ static struct FakeSteamClient014 g_steamclient014_instance = { g_steamclient014_
 
 // slot 0: SendP2PPacket(CSteamID steamIDRemote, const void* pubData, uint32 cubData, uint32 eP2PSendType, int32 nChannel) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamNetworking006_SendP2PPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "SendP2PPacket", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: IsP2PPacketAvailable(uint32* pcubMsgSize, int32 nChannel) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking006_IsP2PPacketAvailable(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "IsP2PPacketAvailable", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: ReadP2PPacket(void* pubDest, uint32 cubDest, uint32* pcubMsgSize, CSteamID* psteamIDRemote, int32 nChannel) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamNetworking006_ReadP2PPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "ReadP2PPacket", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: AcceptP2PSessionWithUser(CSteamID steamIDRemote) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking006_AcceptP2PSessionWithUser(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "AcceptP2PSessionWithUser", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: CloseP2PSessionWithUser(CSteamID steamIDRemote) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking006_CloseP2PSessionWithUser(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "CloseP2PSessionWithUser", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: CloseP2PChannelWithUser(CSteamID steamIDRemote, int32 nChannel) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamNetworking006_CloseP2PChannelWithUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "CloseP2PChannelWithUser", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetP2PSessionState(CSteamID steamIDRemote, P2PSessionState_t* pConnectionState) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamNetworking006_GetP2PSessionState(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "GetP2PSessionState", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: AllowP2PPacketRelay(bool bAllow) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamNetworking006_AllowP2PPacketRelay(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "AllowP2PPacketRelay", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: CreateListenSocket(int32 nVirtualP2PPort, SteamIPAddress_t nIP, uint32 nPort, bool bAllowUseOfPacketRelay) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamNetworking006_CreateListenSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "CreateListenSocket", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: CreateP2PConnectionSocket(CSteamID steamIDTarget, int32 nVirtualPort, int32 nTimeoutSec, bool bAllowUseOfPacketRelay) -> uint32 | __thiscall ret 20 (STUB)
 static uint32_t THISCALL vt_SteamNetworking006_CreateP2PConnectionSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "CreateP2PConnectionSocket", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: CreateConnectionSocket(SteamIPAddress_t nIP, uint32 nPort, int32 nTimeoutSec) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamNetworking006_CreateConnectionSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "CreateConnectionSocket", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: DestroySocket(uint32 hSocket, bool bNotifyRemoteEnd) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking006_DestroySocket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "DestroySocket", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: DestroyListenSocket(uint32 hSocket, bool bNotifyRemoteEnd) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking006_DestroyListenSocket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "DestroyListenSocket", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: SendDataOnSocket(uint32 hSocket, void* pubData, uint32 cubData, bool bReliable) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamNetworking006_SendDataOnSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "SendDataOnSocket", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: IsDataAvailableOnSocket(uint32 hSocket, uint32* pcubMsgSize) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamNetworking006_IsDataAvailableOnSocket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "IsDataAvailableOnSocket", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: RetrieveDataFromSocket(uint32 hSocket, void* pubDest, uint32 cubDest, uint32* pcubMsgSize) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamNetworking006_RetrieveDataFromSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "RetrieveDataFromSocket", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: IsDataAvailable(uint32 hListenSocket, uint32* pcubMsgSize, uint32* phSocket) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamNetworking006_IsDataAvailable(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "IsDataAvailable", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: RetrieveData(uint32 hListenSocket, void* pubDest, uint32 cubDest, uint32* pcubMsgSize, uint32* phSocket) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamNetworking006_RetrieveData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "RetrieveData", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetSocketInfo(uint32 hSocket, CSteamID* pSteamIDRemote, int32* peSocketStatus, SteamIPAddress_t* punIPRemote, uint16_t* punPortRemote) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamNetworking006_GetSocketInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "GetSocketInfo", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: GetListenSocketInfo(uint32 hListenSocket, SteamIPAddress_t* pnIP, uint16_t* pnPort) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamNetworking006_GetListenSocketInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "GetListenSocketInfo", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: GetSocketConnectionType(uint32 hSocket) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_SteamNetworking006_GetSocketConnectionType(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "GetSocketConnectionType", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: GetMaxPacketSize(uint32 hSocket) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamNetworking006_GetMaxPacketSize(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "GetMaxPacketSize", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -12330,354 +13823,472 @@ static struct FakeSteamNetworking006 g_steamnetworking006_instance = { g_steamne
 
 // slot 0: FileWrite(const char* pchFile, const void* pvData, int32 cubData) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileWrite(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileWrite", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: FileRead(const char* pchFile, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileRead", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: FileWriteAsync(const char* pchFile, const void* pvData, uint32 cubData) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileWriteAsync(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileWriteAsync", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 3: FileReadAsync(const char* pchFile, uint32 nOffset, uint32 cubToRead) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileReadAsync(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileReadAsync", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 4: FileReadAsyncComplete(uint64 hReadCall, void* pvBuffer, uint32 cubToRead) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileReadAsyncComplete(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileReadAsyncComplete", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: FileForget(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileForget(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileForget", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: FileDelete(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileDelete(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileDelete", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: FileShare(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileShare(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileShare", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 8: SetSyncPlatforms(const char* pchFile, uint32 eRemoteStoragePlatform) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_SetSyncPlatforms(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "SetSyncPlatforms", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: FileWriteStreamOpen(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileWriteStreamOpen(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileWriteStreamOpen", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 10: FileWriteStreamWriteChunk(uint64 writeHandle, const void* pvData, int32 cubData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileWriteStreamWriteChunk(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileWriteStreamWriteChunk", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: FileWriteStreamClose(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileWriteStreamClose(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileWriteStreamClose", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: FileWriteStreamCancel(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileWriteStreamCancel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileWriteStreamCancel", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: FileExists(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FileExists(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FileExists", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: FilePersisted(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_FilePersisted(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "FilePersisted", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: GetFileSize(const char* pchFile) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetFileSize(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetFileSize", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: GetFileTimestamp(const char* pchFile) -> int64 | __thiscall ret 4 (STUB)
 static int64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetFileTimestamp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetFileTimestamp", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 17: GetSyncPlatforms(const char* pchFile) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetSyncPlatforms(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetSyncPlatforms", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetFileCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetFileCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetFileCount", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: GetFileNameAndSize(int32 iFile, int32* pnFileSizeInBytes) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetFileNameAndSize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetFileNameAndSize", 19, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 20: GetQuota(uint64* pnTotalBytes, uint64* puAvailableBytes) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetQuota(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetQuota", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: IsCloudEnabledForAccount() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_IsCloudEnabledForAccount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "IsCloudEnabledForAccount", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: IsCloudEnabledForApp() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_IsCloudEnabledForApp(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "IsCloudEnabledForApp", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: SetCloudEnabledForApp(bool bEnabled) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_SetCloudEnabledForApp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "SetCloudEnabledForApp", 23, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 24: UGCDownload(uint64 hContent, uint32 unPriority) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UGCDownload(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UGCDownload", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 25: GetUGCDownloadProgress(uint64 hContent, int32* pnBytesDownloaded, int32* pnBytesExpected) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetUGCDownloadProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetUGCDownloadProgress", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: GetUGCDetails(uint64 hContent, uint32* pnAppID, char** ppchName, int32* pnFileSizeInBytes, CSteamID* pSteamIDOwner) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetUGCDetails", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: UGCRead(uint64 hContent, void* pvData, int32 cubDataToRead, uint32 cOffset, uint32 eAction) -> int32 | __thiscall ret 24 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UGCRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UGCRead", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: GetCachedUGCCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetCachedUGCCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetCachedUGCCount", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: GetCachedUGCHandle(int32 iCachedContent) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetCachedUGCHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetCachedUGCHandle", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 30: PublishWorkshopFile(const char* pchFile, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags, uint32 eWorkshopFileType) -> uint64 | __thiscall ret 32 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_PublishWorkshopFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "PublishWorkshopFile", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 31: CreatePublishedFileUpdateRequest(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_CreatePublishedFileUpdateRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "CreatePublishedFileUpdateRequest", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 32: UpdatePublishedFileFile(uint64 updateHandle, const char* pchFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UpdatePublishedFileFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UpdatePublishedFileFile", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: UpdatePublishedFilePreviewFile(uint64 updateHandle, const char* pchPreviewFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UpdatePublishedFilePreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UpdatePublishedFilePreviewFile", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: UpdatePublishedFileTitle(uint64 updateHandle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UpdatePublishedFileTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UpdatePublishedFileTitle", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: UpdatePublishedFileDescription(uint64 updateHandle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UpdatePublishedFileDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UpdatePublishedFileDescription", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: UpdatePublishedFileVisibility(uint64 updateHandle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UpdatePublishedFileVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UpdatePublishedFileVisibility", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: UpdatePublishedFileTags(uint64 updateHandle, w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UpdatePublishedFileTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UpdatePublishedFileTags", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: CommitPublishedFileUpdate(uint64 updateHandle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_CommitPublishedFileUpdate(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "CommitPublishedFileUpdate", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 39: GetPublishedFileDetails(uint64 unPublishedFileId, uint32 unMaxSecondsOld) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetPublishedFileDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetPublishedFileDetails", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 40: DeletePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_DeletePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "DeletePublishedFile", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 41: EnumerateUserPublishedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_EnumerateUserPublishedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "EnumerateUserPublishedFiles", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 42: SubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_SubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "SubscribePublishedFile", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 43: EnumerateUserSubscribedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_EnumerateUserSubscribedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "EnumerateUserSubscribedFiles", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 44: UnsubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UnsubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UnsubscribePublishedFile", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 45: UpdatePublishedFileSetChangeDescription(uint64 updateHandle, const char* pchChangeDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UpdatePublishedFileSetChangeDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UpdatePublishedFileSetChangeDescription", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 46: GetPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetPublishedItemVoteDetails", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 47: UpdateUserPublishedItemVote(uint64 unPublishedFileId, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UpdateUserPublishedItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UpdateUserPublishedItemVote", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 48: GetUserPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetUserPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetUserPublishedItemVoteDetails", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 49: EnumerateUserSharedWorkshopFiles(CSteamID steamId, uint32 unStartIndex, w_SteamParamStringArray_t* pRequiredTags, w_SteamParamStringArray_t* pExcludedTags) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_EnumerateUserSharedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "EnumerateUserSharedWorkshopFiles", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 50: PublishVideo(uint32 eVideoProvider, const char* pchVideoAccount, const char* pchVideoIdentifier, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags) -> uint64 | __thiscall ret 36 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_PublishVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "PublishVideo", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 51: SetUserPublishedFileAction(uint64 unPublishedFileId, uint32 eAction) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_SetUserPublishedFileAction(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "SetUserPublishedFileAction", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 52: EnumeratePublishedFilesByUserAction(uint32 eAction, uint32 unStartIndex) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_EnumeratePublishedFilesByUserAction(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "EnumeratePublishedFilesByUserAction", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 53: EnumeratePublishedWorkshopFiles(uint32 eEnumerationType, uint32 unStartIndex, uint32 unCount, uint32 unDays, w_SteamParamStringArray_t* pTags, w_SteamParamStringArray_t* pUserTags) -> uint64 | __thiscall ret 24 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_EnumeratePublishedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "EnumeratePublishedWorkshopFiles", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 54: UGCDownloadToLocation(uint64 hContent, const char* pchLocation, uint32 unPriority) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_UGCDownloadToLocation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "UGCDownloadToLocation", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 55: GetLocalFileChangeCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetLocalFileChangeCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetLocalFileChangeCount", 55, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 56: GetLocalFileChange(int32 iFile, uint32* pEChangeType, uint32* pEFilePathType) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_GetLocalFileChange(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "GetLocalFileChange", 56, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 57: BeginFileWriteBatch() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_BeginFileWriteBatch(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "BeginFileWriteBatch", 57, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 58: EndFileWriteBatch() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION016_EndFileWriteBatch(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "EndFileWriteBatch", 58, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -12753,7 +14364,11 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION016 g_steamremotestorage_i
 static int32_t THISCALL vt_SteamClient020_CreateSteamPipe(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 1; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 1;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -12766,7 +14381,11 @@ static int32_t THISCALL vt_SteamClient020_CreateSteamPipe(void *self) {
 static int THISCALL vt_SteamClient020_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -12781,7 +14400,11 @@ static int THISCALL vt_SteamClient020_BReleaseSteamPipe(void *self, int32_t hSte
 static int32_t THISCALL vt_SteamClient020_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 1; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 1;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -12796,7 +14419,11 @@ static int32_t THISCALL vt_SteamClient020_ConnectToGlobalUser(void *self, int32_
 static int32_t THISCALL vt_SteamClient020_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -12820,7 +14447,11 @@ static int32_t THISCALL vt_SteamClient020_CreateLocalUser(void *self, int32_t * 
 static void THISCALL vt_SteamClient020_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return;
+  }
 #endif
   uint8_t argbuf[8];
   uint32_t argOff = 0;
@@ -12914,7 +14545,9 @@ static void * THISCALL vt_SteamClient020_GetISteamGameServer(void *self, int32_t
 
 // slot 7: SetLocalIPBinding(const SteamIPAddress_t* unIP, uint32 usPort) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamClient020_SetLocalIPBinding(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "SetLocalIPBinding", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12
@@ -13385,7 +15018,11 @@ static void * THISCALL vt_SteamClient020_GetISteamGameSearch(void *self, int32_t
 static void THISCALL vt_SteamClient020_RunFrame(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "RunFrame", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[1]; uint32_t retlen = 0;
@@ -13396,7 +15033,11 @@ static void THISCALL vt_SteamClient020_RunFrame(void *self) {
 static uint32_t THISCALL vt_SteamClient020_GetIPCCallCount(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "GetIPCCallCount", 21, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -13407,14 +15048,20 @@ static uint32_t THISCALL vt_SteamClient020_GetIPCCallCount(void *self) {
 
 // slot 22: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient020_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "SetWarningMessageHook", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 23: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
 static int THISCALL vt_SteamClient020_BShutdownIfAllPipesClosed(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "BShutdownIfAllPipesClosed", 23, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -13753,17 +15400,23 @@ static void * THISCALL vt_SteamClient020_GetISteamHTMLSurface(void *self, int32_
 
 // slot 32: DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient020_DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess", 32, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 33: DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient020_DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess", 33, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 34: Set_SteamAPI_CCheckCallbackRegisteredInProcess(void* func) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient020_Set_SteamAPI_CCheckCallbackRegisteredInProcess(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "Set_SteamAPI_CCheckCallbackRegisteredInProcess", 34, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 35: GetISteamInventory(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInventory*/* | __thiscall ret 12
@@ -13933,7 +15586,9 @@ static void * THISCALL vt_SteamClient020_GetISteamRemotePlay(void *self, int32_t
 
 // slot 41: DestroyAllInterfaces() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamClient020_DestroyAllInterfaces(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "DestroyAllInterfaces", 41, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steamclient020_vtbl[42] = {
@@ -13991,7 +15646,11 @@ static struct FakeSteamClient020 g_steamclient020_instance = { g_steamclient020_
 static int32_t THISCALL vt_SteamClient021_CreateSteamPipe(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 1; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 1;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -14004,7 +15663,11 @@ static int32_t THISCALL vt_SteamClient021_CreateSteamPipe(void *self) {
 static int THISCALL vt_SteamClient021_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -14019,7 +15682,11 @@ static int THISCALL vt_SteamClient021_BReleaseSteamPipe(void *self, int32_t hSte
 static int32_t THISCALL vt_SteamClient021_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 1; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 1;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -14034,7 +15701,11 @@ static int32_t THISCALL vt_SteamClient021_ConnectToGlobalUser(void *self, int32_
 static int32_t THISCALL vt_SteamClient021_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
@@ -14058,7 +15729,11 @@ static int32_t THISCALL vt_SteamClient021_CreateLocalUser(void *self, int32_t * 
 static void THISCALL vt_SteamClient021_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return;
+  }
 #endif
   uint8_t argbuf[8];
   uint32_t argOff = 0;
@@ -14152,7 +15827,9 @@ static void * THISCALL vt_SteamClient021_GetISteamGameServer(void *self, int32_t
 
 // slot 7: SetLocalIPBinding(const SteamIPAddress_t* unIP, uint32 usPort) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamClient021_SetLocalIPBinding(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "SetLocalIPBinding", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12
@@ -14623,7 +16300,11 @@ static void * THISCALL vt_SteamClient021_GetISteamGameSearch(void *self, int32_t
 static void THISCALL vt_SteamClient021_RunFrame(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "RunFrame", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[1]; uint32_t retlen = 0;
@@ -14634,7 +16315,11 @@ static void THISCALL vt_SteamClient021_RunFrame(void *self) {
 static uint32_t THISCALL vt_SteamClient021_GetIPCCallCount(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "GetIPCCallCount", 21, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -14645,14 +16330,20 @@ static uint32_t THISCALL vt_SteamClient021_GetIPCCallCount(void *self) {
 
 // slot 22: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient021_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "SetWarningMessageHook", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 23: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
 static int THISCALL vt_SteamClient021_BShutdownIfAllPipesClosed(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) { return 0; }
+  if (!g_bridge_steamstub_path_active) {
+    static volatile LONG gamelib_sc[2];
+    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "BShutdownIfAllPipesClosed", 23, GAMELIB_STUBCALL_KIND_OFFPATH);
+    return 0;
+  }
 #endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -14909,17 +16600,23 @@ static void * THISCALL vt_SteamClient021_GetISteamHTMLSurface(void *self, int32_
 
 // slot 30: DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient021_DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess", 30, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 31: DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient021_DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess", 31, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 32: Set_SteamAPI_CCheckCallbackRegisteredInProcess(void* func) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamClient021_Set_SteamAPI_CCheckCallbackRegisteredInProcess(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "Set_SteamAPI_CCheckCallbackRegisteredInProcess", 32, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 33: GetISteamInventory(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInventory*/* | __thiscall ret 12
@@ -15089,7 +16786,9 @@ static void * THISCALL vt_SteamClient021_GetISteamRemotePlay(void *self, int32_t
 
 // slot 39: DestroyAllInterfaces() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamClient021_DestroyAllInterfaces(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "DestroyAllInterfaces", 39, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steamclient021_vtbl[40] = {
@@ -15176,58 +16875,78 @@ static void * THISCALL vt_SteamUser021_GetSteamID(void *self, void *sretOut) {
 
 // slot 3: InitiateGameConnection_DEPRECATED(void* pAuthBlob, int32 cbMaxAuthBlob, CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer, bool bSecure) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamUser021_InitiateGameConnection_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "InitiateGameConnection_DEPRECATED", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: TerminateGameConnection_DEPRECATED(uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUser021_TerminateGameConnection_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "TerminateGameConnection_DEPRECATED", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: TrackAppUsageEvent(CGameID gameID, int32 eAppUsageEvent, const char* pchExtraInfo) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamUser021_TrackAppUsageEvent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "TrackAppUsageEvent", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUser021_GetUserDataFolder(void *self, char * pchBuffer, int32_t cubBuffer) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchBuffer != NULL && cubBuffer > 0) pchBuffer[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "GetUserDataFolder", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: StartVoiceRecording() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUser021_StartVoiceRecording(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "StartVoiceRecording", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: StopVoiceRecording() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUser021_StopVoiceRecording(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "StopVoiceRecording", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: GetAvailableVoice(uint32* pcbCompressed, uint32* pcbUncompressed_Deprecated, uint32 nUncompressedVoiceDesiredSampleRate_Deprecated) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser021_GetAvailableVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "GetAvailableVoice", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetVoice(bool bWantCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, bool bWantUncompressed_Deprecated, void* pUncompressedDestBuffer_Deprecated, uint32 cbUncompressedDestBufferSize_Deprecated, uint32* nUncompressBytesWritten_Deprecated, uint32 nUncompressedVoiceDesiredSampleRate_Deprecated) -> uint32 | __thiscall ret 36 (STUB)
 static uint32_t THISCALL vt_SteamUser021_GetVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "GetVoice", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: DecompressVoice(const void* pCompressed, uint32 cbCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, uint32 nDesiredSampleRate) -> uint32 | __thiscall ret 24 (STUB)
 static uint32_t THISCALL vt_SteamUser021_DecompressVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "DecompressVoice", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetVoiceOptimalSampleRate() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUser021_GetVoiceOptimalSampleRate(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "GetVoiceOptimalSampleRate", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -15268,13 +16987,17 @@ static uint32_t THISCALL vt_SteamUser021_GetAuthSessionTicket(void *self, void *
 
 // slot 14: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamUser021_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "BeginAuthSession", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUser021_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "EndAuthSession", 15, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 16: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4
@@ -15289,90 +17012,120 @@ static void THISCALL vt_SteamUser021_CancelAuthTicket(void *self, uint32_t hAuth
 
 // slot 17: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser021_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "UserHasLicenseForApp", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: BIsBehindNAT() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser021_BIsBehindNAT(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "BIsBehindNAT", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: AdvertiseGame(CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamUser021_AdvertiseGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "AdvertiseGame", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 20: RequestEncryptedAppTicket(void* pDataToInclude, int32 cbDataToInclude) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamUser021_RequestEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "RequestEncryptedAppTicket", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 21: GetEncryptedAppTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUser021_GetEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "GetEncryptedAppTicket", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: GetGameBadgeLevel(int32 nSeries, bool bFoil) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamUser021_GetGameBadgeLevel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "GetGameBadgeLevel", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: GetPlayerSteamLevel() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamUser021_GetPlayerSteamLevel(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "GetPlayerSteamLevel", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: RequestStoreAuthURL(const char* pchRedirectURL) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamUser021_RequestStoreAuthURL(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "RequestStoreAuthURL", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 25: BIsPhoneVerified() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser021_BIsPhoneVerified(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "BIsPhoneVerified", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: BIsTwoFactorEnabled() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser021_BIsTwoFactorEnabled(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "BIsTwoFactorEnabled", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: BIsPhoneIdentifying() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser021_BIsPhoneIdentifying(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "BIsPhoneIdentifying", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: BIsPhoneRequiringVerification() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser021_BIsPhoneRequiringVerification(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "BIsPhoneRequiringVerification", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: GetMarketEligibility() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_SteamUser021_GetMarketEligibility(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "GetMarketEligibility", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 30: GetDurationControl() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_SteamUser021_GetDurationControl(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "GetDurationControl", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 31: BSetDurationControlOnlineState(uint32 eNewState) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamUser021_BSetDurationControlOnlineState(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser021", "BSetDurationControlOnlineState", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -15438,7 +17191,9 @@ static const char * THISCALL vt_SteamFriends017_GetPersonaName(void *self) {
 
 // slot 1: SetPersonaName(const char* pchPersonaName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamFriends017_SetPersonaName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "SetPersonaName", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -15454,26 +17209,34 @@ static uint32_t THISCALL vt_SteamFriends017_GetPersonaState(void *self) {
 
 // slot 3: GetFriendCount(int32 iFriendFlags) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetFriendCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendCount", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: GetFriendByIndex(int32 iFriend, int32 iFriendFlags) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends017_GetFriendByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendByIndex", 4, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 5: GetFriendRelationship(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends017_GetFriendRelationship(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendRelationship", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetFriendPersonaState(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends017_GetFriendPersonaState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendPersonaState", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -15500,427 +17263,571 @@ static const char * THISCALL vt_SteamFriends017_GetFriendPersonaName(void *self,
 
 // slot 8: GetFriendGamePlayed(CSteamID steamIDFriend, FriendGameInfo_t* pFriendGameInfo) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends017_GetFriendGamePlayed(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendGamePlayed", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetFriendPersonaNameHistory(CSteamID steamIDFriend, int32 iPersonaName) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends017_GetFriendPersonaNameHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendPersonaNameHistory", 9, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 10: GetFriendSteamLevel(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetFriendSteamLevel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendSteamLevel", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetPlayerNickname(CSteamID steamIDPlayer) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends017_GetPlayerNickname(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetPlayerNickname", 11, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 12: GetFriendsGroupCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetFriendsGroupCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendsGroupCount", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetFriendsGroupIDByIndex(int32 iFG) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_SteamFriends017_GetFriendsGroupIDByIndex(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendsGroupIDByIndex", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: GetFriendsGroupName(uint32 friendsGroupID) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends017_GetFriendsGroupName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendsGroupName", 14, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 15: GetFriendsGroupMembersCount(uint32 friendsGroupID) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetFriendsGroupMembersCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendsGroupMembersCount", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: GetFriendsGroupMembersList(uint32 friendsGroupID, CSteamID* pOutSteamIDMembers, int32 nMembersCount) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends017_GetFriendsGroupMembersList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendsGroupMembersList", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: HasFriend(CSteamID steamIDFriend, int32 iFriendFlags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends017_HasFriend(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "HasFriend", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetClanCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetClanCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetClanCount", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: GetClanByIndex(int32 iClan) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends017_GetClanByIndex(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetClanByIndex", 19, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 20: GetClanName(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends017_GetClanName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetClanName", 20, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 21: GetClanTag(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends017_GetClanTag(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetClanTag", 21, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 22: GetClanActivityCounts(CSteamID steamIDClan, int32* pnOnline, int32* pnInGame, int32* pnChatting) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamFriends017_GetClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetClanActivityCounts", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: DownloadClanActivityCounts(CSteamID* psteamIDClans, int32 cClansToRequest) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends017_DownloadClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "DownloadClanActivityCounts", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 24: GetFriendCountFromSource(CSteamID steamIDSource) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetFriendCountFromSource(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendCountFromSource", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: GetFriendFromSourceByIndex(CSteamID steamIDSource, int32 iFriend) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends017_GetFriendFromSourceByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendFromSourceByIndex", 25, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 26: IsUserInSource(CSteamID steamIDUser, CSteamID steamIDSource) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamFriends017_IsUserInSource(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "IsUserInSource", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: SetInGameVoiceSpeaking(CSteamID steamIDUser, bool bSpeaking) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends017_SetInGameVoiceSpeaking(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "SetInGameVoiceSpeaking", 27, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 28: ActivateGameOverlay(const char* pchDialog) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends017_ActivateGameOverlay(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "ActivateGameOverlay", 28, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 29: ActivateGameOverlayToUser(const char* pchDialog, CSteamID steamID) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamFriends017_ActivateGameOverlayToUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "ActivateGameOverlayToUser", 29, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 30: ActivateGameOverlayToWebPage(const char* pchURL, uint32 eMode) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends017_ActivateGameOverlayToWebPage(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "ActivateGameOverlayToWebPage", 30, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 31: ActivateGameOverlayToStore(uint32 nAppID, uint32 eFlag) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends017_ActivateGameOverlayToStore(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "ActivateGameOverlayToStore", 31, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 32: SetPlayedWith(CSteamID steamIDUserPlayedWith) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends017_SetPlayedWith(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "SetPlayedWith", 32, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 33: ActivateGameOverlayInviteDialog(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends017_ActivateGameOverlayInviteDialog(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "ActivateGameOverlayInviteDialog", 33, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 34: GetSmallFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetSmallFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetSmallFriendAvatar", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: GetMediumFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetMediumFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetMediumFriendAvatar", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: GetLargeFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetLargeFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetLargeFriendAvatar", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: RequestUserInformation(CSteamID steamIDUser, bool bRequireNameOnly) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends017_RequestUserInformation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "RequestUserInformation", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: RequestClanOfficerList(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends017_RequestClanOfficerList(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "RequestClanOfficerList", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 39: GetClanOwner(CSteamID steamIDClan) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends017_GetClanOwner(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetClanOwner", 39, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 40: GetClanOfficerCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetClanOfficerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetClanOfficerCount", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 41: GetClanOfficerByIndex(CSteamID steamIDClan, int32 iOfficer) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends017_GetClanOfficerByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetClanOfficerByIndex", 41, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 42: GetUserRestrictions() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamFriends017_GetUserRestrictions(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetUserRestrictions", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: SetRichPresence(const char* pchKey, const char* pchValue) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends017_SetRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "SetRichPresence", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 44: ClearRichPresence() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamFriends017_ClearRichPresence(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "ClearRichPresence", 44, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 45: GetFriendRichPresence(CSteamID steamIDFriend, const char* pchKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends017_GetFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendRichPresence", 45, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 46: GetFriendRichPresenceKeyCount(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetFriendRichPresenceKeyCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendRichPresenceKeyCount", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 47: GetFriendRichPresenceKeyByIndex(CSteamID steamIDFriend, int32 iKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends017_GetFriendRichPresenceKeyByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendRichPresenceKeyByIndex", 47, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 48: RequestFriendRichPresence(CSteamID steamIDFriend) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends017_RequestFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "RequestFriendRichPresence", 48, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 49: InviteUserToGame(CSteamID steamIDFriend, const char* pchConnectString) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends017_InviteUserToGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "InviteUserToGame", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 50: GetCoplayFriendCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetCoplayFriendCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetCoplayFriendCount", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 51: GetCoplayFriend(int32 iCoplayFriend) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends017_GetCoplayFriend(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetCoplayFriend", 51, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 52: GetFriendCoplayTime(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetFriendCoplayTime(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendCoplayTime", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 53: GetFriendCoplayGame(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamFriends017_GetFriendCoplayGame(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendCoplayGame", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 54: JoinClanChatRoom(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends017_JoinClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "JoinClanChatRoom", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 55: LeaveClanChatRoom(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends017_LeaveClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "LeaveClanChatRoom", 55, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 56: GetClanChatMemberCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetClanChatMemberCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetClanChatMemberCount", 56, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 57: GetChatMemberByIndex(CSteamID steamIDClan, int32 iUser) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends017_GetChatMemberByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetChatMemberByIndex", 57, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 58: SendClanChatMessage(CSteamID steamIDClanChat, const char* pchText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends017_SendClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "SendClanChatMessage", 58, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 59: GetClanChatMessage(CSteamID steamIDClanChat, int32 iMessage, void* prgchText, int32 cchTextMax, uint32* peChatEntryType, CSteamID* psteamidChatter) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetClanChatMessage", 59, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 60: IsClanChatAdmin(CSteamID steamIDClanChat, CSteamID steamIDUser) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamFriends017_IsClanChatAdmin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "IsClanChatAdmin", 60, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 61: IsClanChatWindowOpenInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends017_IsClanChatWindowOpenInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "IsClanChatWindowOpenInSteam", 61, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 62: OpenClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends017_OpenClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "OpenClanChatWindowInSteam", 62, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 63: CloseClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends017_CloseClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "CloseClanChatWindowInSteam", 63, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 64: SetListenForFriendsMessages(bool bInterceptEnabled) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamFriends017_SetListenForFriendsMessages(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "SetListenForFriendsMessages", 64, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 65: ReplyToFriendMessage(CSteamID steamIDFriend, const char* pchMsgToSend) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends017_ReplyToFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "ReplyToFriendMessage", 65, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 66: GetFriendMessage(CSteamID steamIDFriend, int32 iMessageID, void* pvData, int32 cubData, uint32* peChatEntryType) -> int32 | __thiscall ret 24 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFriendMessage", 66, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 67: GetFollowerCount(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends017_GetFollowerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetFollowerCount", 67, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 68: IsFollowing(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends017_IsFollowing(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "IsFollowing", 68, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 69: EnumerateFollowingList(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamFriends017_EnumerateFollowingList(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "EnumerateFollowingList", 69, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 70: IsClanPublic(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends017_IsClanPublic(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "IsClanPublic", 70, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 71: IsClanOfficialGameGroup(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamFriends017_IsClanOfficialGameGroup(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "IsClanOfficialGameGroup", 71, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 72: GetNumChatsWithUnreadPriorityMessages() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamFriends017_GetNumChatsWithUnreadPriorityMessages(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetNumChatsWithUnreadPriorityMessages", 72, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 73: ActivateGameOverlayRemotePlayTogetherInviteDialog(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamFriends017_ActivateGameOverlayRemotePlayTogetherInviteDialog(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "ActivateGameOverlayRemotePlayTogetherInviteDialog", 73, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 74: RegisterProtocolInOverlayBrowser(const char* pchProtocol) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamFriends017_RegisterProtocolInOverlayBrowser(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "RegisterProtocolInOverlayBrowser", 74, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 75: ActivateGameOverlayInviteDialogConnectString(const char* pchConnectString) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamFriends017_ActivateGameOverlayInviteDialogConnectString(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "ActivateGameOverlayInviteDialogConnectString", 75, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 76: RequestEquippedProfileItems(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamFriends017_RequestEquippedProfileItems(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "RequestEquippedProfileItems", 76, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 77: BHasEquippedProfileItem(CSteamID steamID, uint32 itemType) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamFriends017_BHasEquippedProfileItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "BHasEquippedProfileItem", 77, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 78: GetProfileItemPropertyString(CSteamID steamID, uint32 itemType, uint32 prop) -> const char* | __thiscall ret 16 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamFriends017_GetProfileItemPropertyString(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetProfileItemPropertyString", 78, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 79: GetProfileItemPropertyUint(CSteamID steamID, uint32 itemType, uint32 prop) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamFriends017_GetProfileItemPropertyUint(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamFriends017", "GetProfileItemPropertyUint", 79, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -16074,19 +17981,25 @@ static const char * THISCALL vt_SteamUtils010_GetIPCountry(void *self) {
 
 // slot 5: GetImageSize(int32 iImage, uint32* pnWidth, uint32* pnHeight) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils010_GetImageSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "GetImageSize", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetImageRGBA(int32 iImage, uint8_t* pubDest, int32 nDestBufferSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils010_GetImageRGBA(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "GetImageRGBA", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: GetCSERIPPort(uint32* unIP, uint16_t* usPort) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUtils010_GetCSERIPPort(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "GetCSERIPPort", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -16112,41 +18025,55 @@ static uint32_t THISCALL vt_SteamUtils010_GetAppID(void *self) {
 
 // slot 10: SetOverlayNotificationPosition(uint32 eNotificationPosition) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils010_SetOverlayNotificationPosition(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "SetOverlayNotificationPosition", 10, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 11: IsAPICallCompleted(uint64 hSteamAPICall, bool* pbFailed) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils010_IsAPICallCompleted(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "IsAPICallCompleted", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetAPICallFailureReason(uint64 hSteamAPICall) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamUtils010_GetAPICallFailureReason(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "GetAPICallFailureReason", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetAPICallResult(uint64 hSteamAPICall, void* pCallback, int32 cubCallback, int32 iCallbackExpected, bool* pbFailed) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamUtils010_GetAPICallResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "GetAPICallResult", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: RunFrame() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUtils010_RunFrame(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "RunFrame", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: GetIPCCallCount() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUtils010_GetIPCCallCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "GetIPCCallCount", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils010_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "SetWarningMessageHook", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: IsOverlayEnabled() -> bool | __thiscall ret 0
@@ -16161,32 +18088,42 @@ static int THISCALL vt_SteamUtils010_IsOverlayEnabled(void *self) {
 
 // slot 18: BOverlayNeedsPresent() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils010_BOverlayNeedsPresent(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "BOverlayNeedsPresent", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: CheckFileSignature(const char* szFileName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamUtils010_CheckFileSignature(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "CheckFileSignature", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 20: ShowGamepadTextInput(uint32 eInputMode, uint32 eLineInputMode, const char* pchDescription, uint32 unCharMax, const char* pchExistingText) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamUtils010_ShowGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "ShowGamepadTextInput", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: GetEnteredGamepadTextLength() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUtils010_GetEnteredGamepadTextLength(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "GetEnteredGamepadTextLength", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUtils010_GetEnteredGamepadTextInput(void *self, char * pchText, uint32_t cchText) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchText != NULL && cchText > 0) pchText[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "GetEnteredGamepadTextInput", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -16221,7 +18158,9 @@ static int THISCALL vt_SteamUtils010_IsSteamRunningInVR(void *self) {
 
 // slot 25: SetOverlayNotificationInset(int32 nHorizontalInset, int32 nVerticalInset) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUtils010_SetOverlayNotificationInset(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "SetOverlayNotificationInset", 25, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 26: IsSteamInBigPictureMode() -> bool | __thiscall ret 0
@@ -16236,71 +18175,95 @@ static int THISCALL vt_SteamUtils010_IsSteamInBigPictureMode(void *self) {
 
 // slot 27: StartVRDashboard() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUtils010_StartVRDashboard(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "StartVRDashboard", 27, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 28: IsVRHeadsetStreamingEnabled() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils010_IsVRHeadsetStreamingEnabled(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "IsVRHeadsetStreamingEnabled", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: SetVRHeadsetStreamingEnabled(bool bEnabled) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils010_SetVRHeadsetStreamingEnabled(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "SetVRHeadsetStreamingEnabled", 29, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 30: IsSteamChinaLauncher() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils010_IsSteamChinaLauncher(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "IsSteamChinaLauncher", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: InitFilterText(uint32 unFilterOptions) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamUtils010_InitFilterText(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "InitFilterText", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 32: FilterText(uint32 eContext, CSteamID sourceSteamID, const char* pchInputMessage, char* pchOutFilteredText, uint32 nByteSizeOutFilteredText) -> int32 | __thiscall ret 24 (STUB)
 static int32_t THISCALL vt_SteamUtils010_FilterText(void *self, uint32_t eContext, uint64_t sourceSteamID, const char * pchInputMessage, char * pchOutFilteredText, uint32_t nByteSizeOutFilteredText) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchOutFilteredText != NULL && nByteSizeOutFilteredText > 0) pchOutFilteredText[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "FilterText", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: GetIPv6ConnectivityState(uint32 eProtocol) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_SteamUtils010_GetIPv6ConnectivityState(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "GetIPv6ConnectivityState", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: IsSteamRunningOnSteamDeck() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils010_IsSteamRunningOnSteamDeck(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "IsSteamRunningOnSteamDeck", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: ShowFloatingGamepadTextInput(uint32 eKeyboardMode, int32 nTextFieldXPosition, int32 nTextFieldYPosition, int32 nTextFieldWidth, int32 nTextFieldHeight) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamUtils010_ShowFloatingGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "ShowFloatingGamepadTextInput", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: SetGameLauncherMode(bool bLauncherMode) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils010_SetGameLauncherMode(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "SetGameLauncherMode", 36, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 37: DismissFloatingGamepadTextInput() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils010_DismissFloatingGamepadTextInput(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "DismissFloatingGamepadTextInput", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: DismissGamepadTextInput() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils010_DismissGamepadTextInput(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils010", "DismissGamepadTextInput", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -16354,7 +18317,9 @@ static struct FakeSteamUtils010 g_steamutils010_instance = { g_steamutils010_vtb
 
 // slot 0: RequestCurrentStats() -> bool | __thiscall ret 0 (HELPER FALLBACK)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestCurrentStats(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "RequestCurrentStats", 0, GAMELIB_STUBCALL_KIND_FALLBACK);
   return 1;
 }
 
@@ -16704,7 +18669,9 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats(void *self
 
 // slot 11: GetAchievementIcon(const char* pchName) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementIcon(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetAchievementIcon", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -16837,31 +18804,41 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchieveme
 
 // slot 16: RequestUserStats(CSteamID steamIDUser) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestUserStats(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "RequestUserStats", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 17: GetUserStat_2(CSteamID steamIDUser, const char* pchName, float* pData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserStat_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetUserStat_2", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetUserStat(CSteamID steamIDUser, const char* pchName, int32* pData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetUserStat", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: GetUserAchievement(CSteamID steamIDUser, const char* pchName, bool* pbAchieved) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetUserAchievement", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: GetUserAchievementAndUnlockTime(CSteamID steamIDUser, const char* pchName, bool* pbAchieved, uint32* punUnlockTime) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserAchievementAndUnlockTime(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetUserAchievementAndUnlockTime", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -16879,141 +18856,187 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats(void *s
 
 // slot 22: FindOrCreateLeaderboard(const char* pchLeaderboardName, uint32 eLeaderboardSortMethod, uint32 eLeaderboardDisplayType) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_FindOrCreateLeaderboard(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "FindOrCreateLeaderboard", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 23: FindLeaderboard(const char* pchLeaderboardName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_FindLeaderboard(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "FindLeaderboard", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 24: GetLeaderboardName(uint64 hSteamLeaderboard) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetLeaderboardName", 24, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 25: GetLeaderboardEntryCount(uint64 hSteamLeaderboard) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardEntryCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetLeaderboardEntryCount", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: GetLeaderboardSortMethod(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardSortMethod(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetLeaderboardSortMethod", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: GetLeaderboardDisplayType(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardDisplayType(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetLeaderboardDisplayType", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: DownloadLeaderboardEntries(uint64 hSteamLeaderboard, uint32 eLeaderboardDataRequest, int32 nRangeStart, int32 nRangeEnd) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_DownloadLeaderboardEntries(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "DownloadLeaderboardEntries", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 29: DownloadLeaderboardEntriesForUsers(uint64 hSteamLeaderboard, CSteamID* prgUsers, int32 cUsers) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_DownloadLeaderboardEntriesForUsers(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "DownloadLeaderboardEntriesForUsers", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 30: GetDownloadedLeaderboardEntry(uint64 hSteamLeaderboardEntries, int32 index, w_LeaderboardEntry_t_123* pLeaderboardEntry, int32* pDetails, int32 cDetailsMax) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetDownloadedLeaderboardEntry(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetDownloadedLeaderboardEntry", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: UploadLeaderboardScore(uint64 hSteamLeaderboard, uint32 eLeaderboardUploadScoreMethod, int32 nScore, const int32_t* pScoreDetails, int32 cScoreDetailsCount) -> uint64 | __thiscall ret 24 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_UploadLeaderboardScore(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "UploadLeaderboardScore", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 32: AttachLeaderboardUGC(uint64 hSteamLeaderboard, uint64 hUGC) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_AttachLeaderboardUGC(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "AttachLeaderboardUGC", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 33: GetNumberOfCurrentPlayers() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumberOfCurrentPlayers(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetNumberOfCurrentPlayers", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 34: RequestGlobalAchievementPercentages() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestGlobalAchievementPercentages(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "RequestGlobalAchievementPercentages", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 35: GetMostAchievedAchievementInfo(char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 16 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetMostAchievedAchievementInfo(void *self, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetMostAchievedAchievementInfo", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: GetNextMostAchievedAchievementInfo(int32 iIteratorPrevious, char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 20 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetNextMostAchievedAchievementInfo(void *self, int32_t iIteratorPrevious, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetNextMostAchievedAchievementInfo", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: GetAchievementAchievedPercent(const char* pchName, float* pflPercent) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAchievedPercent(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetAchievementAchievedPercent", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: RequestGlobalStats(int32 nHistoryDays) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestGlobalStats(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "RequestGlobalStats", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 39: GetGlobalStat_2(const char* pchStatName, double* pData) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStat_2(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetGlobalStat_2", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: GetGlobalStat(const char* pchStatName, int64_t* pData) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStat(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetGlobalStat", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 41: GetGlobalStatHistory_2(const char* pchStatName, double* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStatHistory_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetGlobalStatHistory_2", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 42: GetGlobalStatHistory(const char* pchStatName, int64_t* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStatHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetGlobalStatHistory", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: GetAchievementProgressLimits_2(const char* pchName, float* pfMinProgress, float* pfMaxProgress) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementProgressLimits_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetAchievementProgressLimits_2", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 44: GetAchievementProgressLimits(const char* pchName, int32* pnMinProgress, int32* pnMaxProgress) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementProgressLimits(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION012", "GetAchievementProgressLimits", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -17417,7 +19440,9 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats(void *self
 
 // slot 10: GetAchievementIcon(const char* pchName) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementIcon(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetAchievementIcon", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -17550,31 +19575,41 @@ static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchieveme
 
 // slot 15: RequestUserStats(CSteamID steamIDUser) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_RequestUserStats(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "RequestUserStats", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 16: GetUserStat_2(CSteamID steamIDUser, const char* pchName, float* pData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserStat_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetUserStat_2", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: GetUserStat(CSteamID steamIDUser, const char* pchName, int32* pData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetUserStat", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetUserAchievement(CSteamID steamIDUser, const char* pchName, bool* pbAchieved) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetUserAchievement", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: GetUserAchievementAndUnlockTime(CSteamID steamIDUser, const char* pchName, bool* pbAchieved, uint32* punUnlockTime) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserAchievementAndUnlockTime(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetUserAchievementAndUnlockTime", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -17592,141 +19627,187 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats(void *s
 
 // slot 21: FindOrCreateLeaderboard(const char* pchLeaderboardName, uint32 eLeaderboardSortMethod, uint32 eLeaderboardDisplayType) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_FindOrCreateLeaderboard(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "FindOrCreateLeaderboard", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 22: FindLeaderboard(const char* pchLeaderboardName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_FindLeaderboard(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "FindLeaderboard", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 23: GetLeaderboardName(uint64 hSteamLeaderboard) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetLeaderboardName", 23, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 24: GetLeaderboardEntryCount(uint64 hSteamLeaderboard) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardEntryCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetLeaderboardEntryCount", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: GetLeaderboardSortMethod(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardSortMethod(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetLeaderboardSortMethod", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: GetLeaderboardDisplayType(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardDisplayType(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetLeaderboardDisplayType", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: DownloadLeaderboardEntries(uint64 hSteamLeaderboard, uint32 eLeaderboardDataRequest, int32 nRangeStart, int32 nRangeEnd) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_DownloadLeaderboardEntries(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "DownloadLeaderboardEntries", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 28: DownloadLeaderboardEntriesForUsers(uint64 hSteamLeaderboard, CSteamID* prgUsers, int32 cUsers) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_DownloadLeaderboardEntriesForUsers(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "DownloadLeaderboardEntriesForUsers", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 29: GetDownloadedLeaderboardEntry(uint64 hSteamLeaderboardEntries, int32 index, w_LeaderboardEntry_t_123* pLeaderboardEntry, int32* pDetails, int32 cDetailsMax) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetDownloadedLeaderboardEntry(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetDownloadedLeaderboardEntry", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: UploadLeaderboardScore(uint64 hSteamLeaderboard, uint32 eLeaderboardUploadScoreMethod, int32 nScore, const int32_t* pScoreDetails, int32 cScoreDetailsCount) -> uint64 | __thiscall ret 24 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_UploadLeaderboardScore(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "UploadLeaderboardScore", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 31: AttachLeaderboardUGC(uint64 hSteamLeaderboard, uint64 hUGC) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_AttachLeaderboardUGC(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "AttachLeaderboardUGC", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 32: GetNumberOfCurrentPlayers() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumberOfCurrentPlayers(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetNumberOfCurrentPlayers", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 33: RequestGlobalAchievementPercentages() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_RequestGlobalAchievementPercentages(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "RequestGlobalAchievementPercentages", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 34: GetMostAchievedAchievementInfo(char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 16 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetMostAchievedAchievementInfo(void *self, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetMostAchievedAchievementInfo", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: GetNextMostAchievedAchievementInfo(int32 iIteratorPrevious, char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 20 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetNextMostAchievedAchievementInfo(void *self, int32_t iIteratorPrevious, char * pchName, uint32_t unNameBufLen, float * pflPercent, int * pbAchieved) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && unNameBufLen > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetNextMostAchievedAchievementInfo", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: GetAchievementAchievedPercent(const char* pchName, float* pflPercent) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAchievedPercent(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetAchievementAchievedPercent", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: RequestGlobalStats(int32 nHistoryDays) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_RequestGlobalStats(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "RequestGlobalStats", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 38: GetGlobalStat_2(const char* pchStatName, double* pData) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStat_2(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetGlobalStat_2", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 39: GetGlobalStat(const char* pchStatName, int64_t* pData) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStat(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetGlobalStat", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: GetGlobalStatHistory_2(const char* pchStatName, double* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStatHistory_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetGlobalStatHistory_2", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 41: GetGlobalStatHistory(const char* pchStatName, int64_t* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStatHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetGlobalStatHistory", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 42: GetAchievementProgressLimits_2(const char* pchName, float* pfMinProgress, float* pfMaxProgress) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementProgressLimits_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetAchievementProgressLimits_2", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: GetAchievementProgressLimits(const char* pchName, int32* pnMinProgress, int32* pnMaxProgress) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementProgressLimits(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUSERSTATS_INTERFACE_VERSION013", "GetAchievementProgressLimits", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -17785,274 +19866,370 @@ static struct FakeSTEAMUSERSTATS_INTERFACE_VERSION013 g_steamuserstats_interface
 
 // slot 0: Init(bool bExplicitlyCallRunFrame) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamInput006_Init(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "Init", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: Shutdown() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamInput006_Shutdown(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "Shutdown", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: SetInputActionManifestFilePath(const char* pchInputActionManifestAbsolutePath) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamInput006_SetInputActionManifestFilePath(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "SetInputActionManifestFilePath", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: RunFrame(bool bReservedValue) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamInput006_RunFrame(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "RunFrame", 3, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 4: BWaitForData(bool bWaitForever, uint32 unTimeout) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamInput006_BWaitForData(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "BWaitForData", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: BNewDataAvailable() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamInput006_BNewDataAvailable(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "BNewDataAvailable", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetConnectedControllers(uint64* handlesOut) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamInput006_GetConnectedControllers(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetConnectedControllers", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: EnableDeviceCallbacks() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamInput006_EnableDeviceCallbacks(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "EnableDeviceCallbacks", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: EnableActionEventCallbacks(void* pCallback) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamInput006_EnableActionEventCallbacks(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "EnableActionEventCallbacks", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: GetActionSetHandle(const char* pszActionSetName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamInput006_GetActionSetHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetActionSetHandle", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 10: ActivateActionSet(uint64 inputHandle, uint64 actionSetHandle) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamInput006_ActivateActionSet(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "ActivateActionSet", 10, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 11: GetCurrentActionSet(uint64 inputHandle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamInput006_GetCurrentActionSet(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetCurrentActionSet", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 12: ActivateActionSetLayer(uint64 inputHandle, uint64 actionSetLayerHandle) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamInput006_ActivateActionSetLayer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "ActivateActionSetLayer", 12, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 13: DeactivateActionSetLayer(uint64 inputHandle, uint64 actionSetLayerHandle) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamInput006_DeactivateActionSetLayer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "DeactivateActionSetLayer", 13, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 14: DeactivateAllActionSetLayers(uint64 inputHandle) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamInput006_DeactivateAllActionSetLayers(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "DeactivateAllActionSetLayers", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: GetActiveActionSetLayers(uint64 inputHandle, uint64* handlesOut) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_SteamInput006_GetActiveActionSetLayers(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetActiveActionSetLayers", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: GetDigitalActionHandle(const char* pszActionName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamInput006_GetDigitalActionHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetDigitalActionHandle", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 17: GetDigitalActionData(uint64 inputHandle, uint64 digitalActionHandle) -> InputDigitalActionData_t | __thiscall ret 20 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamInput006_GetDigitalActionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 2);
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetDigitalActionData", 17, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 18: GetDigitalActionOrigins(uint64 inputHandle, uint64 actionSetHandle, uint64 digitalActionHandle, uint32* originsOut) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamInput006_GetDigitalActionOrigins(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetDigitalActionOrigins", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: GetStringForDigitalActionName(uint64 eActionHandle) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamInput006_GetStringForDigitalActionName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetStringForDigitalActionName", 19, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 20: GetAnalogActionHandle(const char* pszActionName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamInput006_GetAnalogActionHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetAnalogActionHandle", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 21: GetAnalogActionData(uint64 inputHandle, uint64 analogActionHandle) -> InputAnalogActionData_t | __thiscall ret 20 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamInput006_GetAnalogActionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 16);
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetAnalogActionData", 21, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 22: GetAnalogActionOrigins(uint64 inputHandle, uint64 actionSetHandle, uint64 analogActionHandle, uint32* originsOut) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamInput006_GetAnalogActionOrigins(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetAnalogActionOrigins", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: GetGlyphPNGForActionOrigin(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamInput006_GetGlyphPNGForActionOrigin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetGlyphPNGForActionOrigin", 23, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 24: GetGlyphSVGForActionOrigin(uint32 _unknownArg0, uint32 _unknownArg1) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamInput006_GetGlyphSVGForActionOrigin(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetGlyphSVGForActionOrigin", 24, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 25: GetGlyphForActionOrigin_Legacy(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamInput006_GetGlyphForActionOrigin_Legacy(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetGlyphForActionOrigin_Legacy", 25, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 26: GetStringForActionOrigin(uint32 eOrigin) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamInput006_GetStringForActionOrigin(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetStringForActionOrigin", 26, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 27: GetStringForAnalogActionName(uint64 eActionHandle) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamInput006_GetStringForAnalogActionName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetStringForAnalogActionName", 27, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 28: StopAnalogActionMomentum(uint64 inputHandle, uint64 eAction) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamInput006_StopAnalogActionMomentum(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "StopAnalogActionMomentum", 28, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 29: GetMotionData(uint64 inputHandle) -> InputMotionData_t | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamInput006_GetMotionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 40);
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetMotionData", 29, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 30: TriggerVibration(uint64 inputHandle, uint32 usLeftSpeed, uint32 usRightSpeed) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamInput006_TriggerVibration(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "TriggerVibration", 30, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 31: TriggerVibrationExtended(uint64 inputHandle, uint32 usLeftSpeed, uint32 usRightSpeed, uint32 usLeftTriggerSpeed, uint32 usRightTriggerSpeed) -> void | __thiscall ret 24 (STUB)
 static void THISCALL vt_SteamInput006_TriggerVibrationExtended(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "TriggerVibrationExtended", 31, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 32: TriggerSimpleHapticEvent(uint64 inputHandle, uint32 eHapticLocation, bool nIntensity, char nGainDB, bool nOtherIntensity, char nOtherGainDB) -> void | __thiscall ret 28 (STUB)
 static void THISCALL vt_SteamInput006_TriggerSimpleHapticEvent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "TriggerSimpleHapticEvent", 32, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 33: SetLEDColor(uint64 inputHandle, bool nColorR, bool nColorG, bool nColorB, uint32 nFlags) -> void | __thiscall ret 24 (STUB)
 static void THISCALL vt_SteamInput006_SetLEDColor(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "SetLEDColor", 33, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 34: Legacy_TriggerHapticPulse(uint64 inputHandle, uint32 eTargetPad, uint32 usDurationMicroSec) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamInput006_Legacy_TriggerHapticPulse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "Legacy_TriggerHapticPulse", 34, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 35: Legacy_TriggerRepeatedHapticPulse(uint64 inputHandle, uint32 eTargetPad, uint32 usDurationMicroSec, uint32 usOffMicroSec, uint32 unRepeat, uint32 nFlags) -> void | __thiscall ret 28 (STUB)
 static void THISCALL vt_SteamInput006_Legacy_TriggerRepeatedHapticPulse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "Legacy_TriggerRepeatedHapticPulse", 35, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 36: ShowBindingPanel(uint64 inputHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamInput006_ShowBindingPanel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "ShowBindingPanel", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: GetInputTypeForHandle(uint64 inputHandle) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamInput006_GetInputTypeForHandle(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetInputTypeForHandle", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: GetControllerForGamepadIndex(int32 nIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamInput006_GetControllerForGamepadIndex(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetControllerForGamepadIndex", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 39: GetGamepadIndexForController(uint64 ulinputHandle) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamInput006_GetGamepadIndexForController(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetGamepadIndexForController", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: GetStringForXboxOrigin(uint32 eOrigin) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamInput006_GetStringForXboxOrigin(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetStringForXboxOrigin", 40, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 41: GetGlyphForXboxOrigin(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamInput006_GetGlyphForXboxOrigin(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetGlyphForXboxOrigin", 41, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 42: GetActionOriginFromXboxOrigin(uint64 inputHandle, uint32 eOrigin) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamInput006_GetActionOriginFromXboxOrigin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetActionOriginFromXboxOrigin", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: TranslateActionOrigin(uint32 eDestinationInputType, uint32 eSourceOrigin) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamInput006_TranslateActionOrigin(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "TranslateActionOrigin", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 44: GetDeviceBindingRevision(uint64 inputHandle, int32* pMajor, int32* pMinor) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamInput006_GetDeviceBindingRevision(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetDeviceBindingRevision", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 45: GetRemotePlaySessionID(uint64 inputHandle) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamInput006_GetRemotePlaySessionID(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetRemotePlaySessionID", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 46: GetSessionInputConfigurationSettings() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamInput006_GetSessionInputConfigurationSettings(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "GetSessionInputConfigurationSettings", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 47: SetDualSenseTriggerEffect(uint64 inputHandle, const ScePadTriggerEffectParam* pParam) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_SteamInput006_SetDualSenseTriggerEffect(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamInput006", "SetDualSenseTriggerEffect", 47, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steaminput006_vtbl[48] = {
@@ -18114,243 +20291,331 @@ static struct FakeSteamInput006 g_steaminput006_instance = { g_steaminput006_vtb
 
 // slot 0: InitGameServer(uint32 unIP, uint32 usGamePort, uint32 usQueryPort, uint32 unFlags, uint32 nGameAppId, const char* pchVersionString) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamGameServer014_InitGameServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "InitGameServer", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: SetProduct(const char* pszProduct) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetProduct(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetProduct", 1, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 2: SetGameDescription(const char* pszGameDescription) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetGameDescription(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetGameDescription", 2, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 3: SetModDir(const char* pszModDir) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetModDir(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetModDir", 3, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 4: SetDedicatedServer(bool bDedicated) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetDedicatedServer(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetDedicatedServer", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: LogOn(const char* pszToken) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_LogOn(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "LogOn", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: LogOnAnonymous() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer014_LogOnAnonymous(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "LogOnAnonymous", 6, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 7: LogOff() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer014_LogOff(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "LogOff", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: BLoggedOn() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamGameServer014_BLoggedOn(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "BLoggedOn", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: BSecure() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamGameServer014_BSecure(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "BSecure", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetSteamID() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamGameServer014_GetSteamID(void *self, void *sretOut) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "GetSteamID", 10, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 11: WasRestartRequested() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamGameServer014_WasRestartRequested(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "WasRestartRequested", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: SetMaxPlayerCount(int32 cPlayersMax) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetMaxPlayerCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetMaxPlayerCount", 12, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 13: SetBotPlayerCount(int32 cBotplayers) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetBotPlayerCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetBotPlayerCount", 13, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 14: SetServerName(const char* pszServerName) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetServerName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetServerName", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: SetMapName(const char* pszMapName) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetMapName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetMapName", 15, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 16: SetPasswordProtected(bool bPasswordProtected) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetPasswordProtected(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetPasswordProtected", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: SetSpectatorPort(uint32 unSpectatorPort) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetSpectatorPort(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetSpectatorPort", 17, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 18: SetSpectatorServerName(const char* pszSpectatorServerName) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetSpectatorServerName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetSpectatorServerName", 18, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 19: ClearAllKeyValues() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer014_ClearAllKeyValues(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "ClearAllKeyValues", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 20: SetKeyValue(const char* pKey, const char* pValue) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamGameServer014_SetKeyValue(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetKeyValue", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 21: SetGameTags(const char* pchGameTags) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetGameTags(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetGameTags", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 22: SetGameData(const char* pchGameData) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetGameData(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetGameData", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 23: SetRegion(const char* pszRegion) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetRegion(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetRegion", 23, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 24: SetAdvertiseServerActive(bool bActive) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetAdvertiseServerActive(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetAdvertiseServerActive", 24, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 25: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamGameServer014_GetAuthSessionTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "GetAuthSessionTicket", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamGameServer014_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "BeginAuthSession", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamGameServer014_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "EndAuthSession", 27, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 28: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_CancelAuthTicket(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "CancelAuthTicket", 28, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 29: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamGameServer014_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "UserHasLicenseForApp", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: RequestUserGroupStatus(CSteamID steamIDUser, CSteamID steamIDGroup) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer014_RequestUserGroupStatus(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "RequestUserGroupStatus", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: GetGameplayStats() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer014_GetGameplayStats(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "GetGameplayStats", 31, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 32: GetServerReputation() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_SteamGameServer014_GetServerReputation(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "GetServerReputation", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 33: GetPublicIP() -> SteamIPAddress_t | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamGameServer014_GetPublicIP(void *self, void *sretOut) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 20);
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "GetPublicIP", 33, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 34: HandleIncomingPacket(const void* pData, int32 cbData, uint32 srcIP, uint32 srcPort) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer014_HandleIncomingPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "HandleIncomingPacket", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: GetNextOutgoingPacket(void* pOut, int32 cbMaxOut, uint32* pNetAdr, uint16_t* pPort) -> int32 | __thiscall ret 16 (STUB)
 static int32_t THISCALL vt_SteamGameServer014_GetNextOutgoingPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "GetNextOutgoingPacket", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: AssociateWithClan(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamGameServer014_AssociateWithClan(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "AssociateWithClan", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 37: ComputeNewPlayerCompatibility(CSteamID steamIDNewPlayer) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamGameServer014_ComputeNewPlayerCompatibility(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "ComputeNewPlayerCompatibility", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 38: SendUserConnectAndAuthenticate_DEPRECATED(uint32 unIPClient, const void* pvAuthBlob, uint32 cubAuthBlobSize, CSteamID* pSteamIDUser) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer014_SendUserConnectAndAuthenticate_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SendUserConnectAndAuthenticate_DEPRECATED", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 39: CreateUnauthenticatedUserConnection() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamGameServer014_CreateUnauthenticatedUserConnection(void *self, void *sretOut) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "CreateUnauthenticatedUserConnection", 39, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 40: SendUserDisconnect_DEPRECATED(CSteamID steamIDUser) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamGameServer014_SendUserDisconnect_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SendUserDisconnect_DEPRECATED", 40, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 41: BUpdateUserData(CSteamID steamIDUser, const char* pchPlayerName, uint32 uScore) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer014_BUpdateUserData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "BUpdateUserData", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 42: SetMasterServerHeartbeatInterval_DEPRECATED(int32 iHeartbeatInterval) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer014_SetMasterServerHeartbeatInterval_DEPRECATED(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "SetMasterServerHeartbeatInterval_DEPRECATED", 42, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 43: ForceMasterServerHeartbeat_DEPRECATED() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer014_ForceMasterServerHeartbeat_DEPRECATED(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer014", "ForceMasterServerHeartbeat_DEPRECATED", 43, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steamgameserver014_vtbl[44] = {
@@ -18408,243 +20673,331 @@ static struct FakeSteamGameServer014 g_steamgameserver014_instance = { g_steamga
 
 // slot 0: InitGameServer(uint32 unIP, uint32 usGamePort, uint32 usQueryPort, uint32 unFlags, uint32 nGameAppId, const char* pchVersionString) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamGameServer015_InitGameServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "InitGameServer", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: SetProduct(const char* pszProduct) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetProduct(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetProduct", 1, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 2: SetGameDescription(const char* pszGameDescription) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetGameDescription(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetGameDescription", 2, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 3: SetModDir(const char* pszModDir) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetModDir(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetModDir", 3, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 4: SetDedicatedServer(bool bDedicated) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetDedicatedServer(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetDedicatedServer", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: LogOn(const char* pszToken) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_LogOn(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "LogOn", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: LogOnAnonymous() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer015_LogOnAnonymous(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "LogOnAnonymous", 6, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 7: LogOff() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer015_LogOff(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "LogOff", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: BLoggedOn() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamGameServer015_BLoggedOn(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "BLoggedOn", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: BSecure() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamGameServer015_BSecure(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "BSecure", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetSteamID() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamGameServer015_GetSteamID(void *self, void *sretOut) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "GetSteamID", 10, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 11: WasRestartRequested() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamGameServer015_WasRestartRequested(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "WasRestartRequested", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: SetMaxPlayerCount(int32 cPlayersMax) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetMaxPlayerCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetMaxPlayerCount", 12, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 13: SetBotPlayerCount(int32 cBotplayers) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetBotPlayerCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetBotPlayerCount", 13, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 14: SetServerName(const char* pszServerName) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetServerName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetServerName", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: SetMapName(const char* pszMapName) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetMapName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetMapName", 15, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 16: SetPasswordProtected(bool bPasswordProtected) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetPasswordProtected(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetPasswordProtected", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: SetSpectatorPort(uint32 unSpectatorPort) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetSpectatorPort(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetSpectatorPort", 17, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 18: SetSpectatorServerName(const char* pszSpectatorServerName) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetSpectatorServerName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetSpectatorServerName", 18, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 19: ClearAllKeyValues() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer015_ClearAllKeyValues(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "ClearAllKeyValues", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 20: SetKeyValue(const char* pKey, const char* pValue) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamGameServer015_SetKeyValue(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetKeyValue", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 21: SetGameTags(const char* pchGameTags) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetGameTags(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetGameTags", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 22: SetGameData(const char* pchGameData) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetGameData(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetGameData", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 23: SetRegion(const char* pszRegion) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetRegion(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetRegion", 23, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 24: SetAdvertiseServerActive(bool bActive) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetAdvertiseServerActive(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetAdvertiseServerActive", 24, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 25: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket, const SteamNetworkingIdentity_144* pSnid) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamGameServer015_GetAuthSessionTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "GetAuthSessionTicket", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamGameServer015_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "BeginAuthSession", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamGameServer015_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "EndAuthSession", 27, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 28: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_CancelAuthTicket(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "CancelAuthTicket", 28, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 29: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamGameServer015_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "UserHasLicenseForApp", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: RequestUserGroupStatus(CSteamID steamIDUser, CSteamID steamIDGroup) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer015_RequestUserGroupStatus(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "RequestUserGroupStatus", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: GetGameplayStats() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer015_GetGameplayStats(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "GetGameplayStats", 31, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 32: GetServerReputation() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_SteamGameServer015_GetServerReputation(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "GetServerReputation", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 33: GetPublicIP() -> SteamIPAddress_t | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamGameServer015_GetPublicIP(void *self, void *sretOut) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 20);
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "GetPublicIP", 33, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 34: HandleIncomingPacket(const void* pData, int32 cbData, uint32 srcIP, uint32 srcPort) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer015_HandleIncomingPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "HandleIncomingPacket", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: GetNextOutgoingPacket(void* pOut, int32 cbMaxOut, uint32* pNetAdr, uint16_t* pPort) -> int32 | __thiscall ret 16 (STUB)
 static int32_t THISCALL vt_SteamGameServer015_GetNextOutgoingPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "GetNextOutgoingPacket", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: AssociateWithClan(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamGameServer015_AssociateWithClan(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "AssociateWithClan", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 37: ComputeNewPlayerCompatibility(CSteamID steamIDNewPlayer) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamGameServer015_ComputeNewPlayerCompatibility(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "ComputeNewPlayerCompatibility", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 38: SendUserConnectAndAuthenticate_DEPRECATED(uint32 unIPClient, const void* pvAuthBlob, uint32 cubAuthBlobSize, CSteamID* pSteamIDUser) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer015_SendUserConnectAndAuthenticate_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SendUserConnectAndAuthenticate_DEPRECATED", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 39: CreateUnauthenticatedUserConnection() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamGameServer015_CreateUnauthenticatedUserConnection(void *self, void *sretOut) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "CreateUnauthenticatedUserConnection", 39, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 40: SendUserDisconnect_DEPRECATED(CSteamID steamIDUser) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamGameServer015_SendUserDisconnect_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SendUserDisconnect_DEPRECATED", 40, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 41: BUpdateUserData(CSteamID steamIDUser, const char* pchPlayerName, uint32 uScore) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer015_BUpdateUserData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "BUpdateUserData", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 42: SetMasterServerHeartbeatInterval_DEPRECATED(int32 iHeartbeatInterval) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer015_SetMasterServerHeartbeatInterval_DEPRECATED(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "SetMasterServerHeartbeatInterval_DEPRECATED", 42, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 43: ForceMasterServerHeartbeat_DEPRECATED() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer015_ForceMasterServerHeartbeat_DEPRECATED(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer015", "ForceMasterServerHeartbeat_DEPRECATED", 43, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steamgameserver015_vtbl[44] = {
@@ -18702,61 +21055,81 @@ static struct FakeSteamGameServer015 g_steamgameserver015_instance = { g_steamga
 
 // slot 0: RequestUserStats(CSteamID steamIDUser) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamGameServerStats001_RequestUserStats(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServerStats001", "RequestUserStats", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 1: GetUserStat_2(CSteamID steamIDUser, const char* pchName, float* pData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServerStats001_GetUserStat_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServerStats001", "GetUserStat_2", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: GetUserStat(CSteamID steamIDUser, const char* pchName, int32* pData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServerStats001_GetUserStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServerStats001", "GetUserStat", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: GetUserAchievement(CSteamID steamIDUser, const char* pchName, bool* pbAchieved) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServerStats001_GetUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServerStats001", "GetUserAchievement", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: SetUserStat_2(CSteamID steamIDUser, const char* pchName, float fData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServerStats001_SetUserStat_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServerStats001", "SetUserStat_2", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: SetUserStat(CSteamID steamIDUser, const char* pchName, int32 nData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServerStats001_SetUserStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServerStats001", "SetUserStat", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: UpdateUserAvgRateStat(CSteamID steamIDUser, const char* pchName, float flCountThisSession, double dSessionLength) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamGameServerStats001_UpdateUserAvgRateStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServerStats001", "UpdateUserAvgRateStat", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: SetUserAchievement(CSteamID steamIDUser, const char* pchName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamGameServerStats001_SetUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServerStats001", "SetUserAchievement", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: ClearUserAchievement(CSteamID steamIDUser, const char* pchName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamGameServerStats001_ClearUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServerStats001", "ClearUserAchievement", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: StoreUserStats(CSteamID steamIDUser) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamGameServerStats001_StoreUserStats(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServerStats001", "StoreUserStats", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -18781,53 +21154,71 @@ static struct FakeSteamGameServerStats001 g_steamgameserverstats001_instance = {
 
 // slot 0: WriteScreenshot(void* pubRGB, uint32 cubRGB, int32 nWidth, int32 nHeight) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION003_WriteScreenshot(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION003", "WriteScreenshot", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: AddScreenshotToLibrary(const char* pchFilename, const char* pchThumbnailFilename, int32 nWidth, int32 nHeight) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION003_AddScreenshotToLibrary(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION003", "AddScreenshotToLibrary", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: TriggerScreenshot() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION003_TriggerScreenshot(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION003", "TriggerScreenshot", 2, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 3: HookScreenshots(bool bHook) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION003_HookScreenshots(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION003", "HookScreenshots", 3, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 4: SetLocation(uint32 hScreenshot, const char* pchLocation) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION003_SetLocation(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION003", "SetLocation", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: TagUser(uint32 hScreenshot, CSteamID steamID) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION003_TagUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION003", "TagUser", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: TagPublishedFile(uint32 hScreenshot, uint64 unPublishedFileID) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION003_TagPublishedFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION003", "TagPublishedFile", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: IsScreenshotsHooked() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION003_IsScreenshotsHooked(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION003", "IsScreenshotsHooked", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: AddVRScreenshotToLibrary(uint32 eType, const char* pchFilename, const char* pchVRFilename) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION003_AddVRScreenshotToLibrary(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION003", "AddVRScreenshotToLibrary", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -18851,86 +21242,114 @@ static struct FakeSTEAMSCREENSHOTS_INTERFACE_VERSION003 g_steamscreenshots_inter
 
 // slot 0: AddGameSearchParams(const char* pchKeyToFind, const char* pchValuesToFind) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_AddGameSearchParams(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "AddGameSearchParams", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: SearchForGameWithLobby(CSteamID steamIDLobby, int32 nPlayerMin, int32 nPlayerMax) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_SearchForGameWithLobby(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "SearchForGameWithLobby", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: SearchForGameSolo(int32 nPlayerMin, int32 nPlayerMax) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_SearchForGameSolo(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "SearchForGameSolo", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: AcceptGame() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_AcceptGame(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "AcceptGame", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: DeclineGame() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_DeclineGame(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "DeclineGame", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: RetrieveConnectionDetails(CSteamID steamIDHost, char* pchConnectionDetails, int32 cubConnectionDetails) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_RetrieveConnectionDetails(void *self, uint64_t steamIDHost, char * pchConnectionDetails, int32_t cubConnectionDetails) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchConnectionDetails != NULL && cubConnectionDetails > 0) pchConnectionDetails[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "RetrieveConnectionDetails", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: EndGameSearch() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_EndGameSearch(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "EndGameSearch", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: SetGameHostParams(const char* pchKey, const char* pchValue) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_SetGameHostParams(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "SetGameHostParams", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: SetConnectionDetails(const char* pchConnectionDetails, int32 cubConnectionDetails) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_SetConnectionDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "SetConnectionDetails", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: RequestPlayersForGame(int32 nPlayerMin, int32 nPlayerMax, int32 nMaxTeamSize) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_RequestPlayersForGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "RequestPlayersForGame", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: HostConfirmGameStart(uint64 ullUniqueGameID) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_HostConfirmGameStart(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "HostConfirmGameStart", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: CancelRequestPlayersForGame() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_CancelRequestPlayersForGame(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "CancelRequestPlayersForGame", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: SubmitPlayerResult(uint64 ullUniqueGameID, CSteamID steamIDPlayer, uint32 EPlayerResult) -> uint32 | __thiscall ret 20 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_SubmitPlayerResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "SubmitPlayerResult", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: EndGame(uint64 ullUniqueGameID) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamMatchGameSearch001_EndGame(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchGameSearch001", "EndGame", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -18959,33 +21378,43 @@ static struct FakeSteamMatchGameSearch001 g_steammatchgamesearch001_instance = {
 
 // slot 0: GetNumInstalledApps() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_STEAMAPPLIST_INTERFACE_VERSION001_GetNumInstalledApps(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPLIST_INTERFACE_VERSION001", "GetNumInstalledApps", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: GetInstalledApps(uint32* pvecAppID, uint32 unMaxAppIDs) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMAPPLIST_INTERFACE_VERSION001_GetInstalledApps(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPLIST_INTERFACE_VERSION001", "GetInstalledApps", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: GetAppName(uint32 nAppID, char* pchName, int32 cchNameMax) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMAPPLIST_INTERFACE_VERSION001_GetAppName(void *self, uint32_t nAppID, char * pchName, int32_t cchNameMax) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && cchNameMax > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPLIST_INTERFACE_VERSION001", "GetAppName", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: GetAppInstallDir(uint32 nAppID, char* pchDirectory, int32 cchNameMax) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMAPPLIST_INTERFACE_VERSION001_GetAppInstallDir(void *self, uint32_t nAppID, char * pchDirectory, int32_t cchNameMax) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchDirectory != NULL && cchNameMax > 0) pchDirectory[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPLIST_INTERFACE_VERSION001", "GetAppInstallDir", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: GetAppBuildId(uint32 nAppID) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_STEAMAPPLIST_INTERFACE_VERSION001_GetAppBuildId(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPLIST_INTERFACE_VERSION001", "GetAppBuildId", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -19005,50 +21434,68 @@ static struct FakeSTEAMAPPLIST_INTERFACE_VERSION001 g_steamapplist_interface_ver
 
 // slot 0: BIsEnabled() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSIC_INTERFACE_VERSION001_BIsEnabled(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSIC_INTERFACE_VERSION001", "BIsEnabled", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: BIsPlaying() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSIC_INTERFACE_VERSION001_BIsPlaying(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSIC_INTERFACE_VERSION001", "BIsPlaying", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: GetPlaybackStatus() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_STEAMMUSIC_INTERFACE_VERSION001_GetPlaybackStatus(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSIC_INTERFACE_VERSION001", "GetPlaybackStatus", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: Play() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_STEAMMUSIC_INTERFACE_VERSION001_Play(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSIC_INTERFACE_VERSION001", "Play", 3, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 4: Pause() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_STEAMMUSIC_INTERFACE_VERSION001_Pause(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSIC_INTERFACE_VERSION001", "Pause", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: PlayPrevious() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_STEAMMUSIC_INTERFACE_VERSION001_PlayPrevious(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSIC_INTERFACE_VERSION001", "PlayPrevious", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: PlayNext() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_STEAMMUSIC_INTERFACE_VERSION001_PlayNext(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSIC_INTERFACE_VERSION001", "PlayNext", 6, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 7: SetVolume(float flVolume) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMMUSIC_INTERFACE_VERSION001_SetVolume(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSIC_INTERFACE_VERSION001", "SetVolume", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: GetVolume() -> float | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_STEAMMUSIC_INTERFACE_VERSION001_GetVolume(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSIC_INTERFACE_VERSION001", "GetVolume", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0.0f;
 }
 
@@ -19072,193 +21519,257 @@ static struct FakeSTEAMMUSIC_INTERFACE_VERSION001 g_steammusic_interface_version
 
 // slot 0: RegisterSteamMusicRemote(const char* pchName) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_RegisterSteamMusicRemote(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "RegisterSteamMusicRemote", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: DeregisterSteamMusicRemote() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_DeregisterSteamMusicRemote(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "DeregisterSteamMusicRemote", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: BIsCurrentMusicRemote() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_BIsCurrentMusicRemote(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "BIsCurrentMusicRemote", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: BActivationSuccess(bool bValue) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_BActivationSuccess(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "BActivationSuccess", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: SetDisplayName(const char* pchDisplayName) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_SetDisplayName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "SetDisplayName", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: SetPNGIcon_64x64(void* pvBuffer, uint32 cbBufferLength) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_SetPNGIcon_64x64(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "SetPNGIcon_64x64", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: EnablePlayPrevious(bool bValue) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_EnablePlayPrevious(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "EnablePlayPrevious", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: EnablePlayNext(bool bValue) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_EnablePlayNext(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "EnablePlayNext", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: EnableShuffled(bool bValue) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_EnableShuffled(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "EnableShuffled", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: EnableLooped(bool bValue) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_EnableLooped(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "EnableLooped", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: EnableQueue(bool bValue) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_EnableQueue(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "EnableQueue", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: EnablePlaylists(bool bValue) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_EnablePlaylists(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "EnablePlaylists", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: UpdatePlaybackStatus(uint32 nStatus) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_UpdatePlaybackStatus(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "UpdatePlaybackStatus", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: UpdateShuffled(bool bValue) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_UpdateShuffled(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "UpdateShuffled", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: UpdateLooped(bool bValue) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_UpdateLooped(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "UpdateLooped", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: UpdateVolume(float flValue) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_UpdateVolume(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "UpdateVolume", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: CurrentEntryWillChange() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_CurrentEntryWillChange(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "CurrentEntryWillChange", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: CurrentEntryIsAvailable(bool bAvailable) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_CurrentEntryIsAvailable(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "CurrentEntryIsAvailable", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: UpdateCurrentEntryText(const char* pchText) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_UpdateCurrentEntryText(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "UpdateCurrentEntryText", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: UpdateCurrentEntryElapsedSeconds(int32 nValue) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_UpdateCurrentEntryElapsedSeconds(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "UpdateCurrentEntryElapsedSeconds", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: UpdateCurrentEntryCoverArt(void* pvBuffer, uint32 cbBufferLength) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_UpdateCurrentEntryCoverArt(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "UpdateCurrentEntryCoverArt", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: CurrentEntryDidChange() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_CurrentEntryDidChange(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "CurrentEntryDidChange", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: QueueWillChange() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_QueueWillChange(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "QueueWillChange", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: ResetQueueEntries() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_ResetQueueEntries(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "ResetQueueEntries", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: SetQueueEntry(int32 nID, int32 nPosition, const char* pchEntryText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_SetQueueEntry(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "SetQueueEntry", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: SetCurrentQueueEntry(int32 nID) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_SetCurrentQueueEntry(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "SetCurrentQueueEntry", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: QueueDidChange() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_QueueDidChange(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "QueueDidChange", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: PlaylistWillChange() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_PlaylistWillChange(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "PlaylistWillChange", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: ResetPlaylistEntries() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_ResetPlaylistEntries(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "ResetPlaylistEntries", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: SetPlaylistEntry(int32 nID, int32 nPosition, const char* pchEntryText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_SetPlaylistEntry(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "SetPlaylistEntry", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: SetCurrentPlaylistEntry(int32 nID) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_SetCurrentPlaylistEntry(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "SetCurrentPlaylistEntry", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: PlaylistDidChange() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMMUSICREMOTE_INTERFACE_VERSION001_PlaylistDidChange(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMMUSICREMOTE_INTERFACE_VERSION001", "PlaylistDidChange", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -19305,37 +21816,49 @@ static struct FakeSTEAMMUSICREMOTE_INTERFACE_VERSION001 g_steammusicremote_inter
 
 // slot 0: BIsParentalLockEnabled() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMPARENTALSETTINGS_INTERFACE_VERSION001_BIsParentalLockEnabled(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMPARENTALSETTINGS_INTERFACE_VERSION001", "BIsParentalLockEnabled", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: BIsParentalLockLocked() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMPARENTALSETTINGS_INTERFACE_VERSION001_BIsParentalLockLocked(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMPARENTALSETTINGS_INTERFACE_VERSION001", "BIsParentalLockLocked", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: BIsAppBlocked(uint32 nAppID) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMPARENTALSETTINGS_INTERFACE_VERSION001_BIsAppBlocked(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMPARENTALSETTINGS_INTERFACE_VERSION001", "BIsAppBlocked", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: BIsAppInBlockList(uint32 nAppID) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMPARENTALSETTINGS_INTERFACE_VERSION001_BIsAppInBlockList(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMPARENTALSETTINGS_INTERFACE_VERSION001", "BIsAppInBlockList", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: BIsFeatureBlocked(uint32 eFeature) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMPARENTALSETTINGS_INTERFACE_VERSION001_BIsFeatureBlocked(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMPARENTALSETTINGS_INTERFACE_VERSION001", "BIsFeatureBlocked", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: BIsFeatureInBlockList(uint32 eFeature) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMPARENTALSETTINGS_INTERFACE_VERSION001_BIsFeatureInBlockList(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMPARENTALSETTINGS_INTERFACE_VERSION001", "BIsFeatureInBlockList", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -19356,73 +21879,97 @@ static struct FakeSTEAMPARENTALSETTINGS_INTERFACE_VERSION001 g_steamparentalsett
 
 // slot 0: GetNumActiveBeacons() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamParties002_GetNumActiveBeacons(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "GetNumActiveBeacons", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: GetBeaconByIndex(uint32 unIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamParties002_GetBeaconByIndex(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "GetBeaconByIndex", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 2: GetBeaconDetails(uint64 ulBeaconID, CSteamID* pSteamIDBeaconOwner, w_SteamPartyBeaconLocation_t* pLocation, char* pchMetadata, int32 cchMetadata) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamParties002_GetBeaconDetails(void *self, uint64_t ulBeaconID, void * pSteamIDBeaconOwner, void * pLocation, char * pchMetadata, int32_t cchMetadata) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchMetadata != NULL && cchMetadata > 0) pchMetadata[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "GetBeaconDetails", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: JoinParty(uint64 ulBeaconID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamParties002_JoinParty(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "JoinParty", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 4: GetNumAvailableBeaconLocations(uint32* puNumLocations) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_SteamParties002_GetNumAvailableBeaconLocations(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "GetNumAvailableBeaconLocations", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: GetAvailableBeaconLocations(w_SteamPartyBeaconLocation_t* pLocationList, uint32 uMaxNumLocations) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamParties002_GetAvailableBeaconLocations(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "GetAvailableBeaconLocations", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: CreateBeacon(uint32 unOpenSlots, w_SteamPartyBeaconLocation_t* pBeaconLocation, const char* pchConnectString, const char* pchMetadata) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_SteamParties002_CreateBeacon(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "CreateBeacon", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 7: OnReservationCompleted(uint64 ulBeacon, CSteamID steamIDUser) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamParties002_OnReservationCompleted(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "OnReservationCompleted", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: CancelReservation(uint64 ulBeacon, CSteamID steamIDUser) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamParties002_CancelReservation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "CancelReservation", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: ChangeNumOpenSlots(uint64 ulBeacon, uint32 unOpenSlots) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_SteamParties002_ChangeNumOpenSlots(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "ChangeNumOpenSlots", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 10: DestroyBeacon(uint64 ulBeacon) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamParties002_DestroyBeacon(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "DestroyBeacon", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetBeaconLocationData(w_SteamPartyBeaconLocation_t BeaconLocation, uint32 eData, char* pchDataStringOut, int32 cchDataStringOut) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamParties002_GetBeaconLocationData(void *self, uint32_t BeaconLocation, uint32_t eData, char * pchDataStringOut, int32_t cchDataStringOut) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchDataStringOut != NULL && cchDataStringOut > 0) pchDataStringOut[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamParties002", "GetBeaconLocationData", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -19449,44 +21996,58 @@ static struct FakeSteamParties002 g_steamparties002_instance = { g_steamparties0
 
 // slot 0: GetSessionCount() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION001_GetSessionCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION001", "GetSessionCount", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: GetSessionID(int32 iSessionIndex) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION001_GetSessionID(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION001", "GetSessionID", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: GetSessionSteamID(uint32 unSessionID) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION001_GetSessionSteamID(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION001", "GetSessionSteamID", 2, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 3: GetSessionClientName(uint32 unSessionID) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION001_GetSessionClientName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION001", "GetSessionClientName", 3, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 4: GetSessionClientFormFactor(uint32 unSessionID) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION001_GetSessionClientFormFactor(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION001", "GetSessionClientFormFactor", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: BGetSessionClientResolution(uint32 unSessionID, int32* pnResolutionX, int32* pnResolutionY) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION001_BGetSessionClientResolution(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION001", "BGetSessionClientResolution", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: BSendRemotePlayTogetherInvite(CSteamID steamIDFriend) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION001_BSendRemotePlayTogetherInvite(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION001", "BSendRemotePlayTogetherInvite", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -19508,50 +22069,66 @@ static struct FakeSTEAMREMOTEPLAY_INTERFACE_VERSION001 g_steamremoteplay_interfa
 
 // slot 0: GetSessionCount() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION002_GetSessionCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION002", "GetSessionCount", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: GetSessionID(int32 iSessionIndex) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION002_GetSessionID(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION002", "GetSessionID", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: GetSessionSteamID(uint32 unSessionID) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION002_GetSessionSteamID(void *self, void *sretOut, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION002", "GetSessionSteamID", 2, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 3: GetSessionClientName(uint32 unSessionID) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION002_GetSessionClientName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION002", "GetSessionClientName", 3, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 4: GetSessionClientFormFactor(uint32 unSessionID) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION002_GetSessionClientFormFactor(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION002", "GetSessionClientFormFactor", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: BGetSessionClientResolution(uint32 unSessionID, int32* pnResolutionX, int32* pnResolutionY) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION002_BGetSessionClientResolution(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION002", "BGetSessionClientResolution", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: BStartRemotePlayTogether(bool bShowOverlay) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION002_BStartRemotePlayTogether(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION002", "BStartRemotePlayTogether", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: BSendRemotePlayTogetherInvite(CSteamID steamIDFriend) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTEPLAY_INTERFACE_VERSION002_BSendRemotePlayTogetherInvite(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTEPLAY_INTERFACE_VERSION002", "BSendRemotePlayTogetherInvite", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -19574,23 +22151,31 @@ static struct FakeSTEAMREMOTEPLAY_INTERFACE_VERSION002 g_steamremoteplay_interfa
 
 // slot 0: GetVideoURL(uint32 unVideoAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMVIDEO_INTERFACE_V002_GetVideoURL(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMVIDEO_INTERFACE_V002", "GetVideoURL", 0, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 1: IsBroadcasting(int32* pnNumViewers) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMVIDEO_INTERFACE_V002_IsBroadcasting(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMVIDEO_INTERFACE_V002", "IsBroadcasting", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: GetOPFSettings(uint32 unVideoAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMVIDEO_INTERFACE_V002_GetOPFSettings(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMVIDEO_INTERFACE_V002", "GetOPFSettings", 2, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 3: GetOPFStringForApp(uint32 unVideoAppID, char* pchBuffer, int32* pnBufferSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMVIDEO_INTERFACE_V002_GetOPFStringForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMVIDEO_INTERFACE_V002", "GetOPFStringForApp", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -19609,23 +22194,31 @@ static struct FakeSTEAMVIDEO_INTERFACE_V002 g_steamvideo_interface_v002_instance
 
 // slot 0: GetVideoURL(uint32 unVideoAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMVIDEO_INTERFACE_V007_GetVideoURL(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMVIDEO_INTERFACE_V007", "GetVideoURL", 0, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 1: IsBroadcasting(int32* pnNumViewers) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMVIDEO_INTERFACE_V007_IsBroadcasting(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMVIDEO_INTERFACE_V007", "IsBroadcasting", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: GetOPFSettings(uint32 unVideoAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMVIDEO_INTERFACE_V007_GetOPFSettings(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMVIDEO_INTERFACE_V007", "GetOPFSettings", 2, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 3: GetOPFStringForApp(uint32 unVideoAppID, char* pchBuffer, int32* pnBufferSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMVIDEO_INTERFACE_V007_GetOPFStringForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMVIDEO_INTERFACE_V007", "GetOPFStringForApp", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -19644,22 +22237,30 @@ static struct FakeSTEAMVIDEO_INTERFACE_V007 g_steamvideo_interface_v007_instance
 
 // slot 0: SetTimelineStateDescription(const char* pchDescription, float flTimeDelta) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMTIMELINE_INTERFACE_V001_SetTimelineStateDescription(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMTIMELINE_INTERFACE_V001", "SetTimelineStateDescription", 0, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 1: ClearTimelineStateDescription(float flTimeDelta) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMTIMELINE_INTERFACE_V001_ClearTimelineStateDescription(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMTIMELINE_INTERFACE_V001", "ClearTimelineStateDescription", 1, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 2: AddTimelineEvent(const char* pchIcon, const char* pchTitle, const char* pchDescription, uint32 unPriority, float flStartOffsetSeconds, float flDurationSeconds, uint32 ePossibleClip) -> void | __thiscall ret 28 (STUB)
 static void THISCALL vt_STEAMTIMELINE_INTERFACE_V001_AddTimelineEvent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMTIMELINE_INTERFACE_V001", "AddTimelineEvent", 2, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 3: SetTimelineGameMode(uint32 eMode) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMTIMELINE_INTERFACE_V001_SetTimelineGameMode(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMTIMELINE_INTERFACE_V001", "SetTimelineGameMode", 3, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steamtimeline_interface_v001_vtbl[4] = {
@@ -19677,151 +22278,201 @@ static struct FakeSTEAMTIMELINE_INTERFACE_V001 g_steamtimeline_interface_v001_in
 
 // slot 0: CreateHTTPRequest(uint32 eHTTPRequestMethod, const char* pchAbsoluteURL) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_CreateHTTPRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "CreateHTTPRequest", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: SetHTTPRequestContextValue(uint32 hRequest, uint64 ulContextValue) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SetHTTPRequestContextValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SetHTTPRequestContextValue", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: SetHTTPRequestNetworkActivityTimeout(uint32 hRequest, uint32 unTimeoutSeconds) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SetHTTPRequestNetworkActivityTimeout(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SetHTTPRequestNetworkActivityTimeout", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: SetHTTPRequestHeaderValue(uint32 hRequest, const char* pchHeaderName, const char* pchHeaderValue) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SetHTTPRequestHeaderValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SetHTTPRequestHeaderValue", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: SetHTTPRequestGetOrPostParameter(uint32 hRequest, const char* pchParamName, const char* pchParamValue) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SetHTTPRequestGetOrPostParameter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SetHTTPRequestGetOrPostParameter", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: SendHTTPRequest(uint32 hRequest, uint64* pCallHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SendHTTPRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SendHTTPRequest", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: SendHTTPRequestAndStreamResponse(uint32 hRequest, uint64* pCallHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SendHTTPRequestAndStreamResponse(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SendHTTPRequestAndStreamResponse", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: DeferHTTPRequest(uint32 hRequest) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_DeferHTTPRequest(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "DeferHTTPRequest", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: PrioritizeHTTPRequest(uint32 hRequest) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_PrioritizeHTTPRequest(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "PrioritizeHTTPRequest", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetHTTPResponseHeaderSize(uint32 hRequest, const char* pchHeaderName, uint32* unResponseHeaderSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_GetHTTPResponseHeaderSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "GetHTTPResponseHeaderSize", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetHTTPResponseHeaderValue(uint32 hRequest, const char* pchHeaderName, uint8_t* pHeaderValueBuffer, uint32 unBufferSize) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_GetHTTPResponseHeaderValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "GetHTTPResponseHeaderValue", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetHTTPResponseBodySize(uint32 hRequest, uint32* unBodySize) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_GetHTTPResponseBodySize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "GetHTTPResponseBodySize", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetHTTPResponseBodyData(uint32 hRequest, uint8_t* pBodyDataBuffer, uint32 unBufferSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_GetHTTPResponseBodyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "GetHTTPResponseBodyData", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetHTTPStreamingResponseBodyData(uint32 hRequest, uint32 cOffset, uint8_t* pBodyDataBuffer, uint32 unBufferSize) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_GetHTTPStreamingResponseBodyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "GetHTTPStreamingResponseBodyData", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: ReleaseHTTPRequest(uint32 hRequest) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_ReleaseHTTPRequest(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "ReleaseHTTPRequest", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: GetHTTPDownloadProgressPct(uint32 hRequest, float* pflPercentOut) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_GetHTTPDownloadProgressPct(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "GetHTTPDownloadProgressPct", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: SetHTTPRequestRawPostBody(uint32 hRequest, const char* pchContentType, uint8_t* pubBody, uint32 unBodyLen) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SetHTTPRequestRawPostBody(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SetHTTPRequestRawPostBody", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: CreateCookieContainer(bool bAllowResponsesToModify) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_CreateCookieContainer(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "CreateCookieContainer", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: ReleaseCookieContainer(uint32 hCookieContainer) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_ReleaseCookieContainer(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "ReleaseCookieContainer", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: SetCookie(uint32 hCookieContainer, const char* pchHost, const char* pchUrl, const char* pchCookie) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SetCookie(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SetCookie", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: SetHTTPRequestCookieContainer(uint32 hRequest, uint32 hCookieContainer) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SetHTTPRequestCookieContainer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SetHTTPRequestCookieContainer", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: SetHTTPRequestUserAgentInfo(uint32 hRequest, const char* pchUserAgentInfo) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SetHTTPRequestUserAgentInfo(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SetHTTPRequestUserAgentInfo", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: SetHTTPRequestRequiresVerifiedCertificate(uint32 hRequest, bool bRequireVerifiedCertificate) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SetHTTPRequestRequiresVerifiedCertificate(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SetHTTPRequestRequiresVerifiedCertificate", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: SetHTTPRequestAbsoluteTimeoutMS(uint32 hRequest, uint32 unMilliseconds) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_SetHTTPRequestAbsoluteTimeoutMS(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "SetHTTPRequestAbsoluteTimeoutMS", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: GetHTTPRequestWasTimedOut(uint32 hRequest, bool* pbWasTimedOut) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION003_GetHTTPRequestWasTimedOut(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION003", "GetHTTPRequestWasTimedOut", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -19861,524 +22512,696 @@ static struct FakeSTEAMHTTP_INTERFACE_VERSION003 g_steamhttp_interface_version00
 
 // slot 0: CreateQueryUserUGCRequest(uint32 unAccountID, uint32 eListType, uint32 eMatchingUGCType, uint32 eSortOrder, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 28 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_CreateQueryUserUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "CreateQueryUserUGCRequest", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 1: CreateQueryAllUGCRequest_2(uint32 eQueryType, uint32 eMatchingeMatchingUGCTypeFileType, uint32 nCreatorAppID, uint32 nConsumerAppID, const char* pchCursor) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_CreateQueryAllUGCRequest_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "CreateQueryAllUGCRequest_2", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 2: CreateQueryAllUGCRequest(uint32 eQueryType, uint32 eMatchingeMatchingUGCTypeFileType, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_CreateQueryAllUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "CreateQueryAllUGCRequest", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 3: CreateQueryUGCDetailsRequest(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_CreateQueryUGCDetailsRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "CreateQueryUGCDetailsRequest", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 4: SendQueryUGCRequest(uint64 handle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SendQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SendQueryUGCRequest", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 5: GetQueryUGCResult(uint64 handle, uint32 index, w_SteamUGCDetails_t_128x* pDetails) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCResult", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetQueryUGCNumTags(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCNumTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCNumTags", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: GetQueryUGCTag(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCTag(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCTag", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: GetQueryUGCTagDisplayName(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCTagDisplayName(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCTagDisplayName", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetQueryUGCPreviewURL(uint64 handle, uint32 index, char* pchURL, uint32 cchURLSize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCPreviewURL(void *self, uint64_t handle, uint32_t index, char * pchURL, uint32_t cchURLSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchURL != NULL && cchURLSize > 0) pchURL[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCPreviewURL", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetQueryUGCMetadata(uint64 handle, uint32 index, char* pchMetadata, uint32 cchMetadatasize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCMetadata(void *self, uint64_t handle, uint32_t index, char * pchMetadata, uint32_t cchMetadatasize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchMetadata != NULL && cchMetadatasize > 0) pchMetadata[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCMetadata", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetQueryUGCChildren(uint64 handle, uint32 index, uint64* pvecPublishedFileID, uint32 cMaxEntries) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCChildren", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetQueryUGCStatistic(uint64 handle, uint32 index, uint32 eStatType, uint64* pStatValue) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCStatistic(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCStatistic", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetQueryUGCNumAdditionalPreviews(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCNumAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCNumAdditionalPreviews", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: GetQueryUGCAdditionalPreview(uint64 handle, uint32 index, uint32 previewIndex, char* pchURLOrVideoID, uint32 cchURLSize, char* pchOriginalFileName, uint32 cchOriginalFileNameSize, uint32* pPreviewType) -> bool | __thiscall ret 36 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCAdditionalPreview(void *self, uint64_t handle, uint32_t index, uint32_t previewIndex, char * pchURLOrVideoID, uint32_t cchURLSize, char * pchOriginalFileName, uint32_t cchOriginalFileNameSize, uint32_t * pPreviewType) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchURLOrVideoID != NULL && cchURLSize > 0) pchURLOrVideoID[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCAdditionalPreview", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: GetQueryUGCNumKeyValueTags(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCNumKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCNumKeyValueTags", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: GetQueryUGCKeyValueTag_2(uint64 handle, uint32 index, const char* pchKey, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCKeyValueTag_2(void *self, uint64_t handle, uint32_t index, const char * pchKey, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCKeyValueTag_2", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: GetQueryUGCKeyValueTag(uint64 handle, uint32 index, uint32 keyValueTagIndex, char* pchKey, uint32 cchKeySize, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 32 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetQueryUGCKeyValueTag(void *self, uint64_t handle, uint32_t index, uint32_t keyValueTagIndex, char * pchKey, uint32_t cchKeySize, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchKey != NULL && cchKeySize > 0) pchKey[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetQueryUGCKeyValueTag", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: ReleaseQueryUGCRequest(uint64 handle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_ReleaseQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "ReleaseQueryUGCRequest", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: AddRequiredTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_AddRequiredTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "AddRequiredTag", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: AddRequiredTagGroup(uint64 handle, const w_SteamParamStringArray_t* pTagGroups) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_AddRequiredTagGroup(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "AddRequiredTagGroup", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: AddExcludedTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_AddExcludedTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "AddExcludedTag", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: SetReturnOnlyIDs(uint64 handle, bool bReturnOnlyIDs) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetReturnOnlyIDs(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetReturnOnlyIDs", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: SetReturnKeyValueTags(uint64 handle, bool bReturnKeyValueTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetReturnKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetReturnKeyValueTags", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: SetReturnLongDescription(uint64 handle, bool bReturnLongDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetReturnLongDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetReturnLongDescription", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: SetReturnMetadata(uint64 handle, bool bReturnMetadata) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetReturnMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetReturnMetadata", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: SetReturnChildren(uint64 handle, bool bReturnChildren) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetReturnChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetReturnChildren", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: SetReturnAdditionalPreviews(uint64 handle, bool bReturnAdditionalPreviews) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetReturnAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetReturnAdditionalPreviews", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: SetReturnTotalOnly(uint64 handle, bool bReturnTotalOnly) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetReturnTotalOnly(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetReturnTotalOnly", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: SetReturnPlaytimeStats(uint64 handle, uint32 unDays) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetReturnPlaytimeStats(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetReturnPlaytimeStats", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: SetLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetLanguage", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: SetAllowCachedResponse(uint64 handle, uint32 unMaxAgeSeconds) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetAllowCachedResponse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetAllowCachedResponse", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 32: SetCloudFileNameFilter(uint64 handle, const char* pMatchCloudFileName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetCloudFileNameFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetCloudFileNameFilter", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: SetMatchAnyTag(uint64 handle, bool bMatchAnyTag) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetMatchAnyTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetMatchAnyTag", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: SetSearchText(uint64 handle, const char* pSearchText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetSearchText(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetSearchText", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: SetRankedByTrendDays(uint64 handle, uint32 unDays) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetRankedByTrendDays(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetRankedByTrendDays", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: SetTimeCreatedDateRange(uint64 handle, uint32 rtStart, uint32 rtEnd) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetTimeCreatedDateRange(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetTimeCreatedDateRange", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: SetTimeUpdatedDateRange(uint64 handle, uint32 rtStart, uint32 rtEnd) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetTimeUpdatedDateRange(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetTimeUpdatedDateRange", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: AddRequiredKeyValueTag(uint64 handle, const char* pKey, const char* pValue) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_AddRequiredKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "AddRequiredKeyValueTag", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 39: RequestUGCDetails(uint64 nPublishedFileID, uint32 unMaxAgeSeconds) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_RequestUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "RequestUGCDetails", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 40: CreateItem(uint32 nConsumerAppId, uint32 eFileType) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_CreateItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "CreateItem", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 41: StartItemUpdate(uint32 nConsumerAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_StartItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "StartItemUpdate", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 42: SetItemTitle(uint64 handle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetItemTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetItemTitle", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: SetItemDescription(uint64 handle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetItemDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetItemDescription", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 44: SetItemUpdateLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetItemUpdateLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetItemUpdateLanguage", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 45: SetItemMetadata(uint64 handle, const char* pchMetaData) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetItemMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetItemMetadata", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 46: SetItemVisibility(uint64 handle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetItemVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetItemVisibility", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 47: SetItemTags(uint64 updateHandle, const w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetItemTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetItemTags", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 48: SetItemContent(uint64 handle, const char* pszContentFolder) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetItemContent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetItemContent", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 49: SetItemPreview(uint64 handle, const char* pszPreviewFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetItemPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetItemPreview", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 50: SetAllowLegacyUpload(uint64 handle, bool bAllowLegacyUpload) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetAllowLegacyUpload(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetAllowLegacyUpload", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 51: RemoveAllItemKeyValueTags(uint64 handle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_RemoveAllItemKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "RemoveAllItemKeyValueTags", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 52: RemoveItemKeyValueTags(uint64 handle, const char* pchKey) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_RemoveItemKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "RemoveItemKeyValueTags", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 53: AddItemKeyValueTag(uint64 handle, const char* pchKey, const char* pchValue) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_AddItemKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "AddItemKeyValueTag", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 54: AddItemPreviewFile(uint64 handle, const char* pszPreviewFile, uint32 type) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_AddItemPreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "AddItemPreviewFile", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 55: AddItemPreviewVideo(uint64 handle, const char* pszVideoID) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_AddItemPreviewVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "AddItemPreviewVideo", 55, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 56: UpdateItemPreviewFile(uint64 handle, uint32 index, const char* pszPreviewFile) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_UpdateItemPreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "UpdateItemPreviewFile", 56, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 57: UpdateItemPreviewVideo(uint64 handle, uint32 index, const char* pszVideoID) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_UpdateItemPreviewVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "UpdateItemPreviewVideo", 57, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 58: RemoveItemPreview(uint64 handle, uint32 index) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_RemoveItemPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "RemoveItemPreview", 58, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 59: SubmitItemUpdate(uint64 handle, const char* pchChangeNote) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SubmitItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SubmitItemUpdate", 59, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 60: GetItemUpdateProgress(uint64 handle, uint64* punBytesProcessed, uint64* punBytesTotal) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetItemUpdateProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetItemUpdateProgress", 60, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 61: SetUserItemVote(uint64 nPublishedFileID, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SetUserItemVote", 61, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 62: GetUserItemVote(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetUserItemVote", 62, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 63: AddItemToFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_AddItemToFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "AddItemToFavorites", 63, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 64: RemoveItemFromFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_RemoveItemFromFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "RemoveItemFromFavorites", 64, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 65: SubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SubscribeItem", 65, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 66: UnsubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_UnsubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "UnsubscribeItem", 66, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 67: GetNumSubscribedItems() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetNumSubscribedItems(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetNumSubscribedItems", 67, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 68: GetSubscribedItems(uint64* pvecPublishedFileID, uint32 cMaxEntries) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetSubscribedItems(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetSubscribedItems", 68, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 69: GetItemState(uint64 nPublishedFileID) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetItemState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetItemState", 69, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 70: GetItemInstallInfo(uint64 nPublishedFileID, uint64* punSizeOnDisk, char* pchFolder, uint32 cchFolderSize, uint32* punTimeStamp) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetItemInstallInfo(void *self, uint64_t nPublishedFileID, uint64_t * punSizeOnDisk, char * pchFolder, uint32_t cchFolderSize, uint32_t * punTimeStamp) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchFolder != NULL && cchFolderSize > 0) pchFolder[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetItemInstallInfo", 70, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 71: GetItemDownloadInfo(uint64 nPublishedFileID, uint64* punBytesDownloaded, uint64* punBytesTotal) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetItemDownloadInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetItemDownloadInfo", 71, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 72: DownloadItem(uint64 nPublishedFileID, bool bHighPriority) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_DownloadItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "DownloadItem", 72, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 73: BInitWorkshopForGameServer(uint32 unWorkshopDepotID, const char* pszFolder) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_BInitWorkshopForGameServer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "BInitWorkshopForGameServer", 73, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 74: SuspendDownloads(bool bSuspend) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SuspendDownloads(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SuspendDownloads", 74, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 75: StartPlaytimeTracking(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_StartPlaytimeTracking(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "StartPlaytimeTracking", 75, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 76: StopPlaytimeTracking(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_StopPlaytimeTracking(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "StopPlaytimeTracking", 76, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 77: StopPlaytimeTrackingForAllItems() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_StopPlaytimeTrackingForAllItems(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "StopPlaytimeTrackingForAllItems", 77, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 78: AddDependency(uint64 nParentPublishedFileID, uint64 nChildPublishedFileID) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_AddDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "AddDependency", 78, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 79: RemoveDependency(uint64 nParentPublishedFileID, uint64 nChildPublishedFileID) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_RemoveDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "RemoveDependency", 79, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 80: AddAppDependency(uint64 nPublishedFileID, uint32 nAppID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_AddAppDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "AddAppDependency", 80, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 81: RemoveAppDependency(uint64 nPublishedFileID, uint32 nAppID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_RemoveAppDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "RemoveAppDependency", 81, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 82: GetAppDependencies(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetAppDependencies(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetAppDependencies", 82, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 83: DeleteItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_DeleteItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "DeleteItem", 83, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 84: ShowWorkshopEULA() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION016_ShowWorkshopEULA(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "ShowWorkshopEULA", 84, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 85: GetWorkshopEULAStatus() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_GetWorkshopEULAStatus(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "GetWorkshopEULAStatus", 85, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -20479,542 +23302,720 @@ static struct FakeSTEAMUGC_INTERFACE_VERSION016 g_steamugc_interface_version016_
 
 // slot 0: CreateQueryUserUGCRequest(uint32 unAccountID, uint32 eListType, uint32 eMatchingUGCType, uint32 eSortOrder, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 28 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_CreateQueryUserUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "CreateQueryUserUGCRequest", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 1: CreateQueryAllUGCRequest_2(uint32 eQueryType, uint32 eMatchingeMatchingUGCTypeFileType, uint32 nCreatorAppID, uint32 nConsumerAppID, const char* pchCursor) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_CreateQueryAllUGCRequest_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "CreateQueryAllUGCRequest_2", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 2: CreateQueryAllUGCRequest(uint32 eQueryType, uint32 eMatchingeMatchingUGCTypeFileType, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_CreateQueryAllUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "CreateQueryAllUGCRequest", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 3: CreateQueryUGCDetailsRequest(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_CreateQueryUGCDetailsRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "CreateQueryUGCDetailsRequest", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 4: SendQueryUGCRequest(uint64 handle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SendQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SendQueryUGCRequest", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 5: GetQueryUGCResult(uint64 handle, uint32 index, w_SteamUGCDetails_t_128x* pDetails) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCResult", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetQueryUGCNumTags(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCNumTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCNumTags", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: GetQueryUGCTag(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCTag(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCTag", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: GetQueryUGCTagDisplayName(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCTagDisplayName(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCTagDisplayName", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetQueryUGCPreviewURL(uint64 handle, uint32 index, char* pchURL, uint32 cchURLSize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCPreviewURL(void *self, uint64_t handle, uint32_t index, char * pchURL, uint32_t cchURLSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchURL != NULL && cchURLSize > 0) pchURL[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCPreviewURL", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetQueryUGCMetadata(uint64 handle, uint32 index, char* pchMetadata, uint32 cchMetadatasize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCMetadata(void *self, uint64_t handle, uint32_t index, char * pchMetadata, uint32_t cchMetadatasize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchMetadata != NULL && cchMetadatasize > 0) pchMetadata[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCMetadata", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetQueryUGCChildren(uint64 handle, uint32 index, uint64* pvecPublishedFileID, uint32 cMaxEntries) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCChildren", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetQueryUGCStatistic(uint64 handle, uint32 index, uint32 eStatType, uint64* pStatValue) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCStatistic(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCStatistic", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetQueryUGCNumAdditionalPreviews(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCNumAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCNumAdditionalPreviews", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: GetQueryUGCAdditionalPreview(uint64 handle, uint32 index, uint32 previewIndex, char* pchURLOrVideoID, uint32 cchURLSize, char* pchOriginalFileName, uint32 cchOriginalFileNameSize, uint32* pPreviewType) -> bool | __thiscall ret 36 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCAdditionalPreview(void *self, uint64_t handle, uint32_t index, uint32_t previewIndex, char * pchURLOrVideoID, uint32_t cchURLSize, char * pchOriginalFileName, uint32_t cchOriginalFileNameSize, uint32_t * pPreviewType) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchURLOrVideoID != NULL && cchURLSize > 0) pchURLOrVideoID[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCAdditionalPreview", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: GetQueryUGCNumKeyValueTags(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCNumKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCNumKeyValueTags", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: GetQueryUGCKeyValueTag_2(uint64 handle, uint32 index, const char* pchKey, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCKeyValueTag_2(void *self, uint64_t handle, uint32_t index, const char * pchKey, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCKeyValueTag_2", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: GetQueryUGCKeyValueTag(uint64 handle, uint32 index, uint32 keyValueTagIndex, char* pchKey, uint32 cchKeySize, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 32 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCKeyValueTag(void *self, uint64_t handle, uint32_t index, uint32_t keyValueTagIndex, char * pchKey, uint32_t cchKeySize, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchKey != NULL && cchKeySize > 0) pchKey[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCKeyValueTag", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetQueryUGCContentDescriptors(uint64 handle, uint32 index, uint32* pvecDescriptors, uint32 cMaxEntries) -> uint32 | __thiscall ret 20 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetQueryUGCContentDescriptors(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetQueryUGCContentDescriptors", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: ReleaseQueryUGCRequest(uint64 handle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_ReleaseQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "ReleaseQueryUGCRequest", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: AddRequiredTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_AddRequiredTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "AddRequiredTag", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: AddRequiredTagGroup(uint64 handle, const w_SteamParamStringArray_t* pTagGroups) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_AddRequiredTagGroup(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "AddRequiredTagGroup", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: AddExcludedTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_AddExcludedTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "AddExcludedTag", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: SetReturnOnlyIDs(uint64 handle, bool bReturnOnlyIDs) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetReturnOnlyIDs(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetReturnOnlyIDs", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: SetReturnKeyValueTags(uint64 handle, bool bReturnKeyValueTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetReturnKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetReturnKeyValueTags", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: SetReturnLongDescription(uint64 handle, bool bReturnLongDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetReturnLongDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetReturnLongDescription", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: SetReturnMetadata(uint64 handle, bool bReturnMetadata) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetReturnMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetReturnMetadata", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: SetReturnChildren(uint64 handle, bool bReturnChildren) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetReturnChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetReturnChildren", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: SetReturnAdditionalPreviews(uint64 handle, bool bReturnAdditionalPreviews) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetReturnAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetReturnAdditionalPreviews", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: SetReturnTotalOnly(uint64 handle, bool bReturnTotalOnly) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetReturnTotalOnly(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetReturnTotalOnly", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: SetReturnPlaytimeStats(uint64 handle, uint32 unDays) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetReturnPlaytimeStats(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetReturnPlaytimeStats", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: SetLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetLanguage", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 32: SetAllowCachedResponse(uint64 handle, uint32 unMaxAgeSeconds) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetAllowCachedResponse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetAllowCachedResponse", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: SetCloudFileNameFilter(uint64 handle, const char* pMatchCloudFileName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetCloudFileNameFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetCloudFileNameFilter", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: SetMatchAnyTag(uint64 handle, bool bMatchAnyTag) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetMatchAnyTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetMatchAnyTag", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: SetSearchText(uint64 handle, const char* pSearchText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetSearchText(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetSearchText", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: SetRankedByTrendDays(uint64 handle, uint32 unDays) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetRankedByTrendDays(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetRankedByTrendDays", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: SetTimeCreatedDateRange(uint64 handle, uint32 rtStart, uint32 rtEnd) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetTimeCreatedDateRange(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetTimeCreatedDateRange", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: SetTimeUpdatedDateRange(uint64 handle, uint32 rtStart, uint32 rtEnd) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetTimeUpdatedDateRange(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetTimeUpdatedDateRange", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 39: AddRequiredKeyValueTag(uint64 handle, const char* pKey, const char* pValue) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_AddRequiredKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "AddRequiredKeyValueTag", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: RequestUGCDetails(uint64 nPublishedFileID, uint32 unMaxAgeSeconds) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_RequestUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "RequestUGCDetails", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 41: CreateItem(uint32 nConsumerAppId, uint32 eFileType) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_CreateItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "CreateItem", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 42: StartItemUpdate(uint32 nConsumerAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_StartItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "StartItemUpdate", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 43: SetItemTitle(uint64 handle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetItemTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetItemTitle", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 44: SetItemDescription(uint64 handle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetItemDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetItemDescription", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 45: SetItemUpdateLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetItemUpdateLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetItemUpdateLanguage", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 46: SetItemMetadata(uint64 handle, const char* pchMetaData) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetItemMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetItemMetadata", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 47: SetItemVisibility(uint64 handle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetItemVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetItemVisibility", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 48: SetItemTags(uint64 updateHandle, const w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetItemTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetItemTags", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 49: SetItemContent(uint64 handle, const char* pszContentFolder) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetItemContent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetItemContent", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 50: SetItemPreview(uint64 handle, const char* pszPreviewFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetItemPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetItemPreview", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 51: SetAllowLegacyUpload(uint64 handle, bool bAllowLegacyUpload) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetAllowLegacyUpload(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetAllowLegacyUpload", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 52: RemoveAllItemKeyValueTags(uint64 handle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_RemoveAllItemKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "RemoveAllItemKeyValueTags", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 53: RemoveItemKeyValueTags(uint64 handle, const char* pchKey) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_RemoveItemKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "RemoveItemKeyValueTags", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 54: AddItemKeyValueTag(uint64 handle, const char* pchKey, const char* pchValue) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_AddItemKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "AddItemKeyValueTag", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 55: AddItemPreviewFile(uint64 handle, const char* pszPreviewFile, uint32 type) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_AddItemPreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "AddItemPreviewFile", 55, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 56: AddItemPreviewVideo(uint64 handle, const char* pszVideoID) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_AddItemPreviewVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "AddItemPreviewVideo", 56, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 57: UpdateItemPreviewFile(uint64 handle, uint32 index, const char* pszPreviewFile) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_UpdateItemPreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "UpdateItemPreviewFile", 57, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 58: UpdateItemPreviewVideo(uint64 handle, uint32 index, const char* pszVideoID) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_UpdateItemPreviewVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "UpdateItemPreviewVideo", 58, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 59: RemoveItemPreview(uint64 handle, uint32 index) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_RemoveItemPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "RemoveItemPreview", 59, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 60: AddContentDescriptor(uint64 handle, uint32 descid) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_AddContentDescriptor(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "AddContentDescriptor", 60, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 61: RemoveContentDescriptor(uint64 handle, uint32 descid) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_RemoveContentDescriptor(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "RemoveContentDescriptor", 61, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 62: SubmitItemUpdate(uint64 handle, const char* pchChangeNote) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SubmitItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SubmitItemUpdate", 62, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 63: GetItemUpdateProgress(uint64 handle, uint64* punBytesProcessed, uint64* punBytesTotal) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetItemUpdateProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetItemUpdateProgress", 63, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 64: SetUserItemVote(uint64 nPublishedFileID, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SetUserItemVote", 64, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 65: GetUserItemVote(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetUserItemVote", 65, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 66: AddItemToFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_AddItemToFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "AddItemToFavorites", 66, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 67: RemoveItemFromFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_RemoveItemFromFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "RemoveItemFromFavorites", 67, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 68: SubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SubscribeItem", 68, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 69: UnsubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_UnsubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "UnsubscribeItem", 69, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 70: GetNumSubscribedItems() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetNumSubscribedItems(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetNumSubscribedItems", 70, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 71: GetSubscribedItems(uint64* pvecPublishedFileID, uint32 cMaxEntries) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetSubscribedItems(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetSubscribedItems", 71, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 72: GetItemState(uint64 nPublishedFileID) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetItemState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetItemState", 72, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 73: GetItemInstallInfo(uint64 nPublishedFileID, uint64* punSizeOnDisk, char* pchFolder, uint32 cchFolderSize, uint32* punTimeStamp) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetItemInstallInfo(void *self, uint64_t nPublishedFileID, uint64_t * punSizeOnDisk, char * pchFolder, uint32_t cchFolderSize, uint32_t * punTimeStamp) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchFolder != NULL && cchFolderSize > 0) pchFolder[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetItemInstallInfo", 73, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 74: GetItemDownloadInfo(uint64 nPublishedFileID, uint64* punBytesDownloaded, uint64* punBytesTotal) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetItemDownloadInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetItemDownloadInfo", 74, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 75: DownloadItem(uint64 nPublishedFileID, bool bHighPriority) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_DownloadItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "DownloadItem", 75, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 76: BInitWorkshopForGameServer(uint32 unWorkshopDepotID, const char* pszFolder) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_BInitWorkshopForGameServer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "BInitWorkshopForGameServer", 76, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 77: SuspendDownloads(bool bSuspend) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SuspendDownloads(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SuspendDownloads", 77, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 78: StartPlaytimeTracking(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_StartPlaytimeTracking(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "StartPlaytimeTracking", 78, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 79: StopPlaytimeTracking(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_StopPlaytimeTracking(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "StopPlaytimeTracking", 79, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 80: StopPlaytimeTrackingForAllItems() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_StopPlaytimeTrackingForAllItems(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "StopPlaytimeTrackingForAllItems", 80, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 81: AddDependency(uint64 nParentPublishedFileID, uint64 nChildPublishedFileID) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_AddDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "AddDependency", 81, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 82: RemoveDependency(uint64 nParentPublishedFileID, uint64 nChildPublishedFileID) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_RemoveDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "RemoveDependency", 82, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 83: AddAppDependency(uint64 nPublishedFileID, uint32 nAppID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_AddAppDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "AddAppDependency", 83, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 84: RemoveAppDependency(uint64 nPublishedFileID, uint32 nAppID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_RemoveAppDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "RemoveAppDependency", 84, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 85: GetAppDependencies(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetAppDependencies(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetAppDependencies", 85, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 86: DeleteItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_DeleteItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "DeleteItem", 86, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 87: ShowWorkshopEULA() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION017_ShowWorkshopEULA(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "ShowWorkshopEULA", 87, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 88: GetWorkshopEULAStatus() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_GetWorkshopEULAStatus(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "GetWorkshopEULAStatus", 88, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -21118,573 +24119,761 @@ static struct FakeSTEAMUGC_INTERFACE_VERSION017 g_steamugc_interface_version017_
 
 // slot 0: CreateQueryUserUGCRequest(uint32 unAccountID, uint32 eListType, uint32 eMatchingUGCType, uint32 eSortOrder, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 28 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_CreateQueryUserUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "CreateQueryUserUGCRequest", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 1: CreateQueryAllUGCRequest_2(uint32 eQueryType, uint32 eMatchingeMatchingUGCTypeFileType, uint32 nCreatorAppID, uint32 nConsumerAppID, const char* pchCursor) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_CreateQueryAllUGCRequest_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "CreateQueryAllUGCRequest_2", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 2: CreateQueryAllUGCRequest(uint32 eQueryType, uint32 eMatchingeMatchingUGCTypeFileType, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_CreateQueryAllUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "CreateQueryAllUGCRequest", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 3: CreateQueryUGCDetailsRequest(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_CreateQueryUGCDetailsRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "CreateQueryUGCDetailsRequest", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 4: SendQueryUGCRequest(uint64 handle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SendQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SendQueryUGCRequest", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 5: GetQueryUGCResult(uint64 handle, uint32 index, w_SteamUGCDetails_t_160* pDetails) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCResult", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetQueryUGCNumTags(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCNumTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCNumTags", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: GetQueryUGCTag(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCTag(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCTag", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: GetQueryUGCTagDisplayName(uint64 handle, uint32 index, uint32 indexTag, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCTagDisplayName(void *self, uint64_t handle, uint32_t index, uint32_t indexTag, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCTagDisplayName", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetQueryUGCPreviewURL(uint64 handle, uint32 index, char* pchURL, uint32 cchURLSize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCPreviewURL(void *self, uint64_t handle, uint32_t index, char * pchURL, uint32_t cchURLSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchURL != NULL && cchURLSize > 0) pchURL[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCPreviewURL", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetQueryUGCMetadata(uint64 handle, uint32 index, char* pchMetadata, uint32 cchMetadatasize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCMetadata(void *self, uint64_t handle, uint32_t index, char * pchMetadata, uint32_t cchMetadatasize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchMetadata != NULL && cchMetadatasize > 0) pchMetadata[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCMetadata", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetQueryUGCChildren(uint64 handle, uint32 index, uint64* pvecPublishedFileID, uint32 cMaxEntries) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCChildren", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetQueryUGCStatistic(uint64 handle, uint32 index, uint32 eStatType, uint64* pStatValue) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCStatistic(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCStatistic", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetQueryUGCNumAdditionalPreviews(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCNumAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCNumAdditionalPreviews", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: GetQueryUGCAdditionalPreview(uint64 handle, uint32 index, uint32 previewIndex, char* pchURLOrVideoID, uint32 cchURLSize, char* pchOriginalFileName, uint32 cchOriginalFileNameSize, uint32* pPreviewType) -> bool | __thiscall ret 36 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCAdditionalPreview(void *self, uint64_t handle, uint32_t index, uint32_t previewIndex, char * pchURLOrVideoID, uint32_t cchURLSize, char * pchOriginalFileName, uint32_t cchOriginalFileNameSize, uint32_t * pPreviewType) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchURLOrVideoID != NULL && cchURLSize > 0) pchURLOrVideoID[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCAdditionalPreview", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: GetQueryUGCNumKeyValueTags(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCNumKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCNumKeyValueTags", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: GetQueryUGCKeyValueTag_2(uint64 handle, uint32 index, const char* pchKey, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCKeyValueTag_2(void *self, uint64_t handle, uint32_t index, const char * pchKey, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchValue != NULL && cchValueSize > 0) pchValue[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCKeyValueTag_2", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: GetQueryUGCKeyValueTag(uint64 handle, uint32 index, uint32 keyValueTagIndex, char* pchKey, uint32 cchKeySize, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 32 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCKeyValueTag(void *self, uint64_t handle, uint32_t index, uint32_t keyValueTagIndex, char * pchKey, uint32_t cchKeySize, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchKey != NULL && cchKeySize > 0) pchKey[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCKeyValueTag", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetNumSupportedGameVersions(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetNumSupportedGameVersions(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetNumSupportedGameVersions", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: GetSupportedGameVersionData(uint64 handle, uint32 index, uint32 versionIndex, char* pchGameBranchMin, char* pchGameBranchMax, uint32 cchGameBranchSize) -> bool | __thiscall ret 28 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetSupportedGameVersionData(void *self, uint64_t handle, uint32_t index, uint32_t versionIndex, char * pchGameBranchMin, char * pchGameBranchMax, uint32_t cchGameBranchSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchGameBranchMax != NULL && cchGameBranchSize > 0) pchGameBranchMax[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetSupportedGameVersionData", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: GetQueryUGCContentDescriptors(uint64 handle, uint32 index, uint32* pvecDescriptors, uint32 cMaxEntries) -> uint32 | __thiscall ret 20 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetQueryUGCContentDescriptors(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetQueryUGCContentDescriptors", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: ReleaseQueryUGCRequest(uint64 handle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_ReleaseQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "ReleaseQueryUGCRequest", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: AddRequiredTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_AddRequiredTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "AddRequiredTag", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: AddRequiredTagGroup(uint64 handle, const w_SteamParamStringArray_t* pTagGroups) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_AddRequiredTagGroup(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "AddRequiredTagGroup", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: AddExcludedTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_AddExcludedTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "AddExcludedTag", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: SetReturnOnlyIDs(uint64 handle, bool bReturnOnlyIDs) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetReturnOnlyIDs(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetReturnOnlyIDs", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: SetReturnKeyValueTags(uint64 handle, bool bReturnKeyValueTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetReturnKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetReturnKeyValueTags", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: SetReturnLongDescription(uint64 handle, bool bReturnLongDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetReturnLongDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetReturnLongDescription", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: SetReturnMetadata(uint64 handle, bool bReturnMetadata) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetReturnMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetReturnMetadata", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: SetReturnChildren(uint64 handle, bool bReturnChildren) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetReturnChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetReturnChildren", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: SetReturnAdditionalPreviews(uint64 handle, bool bReturnAdditionalPreviews) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetReturnAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetReturnAdditionalPreviews", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: SetReturnTotalOnly(uint64 handle, bool bReturnTotalOnly) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetReturnTotalOnly(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetReturnTotalOnly", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 32: SetReturnPlaytimeStats(uint64 handle, uint32 unDays) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetReturnPlaytimeStats(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetReturnPlaytimeStats", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: SetLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetLanguage", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: SetAllowCachedResponse(uint64 handle, uint32 unMaxAgeSeconds) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetAllowCachedResponse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetAllowCachedResponse", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: SetAdminQuery(uint64 handle, bool bAdminQuery) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetAdminQuery(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetAdminQuery", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: SetCloudFileNameFilter(uint64 handle, const char* pMatchCloudFileName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetCloudFileNameFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetCloudFileNameFilter", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: SetMatchAnyTag(uint64 handle, bool bMatchAnyTag) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetMatchAnyTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetMatchAnyTag", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: SetSearchText(uint64 handle, const char* pSearchText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetSearchText(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetSearchText", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 39: SetRankedByTrendDays(uint64 handle, uint32 unDays) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetRankedByTrendDays(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetRankedByTrendDays", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: SetTimeCreatedDateRange(uint64 handle, uint32 rtStart, uint32 rtEnd) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetTimeCreatedDateRange(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetTimeCreatedDateRange", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 41: SetTimeUpdatedDateRange(uint64 handle, uint32 rtStart, uint32 rtEnd) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetTimeUpdatedDateRange(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetTimeUpdatedDateRange", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 42: AddRequiredKeyValueTag(uint64 handle, const char* pKey, const char* pValue) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_AddRequiredKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "AddRequiredKeyValueTag", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: RequestUGCDetails(uint64 nPublishedFileID, uint32 unMaxAgeSeconds) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_RequestUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "RequestUGCDetails", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 44: CreateItem(uint32 nConsumerAppId, uint32 eFileType) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_CreateItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "CreateItem", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 45: StartItemUpdate(uint32 nConsumerAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_StartItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "StartItemUpdate", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 46: SetItemTitle(uint64 handle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetItemTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetItemTitle", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 47: SetItemDescription(uint64 handle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetItemDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetItemDescription", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 48: SetItemUpdateLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetItemUpdateLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetItemUpdateLanguage", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 49: SetItemMetadata(uint64 handle, const char* pchMetaData) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetItemMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetItemMetadata", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 50: SetItemVisibility(uint64 handle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetItemVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetItemVisibility", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 51: SetItemTags(uint64 updateHandle, const w_SteamParamStringArray_t* pTags, bool bAllowAdminTags) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetItemTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetItemTags", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 52: SetItemContent(uint64 handle, const char* pszContentFolder) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetItemContent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetItemContent", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 53: SetItemPreview(uint64 handle, const char* pszPreviewFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetItemPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetItemPreview", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 54: SetAllowLegacyUpload(uint64 handle, bool bAllowLegacyUpload) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetAllowLegacyUpload(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetAllowLegacyUpload", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 55: RemoveAllItemKeyValueTags(uint64 handle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_RemoveAllItemKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "RemoveAllItemKeyValueTags", 55, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 56: RemoveItemKeyValueTags(uint64 handle, const char* pchKey) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_RemoveItemKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "RemoveItemKeyValueTags", 56, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 57: AddItemKeyValueTag(uint64 handle, const char* pchKey, const char* pchValue) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_AddItemKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "AddItemKeyValueTag", 57, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 58: AddItemPreviewFile(uint64 handle, const char* pszPreviewFile, uint32 type) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_AddItemPreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "AddItemPreviewFile", 58, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 59: AddItemPreviewVideo(uint64 handle, const char* pszVideoID) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_AddItemPreviewVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "AddItemPreviewVideo", 59, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 60: UpdateItemPreviewFile(uint64 handle, uint32 index, const char* pszPreviewFile) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_UpdateItemPreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "UpdateItemPreviewFile", 60, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 61: UpdateItemPreviewVideo(uint64 handle, uint32 index, const char* pszVideoID) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_UpdateItemPreviewVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "UpdateItemPreviewVideo", 61, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 62: RemoveItemPreview(uint64 handle, uint32 index) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_RemoveItemPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "RemoveItemPreview", 62, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 63: AddContentDescriptor(uint64 handle, uint32 descid) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_AddContentDescriptor(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "AddContentDescriptor", 63, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 64: RemoveContentDescriptor(uint64 handle, uint32 descid) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_RemoveContentDescriptor(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "RemoveContentDescriptor", 64, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 65: SetRequiredGameVersions(uint64 handle, const char* pszGameBranchMin, const char* pszGameBranchMax) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetRequiredGameVersions(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetRequiredGameVersions", 65, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 66: SubmitItemUpdate(uint64 handle, const char* pchChangeNote) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SubmitItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SubmitItemUpdate", 66, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 67: GetItemUpdateProgress(uint64 handle, uint64* punBytesProcessed, uint64* punBytesTotal) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetItemUpdateProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetItemUpdateProgress", 67, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 68: SetUserItemVote(uint64 nPublishedFileID, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SetUserItemVote", 68, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 69: GetUserItemVote(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetUserItemVote", 69, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 70: AddItemToFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_AddItemToFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "AddItemToFavorites", 70, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 71: RemoveItemFromFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_RemoveItemFromFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "RemoveItemFromFavorites", 71, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 72: SubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SubscribeItem", 72, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 73: UnsubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_UnsubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "UnsubscribeItem", 73, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 74: GetNumSubscribedItems() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetNumSubscribedItems(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetNumSubscribedItems", 74, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 75: GetSubscribedItems(uint64* pvecPublishedFileID, uint32 cMaxEntries) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetSubscribedItems(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetSubscribedItems", 75, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 76: GetItemState(uint64 nPublishedFileID) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetItemState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetItemState", 76, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 77: GetItemInstallInfo(uint64 nPublishedFileID, uint64* punSizeOnDisk, char* pchFolder, uint32 cchFolderSize, uint32* punTimeStamp) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetItemInstallInfo(void *self, uint64_t nPublishedFileID, uint64_t * punSizeOnDisk, char * pchFolder, uint32_t cchFolderSize, uint32_t * punTimeStamp) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchFolder != NULL && cchFolderSize > 0) pchFolder[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetItemInstallInfo", 77, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 78: GetItemDownloadInfo(uint64 nPublishedFileID, uint64* punBytesDownloaded, uint64* punBytesTotal) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetItemDownloadInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetItemDownloadInfo", 78, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 79: DownloadItem(uint64 nPublishedFileID, bool bHighPriority) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_DownloadItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "DownloadItem", 79, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 80: BInitWorkshopForGameServer(uint32 unWorkshopDepotID, const char* pszFolder) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_BInitWorkshopForGameServer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "BInitWorkshopForGameServer", 80, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 81: SuspendDownloads(bool bSuspend) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SuspendDownloads(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SuspendDownloads", 81, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 82: StartPlaytimeTracking(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_StartPlaytimeTracking(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "StartPlaytimeTracking", 82, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 83: StopPlaytimeTracking(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_StopPlaytimeTracking(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "StopPlaytimeTracking", 83, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 84: StopPlaytimeTrackingForAllItems() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_StopPlaytimeTrackingForAllItems(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "StopPlaytimeTrackingForAllItems", 84, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 85: AddDependency(uint64 nParentPublishedFileID, uint64 nChildPublishedFileID) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_AddDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "AddDependency", 85, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 86: RemoveDependency(uint64 nParentPublishedFileID, uint64 nChildPublishedFileID) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_RemoveDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "RemoveDependency", 86, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 87: AddAppDependency(uint64 nPublishedFileID, uint32 nAppID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_AddAppDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "AddAppDependency", 87, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 88: RemoveAppDependency(uint64 nPublishedFileID, uint32 nAppID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_RemoveAppDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "RemoveAppDependency", 88, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 89: GetAppDependencies(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetAppDependencies(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetAppDependencies", 89, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 90: DeleteItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_DeleteItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "DeleteItem", 90, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 91: ShowWorkshopEULA() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION020_ShowWorkshopEULA(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "ShowWorkshopEULA", 91, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 92: GetWorkshopEULAStatus() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetWorkshopEULAStatus(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetWorkshopEULAStatus", 92, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 93: GetUserContentDescriptorPreferences(uint32* pvecDescriptors, uint32 cMaxEntries) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_GetUserContentDescriptorPreferences(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "GetUserContentDescriptorPreferences", 93, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -21793,195 +24982,271 @@ static struct FakeSTEAMUGC_INTERFACE_VERSION020 g_steamugc_interface_version020_
 
 // slot 0: destructor() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_destructor(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "destructor", 0, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 1: Init() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_Init(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "Init", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: Shutdown() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_Shutdown(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "Shutdown", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: CreateBrowser(const char* pchUserAgent, const char* pchUserCSS) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_CreateBrowser(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "CreateBrowser", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 4: RemoveBrowser(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_RemoveBrowser(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "RemoveBrowser", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: LoadURL(uint32 unBrowserHandle, const char* pchURL, const char* pchPostData) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_LoadURL(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "LoadURL", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: SetSize(uint32 unBrowserHandle, uint32 unWidth, uint32 unHeight) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_SetSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "SetSize", 6, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 7: StopLoad(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_StopLoad(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "StopLoad", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: Reload(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_Reload(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "Reload", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: GoBack(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_GoBack(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "GoBack", 9, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 10: GoForward(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_GoForward(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "GoForward", 10, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 11: AddHeader(uint32 unBrowserHandle, const char* pchKey, const char* pchValue) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_AddHeader(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "AddHeader", 11, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 12: ExecuteJavascript(uint32 unBrowserHandle, const char* pchScript) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_ExecuteJavascript(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "ExecuteJavascript", 12, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 13: MouseUp(uint32 unBrowserHandle, uint32 eMouseButton) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_MouseUp(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "MouseUp", 13, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 14: MouseDown(uint32 unBrowserHandle, uint32 eMouseButton) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_MouseDown(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "MouseDown", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: MouseDoubleClick(uint32 unBrowserHandle, uint32 eMouseButton) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_MouseDoubleClick(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "MouseDoubleClick", 15, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 16: MouseMove(uint32 unBrowserHandle, int32 x, int32 y) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_MouseMove(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "MouseMove", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: MouseWheel(uint32 unBrowserHandle, int32 nDelta) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_MouseWheel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "MouseWheel", 17, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 18: KeyDown(uint32 unBrowserHandle, uint32 nNativeKeyCode, uint32 eHTMLKeyModifiers, bool bIsSystemKey) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_KeyDown(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "KeyDown", 18, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 19: KeyUp(uint32 unBrowserHandle, uint32 nNativeKeyCode, uint32 eHTMLKeyModifiers) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_KeyUp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "KeyUp", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 20: KeyChar(uint32 unBrowserHandle, uint32 cUnicodeChar, uint32 eHTMLKeyModifiers) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_KeyChar(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "KeyChar", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 21: SetHorizontalScroll(uint32 unBrowserHandle, uint32 nAbsolutePixelScroll) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_SetHorizontalScroll(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "SetHorizontalScroll", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 22: SetVerticalScroll(uint32 unBrowserHandle, uint32 nAbsolutePixelScroll) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_SetVerticalScroll(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "SetVerticalScroll", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 23: SetKeyFocus(uint32 unBrowserHandle, bool bHasKeyFocus) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_SetKeyFocus(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "SetKeyFocus", 23, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 24: ViewSource(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_ViewSource(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "ViewSource", 24, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 25: CopyToClipboard(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_CopyToClipboard(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "CopyToClipboard", 25, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 26: PasteFromClipboard(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_PasteFromClipboard(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "PasteFromClipboard", 26, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 27: Find(uint32 unBrowserHandle, const char* pchSearchStr, bool bCurrentlyInFind, bool bReverse) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_Find(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "Find", 27, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 28: StopFind(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_StopFind(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "StopFind", 28, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 29: GetLinkAtPosition(uint32 unBrowserHandle, int32 x, int32 y) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_GetLinkAtPosition(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "GetLinkAtPosition", 29, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 30: SetCookie(const char* pchHostname, const char* pchKey, const char* pchValue, const char* pchPath, uint32 nExpires, bool bSecure, bool bHTTPOnly) -> void | __thiscall ret 28 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_SetCookie(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "SetCookie", 30, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 31: SetPageScaleFactor(uint32 unBrowserHandle, float flZoom, int32 nPointX, int32 nPointY) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_SetPageScaleFactor(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "SetPageScaleFactor", 31, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 32: SetBackgroundMode(uint32 unBrowserHandle, bool bBackgroundMode) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_SetBackgroundMode(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "SetBackgroundMode", 32, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 33: SetDPIScalingFactor(uint32 unBrowserHandle, float flDPIScaling) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_SetDPIScalingFactor(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "SetDPIScalingFactor", 33, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 34: OpenDeveloperTools(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_OpenDeveloperTools(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "OpenDeveloperTools", 34, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 35: AllowStartRequest(uint32 unBrowserHandle, bool bAllowed) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_AllowStartRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "AllowStartRequest", 35, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 36: JSDialogResponse(uint32 unBrowserHandle, bool bResult) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_JSDialogResponse(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "JSDialogResponse", 36, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 37: FileLoadDialogResponse(uint32 unBrowserHandle, const char** pchSelectedFiles) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_005_FileLoadDialogResponse(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_005", "FileLoadDialogResponse", 37, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steamhtmlsurface_interface_version_005_vtbl[38] = {
@@ -22033,227 +25298,303 @@ static struct FakeSTEAMHTMLSURFACE_INTERFACE_VERSION_005 g_steamhtmlsurface_inte
 
 // slot 0: GetResultStatus(int32 resultHandle) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetResultStatus(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetResultStatus", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: GetResultItems(int32 resultHandle, SteamItemDetails_t* pOutItemsArray, uint32* punOutItemsArraySize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetResultItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetResultItems", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: GetResultItemProperty(int32 resultHandle, uint32 unItemIndex, const char* pchPropertyName, char* pchValueBuffer, uint32* punValueBufferSizeOut) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetResultItemProperty(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetResultItemProperty", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: GetResultTimestamp(int32 resultHandle) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetResultTimestamp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetResultTimestamp", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: CheckResultSteamID(int32 resultHandle, CSteamID steamIDExpected) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_CheckResultSteamID(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "CheckResultSteamID", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: DestroyResult(int32 resultHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMINVENTORY_INTERFACE_V003_DestroyResult(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "DestroyResult", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: GetAllItems(int32* pResultHandle) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetAllItems(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetAllItems", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: GetItemsByID(int32* pResultHandle, const uint64_t* pInstanceIDs, uint32 unCountInstanceIDs) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetItemsByID(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetItemsByID", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: SerializeResult(int32 resultHandle, void* pOutBuffer, uint32* punOutBufferSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_SerializeResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "SerializeResult", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: DeserializeResult(int32* pOutResultHandle, const void* pBuffer, uint32 unBufferSize, bool bRESERVED_MUST_BE_FALSE) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_DeserializeResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "DeserializeResult", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GenerateItems(int32* pResultHandle, const int32_t* pArrayItemDefs, const uint32_t* punArrayQuantity, uint32 unArrayLength) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GenerateItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GenerateItems", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GrantPromoItems(int32* pResultHandle) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GrantPromoItems(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GrantPromoItems", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: AddPromoItem(int32* pResultHandle, int32 itemDef) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_AddPromoItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "AddPromoItem", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: AddPromoItems(int32* pResultHandle, const int32_t* pArrayItemDefs, uint32 unArrayLength) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_AddPromoItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "AddPromoItems", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: ConsumeItem(int32* pResultHandle, uint64 itemConsume, uint32 unQuantity) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_ConsumeItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "ConsumeItem", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: ExchangeItems(int32* pResultHandle, const int32_t* pArrayGenerate, const uint32_t* punArrayGenerateQuantity, uint32 unArrayGenerateLength, const uint64_t* pArrayDestroy, const uint32_t* punArrayDestroyQuantity, uint32 unArrayDestroyLength) -> bool | __thiscall ret 28 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_ExchangeItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "ExchangeItems", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: TransferItemQuantity(int32* pResultHandle, uint64 itemIdSource, uint32 unQuantity, uint64 itemIdDest) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_TransferItemQuantity(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "TransferItemQuantity", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: SendItemDropHeartbeat() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_STEAMINVENTORY_INTERFACE_V003_SendItemDropHeartbeat(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "SendItemDropHeartbeat", 17, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 18: TriggerItemDrop(int32* pResultHandle, int32 dropListDefinition) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_TriggerItemDrop(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "TriggerItemDrop", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: TradeItems(int32* pResultHandle, CSteamID steamIDTradePartner, const uint64_t* pArrayGive, const uint32_t* pArrayGiveQuantity, uint32 nArrayGiveLength, const uint64_t* pArrayGet, const uint32_t* pArrayGetQuantity, uint32 nArrayGetLength) -> bool | __thiscall ret 36 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_TradeItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "TradeItems", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: LoadItemDefinitions() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_LoadItemDefinitions(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "LoadItemDefinitions", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: GetItemDefinitionIDs(int32* pItemDefIDs, uint32* punItemDefIDsArraySize) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetItemDefinitionIDs(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetItemDefinitionIDs", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: GetItemDefinitionProperty(int32 iDefinition, const char* pchPropertyName, char* pchValueBuffer, uint32* punValueBufferSizeOut) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetItemDefinitionProperty(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetItemDefinitionProperty", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: RequestEligiblePromoItemDefinitionsIDs(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMINVENTORY_INTERFACE_V003_RequestEligiblePromoItemDefinitionsIDs(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "RequestEligiblePromoItemDefinitionsIDs", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 24: GetEligiblePromoItemDefinitionIDs(CSteamID steamID, int32* pItemDefIDs, uint32* punItemDefIDsArraySize) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetEligiblePromoItemDefinitionIDs(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetEligiblePromoItemDefinitionIDs", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: StartPurchase(const int32_t* pArrayItemDefs, const uint32_t* punArrayQuantity, uint32 unArrayLength) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMINVENTORY_INTERFACE_V003_StartPurchase(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "StartPurchase", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 26: RequestPrices() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMINVENTORY_INTERFACE_V003_RequestPrices(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "RequestPrices", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 27: GetNumItemsWithPrices() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetNumItemsWithPrices(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetNumItemsWithPrices", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: GetItemsWithPrices(int32* pArrayItemDefs, uint64* pCurrentPrices, uint64* pBasePrices, uint32 unArrayLength) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetItemsWithPrices(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetItemsWithPrices", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: GetItemPrice(int32 iDefinition, uint64* pCurrentPrice, uint64* pBasePrice) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_GetItemPrice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "GetItemPrice", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: StartUpdateProperties() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMINVENTORY_INTERFACE_V003_StartUpdateProperties(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "StartUpdateProperties", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 31: RemoveProperty(uint64 handle, uint64 nItemID, const char* pchPropertyName) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_RemoveProperty(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "RemoveProperty", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 32: SetProperty_4(uint64 handle, uint64 nItemID, const char* pchPropertyName, float flValue) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_SetProperty_4(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "SetProperty_4", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: SetProperty_3(uint64 handle, uint64 nItemID, const char* pchPropertyName, int64 nValue) -> bool | __thiscall ret 28 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_SetProperty_3(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "SetProperty_3", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: SetProperty_2(uint64 handle, uint64 nItemID, const char* pchPropertyName, bool bValue) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_SetProperty_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "SetProperty_2", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: SetProperty(uint64 handle, uint64 nItemID, const char* pchPropertyName, const char* pchPropertyValue) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_SetProperty(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "SetProperty", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: SubmitUpdateProperties(uint64 handle, int32* pResultHandle) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_SubmitUpdateProperties(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "SubmitUpdateProperties", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: InspectItem(int32* pResultHandle, const char* pchItemToken) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V003_InspectItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V003", "InspectItem", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -22365,19 +25706,25 @@ static const char * THISCALL vt_SteamUtils009_GetIPCountry(void *self) {
 
 // slot 5: GetImageSize(int32 iImage, uint32* pnWidth, uint32* pnHeight) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils009_GetImageSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "GetImageSize", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetImageRGBA(int32 iImage, uint8_t* pubDest, int32 nDestBufferSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils009_GetImageRGBA(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "GetImageRGBA", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: GetCSERIPPort(uint32* unIP, uint16_t* usPort) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUtils009_GetCSERIPPort(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "GetCSERIPPort", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -22403,41 +25750,55 @@ static uint32_t THISCALL vt_SteamUtils009_GetAppID(void *self) {
 
 // slot 10: SetOverlayNotificationPosition(uint32 eNotificationPosition) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils009_SetOverlayNotificationPosition(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "SetOverlayNotificationPosition", 10, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 11: IsAPICallCompleted(uint64 hSteamAPICall, bool* pbFailed) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils009_IsAPICallCompleted(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "IsAPICallCompleted", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetAPICallFailureReason(uint64 hSteamAPICall) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamUtils009_GetAPICallFailureReason(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "GetAPICallFailureReason", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetAPICallResult(uint64 hSteamAPICall, void* pCallback, int32 cubCallback, int32 iCallbackExpected, bool* pbFailed) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamUtils009_GetAPICallResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "GetAPICallResult", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: RunFrame() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUtils009_RunFrame(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "RunFrame", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: GetIPCCallCount() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUtils009_GetIPCCallCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "GetIPCCallCount", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils009_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "SetWarningMessageHook", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: IsOverlayEnabled() -> bool | __thiscall ret 0
@@ -22452,32 +25813,42 @@ static int THISCALL vt_SteamUtils009_IsOverlayEnabled(void *self) {
 
 // slot 18: BOverlayNeedsPresent() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils009_BOverlayNeedsPresent(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "BOverlayNeedsPresent", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: CheckFileSignature(const char* szFileName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamUtils009_CheckFileSignature(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "CheckFileSignature", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 20: ShowGamepadTextInput(uint32 eInputMode, uint32 eLineInputMode, const char* pchDescription, uint32 unCharMax, const char* pchExistingText) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamUtils009_ShowGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "ShowGamepadTextInput", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: GetEnteredGamepadTextLength() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUtils009_GetEnteredGamepadTextLength(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "GetEnteredGamepadTextLength", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUtils009_GetEnteredGamepadTextInput(void *self, char * pchText, uint32_t cchText) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchText != NULL && cchText > 0) pchText[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "GetEnteredGamepadTextInput", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -22512,7 +25883,9 @@ static int THISCALL vt_SteamUtils009_IsSteamRunningInVR(void *self) {
 
 // slot 25: SetOverlayNotificationInset(int32 nHorizontalInset, int32 nVerticalInset) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUtils009_SetOverlayNotificationInset(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "SetOverlayNotificationInset", 25, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 26: IsSteamInBigPictureMode() -> bool | __thiscall ret 0
@@ -22527,42 +25900,56 @@ static int THISCALL vt_SteamUtils009_IsSteamInBigPictureMode(void *self) {
 
 // slot 27: StartVRDashboard() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUtils009_StartVRDashboard(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "StartVRDashboard", 27, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 28: IsVRHeadsetStreamingEnabled() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils009_IsVRHeadsetStreamingEnabled(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "IsVRHeadsetStreamingEnabled", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: SetVRHeadsetStreamingEnabled(bool bEnabled) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils009_SetVRHeadsetStreamingEnabled(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "SetVRHeadsetStreamingEnabled", 29, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 30: IsSteamChinaLauncher() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils009_IsSteamChinaLauncher(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "IsSteamChinaLauncher", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: InitFilterText() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils009_InitFilterText(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "InitFilterText", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 32: FilterText(char* pchOutFilteredText, uint32 nByteSizeOutFilteredText, const char* pchInputMessage, bool bLegalOnly) -> int32 | __thiscall ret 16 (STUB)
 static int32_t THISCALL vt_SteamUtils009_FilterText(void *self, char * pchOutFilteredText, uint32_t nByteSizeOutFilteredText, const char * pchInputMessage, int bLegalOnly) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchOutFilteredText != NULL && nByteSizeOutFilteredText > 0) pchOutFilteredText[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "FilterText", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: GetIPv6ConnectivityState(uint32 eProtocol) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_SteamUtils009_GetIPv6ConnectivityState(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils009", "GetIPv6ConnectivityState", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -22611,179 +25998,241 @@ static struct FakeSteamUtils009 g_steamutils009_instance = { g_steamutils009_vtb
 
 // slot 0: Init() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamController006_Init(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "Init", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: Shutdown() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamController006_Shutdown(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "Shutdown", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: RunFrame() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamController006_RunFrame(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "RunFrame", 2, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 3: GetConnectedControllers(uint64* handlesOut) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamController006_GetConnectedControllers(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetConnectedControllers", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: ShowBindingPanel(uint64 controllerHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamController006_ShowBindingPanel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "ShowBindingPanel", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: GetActionSetHandle(const char* pszActionSetName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamController006_GetActionSetHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetActionSetHandle", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 6: ActivateActionSet(uint64 controllerHandle, uint64 actionSetHandle) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController006_ActivateActionSet(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "ActivateActionSet", 6, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 7: GetCurrentActionSet(uint64 controllerHandle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamController006_GetCurrentActionSet(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetCurrentActionSet", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 8: ActivateActionSetLayer(uint64 controllerHandle, uint64 actionSetLayerHandle) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController006_ActivateActionSetLayer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "ActivateActionSetLayer", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: DeactivateActionSetLayer(uint64 controllerHandle, uint64 actionSetLayerHandle) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController006_DeactivateActionSetLayer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "DeactivateActionSetLayer", 9, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 10: DeactivateAllActionSetLayers(uint64 controllerHandle) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamController006_DeactivateAllActionSetLayers(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "DeactivateAllActionSetLayers", 10, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 11: GetActiveActionSetLayers(uint64 controllerHandle, uint64* handlesOut) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_SteamController006_GetActiveActionSetLayers(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetActiveActionSetLayers", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetDigitalActionHandle(const char* pszActionName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamController006_GetDigitalActionHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetDigitalActionHandle", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 13: GetDigitalActionData(uint64 controllerHandle, uint64 digitalActionHandle) -> ControllerDigitalActionData_t | __thiscall ret 20 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamController006_GetDigitalActionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 2);
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetDigitalActionData", 13, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 14: GetDigitalActionOrigins(uint64 controllerHandle, uint64 actionSetHandle, uint64 digitalActionHandle, uint32* originsOut) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamController006_GetDigitalActionOrigins(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetDigitalActionOrigins", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: GetAnalogActionHandle(const char* pszActionName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamController006_GetAnalogActionHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetAnalogActionHandle", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 16: GetAnalogActionData(uint64 controllerHandle, uint64 analogActionHandle) -> ControllerAnalogActionData_t | __thiscall ret 20 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamController006_GetAnalogActionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 16);
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetAnalogActionData", 16, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 17: GetAnalogActionOrigins(uint64 controllerHandle, uint64 actionSetHandle, uint64 analogActionHandle, uint32* originsOut) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamController006_GetAnalogActionOrigins(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetAnalogActionOrigins", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: StopAnalogActionMomentum(uint64 controllerHandle, uint64 eAction) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController006_StopAnalogActionMomentum(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "StopAnalogActionMomentum", 18, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 19: TriggerHapticPulse(uint64 controllerHandle, uint32 eTargetPad, uint32 usDurationMicroSec) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController006_TriggerHapticPulse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "TriggerHapticPulse", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 20: TriggerRepeatedHapticPulse(uint64 controllerHandle, uint32 eTargetPad, uint32 usDurationMicroSec, uint32 usOffMicroSec, uint32 unRepeat, uint32 nFlags) -> void | __thiscall ret 28 (STUB)
 static void THISCALL vt_SteamController006_TriggerRepeatedHapticPulse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "TriggerRepeatedHapticPulse", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 21: TriggerVibration(uint64 controllerHandle, uint32 usLeftSpeed, uint32 usRightSpeed) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController006_TriggerVibration(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "TriggerVibration", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 22: SetLEDColor(uint64 controllerHandle, bool nColorR, bool nColorG, bool nColorB, uint32 nFlags) -> void | __thiscall ret 24 (STUB)
 static void THISCALL vt_SteamController006_SetLEDColor(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "SetLEDColor", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 23: GetGamepadIndexForController(uint64 ulControllerHandle) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamController006_GetGamepadIndexForController(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetGamepadIndexForController", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: GetControllerForGamepadIndex(int32 nIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamController006_GetControllerForGamepadIndex(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetControllerForGamepadIndex", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 25: GetMotionData(uint64 controllerHandle) -> ControllerMotionData_t | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamController006_GetMotionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 40);
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetMotionData", 25, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 26: ShowDigitalActionOrigins(uint64 controllerHandle, uint64 digitalActionHandle, float flScale, float flXPosition, float flYPosition) -> bool | __thiscall ret 28 (STUB)
 static int THISCALL vt_SteamController006_ShowDigitalActionOrigins(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "ShowDigitalActionOrigins", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: ShowAnalogActionOrigins(uint64 controllerHandle, uint64 analogActionHandle, float flScale, float flXPosition, float flYPosition) -> bool | __thiscall ret 28 (STUB)
 static int THISCALL vt_SteamController006_ShowAnalogActionOrigins(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "ShowAnalogActionOrigins", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: GetStringForActionOrigin(uint32 eOrigin) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamController006_GetStringForActionOrigin(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetStringForActionOrigin", 28, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 29: GetGlyphForActionOrigin(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamController006_GetGlyphForActionOrigin(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetGlyphForActionOrigin", 29, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 30: GetInputTypeForHandle(uint64 controllerHandle) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamController006_GetInputTypeForHandle(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController006", "GetInputTypeForHandle", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -22829,241 +26278,329 @@ static struct FakeSteamController006 g_steamcontroller006_instance = { g_steamco
 
 // slot 0: InitGameServer(uint32 unIP, uint32 usGamePort, uint32 usQueryPort, uint32 unFlags, uint32 nGameAppId, const char* pchVersionString) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamGameServer012_InitGameServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "InitGameServer", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: SetProduct(const char* pszProduct) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetProduct(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetProduct", 1, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 2: SetGameDescription(const char* pszGameDescription) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetGameDescription(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetGameDescription", 2, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 3: SetModDir(const char* pszModDir) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetModDir(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetModDir", 3, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 4: SetDedicatedServer(bool bDedicated) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetDedicatedServer(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetDedicatedServer", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: LogOn(const char* pszToken) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_LogOn(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "LogOn", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: LogOnAnonymous() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer012_LogOnAnonymous(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "LogOnAnonymous", 6, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 7: LogOff() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer012_LogOff(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "LogOff", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: BLoggedOn() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamGameServer012_BLoggedOn(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "BLoggedOn", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: BSecure() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamGameServer012_BSecure(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "BSecure", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetSteamID() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamGameServer012_GetSteamID(void *self, void *sretOut) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "GetSteamID", 10, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 11: WasRestartRequested() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamGameServer012_WasRestartRequested(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "WasRestartRequested", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: SetMaxPlayerCount(int32 cPlayersMax) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetMaxPlayerCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetMaxPlayerCount", 12, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 13: SetBotPlayerCount(int32 cBotplayers) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetBotPlayerCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetBotPlayerCount", 13, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 14: SetServerName(const char* pszServerName) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetServerName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetServerName", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: SetMapName(const char* pszMapName) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetMapName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetMapName", 15, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 16: SetPasswordProtected(bool bPasswordProtected) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetPasswordProtected(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetPasswordProtected", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: SetSpectatorPort(uint32 unSpectatorPort) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetSpectatorPort(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetSpectatorPort", 17, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 18: SetSpectatorServerName(const char* pszSpectatorServerName) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetSpectatorServerName(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetSpectatorServerName", 18, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 19: ClearAllKeyValues() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer012_ClearAllKeyValues(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "ClearAllKeyValues", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 20: SetKeyValue(const char* pKey, const char* pValue) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamGameServer012_SetKeyValue(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetKeyValue", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 21: SetGameTags(const char* pchGameTags) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetGameTags(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetGameTags", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 22: SetGameData(const char* pchGameData) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetGameData(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetGameData", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 23: SetRegion(const char* pszRegion) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetRegion(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetRegion", 23, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 24: SendUserConnectAndAuthenticate(uint32 unIPClient, const void* pvAuthBlob, uint32 cubAuthBlobSize, CSteamID* pSteamIDUser) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer012_SendUserConnectAndAuthenticate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SendUserConnectAndAuthenticate", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: CreateUnauthenticatedUserConnection() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamGameServer012_CreateUnauthenticatedUserConnection(void *self, void *sretOut) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 8);
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "CreateUnauthenticatedUserConnection", 25, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 26: SendUserDisconnect(CSteamID steamIDUser) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamGameServer012_SendUserDisconnect(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SendUserDisconnect", 26, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 27: BUpdateUserData(CSteamID steamIDUser, const char* pchPlayerName, uint32 uScore) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer012_BUpdateUserData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "BUpdateUserData", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamGameServer012_GetAuthSessionTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "GetAuthSessionTicket", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamGameServer012_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "BeginAuthSession", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamGameServer012_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "EndAuthSession", 30, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 31: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_CancelAuthTicket(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "CancelAuthTicket", 31, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 32: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamGameServer012_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "UserHasLicenseForApp", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: RequestUserGroupStatus(CSteamID steamIDUser, CSteamID steamIDGroup) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer012_RequestUserGroupStatus(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "RequestUserGroupStatus", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: GetGameplayStats() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer012_GetGameplayStats(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "GetGameplayStats", 34, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 35: GetServerReputation() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_SteamGameServer012_GetServerReputation(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "GetServerReputation", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 36: GetPublicIP() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamGameServer012_GetPublicIP(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "GetPublicIP", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: HandleIncomingPacket(const void* pData, int32 cbData, uint32 srcIP, uint32 srcPort) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamGameServer012_HandleIncomingPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "HandleIncomingPacket", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: GetNextOutgoingPacket(void* pOut, int32 cbMaxOut, uint32* pNetAdr, uint16_t* pPort) -> int32 | __thiscall ret 16 (STUB)
 static int32_t THISCALL vt_SteamGameServer012_GetNextOutgoingPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "GetNextOutgoingPacket", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 39: EnableHeartbeats(bool bActive) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_EnableHeartbeats(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "EnableHeartbeats", 39, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 40: SetHeartbeatInterval(int32 iHeartbeatInterval) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamGameServer012_SetHeartbeatInterval(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "SetHeartbeatInterval", 40, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 41: ForceHeartbeat() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamGameServer012_ForceHeartbeat(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "ForceHeartbeat", 41, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 42: AssociateWithClan(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamGameServer012_AssociateWithClan(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "AssociateWithClan", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 43: ComputeNewPlayerCompatibility(CSteamID steamIDNewPlayer) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamGameServer012_ComputeNewPlayerCompatibility(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamGameServer012", "ComputeNewPlayerCompatibility", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -23122,196 +26659,264 @@ static struct FakeSteamGameServer012 g_steamgameserver012_instance = { g_steamga
 
 // slot 0: Init() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamController008_Init(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "Init", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: Shutdown() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamController008_Shutdown(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "Shutdown", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: RunFrame() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamController008_RunFrame(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "RunFrame", 2, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 3: GetConnectedControllers(uint64* handlesOut) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_SteamController008_GetConnectedControllers(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetConnectedControllers", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: GetActionSetHandle(const char* pszActionSetName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamController008_GetActionSetHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetActionSetHandle", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 5: ActivateActionSet(uint64 controllerHandle, uint64 actionSetHandle) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController008_ActivateActionSet(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "ActivateActionSet", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: GetCurrentActionSet(uint64 controllerHandle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamController008_GetCurrentActionSet(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetCurrentActionSet", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 7: ActivateActionSetLayer(uint64 controllerHandle, uint64 actionSetLayerHandle) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController008_ActivateActionSetLayer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "ActivateActionSetLayer", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: DeactivateActionSetLayer(uint64 controllerHandle, uint64 actionSetLayerHandle) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController008_DeactivateActionSetLayer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "DeactivateActionSetLayer", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: DeactivateAllActionSetLayers(uint64 controllerHandle) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamController008_DeactivateAllActionSetLayers(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "DeactivateAllActionSetLayers", 9, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 10: GetActiveActionSetLayers(uint64 controllerHandle, uint64* handlesOut) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_SteamController008_GetActiveActionSetLayers(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetActiveActionSetLayers", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetDigitalActionHandle(const char* pszActionName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamController008_GetDigitalActionHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetDigitalActionHandle", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 12: GetDigitalActionData(uint64 controllerHandle, uint64 digitalActionHandle) -> InputDigitalActionData_t | __thiscall ret 20 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamController008_GetDigitalActionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 2);
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetDigitalActionData", 12, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 13: GetDigitalActionOrigins(uint64 controllerHandle, uint64 actionSetHandle, uint64 digitalActionHandle, uint32* originsOut) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamController008_GetDigitalActionOrigins(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetDigitalActionOrigins", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: GetAnalogActionHandle(const char* pszActionName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamController008_GetAnalogActionHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetAnalogActionHandle", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 15: GetAnalogActionData(uint64 controllerHandle, uint64 analogActionHandle) -> InputAnalogActionData_t | __thiscall ret 20 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamController008_GetAnalogActionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 16);
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetAnalogActionData", 15, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 16: GetAnalogActionOrigins(uint64 controllerHandle, uint64 actionSetHandle, uint64 analogActionHandle, uint32* originsOut) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamController008_GetAnalogActionOrigins(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetAnalogActionOrigins", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: GetGlyphForActionOrigin(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamController008_GetGlyphForActionOrigin(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetGlyphForActionOrigin", 17, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 18: GetStringForActionOrigin(uint32 eOrigin) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamController008_GetStringForActionOrigin(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetStringForActionOrigin", 18, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 19: StopAnalogActionMomentum(uint64 controllerHandle, uint64 eAction) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController008_StopAnalogActionMomentum(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "StopAnalogActionMomentum", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 20: GetMotionData(uint64 controllerHandle) -> InputMotionData_t | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamController008_GetMotionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   memset(sretOut, 0, 40);
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetMotionData", 20, GAMELIB_STUBCALL_KIND_STUB);
   return sretOut;
 }
 
 // slot 21: TriggerHapticPulse(uint64 controllerHandle, uint32 eTargetPad, uint32 usDurationMicroSec) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController008_TriggerHapticPulse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "TriggerHapticPulse", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 22: TriggerRepeatedHapticPulse(uint64 controllerHandle, uint32 eTargetPad, uint32 usDurationMicroSec, uint32 usOffMicroSec, uint32 unRepeat, uint32 nFlags) -> void | __thiscall ret 28 (STUB)
 static void THISCALL vt_SteamController008_TriggerRepeatedHapticPulse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "TriggerRepeatedHapticPulse", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 23: TriggerVibration(uint64 controllerHandle, uint32 usLeftSpeed, uint32 usRightSpeed) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamController008_TriggerVibration(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "TriggerVibration", 23, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 24: SetLEDColor(uint64 controllerHandle, bool nColorR, bool nColorG, bool nColorB, uint32 nFlags) -> void | __thiscall ret 24 (STUB)
 static void THISCALL vt_SteamController008_SetLEDColor(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "SetLEDColor", 24, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 25: ShowBindingPanel(uint64 controllerHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamController008_ShowBindingPanel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "ShowBindingPanel", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: GetInputTypeForHandle(uint64 controllerHandle) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamController008_GetInputTypeForHandle(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetInputTypeForHandle", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: GetControllerForGamepadIndex(int32 nIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamController008_GetControllerForGamepadIndex(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetControllerForGamepadIndex", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 28: GetGamepadIndexForController(uint64 ulControllerHandle) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamController008_GetGamepadIndexForController(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetGamepadIndexForController", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: GetStringForXboxOrigin(uint32 eOrigin) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_SteamController008_GetStringForXboxOrigin(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetStringForXboxOrigin", 29, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 30: GetGlyphForXboxOrigin(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamController008_GetGlyphForXboxOrigin(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetGlyphForXboxOrigin", 30, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 31: GetActionOriginFromXboxOrigin(uint64 controllerHandle, uint32 eOrigin) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamController008_GetActionOriginFromXboxOrigin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetActionOriginFromXboxOrigin", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 32: TranslateActionOrigin(uint32 eDestinationInputType, uint32 eSourceOrigin) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamController008_TranslateActionOrigin(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "TranslateActionOrigin", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: GetControllerBindingRevision(uint64 controllerHandle, int32* pMajor, int32* pMinor) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_SteamController008_GetControllerBindingRevision(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamController008", "GetControllerBindingRevision", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -23360,449 +26965,597 @@ static struct FakeSteamController008 g_steamcontroller008_instance = { g_steamco
 
 // slot 0: CreateQueryUserUGCRequest(uint32 unAccountID, uint32 eListType, uint32 eMatchingUGCType, uint32 eSortOrder, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 28 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_CreateQueryUserUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "CreateQueryUserUGCRequest", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 1: CreateQueryAllUGCRequest(uint32 eQueryType, uint32 eMatchingeMatchingUGCTypeFileType, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_CreateQueryAllUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "CreateQueryAllUGCRequest", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 2: CreateQueryUGCDetailsRequest(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_CreateQueryUGCDetailsRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "CreateQueryUGCDetailsRequest", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 3: SendQueryUGCRequest(uint64 handle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SendQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SendQueryUGCRequest", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 4: GetQueryUGCResult(uint64 handle, uint32 index, w_SteamUGCDetails_t_128x* pDetails) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetQueryUGCResult", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: GetQueryUGCPreviewURL(uint64 handle, uint32 index, char* pchURL, uint32 cchURLSize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCPreviewURL(void *self, uint64_t handle, uint32_t index, char * pchURL, uint32_t cchURLSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchURL != NULL && cchURLSize > 0) pchURL[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetQueryUGCPreviewURL", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetQueryUGCMetadata(uint64 handle, uint32 index, char* pchMetadata, uint32 cchMetadatasize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCMetadata(void *self, uint64_t handle, uint32_t index, char * pchMetadata, uint32_t cchMetadatasize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchMetadata != NULL && cchMetadatasize > 0) pchMetadata[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetQueryUGCMetadata", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: GetQueryUGCChildren(uint64 handle, uint32 index, uint64* pvecPublishedFileID, uint32 cMaxEntries) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetQueryUGCChildren", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: GetQueryUGCStatistic(uint64 handle, uint32 index, uint32 eStatType, uint64* pStatValue) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCStatistic(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetQueryUGCStatistic", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetQueryUGCNumAdditionalPreviews(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCNumAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetQueryUGCNumAdditionalPreviews", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetQueryUGCAdditionalPreview(uint64 handle, uint32 index, uint32 previewIndex, char* pchURLOrVideoID, uint32 cchURLSize, char* pchOriginalFileName, uint32 cchOriginalFileNameSize, uint32* pPreviewType) -> bool | __thiscall ret 36 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCAdditionalPreview(void *self, uint64_t handle, uint32_t index, uint32_t previewIndex, char * pchURLOrVideoID, uint32_t cchURLSize, char * pchOriginalFileName, uint32_t cchOriginalFileNameSize, uint32_t * pPreviewType) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchURLOrVideoID != NULL && cchURLSize > 0) pchURLOrVideoID[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetQueryUGCAdditionalPreview", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetQueryUGCNumKeyValueTags(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCNumKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetQueryUGCNumKeyValueTags", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetQueryUGCKeyValueTag(uint64 handle, uint32 index, uint32 keyValueTagIndex, char* pchKey, uint32 cchKeySize, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 32 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetQueryUGCKeyValueTag(void *self, uint64_t handle, uint32_t index, uint32_t keyValueTagIndex, char * pchKey, uint32_t cchKeySize, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchKey != NULL && cchKeySize > 0) pchKey[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetQueryUGCKeyValueTag", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: ReleaseQueryUGCRequest(uint64 handle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_ReleaseQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "ReleaseQueryUGCRequest", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: AddRequiredTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_AddRequiredTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "AddRequiredTag", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: AddExcludedTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_AddExcludedTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "AddExcludedTag", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: SetReturnOnlyIDs(uint64 handle, bool bReturnOnlyIDs) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetReturnOnlyIDs(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetReturnOnlyIDs", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: SetReturnKeyValueTags(uint64 handle, bool bReturnKeyValueTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetReturnKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetReturnKeyValueTags", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: SetReturnLongDescription(uint64 handle, bool bReturnLongDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetReturnLongDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetReturnLongDescription", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: SetReturnMetadata(uint64 handle, bool bReturnMetadata) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetReturnMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetReturnMetadata", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: SetReturnChildren(uint64 handle, bool bReturnChildren) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetReturnChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetReturnChildren", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: SetReturnAdditionalPreviews(uint64 handle, bool bReturnAdditionalPreviews) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetReturnAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetReturnAdditionalPreviews", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: SetReturnTotalOnly(uint64 handle, bool bReturnTotalOnly) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetReturnTotalOnly(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetReturnTotalOnly", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: SetReturnPlaytimeStats(uint64 handle, uint32 unDays) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetReturnPlaytimeStats(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetReturnPlaytimeStats", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: SetLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetLanguage", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: SetAllowCachedResponse(uint64 handle, uint32 unMaxAgeSeconds) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetAllowCachedResponse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetAllowCachedResponse", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: SetCloudFileNameFilter(uint64 handle, const char* pMatchCloudFileName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetCloudFileNameFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetCloudFileNameFilter", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: SetMatchAnyTag(uint64 handle, bool bMatchAnyTag) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetMatchAnyTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetMatchAnyTag", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: SetSearchText(uint64 handle, const char* pSearchText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetSearchText(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetSearchText", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: SetRankedByTrendDays(uint64 handle, uint32 unDays) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetRankedByTrendDays(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetRankedByTrendDays", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: AddRequiredKeyValueTag(uint64 handle, const char* pKey, const char* pValue) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_AddRequiredKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "AddRequiredKeyValueTag", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: RequestUGCDetails(uint64 nPublishedFileID, uint32 unMaxAgeSeconds) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_RequestUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "RequestUGCDetails", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 32: CreateItem(uint32 nConsumerAppId, uint32 eFileType) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_CreateItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "CreateItem", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 33: StartItemUpdate(uint32 nConsumerAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_StartItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "StartItemUpdate", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 34: SetItemTitle(uint64 handle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetItemTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetItemTitle", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: SetItemDescription(uint64 handle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetItemDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetItemDescription", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: SetItemUpdateLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetItemUpdateLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetItemUpdateLanguage", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: SetItemMetadata(uint64 handle, const char* pchMetaData) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetItemMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetItemMetadata", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: SetItemVisibility(uint64 handle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetItemVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetItemVisibility", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 39: SetItemTags(uint64 updateHandle, const w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetItemTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetItemTags", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: SetItemContent(uint64 handle, const char* pszContentFolder) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetItemContent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetItemContent", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 41: SetItemPreview(uint64 handle, const char* pszPreviewFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetItemPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetItemPreview", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 42: RemoveItemKeyValueTags(uint64 handle, const char* pchKey) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_RemoveItemKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "RemoveItemKeyValueTags", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: AddItemKeyValueTag(uint64 handle, const char* pchKey, const char* pchValue) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_AddItemKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "AddItemKeyValueTag", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 44: AddItemPreviewFile(uint64 handle, const char* pszPreviewFile, uint32 type) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_AddItemPreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "AddItemPreviewFile", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 45: AddItemPreviewVideo(uint64 handle, const char* pszVideoID) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_AddItemPreviewVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "AddItemPreviewVideo", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 46: UpdateItemPreviewFile(uint64 handle, uint32 index, const char* pszPreviewFile) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_UpdateItemPreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "UpdateItemPreviewFile", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 47: UpdateItemPreviewVideo(uint64 handle, uint32 index, const char* pszVideoID) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_UpdateItemPreviewVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "UpdateItemPreviewVideo", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 48: RemoveItemPreview(uint64 handle, uint32 index) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_RemoveItemPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "RemoveItemPreview", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 49: SubmitItemUpdate(uint64 handle, const char* pchChangeNote) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SubmitItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SubmitItemUpdate", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 50: GetItemUpdateProgress(uint64 handle, uint64* punBytesProcessed, uint64* punBytesTotal) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetItemUpdateProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetItemUpdateProgress", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 51: SetUserItemVote(uint64 nPublishedFileID, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SetUserItemVote", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 52: GetUserItemVote(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetUserItemVote", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 53: AddItemToFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_AddItemToFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "AddItemToFavorites", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 54: RemoveItemFromFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_RemoveItemFromFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "RemoveItemFromFavorites", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 55: SubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SubscribeItem", 55, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 56: UnsubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_UnsubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "UnsubscribeItem", 56, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 57: GetNumSubscribedItems() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetNumSubscribedItems(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetNumSubscribedItems", 57, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 58: GetSubscribedItems(uint64* pvecPublishedFileID, uint32 cMaxEntries) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetSubscribedItems(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetSubscribedItems", 58, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 59: GetItemState(uint64 nPublishedFileID) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetItemState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetItemState", 59, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 60: GetItemInstallInfo(uint64 nPublishedFileID, uint64* punSizeOnDisk, char* pchFolder, uint32 cchFolderSize, uint32* punTimeStamp) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetItemInstallInfo(void *self, uint64_t nPublishedFileID, uint64_t * punSizeOnDisk, char * pchFolder, uint32_t cchFolderSize, uint32_t * punTimeStamp) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchFolder != NULL && cchFolderSize > 0) pchFolder[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetItemInstallInfo", 60, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 61: GetItemDownloadInfo(uint64 nPublishedFileID, uint64* punBytesDownloaded, uint64* punBytesTotal) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetItemDownloadInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetItemDownloadInfo", 61, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 62: DownloadItem(uint64 nPublishedFileID, bool bHighPriority) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_DownloadItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "DownloadItem", 62, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 63: BInitWorkshopForGameServer(uint32 unWorkshopDepotID, const char* pszFolder) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION010_BInitWorkshopForGameServer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "BInitWorkshopForGameServer", 63, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 64: SuspendDownloads(bool bSuspend) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMUGC_INTERFACE_VERSION010_SuspendDownloads(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "SuspendDownloads", 64, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 65: StartPlaytimeTracking(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_StartPlaytimeTracking(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "StartPlaytimeTracking", 65, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 66: StopPlaytimeTracking(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_StopPlaytimeTracking(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "StopPlaytimeTracking", 66, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 67: StopPlaytimeTrackingForAllItems() -> uint64 | __thiscall ret 0 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_StopPlaytimeTrackingForAllItems(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "StopPlaytimeTrackingForAllItems", 67, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 68: AddDependency(uint64 nParentPublishedFileID, uint64 nChildPublishedFileID) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_AddDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "AddDependency", 68, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 69: RemoveDependency(uint64 nParentPublishedFileID, uint64 nChildPublishedFileID) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_RemoveDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "RemoveDependency", 69, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 70: AddAppDependency(uint64 nPublishedFileID, uint32 nAppID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_AddAppDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "AddAppDependency", 70, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 71: RemoveAppDependency(uint64 nPublishedFileID, uint32 nAppID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_RemoveAppDependency(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "RemoveAppDependency", 71, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 72: GetAppDependencies(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_GetAppDependencies(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "GetAppDependencies", 72, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 73: DeleteItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION010_DeleteItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION010", "DeleteItem", 73, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -23924,58 +27677,78 @@ static void * THISCALL vt_SteamUser018_GetSteamID(void *self, void *sretOut) {
 
 // slot 3: InitiateGameConnection(void* pAuthBlob, int32 cbMaxAuthBlob, CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer, bool bSecure) -> int32 | __thiscall ret 28 (STUB)
 static int32_t THISCALL vt_SteamUser018_InitiateGameConnection(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "InitiateGameConnection", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: TerminateGameConnection(uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUser018_TerminateGameConnection(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "TerminateGameConnection", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: TrackAppUsageEvent(CGameID gameID, int32 eAppUsageEvent, const char* pchExtraInfo) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamUser018_TrackAppUsageEvent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "TrackAppUsageEvent", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUser018_GetUserDataFolder(void *self, char * pchBuffer, int32_t cubBuffer) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchBuffer != NULL && cubBuffer > 0) pchBuffer[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "GetUserDataFolder", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: StartVoiceRecording() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUser018_StartVoiceRecording(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "StartVoiceRecording", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: StopVoiceRecording() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUser018_StopVoiceRecording(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "StopVoiceRecording", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: GetAvailableVoice(uint32* pcbCompressed, uint32* pcbUncompressed, uint32 nUncompressedVoiceDesiredSampleRate) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser018_GetAvailableVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "GetAvailableVoice", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetVoice(bool bWantCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, bool bWantUncompressed, void* pUncompressedDestBuffer, uint32 cbUncompressedDestBufferSize, uint32* nUncompressBytesWritten, uint32 nUncompressedVoiceDesiredSampleRate) -> uint32 | __thiscall ret 36 (STUB)
 static uint32_t THISCALL vt_SteamUser018_GetVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "GetVoice", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: DecompressVoice(const void* pCompressed, uint32 cbCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, uint32 nDesiredSampleRate) -> uint32 | __thiscall ret 24 (STUB)
 static uint32_t THISCALL vt_SteamUser018_DecompressVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "DecompressVoice", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetVoiceOptimalSampleRate() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUser018_GetVoiceOptimalSampleRate(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "GetVoiceOptimalSampleRate", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -24016,13 +27789,17 @@ static uint32_t THISCALL vt_SteamUser018_GetAuthSessionTicket(void *self, void *
 
 // slot 14: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_SteamUser018_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "BeginAuthSession", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUser018_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "EndAuthSession", 15, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 16: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4
@@ -24037,48 +27814,64 @@ static void THISCALL vt_SteamUser018_CancelAuthTicket(void *self, uint32_t hAuth
 
 // slot 17: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_SteamUser018_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "UserHasLicenseForApp", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: BIsBehindNAT() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUser018_BIsBehindNAT(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "BIsBehindNAT", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: AdvertiseGame(CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_SteamUser018_AdvertiseGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "AdvertiseGame", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 20: RequestEncryptedAppTicket(void* pDataToInclude, int32 cbDataToInclude) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_SteamUser018_RequestEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "RequestEncryptedAppTicket", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 21: GetEncryptedAppTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUser018_GetEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "GetEncryptedAppTicket", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: GetGameBadgeLevel(int32 nSeries, bool bFoil) -> int32 | __thiscall ret 8 (STUB)
 static int32_t THISCALL vt_SteamUser018_GetGameBadgeLevel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "GetGameBadgeLevel", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: GetPlayerSteamLevel() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_SteamUser018_GetPlayerSteamLevel(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "GetPlayerSteamLevel", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: RequestStoreAuthURL(const char* pchRedirectURL) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamUser018_RequestStoreAuthURL(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUser018", "RequestStoreAuthURL", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -24177,19 +27970,25 @@ static const char * THISCALL vt_SteamUtils007_GetIPCountry(void *self) {
 
 // slot 5: GetImageSize(int32 iImage, uint32* pnWidth, uint32* pnHeight) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils007_GetImageSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "GetImageSize", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetImageRGBA(int32 iImage, uint8_t* pubDest, int32 nDestBufferSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils007_GetImageRGBA(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "GetImageRGBA", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: GetCSERIPPort(uint32* unIP, uint16_t* usPort) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUtils007_GetCSERIPPort(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "GetCSERIPPort", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -24215,41 +28014,55 @@ static uint32_t THISCALL vt_SteamUtils007_GetAppID(void *self) {
 
 // slot 10: SetOverlayNotificationPosition(uint32 eNotificationPosition) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils007_SetOverlayNotificationPosition(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "SetOverlayNotificationPosition", 10, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 11: IsAPICallCompleted(uint64 hSteamAPICall, bool* pbFailed) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_SteamUtils007_IsAPICallCompleted(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "IsAPICallCompleted", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetAPICallFailureReason(uint64 hSteamAPICall) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_SteamUtils007_GetAPICallFailureReason(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "GetAPICallFailureReason", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetAPICallResult(uint64 hSteamAPICall, void* pCallback, int32 cubCallback, int32 iCallbackExpected, bool* pbFailed) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_SteamUtils007_GetAPICallResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "GetAPICallResult", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: RunFrame() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamUtils007_RunFrame(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "RunFrame", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: GetIPCCallCount() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUtils007_GetIPCCallCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "GetIPCCallCount", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_SteamUtils007_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "SetWarningMessageHook", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: IsOverlayEnabled() -> bool | __thiscall ret 0
@@ -24264,32 +28077,42 @@ static int THISCALL vt_SteamUtils007_IsOverlayEnabled(void *self) {
 
 // slot 18: BOverlayNeedsPresent() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamUtils007_BOverlayNeedsPresent(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "BOverlayNeedsPresent", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: CheckFileSignature(const char* szFileName) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_SteamUtils007_CheckFileSignature(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "CheckFileSignature", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 20: ShowGamepadTextInput(uint32 eInputMode, uint32 eLineInputMode, const char* pchDescription, uint32 unCharMax, const char* pchExistingText) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_SteamUtils007_ShowGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "ShowGamepadTextInput", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: GetEnteredGamepadTextLength() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamUtils007_GetEnteredGamepadTextLength(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "GetEnteredGamepadTextLength", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_SteamUtils007_GetEnteredGamepadTextInput(void *self, char * pchText, uint32_t cchText) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchText != NULL && cchText > 0) pchText[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "GetEnteredGamepadTextInput", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -24324,7 +28147,9 @@ static int THISCALL vt_SteamUtils007_IsSteamRunningInVR(void *self) {
 
 // slot 25: SetOverlayNotificationInset(int32 nHorizontalInset, int32 nVerticalInset) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_SteamUtils007_SetOverlayNotificationInset(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamUtils007", "SetOverlayNotificationInset", 25, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steamutils007_vtbl[26] = {
@@ -24498,49 +28323,65 @@ static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetDLCCount(void *self
 
 // slot 11: BGetDLCDataByIndex(int32 iDLC, uint32* pAppID, bool* pbAvailable, char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BGetDLCDataByIndex(void *self, int32_t iDLC, uint32_t * pAppID, int * pbAvailable, char * pchName, int32_t cchNameBufferSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION007", "BGetDLCDataByIndex", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: InstallDLC(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_InstallDLC(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION007", "InstallDLC", 12, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 13: UninstallDLC(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_UninstallDLC(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION007", "UninstallDLC", 13, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 14: RequestAppProofOfPurchaseKey(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_RequestAppProofOfPurchaseKey(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION007", "RequestAppProofOfPurchaseKey", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: GetCurrentBetaName(char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentBetaName(void *self, char * pchName, int32_t cchNameBufferSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchName != NULL && cchNameBufferSize > 0) pchName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION007", "GetCurrentBetaName", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: MarkContentCorrupt(bool bMissingFilesOnly) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_MarkContentCorrupt(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION007", "MarkContentCorrupt", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: GetInstalledDepots(uint32 appID, uint32* pvecDepots, uint32 cMaxDepots) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetInstalledDepots(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION007", "GetInstalledDepots", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: GetAppInstallDir(uint32 appID, char* pchFolder, uint32 cchFolderBufferSize) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetAppInstallDir(void *self, uint32_t appID, char * pchFolder, uint32_t cchFolderBufferSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchFolder != NULL && cchFolderBufferSize > 0) pchFolder[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION007", "GetAppInstallDir", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -24571,13 +28412,17 @@ static void * THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner(void *self,
 
 // slot 21: GetLaunchQueryParam(const char* pchKey) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetLaunchQueryParam(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION007", "GetLaunchQueryParam", 21, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 22: GetDlcDownloadProgress(uint32 nAppID, uint64* punBytesDownloaded, uint64* punBytesTotal) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetDlcDownloadProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMAPPS_INTERFACE_VERSION007", "GetDlcDownloadProgress", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -24626,312 +28471,416 @@ static struct FakeSTEAMAPPS_INTERFACE_VERSION007 g_steamapps_interface_version00
 
 // slot 0: FileWrite(const char* pchFile, const void* pvData, int32 cubData) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWrite(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "FileWrite", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: FileRead(const char* pchFile, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 12 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "FileRead", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: FileForget(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileForget(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "FileForget", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: FileDelete(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileDelete(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "FileDelete", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: FileShare(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileShare(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "FileShare", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 5: SetSyncPlatforms(const char* pchFile, uint32 eRemoteStoragePlatform) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SetSyncPlatforms(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "SetSyncPlatforms", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: FileWriteStreamOpen(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamOpen(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "FileWriteStreamOpen", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 7: FileWriteStreamWriteChunk(uint64 writeHandle, const void* pvData, int32 cubData) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamWriteChunk(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "FileWriteStreamWriteChunk", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: FileWriteStreamClose(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamClose(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "FileWriteStreamClose", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: FileWriteStreamCancel(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamCancel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "FileWriteStreamCancel", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: FileExists(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileExists(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "FileExists", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: FilePersisted(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FilePersisted(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "FilePersisted", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetFileSize(const char* pchFile) -> int32 | __thiscall ret 4 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileSize(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetFileSize", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetFileTimestamp(const char* pchFile) -> int64 | __thiscall ret 4 (STUB)
 static int64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileTimestamp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetFileTimestamp", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 14: GetSyncPlatforms(const char* pchFile) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetSyncPlatforms(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetSyncPlatforms", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: GetFileCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetFileCount", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: GetFileNameAndSize(int32 iFile, int32* pnFileSizeInBytes) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
 static const char * THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileNameAndSize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetFileNameAndSize", 16, GAMELIB_STUBCALL_KIND_STUB);
   return "";
 }
 
 // slot 17: GetQuota(int32* pnTotalBytes, int32* puAvailableBytes) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetQuota(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetQuota", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: IsCloudEnabledForAccount() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_IsCloudEnabledForAccount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "IsCloudEnabledForAccount", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: IsCloudEnabledForApp() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_IsCloudEnabledForApp(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "IsCloudEnabledForApp", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: SetCloudEnabledForApp(bool bEnabled) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SetCloudEnabledForApp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "SetCloudEnabledForApp", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 21: UGCDownload(uint64 hContent, uint32 unPriority) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UGCDownload(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UGCDownload", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 22: GetUGCDownloadProgress(uint64 hContent, int32* pnBytesDownloaded, int32* pnBytesExpected) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetUGCDownloadProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetUGCDownloadProgress", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: GetUGCDetails(uint64 hContent, uint32* pnAppID, char** ppchName, int32* pnFileSizeInBytes, CSteamID* pSteamIDOwner) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetUGCDetails", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: UGCRead(uint64 hContent, void* pvData, int32 cubDataToRead, uint32 cOffset, uint32 eAction) -> int32 | __thiscall ret 24 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UGCRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UGCRead", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: GetCachedUGCCount() -> int32 | __thiscall ret 0 (STUB)
 static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetCachedUGCCount(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetCachedUGCCount", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: GetCachedUGCHandle(int32 iCachedContent) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetCachedUGCHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetCachedUGCHandle", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 27: PublishWorkshopFile(const char* pchFile, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags, uint32 eWorkshopFileType) -> uint64 | __thiscall ret 32 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_PublishWorkshopFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "PublishWorkshopFile", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 28: CreatePublishedFileUpdateRequest(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_CreatePublishedFileUpdateRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "CreatePublishedFileUpdateRequest", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 29: UpdatePublishedFileFile(uint64 updateHandle, const char* pchFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UpdatePublishedFileFile", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 30: UpdatePublishedFilePreviewFile(uint64 updateHandle, const char* pchPreviewFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFilePreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UpdatePublishedFilePreviewFile", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 31: UpdatePublishedFileTitle(uint64 updateHandle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UpdatePublishedFileTitle", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 32: UpdatePublishedFileDescription(uint64 updateHandle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UpdatePublishedFileDescription", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: UpdatePublishedFileVisibility(uint64 updateHandle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UpdatePublishedFileVisibility", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: UpdatePublishedFileTags(uint64 updateHandle, w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UpdatePublishedFileTags", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: CommitPublishedFileUpdate(uint64 updateHandle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_CommitPublishedFileUpdate(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "CommitPublishedFileUpdate", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 36: GetPublishedFileDetails(uint64 unPublishedFileId, uint32 unMaxSecondsOld) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetPublishedFileDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetPublishedFileDetails", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 37: DeletePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_DeletePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "DeletePublishedFile", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 38: EnumerateUserPublishedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumerateUserPublishedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "EnumerateUserPublishedFiles", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 39: SubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "SubscribePublishedFile", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 40: EnumerateUserSubscribedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumerateUserSubscribedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "EnumerateUserSubscribedFiles", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 41: UnsubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UnsubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UnsubscribePublishedFile", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 42: UpdatePublishedFileSetChangeDescription(uint64 updateHandle, const char* pchChangeDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileSetChangeDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UpdatePublishedFileSetChangeDescription", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 43: GetPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetPublishedItemVoteDetails", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 44: UpdateUserPublishedItemVote(uint64 unPublishedFileId, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdateUserPublishedItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UpdateUserPublishedItemVote", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 45: GetUserPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetUserPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "GetUserPublishedItemVoteDetails", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 46: EnumerateUserSharedWorkshopFiles(CSteamID steamId, uint32 unStartIndex, w_SteamParamStringArray_t* pRequiredTags, w_SteamParamStringArray_t* pExcludedTags) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumerateUserSharedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "EnumerateUserSharedWorkshopFiles", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 47: PublishVideo(uint32 eVideoProvider, const char* pchVideoAccount, const char* pchVideoIdentifier, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags) -> uint64 | __thiscall ret 36 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_PublishVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "PublishVideo", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 48: SetUserPublishedFileAction(uint64 unPublishedFileId, uint32 eAction) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SetUserPublishedFileAction(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "SetUserPublishedFileAction", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 49: EnumeratePublishedFilesByUserAction(uint32 eAction, uint32 unStartIndex) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumeratePublishedFilesByUserAction(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "EnumeratePublishedFilesByUserAction", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 50: EnumeratePublishedWorkshopFiles(uint32 eEnumerationType, uint32 unStartIndex, uint32 unCount, uint32 unDays, w_SteamParamStringArray_t* pTags, w_SteamParamStringArray_t* pUserTags) -> uint64 | __thiscall ret 24 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumeratePublishedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "EnumeratePublishedWorkshopFiles", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 51: UGCDownloadToLocation(uint64 hContent, const char* pchLocation, uint32 unPriority) -> uint64 | __thiscall ret 16 (STUB)
 static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UGCDownloadToLocation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "UGCDownloadToLocation", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
@@ -24998,354 +28947,470 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION012 g_steamremotestorage_i
 
 // slot 0: CreateQueryUserUGCRequest(uint32 unAccountID, uint32 eListType, uint32 eMatchingUGCType, uint32 eSortOrder, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 28 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_CreateQueryUserUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "CreateQueryUserUGCRequest", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 1: CreateQueryAllUGCRequest(uint32 eQueryType, uint32 eMatchingeMatchingUGCTypeFileType, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 20 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_CreateQueryAllUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "CreateQueryAllUGCRequest", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 2: CreateQueryUGCDetailsRequest(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_CreateQueryUGCDetailsRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "CreateQueryUGCDetailsRequest", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 3: SendQueryUGCRequest(uint64 handle) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SendQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SendQueryUGCRequest", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 4: GetQueryUGCResult(uint64 handle, uint32 index, w_SteamUGCDetails_t_128x* pDetails) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetQueryUGCResult", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: GetQueryUGCPreviewURL(uint64 handle, uint32 index, char* pchURL, uint32 cchURLSize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCPreviewURL(void *self, uint64_t handle, uint32_t index, char * pchURL, uint32_t cchURLSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchURL != NULL && cchURLSize > 0) pchURL[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetQueryUGCPreviewURL", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetQueryUGCMetadata(uint64 handle, uint32 index, char* pchMetadata, uint32 cchMetadatasize) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCMetadata(void *self, uint64_t handle, uint32_t index, char * pchMetadata, uint32_t cchMetadatasize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchMetadata != NULL && cchMetadatasize > 0) pchMetadata[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetQueryUGCMetadata", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: GetQueryUGCChildren(uint64 handle, uint32 index, uint64* pvecPublishedFileID, uint32 cMaxEntries) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetQueryUGCChildren", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: GetQueryUGCStatistic(uint64 handle, uint32 index, uint32 eStatType, uint32* pStatValue) -> bool | __thiscall ret 20 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCStatistic(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetQueryUGCStatistic", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetQueryUGCNumAdditionalPreviews(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCNumAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetQueryUGCNumAdditionalPreviews", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetQueryUGCAdditionalPreview(uint64 handle, uint32 index, uint32 previewIndex, char* pchURLOrVideoID, uint32 cchURLSize, bool* pbIsImage) -> bool | __thiscall ret 28 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCAdditionalPreview(void *self, uint64_t handle, uint32_t index, uint32_t previewIndex, char * pchURLOrVideoID, uint32_t cchURLSize, int * pbIsImage) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchURLOrVideoID != NULL && cchURLSize > 0) pchURLOrVideoID[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetQueryUGCAdditionalPreview", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetQueryUGCNumKeyValueTags(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCNumKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetQueryUGCNumKeyValueTags", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetQueryUGCKeyValueTag(uint64 handle, uint32 index, uint32 keyValueTagIndex, char* pchKey, uint32 cchKeySize, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 32 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCKeyValueTag(void *self, uint64_t handle, uint32_t index, uint32_t keyValueTagIndex, char * pchKey, uint32_t cchKeySize, char * pchValue, uint32_t cchValueSize) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchKey != NULL && cchKeySize > 0) pchKey[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetQueryUGCKeyValueTag", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: ReleaseQueryUGCRequest(uint64 handle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_ReleaseQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "ReleaseQueryUGCRequest", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: AddRequiredTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_AddRequiredTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "AddRequiredTag", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: AddExcludedTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_AddExcludedTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "AddExcludedTag", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: SetReturnKeyValueTags(uint64 handle, bool bReturnKeyValueTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetReturnKeyValueTags", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: SetReturnLongDescription(uint64 handle, bool bReturnLongDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnLongDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetReturnLongDescription", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: SetReturnMetadata(uint64 handle, bool bReturnMetadata) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetReturnMetadata", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: SetReturnChildren(uint64 handle, bool bReturnChildren) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetReturnChildren", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: SetReturnAdditionalPreviews(uint64 handle, bool bReturnAdditionalPreviews) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetReturnAdditionalPreviews", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: SetReturnTotalOnly(uint64 handle, bool bReturnTotalOnly) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnTotalOnly(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetReturnTotalOnly", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: SetLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetLanguage", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: SetAllowCachedResponse(uint64 handle, uint32 unMaxAgeSeconds) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetAllowCachedResponse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetAllowCachedResponse", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: SetCloudFileNameFilter(uint64 handle, const char* pMatchCloudFileName) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetCloudFileNameFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetCloudFileNameFilter", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 25: SetMatchAnyTag(uint64 handle, bool bMatchAnyTag) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetMatchAnyTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetMatchAnyTag", 25, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 26: SetSearchText(uint64 handle, const char* pSearchText) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetSearchText(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetSearchText", 26, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 27: SetRankedByTrendDays(uint64 handle, uint32 unDays) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetRankedByTrendDays(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetRankedByTrendDays", 27, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 28: AddRequiredKeyValueTag(uint64 handle, const char* pKey, const char* pValue) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_AddRequiredKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "AddRequiredKeyValueTag", 28, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 29: RequestUGCDetails(uint64 nPublishedFileID, uint32 unMaxAgeSeconds) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_RequestUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "RequestUGCDetails", 29, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 30: CreateItem(uint32 nConsumerAppId, uint32 eFileType) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_CreateItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "CreateItem", 30, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 31: StartItemUpdate(uint32 nConsumerAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_StartItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "StartItemUpdate", 31, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 32: SetItemTitle(uint64 handle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetItemTitle", 32, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 33: SetItemDescription(uint64 handle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetItemDescription", 33, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 34: SetItemUpdateLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemUpdateLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetItemUpdateLanguage", 34, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 35: SetItemMetadata(uint64 handle, const char* pchMetaData) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetItemMetadata", 35, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 36: SetItemVisibility(uint64 handle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetItemVisibility", 36, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 37: SetItemTags(uint64 updateHandle, const w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetItemTags", 37, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 38: SetItemContent(uint64 handle, const char* pszContentFolder) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemContent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetItemContent", 38, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 39: SetItemPreview(uint64 handle, const char* pszPreviewFile) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetItemPreview", 39, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 40: RemoveItemKeyValueTags(uint64 handle, const char* pchKey) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_RemoveItemKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "RemoveItemKeyValueTags", 40, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 41: AddItemKeyValueTag(uint64 handle, const char* pchKey, const char* pchValue) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_AddItemKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "AddItemKeyValueTag", 41, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 42: SubmitItemUpdate(uint64 handle, const char* pchChangeNote) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SubmitItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SubmitItemUpdate", 42, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 43: GetItemUpdateProgress(uint64 handle, uint64* punBytesProcessed, uint64* punBytesTotal) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetItemUpdateProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetItemUpdateProgress", 43, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 44: SetUserItemVote(uint64 nPublishedFileID, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SetUserItemVote", 44, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 45: GetUserItemVote(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetUserItemVote", 45, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 46: AddItemToFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_AddItemToFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "AddItemToFavorites", 46, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 47: RemoveItemFromFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_RemoveItemFromFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "RemoveItemFromFavorites", 47, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 48: SubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SubscribeItem", 48, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 49: UnsubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_UnsubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "UnsubscribeItem", 49, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 50: GetNumSubscribedItems() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetNumSubscribedItems(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetNumSubscribedItems", 50, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 51: GetSubscribedItems(uint64* pvecPublishedFileID, uint32 cMaxEntries) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetSubscribedItems(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetSubscribedItems", 51, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 52: GetItemState(uint64 nPublishedFileID) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetItemState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetItemState", 52, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 53: GetItemInstallInfo(uint64 nPublishedFileID, uint64* punSizeOnDisk, char* pchFolder, uint32 cchFolderSize, uint32* punTimeStamp) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetItemInstallInfo(void *self, uint64_t nPublishedFileID, uint64_t * punSizeOnDisk, char * pchFolder, uint32_t cchFolderSize, uint32_t * punTimeStamp) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchFolder != NULL && cchFolderSize > 0) pchFolder[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetItemInstallInfo", 53, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 54: GetItemDownloadInfo(uint64 nPublishedFileID, uint64* punBytesDownloaded, uint64* punBytesTotal) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetItemDownloadInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "GetItemDownloadInfo", 54, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 55: DownloadItem(uint64 nPublishedFileID, bool bHighPriority) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_DownloadItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "DownloadItem", 55, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 56: BInitWorkshopForGameServer(uint32 unWorkshopDepotID, const char* pszFolder) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_BInitWorkshopForGameServer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "BInitWorkshopForGameServer", 56, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 57: SuspendDownloads(bool bSuspend) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SuspendDownloads(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION007", "SuspendDownloads", 57, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steamugc_interface_version007_vtbl[58] = {
@@ -25417,151 +29482,201 @@ static struct FakeSTEAMUGC_INTERFACE_VERSION007 g_steamugc_interface_version007_
 
 // slot 0: CreateHTTPRequest(uint32 eHTTPRequestMethod, const char* pchAbsoluteURL) -> uint32 | __thiscall ret 8 (STUB)
 static uint32_t THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_CreateHTTPRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "CreateHTTPRequest", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: SetHTTPRequestContextValue(uint32 hRequest, uint64 ulContextValue) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestContextValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SetHTTPRequestContextValue", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: SetHTTPRequestNetworkActivityTimeout(uint32 hRequest, uint32 unTimeoutSeconds) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestNetworkActivityTimeout(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SetHTTPRequestNetworkActivityTimeout", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: SetHTTPRequestHeaderValue(uint32 hRequest, const char* pchHeaderName, const char* pchHeaderValue) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestHeaderValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SetHTTPRequestHeaderValue", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: SetHTTPRequestGetOrPostParameter(uint32 hRequest, const char* pchParamName, const char* pchParamValue) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestGetOrPostParameter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SetHTTPRequestGetOrPostParameter", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: SendHTTPRequest(uint32 hRequest, uint64* pCallHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SendHTTPRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SendHTTPRequest", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: SendHTTPRequestAndStreamResponse(uint32 hRequest, uint64* pCallHandle) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SendHTTPRequestAndStreamResponse(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SendHTTPRequestAndStreamResponse", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: DeferHTTPRequest(uint32 hRequest) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_DeferHTTPRequest(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "DeferHTTPRequest", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: PrioritizeHTTPRequest(uint32 hRequest) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_PrioritizeHTTPRequest(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "PrioritizeHTTPRequest", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GetHTTPResponseHeaderSize(uint32 hRequest, const char* pchHeaderName, uint32* unResponseHeaderSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseHeaderSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "GetHTTPResponseHeaderSize", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GetHTTPResponseHeaderValue(uint32 hRequest, const char* pchHeaderName, uint8_t* pHeaderValueBuffer, uint32 unBufferSize) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseHeaderValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "GetHTTPResponseHeaderValue", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: GetHTTPResponseBodySize(uint32 hRequest, uint32* unBodySize) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseBodySize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "GetHTTPResponseBodySize", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: GetHTTPResponseBodyData(uint32 hRequest, uint8_t* pBodyDataBuffer, uint32 unBufferSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseBodyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "GetHTTPResponseBodyData", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: GetHTTPStreamingResponseBodyData(uint32 hRequest, uint32 cOffset, uint8_t* pBodyDataBuffer, uint32 unBufferSize) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPStreamingResponseBodyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "GetHTTPStreamingResponseBodyData", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: ReleaseHTTPRequest(uint32 hRequest) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_ReleaseHTTPRequest(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "ReleaseHTTPRequest", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: GetHTTPDownloadProgressPct(uint32 hRequest, float* pflPercentOut) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPDownloadProgressPct(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "GetHTTPDownloadProgressPct", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: SetHTTPRequestRawPostBody(uint32 hRequest, const char* pchContentType, uint8_t* pubBody, uint32 unBodyLen) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestRawPostBody(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SetHTTPRequestRawPostBody", 16, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 17: CreateCookieContainer(bool bAllowResponsesToModify) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_CreateCookieContainer(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "CreateCookieContainer", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: ReleaseCookieContainer(uint32 hCookieContainer) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_ReleaseCookieContainer(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "ReleaseCookieContainer", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: SetCookie(uint32 hCookieContainer, const char* pchHost, const char* pchUrl, const char* pchCookie) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetCookie(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SetCookie", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: SetHTTPRequestCookieContainer(uint32 hRequest, uint32 hCookieContainer) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestCookieContainer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SetHTTPRequestCookieContainer", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: SetHTTPRequestUserAgentInfo(uint32 hRequest, const char* pchUserAgentInfo) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestUserAgentInfo(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SetHTTPRequestUserAgentInfo", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: SetHTTPRequestRequiresVerifiedCertificate(uint32 hRequest, bool bRequireVerifiedCertificate) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestRequiresVerifiedCertificate(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SetHTTPRequestRequiresVerifiedCertificate", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 23: SetHTTPRequestAbsoluteTimeoutMS(uint32 hRequest, uint32 unMilliseconds) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestAbsoluteTimeoutMS(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "SetHTTPRequestAbsoluteTimeoutMS", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 24: GetHTTPRequestWasTimedOut(uint32 hRequest, bool* pbWasTimedOut) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPRequestWasTimedOut(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTTP_INTERFACE_VERSION002", "GetHTTPRequestWasTimedOut", 24, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -25601,41 +29716,55 @@ static struct FakeSTEAMHTTP_INTERFACE_VERSION002 g_steamhttp_interface_version00
 
 // slot 0: WriteScreenshot(void* pubRGB, uint32 cubRGB, int32 nWidth, int32 nHeight) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_WriteScreenshot(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION002", "WriteScreenshot", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: AddScreenshotToLibrary(const char* pchFilename, const char* pchThumbnailFilename, int32 nWidth, int32 nHeight) -> uint32 | __thiscall ret 16 (STUB)
 static uint32_t THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_AddScreenshotToLibrary(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION002", "AddScreenshotToLibrary", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: TriggerScreenshot() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_TriggerScreenshot(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION002", "TriggerScreenshot", 2, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 3: HookScreenshots(bool bHook) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_HookScreenshots(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION002", "HookScreenshots", 3, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 4: SetLocation(uint32 hScreenshot, const char* pchLocation) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_SetLocation(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION002", "SetLocation", 4, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 5: TagUser(uint32 hScreenshot, CSteamID steamID) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_TagUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION002", "TagUser", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: TagPublishedFile(uint32 hScreenshot, uint64 unPublishedFileID) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_TagPublishedFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMSCREENSHOTS_INTERFACE_VERSION002", "TagPublishedFile", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -25657,185 +29786,257 @@ static struct FakeSTEAMSCREENSHOTS_INTERFACE_VERSION002 g_steamscreenshots_inter
 
 // slot 0: destructor() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_destructor(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "destructor", 0, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 1: Init() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Init(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "Init", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: Shutdown() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Shutdown(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "Shutdown", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: CreateBrowser(const char* pchUserAgent, const char* pchUserCSS) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_CreateBrowser(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "CreateBrowser", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 4: RemoveBrowser(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_RemoveBrowser(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "RemoveBrowser", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: LoadURL(uint32 unBrowserHandle, const char* pchURL, const char* pchPostData) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_LoadURL(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "LoadURL", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 6: SetSize(uint32 unBrowserHandle, uint32 unWidth, uint32 unHeight) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "SetSize", 6, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 7: StopLoad(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_StopLoad(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "StopLoad", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 8: Reload(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Reload(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "Reload", 8, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 9: GoBack(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_GoBack(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "GoBack", 9, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 10: GoForward(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_GoForward(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "GoForward", 10, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 11: AddHeader(uint32 unBrowserHandle, const char* pchKey, const char* pchValue) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_AddHeader(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "AddHeader", 11, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 12: ExecuteJavascript(uint32 unBrowserHandle, const char* pchScript) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_ExecuteJavascript(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "ExecuteJavascript", 12, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 13: MouseUp(uint32 unBrowserHandle, uint32 eMouseButton) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseUp(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "MouseUp", 13, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 14: MouseDown(uint32 unBrowserHandle, uint32 eMouseButton) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseDown(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "MouseDown", 14, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 15: MouseDoubleClick(uint32 unBrowserHandle, uint32 eMouseButton) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseDoubleClick(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "MouseDoubleClick", 15, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 16: MouseMove(uint32 unBrowserHandle, int32 x, int32 y) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseMove(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "MouseMove", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: MouseWheel(uint32 unBrowserHandle, int32 nDelta) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseWheel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "MouseWheel", 17, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 18: KeyDown(uint32 unBrowserHandle, uint32 nNativeKeyCode, uint32 eHTMLKeyModifiers) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_KeyDown(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "KeyDown", 18, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 19: KeyUp(uint32 unBrowserHandle, uint32 nNativeKeyCode, uint32 eHTMLKeyModifiers) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_KeyUp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "KeyUp", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 20: KeyChar(uint32 unBrowserHandle, uint32 cUnicodeChar, uint32 eHTMLKeyModifiers) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_KeyChar(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "KeyChar", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 21: SetHorizontalScroll(uint32 unBrowserHandle, uint32 nAbsolutePixelScroll) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetHorizontalScroll(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "SetHorizontalScroll", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 22: SetVerticalScroll(uint32 unBrowserHandle, uint32 nAbsolutePixelScroll) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetVerticalScroll(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "SetVerticalScroll", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 23: SetKeyFocus(uint32 unBrowserHandle, bool bHasKeyFocus) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetKeyFocus(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "SetKeyFocus", 23, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 24: ViewSource(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_ViewSource(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "ViewSource", 24, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 25: CopyToClipboard(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_CopyToClipboard(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "CopyToClipboard", 25, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 26: PasteFromClipboard(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_PasteFromClipboard(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "PasteFromClipboard", 26, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 27: Find(uint32 unBrowserHandle, const char* pchSearchStr, bool bCurrentlyInFind, bool bReverse) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Find(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "Find", 27, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 28: StopFind(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_StopFind(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "StopFind", 28, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 29: GetLinkAtPosition(uint32 unBrowserHandle, int32 x, int32 y) -> void | __thiscall ret 12 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_GetLinkAtPosition(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "GetLinkAtPosition", 29, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 30: SetCookie(const char* pchHostname, const char* pchKey, const char* pchValue, const char* pchPath, uint32 nExpires, bool bSecure, bool bHTTPOnly) -> void | __thiscall ret 28 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetCookie(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "SetCookie", 30, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 31: SetPageScaleFactor(uint32 unBrowserHandle, float flZoom, int32 nPointX, int32 nPointY) -> void | __thiscall ret 16 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetPageScaleFactor(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "SetPageScaleFactor", 31, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 32: SetBackgroundMode(uint32 unBrowserHandle, bool bBackgroundMode) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetBackgroundMode(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "SetBackgroundMode", 32, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 33: AllowStartRequest(uint32 unBrowserHandle, bool bAllowed) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_AllowStartRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "AllowStartRequest", 33, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 34: JSDialogResponse(uint32 unBrowserHandle, bool bResult) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_JSDialogResponse(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "JSDialogResponse", 34, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 35: FileLoadDialogResponse(uint32 unBrowserHandle, const char** pchSelectedFiles) -> void | __thiscall ret 8 (STUB)
 static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_FileLoadDialogResponse(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "FileLoadDialogResponse", 35, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 static vfn g_steamhtmlsurface_interface_version_003_vtbl[36] = {
@@ -25885,143 +30086,191 @@ static struct FakeSTEAMHTMLSURFACE_INTERFACE_VERSION_003 g_steamhtmlsurface_inte
 
 // slot 0: GetResultStatus(int32 resultHandle) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetResultStatus(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "GetResultStatus", 0, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 1: GetResultItems(int32 resultHandle, SteamItemDetails_t* pOutItemsArray, uint32* punOutItemsArraySize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetResultItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "GetResultItems", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 2: GetResultTimestamp(int32 resultHandle) -> uint32 | __thiscall ret 4 (STUB)
 static uint32_t THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetResultTimestamp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "GetResultTimestamp", 2, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 3: CheckResultSteamID(int32 resultHandle, CSteamID steamIDExpected) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_CheckResultSteamID(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "CheckResultSteamID", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 4: DestroyResult(int32 resultHandle) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMINVENTORY_INTERFACE_V001_DestroyResult(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "DestroyResult", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 5: GetAllItems(int32* pResultHandle) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetAllItems(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "GetAllItems", 5, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 6: GetItemsByID(int32* pResultHandle, const uint64_t* pInstanceIDs, uint32 unCountInstanceIDs) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetItemsByID(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "GetItemsByID", 6, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 7: SerializeResult(int32 resultHandle, void* pOutBuffer, uint32* punOutBufferSize) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_SerializeResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "SerializeResult", 7, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 8: DeserializeResult(int32* pOutResultHandle, const void* pBuffer, uint32 unBufferSize, bool bRESERVED_MUST_BE_FALSE) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_DeserializeResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "DeserializeResult", 8, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 9: GenerateItems(int32* pResultHandle, const int32_t* pArrayItemDefs, const uint32_t* punArrayQuantity, uint32 unArrayLength) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GenerateItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "GenerateItems", 9, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 10: GrantPromoItems(int32* pResultHandle) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GrantPromoItems(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "GrantPromoItems", 10, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 11: AddPromoItem(int32* pResultHandle, int32 itemDef) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_AddPromoItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "AddPromoItem", 11, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 12: AddPromoItems(int32* pResultHandle, const int32_t* pArrayItemDefs, uint32 unArrayLength) -> bool | __thiscall ret 12 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_AddPromoItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "AddPromoItems", 12, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 13: ConsumeItem(int32* pResultHandle, uint64 itemConsume, uint32 unQuantity) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_ConsumeItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "ConsumeItem", 13, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 14: ExchangeItems(int32* pResultHandle, const int32_t* pArrayGenerate, const uint32_t* punArrayGenerateQuantity, uint32 unArrayGenerateLength, const uint64_t* pArrayDestroy, const uint32_t* punArrayDestroyQuantity, uint32 unArrayDestroyLength) -> bool | __thiscall ret 28 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_ExchangeItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "ExchangeItems", 14, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 15: TransferItemQuantity(int32* pResultHandle, uint64 itemIdSource, uint32 unQuantity, uint64 itemIdDest) -> bool | __thiscall ret 24 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_TransferItemQuantity(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "TransferItemQuantity", 15, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 16: SendItemDropHeartbeat() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_STEAMINVENTORY_INTERFACE_V001_SendItemDropHeartbeat(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "SendItemDropHeartbeat", 16, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 17: TriggerItemDrop(int32* pResultHandle, int32 dropListDefinition) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_TriggerItemDrop(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "TriggerItemDrop", 17, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 18: TradeItems(int32* pResultHandle, CSteamID steamIDTradePartner, const uint64_t* pArrayGive, const uint32_t* pArrayGiveQuantity, uint32 nArrayGiveLength, const uint64_t* pArrayGet, const uint32_t* pArrayGetQuantity, uint32 nArrayGetLength) -> bool | __thiscall ret 36 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_TradeItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "TradeItems", 18, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 19: LoadItemDefinitions() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_LoadItemDefinitions(void *self) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "LoadItemDefinitions", 19, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 20: GetItemDefinitionIDs(int32* pItemDefIDs, uint32* punItemDefIDsArraySize) -> bool | __thiscall ret 8 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetItemDefinitionIDs(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "GetItemDefinitionIDs", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 21: GetItemDefinitionProperty(int32 iDefinition, const char* pchPropertyName, char* pchValueBuffer, uint32* punValueBufferSizeOut) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetItemDefinitionProperty(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "GetItemDefinitionProperty", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
 // slot 22: RequestEligiblePromoItemDefinitionsIDs(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
 static uint64_t THISCALL vt_STEAMINVENTORY_INTERFACE_V001_RequestEligiblePromoItemDefinitionsIDs(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "RequestEligiblePromoItemDefinitionsIDs", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0LL;
 }
 
 // slot 23: GetEligiblePromoItemDefinitionIDs(CSteamID steamID, int32* pItemDefIDs, uint32* punItemDefIDsArraySize) -> bool | __thiscall ret 16 (STUB)
 static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetEligiblePromoItemDefinitionIDs(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMINVENTORY_INTERFACE_V001", "GetEligiblePromoItemDefinitionIDs", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 
@@ -26060,12 +30309,16 @@ static struct FakeSTEAMINVENTORY_INTERFACE_V001 g_steaminventory_interface_v001_
 
 // slot 0: GetVideoURL(uint32 unVideoAppID) -> void | __thiscall ret 4 (STUB)
 static void THISCALL vt_STEAMVIDEO_INTERFACE_V001_GetVideoURL(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMVIDEO_INTERFACE_V001", "GetVideoURL", 0, GAMELIB_STUBCALL_KIND_STUB);
 }
 
 // slot 1: IsBroadcasting(int32* pnNumViewers) -> bool | __thiscall ret 4 (STUB)
 static int THISCALL vt_STEAMVIDEO_INTERFACE_V001_IsBroadcasting(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
   (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMVIDEO_INTERFACE_V001", "IsBroadcasting", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
 }
 

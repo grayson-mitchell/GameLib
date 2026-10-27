@@ -215,6 +215,30 @@ function firstReturnInstruction(block: string): string {
   return first
 }
 
+/**
+ * Proves the incoming %rdx (the Win64 sret pointer) is returned in %rax,
+ * directly or through a callee-saved register it was parked in across a call
+ * (Win64: rbx, rsi, rdi, r12-r15, rbp). Returns the parking register (or
+ * `rdx` for a direct move) so callers can follow the store base; null when the
+ * dataflow does not hold. quick 261027-jgs: shared by the ijs and the STUBCALL
+ * sret gates.
+ */
+function rdxReturnedInRax(block: string): string | null {
+  if (/\bmovq?\s+%rdx,\s*%rax\b/.test(block)) return 'rdx'
+  const parked = /\bmovq?\s+%rdx,\s*%(rbx|rsi|rdi|rbp|r12|r13|r14|r15)\b/.exec(
+    block
+  )
+  if (
+    parked !== null &&
+    new RegExp(`\\bmovq?\\s+%${parked[1]},\\s*%rax\\b`).test(
+      block.slice(parked.index + parked[0].length)
+    )
+  ) {
+    return parked[1]
+  }
+  return null
+}
+
 describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthetic free function)', () => {
   let skipReason: string | null = null
   let zigBinPath = ''
@@ -311,16 +335,29 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
     }
     const disasm = await compileAndDisasm('x86_64-windows-gnu', 'x64')
     const block = extractFunctionBlock(disasm, TARGET_FUNC)
-    // At -O2 the stub never reads `self`, so %rcx is no longer copied
-    // anywhere and the old `mov %rcx,` matcher missed (quick 261023-tyf).
-    // The register roles are still asserted: sretOut (%rdx) is both
-    // returned in %rax and the store target, and %rcx (self) is NOT used
-    // as the sret pointer (the free-function shift would do exactly that).
-    expect(block).toMatch(/mov[a-z]*\s+%rdx,\s*%rax/)
-    expect(block).toMatch(/mov[a-z]*\s+\$0x0,\s*\(%rdx\)/)
+    // quick 261027-jgs: the stub now makes one call (the STUBCALL report), so
+    // at -O2 the incoming %rdx (sretOut) may be parked in a callee-saved
+    // register across it. The register roles are still asserted: sretOut
+    // (%rdx) reaches %rax directly or through that register, the zero store
+    // goes through %rdx or that register, and %rcx (self) is NEVER the sret
+    // pointer (the free-function shift would do exactly that).
+    const base = rdxReturnedInRax(block)
+    expect(base).not.toBeNull()
+    expect(block).toMatch(/\bcallq?\b/)
+    const bases = new Set(['rdx', base!])
+    const storeBase = [...bases].map((r) => `%${r}`).join('|')
+    expect(block).toMatch(
+      new RegExp(
+        `mov[a-z]*\\s+\\$0x0,\\s*(?:-?0x[0-9a-f]+)?\\((?:${storeBase})\\)`
+      )
+    )
     expect(block).not.toMatch(/\(%rcx\)/)
     expect(block).not.toMatch(/mov[a-z]*\s+%rcx,\s*%rax/)
-    expect(lastReturnInstruction(block)).toMatch(/ret[a-z]*\s*$/)
+    // The block runs on into neighbouring statics (objdump labels only
+    // exports); the stub has a single epilogue, so first == real.
+    const ret = firstReturnInstruction(block)
+    expect(ret).toMatch(/ret[a-z]*\s*$/)
+    expect(ret).not.toMatch(/\$0x/)
   }, 180000)
 
   it('i386: the __thiscall stub ends in ret $0x4 (callee-cleans the 4-byte hidden sret pointer)', async () => {
@@ -330,7 +367,7 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
     }
     const disasm = await compileAndDisasm('x86-windows-gnu', 'x86')
     const block = extractFunctionBlock(disasm, TARGET_FUNC)
-    expect(lastReturnInstruction(block)).toMatch(/ret[a-z]*\s+\$0x4/)
+    expect(firstReturnInstruction(block)).toMatch(/ret[a-z]*\s+\$0x4/)
   }, 180000)
 
   it('i386: a by-value CSteamID wire method pops its 8 stack bytes (ret $0x8)', async () => {
@@ -376,18 +413,10 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
     const disasm = await compileAndDisasm('x86_64-windows-gnu', 'x64')
     const block = extractFunctionBlock(disasm, NULL_SRET_FUNC)
     // The function now makes a call (the NULLSRET report), so at -O2 the
-    // incoming %rdx is parked in a callee-saved register (Win64: rbx, rsi, rdi,
-    // r12-r15, rbp) across it and moved to %rax afterwards. Prove the
-    // dataflow: direct rdx->rax, or rdx->R followed later by R->rax.
-    const direct = /\bmovq?\s+%rdx,\s*%rax\b/.test(block)
-    const parked =
-      /\bmovq?\s+%rdx,\s*%(rbx|rsi|rdi|rbp|r12|r13|r14|r15)\b/.exec(block)
-    const viaCalleeSaved =
-      parked !== null &&
-      new RegExp(`\\bmovq?\\s+%${parked[1]},\\s*%rax\\b`).test(
-        block.slice(parked.index + parked[0].length)
-      )
-    expect(direct || viaCalleeSaved).toBe(true)
+    // incoming %rdx is parked in a callee-saved register across it and moved
+    // to %rax afterwards. Prove the dataflow: direct rdx->rax, or rdx->R
+    // followed later by R->rax.
+    expect(rdxReturnedInRax(block)).not.toBeNull()
     const lastRet = lastReturnInstruction(block)
     expect(lastRet).toMatch(/ret[a-z]*\s*$/)
     expect(lastRet).not.toMatch(/\$0x/)

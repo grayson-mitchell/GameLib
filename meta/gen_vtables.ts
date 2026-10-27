@@ -166,7 +166,7 @@ export interface MethodSignature {
   /** 51-10: the helper-side flat dlsym name this method's wire dispatch
    * resolves. Unused by this plan's generator paths. */
   helperFlat?: string
-  /** A method with this set never calls `bridge_transact` -- it returns the
+  /** A method with this set never forwards its call (bar one STUBCALL first-call report) -- it returns the
    * constant immediately (51-06 Task 3). Unused by this plan's manifests. */
   helperFallback?: number | boolean
   /** 53-14: number of trailing NULL pointer arguments the helper appends to
@@ -1442,11 +1442,39 @@ function packArgsBlock(method: MethodSignature): {
 }
 
 /**
- * 51-06 Task 2: a stub method never calls `bridge_transact` -- it answers a
- * canned zero/false/NULL/empty-string/zero-filled-sret value locally,
+ * quick 261027-jgs: the C lines that report the FIRST call of a locally
+ * answered manifest method to the helper (logged as STUBCALL). `decl` is the
+ * block-scope one-shot state (`[0]` reported flag, `[1]` attempts) and must
+ * precede the first statement; `call` goes after any memset / text-out prelude
+ * and before the return, so it never alters the returned value or out-params.
+ * Interface and method names are generator-controlled identifiers, asserted
+ * here before they become C string literals.
+ */
+function stubCallSite(
+  manifest: InterfaceManifest,
+  method: MethodSignature,
+  kindDefine: 'STUB' | 'FALLBACK' | 'OFFPATH'
+): { decl: string; call: string } {
+  const ident = /^[A-Za-z0-9_]+$/
+  if (!ident.test(manifest.interface) || !ident.test(method.name)) {
+    throw new Error(
+      `stubCallSite: ${manifest.interface}.${method.name} is not a plain identifier`
+    )
+  }
+  return {
+    decl: `  static volatile LONG gamelib_sc[2];\n`,
+    call: `  gamelib_stubcall_note(gamelib_sc, "${manifest.interface}", "${method.name}", ${method.slot}, GAMELIB_STUBCALL_KIND_${kindDefine});\n`
+  }
+}
+
+/**
+ * 51-06 Task 2: a stub method never FORWARDS its call over the wire -- it
+ * answers a canned zero/false/NULL/empty-string/zero-filled-sret value locally,
  * matching `shimCoverage.ts`'s `ServedInterface.mode === 'stub'` semantics
  * (D-51-02's one-time notice exists precisely because a stubbed interface
- * never talks to the real Mac Steam client). Its C signature is driven
+ * never talks to the real Mac Steam client). quick 261027-jgs: it does send
+ * ONE diagnostic first-call report (gamelib_stubcall_note, logged STUBCALL),
+ * once per method, never changing its answer. Its C signature is driven
  * ENTIRELY by `stackBytes` -- never by `method.params`, which for a stub
  * slot may be an incomplete/placeholder description -- so a stub can never
  * corrupt the caller's stack even if its declared params are wrong. A
@@ -1504,14 +1532,17 @@ function emitStubBody(
   const signatureParams = paramParts
     ? `void *self, ${paramParts}`
     : 'void *self'
+  const site = stubCallSite(manifest, method, 'STUB')
 
   if (sret) {
     const structSize = method.structSize ?? 0
     return (
       header +
       `static void * THISCALL ${funcName}(${signatureParams}) {\n` +
+      site.decl +
       `  (void)self;\n` +
       `  memset(sretOut, 0, ${structSize});\n` +
+      site.call +
       `  return sretOut;\n` +
       `}\n`
     )
@@ -1521,7 +1552,9 @@ function emitStubBody(
     return (
       header +
       `static const char * THISCALL ${funcName}(${signatureParams}) {\n` +
+      site.decl +
       `  (void)self;\n` +
+      site.call +
       `  return "";\n` +
       `}\n`
     )
@@ -1531,8 +1564,10 @@ function emitStubBody(
     return (
       header +
       `static void THISCALL ${funcName}(${signatureParams}) {\n` +
+      site.decl +
       `  (void)self;\n` +
       textOutPrelude +
+      site.call +
       `}\n`
     )
   }
@@ -1551,8 +1586,10 @@ function emitStubBody(
   return (
     header +
     `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
+    site.decl +
     `  (void)self;\n` +
     textOutPrelude +
+    site.call +
     `  return ${zeroLiteral};\n` +
     `}\n`
   )
@@ -1826,9 +1863,14 @@ function steamClientOffPathGate(
     const entry = STEAM_CLIENT_OFF_PATH_VALUES[method.name]
     value = ` ${entry ?? (method.returnKind === 'int64' ? '0LL' : '0')}`
   }
+  const site = stubCallSite(manifest, method, 'OFFPATH')
   return (
     `#if defined(__x86_64__)\n` +
-    `  if (!g_bridge_steamstub_path_active) { return${value}; }\n` +
+    `  if (!g_bridge_steamstub_path_active) {\n` +
+    `  ${site.decl}` +
+    `  ${site.call}` +
+    `    return${value};\n` +
+    `  }\n` +
     `#endif\n`
   )
 }
@@ -1980,11 +2022,14 @@ function emitVtableStub(
           ? '1'
           : '0'
         : String(method.helperFallback)
+    const fbSite = stubCallSite(manifest, method, 'FALLBACK')
     if (method.returnKind === 'void') {
       return (
         header +
         `static void THISCALL ${funcName}(${signatureParams}) {\n` +
+        fbSite.decl +
         `  (void)self;\n` +
+        fbSite.call +
         `}\n`
       )
     }
@@ -1992,7 +2037,9 @@ function emitVtableStub(
     return (
       header +
       `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
+      fbSite.decl +
       `  (void)self;\n` +
+      fbSite.call +
       `  return ${fallbackLiteral};\n` +
       `}\n`
     )
@@ -2876,6 +2923,12 @@ export function generateShimC(
 #define BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS 6
 // quick 261027-ijs: the first game call of each per-version x64 sret null-object slot is reported (the helper logs NULLSRET); an old helper answers STATUS_ERR, which is harmless.
 #define BRIDGE_CONTROL_SLOT_REPORT_NULL_SRET 7
+// quick 261027-jgs: the first game call of each locally-answered method or x64 null-object slot is reported (the helper logs STUBCALL); an old helper answers STATUS_ERR, which re-arms the site at most 3 times and is otherwise harmless.
+#define BRIDGE_CONTROL_SLOT_REPORT_STUB_CALL 8
+#define GAMELIB_STUBCALL_KIND_STUB 0
+#define GAMELIB_STUBCALL_KIND_FALLBACK 1
+#define GAMELIB_STUBCALL_KIND_OFFPATH 2
+#define GAMELIB_STUBCALL_KIND_NULL 3
 #define GAMELIB_INIT_FN_STEAMAPI_INIT 0
 #define GAMELIB_INIT_FN_STEAMINTERNAL_INIT 1
 #define GAMELIB_INIT_FN_STEAMAPI_INITSAFE 2
@@ -3245,6 +3298,33 @@ static void gamelib_report_init(uint32_t fn, int32_t ret) {
   memcpy(req, &fn, 4);
   memcpy(req + 4, &ret, 4);
   (void)bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_INIT, req, 8, retbuf, sizeof(retbuf), &retlen);
+}
+
+/* quick 261027-jgs: report the first call of a locally-answered site (STUBCALL
+ * in the helper log). st[0] = reported flag, st[1] = attempts. One-shot per
+ * site; the flag is re-armed when bridge_transact fails (no helper, before
+ * HELLO, old helper), bounded at 3 attempts per site. Holds no lock itself
+ * (bridge_transact takes g_bridge_lock), never touches the caller's return
+ * value or out-params, and is noinline because it is a cold path and to keep
+ * the ABI-gate shapes of every stub a simple "call, then set the return".
+ * A NULL method means mlen 0 (x64 null objects). Unguarded: x86 needs it too. */
+__attribute__((noinline)) static void gamelib_stubcall_note(volatile LONG *st, const char *ver, const char *method, uint32_t slot, uint32_t kind) {
+  uint8_t req[16 + 128 + 128];
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  uint32_t vlen = 0, mlen = 0;
+  if (InterlockedCompareExchange(&st[0], 1, 0) != 0) return;
+  if (InterlockedIncrement(&st[1]) > 3) return;
+  while (vlen < 128 && ver[vlen] != '\0') vlen++;
+  if (method != NULL) { while (mlen < 128 && method[mlen] != '\0') mlen++; }
+  memcpy(req, &kind, 4);
+  memcpy(req + 4, &slot, 4);
+  memcpy(req + 8, &vlen, 4);
+  memcpy(req + 12, &mlen, 4);
+  memcpy(req + 16, ver, vlen);
+  if (mlen > 0) memcpy(req + 16 + vlen, method, mlen);
+  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_STUB_CALL, req, 16 + vlen + mlen, retbuf, sizeof(retbuf), &retlen)) {
+    InterlockedExchange(&st[0], 0);
+  }
 }
 
 /* Phase 55: callback registry embedder. Lock rule: g_cb_registry_lock is never

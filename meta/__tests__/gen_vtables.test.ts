@@ -2021,7 +2021,7 @@ describe('gen_vtables', () => {
           'static uint32_t THISCALL vt_SteamClient017_CreateSteamPipe(void *self) {'
         )
         expect(c).toMatch(
-          /vt_SteamClient017_CreateSteamPipe\(void \*self\) \{\n {2}\(void\)self;\n {2}return 1;\n\}/
+          /vt_SteamClient017_CreateSteamPipe\(void \*self\) \{\n {2}static volatile LONG gamelib_sc\[2\];\n {2}\(void\)self;\n {2}gamelib_stubcall_note\(gamelib_sc, "SteamClient017", "CreateSteamPipe", 1, GAMELIB_STUBCALL_KIND_FALLBACK\);\n {2}return 1;\n\}/
         )
       })
     })
@@ -2331,7 +2331,11 @@ describe('gen_vtables', () => {
       expect(txAt).toBeGreaterThan(flagAt)
       expect(b.slice(0, flagAt)).toContain('#if defined(__x86_64__)')
       const local = b.slice(flagAt, txAt)
-      expect(local).toContain(`{ return${ret}; }`)
+      expect(local).toMatch(
+        new RegExp(
+          `gamelib_stubcall_note\\(gamelib_sc, [^;]*GAMELIB_STUBCALL_KIND_OFFPATH\\);\\n\\s*return${ret};\\n\\s*\\}`
+        )
+      )
       expect(local).not.toContain('bridge_transact(')
     }
 
@@ -3791,4 +3795,217 @@ describe('WR-03: shim authenticates every socket with the per-launch secret', ()
       }
     }
   )
+})
+
+describe('quick 261027-jgs: STUBCALL first-call reporting in the shim', () => {
+  const synthetic = (
+    mode: 'stub' | 'wire',
+    methods: InterfaceManifestV2['methods'],
+    over: Partial<InterfaceManifestV2> = {}
+  ): InterfaceManifestV2 => ({
+    schemaVersion: 2,
+    interface: 'StubCallExercise001',
+    family: 'StubCallExercise',
+    ordinal: 190,
+    arches: ['x86', 'x64'],
+    mode,
+    complete: true,
+    source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+    methods,
+    ...over
+  })
+  const fn = (c: string, name: string): string => {
+    const m = c.match(
+      new RegExp(
+        `vt_StubCallExercise001_${name}\\([^{]*\\) \\{[\\s\\S]*?\\n\\}`
+      )
+    )
+    expect(m).not.toBeNull()
+    return m![0]
+  }
+  const stubManifest = synthetic('stub', [
+    {
+      slot: 0,
+      name: 'SretStub',
+      returns: 'S_t',
+      returnKind: 'class',
+      structSize: 16,
+      stackBytes: 4,
+      params: []
+    },
+    {
+      slot: 1,
+      name: 'StrStub',
+      returns: 'const char *',
+      returnKind: 'string',
+      stackBytes: 0,
+      params: []
+    },
+    {
+      slot: 2,
+      name: 'VoidStub',
+      returns: 'void',
+      returnKind: 'void',
+      stackBytes: 4,
+      params: []
+    },
+    {
+      slot: 3,
+      name: 'ValueStub',
+      returns: 'int32',
+      returnKind: 'int32',
+      stackBytes: 0,
+      params: []
+    }
+  ])
+
+  it('emits one noinline reporter, the slot-8 define and the four kind defines in the preamble', () => {
+    const c = generateShimC([stubManifest])
+    expect(c).toContain('#define BRIDGE_CONTROL_SLOT_REPORT_STUB_CALL 8')
+    expect(c).toContain('#define GAMELIB_STUBCALL_KIND_STUB 0')
+    expect(c).toContain('#define GAMELIB_STUBCALL_KIND_FALLBACK 1')
+    expect(c).toContain('#define GAMELIB_STUBCALL_KIND_OFFPATH 2')
+    expect(c).toContain('#define GAMELIB_STUBCALL_KIND_NULL 3')
+    expect(
+      c.match(
+        /__attribute__\(\(noinline\)\) static void gamelib_stubcall_note\(/g
+      )
+    ).toHaveLength(1)
+    expect(c).toContain('InterlockedCompareExchange(&st[0], 1, 0) != 0')
+    expect(c).toContain('InterlockedIncrement(&st[1]) > 3')
+    expect(c).toContain('InterlockedExchange(&st[0], 0)')
+  })
+
+  it.each([
+    ['SretStub', 3, 'memset(sretOut, 0, 16);', 'return sretOut;'],
+    ['StrStub', 1, '(void)self;', 'return "";'],
+    ['VoidStub', 2, '(void)self;', '}'],
+    ['ValueStub', 3, '(void)self;', 'return 0;']
+  ])(
+    'stub %s reports kind=stub after its prelude and before its unchanged return',
+    (name, slotOrIgnored, pre, ret) => {
+      void slotOrIgnored
+      const body = fn(generateShimC([stubManifest]), name)
+      const slot = stubManifest.methods.find((m) => m.name === name)!.slot
+      const decl = body.indexOf('static volatile LONG gamelib_sc[2];')
+      const call = `gamelib_stubcall_note(gamelib_sc, "StubCallExercise001", "${name}", ${slot}, GAMELIB_STUBCALL_KIND_STUB);`
+      expect(decl).toBeGreaterThan(-1)
+      expect(decl).toBeLessThan(body.indexOf('(void)self;'))
+      expect(body).toContain(call)
+      expect(body.indexOf(pre)).toBeLessThanOrEqual(body.indexOf(call))
+      expect(body.indexOf(call)).toBeLessThan(body.lastIndexOf(ret))
+      expect(body).not.toContain('bridge_transact')
+    }
+  )
+
+  it('both helperFallback shapes report kind=fallback', () => {
+    const c = generateShimC([
+      synthetic('wire', [
+        {
+          slot: 0,
+          name: 'FbVoid',
+          returns: 'void',
+          returnKind: 'void',
+          stackBytes: 0,
+          params: [],
+          helperFallback: 1
+        },
+        {
+          slot: 1,
+          name: 'FbBool',
+          returns: 'bool',
+          returnKind: 'int32',
+          stackBytes: 0,
+          params: [],
+          helperFallback: 1
+        }
+      ])
+    ])
+    for (const [n, slot] of [
+      ['FbVoid', 0],
+      ['FbBool', 1]
+    ] as const) {
+      expect(fn(c, n)).toContain(
+        `gamelib_stubcall_note(gamelib_sc, "StubCallExercise001", "${n}", ${slot}, GAMELIB_STUBCALL_KIND_FALLBACK);`
+      )
+    }
+  })
+
+  it('a plain wire method carries no report site', () => {
+    const c = generateShimC([
+      synthetic('wire', [
+        {
+          slot: 0,
+          name: 'WireOnly',
+          returns: 'int32',
+          returnKind: 'int32',
+          stackBytes: 0,
+          params: []
+        }
+      ])
+    ])
+    expect(fn(c, 'WireOnly')).not.toContain('gamelib_stubcall_note')
+  })
+
+  it('SteamClient version lookups carry no report site; non-lookup wire methods carry the offpath one', () => {
+    const real017 = real.find((m) => m.interface === 'SteamClient017')!
+    const c = generateShimC([real017])
+    const lookup = c.match(
+      /vt_SteamClient017_GetISteamUser\([^{]*\) \{[\s\S]*?\n\}/
+    )
+    expect(lookup).not.toBeNull()
+    expect(lookup![0]).not.toContain('gamelib_stubcall_note')
+    expect(c).toMatch(/GAMELIB_STUBCALL_KIND_OFFPATH\);\n\s*return/)
+  })
+
+  it('rejects a non-identifier interface or method name before it becomes a C literal', () => {
+    expect(() =>
+      generateShimC([
+        synthetic('stub', [
+          {
+            slot: 0,
+            name: 'Bad"Name',
+            returns: 'void',
+            returnKind: 'void',
+            stackBytes: 0,
+            params: []
+          }
+        ])
+      ])
+    ).toThrow(/plain identifier|name/i)
+  })
+
+  it('real manifests: the report-site count equals the count computed from the manifests, each site matches its own interface/method/slot', () => {
+    const c = generateShimC(real, { x64NullSretInventory: realInventory })
+    let expected = 0
+    const bySite = new Map<string, number>()
+    for (const m of real) {
+      for (const x of m.methods) {
+        const lookup =
+          m.family === 'SteamClient' &&
+          x.name.replace(/^DEPRECATED_/, '').startsWith('GetISteam') &&
+          x.params.some((p) => p.type === 'const char*')
+        if (lookup) continue
+        const mode = x.mode ?? m.mode
+        if (
+          x.helperFallback !== undefined ||
+          mode === 'stub' ||
+          m.family === 'SteamClient'
+        ) {
+          expected++
+          bySite.set(`${m.interface}.${x.name}:${x.slot}`, 1)
+        }
+      }
+    }
+    const sites = [
+      ...c.matchAll(
+        /gamelib_stubcall_note\(gamelib_sc, "([A-Za-z0-9_]+)", "([A-Za-z0-9_]+)", (\d+), GAMELIB_STUBCALL_KIND_[A-Z]+\);/g
+      )
+    ]
+    expect(sites).toHaveLength(expected)
+    expect(expected).toBeGreaterThan(0)
+    for (const [, iface, method, slot] of sites) {
+      expect(bySite.has(`${iface}.${method}:${slot}`)).toBe(true)
+    }
+  })
 })
