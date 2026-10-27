@@ -42,7 +42,7 @@ import {
   type SharedRedistKind
 } from './bridge/sharedRedists'
 import { getFileSize, sendProgressUpdate } from 'backend/utils'
-import { SteamUser } from './user'
+import { SteamUser, type AuthSessionReason } from './user'
 import { sanitizeInstalldir } from './installLocation'
 import {
   selectAllDepots,
@@ -205,6 +205,10 @@ export interface DownloadSteamDepotsOpts {
   os: string
   language?: string
   signal?: AbortSignal
+  /** Phase 54, internal: the reason logged with the lease buildDepotPlan
+   *  acquires. Defaults to 'user-install'; prescreenBridgeDepots passes
+   *  'prescreen'. Never user-facing. */
+  sessionReason?: AuthSessionReason
 }
 
 /** One chunk within a depot manifest file, exactly as steam-user's raw manifest
@@ -393,7 +397,7 @@ class DepotPlanAbortedError extends Error {
 }
 
 /**
- * D-UAT-05: buildDepotPlan's PICS/manifest network calls (ensureConnected,
+ * D-UAT-05: buildDepotPlan's PICS/manifest network calls (acquireAuthenticated,
  * getProductInfo x3, getDepotDecryptionKey+getRawManifest PER OWNED DEPOT)
  * previously never consulted the AbortSignal at all — a stop()/cancel()
  * issued while the plan was still being built had NO effect until the whole
@@ -408,13 +412,15 @@ function throwIfAborted(signal?: AbortSignal): void {
   }
 }
 
-/** Never open a second logon (T-21-11) — reuse the same authenticated client
- *  library.ts's refresh() reaches via SteamUser.ensureConnected()/getClient(). */
+/** Never open a second logon (T-21-11). Phase 54: every caller holds an
+ *  authenticated lease from SteamUser.acquireAuthenticated() (buildDepotPlan,
+ *  downloadSelectedDepotFiles, downloadSharedRedistDepots), and the lease's
+ *  client is the one SteamUser.getClient() returns while it is held. */
 function getDepotClient(): SteamUserDepotClient {
   const client = SteamUser.getClient()
   if (!client) {
     throw new Error(
-      'downloadSteamDepots: no authenticated steam-user client available after ensureConnected()'
+      'downloadSteamDepots: no authenticated steam-user client available after acquireAuthenticated()'
     )
   }
   return client as unknown as SteamUserDepotClient
@@ -457,7 +463,7 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
  * whole plan build with no recovery — for a large multi-depot game this
  * phase can run long enough for a transient drop to occur before a single
  * chunk is ever streamed (the chunk-phase retry in downloadDepotFiles is
- * never reached). On failure, re-runs SteamUser.ensureConnected() (which
+ * never reached). On failure, re-runs SteamUser.acquireAuthenticated() (which
  * transparently reconnects — steam-user nulls out `steamID` the instant the
  * CM connection drops, so a stale `connected` check would never catch this)
  * and re-resolves getDepotClient() before the next attempt, since a
@@ -505,7 +511,7 @@ async function withPlanBuildRetry<T>(
       // "connection dropped" copy classifyDepotError previously fell back to
       // after 3 pointless reconnects) on an error retrying can never fix.
       // WR-02: a withTimeout timeout is also non-retryable. The retry's
-      // `await SteamUser.ensureConnected()` returns instantly on the stale
+      // a bare reconnect returns instantly on the stale
       // fast-path socket (client.steamID still populated), so every retry
       // re-issues the same CM call against the same dead socket and re-hangs
       // a full bound — burning PLAN_BUILD_MAX_ATTEMPTS x bound instead of the
@@ -521,7 +527,13 @@ async function withPlanBuildRetry<T>(
         ],
         LogPrefix.Steam
       )
-      await SteamUser.ensureConnected()
+      // Phase 54: the reconnect is a wrapped cold connect owned by SteamUser;
+      // the outer lease (buildDepotPlan et al.) keeps the session alive, so
+      // this inner lease is released at once.
+      const retryLease = await SteamUser.acquireAuthenticated({
+        reason: 'plan-retry'
+      })
+      if (retryLease.ok) retryLease.release()
       throwIfAborted(signal)
       await delay(PLAN_BUILD_RETRY_DELAY_MS, signal)
     }
@@ -778,21 +790,38 @@ export async function buildDepotPlan(
   assertNumericAppId(appId)
   throwIfAborted(opts.signal)
 
+  // Phase 54: the plan body holds an authenticated lease for its whole
+  // length (the gated, refcounted session in user.ts) and releases it on
+  // every exit, including a thrown step error and an abort.
+  const lease = await SteamUser.acquireAuthenticated({
+    reason: opts.sessionReason ?? 'user-install',
+    guidedAction: 'install',
+    appName: appId
+  })
+  try {
+    throwIfAborted(opts.signal)
+    if (!lease.ok) {
+      logWarning(
+        `downloadSteamDepots: no authenticated Steam CM connection for appId ${appId} (${lease.reason})`,
+        LogPrefix.Steam
+      )
+      throw new Error(
+        `downloadSteamDepots: no authenticated Steam CM connection available for appId ${appId} (${lease.reason})`
+      )
+    }
+    return await buildDepotPlanLeased(appId, opts)
+  } finally {
+    if (lease.ok) lease.release()
+  }
+}
+
+async function buildDepotPlanLeased(
+  appId: string,
+  opts: DownloadSteamDepotsOpts
+): Promise<DepotPlan> {
   // [Timing] debug/steam-install-slow-start: total buildDepotPlan duration,
   // reported at every return/throw path below. Temporary instrumentation.
   const planStart = Date.now()
-
-  const connected = await SteamUser.ensureConnected()
-  throwIfAborted(opts.signal)
-  if (!connected) {
-    logWarning(
-      `downloadSteamDepots: no authenticated Steam CM connection for appId ${appId}`,
-      LogPrefix.Steam
-    )
-    throw new Error(
-      `downloadSteamDepots: no authenticated Steam CM connection available for appId ${appId}`
-    )
-  }
 
   const numericAppId = Number(appId)
 
@@ -1046,7 +1075,11 @@ export async function prescreenBridgeDepots(
   const prescreenStart = Date.now()
   let result: 'none' | 'x86' | 'x64' | 'both' | 'unknown'
   try {
-    const plan = await buildDepotPlan(appId, { ...opts, os: 'windows' })
+    const plan = await buildDepotPlan(appId, {
+      ...opts,
+      os: 'windows',
+      sessionReason: 'prescreen'
+    })
     result = screenDepotPlanForSteamApi(plan)
   } catch (err) {
     logWarning(
@@ -3841,11 +3874,13 @@ export async function finalizeToSteam(
   )
   const sizeOnDisk = await measureInstalledBytes(installRoot)
 
-  // SteamID64 of the currently-authenticated user, if any — LastOwner is a
-  // STRING (64-bit), never a JS Number (T-21-04). Falls back to manifest.ts's
-  // own "0" default when no authenticated client is available (e.g. a future
-  // Plan 08 startup-resume finalize invoked before reconnection completes).
-  const lastOwner = SteamUser.getClient()?.steamID?.getSteamID64()
+  // SteamID64 of the signed-in user, read from the persisted account — the
+  // CM session may already be closed at finalize (a startup-resume finalize,
+  // or the idle grace expiring under a long download), so the live client is
+  // not the source. LastOwner is a STRING (64-bit), never a JS Number
+  // (T-21-04). Falls back to manifest.ts's own "0" default when nothing is
+  // persisted.
+  const lastOwner = SteamUser.getPersistedSteamId64()
 
   // Phase 23 (23-02, D-01/D-02): the single completeness-gate call site.
   // buildid is ONLY ever the caller-supplied opts.buildid (plan-time PICS
@@ -4202,7 +4237,19 @@ export async function downloadSelectedDepotFiles(
   appId: string,
   opts: DownloadSelectedDepotFilesOpts
 ): Promise<DownloadSelectedDepotFilesResult> {
+  let lease: Awaited<ReturnType<typeof SteamUser.acquireAuthenticated>> | null =
+    null
   try {
+    lease = await SteamUser.acquireAuthenticated({
+      reason: 'original-restore',
+      guidedAction: 'install',
+      appName: appId
+    })
+    if (!lease.ok) {
+      throw new Error(
+        `downloadSteamDepots: no authenticated Steam CM connection available for appId ${appId} (${lease.reason})`
+      )
+    }
     const plan = await buildDepotPlan(appId, opts)
     const picked: DownloadSelectedDepotFilesResult['files'] = []
     let totalBytes = 0
@@ -4270,6 +4317,8 @@ export async function downloadSelectedDepotFiles(
       files: [],
       error: classifyDepotError(err).message
     }
+  } finally {
+    if (lease?.ok) lease.release()
   }
 }
 
