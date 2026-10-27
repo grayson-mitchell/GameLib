@@ -1,7 +1,7 @@
 ---
 quick: 261027-tot
 status: complete
-live-gate: pending (operator)
+live-gate: partial (client row passed 2026-10-28; bottle row pending)
 commits: [2a9e1a0dd, c5c22158d, ec864ad2b]
 ---
 
@@ -32,8 +32,10 @@ First-run Steam setup payload fetches now push `steamSetupDownloadProgress` and 
 ## Known stubs
 None.
 
-## Operator live gate (PENDING, not run)
-On a Mac with no Steam.app and no cached `steam.dmg` under `steamSupportPath/redist`, restart `pnpm tauri dev` (dev does not rebuild the sidecar), press Install on a Steam title, consent to guided setup, open Downloads. Expect a "Setup" section with a "Steam client installer" row whose bytes and percent advance and which disappears when the dmg opens; no Completed entry and no "Installation Failed" toast. Repeat on a Mac with CrossOver and no provisioned bottle: row labelled "Steam for CrossOver".
+## Operator live gate (client half PASSED 2026-10-28; bottle half pending)
+**Client half: pass.** Run on the operator's Mac 2026-10-28 from the worktree dev build, with `/Applications/Steam.app` moved to the Trash. Install showed the guided-setup consent dialog, not the old "Steam client not ready for appId" error. After consent the Downloads view showed the "Steam client installer" row with advancing bytes (operator confirmed). Avernum 5 then installed to completion over the bridge. A first attempt failed with "Bridge shim has not been built yet": the fresh worktree lacked the gitignored `public/bin/arm64/darwin` bridge DLLs. That was a worktree build gap, fixed by `pnpm build-steam-bridge`, not a defect in this change.
+
+**Bottle half: pending.** It needs a bottle-only title (e.g. Avernum 6, 206060) on a profile with no provisioned CrossOver bottle. Expect the row "Steam for CrossOver". Removing Mac Steam is not needed for this half.
 
 ## Deferred
 - Pre-existing `pnpm codecheck` failure from Phase 54 RED test (anonymousClient); owned by the Phase 54 session.
