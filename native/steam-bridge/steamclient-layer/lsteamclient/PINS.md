@@ -76,4 +76,21 @@ and `--check`. It is operator-run, never in release CI, never on a user's machin
 
 ## Build result
 
-pending: written by 56-02 Task 3
+Date: 2026-10-28. Base that shipped: stock Wine, tag `wine-11.15` @
+`2df1ee28039cf84776eb1421ed90bd154cebb65f`.
+
+D-01 amended per D-19: built against stock wine-11.15 @ 2df1ee28… because the CrossOver 26.3.0 drop
+failed at `make dlls/lsteamclient/x86_64-windows/lsteamclient.dll`: its `tools/makedep.c` has no
+`.cpp` parser (only `.c .h .inl .l .m .rh .x .y`), so the `#pragma makedep unix` in the
+`cpp*.cpp` files is ignored, they are built as PE objects, and mingw rejects
+`steamclient_structs.h:76` ("template argument 1 is invalid"). Fixing that would need a change to
+CrossOver's sources, which D-19 forbids. 044 proved this Wine 11.15 configuration on the CX 26.3
+runner.
+
+| Output             | Size (B)   | sha256                                                             |
+| ------------------ | ---------- | ------------------------------------------------------------------ |
+| `lsteamclient.dll` | 33,904,653 | `22bb19413ce1f66c771c2d54260f6811480375db66c74e60c66a02d307b5cb76` |
+| `lsteamclient.so`  | 2,388,896  | `dd48289787223d9e0f75a97da3cc15aa616faa382741e39a5a433fa5cfa5167d` |
+
+Toolchain: mingw-w64 14.0.0 (`x86_64-w64-mingw32-gcc` GCC 16.2.0), Apple clang 21.0.0
+(clang-2100.3.34.2), GNU Bison 3.8.2 (Homebrew).

@@ -81,7 +81,7 @@ export const LSTEAMCLIENT_BASES = {
 } as const
 
 // ts-prune-ignore-next
-export const DEFAULT_LSTEAMCLIENT_BASE: 'crossover' | 'wine' = 'crossover'
+export const DEFAULT_LSTEAMCLIENT_BASE: 'crossover' | 'wine' = 'wine'
 
 const DEFAULT_BUILD = '26.3.0.39832'
 const PATH_PREPEND = '/opt/homebrew/opt/bison/bin:/opt/homebrew/bin'
@@ -250,7 +250,9 @@ export function buildUnixLinkArgv(opts: {
       ...opts.objs,
       `${opts.build}/dlls/ntdll/ntdll.so`,
       '-lc++',
-      '-Wl,-undefined,dynamic_lookup'
+      '-Wl,-undefined,dynamic_lookup',
+      // -S drops the debug map, whose N_OSO entries carry absolute object paths of the build host
+      '-Wl,-S'
     ]
   }
 }
@@ -330,7 +332,9 @@ export function checkLsteamclientOutputs(
     failures.push('trace string')
   if (
     f.workRoot &&
-    f.otoolText.split('\n').some((l) => l.trim().startsWith(f.workRoot))
+    f.otoolText
+      .split('\n')
+      .some((l) => /^\s/.test(l) && l.trim().startsWith(f.workRoot))
   )
     failures.push('so work-dir dependency')
   if (f.homeDir.length > 1) {
@@ -678,7 +682,7 @@ export async function main(): Promise<void> {
     const tgz = join(dl, 'crossover-sources-26.3.0.tar.gz')
     await download(b.url, tgz, { sha256: b.sha256, size: b.size })
     const xdir = join(workRoot, 'crossover-26.3.0')
-    srcDir = join(xdir, 'wine')
+    srcDir = xdir
     if (!existsSync(join(srcDir, 'configure'))) {
       rmSync(xdir, { recursive: true, force: true })
       mkdirSync(xdir, { recursive: true })
@@ -688,7 +692,7 @@ export async function main(): Promise<void> {
         '-C',
         xdir,
         '--strip-components=2',
-        '*/sources/wine'
+        'sources/wine'
       ])
     }
     basePin = `crossover-sources-26.3.0 sha256 ${b.sha256}`

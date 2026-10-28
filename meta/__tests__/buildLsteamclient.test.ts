@@ -190,7 +190,8 @@ describe('unix argv', () => {
       '-Wl,-rpath,@loader_path/',
       '/b/dlls/ntdll/ntdll.so',
       '-lc++',
-      '-Wl,-undefined,dynamic_lookup'
+      '-Wl,-undefined,dynamic_lookup',
+      '-Wl,-S'
     ])
       expect(a.args).toContain(f)
     expect(a.args.indexOf('/b/1.o')).toBeLessThan(a.args.indexOf('/b/2.o'))
