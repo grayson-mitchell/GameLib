@@ -45,7 +45,11 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { runWineCommand } from 'backend/launcher'
 import type { GameSettings } from 'common/types'
-import { getBottleDir, sanitizeBottleName } from '../../bottle'
+import {
+  endPerGameBridgeBottleSession,
+  getBottleDir,
+  sanitizeBottleName
+} from '../../bottle'
 import {
   findRuntimeLoadedSteamApiDlls,
   findUnrealLayout,
@@ -77,6 +81,12 @@ export const DRM_VALVE_FILES = [
 export const DRM_COMPONENT_FILES = ['lsteamclient.dll', 'steam.exe'] as const
 // ts-prune-ignore-next
 export const DRM_REG_ADD_TIMEOUT_MS = 15_000
+/**
+ * Extra attempts after a timed-out reg add. A fresh bottle's first wine session
+ * can wedge in winedevice (winebus HID spin); the next fresh session passes.
+ */
+// ts-prune-ignore-next
+export const DRM_REG_ADD_RETRIES = 1
 
 const ACTIVE_PROCESS_KEY = 'HKCU\\Software\\Valve\\Steam\\ActiveProcess'
 const STEAM_KEY = 'HKCU\\Software\\Valve\\Steam'
@@ -219,6 +229,15 @@ export type StageDrmBottleDeps = {
   regTimeoutMs?: number
   /** Live wine processes of the bottle, logged on a reg add timeout. */
   listBottleProcesses?: (bottleDir: string) => Promise<string[]>
+  /**
+   * Ends the stage's own wine session after a reg add timeout, so the retry
+   * starts a fresh one (debug drm-stage-winebus-hid-spin).
+   */
+  endStageSession?: (args: {
+    appId: string
+    bottleName: string
+    bottleDir: string
+  }) => Promise<void>
 }
 
 // ts-prune-ignore-next
@@ -524,6 +543,140 @@ async function defaultListBottleProcesses(
   return entries
 }
 
+const WINE_COMMAND =
+  /wineserver|wineboot|winedevice|winewrapper|wine64|\bwine\b|\.exe\b/i
+
+/**
+ * PIDs of the wine processes (any user-visible env mentioning this bottle) that
+ * the `ps -E` listing attributes to this bottle: `WINEPREFIX=<bottleDir>` or
+ * `CX_BOTTLE=<name>` as a whole env entry. Pure; never throws.
+ * @internal exported for tests
+ */
+// ts-prune-ignore-next
+export function pidsOfBottleSession(
+  psOutput: string,
+  bottleDir: string,
+  bottleName: string,
+  ownPid: number
+): number[] {
+  const escape = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const prefix = new RegExp(`(^|\\s)WINEPREFIX=${escape(bottleDir)}(?=\\s|$)`)
+  const bottle = new RegExp(`(^|\\s)CX_BOTTLE=${escape(bottleName)}(?=\\s|$)`)
+  const pids: number[] = []
+  for (const line of psOutput.split('\n')) {
+    const m = /^\s*(\d+)\s+(.*)$/.exec(line)
+    if (!m) continue
+    const pid = Number(m[1])
+    if (pid === ownPid || pid <= 1) continue
+    const rest = m[2]
+    if (!WINE_COMMAND.test(rest)) continue
+    if (prefix.test(rest) || bottle.test(rest)) pids.push(pid)
+  }
+  return pids
+}
+
+/**
+ * PIDs of wine processes whose working directory, per `lsof -F pn -d cwd`, is
+ * the bottle dir or inside it. Wine blanks winedevice's env in `ps -E`, so the
+ * env match above never sees the spinning winedevice; its cwd under drive_c
+ * does (live gate 2026-10-29). `psOutput` (`ps -o pid=,command=`, no env)
+ * limits the match to wine commands, so a shell cd'd into the bottle is never
+ * picked. Pure; never throws.
+ * @internal exported for tests
+ */
+// ts-prune-ignore-next
+export function pidsWithCwdInBottle(
+  lsofOutput: string,
+  psOutput: string,
+  bottleDir: string,
+  ownPid: number
+): number[] {
+  const wine = new Set<number>()
+  for (const line of psOutput.split('\n')) {
+    const m = /^\s*(\d+)\s+(.*)$/.exec(line)
+    if (m && WINE_COMMAND.test(m[2])) wine.add(Number(m[1]))
+  }
+  const pids: number[] = []
+  let pid = 0
+  for (const line of lsofOutput.split('\n')) {
+    if (line.startsWith('p')) {
+      pid = Number(line.slice(1)) || 0
+    } else if (
+      line.startsWith('n') &&
+      pid > 1 &&
+      pid !== ownPid &&
+      wine.has(pid) &&
+      (line.slice(1) === bottleDir || line.slice(1).startsWith(`${bottleDir}/`))
+    ) {
+      pids.push(pid)
+    }
+  }
+  return pids
+}
+
+/** stdout of a bounded listing command; lsof exits 1 on any unreadable pid. */
+function listingOutput(file: string, argv: string[]): Promise<string> {
+  return new Promise<string>((resolveOut) => {
+    execFile(
+      file,
+      argv,
+      { timeout: 3000, maxBuffer: 16 * 1024 * 1024 },
+      (_error, stdout) => resolveOut(String(stdout ?? ''))
+    )
+  })
+}
+
+/**
+ * Ends the wine session a timed-out stage reg add left behind: the clone
+ * runner's `wineserver -k`, then SIGKILL for whatever still belongs to this
+ * bottle (a spinning winedevice survives `wineserver -k`, and a pid kill was
+ * what stopped it). A process belongs to the bottle by its env (`ps -E`) or by
+ * a cwd inside the bottle (`lsof`), so other bottles' sessions are never
+ * touched. Best effort; never throws.
+ */
+async function defaultEndStageSession(args: {
+  appId: string
+  bottleName: string
+  bottleDir: string
+}): Promise<void> {
+  try {
+    await endPerGameBridgeBottleSession(args.appId, args.bottleName, 5000)
+  } catch {
+    // best effort
+  }
+  try {
+    const [psEnvOut, psOut, lsofOut] = await Promise.all([
+      listingOutput('/bin/ps', ['-axwwE', '-o', 'pid=,command=']),
+      listingOutput('/bin/ps', ['-axww', '-o', 'pid=,command=']),
+      listingOutput('/usr/sbin/lsof', ['-nP', '-d', 'cwd', '-F', 'pn'])
+    ])
+    const pids = [
+      ...new Set([
+        ...pidsOfBottleSession(
+          psEnvOut,
+          args.bottleDir,
+          args.bottleName,
+          process.pid
+        ),
+        ...pidsWithCwdInBottle(lsofOut, psOut, args.bottleDir, process.pid)
+      ])
+    ]
+    for (const pid of pids) {
+      try {
+        process.kill(pid, 'SIGKILL')
+      } catch {
+        // already gone
+      }
+    }
+    logInfo(
+      `stageDrmBottle: appId ${args.appId} ended stage session, killed ${pids.length} leftover process(es)`,
+      LogPrefix.Steam
+    )
+  } catch {
+    // best effort
+  }
+}
+
 async function runRegArgv(
   commands: string[][],
   run: NonNullable<StageDrmBottleDeps['runReg']>,
@@ -739,11 +892,27 @@ export async function stageDrmBottle(
             // debug drm-bottle-stage-reg-add-hang).
             resolveOnExit: true
           }))
-      const err = await runRegArgv(
-        commands,
-        run,
-        deps.regTimeoutMs ?? DRM_REG_ADD_TIMEOUT_MS
-      )
+      const regTimeoutMs = deps.regTimeoutMs ?? DRM_REG_ADD_TIMEOUT_MS
+      let err = await runRegArgv(commands, run, regTimeoutMs)
+      // A fresh bottle's first wine session can wedge (winedevice HID spin);
+      // end it and retry once on a fresh session. reg add /f is idempotent.
+      for (
+        let attempt = 0;
+        err?.includes('timed out after') && attempt < DRM_REG_ADD_RETRIES;
+        attempt++
+      ) {
+        if (input.signal?.aborted) return fail('aborted')
+        logWarning(
+          `stageDrmBottle: appId ${input.appId} ${err}; ending the stage session and retrying`,
+          LogPrefix.Steam
+        )
+        await (deps.endStageSession ?? defaultEndStageSession)({
+          appId: input.appId,
+          bottleName: name,
+          bottleDir
+        })
+        err = await runRegArgv(commands, run, regTimeoutMs)
+      }
       if (err) {
         logWarning(
           `stageDrmBottle: appId ${input.appId} ${err}`,
