@@ -274,3 +274,100 @@ Still open: W9 (the packaged NSIS build repeats W1-W2), W10 (`38-E01` P1-P5 agai
 app, recorded in `38-VERIFICATION.md`), the macOS/Linux compile and the macOS/Linux live run of
 261012-f25 and 261012-gn8, and the case where the window is resized while away from the store
 route. This file stays `ready: live-gate` in `pending/`.
+
+## W9 + W10 live results (2026-10-29, quick 261029-bv7)
+
+### Build under test
+
+- `pnpm tauri:dev:packaged` at `ae9cb5f36` produced
+  `src-tauri/target/debug/bundle/nsis/GameLib_0.8.0_x64-setup.exe`.
+- This is a DEBUG-profile NSIS build, not a release build: bundled SEA sidecar, no Vite dev server.
+- The script exited 1 after it wrote the bundle. The cause was the updater-signature step, which
+  needs `TAURI_SIGNING_PRIVATE_KEY`; that variable is not set locally. The installer is therefore
+  unsigned and has no updater `.sig`. See the last lines of
+  `.planning/quick/261029-bv7-record-windows-stores-embed-w9-w10-live-/evidence/packaged-build.log`.
+- It was installed per-user to `%LOCALAPPDATA%\GameLib\gamelib-shell.exe`.
+- Why it was built locally: `release-tauri.yml` run `38856607168` (2026-10-16, tag v0.8) succeeded
+  but its artifacts list is empty, and the only published installer (v0.8.0, 2026-10-01) predates
+  the embed.
+- Display: DPI 96, scale 1.0, client area 1280x830. Logical equals physical.
+
+### W9
+
+- W9a PASS: Steam renders in the slot on the packaged build.
+- W9b PASS: GOG renders.
+- These are the operator's verdicts, one word each.
+- Limits: W9 is defined as W1-W2 on the packaged build, so W3-W8 were not repeated there. No
+  release-profile, signed or CI-produced installer was exercised, and neither was the updater path.
+
+### W10: 38-E01 P1-P5 against the shipped app
+
+- Criteria: `.planning/quick/260930-o75-phase-38-sitting-13-windows-38-e01-38-w0/evidence/e01-prediction.md`.
+  They were written for the spike 027 harness and are scored here by analogy.
+- Instruments: the operator's eyes, plus `hwnd_sampler.ps1` against pid 39116 (50 ms interval, 13
+  change-samples, all at dpi 96 and client 1280x830), kept as
+  `.planning/quick/261029-bv7-record-windows-stores-embed-w9-w10-live-/evidence/w10-hwnd/hwnd-samples.jsonl`.
+  The shipped app has no API log, unlike sitting 13, so each criterion has one OS instrument at
+  most.
+- Sampler timestamps are UTC and dated 2026-10-28T19:2x, while the run's local date is 2026-10-29.
+- P1 PASS: no error panel (operator). A second `WRY_WEBVIEW` child, `0xC08A0`, appears beside the
+  main `0x90C24` at 2026-10-28T19:28:11.558Z. This is the analogue of `list_webviews` showing
+  `main` plus `store-embed`. Nothing logged an `add_child OK` line.
+- P2 PASS: the child's rect is client 256,119 1024x711. x 256 is the sidebar's right edge and y 119
+  is the store toolbar's bottom. 256+1024 = 1280 and 119+711 = 830, so it is flush to the client
+  area's right and bottom edges. Limits: the requested rect was not logged, so P2 is scored against
+  the slot's on-screen geometry and not against a logged request, and the `dpi/96` scaling arm is
+  not exercised at scale 1.0.
+- P3 PASS: `0xC08A0` is `vis=false` with the same rect on Library (2026-10-28T19:28:36.505Z) and
+  `vis=true` with the same rect on return to Stores (2026-10-28T19:28:39.641Z).
+- P4: covered by process exit only. The operator quit the app after the last JSONL row (19:28:39.641Z),
+  which still shows the embed visible, and no row records the exit. Quitting the shipped app does
+  not exercise an explicit `store_embed_close` the way the harness's 7a destroy did, so this is not
+  an independent destroy observation.
+- P5 PASS on the operator's eyes alone: content only inside the slot, nothing over the tabs or
+  sidebar. The sampler's PNGs cannot corroborate it. GPU-composited WebView2 content is not
+  reliably captured (shot-006 renders the Steam slot black), and the one frame that does show the
+  GOG page, shot-013, is a single frame after the Library return.
+- Screenshots: shot-001 (before Stores), shot-006 (Steam slot) and shot-013 (after the Library
+  return) were kept and 10 were deleted as uninformative. The JSONL keeps all 13 rows, so 10 rows'
+  `shot` field names a file that no longer exists.
+- Recorded in the ledger as `38-E01`'s new `shipped_app_2026_10_29` field, in
+  `.planning/milestones/v0.8-phases/38-deferred-hardware-and-environment-uat-gates-windows-linux-ma/38-VERIFICATION.md`.
+
+### macOS and Linux compile
+
+- Discharged by CI, not by a live run. Commits `21f99ba7d`, `e97265b1c` and `a8e03e290` are
+  ancestors of tag v0.8.
+- `release-tauri.yml` run `38856607168` (2026-10-16, tag v0.8) succeeded on all three legs:
+  windows-latest x86_64-pc-windows-msvc, ubuntu-22.04 x86_64-unknown-linux-gnu, and macos-latest
+  aarch64-apple-darwin.
+- `rust-test.yml` run `40738687297` at `ae9cb5f36`: jobs `cargo-test (macos-latest)` and
+  `cargo-test (windows-latest)` were green.
+- This is compile only. No live run happened off Windows.
+
+### Other observation
+
+A "Retrying (Ignore)" banner ran across the top of the window, from before Stores was opened. The
+operator said: "that banner was there on launch... intermittently happens, seen it before". Nothing
+was investigated; it is tracked in
+`.planning/todos/pending/2026-10-29-retrying-banner-on-packaged-windows-launch.md`.
+
+## Resolution
+
+Closed 2026-10-29 and moved to `completed/`. W1-W10 all pass on Windows:
+
+- W1-W7 on the dev build at `36d88c94d` on 2026-10-12.
+- W8 re-run at `47cd338b4` (120% and 80% Accessibility zoom).
+- W9-W10 on the packaged debug build at `ae9cb5f36` on 2026-10-29. W10's P4 is covered by process
+  exit only, not by an independent destroy observation.
+
+The macOS/Linux compile is discharged by CI. These items are carried forward, not closed:
+
+- The macOS live run of 261012-f25 / 261012-gn8, including non-100% Accessibility Zoom, goes to
+  `.planning/todos/pending/2026-10-29-store-embed-follow-ups-off-windows.md`.
+- The Linux live run of the same goes to that file.
+- The window-resized-while-away-from-the-store-route stale-geometry case goes to that file.
+- The embed UA's `Macintosh` token on Windows and Linux goes to that file.
+- The D-34 deep-link panel heading that says "on this platform" goes to that file.
+- The "Retrying (Ignore)" launch banner goes to
+  `.planning/todos/pending/2026-10-29-retrying-banner-on-packaged-windows-launch.md`.
