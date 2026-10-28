@@ -73,11 +73,15 @@
  * `interfaceVersions.ts`/`shimCoverage.ts` already established (D-51-15's
  * own doc comment on `importParse.ts`): only `node:*` builtins, the four
  * pure bridge modules (`importParse.ts`, `interfaceVersions.ts`,
- * `shimCoverage.ts`, and -- quick 261024-br4 -- the Steam CEG / `.bind` PE
+ * `shimCoverage.ts`, `drm/drmTrace.ts`, and -- quick 261024-br4 -- the Steam CEG / `.bind` PE
  * scanner `peSteamDrm.ts`; by relative path, not a `backend/...` alias), and
  * `@node-steam/vdf` (a plain npm dependency, not a backend module). This
  * keeps `pnpm bridge-census` (`node meta/runTs.cjs --bundle --platform=node
  * --target=node21 meta/bridgeCensus.ts`) bundleable standalone.
+ *
+ * Amended Phase 56 (D-15/D-16): a `.bind` title runs in steamclient-layer DRM
+ * mode, so its verified evidence is the `[bridge-drm]` anchor plus role=game
+ * lsteamclient trace lines, never a HELLO.
  *
  * Repo-relative reads use `process.cwd()`, NOT `__dirname` -- `runTs.cjs`
  * bundles this file into a private `mkdtempSync` tmpdir and runs it from
@@ -117,6 +121,12 @@ import {
   evaluateShimCoverage,
   SHIM64_EXPORTED_SYMBOLS
 } from '../src/backend/storeManagers/steam/bridge/shimCoverage'
+import {
+  appLogPayload,
+  extractDrmEvidence,
+  parseDrmLaunchAnchor,
+  type DrmEvidence
+} from '../src/backend/storeManagers/steam/bridge/drm/drmTrace'
 import {
   detectSteamDrmInPe,
   readPeSteamApiDelayImports
@@ -322,10 +332,10 @@ export const DEFAULT_COVERAGE_DEPS: CensusCoverageDeps = {
  *  7. Otherwise -> 'bridge'.
  *
  * After classification, a SteamStub `.bind` section (`steamDrm.hasBindSection`)
- * appends an informational suffix to `detail` on every non-known-bad row. It
- * never changes the class, so it never changes routing (SteamStub is in scope
- * for the bridge; bottled Steam is a narrow fallback), and it adds no
- * `CensusRow` key (T-51-39).
+ * appends a suffix to `detail` on every non-known-bad row. `.bind` rows launch
+ * in steamclient-layer DRM mode (Phase 56 D-12); the class is still the
+ * TCP-bridge coverage verdict and is informational for these rows. Known-bad
+ * (CEG) rows are unchanged, and no `CensusRow` key is added (T-51-39).
  */
 export function classifyCensusTitle(
   input: CensusTitleInput,
@@ -338,7 +348,7 @@ export function classifyCensusTitle(
   }
   row = withManagedNote(input, row)
   if (input.steamDrm?.hasBindSection && row.class !== 'known-bad') {
-    const note = 'SteamStub .bind section (informational)'
+    const note = 'SteamStub .bind: routed to DRM mode (steamclient-layer)'
     return { ...row, detail: row.detail ? `${row.detail}; ${note}` : note }
   }
   return row
@@ -644,7 +654,7 @@ function isRoutedToBridge(row: CensusRow): boolean {
  * fully covers the title's symbols (static scan), the D-51-15 coverage
  * verdict ('unconfirmed', quick 261024-uir, is routed but never covered).
  * verified = rows whose evidence is 'verified' (HELLO + clean game
- * log). playRecorded = the allowlist's playVerified record, kept apart. A
+ * log, or for DRM-mode rows the anchor + role=game trace evidence). playRecorded = the allowlist's playVerified record, kept apart. A
  * 'no-binary' row never counts as routed or covered, but it DOES count
  * toward `total`.
  */
@@ -959,9 +969,127 @@ function findNover(appid: string, appLogTexts: string[]): string | null {
   return null
 }
 
+/** Phase 56 (D-15): DRM-mode analogue of `appLogSegmentFor`. The launch anchor
+ * is a genuine `[bridge-drm] appId=<appid> ...` payload (logger header
+ * stripped, anchored at payload start). Takes the newest file holding one,
+ * slices from its LAST anchor, then appends every newer file in ascending
+ * mtime order. null when no file has an anchor. Pure. */
+export function drmAppLogSegmentFor(
+  appid: string,
+  files: Array<{ name: string; mtimeMs: number; text: string }>
+): string | null {
+  if (!/^\d+$/.test(appid)) return null
+  const sorted = [...files].sort((a, b) => b.mtimeMs - a.mtimeMs)
+  for (const f of sorted) {
+    let last = -1
+    let offset = 0
+    for (const line of f.text.split('\n')) {
+      if (parseDrmLaunchAnchor(appLogPayload(line))?.appId === appid) {
+        last = offset
+      }
+      offset += line.length + 1
+    }
+    if (last < 0) continue
+    const newer = files
+      .filter((o) => o.mtimeMs > f.mtimeMs)
+      .sort((x, y) => x.mtimeMs - y.mtimeMs)
+    let out = f.text.slice(last)
+    for (const o of newer) {
+      if (!out.endsWith('\n')) out += '\n'
+      out += o.text
+    }
+    return out
+  }
+  return null
+}
+
+/** Phase 56 (D-16): a failure in the game's own log, DRM branch only. */
+function findDrmGameLogFailure(gameLogTexts: string[]): BridgeEvidence | null {
+  if (gameLogTexts.some((t) => UE_INIT_FAILED.some((re) => re.test(t)))) {
+    return { status: 'init-failed', detail: 'UE SteamAPI init failed' }
+  }
+  for (const text of gameLogTexts) {
+    const missing = text.match(
+      /EntryPointNotFoundException:\s*((?:SteamAPI|SteamInternal)_\w+)/
+    )
+    if (missing) return { status: 'init-failed', detail: missing[1] }
+  }
+  const initFail =
+    /(SteamAPI[_.]Init(Ex)?)\s*(\(\))?[^\n]*?(failed|returned false)/i
+  for (const text of gameLogTexts) {
+    const m = text.match(initFail)
+    if (m) {
+      return {
+        status: 'init-failed',
+        detail: m[2] ? 'SteamAPI_InitEx' : 'SteamAPI_Init'
+      }
+    }
+  }
+  return null
+}
+
+/** Phase 56 (D-15/D-16): DRM-mode verdict. No detail ever carries the
+ * anchor's trace path (T-51-39). */
+function classifyDrmEvidence(input: {
+  appid: string
+  appLogTexts: string[]
+  gameLogTexts: string[]
+}): BridgeEvidence {
+  const ev: DrmEvidence = {
+    anchored: false,
+    gameInterfaces: [],
+    gameCalls: [],
+    helperEvents: 0,
+    pidConflict: false
+  }
+  const ifaces = new Set<string>()
+  const calls = new Set<string>()
+  for (const t of input.appLogTexts) {
+    const e = extractDrmEvidence(input.appid, t)
+    ev.anchored = ev.anchored || e.anchored
+    e.gameInterfaces.forEach((i) => ifaces.add(i))
+    e.gameCalls.forEach((c) => calls.add(c))
+    ev.helperEvents += e.helperEvents
+    ev.pidConflict = ev.pidConflict || e.pidConflict
+  }
+  if (!ev.anchored)
+    return { status: 'unverified', detail: 'no DRM-mode anchor' }
+  if (ev.pidConflict) {
+    return { status: 'unverified', detail: 'game/helper pid conflict' }
+  }
+  if (ifaces.size === 0) {
+    return {
+      status: 'unverified',
+      detail:
+        ev.helperEvents > 0 ? 'helper-only trace' : 'no game create-interface'
+    }
+  }
+  const failure = findDrmGameLogFailure(input.gameLogTexts)
+  if (failure) return failure
+  // D-16 "a call beyond init": ISteamClient_* is pipe/user/accessor plumbing
+  // that SteamAPI_Init itself performs, and SetMinidumpSteamID never counts.
+  // Claude's discretion under D-16; 56-15 records the exact traced names.
+  const counting = [...calls].filter(
+    (c) => !c.startsWith('ISteamClient_') && !/SetMinidumpSteamID/i.test(c)
+  )
+  if (counting.length > 0) {
+    const pick =
+      counting.find((c) => /_(GetSteamID|BLoggedOn|GetPersonaName)$/.test(c)) ??
+      counting[0]
+    return { status: 'verified', detail: `game call ${pick}` }
+  }
+  if (input.gameLogTexts.some((t) => UE_INIT_OK.test(t))) {
+    return { status: 'verified', detail: 'game log init' }
+  }
+  return { status: 'unverified', detail: 'no game-originated call' }
+}
+
 /**
  * Quick 261024-f0w + D-53-13 + 53-11 (VERIFICATION gap 4): pure live-evidence
- * check, per engine. Order: no HELLO -> unverified. Unity (the default): no
+ * check. Phase 56 (D-15/D-16) comes first: with `drmMode`, or with no HELLO
+ * but a `[bridge-drm]` anchor, the DRM branch decides (anchor + role=game
+ * create-interface + a game call beyond init, or a clean game-log init line).
+ * Otherwise, per engine. Order: no HELLO -> unverified. Unity (the default): no
  * game log -> unverified; a NOVER line for the appid in the launch segment ->
  * init-failed (a flat lookup answered NULL is exactly a Steamworks.NET
  * CSteamAPIContext.Init failure); failure marker -> init-failed; else
@@ -986,9 +1114,20 @@ export function classifyBridgeEvidence(input: {
   engine?: CensusEngine
   /** D-53-15: the row's judged steam_api import set is init/shutdown only. */
   initOnlyImports?: boolean
+  /** Phase 56 D-12: the row launches in steamclient-layer DRM mode. */
+  drmMode?: boolean
 }): BridgeEvidence {
   if (!/^\d+$/.test(input.appid)) {
     return { status: 'unverified', detail: 'no HELLO' }
+  }
+  if (
+    input.drmMode === true ||
+    (!input.appLogTexts.some((t) => hasHello(input.appid, t)) &&
+      input.appLogTexts.some(
+        (t) => extractDrmEvidence(input.appid, t).anchored
+      ))
+  ) {
+    return classifyDrmEvidence(input)
   }
   if (!input.appLogTexts.some((t) => hasHello(input.appid, t))) {
     return { status: 'unverified', detail: 'no HELLO' }
@@ -1590,17 +1729,22 @@ function collectEvidence(
   entry: ManifestEntry,
   appLogFiles: AppLogFile[],
   engine: CensusEngine,
-  initOnlyImports = false
+  initOnlyImports = false,
+  drmMode = false
 ): BridgeEvidence {
   if (entry.bottleName !== `GameLibSteamBridge-${entry.appid}`) {
     return { status: 'unverified', detail: 'no per-game bridge bottle' }
   }
-  const segment = appLogSegmentFor(entry.appid, appLogFiles)
+  const segment = drmMode
+    ? drmAppLogSegmentFor(entry.appid, appLogFiles)
+    : (appLogSegmentFor(entry.appid, appLogFiles) ??
+      drmAppLogSegmentFor(entry.appid, appLogFiles))
   return classifyBridgeEvidence({
     appid: entry.appid,
     appLogTexts: segment === null ? [] : [segment],
     engine,
     initOnlyImports,
+    drmMode,
     gameLogTexts: readTexts(
       engineLogPaths(engine, join(BOTTLES_DIR, entry.bottleName))
     )
@@ -2019,7 +2163,13 @@ async function classifyInstalledTitle(
   })
   // D-53-15: unscanned IL2CPP Steam usage is never assumed init-only.
   const initOnly = isInitOnlyImportSet(judged) && managed?.kind !== 'il2cpp'
-  const evidence = collectEvidence(entry, appLogTexts, engine, initOnly)
+  const evidence = collectEvidence(
+    entry,
+    appLogTexts,
+    engine,
+    initOnly,
+    steamDrm?.hasBindSection === true && steamDrm.cegMarkers.length === 0
+  )
 
   return classifyCensusTitle({
     appid: entry.appid,

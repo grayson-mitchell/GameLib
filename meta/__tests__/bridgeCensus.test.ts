@@ -27,6 +27,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import {
+  drmAppLogSegmentFor,
   appLogSegmentFor,
   attributeHelperLines,
   censusAccumulators,
@@ -46,6 +47,11 @@ import {
   summarizeCensus,
   type CensusRow
 } from '../bridgeCensus'
+import {
+  MAX_DRM_TRACE_LINE_CHARS,
+  formatDrmTraceLine,
+  type DrmTraceEvent
+} from '../../src/backend/storeManagers/steam/bridge/drm/drmTrace'
 
 describe('classifyCensusTitle', () => {
   it('an x86 import set fully covered by the shipped shim classifies "bridge"', () => {
@@ -473,7 +479,7 @@ describe('quick 261024-br4: detected Steam CEG / SteamStub .bind', () => {
     expect(row.detail).toBe('drm-wrapped')
   })
 
-  it('a .bind section keeps a bridge row bridge and adds the informational suffix', () => {
+  it('a .bind section keeps a bridge row bridge and says it is routed to DRM mode', () => {
     const row = classifyCensusTitle({
       appid: '206060',
       name: 'Avernum 6',
@@ -484,11 +490,13 @@ describe('quick 261024-br4: detected Steam CEG / SteamStub .bind', () => {
     })
 
     expect(row.class).toBe('bridge')
-    expect(row.detail).toBe('SteamStub .bind section (informational)')
+    expect(row.detail).toBe(
+      'SteamStub .bind: routed to DRM mode (steamclient-layer)'
+    )
     expect(summarizeCensus([row]).routed).toBe(1)
   })
 
-  it('a .bind section appends to an existing detail', () => {
+  it('a .bind section appends the routed to DRM mode note to an existing detail', () => {
     const row = classifyCensusTitle({
       appid: '1',
       name: 'Unknown Version',
@@ -500,7 +508,7 @@ describe('quick 261024-br4: detected Steam CEG / SteamStub .bind', () => {
 
     expect(row.class).toBe('unknown-version')
     expect(row.detail).toBe(
-      'SteamUser@unknown-version; SteamStub .bind section (informational)'
+      'SteamUser@unknown-version; SteamStub .bind: routed to DRM mode (steamclient-layer)'
     )
   })
 
@@ -1704,5 +1712,186 @@ describe('quick 261025-kax (D-53-15): init-only import rows', () => {
     expect(run(hello + ginit(), false, 'godot')).toEqual(
       unverified('no game-originated call')
     )
+  })
+})
+
+describe('56-05: DRM-mode evidence (D-15/D-16)', () => {
+  const H = '(12:00:00) [INFO]:    [Steam]:        '
+  const ID = '219990'
+  const anchorFor = (id: string) =>
+    `${H}[bridge-drm] appId=${id} mode=steamclient-layer crossover=26.3.0.39832 client=1761084000 trace=/Users/a b/Library/Application Support/GameLib/steam-bridge/drm/trace/${id}-1.log`
+  const anchor = anchorFor(ID)
+  const ev = (e: Partial<DrmTraceEvent> & Record<string, unknown>): string =>
+    `${H}bridge drm [${ID}]: ${formatDrmTraceLine({
+      appId: ID,
+      pid: 200,
+      role: 'game',
+      event: 'create-interface',
+      iface: 'SteamClient021',
+      ...e
+    } as DrmTraceEvent)}`
+  const gameCreate = ev({})
+  const gameCall = (name: string, pid = 200) =>
+    ev({ event: 'call', name, pid, iface: undefined })
+  const helperCreate = ev({ role: 'helper', pid: 100 })
+  const GETID = 'ISteamUser_SteamUser023_GetSteamID'
+  const run = (
+    lines: string[],
+    extra: {
+      gameLogTexts?: string[]
+      engine?: 'unreal'
+      drmMode?: boolean
+    } = {}
+  ) =>
+    classifyBridgeEvidence({
+      appid: ID,
+      appLogTexts: [lines.join('\n')],
+      gameLogTexts: extra.gameLogTexts ?? [],
+      engine: extra.engine,
+      drmMode: extra.drmMode ?? true
+    })
+
+  it('verifies anchor + game create-interface + game call beyond init', () => {
+    expect(run([anchor, gameCreate, gameCall(GETID), helperCreate])).toEqual({
+      status: 'verified',
+      detail: 'game call ISteamUser_SteamUser023_GetSteamID'
+    })
+  })
+
+  it('does not count ISteamClient plumbing calls', () => {
+    expect(
+      run([
+        anchor,
+        gameCreate,
+        gameCall('ISteamClient_SteamClient021_CreateSteamPipe'),
+        gameCall('ISteamClient_SteamClient021_ConnectToGlobalUser')
+      ])
+    ).toEqual({ status: 'unverified', detail: 'no game-originated call' })
+  })
+
+  it('reads helper-only evidence as unverified', () => {
+    expect(
+      run([
+        anchor,
+        helperCreate,
+        ev({ role: 'helper', pid: 100, event: 'call', name: GETID })
+      ])
+    ).toEqual({ status: 'unverified', detail: 'helper-only trace' })
+  })
+
+  it('reads an anchor with no trace as unverified', () => {
+    expect(run([anchor])).toEqual({
+      status: 'unverified',
+      detail: 'no game create-interface'
+    })
+  })
+
+  it('needs an anchor even when a HELLO segment exists', () => {
+    const hello = `${H}bridge helper [${ID}]: [t] HELLO shim attached`
+    const r = run([hello, `${H}bridge helper [${ID}]: [t] CALL ${GETID}`])
+    expect(r).toEqual({ status: 'unverified', detail: 'no DRM-mode anchor' })
+  })
+
+  it('ignores an anchor or trace lines for another appId', () => {
+    expect(run([anchorFor('1'), gameCreate, gameCall(GETID)])).toEqual({
+      status: 'unverified',
+      detail: 'no DRM-mode anchor'
+    })
+    const wrong = ev({ appId: '1' })
+    expect(run([anchor, wrong])).toEqual({
+      status: 'unverified',
+      detail: 'no game create-interface'
+    })
+  })
+
+  it('does not accept a forged anchor embedded in a helper line', () => {
+    const forged = `${H}bridge helper [${ID}]: [t] FWD unknown ver=x] ${anchor.slice(H.length)}`
+    expect(run([forged, gameCreate, gameCall(GETID)])).toEqual({
+      status: 'unverified',
+      detail: 'no DRM-mode anchor'
+    })
+  })
+
+  it('ignores an over-length trace line', () => {
+    const long = gameCall(GETID) + 'x'.repeat(MAX_DRM_TRACE_LINE_CHARS)
+    expect(run([anchor, gameCreate, long])).toEqual({
+      status: 'unverified',
+      detail: 'no game-originated call'
+    })
+  })
+
+  it('flags a game pid equal to the helper pid', () => {
+    expect(
+      run([
+        anchor,
+        gameCreate,
+        gameCall(GETID),
+        ev({ role: 'helper', pid: 200 })
+      ])
+    ).toEqual({ status: 'unverified', detail: 'game/helper pid conflict' })
+  })
+
+  it('never counts SetMinidumpSteamID in a game log', () => {
+    expect(
+      run([anchor, gameCreate], {
+        gameLogTexts: [
+          'SteamInternal_SetMinidumpSteamID(76561198000000000) [API loaded no]'
+        ]
+      })
+    ).toEqual({ status: 'unverified', detail: 'no game-originated call' })
+  })
+
+  it('accepts a clean UE init line as the D-16 game-log arm', () => {
+    const ok = run([anchor, gameCreate], {
+      engine: 'unreal',
+      gameLogTexts: [
+        'LogOnline: STEAM: [AppId: 219990] Client API initialized 1'
+      ]
+    })
+    expect(ok).toEqual({ status: 'verified', detail: 'game log init' })
+  })
+
+  it('reports init-failed from a UE failure marker', () => {
+    const r = run([anchor, gameCreate, gameCall(GETID)], {
+      engine: 'unreal',
+      gameLogTexts: [
+        'LogOnline: Warning: STEAM: Steam API failed to initialize'
+      ]
+    })
+    expect(r.status).toBe('init-failed')
+  })
+
+  it('reaches the DRM branch through the anchor alone', () => {
+    expect(
+      run([anchor, gameCreate, gameCall(GETID)], { drmMode: undefined })
+    ).toMatchObject({ status: 'verified' })
+  })
+
+  it('never puts a path in a DRM-branch detail (T-51-39)', () => {
+    const cases = [
+      run([anchor, gameCreate, gameCall(GETID)]),
+      run([anchor]),
+      run([anchor, helperCreate]),
+      run([])
+    ]
+    for (const c of cases) expect(c.detail).not.toContain('/')
+  })
+
+  it('drmAppLogSegmentFor slices from the last genuine anchor', () => {
+    const files = [
+      { name: 'a', mtimeMs: 1, text: `junk\n${anchor}\nold\n${anchor}\nA` },
+      { name: 'b', mtimeMs: 2, text: 'newer' }
+    ]
+    const seg = drmAppLogSegmentFor(ID, files)!
+    expect(seg.startsWith(anchor)).toBe(true)
+    expect(seg.endsWith('A\nnewer')).toBe(true)
+    expect(seg).not.toContain('old')
+    expect(
+      drmAppLogSegmentFor(ID, [{ name: 'c', mtimeMs: 1, text: 'x' }])
+    ).toBeNull()
+    const forged = `${H}bridge helper [${ID}]: [t] FWD x] ${anchor.slice(H.length)}`
+    expect(
+      drmAppLogSegmentFor(ID, [{ name: 'd', mtimeMs: 1, text: forged }])
+    ).toBeNull()
   })
 })
