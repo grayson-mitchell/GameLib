@@ -411,6 +411,59 @@ describe('registry fixes application', () => {
     }
   })
 
+  it('dllOverrides-only profile writes the AppDefaults value', async () => {
+    writeBundled({
+      dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'disabled' } }]
+    })
+    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
+    const arg = mockRunWineCommand.mock.calls[0][0]
+    expect(arg.commandParts).toEqual([
+      'reg',
+      'add',
+      'HKCU\\Software\\Wine\\AppDefaults\\Game.exe\\DllOverrides',
+      '/v',
+      'nvapi64',
+      '/t',
+      'REG_SZ',
+      '/d',
+      '',
+      '/reg:64',
+      '/f'
+    ])
+    expect(arg.protonVerb).toBe('run')
+    expect(arg.skipPrefixCheckIKnowWhatImDoing).toBe(true)
+  })
+
+  it('skips a dllOverrides value already in the bottle user.reg', async () => {
+    const root = join(tmpdir(), `gamelib-bridge-bottles-dllo-${process.pid}`)
+    try {
+      const bottle = join(root, 'GameLibSteamBridge-480')
+      mkdirSync(bottle, { recursive: true })
+      writeFileSync(
+        join(bottle, 'user.reg'),
+        'WINE REGISTRY Version 2\n\n#arch=win64\n\n' +
+          String.raw`[Software\\Wine\\AppDefaults\\Game.exe\\DllOverrides] 1` +
+          '\n#time=1\n"nvapi64"=""\n\n'
+      )
+      mockBottleRoot = root
+      writeBundled({
+        dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'disabled' } }]
+      })
+      await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      expect(
+        mockRunWineCommand.mock.calls.filter((c) =>
+          c[0].commandParts.includes('reg')
+        )
+      ).toHaveLength(0)
+      const infos = mockLogInfo.mock.calls.map((c) => c[0] as string)
+      expect(infos.filter((m) => m.includes('already set'))).toHaveLength(1)
+    } finally {
+      mockBottleRoot = '/mock/Bottles'
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it('views [64] applies once', async () => {
     writeBundled({ title: 't', registry: [{ ...WMP, views: [64] }] })
     await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)

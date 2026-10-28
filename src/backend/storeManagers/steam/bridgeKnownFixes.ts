@@ -54,6 +54,7 @@ import {
 import {
   applyRegistryFixes,
   buildRegistryFixCommandParts,
+  knownFixProfileRegistryFixes,
   validateRegistryFixes as sharedValidateRegistryFixes,
   type ValidRegistryFix
 } from 'backend/knownFixesRegistry'
@@ -193,15 +194,19 @@ export async function applySteamBridgeKnownFixes(
     const { Winetricks } = await import('backend/tools')
     const { runWineCommand } = await import('backend/launcher')
 
-    if (profile?.registry !== undefined) {
-      // First, so later fix steps see the marker. wait: false follows
+    const registryCtx = { label: `Steam ${appId}`, logPrefix: LogPrefix.Steam }
+    const registryRaw = profile
+      ? knownFixProfileRegistryFixes(profile, registryCtx)
+      : undefined
+    if (registryRaw !== undefined) {
+      // First (registry then dllOverrides), so later fix steps see the marker. wait: false follows
       // drm/stageDrmBottle.ts: reg.exe's exit code proves the write and
       // `wineserver --wait` can block forever. Values already present in the
       // bottle's system.reg/user.reg are skipped, and a timed-out reg add is
       // killed (quick 261027-m1m).
       await applyRegistryFixes(
-        profile.registry,
-        { label: `Steam ${appId}`, logPrefix: LogPrefix.Steam },
+        registryRaw,
+        registryCtx,
         (commandParts, onSpawn) =>
           runWineCommand({
             commandParts,

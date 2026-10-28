@@ -52,7 +52,9 @@ import {
   applyKnownFixProfileRegistry,
   applyRegistryFixes,
   buildRegistryFixCommandParts,
+  dllOverridesToRegistryFixes,
   knownFixPrefixDir,
+  knownFixProfileRegistryFixes,
   REGISTRY_FIX_TIMEOUT_MS,
   validateRegistryFixes,
   wineRegistryValueIsSet,
@@ -479,6 +481,157 @@ describe('knownFixPrefixDir', () => {
   })
 })
 
+const AD = (exe: string) =>
+  `HKCU\\Software\\Wine\\AppDefaults\\${exe}\\DllOverrides`
+
+describe('dllOverridesToRegistryFixes', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('compiles dlls to REG_SZ AppDefaults entries, disabled as empty', () => {
+    expect(
+      dllOverridesToRegistryFixes(
+        [
+          {
+            exe: 'Game.exe',
+            dlls: { nvapi64: 'disabled', d3d9: 'native,builtin' }
+          }
+        ],
+        CTX
+      )
+    ).toEqual([
+      {
+        key: AD('Game.exe'),
+        name: 'nvapi64',
+        type: 'REG_SZ',
+        value: '',
+        views: [64]
+      },
+      {
+        key: AD('Game.exe'),
+        name: 'd3d9',
+        type: 'REG_SZ',
+        value: 'native,builtin',
+        views: [64]
+      }
+    ])
+    expect(mockLogWarning).not.toHaveBeenCalled()
+  })
+
+  it.each(['native', 'builtin', 'native,builtin', 'builtin,native'])(
+    'writes mode %s verbatim',
+    (mode) => {
+      const out = dllOverridesToRegistryFixes(
+        [{ exe: 'a.exe', dlls: { x: mode } }],
+        CTX
+      )
+      expect(out[0].value).toBe(mode)
+    }
+  )
+
+  it.each(['n', 'b', '', 'native, builtin', 3, null])(
+    'skips bad mode %p with a warning',
+    (mode) => {
+      expect(
+        dllOverridesToRegistryFixes([{ exe: 'a.exe', dlls: { x: mode } }], CTX)
+      ).toEqual([])
+      expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it.each(['..\\x.exe', 'a/b.exe', 'Game', 'x"y.exe', undefined, 5])(
+    'skips the whole entry for bad exe %p',
+    (exe) => {
+      expect(
+        dllOverridesToRegistryFixes([{ exe, dlls: { x: 'native' } }], CTX)
+      ).toEqual([])
+      expect(mockLogWarning).toHaveBeenCalled()
+    }
+  )
+
+  it.each(['d3d9.dll', 'a\\b', '', 'a'.repeat(65)])(
+    'skips only the bad dll name %p',
+    (dll) => {
+      const out = dllOverridesToRegistryFixes(
+        [{ exe: 'a.exe', dlls: { [dll]: 'native', ok: 'builtin' } }],
+        CTX
+      )
+      expect(out.map((o) => o.name)).toEqual(['ok'])
+      expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it('skips entries with empty or non-object dlls', () => {
+    expect(
+      dllOverridesToRegistryFixes(
+        [{ exe: 'a.exe', dlls: {} }, { exe: 'a.exe', dlls: [] }, 'x', null],
+        CTX
+      )
+    ).toEqual([])
+    expect(mockLogWarning).toHaveBeenCalledTimes(4)
+  })
+
+  it.each([null, 5, 'x', { exe: 'a.exe' }, undefined])(
+    'warns and returns [] for non-array %p without throwing',
+    (v) => {
+      expect(dllOverridesToRegistryFixes(v, CTX)).toEqual([])
+      expect(mockLogWarning).toHaveBeenCalledWith(
+        'gog 123: ignoring dllOverrides, not an array',
+        'Backend'
+      )
+    }
+  )
+
+  it('produces entries that pass validateRegistryFixes', () => {
+    const out = dllOverridesToRegistryFixes(
+      [{ exe: 'Game.exe', dlls: { nvapi64: 'disabled' } }],
+      CTX
+    )
+    expect(validateRegistryFixes(out, CTX)).toEqual([
+      {
+        key: AD('Game.exe'),
+        name: 'nvapi64',
+        type: 'REG_SZ',
+        data: '',
+        views: [64]
+      }
+    ])
+  })
+})
+
+describe('knownFixProfileRegistryFixes', () => {
+  beforeEach(() => jest.clearAllMocks())
+  const DO = [{ exe: 'a.exe', dlls: { x: 'native' } }] as never
+
+  it('is undefined with neither key', () => {
+    expect(knownFixProfileRegistryFixes({ title: 't' }, CTX)).toBeUndefined()
+  })
+
+  it('returns profile.registry itself when dllOverrides is absent', () => {
+    const registry = [ENTRY] as never
+    expect(knownFixProfileRegistryFixes({ registry }, CTX)).toBe(registry)
+    const bad = 'junk' as never
+    expect(knownFixProfileRegistryFixes({ registry: bad }, CTX)).toBe(bad)
+    expect(mockLogWarning).not.toHaveBeenCalled()
+  })
+
+  it('puts registry first, then dllOverrides', () => {
+    const out = knownFixProfileRegistryFixes(
+      { registry: [ENTRY] as never, dllOverrides: DO },
+      CTX
+    ) as { name: string }[]
+    expect(out.map((o) => o.name)).toEqual(['Bar', 'x'])
+  })
+
+  it('warns once for a non-array registry and keeps the overrides', () => {
+    const out = knownFixProfileRegistryFixes(
+      { registry: 'junk' as never, dllOverrides: DO },
+      CTX
+    ) as unknown[]
+    expect(out).toHaveLength(1)
+    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('applyKnownFixProfileRegistry', () => {
   const SETTINGS = {
     winePrefix: '/games/prefixes/GOGAPP'
@@ -563,6 +716,46 @@ describe('applyKnownFixProfileRegistry', () => {
     expect(mockLogWarning).toHaveBeenCalledWith(
       expect.stringContaining('gog GOGAPP: registry fix'),
       'Backend'
+    )
+  })
+
+  it('applies a dllOverrides-only profile as an AppDefaults reg add', async () => {
+    writeIn(bundledFixesPath, 'gog', {
+      dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'disabled' } }]
+    })
+
+    await applyKnownFixProfileRegistry('GOGAPP', 'gog', SETTINGS)
+
+    expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
+    const arg = mockRunWineCommand.mock.calls[0][0]
+    expect(arg.commandParts).toEqual([
+      'reg',
+      'add',
+      'HKCU\\Software\\Wine\\AppDefaults\\Game.exe\\DllOverrides',
+      '/v',
+      'nvapi64',
+      '/t',
+      'REG_SZ',
+      '/d',
+      '',
+      '/reg:64',
+      '/f'
+    ])
+    expect(arg.protonVerb).toBe('runinprefix')
+  })
+
+  it('runs registry entries before dllOverrides', async () => {
+    writeIn(bundledFixesPath, 'gog', {
+      registry: [{ ...ENTRY, views: [64] }],
+      dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'native' } }]
+    })
+
+    await applyKnownFixProfileRegistry('GOGAPP', 'gog', SETTINGS)
+
+    expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
+    expect(mockRunWineCommand.mock.calls[0][0].commandParts[2]).toBe(KEY)
+    expect(mockRunWineCommand.mock.calls[1][0].commandParts[2]).toContain(
+      'AppDefaults'
     )
   })
 

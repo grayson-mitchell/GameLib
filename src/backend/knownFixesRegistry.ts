@@ -1,5 +1,9 @@
 /**
- * Tier-2 `registry` known-fixes, shared by every store (quick 261026-j6x).
+ * Tier-2 `registry` and `dllOverrides` known-fixes, shared by every store
+ * (quick 261026-j6x, 261029-gow). `dllOverrides` compiles to
+ * `AppDefaults\<exe>\DllOverrides` REG_SZ values (spike 031: CrossOver's wine
+ * drops WINEDLLOVERRIDES), views [64] because HKCU\Software is not
+ * redirected, and shares the applier below.
  *
  * `reg add /f` values from `<appName>-<runner>.profile.json`, honoured only
  * from the bundled and local layers, never the remote one (decision 6 of
@@ -20,7 +24,12 @@
 import type { ChildProcess } from 'child_process'
 import { promises as fsPromises } from 'fs'
 import { basename, join } from 'path'
-import type { GameSettings, KnownFixRegistryView, Runner } from 'common/types'
+import type {
+  GameSettings,
+  KnownFixProfile,
+  KnownFixRegistryView,
+  Runner
+} from 'common/types'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { userHome } from 'backend/constants/paths'
@@ -42,7 +51,7 @@ export interface ValidRegistryFix {
   views: KnownFixRegistryView[]
 }
 
-interface RegistryFixLogContext {
+export interface RegistryFixLogContext {
   label: string
   logPrefix: LogPrefix
 }
@@ -150,6 +159,116 @@ export function validateRegistryFixes(
     out.push({ key, name, type, data, views })
   }
   return out
+}
+
+export const DLL_OVERRIDE_MODES = [
+  'native',
+  'builtin',
+  'native,builtin',
+  'builtin,native',
+  'disabled'
+] as const
+
+const DLL_OVERRIDE_EXE = /^[A-Za-z0-9][A-Za-z0-9 ._()+-]{0,250}\.exe$/i
+const DLL_OVERRIDE_DLL = /^[A-Za-z0-9_+-][A-Za-z0-9_.+-]{0,63}$/
+
+function shown(v: unknown): string {
+  try {
+    return String(JSON.stringify(v)).slice(0, 200)
+  } catch {
+    return '[unserialisable]'
+  }
+}
+
+/**
+ * Compiles tier-2 `dllOverrides` to raw registry entries under
+ * `HKCU\Software\Wine\AppDefaults\<exe>\DllOverrides`. They still go through
+ * validateRegistryFixes. Never throws; invalid parts are skipped with a
+ * warning. No reversal (decision 5), as for `registry`.
+ */
+export function dllOverridesToRegistryFixes(
+  raw: unknown,
+  ctx: RegistryFixLogContext
+): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = []
+  try {
+    if (!Array.isArray(raw)) {
+      logWarning(
+        `${ctx.label}: ignoring dllOverrides, not an array`,
+        ctx.logPrefix
+      )
+      return []
+    }
+    const warn = (why: string, v: unknown) =>
+      logWarning(
+        `${ctx.label}: skipping invalid dllOverrides (${why}): ${shown(v)}`,
+        ctx.logPrefix
+      )
+    for (const entry of raw) {
+      if (!isRecord(entry)) {
+        warn('entry not an object', entry)
+        continue
+      }
+      const { exe, dlls } = entry
+      if (typeof exe !== 'string' || !DLL_OVERRIDE_EXE.test(exe)) {
+        warn('bad exe', exe)
+        continue
+      }
+      if (!isRecord(dlls) || Object.keys(dlls).length === 0) {
+        warn('dlls not a non-empty object', dlls)
+        continue
+      }
+      for (const [dll, mode] of Object.entries(dlls)) {
+        if (!DLL_OVERRIDE_DLL.test(dll) || /\.dll$/i.test(dll)) {
+          warn('bad dll name', dll)
+          continue
+        }
+        if (
+          typeof mode !== 'string' ||
+          !(DLL_OVERRIDE_MODES as readonly string[]).includes(mode)
+        ) {
+          warn(`bad mode for ${dll}`, mode)
+          continue
+        }
+        out.push({
+          key: `HKCU\\Software\\Wine\\AppDefaults\\${exe}\\DllOverrides`,
+          name: dll,
+          type: 'REG_SZ',
+          value: mode === 'disabled' ? '' : mode,
+          views: [64]
+        })
+      }
+    }
+  } catch (error) {
+    logWarning(
+      `${ctx.label}: dllOverrides compilation failed: ${String(error)}`,
+      ctx.logPrefix
+    )
+  }
+  return out
+}
+
+/**
+ * Raw registry fixes for a profile: `registry` first, then compiled
+ * `dllOverrides`. undefined when the profile has neither; `profile.registry`
+ * itself when `dllOverrides` is absent (registry-only stays byte-identical).
+ */
+export function knownFixProfileRegistryFixes(
+  profile: KnownFixProfile,
+  ctx: RegistryFixLogContext
+): unknown {
+  if (profile.dllOverrides === undefined) return profile.registry
+  let base: unknown[] = []
+  if (profile.registry !== undefined) {
+    if (Array.isArray(profile.registry)) base = profile.registry
+    else {
+      logWarning(
+        `${ctx.label}: ignoring registry fixes, not an array`,
+        ctx.logPrefix
+      )
+    }
+  }
+  return [...base, ...dllOverridesToRegistryFixes(profile.dllOverrides, ctx)]
 }
 
 /** Argv for `reg add`; an array, never a shell string. */
@@ -452,12 +571,14 @@ export async function applyKnownFixProfileRegistry(
   const label = `${runner} ${appName}`
   try {
     const profile = readKnownFixProfile(appName, runner)
-    if (!profile || profile.registry === undefined) return
+    const ctx = { label, logPrefix: LogPrefix.Backend }
+    const raw = profile ? knownFixProfileRegistryFixes(profile, ctx) : undefined
+    if (raw === undefined) return
     // Lazy, to avoid the launcher import cycle.
     const { runWineCommand } = await import('backend/launcher')
     await applyRegistryFixes(
-      profile.registry,
-      { label, logPrefix: LogPrefix.Backend },
+      raw,
+      ctx,
       (commandParts, onSpawn) =>
         runWineCommand({
           commandParts,

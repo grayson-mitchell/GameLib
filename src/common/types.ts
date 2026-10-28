@@ -1192,6 +1192,18 @@ interface KnownFixOverlayEntry {
   target: 'gstreamer-plugin-path'
 }
 
+export type KnownFixDllOverrideMode =
+  | 'native'
+  | 'builtin'
+  | 'native,builtin'
+  | 'builtin,native'
+  | 'disabled'
+
+interface KnownFixDllOverrideEntry {
+  exe: string
+  dlls: Record<string, KnownFixDllOverrideMode>
+}
+
 export interface KnownFixProfile {
   title?: string
   /** Link to the evidence for the fix (decision 3). */
@@ -1204,6 +1216,15 @@ export interface KnownFixProfile {
    * 32 and 64. Applied on every launch.
    */
   registry?: KnownFixRegistryEntry[]
+  /**
+   * Per-exe DLL overrides (quick 261029-gow). Tier 2 only (local/bundled).
+   * Compiles to `HKCU\Software\Wine\AppDefaults\<exe>\DllOverrides` REG_SZ
+   * values because CrossOver's wine wrapper drops WINEDLLOVERRIDES (spike 031).
+   * `exe` is a basename; there is no bottle-wide fallback. `disabled` writes
+   * ''. Applied every launch, for every store. No reversal: turning the
+   * profile off leaves written values, as for `registry`.
+   */
+  dllOverrides?: KnownFixDllOverrideEntry[]
   /**
    * Overlays to install on demand and put on a plugin path (quick
    * 261027-n77). Tier 2 only (local/bundled); each entry names an id in

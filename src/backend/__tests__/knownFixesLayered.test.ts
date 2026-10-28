@@ -179,6 +179,20 @@ describe('readKnownFixes (tier 1)', () => {
     }
   )
 
+  it.each(LAYERS)(
+    'drops dllOverrides from a tier-1 .json in the %s layer with a warning',
+    (_label, dir) => {
+      put(dir(), '1', {
+        title: 't',
+        dllOverrides: [{ exe: 'a.exe', dlls: { d3d9: 'native' } }]
+      })
+      expect(readKnownFixes('1', 'steam')).toEqual({ title: 't' })
+      expect(mockedLogWarning).toHaveBeenCalledWith(
+        expect.stringMatching(/dllOverrides.*1-<store>\.profile\.json/)
+      )
+    }
+  )
+
   it('drops an unknown non-tier-2 key with a warning naming the layer', () => {
     put(localFixesPath, '1', { title: 't', foo: 1 })
     expect(readKnownFixes('1', 'steam')).toEqual({ title: 't' })
@@ -227,6 +241,7 @@ describe('filterTier1KnownFixes', () => {
     expect(TIER1_KNOWN_FIX_KEYS).toContain('launchNotice')
     expect(TIER1_KNOWN_FIX_KEYS).not.toContain('registry' as never)
     expect(TIER1_KNOWN_FIX_KEYS).not.toContain('steamSharedRedists' as never)
+    expect(TIER1_KNOWN_FIX_KEYS).not.toContain('dllOverrides' as never)
   })
 })
 
@@ -262,6 +277,28 @@ describe('readKnownFixProfile (tier 2)', () => {
     }
     put(bundledFixesPath, '1', profile, '.profile.json')
     expect(readKnownFixProfile('1', 'steam')).toEqual(profile)
+  })
+
+  it.each([
+    ['bundled', () => bundledFixesPath],
+    ['local', () => localFixesPath]
+  ])('keeps dllOverrides from the %s layer without a warning', (_n, dir) => {
+    const profile = {
+      dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'disabled' } }]
+    }
+    put(dir(), '1', profile, '.profile.json')
+    expect(readKnownFixProfile('1', 'steam')).toEqual(profile)
+    expect(mockedLogWarning).not.toHaveBeenCalled()
+  })
+
+  it('ignores a dllOverrides profile that sits only in the remote directory', () => {
+    put(
+      fixesPath,
+      '1',
+      { dllOverrides: [{ exe: 'Game.exe', dlls: { a: 'native' } }] },
+      '.profile.json'
+    )
+    expect(readKnownFixProfile('1', 'steam')).toBeNull()
   })
 
   it('drops tier-1 functional keys with a warning naming the tier-1 file', () => {
