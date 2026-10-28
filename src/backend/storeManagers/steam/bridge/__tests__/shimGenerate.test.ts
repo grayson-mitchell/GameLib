@@ -1500,6 +1500,44 @@ describe('shimGenerate', () => {
       expect(existsSync(shimDestPath())).toBe(true)
     })
 
+    it('reads drm (CEG) from the resolver drmExe, not the bootstrap (CR-02)', async () => {
+      writeFileSync(gameExePath, buildMinimalPe([]))
+      const shipping = join(root, 'Game-Win64-Shipping.exe')
+      writeFileSync(shipping, buildMinimalPe(['STEAM_SPLIT_GUID']))
+      okImports()
+      const spy = jest
+        .spyOn(drmScanExe, 'detectLaunchDrmWrapper')
+        .mockResolvedValue({ drmWrapper: 'steamstub', drmExe: shipping })
+      try {
+        const result = await placeShimForGame('1234', gameExePath, {
+          shimSourcePath: realShimSourcePath
+        })
+        expect(result.drm).toEqual({
+          kind: 'ceg',
+          markers: ['STEAM_SPLIT_GUID']
+        })
+        expect('drmWrapper' in result && result.drmWrapper).toBe('steamstub')
+      } finally {
+        spy.mockRestore()
+      }
+    })
+
+    it('reads drm from the launch exe when the resolver returns it (CR-02)', async () => {
+      writeFileSync(gameExePath, buildMinimalPe(['STEAM_GUIDD']))
+      okImports()
+      const spy = jest
+        .spyOn(drmScanExe, 'detectLaunchDrmWrapper')
+        .mockResolvedValue({ drmWrapper: 'none', drmExe: gameExePath })
+      try {
+        const result = await placeShimForGame('1234', gameExePath, {
+          shimSourcePath: realShimSourcePath
+        })
+        expect(result.drm).toEqual({ kind: 'ceg', markers: ['STEAM_GUIDD'] })
+      } finally {
+        spy.mockRestore()
+      }
+    })
+
     it('a clean PE exe carries drm null', async () => {
       writeFileSync(gameExePath, buildMinimalPe([]))
       okImports()

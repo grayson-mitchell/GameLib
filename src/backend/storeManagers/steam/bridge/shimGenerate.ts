@@ -473,7 +473,6 @@ export async function placeShimForGame(
 ): Promise<PlaceShimResult> {
   const result = await placeShimForGameInner(appId, gameExePath, opts)
   if (result.status === 'error') return result
-  const drm = detectExeSteamDrm(appId, resolve(gameExePath))
   // Gap 11 (56-21): UE titles carry .bind on the Shipping exe, not the
   // bootstrap; stamp from the same resolver launch routing uses.
   const stampBottle = sanitizeBottleName(
@@ -485,6 +484,10 @@ export async function placeShimForGame(
         resolve(gameExePath)
       )
     : undefined
+  // CR-02: drm (CEG) is read from the same exe the resolver chose for
+  // drmWrapper, so launch routing and the persisted verdict agree.
+  const drmSource = launchWrapper?.drmExe ?? resolve(gameExePath)
+  const drm = detectExeSteamDrm(appId, drmSource)
   const flagged = withDrmWrapper(
     appId,
     gameExePath,
@@ -554,6 +557,8 @@ function withDrmWrapper(
   }
   const resolvedExe = resolve(gameExePath)
   const wrapper = launch.drmWrapper
+  // IN-06: exeArch describes the exe wine actually runs (bootstrap/launch
+  // exe); drmWrapper and drm describe the exe carrying .bind (launch.drmExe).
   const exeArch = readFileEffectiveArch(resolvedExe)
   const stamp = { exeArch, ...(wrapper ? { drmWrapper: wrapper } : {}) }
   if (wrapper !== 'steamstub') return { ...result, ...stamp }
