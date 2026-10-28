@@ -986,8 +986,11 @@ export function prepareDrmTraceFile(
       return { status: 'error', cause: 'invalid DRM trace file name' }
 
     try {
-      const re = new RegExp(`^${appId}-([0-9]{1,16})\\.log$`)
-      const mine: { id: number; name: string }[] = []
+      // Group `<id>.log` and `<id>.wine.log` by id so orphan wine logs (the
+      // game died before writing a trace) are pruned too (CR-03). The
+      // `.stage.wine.log` suffix cannot match: `.stage` follows the digits.
+      const re = new RegExp(`^${appId}-([0-9]{1,16})(\\.wine)?\\.log$`)
+      const byId = new Map<number, string[]>()
       for (const name of readdirSync(paths.traceRoot)) {
         const m = re.exec(name)
         if (!m) continue
@@ -995,14 +998,23 @@ export function prepareDrmTraceFile(
           throwIfNoEntry: false
         })
         if (!st || !st.isFile()) continue
-        mine.push({ id: Number(m[1]), name })
+        const id = Number(m[1])
+        const names = byId.get(id)
+        if (names) names.push(name)
+        else byId.set(id, [name])
       }
-      mine.sort((a, b) => b.id - a.id)
-      for (const old of mine.slice(DRM_TRACE_KEEP_PER_APP - 1)) {
-        unlinkSync(join(paths.traceRoot, old.name))
-        rmSync(drmWineLogPathFor(join(paths.traceRoot, old.name)), {
-          force: true
-        })
+      const ids = [...byId.keys()].sort((a, b) => b - a)
+      for (const id of ids.slice(DRM_TRACE_KEEP_PER_APP - 1)) {
+        for (const name of byId.get(id) ?? []) {
+          try {
+            unlinkSync(join(paths.traceRoot, name))
+          } catch (error) {
+            logWarning(
+              `SteamGame: DRM log removal failed for ${name}: ${String(error)}`,
+              LogPrefix.Steam
+            )
+          }
+        }
       }
     } catch (error) {
       logWarning(
