@@ -630,7 +630,7 @@ Plans:
 **Goal:** A SteamStub-wrapped title (`.bind` section) launches through the native Mac Steam bridge with no Windows Steam client. GameLib's forwarding `steamclient64.dll` can never pass SteamStub's module check, because the stub verifies the slot's file is Valve's signed client (spikes 040, 041). So this phase adds a second bridge mode for DRM-wrapped titles only. Spike 043 calls it adoption option 2, and spike 044 proved it live: Grim Dawn 219990 reached its menu under NotProton. The pieces: Valve's genuine `steamclient(64).dll` fetched from Valve's CDN onto the user's machine (never shipped), its exports trampolined in memory to `lsteamclient` (Proton's `steamclient_setup_trampolines`), `lsteamclient` built against a CrossOver source drop, a cloned and patched CrossOver runner, and the x86_64 slice of Mac `steamclient.dylib` as the host. The game's own `steam_api` runs, with no GameLib shim. The TCP `steam_api` bridge stays the default for DRM-free titles. Boundary (user ruling 2026-10-27): fetching the client and trampolining it in memory are in bounds. Patching game exes, decrypting DRM, and a GameLib stand-in for Steam's private protocol are out. CEG titles are out of scope: 044 left CEG's `STEAMSTART` servicing unsolved. Carried open question from 044: Steam API init behind the genuine client is unverified under the strict bridge-verified criterion. Targets: Grim Dawn 219990, Raft 648800, Ranch Simulator 1119730. Source: todo `2026-10-26-steamstub-titles-fail-launch-check-on-bridge.md` item 1. Done when (live gate): Grim Dawn reaches its menu through this mode with only Mac Steam running, and it meets the strict bridge-verified criterion.
 **Requirements**: TBD
 **Depends on:** Phase 52
-**Plans:** 24/26 plans executed
+**Plans:** 25/26 plans executed
 
 Plans:
 - [x] TBD (run /gsd-plan-phase 56 to break down) (completed 2026-10-28)
@@ -644,7 +644,7 @@ Gap closure (56-VERIFICATION gaps_found, live gate FAIL at item 4):
 - [x] 56-22-PLAN.md — live diagnosis session (operator) for Gaps 9 and 7, verdicts and fix specs
 - [x] 56-23-PLAN.md — Gap 9 fix: tolerant staged check, session end after exit and before stage, bounded escalation
 - [x] 56-24-PLAN.md — Gap 7 fix (decision checkpoint, then the chosen branch)
-- [ ] 56-25-PLAN.md — author the re-run live gate (contract defects Gaps 1/5/8/12 fixed), approval, publish if needed
+- [x] 56-25-PLAN.md — author the re-run live gate (contract defects Gaps 1/5/8/12 fixed), approval, publish if needed
 - [ ] 56-26-PLAN.md — run the re-run gate (operator), verdict, close or update gap todos
 
 ### Phase 57: Opt-in known-fix sharing via relay

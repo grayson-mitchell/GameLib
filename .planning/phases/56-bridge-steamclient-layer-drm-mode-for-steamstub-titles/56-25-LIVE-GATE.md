@@ -351,6 +351,38 @@ result: pending
 
 ## Run record
 
+### Approval
+
+Operator approval, 2026-10-29: "Approved". Recorded as: approved as written, including the 3-launch ordinals (Grim Dawn
+1-3, Raft 4-6, Ranch 7, HKLM diagnostic 8, launch 0 = uninstall and reinstall) and the winebus classification (a
+repeat-launch timeout on an unstaged bottle counts as the residual winebus risk, not a G9 failure).
+
+### Publish record
+
+publish: not needed (56-22..24 were closed as superseded, so no component was rebuilt; archive, tag and pin are the 56-15 values).
+
+### Preflight
+
+Author-side, run by plan 56-25 Task 4 on 2026-10-29 (local) / 2026-10-28T19:29Z (session name). Session dir for 56-26: `/tmp/gamelib-gate-20261028T192950Z/`.
+No game launched, no `result:` line filled.
+
+| PC | Observed | Pass |
+| --- | --- | --- |
+| PC1 | `pgrep -x steam_osx` printed pid 21751 | pass |
+| PC2 | ps grep for steamwebhelper.exe / steamservice.exe / Steam\steam.exe printed nothing | pass |
+| PC3 | CFBundleVersion `26.3.0.39832` | pass |
+| PC4 | `pnpm build-steam-bridge`, `pnpm exec vite build`, `pnpm build:sidecar-sea` all exit 0 (log `/tmp/gamelib-gate-20261028T192950Z/pc4-build.log`). build/main/sidecar.js mtime 2026-10-29T08:30:06 vs newest `src/backend` commit 2026-10-29T08:20:55+13:00; `grep -c drmLaunchSetup` = 7 | pass |
+| PC5 | `/tmp/gamelib-gate-20261028T192950Z/pre-session-gamelib.log` (9305 B) and `pre-session-gamelib.log.old` (6782 B) copied | pass |
+| PC6 | run by 56-26 | n/a |
+| PC7 | run by 56-26 | n/a |
+| PC8 | COMPDIR existed (mtime 2026-10-28T22:35:45, six names present). Moved to `/tmp/gamelib-gate-20261028T192950Z/compdir-prior/`; `test ! -e COMPDIR` then exit 0 | pass (after move) |
+| PC9 | `curl -fsSIL` archive URL: HTTP/2 302 then HTTP/2 200 | pass |
+| PC10 | appmanifest_648800.acf (463 B) and appmanifest_1119730.acf (491 B) both exist | pass |
+| PC11 | run by 56-26 | n/a |
+
+Note for 56-26: at preflight time one `gamelib-shell` dev instance was already running (count 1), started BEFORE the PC4
+rebuild, so its sidecar is stale. PC6 requires the operator to restart `pnpm tauri:dev` under `tee -a <session>/terminal.log`.
+
 ## Gaps
 
 ## Verdict
