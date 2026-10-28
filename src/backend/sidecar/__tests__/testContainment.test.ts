@@ -935,6 +935,23 @@ const IN_SCOPE_SUITES = [
  * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock kit
  * Block B gates on. A `readdirSync` recount at this task's execution time puts the directory at 72
  * `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 68 below.
+ *
+ * `steamNativeInstallDefault.test.ts` (quick 261024-exo, 2026-10-24) is classified as structurally
+ * contained on the same basis as `dismissedSignInNoticesSetting.test.ts`, whose harness it copies:
+ * it runs the real `backend/config`, `configStore` and `settingsFlowRegistration` over a disposable
+ * per-file profile under `os.tmpdir()` (its `beforeAll` asserts the resolved config paths sit under
+ * `realpathSync(tmpdir())` before any write), mocks only the per-game settings branch, the store
+ * managers and host wine discovery, declares no `os`/`pathShim` mock and never touches
+ * `bootstrap.init()`. It was never added to the census, so this tripwire went red from the first CI
+ * run after it landed. 73 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 69 below.
+ *
+ * `stdinEofRelease.test.ts` (debug/sidecar-survives-force-quit, 2026-10-26) is classified as
+ * structurally contained: it drives `releaseOnStdinEof` over an in-memory `PassThrough` and replaces
+ * every collaborator (`../../logger`, the abort handler, the download queue and `SteamUser`) with a
+ * full factory mock, so the real `electron`/`electron-store`/`pathShim` import chain is never
+ * required, it touches no filesystem and nothing it runs resolves through `homedir()`. It cannot be
+ * an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock
+ * kit Block B gates on. 74 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 70 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -994,9 +1011,11 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'sidecarStdoutFramesOnly.test.ts',
   'signInProbeBootWire.test.ts',
   'skeletonFlows.test.ts',
+  'stdinEofRelease.test.ts',
   'steamAuthFlows.test.ts',
   'steamFlows.test.ts',
   'steamFocusRefreshWire.test.ts',
+  'steamNativeInstallDefault.test.ts',
   'steamgridSecretStore.test.ts',
   'storeEmbedFlows.test.ts',
   'storeEmbedWireContract.test.ts',
