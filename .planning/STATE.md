@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
 Plan: 26 of 26 complete (56-25 done; 56-22..56-24 closed as superseded by 98837f09b / 5ff2dbd8c, operator ruling 2026-10-29)
 Status: Ready to execute
-Last activity: 2026-10-29 - Completed quick task 261029-e2t: prefetch DRM-mode downloads at the end of a bridge install
+Last activity: 2026-10-29 - Completed quick task 261029-exu: bridge install tail UX
 
 Progress: [██████████] 100%
 
@@ -479,6 +479,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261029-8ws | Record external fix-format research (protonfixes/Lutris/CrossTie/Whisky-Mythic-Sikarugir) in the compat-fixes note; file dllOverrides, launchArgs/exeOverride and protonfixes-import todos | 2026-10-29 | 07e448d18 | Done | [261029-8ws-record-external-fix-format-research-and-](./quick/261029-8ws-record-external-fix-format-research-and-/) |
 | 261029-d7v | DRM-mode launch setup sends its own `'drm-setup'` status, labelled "Preparing Steam DRM support (<step>)", instead of borrowing `'redist'` ("Installing Redistributables"). | 2026-10-29 | 5c163c76a | Tests + codecheck green; not seen live | [261029-d7v-drm-launch-setup-own-status-label](./quick/261029-d7v-drm-launch-setup-own-status-label/) |
 | 261029-e2t | Prefetch DRM-mode downloads (allowlist, steamclient-layer component, runner clone, Valve client) at the end of a bridge install for steamclient-layer titles; first Play only stages the bottle. | 2026-10-29 | fe658e1d7 | Tests + codecheck green; not seen live | [261029-e2t-prefetch-drm-downloads-at-end-of-install](./quick/261029-e2t-prefetch-drm-downloads-at-end-of-install/) |
+| 261029-exu | Bridge install tail: poller leaves completion to installBridgeGame (no early `done`/Play, one finished toast, no bogus restart-Steam toast); "Finishing install…" phase; Downloads hero names redist/DRM phases over an indeterminate bar; `getStatusLabel` gains `drm-setup`. | 2026-10-29 | 64168d694 | Tests + codecheck green; not seen live | [261029-exu-bridge-install-tail-ux](./quick/261029-exu-bridge-install-tail-ux/) |
 | fast | `dialogDisplayed` (send-kind, added by `509bcb01b`) bucketed in `IPC-PORT-INVENTORY.md`; Unique channels 229 → 230, Ported 74 → 75. `pnpm planning-gates` 12/12. | 2026-10-29 | `28c85c608` | Done | — |
 | fast | Library tile shows Stop for a playing Steam game (context menu too), and the recently-played first tile swaps PLAY for a STOP label; D-08 card hide dropped to match MainButton. Not live-tested. | 2026-10-29 | `78f657b58` | Done | — |
 
