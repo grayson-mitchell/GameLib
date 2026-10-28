@@ -51,8 +51,10 @@ jest.mock('../../../depot', () => ({
 jest.mock('backend/launcher', () => ({ runWineCommand: jest.fn() }))
 
 import { runWineCommand } from 'backend/launcher'
+import { logInfo, logWarning } from 'backend/logger'
 import {
   buildDrmRegistryCommands,
+  drmRegistryMismatches,
   drmRegistryStagedInUserReg,
   isPhase52ForwarderBytes,
   removeTcpBridgeArtifacts,
@@ -167,6 +169,25 @@ describe('buildDrmRegistryCommands', () => {
       for (const el of argv) expect(el).not.toMatch(/HKLM|HKEY_LOCAL_MACHINE/i)
       expect(argv[2].startsWith('HKCU\\')).toBe(true)
     }
+  })
+})
+
+describe('drmRegistryMismatches', () => {
+  it('is empty for a staged body and for a trailing-backslash SteamPath', () => {
+    expect(drmRegistryMismatches(STAGED_REG)).toEqual([])
+    const t = STAGED_REG.replaceAll(
+      '"SteamPath"="C:\\\\Program Files (x86)\\\\Steam"',
+      '"SteamPath"="C:\\\\Program Files (x86)\\\\Steam\\\\"'
+    )
+    expect(drmRegistryMismatches(t)).toEqual([])
+  })
+  it('names a missing value', () => {
+    expect(
+      drmRegistryMismatches(STAGED_REG.replace('"Universe"="Public"', ''))
+    ).toEqual(['Software\\\\Valve\\\\Steam\\\\ActiveProcess:Universe'])
+  })
+  it('names every value of a stale body', () => {
+    expect(drmRegistryMismatches(LIVE_STALE).length).toBeGreaterThan(0)
   })
 })
 
@@ -483,6 +504,18 @@ describe('stageDrmBottle', () => {
     expect(r.registryWritten).toBe(true)
   })
 
+  it('logs which registry values were not staged before re-running reg adds', async () => {
+    write(
+      join(bottle, 'user.reg'),
+      STAGED_REG.replace('"Universe"="Public"', '')
+    )
+    await run()
+    expect(logInfo).toHaveBeenCalledWith(
+      'stageDrmBottle: appId 1 registry not staged: Software\\\\Valve\\\\Steam\\\\ActiveProcess:Universe',
+      expect.anything()
+    )
+  })
+
   it('is idempotent once the bottle is staged', async () => {
     await run()
     write(join(bottle, 'user.reg'), STAGED_REG)
@@ -622,9 +655,17 @@ describe('stageDrmBottle', () => {
   it('times out a reg add and clears its timer', async () => {
     const clear = jest.spyOn(global, 'clearTimeout')
     runReg.mockImplementation(() => new Promise(() => undefined))
-    const r = await run({}, { regTimeoutMs: 20 })
+    const listBottleProcesses = jest.fn(() =>
+      Promise.resolve(['11:97.5:wineserver', '12:0.0:steam.exe'])
+    )
+    const r = await run({}, { regTimeoutMs: 20, listBottleProcesses })
     expect(r.status).toBe('error')
     if (r.status === 'error') expect(r.cause).toContain('timed out')
+    expect(listBottleProcesses).toHaveBeenCalledWith(bottle)
+    expect(logWarning).toHaveBeenCalledWith(
+      'stageDrmBottle: appId 1 bottle processes at timeout: 11:97.5:wineserver,12:0.0:steam.exe',
+      expect.anything()
+    )
     expect(runReg).toHaveBeenCalledTimes(1)
     expect(clear).toHaveBeenCalled()
     clear.mockRestore()

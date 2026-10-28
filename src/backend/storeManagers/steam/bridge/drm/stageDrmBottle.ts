@@ -39,6 +39,7 @@ import {
   renameSync,
   unlinkSync
 } from 'node:fs'
+import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -130,14 +131,15 @@ const sameSteamPath = (v: string | undefined): boolean =>
     regEscape(DRM_STEAM_DIR_WIN).toLowerCase()
 
 /**
- * True when a wine user.reg body already holds all four values written by
- * buildDrmRegistryCommands(). Pure; never throws.
+ * Names (`<section>:<value>`) of the four values buildDrmRegistryCommands()
+ * writes that are missing or different in a wine user.reg body; [] when fully
+ * staged. Pure; never throws (an unreadable body reports `user.reg:unparseable`).
  */
 // ts-prune-ignore-next
-export function drmRegistryStagedInUserReg(text: string): boolean {
+export function drmRegistryMismatches(text: string): string[] {
   try {
     if (typeof text !== 'string' || text.length > MAX_USER_REG_BYTES) {
-      return false
+      return ['user.reg:unparseable']
     }
     const sections = new Map<string, Map<string, string>>()
     let current: Map<string, string> | null = null
@@ -152,17 +154,36 @@ export function drmRegistryStagedInUserReg(text: string): boolean {
       const value = /^"([^"]+)"="(.*)"\s*$/.exec(line)
       if (value && current) current.set(value[1], value[2])
     }
-    const active = sections.get('Software\\\\Valve\\\\Steam\\\\ActiveProcess')
-    const steam = sections.get('Software\\\\Valve\\\\Steam')
-    return (
-      active?.get('SteamClientDll64') === regEscape(DRM_STEAMCLIENT64_WIN) &&
-      active.get('Universe') === 'Public' &&
-      sameSteamPath(active.get('SteamPath')) &&
-      sameSteamPath(steam?.get('SteamPath'))
-    )
+    const activeName = 'Software\\\\Valve\\\\Steam\\\\ActiveProcess'
+    const steamName = 'Software\\\\Valve\\\\Steam'
+    const active = sections.get(activeName)
+    const steam = sections.get(steamName)
+    const out: string[] = []
+    if (active?.get('SteamClientDll64') !== regEscape(DRM_STEAMCLIENT64_WIN)) {
+      out.push(`${activeName}:SteamClientDll64`)
+    }
+    if (active?.get('Universe') !== 'Public') {
+      out.push(`${activeName}:Universe`)
+    }
+    if (!sameSteamPath(active?.get('SteamPath'))) {
+      out.push(`${activeName}:SteamPath`)
+    }
+    if (!sameSteamPath(steam?.get('SteamPath'))) {
+      out.push(`${steamName}:SteamPath`)
+    }
+    return out
   } catch {
-    return false
+    return ['user.reg:unparseable']
   }
+}
+
+/**
+ * True when a wine user.reg body already holds all four values written by
+ * buildDrmRegistryCommands(). Pure; never throws.
+ */
+// ts-prune-ignore-next
+export function drmRegistryStagedInUserReg(text: string): boolean {
+  return drmRegistryMismatches(text).length === 0
 }
 
 /** True when the bytes carry the Phase 52 forwarder version string. */
@@ -194,6 +215,8 @@ export type StageDrmBottleDeps = {
     commandParts: string[]
   ) => Promise<{ code?: number; stderr?: string }>
   regTimeoutMs?: number
+  /** Live wine processes of the bottle, logged on a reg add timeout. */
+  listBottleProcesses?: (bottleDir: string) => Promise<string[]>
 }
 
 // ts-prune-ignore-next
@@ -457,6 +480,42 @@ function sourceOk(path: string): boolean {
   return head !== null && head.length === 2 && head.toString('latin1') === 'MZ'
 }
 
+/**
+ * `<pid>:<pcpu>:<basename>` for processes whose command line mentions the
+ * bottle or the DRM runners. The basename is cut at the first `.exe` or wine
+ * binary name, never by splitting on spaces (paths hold "Application Support").
+ */
+async function defaultListBottleProcesses(
+  bottleDir: string
+): Promise<string[]> {
+  const stdout = await new Promise<string>((resolveOut) => {
+    execFile(
+      '/bin/ps',
+      ['-axww', '-o', 'pid=,pcpu=,command='],
+      { timeout: 3000, maxBuffer: 4 * 1024 * 1024 },
+      (error, out) => resolveOut(error ? '' : String(out))
+    )
+  })
+  const entries: string[] = []
+  for (const line of stdout.split('\n')) {
+    const m = /^\s*(\d+)\s+([\d.]+)\s+(.*)$/.exec(line)
+    if (!m) continue
+    const command = m[3]
+    if (
+      !command.includes(bottleDir) &&
+      !command.includes('steam-bridge/drm/runners/')
+    ) {
+      continue
+    }
+    const exe =
+      /([^/\\]+?\.exe)(?=\s|$)/i.exec(command)?.[1] ??
+      /([^/\\\s]*wine[^/\\\s]*)(?=\s|$)/i.exec(command)?.[1] ??
+      'unknown'
+    entries.push(`${m[1]}:${m[2]}:${exe}`)
+  }
+  return entries
+}
+
 async function runRegArgv(
   commands: string[][],
   run: NonNullable<StageDrmBottleDeps['runReg']>,
@@ -632,6 +691,18 @@ export async function stageDrmBottle(
     }
     if (!alreadyStaged) {
       if (input.signal?.aborted) return fail('aborted')
+      if (regStat && regStat.isFile()) {
+        try {
+          logInfo(
+            `stageDrmBottle: appId ${input.appId} registry not staged: ${drmRegistryMismatches(
+              readFileSync(join(bottleDir, 'user.reg'), 'utf8')
+            ).join(', ')}`,
+            LogPrefix.Steam
+          )
+        } catch {
+          // diagnostic only
+        }
+      }
       let commands: string[][]
       try {
         commands = buildDrmRegistryCommands()
@@ -659,6 +730,19 @@ export async function stageDrmBottle(
           `stageDrmBottle: appId ${input.appId} ${err}`,
           LogPrefix.Steam
         )
+        if (err.includes('timed out after')) {
+          try {
+            const procs = await (
+              deps.listBottleProcesses ?? defaultListBottleProcesses
+            )(bottleDir)
+            logWarning(
+              `stageDrmBottle: appId ${input.appId} bottle processes at timeout: ${procs.slice(0, 20).join(',')}`,
+              LogPrefix.Steam
+            )
+          } catch {
+            // diagnostic only
+          }
+        }
         return fail(err)
       }
       registryWritten = true
