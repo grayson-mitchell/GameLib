@@ -8,7 +8,9 @@ import {
   writeFileSync
 } from 'fs'
 import { tmpdir } from 'os'
-import { dirname, join } from 'path'
+import { dirname, join, resolve } from 'path'
+
+import { logWarning } from 'backend/logger'
 
 import { detectLaunchDrmWrapper } from '../drmScanExe'
 
@@ -59,6 +61,7 @@ describe('detectLaunchDrmWrapper', () => {
     mkdirSync(game, { recursive: true })
   })
   afterEach(() => rmSync(bottle, { recursive: true, force: true }))
+  beforeEach(() => jest.mocked(logWarning).mockClear())
 
   function write(path: string, names: string[]): string {
     mkdirSync(dirname(path), { recursive: true })
@@ -119,6 +122,14 @@ describe('detectLaunchDrmWrapper', () => {
       await expect(
         detectLaunchDrmWrapper(bottle, exe, { findUnreal })
       ).resolves.toEqual({ drmWrapper: 'none', drmExe: exe })
+      const msg = jest.mocked(logWarning).mock.calls.map((c) => String(c[0]))
+      expect(
+        msg.some(
+          (m) =>
+            m.includes('Game-Win64-Shipping.exe') &&
+            m.includes('escapes bottle')
+        )
+      ).toBe(true)
     } finally {
       rmSync(outside, { recursive: true, force: true })
     }
@@ -130,5 +141,75 @@ describe('detectLaunchDrmWrapper', () => {
     await expect(
       detectLaunchDrmWrapper(bottle, exe, { findUnreal })
     ).resolves.toEqual({ drmWrapper: 'none', drmExe: exe })
+  })
+
+  it('symlinked bottle root still routes and returns the lexical path', async () => {
+    const holder = realpathSync(mkdtempSync(join(tmpdir(), 'drmscan-lnk-')))
+    try {
+      const link = join(holder, 'bottle-link')
+      symlinkSync(bottle, link)
+      const exe = write(join(game, 'Game.exe'), PLAIN)
+      const ship = write(shipping(), STUB)
+      const lexical = join(
+        link,
+        'Game',
+        'Game',
+        'Binaries',
+        'Win64',
+        'Game-Win64-Shipping.exe'
+      )
+      const findUnreal = jest
+        .fn()
+        .mockResolvedValue({ steamworksDir: null, shippingExes: [lexical] })
+      const r = await detectLaunchDrmWrapper(link, exe, { findUnreal })
+      expect(ship).toBeTruthy()
+      expect(r).toEqual({ drmWrapper: 'steamstub', drmExe: resolve(lexical) })
+      expect(r.drmExe.startsWith(link)).toBe(true)
+    } finally {
+      rmSync(holder, { recursive: true, force: true })
+    }
+  })
+
+  it('symlinked game dir inside the bottle still routes', async () => {
+    const exe = write(join(game, 'Game.exe'), PLAIN)
+    write(
+      join(bottle, 'Real', 'Game', 'Binaries', 'Win64', 'S-Shipping.exe'),
+      STUB
+    )
+    const linkDir = join(bottle, 'Linked')
+    symlinkSync(join(bottle, 'Real'), linkDir)
+    const lexical = join(linkDir, 'Game', 'Binaries', 'Win64', 'S-Shipping.exe')
+    const findUnreal = jest
+      .fn()
+      .mockResolvedValue({ steamworksDir: null, shippingExes: [lexical] })
+    await expect(
+      detectLaunchDrmWrapper(bottle, exe, { findUnreal })
+    ).resolves.toEqual({ drmWrapper: 'steamstub', drmExe: resolve(lexical) })
+  })
+
+  it('a throwing detector on one candidate does not abandon the rest', async () => {
+    const exe = write(join(game, 'Game.exe'), PLAIN)
+    const a = write(join(game, 'a-Shipping.exe'), STUB)
+    const b = write(join(game, 'b-Shipping.exe'), STUB)
+    const findUnreal = jest
+      .fn()
+      .mockResolvedValue({ steamworksDir: null, shippingExes: [b, a] })
+    const detect = jest.fn((p: string) => {
+      if (p === exe) return 'none' as const
+      if (p === a) throw new Error('scan boom')
+      return 'steamstub' as const
+    })
+    await expect(
+      detectLaunchDrmWrapper(bottle, exe, { findUnreal, detect })
+    ).resolves.toEqual({ drmWrapper: 'steamstub', drmExe: b })
+    expect(
+      jest
+        .mocked(logWarning)
+        .mock.calls.some(
+          (c) =>
+            String(c[0]).includes('a-Shipping.exe') &&
+            String(c[0]).includes('scan threw')
+        )
+    ).toBe(true)
   })
 })

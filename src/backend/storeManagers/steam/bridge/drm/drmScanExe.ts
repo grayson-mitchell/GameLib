@@ -12,9 +12,10 @@
  * Callers (games.ts, wired in 56-21) must read CEG markers from `drmExe`, not
  * from the launch exe. Never throws.
  */
-import { dirname } from 'path'
+import { basename, dirname, resolve } from 'path'
 import { realpath } from 'fs/promises'
 
+import { logWarning, LogPrefix } from 'backend/logger'
 import { findUnrealLayout, isContainedWithin } from '../bridgeScan'
 import { detectDrmWrapper } from '../shimGenerate'
 
@@ -46,17 +47,36 @@ export async function detectLaunchDrmWrapper(
   try {
     const layout = await findUnreal(bottleDir, dirname(exePath))
     if (!layout) return own
-    for (const candidate of layout.shippingExes) {
+    const rootReal = await realpath(bottleDir).catch(() => resolve(bottleDir))
+    for (const candidate of [...layout.shippingExes].sort()) {
       if (!candidate.toLowerCase().endsWith('.exe')) continue
+      const name = basename(candidate)
       let real: string
       try {
         real = await realpath(candidate)
       } catch {
+        logWarning(
+          `detectLaunchDrmWrapper: skipped ${name} (realpath failed)`,
+          LogPrefix.Steam
+        )
         continue
       }
-      if (!isContainedWithin(bottleDir, real)) continue
-      if (detect(real) === 'steamstub') {
-        return { drmWrapper: 'steamstub', drmExe: real }
+      if (!isContainedWithin(rootReal, real)) {
+        logWarning(
+          `detectLaunchDrmWrapper: skipped ${name} (escapes bottle)`,
+          LogPrefix.Steam
+        )
+        continue
+      }
+      try {
+        if (detect(real) === 'steamstub') {
+          return { drmWrapper: 'steamstub', drmExe: resolve(candidate) }
+        }
+      } catch {
+        logWarning(
+          `detectLaunchDrmWrapper: skipped ${name} (scan threw)`,
+          LogPrefix.Steam
+        )
       }
     }
   } catch {
