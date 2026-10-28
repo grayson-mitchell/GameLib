@@ -39,6 +39,7 @@ metrics:
 ## Commits
 
 - 64168d694 fix: poller/installer completion ownership, labels, hero phase, tests
+- dcb7c79db fix: game-page MainButton disabled + "Finishing install…" while installed AND installing (live-test follow-up)
 
 ## Verification
 
@@ -54,7 +55,18 @@ metrics:
 - Two uncommitted files from the parallel debug session `drm-stage-winebus-hid-spin`
   (`stageDrmBottle.ts` and its test) were left untouched and not committed.
 
-## Not verified live
+## Live test (2026-10-29 11:07-11:11, Grim Dawn reinstall)
+
+- Log: poller flip at 11:10:32 sent no `done` and no toast; redists 11:10:56-11:11:35; DRM
+  prefetch cache hit; `Finished Installation` + exactly one notify at 11:11:37. No
+  restart-Steam toast. Operator: "all looks good".
+- **Gap found:** the game page still showed Play right after the flip, then "Installing
+  Redistributables". Cause: `MainButton.disabledPlayButtons` had `redist`/`drm-setup` but not
+  `installing` — a Steam game was never `is_installed` and `installing` at once before this
+  task. Fixed in dcb7c79db (regression test fails on the old button, passes on the fix). The
+  library tile was already correct (`isInstalling && isSteam` is checked before `isInstalled`).
+
+## Not verified live (after dcb7c79db)
 
 Needs a fresh bridge install (restart tauri dev first). Expected: no Play and no toast at the
 ACF flip; status "Finishing install…" → "Installing Redistributables (…)" → "Preparing Steam DRM
