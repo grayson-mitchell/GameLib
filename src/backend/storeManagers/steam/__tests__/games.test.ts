@@ -248,7 +248,8 @@ jest.mock('graceful-fs', () => ({
 jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
 jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
-  getFileSize: jest.fn()
+  getFileSize: jest.fn(),
+  sendGameStatusUpdate: jest.fn()
 }))
 // quick-260817-d61: ensureConnected added -- getExtraInfo()'s locked->unlocked
 // keyring-deferral transition now fire-and-forgets a call to it. Defaulted to
@@ -5045,6 +5046,41 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(Math.max(...leaseRelease.mock.invocationCallOrder)).toBeGreaterThan(
       redistOrder
     )
+  })
+
+  it('56-20 Gap 3: a final done status is sent after the install-time redist step', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+
+    await new SteamGame(APP_ID).install({} as any)
+
+    const doneCalls = (sendGameStatusUpdate as jest.Mock).mock.calls
+    const last = doneCalls[doneCalls.length - 1][0]
+    expect(last).toEqual({ appName: APP_ID, runner: 'steam', status: 'done' })
+    const doneOrder = (sendGameStatusUpdate as jest.Mock).mock
+      .invocationCallOrder
+    expect(doneOrder[doneOrder.length - 1]).toBeGreaterThan(
+      (installSteamBridgeSharedRedists as jest.Mock).mock.invocationCallOrder[0]
+    )
+  })
+
+  it('56-20 Gap 3: a rejecting redist step still sends the final done status', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(installSteamBridgeSharedRedists as jest.Mock).mockRejectedValue(
+      new Error('redist boom')
+    )
+    const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+
+    const result = await new SteamGame(APP_ID).install({} as any)
+
+    expect(result).toEqual({ status: 'done' })
+    expect(sendGameStatusUpdate).toHaveBeenLastCalledWith({
+      appName: APP_ID,
+      runner: 'steam',
+      status: 'done'
+    })
   })
 
   it('Phase 54: a rejecting install-time shared-redist step is logged and the install still completes', async () => {

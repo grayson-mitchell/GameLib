@@ -19,3 +19,7 @@ After a bridge install, the install-time shared-redist step (games.ts about 2327
 ## Next
 
 Send a final status after the redist step completes or fails.
+
+## Resolution (56-20)
+
+`installBridgeGame` (games.ts) now sends `sendGameStatusUpdate({ appName, runner: "steam", status: "done" })` in a `finally` after `installSteamBridgeSharedRedists` settles, whether it resolves or rejects. Live confirmation is left to 56-22; 56-26 decides closure.

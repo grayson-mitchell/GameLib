@@ -37,7 +37,7 @@ import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
-import { getFileSize } from 'backend/utils'
+import { getFileSize, sendGameStatusUpdate } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
 import {
@@ -2332,17 +2332,28 @@ export default class SteamGame implements Game {
     // install's logon, so Play never needs one. Never fails the install.
     const { installSteamBridgeSharedRedists } =
       await import('./bridge/sharedRedistInstall')
-    await installSteamBridgeSharedRedists(
-      this.appId,
-      getBridgeBottleSettings(this.appId),
-      undefined,
-      { allowLogon: true }
-    ).catch((error: unknown) => {
-      logWarning(
-        `SteamGame: install-time shared redist step failed for appId ${this.appId}: ${String(error)}`,
-        LogPrefix.Steam
-      )
-    })
+    // The download queue suppresses Steam's own 'done' and the ACF poller's
+    // 'done' fires before the redists, so the final update below is the only
+    // status that clears a lingering 'redist' (56-16 Gap 3).
+    try {
+      await installSteamBridgeSharedRedists(
+        this.appId,
+        getBridgeBottleSettings(this.appId),
+        undefined,
+        { allowLogon: true }
+      ).catch((error: unknown) => {
+        logWarning(
+          `SteamGame: install-time shared redist step failed for appId ${this.appId}: ${String(error)}`,
+          LogPrefix.Steam
+        )
+      })
+    } finally {
+      sendGameStatusUpdate({
+        appName: this.appId,
+        runner: 'steam',
+        status: 'done'
+      })
+    }
 
     return { status: 'done' }
   }
