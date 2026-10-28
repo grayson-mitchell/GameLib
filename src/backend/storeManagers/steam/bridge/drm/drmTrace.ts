@@ -19,16 +19,21 @@
  * pure, never throws, and caps its input size before any regex runs.
  */
 
+// Exported for games.ts (56-12), which passes the trace path to the launch.
+// ts-prune-ignore-next
 export const DRM_TRACE_ENV = 'GAMELIB_DRM_TRACE_FILE'
 
 export const MAX_DRM_TRACE_BYTES = 262144
 export const MAX_DRM_TRACE_LINES = 1024
 export const MAX_DRM_TRACE_LINE_CHARS = 512
 /** Anchor payloads carry a trace path of up to 1024 chars. */
-export const MAX_DRM_ANCHOR_CHARS = 1280
+const MAX_DRM_ANCHOR_CHARS = 1280
 
-export type DrmTraceRole = 'game' | 'helper'
+type DrmTraceRole = 'game' | 'helper'
 
+// Exported for meta/bridgeCensus.ts, which lints under tsconfig.meta.json --
+// outside ts-prune's tsconfig.json project, so its import is invisible here.
+// ts-prune-ignore-next
 export type DrmTraceEvent = {
   appId: string
   pid: number
@@ -38,7 +43,7 @@ export type DrmTraceEvent = {
   | { event: 'call'; name: string }
 )
 
-export interface DrmLaunchAnchor {
+interface DrmLaunchAnchor {
   appId: string
   mode: 'steamclient-layer'
   crossover: string
@@ -46,6 +51,8 @@ export interface DrmLaunchAnchor {
   trace: string
 }
 
+// Exported for meta/bridgeCensus.ts; see DrmTraceEvent.
+// ts-prune-ignore-next
 export interface DrmEvidence {
   anchored: boolean
   gameInterfaces: string[]
