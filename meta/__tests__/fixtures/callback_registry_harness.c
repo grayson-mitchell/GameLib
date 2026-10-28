@@ -5,6 +5,15 @@
  * Locks are ERRORCHECK mutexes: a re-lock returns EDEADLK and we exit(1)
  * instead of hanging.
  */
+/*
+ * Feature-test macro: MUST precede every system include. The test compiles
+ * with -std=c11, which on glibc (the ubuntu CI runner) sets __STRICT_ANSI__
+ * and hides usleep(), pthread_mutexattr_settype() and
+ * PTHREAD_MUTEX_ERRORCHECK, all of which this host scaffolding uses. Darwin's
+ * headers expose them regardless, which is why the harness only ever compiled
+ * on a Mac until the Test workflow ran it on Linux. Harmless on Darwin.
+ */
+#define _GNU_SOURCE
 #include <errno.h>
 #include <pthread.h>
 #include <stddef.h>
