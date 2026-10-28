@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 56 context gathered
-last_updated: "2026-10-28T06:04:51.749Z"
+last_updated: "2026-10-28T06:09:57.526Z"
 last_activity: 2026-10-28
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 124
-  completed_plans: 116
+  completed_plans: 117
   percent: 83
 ---
 
@@ -72,7 +72,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
-Plan: 9 of 16
+Plan: 10 of 16
 Status: Ready to execute
 Last activity: 2026-10-28
 
@@ -201,6 +201,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 54 P11 | 30min | 3 tasks | 2 files |
 | Phase 56 P01 | 25min | 3 tasks | 1 files |
 | Phase 56 P05 | 15min | 2 tasks | 4 files |
+| Phase 56 P09 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -285,6 +286,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 55]: 55-03: CBQ logging via literal-format logts_f; RunCB never called after ManualDispatch_Init
 - [Phase 56]: 56-01: launch_form=bin/wine+CX_BOTTLE; overrides via --dll/CX_ENV/registry, never plain env — wrapper strips WINEDLLOVERRIDES
 - [Phase 56]: 56-05: ISteamClient_* and SetMinidumpSteamID calls do not count as game calls beyond init for DRM census
+- [Phase 56]: 56-09: stageDrmBottle carries own HKCU registry builder and path mapping; no steamClientSetup import
 
 ### Pending Todos
 
@@ -470,7 +472,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-28T06:04:51.743Z
+Last session: 2026-10-28T06:09:53.260Z
 Stopped at: Phase 56 context gathered
 Resume file: None
 
