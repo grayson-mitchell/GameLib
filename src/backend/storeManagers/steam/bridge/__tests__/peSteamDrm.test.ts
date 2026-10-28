@@ -6,10 +6,12 @@
 import {
   CEG_RESOURCE_NAMES,
   detectSteamDrmInPeBytes,
+  readPeImportedDllNames,
   readPeMachineArch,
   readPeSteamApiDelayImports
 } from '../peSteamDrm'
 import { buildDelayImportPe } from './fixtures/delayImportPe'
+import { buildImportPe } from './fixtures/importPe'
 
 type PeFixture = {
   magic?: number
@@ -464,5 +466,71 @@ describe('readPeSteamApiDelayImports (quick 261024-j4l)', () => {
       dlls: [{ name: 'steam_api.dll', imports }]
     })
     expect(readPeSteamApiDelayImports(readOf(pe)).parsed).toBe(false)
+  })
+})
+
+describe('readPeImportedDllNames (quick 261028-k7l)', () => {
+  const readOf = (b: Uint8Array) => (offset: number, length: number) =>
+    offset + length > b.length ? null : b.subarray(offset, offset + length)
+
+  it('reads PE32 import names in file order, original spelling', () => {
+    const pe = buildImportPe({
+      plus: false,
+      dlls: ['KERNEL32.dll', 'd3d11.dll', 'USER32.dll']
+    })
+    expect(readPeImportedDllNames(readOf(pe))).toEqual([
+      'KERNEL32.dll',
+      'd3d11.dll',
+      'USER32.dll'
+    ])
+  })
+
+  it('reads PE32+ import names', () => {
+    const pe = buildImportPe({ plus: true, dlls: ['d3d11.dll'] })
+    expect(readPeImportedDllNames(readOf(pe))).toEqual(['d3d11.dll'])
+  })
+
+  it('returns [] when the import directory is absent', () => {
+    const pe = buildImportPe({ plus: true, dlls: ['d3d11.dll'] })
+    // data dir 1 RVA lives at opt(0x98) + 112 + 8
+    pe.writeUInt32LE(0, 0x80 + 24 + 112 + 8)
+    expect(readPeImportedDllNames(readOf(pe))).toEqual([])
+  })
+
+  it('returns [] when NumberOfRvaAndSizes < 2', () => {
+    const pe = buildImportPe({ plus: false, dlls: ['d3d11.dll'] })
+    pe.writeUInt32LE(1, 0x80 + 24 + 92)
+    expect(readPeImportedDllNames(readOf(pe))).toEqual([])
+  })
+
+  it('returns null on malformed input without throwing', () => {
+    const good = buildImportPe({ plus: false, dlls: ['d3d11.dll'] })
+    expect(readPeImportedDllNames(readOf(Buffer.alloc(0)))).toBeNull()
+    expect(
+      readPeImportedDllNames(readOf(Buffer.from('not a pe at all')))
+    ).toBeNull()
+
+    const pastEof = Buffer.from(good)
+    pastEof.writeUInt32LE(0x7fffff00, 0x3c)
+    expect(readPeImportedDllNames(readOf(pastEof))).toBeNull()
+
+    const outside = Buffer.from(good)
+    outside.writeUInt32LE(0x40000, 0x80 + 24 + 96 + 8)
+    expect(readPeImportedDllNames(readOf(outside))).toBeNull()
+
+    const longName = buildImportPe({ plus: false, dlls: ['x'.repeat(300)] })
+    expect(readPeImportedDllNames(readOf(longName))).toBeNull()
+  })
+
+  it('caps the descriptor walk when there is no terminator', () => {
+    const pe = buildImportPe({ plus: false, dlls: ['a.dll'] })
+    const nameRva = 0x1000 + 0x7100
+    pe.write('b.dll\0', 0x400 + 0x7100, 'latin1')
+    for (let i = 0; i < 1100; i++) {
+      pe.writeUInt32LE(nameRva, 0x400 + i * 20 + 12)
+      pe.writeUInt32LE(1, 0x400 + i * 20 + 16)
+    }
+    const names = readPeImportedDllNames(readOf(pe))
+    expect(names).toHaveLength(1024)
   })
 })

@@ -59,7 +59,7 @@ type PeSteamDrmResult = {
  * Ranged read callback. Returns null, or fewer than `length` bytes, when the
  * range runs past EOF. Any short read is treated as a bounds failure.
  */
-type PeReader = (offset: number, length: number) => Uint8Array | null
+export type PeReader = (offset: number, length: number) => Uint8Array | null
 
 const unparsed = (): PeSteamDrmResult => ({
   parsed: false,
@@ -402,6 +402,82 @@ export function readPeSteamApiDelayImports(
     }
   } catch {
     return noDelayImports(false)
+  }
+}
+
+const MAX_IMPORT_DESCRIPTORS = 1024
+
+/**
+ * quick 261028-k7l: the DLL names of the PE Import Directory (data directory
+ * 1), for the GameMaker D3D11 runner detector (gameMakerRunner.ts). Untrusted
+ * input: descriptors capped, names at 256 bytes, sections at 96; every read is
+ * bounds-checked and the body never throws. Returns [] when the directory is
+ * absent and null when the bytes are not a well-formed PE.
+ */
+export function readPeImportedDllNames(read: PeReader): string[] | null {
+  try {
+    const mz = readExact(read, 0, 2)
+    if (mz.getUint8(0) !== 0x4d || mz.getUint8(1) !== 0x5a) return null
+    const peOffset = u32(read, 0x3c)
+    if (u32(read, peOffset) !== 0x00004550) return null
+    const numberOfSections = u16(read, peOffset + 6)
+    const sizeOfOptionalHeader = u16(read, peOffset + 20)
+    const opt = peOffset + 24
+
+    const magic = u16(read, opt)
+    const plus = magic === 0x20b
+    if (!plus && magic !== 0x10b) return null
+    const dirsOffset = opt + (plus ? 112 : 96)
+    const numberOfRvaAndSizes = u32(read, opt + (plus ? 108 : 92))
+    if (numberOfRvaAndSizes < 2) return []
+    const importRva = u32(read, dirsOffset + 1 * 8)
+    if (importRva === 0) return []
+
+    const sectionTable = opt + sizeOfOptionalHeader
+    const sectionCount = Math.min(numberOfSections, MAX_SECTIONS)
+    const sections: Section[] = []
+    for (let i = 0; i < sectionCount; i++) {
+      const base = sectionTable + i * 40
+      const virtualSize = u32(read, base + 8)
+      const va = u32(read, base + 12)
+      const sizeOfRawData = u32(read, base + 16)
+      const rawPtr = u32(read, base + 20)
+      sections.push({
+        name: '',
+        va,
+        span: virtualSize > 0 ? virtualSize : sizeOfRawData,
+        rawPtr
+      })
+    }
+    const toOffset = (rva: number): number => {
+      const sec = sections.find((s) => s.va <= rva && rva < s.va + s.span)
+      if (!sec) throw new BoundsError('rva outside every section')
+      return sec.rawPtr + (rva - sec.va)
+    }
+    const readAsciiz = (offset: number): string => {
+      let out = ''
+      for (let i = 0; i < MAX_NAME_BYTES; i++) {
+        const c = readExact(read, offset + i, 1).getUint8(0)
+        if (c === 0) return out
+        out += String.fromCharCode(c)
+      }
+      throw new BoundsError('name too long')
+    }
+
+    const table = toOffset(importRva)
+    const names: string[] = []
+    for (let i = 0; i < MAX_IMPORT_DESCRIPTORS; i++) {
+      const d = table + i * 20
+      const originalFirstThunk = u32(read, d)
+      const nameRva = u32(read, d + 12)
+      const firstThunk = u32(read, d + 16)
+      if (originalFirstThunk === 0 && nameRva === 0 && firstThunk === 0) break
+      if (nameRva === 0) continue
+      names.push(readAsciiz(toOffset(nameRva)))
+    }
+    return names
+  } catch {
+    return null
   }
 }
 
