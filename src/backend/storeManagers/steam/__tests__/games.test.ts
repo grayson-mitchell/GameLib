@@ -10673,6 +10673,74 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       )
     })
 
+    it('56-31: orphan wine logs with no trace are bounded per app (CR-03)', () => {
+      const root = makeTmp()
+      const traceRoot = realJoin(root, 'steam-bridge', 'drm', 'trace')
+      mkdirSync(traceRoot, { recursive: true })
+      for (let i = 1; i <= 12; i++) {
+        writeFileSync(realJoin(traceRoot, `219990-${i}.wine.log`), 'x')
+      }
+      prepareDrmTraceFile(root, '219990', 1761084000123)
+      const left = realFs
+        .readdirSync(traceRoot)
+        .filter((n) => n.startsWith('219990-'))
+        .sort()
+      expect(left).toHaveLength(DRM_TRACE_KEEP_PER_APP - 1)
+      for (let i = 12; i > 12 - (DRM_TRACE_KEEP_PER_APP - 1); i--) {
+        expect(left).toContain(`219990-${i}.wine.log`)
+      }
+    })
+
+    it('56-31: mixed trace and wine-only ids are retained by id', () => {
+      const root = makeTmp()
+      const traceRoot = realJoin(root, 'steam-bridge', 'drm', 'trace')
+      mkdirSync(traceRoot, { recursive: true })
+      for (let i = 1; i <= 10; i++) {
+        if (i % 2 === 1)
+          writeFileSync(realJoin(traceRoot, `219990-${i}.log`), 'x')
+        writeFileSync(realJoin(traceRoot, `219990-${i}.wine.log`), 'x')
+      }
+      prepareDrmTraceFile(root, '219990', 1761084000123)
+      const keep = DRM_TRACE_KEEP_PER_APP - 1
+      for (let i = 1; i <= 10; i++) {
+        const survives = i > 10 - keep
+        expect(
+          realExistsSync(realJoin(traceRoot, `219990-${i}.wine.log`))
+        ).toBe(survives)
+        expect(realExistsSync(realJoin(traceRoot, `219990-${i}.log`))).toBe(
+          survives && i % 2 === 1
+        )
+      }
+    })
+
+    it('56-31: other apps and stage wine logs are untouched; non-file entries are spared', () => {
+      const root = makeTmp()
+      const traceRoot = realJoin(root, 'steam-bridge', 'drm', 'trace')
+      mkdirSync(traceRoot, { recursive: true })
+      for (let i = 1; i <= 12; i++) {
+        writeFileSync(realJoin(traceRoot, `648800-${i}.log`), 'x')
+        writeFileSync(realJoin(traceRoot, `648800-${i}.wine.log`), 'x')
+        writeFileSync(realJoin(traceRoot, `219990-${i}.stage.wine.log`), 'x')
+        if (i !== 5) writeFileSync(realJoin(traceRoot, `219990-${i}.log`), 'x')
+      }
+      mkdirSync(realJoin(traceRoot, '219990-5.wine.log'))
+      expect(prepareDrmTraceFile(root, '219990', 99).status).toBe('ok')
+      for (let i = 1; i <= 12; i++) {
+        expect(realExistsSync(realJoin(traceRoot, `648800-${i}.log`))).toBe(
+          true
+        )
+        expect(
+          realExistsSync(realJoin(traceRoot, `648800-${i}.wine.log`))
+        ).toBe(true)
+        expect(
+          realExistsSync(realJoin(traceRoot, `219990-${i}.stage.wine.log`))
+        ).toBe(true)
+      }
+      expect(realExistsSync(realJoin(traceRoot, '219990-5.wine.log'))).toBe(
+        true
+      )
+    })
+
     it('prepareDrmTraceFile refuses a symlinked trace dir and spares symlink targets', () => {
       const root = makeTmp()
       const elsewhere = makeTmp()
