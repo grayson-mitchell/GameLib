@@ -9,6 +9,8 @@ files:
 severity: major
 platform: any
 ready: code
+resolved: 2026-10-29
+resolution: "fixed in 1bceff9a8: select.ts now skips only sharedinstall depots, so a depotfromapp depot with its own manifest (PHARAOH DYNASTIES 372531) is planned; live plan-build gate passed on WARHAMMER III 1142710 (3 -> 5 depots, key and manifest issued); full install + Steam restart not exercised"
 ---
 
 Total War: PHARAOH DYNASTIES (2951630): GameLib planned 3 depots; after a Steam restart Steam queued an
