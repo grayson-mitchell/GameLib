@@ -5714,6 +5714,28 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     })
 
+    it('quick 261029-avh: DRM-mode miss (steamstub), unacknowledged: no notice, downloads through the bridge', async () => {
+      arrange({ scan: { ...missScan, drmWrapper: 'steamstub' } })
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(noticeCalls()).toEqual([])
+      expect(result).not.toEqual({ status: 'done', deferredToSetup: true })
+      expect(downloadSteamDepots).toHaveBeenCalled()
+      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    })
+
+    it('quick 261029-avh: non-DRM miss, unacknowledged: exactly one scan-miss notice on route bridge', async () => {
+      arrange({})
+      await new SteamGame(APP_ID).install({} as any)
+
+      const calls = noticeCalls()
+      expect(calls).toHaveLength(1)
+      expect(calls[0][1]).toMatchObject({
+        reason: 'scan-miss',
+        route: 'bridge'
+      })
+    })
+
     it('does-not-run + miss: exactly one combined notice', async () => {
       arrange({}, 'does-not-run')
       await new SteamGame(APP_ID).install({} as any)
