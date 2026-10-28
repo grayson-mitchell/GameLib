@@ -14,9 +14,11 @@
  * PE resource directory and reports which of those names are present.
  *
  * It also reports whether a section named `.bind` (SteamStub) is present.
- * That flag is INFORMATIONAL ONLY: SteamStub is in scope for the bridge
- * (todo 2026-10-23 "forwarding steamclient dll for SteamStub titles"), and
- * bottled Steam is a narrow fallback, so `.bind` never changes routing.
+ * Since Phase 56 (D-12) a `.bind` launch exe DOES change routing: it selects
+ * the steamclient-layer DRM mode via `drm/steamclientLayerMode.ts`
+ * `resolveBridgeMode`, fed by `detectDrmWrapper` in `shimGenerate.ts`. It is
+ * never routed to bottled Steam, which stays a narrow fallback. CEG markers
+ * keep precedence: a CEG exe stays on the existing refusal path.
  *
  * It also hosts `readPeSteamApiDelayImports` (quick 261024-j4l), which reads
  * the PE Delay Import Directory (data directory 13) for steam_api(64).dll:
@@ -51,7 +53,7 @@ type PeSteamDrmResult = {
   parsed: boolean
   /** CEG resource names found, as read, de-duplicated, in file order */
   cegMarkers: string[]
-  /** a section named `.bind` (SteamStub) exists. Informational only. */
+  /** a section named `.bind` (SteamStub) exists. Drives DRM-mode routing (Phase 56 D-12) via resolveBridgeMode. */
   hasBindSection: boolean
 }
 
