@@ -440,6 +440,21 @@
             }
         },
         "bridge": {
+            "drm": {
+                "detail": "Details: {{cause}}",
+                "step": {
+                    "bottleStage": "GameLib could not prepare this game's bottle to run it with its Steam DRM.",
+                    "componentMissing": "GameLib could not download the compatibility component this game needs. Check your internet connection, then press Play again.",
+                    "componentVerify": "The compatibility component GameLib downloaded failed its integrity check, so GameLib did not use it.",
+                    "runnerClone": "GameLib could not prepare its own copy of CrossOver for this game.",
+                    "runnerPatch": "GameLib could not prepare its own copy of CrossOver for this game, because CrossOver's files did not match what GameLib expects.",
+                    "steamNotRunning": "Mac Steam is not running, and this game needs it. Open Steam, sign in, then press Play again.",
+                    "unsupportedCrossover": "This game needs a version of CrossOver that GameLib supports. The details name the version you have and the versions GameLib supports.",
+                    "valveFetch": "GameLib could not download the Steam client files this game needs from Valve. Check your internet connection, then press Play again.",
+                    "valveVerify": "The Steam client files downloaded from Valve failed their integrity check, so GameLib did not use them."
+                },
+                "title": "This game could not start"
+            },
             "forceBottle": {
                 "help": "Installs into the shared bottled Steam client. Changing this later means reinstalling the game.",
                 "label": "Use the Windows Steam client instead"
@@ -517,13 +532,13 @@
             }
         },
         "goOffline": {
-            "title": "Set Steam offline to continue",
             "body": "GameLib needs to sign in to your Steam account for this. To keep your Steam Friends list signed in, it signs in while the Steam app is offline, but Steam did not go offline when GameLib asked. This can happen while a Steam game is running.",
-            "steps": "If a Steam game is running, quit it first: Steam ignores Go Offline while a game runs. In the Steam app, choose Steam > Go Offline, then press Continue. GameLib sets Steam back online once it has signed in.",
             "continue": "Continue",
-            "stillOnline": "Steam still shows as online. If a Steam game is still running, quit it first. Choose Steam > Go Offline in the Steam app, then press Continue again.",
+            "error": "Could not continue: {{error}}",
             "readyRedeem": "Steam is offline now. Redeem the key again to continue.",
-            "error": "Could not continue: {{error}}"
+            "steps": "If a Steam game is running, quit it first: Steam ignores Go Offline while a game runs. In the Steam app, choose Steam > Go Offline, then press Continue. GameLib sets Steam back online once it has signed in.",
+            "stillOnline": "Steam still shows as online. If a Steam game is still running, quit it first. Choose Steam > Go Offline in the Steam app, then press Continue again.",
+            "title": "Set Steam offline to continue"
         },
         "install": {
             "bottleNameReadonlyHelper": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
