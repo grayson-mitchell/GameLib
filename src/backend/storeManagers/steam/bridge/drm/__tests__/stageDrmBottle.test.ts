@@ -174,6 +174,14 @@ describe('drmRegistryStagedInUserReg', () => {
   it('is true for a staged user.reg', () => {
     expect(drmRegistryStagedInUserReg(STAGED_REG)).toBe(true)
   })
+  it('tolerates a trailing backslash on SteamPath (helper rewrite)', () => {
+    const t = STAGED_REG.replaceAll(
+      '"SteamPath"="C:\\\\Program Files (x86)\\\\Steam"',
+      '"SteamPath"="C:\\\\Program Files (x86)\\\\Steam\\\\"'
+    )
+    expect(t).not.toBe(STAGED_REG)
+    expect(drmRegistryStagedInUserReg(t)).toBe(true)
+  })
   it('is false for the stale forwarder section', () => {
     expect(drmRegistryStagedInUserReg(LIVE_STALE)).toBe(false)
   })

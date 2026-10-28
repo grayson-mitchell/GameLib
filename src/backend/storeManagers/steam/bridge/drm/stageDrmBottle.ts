@@ -118,6 +118,18 @@ export function buildDrmRegistryCommands(): string[][] {
 const regEscape = (s: string): string => s.replace(/\\/g, '\\\\')
 
 /**
+ * The helper steam.exe / lsteamclient rewrite SteamPath with a trailing
+ * backslash after staging. That is the same directory, so it must not count as
+ * "not staged": a needless `reg add` starts a fresh wine session whose
+ * wineboot --init can hang on a crashing winebus (debug
+ * drm-second-launch-bottle-stage).
+ */
+const sameSteamPath = (v: string | undefined): boolean =>
+  v !== undefined &&
+  v.replace(/(\\\\)+$/, '').toLowerCase() ===
+    regEscape(DRM_STEAM_DIR_WIN).toLowerCase()
+
+/**
  * True when a wine user.reg body already holds all four values written by
  * buildDrmRegistryCommands(). Pure; never throws.
  */
@@ -145,8 +157,8 @@ export function drmRegistryStagedInUserReg(text: string): boolean {
     return (
       active?.get('SteamClientDll64') === regEscape(DRM_STEAMCLIENT64_WIN) &&
       active.get('Universe') === 'Public' &&
-      active.get('SteamPath') === regEscape(DRM_STEAM_DIR_WIN) &&
-      steam?.get('SteamPath') === regEscape(DRM_STEAM_DIR_WIN)
+      sameSteamPath(active.get('SteamPath')) &&
+      sameSteamPath(steam?.get('SteamPath'))
     )
   } catch {
     return false
