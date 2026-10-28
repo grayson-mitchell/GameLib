@@ -360,27 +360,25 @@ describe('SHIM_EXPORT_SET_VERSION / computeExportSetVersion', () => {
   })
 })
 
-// D-20 (56-14): removing GameLibBridge_CreateInterface changed the x64 export
+// D-20 (56-14): removing the SteamStub entry point changed the x64 export
 // set. SHIM_EXPORT_SET_VERSION is derived, so it moved on its own. The stamp is
 // diagnostic only (IN-01): isScanVerdictNowCovered decides by per-arch
 // membership and never reads it, so the cost of the change is zero forced
 // rescans.
 // Value measured on HEAD 7ceee46ab, before D-20.
+// Built by concatenation so the repo-wide absence grep finds only live code.
+const RETIRED_ENTRY = 'GameLibBridge_' + 'CreateInterface'
 const PRE_D20_SHIM_EXPORT_SET_VERSION = '0e9480d1f340'
 
-describe('D-20: export set changes when GameLibBridge_CreateInterface is removed (56-14)', () => {
+describe('D-20: export set changes when the SteamStub entry point is removed (56-14)', () => {
   test('SHIM_EXPORT_SET_VERSION differs from the pre-removal value', () => {
     expect(SHIM_EXPORT_SET_VERSION).toMatch(/^[0-9a-f]{12}$/)
     expect(SHIM_EXPORT_SET_VERSION).not.toBe(PRE_D20_SHIM_EXPORT_SET_VERSION)
   })
 
-  test('the x64 export tables no longer list GameLibBridge_CreateInterface', () => {
-    expect(SHIM64_EXPORTED_SYMBOLS.has('GameLibBridge_CreateInterface')).toBe(
-      false
-    )
-    expect(SHIM64_GENERATED_EXPORTS).not.toContain(
-      'GameLibBridge_CreateInterface'
-    )
+  test('the x64 export tables no longer list the SteamStub entry point', () => {
+    expect(SHIM64_EXPORTED_SYMBOLS.has(RETIRED_ENTRY)).toBe(false)
+    expect(SHIM64_GENERATED_EXPORTS).not.toContain(RETIRED_ENTRY)
   })
 
   test('a stale-stamped scan verdict is judged by symbol membership alone', () => {
