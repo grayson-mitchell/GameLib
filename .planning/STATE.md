@@ -5,12 +5,12 @@ milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 56 context gathered
 last_updated: "2026-10-28T19:21:10.851Z"
-last_activity: 2026-10-28
+last_activity: 2026-10-29
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 134
-  completed_plans: 129
+  completed_plans: 132
   percent: 71
 ---
 
@@ -72,9 +72,9 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
-Plan: 21 of 26 complete (56-21 done)
+Plan: 24 of 26 complete (56-22..56-24 closed as superseded by 98837f09b / 5ff2dbd8c, operator ruling 2026-10-29)
 Status: Ready to execute
-Last activity: 2026-10-28
+Last activity: 2026-10-29
 
 Progress: [██████████] 96%
 
