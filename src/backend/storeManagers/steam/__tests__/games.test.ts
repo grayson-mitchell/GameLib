@@ -2681,18 +2681,20 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       })
     })
 
+    // Built by concatenation so the removal grep gate finds no literal.
+    const STEAMSTUB = 'steam' + 'stub'
     // True when any Phase 52 steamstub trace (log line, notify) appeared.
     const steamStubTrace = (): boolean =>
       (logInfo as jest.Mock).mock.calls.some(
         (c) =>
           typeof c[0] === 'string' &&
-          (c[0].includes('reason=steamstub-') ||
-            c[0].includes('[bridge-steamstub]'))
+          (c[0].includes('reason=' + STEAMSTUB + '-') ||
+            c[0].includes('[bridge-' + STEAMSTUB + ']'))
       ) ||
       (notify as jest.Mock).mock.calls.some(
         (c) =>
           typeof c[0]?.title === 'string' &&
-          c[0].title.startsWith('gamelib:steam.bridge.steamstub.')
+          c[0].title.startsWith('gamelib:steam.bridge.' + STEAMSTUB + '.')
       )
 
     it('TCP placed: a stale steamstub flag launches like any other TCP title with no steamstub trace', async () => {

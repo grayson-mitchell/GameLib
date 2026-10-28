@@ -126,13 +126,6 @@ export const builtBridgeShim64Path = fixAsarPath(
   join(publicDir, 'bin', process.arch, 'darwin', 'steam_api64.dll')
 )
 
-// Phase 52 SteamStub forwarder (x64 only): ships via the whole bin/<arch>/darwin
-// dir (release-tauri.yml runs build-steam-bridge). A missing file is a typed
-// 'forwarder-not-built' result in steamClientSetup.ts, never a throw.
-export const builtBridgeSteamClient64Path = fixAsarPath(
-  join(publicDir, 'bin', process.arch, 'darwin', 'steamclient64.dll')
-)
-
 // Phase 24 Plan 06 (R2/R5, D-03): the bundled location of the compiled
 // native arm64 host helper binary (native/steam-bridge/helper/bridge_helper.c,
 // Plan 24-02). Plan 24-07 (packaging) compiles the C source into this exact

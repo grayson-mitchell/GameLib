@@ -149,7 +149,6 @@ import {
   stopBridgeHelper
 } from './bridge/helperProcess'
 import { writeBridgeConfig } from './bridge/bridgeConfig'
-import { setupSteamClientForwarder } from './bridge/steamClientSetup'
 // Phase 51 Plan 09 (D-51-07/09): the pure routing resolver + the persisted
 // verdict read/clear family + the current-shim coverage check. games.ts is
 // the sole assembler of resolveBridgeRoute's input and the sole writer of
@@ -645,17 +644,6 @@ export async function getSteamInstallSize(
 
   return '?? MB'
 }
-
-// Phase 52 (orchestrator decision 3): one notify() per title per GameLib
-// session when SteamStub forwarding is unavailable. Session-scoped rather than
-// a persisted flag so a user who fixes the cause (e.g. rebuilds the forwarder)
-// is told again next session if it still fails. The log line fires every time.
-const steamStubNoticeShownThisSession = new Set<string>()
-
-// Separate gate for the forwarded-path notice, so an earlier unforwarded notice
-// for the same title cannot hide it. Session-scoped for the same reason as
-// decision 3 above.
-const steamStubForwardedNoticeShownThisSession = new Set<string>()
 
 // Phase 56 (56-12): steamclient-layer DRM launch helpers.
 //
@@ -3393,102 +3381,6 @@ export default class SteamGame implements Game {
     markBridgeLimitedNoticeShown(this.appId)
   }
 
-  private maybeNotifySteamStubUnforwarded(
-    cause:
-      | 'forwarder-not-built'
-      | 'x86-deferred'
-      | 'setup-error'
-      | 'no-steam-api'
-      | 'withheld'
-  ): void {
-    logInfo(
-      `[bridge-notice] appId=${this.appId} reason=steamstub-unforwarded:${cause}`,
-      LogPrefix.Steam
-    )
-    if (steamStubNoticeShownThisSession.has(this.appId)) {
-      return
-    }
-    steamStubNoticeShownThisSession.add(this.appId)
-    notify({
-      title: i18next.t(
-        'gamelib:steam.bridge.steamstub.title',
-        'Steam DRM check may fail'
-      ),
-      body: i18next.t(
-        'gamelib:steam.bridge.steamstub.body',
-        "This game uses Steam's DRM wrapper. GameLib could not connect it to your Mac Steam client, so the game will probably close a few seconds after it starts."
-      )
-    })
-  }
-
-  /**
-   * Phase 52 amended done-when (52-UAT item 29): when a SteamStub title's
-   * forwarder is placed and reaches the bridge, say plainly that the stub's
-   * launch check cannot be satisfied through the native Steam bridge, instead
-   * of failing silently.
-   *
-   * The trigger is deterministic (drmWrapper=steamstub AND forwarder placed).
-   * There is no rejection heuristic: the "Steam Error" MessageBox is visible
-   * only in a harness cx-log, the helper is silent after the FWD lines, and
-   * the process stayed alive 90-91 s with the dialog up in 52-30 arms A/B, so
-   * process lifetime cannot tell rejection from success.
-   *
-   * The notice is predictive and pre-emptive: it fires before the stub runs,
-   * on known state, and is not a detected rejection. It never blocks or
-   * reroutes the launch (no bottled Steam; locked boundary).
-   *
-   * It rests on one measured title (Grim Dawn 219990, 52-UAT items 24 and
-   * 27-29); generalising to every SteamStub title is an inference from the
-   * forwarder file being identical across titles, not a measurement. The
-   * image-name caveat is not ruled out: 52-30's pid anchor was a non-Steam
-   * image (notepad.exe) and neither arm showed an image-name query, so the
-   * evidence cannot exclude a stub branch that rejects for another reason.
-   *
-   * Re-scope this notice if any SteamStub title is ever observed reaching its
-   * menu through the bridge, and revisit it if the separate static-RE
-   * decision ever makes the stub accept the forwarder.
-   *
-   * The notice is also sent as an in-app dialog (52-UAT item 30): the
-   * operator never saw the OS notification on a raw-binary run, and dialog.ts
-   * policy rule 1 ("any nag or warning") puts warnings in-app. The dialog is
-   * one-way and non-blocking, so the launch order is unchanged.
-   *
-   * Neither channel is confirmable (52-REVIEW WR-03). The dispatch log records
-   * only whether the 'showDialog' frame was handed to the transport
-   * (`dialog-frame-sent=`), never that it was displayed: there is no renderer
-   * acknowledgement, a launch before DialogHandler subscribes drops the frame
-   * unseen, and the renderer holds one dialog at a time, so a later
-   * showDialog replaces this one. `display=unconfirmed` says so in the line.
-   */
-  private maybeNotifySteamStubForwarded(): void {
-    logInfo(
-      `[bridge-notice] appId=${this.appId} reason=steamstub-forwarded:launch-check-unsatisfiable`,
-      LogPrefix.Steam
-    )
-    if (steamStubForwardedNoticeShownThisSession.has(this.appId)) {
-      return
-    }
-    steamStubForwardedNoticeShownThisSession.add(this.appId)
-    const title = i18next.t(
-      'gamelib:steam.bridge.steamstub.forwardedTitle',
-      'Steam DRM check not supported'
-    )
-    const body = i18next.t(
-      'gamelib:steam.bridge.steamstub.forwardedBody',
-      "This game uses Steam's DRM wrapper. GameLib connected it to your Mac Steam client, but the wrapper's launch check cannot be satisfied through the native Steam bridge, so the game will probably show a Steam error and not start."
-    )
-    notify({ title, body })
-    const dialogFrameSent = showDialogBoxModalAuto({
-      title,
-      message: body,
-      type: 'MESSAGE'
-    })
-    logInfo(
-      `[bridge-notice] appId=${this.appId} dispatched=in-app-dialog+notify dialog-frame-sent=${dialogFrameSent} display=unconfirmed`,
-      LogPrefix.Steam
-    )
-  }
-
   /**
    * D-13 (56-12): a steamclient-layer DRM mode step failed. Logs the
    * [bridge-notice] line on every attempt, and shows the dialog plus notify
@@ -3825,20 +3717,13 @@ export default class SteamGame implements Game {
       writeBridgeScanVerdict(this.appId, shimResult.verdict)
     }
 
-    // Phase 52: SteamStub-wrapped launch exe. shimGenerate stamps a fresh
-    // `drmWrapper` ('steamstub' | 'none') on placed, already-placed,
-    // placed-miss, withheld and no-steam-api results; it is absent only when
-    // the exe could not be read. A fresh value wins over a stale persisted
-    // flag (WR-04); with no fresh value fall back to the verdict, then the
-    // persisted scan.
+    // shimGenerate stamps a fresh `drmWrapper` ('steamstub' | 'none') on most
+    // results. A fresh 'none' clears a stale persisted 'steamstub', so the
+    // persisted scan that meta/bridgeCensus.ts and the electronStores record
+    // read stays honest. Routing reads the exe directly in the 56-12 DRM
+    // branch above (D-12), not this value.
     const freshDrm =
       'drmWrapper' in shimResult ? shimResult.drmWrapper : undefined
-    const drmWrapper =
-      freshDrm !== undefined
-        ? freshDrm === 'steamstub'
-          ? ('steamstub' as const)
-          : undefined
-        : (shimResult.verdict?.drmWrapper ?? persistedScan?.drmWrapper)
     if (
       freshDrm === 'none' &&
       !shimResult.verdict &&
@@ -3887,11 +3772,6 @@ export default class SteamGame implements Game {
       shimResult.status === 'no-steam-api' ||
       shimResult.status === 'withheld'
     ) {
-      if (drmWrapper === 'steamstub') {
-        this.maybeNotifySteamStubUnforwarded(
-          shimResult.status === 'withheld' ? 'withheld' : 'no-steam-api'
-        )
-      }
       logInfo(
         shimResult.status === 'withheld'
           ? `SteamGame: launching appId ${this.appId} via the Steam bridge bottle directly (shim withheld: coverage gaps ${shimResult.verdict.missingSymbols.join(', ')}, no helper)`
@@ -4004,48 +3884,6 @@ export default class SteamGame implements Game {
         fallbackAvailable: true
       })
       return false
-    }
-
-    // Phase 52 (Scopes 3/4): after the helper is ready and the cfg is
-    // written, before wine launches the exe. Never aborts the launch and never
-    // arms the session breaker -- an unforwarded SteamStub title launches as
-    // it did before, with an honest notice.
-    if (drmWrapper === 'steamstub') {
-      // The exe is the authority on arch: the stub that reads SteamClientDll64
-      // or SteamClientDll lives in it (WR-03). Never guess.
-      const exeArch = 'exeArch' in shimResult ? shimResult.exeArch : undefined
-      const forwarderArch =
-        exeArch ?? shimResult.verdict?.arch ?? persistedScan?.arch
-      const forwarder: Awaited<ReturnType<typeof setupSteamClientForwarder>> =
-        forwarderArch === 'x86' || forwarderArch === 'x64'
-          ? await setupSteamClientForwarder({
-              appId: this.appId,
-              bottleName: bridgeBottleSettings.wineCrossoverBottle,
-              bottleSettings: bridgeBottleSettings,
-              exePath,
-              shimPaths,
-              arch: forwarderArch
-            })
-          : {
-              status: 'error',
-              error:
-                'forwarder arch unknown (no PE machine type, verdict or persisted scan)'
-            }
-      if (forwarder.status === 'placed') {
-        logInfo(
-          `[bridge-steamstub] appId=${this.appId} forwarder placed at ${forwarder.winPath}`,
-          LogPrefix.Steam
-        )
-        this.maybeNotifySteamStubForwarded()
-      } else if (forwarder.status === 'unavailable') {
-        this.maybeNotifySteamStubUnforwarded(forwarder.reason)
-      } else {
-        logWarning(
-          `SteamGame: SteamStub forwarder setup failed for appId ${this.appId}: ${forwarder.error}`,
-          LogPrefix.Steam
-        )
-        this.maybeNotifySteamStubUnforwarded('setup-error')
-      }
     }
 
     logInfo(
