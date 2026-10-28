@@ -70,6 +70,7 @@
     "gen-vtables": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/gen_vtables.ts",
     "extract-proton-inventory": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/extractProtonInventory.ts",
     "build:overlay-archive": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildOverlayArchive.ts",
+    "build:lsteamclient": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildLsteamclient.ts",
     "bridge-census": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/bridgeCensus.ts",
     "build-steam-bridge": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/buildSteamBridgeShims.ts",
     "build-runners-onedir": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/buildRunnersOnedir.ts",
