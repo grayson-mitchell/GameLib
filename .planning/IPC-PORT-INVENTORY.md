@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 229 |
-| Ported to sidecar | 74 |
+| Unique channels | 230 |
+| Ported to sidecar | 75 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -633,6 +633,20 @@ thing that caught it.
 both numbers moved together by +1 and `Unported` (159) is unchanged.
 
 `steamGoOfflineCancel`
+
+## Bridge-notice fix — dialog display ack (1 channel) — **PORTED**
+
+Added 2026-10-29 by the bridge-notice fix (`509bcb01b`). The channel is BRAND NEW, send-kind
+(`makeListenerCaller`, `src/preload/api/helpers.ts`), and registered only in the sidecar, in
+`appShellFlowRegistration.ts` (body: `acknowledgeDialogDisplay()`, `dialog/displayAck.ts`). The
+renderer's `DialogHandler` sends it once a `showDialog` frame is on screen. There is no Electron
+leg, so `Ported to sidecar` rises along with `Unique channels`. It went unlisted at `509bcb01b`
+and `preload-surface-gate.py` was the only thing that caught it.
+
+**Unique channels raised 229 → 230, Ported to sidecar raised 74 → 75 (fast fix, 2026-10-29):**
+both numbers moved together by +1 and `Unported` (159) is unchanged.
+
+`dialogDisplayed`
 
 ## Not an IPC channel, but blocks Phase 35
 
