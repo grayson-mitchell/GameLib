@@ -4,7 +4,7 @@ plan: 12
 artifact: uat
 status: parked
 parked_todos: [2026-10-16-phase-21-native-install-uat-deferred-to-windows.md, 2026-10-16-phase-21-d-uat-10-bottled-steam-launch-uninstall.md]
-disposition: "WINDOWS PASS 2026-10-29: 1c/1d/2b/2c PASS (findings D-UAT-11..14); D-UAT-07 blocked by D-UAT-13; 4a/4b/4c still DEFERRED (need Steam absent / never launched). PRIOR: native-install UAT (1c/1d/2b/2c/4a/4b/4c) DEFERRED to Windows post-production (2026-07-20 user decision); D-UAT-10 bottled-Steam launch/uninstall RESOLVED, real-HW verified 2026-10-16. macOS hardware pass: 1a/1b/2a PASS, D-UAT-05/06/08 resolved."
+disposition: "WINDOWS PASS 2026-10-29: 1c/1d/2b/2c PASS (findings D-UAT-11..14); D-UAT-13 fixed (128148bf3) and D-UAT-07 re-verified PASS on Windows 2026-10-29; 4a/4b/4c still DEFERRED (need Steam absent / never launched). PRIOR: native-install UAT (1c/1d/2b/2c/4a/4b/4c) DEFERRED to Windows post-production (2026-07-20 user decision); D-UAT-10 bottled-Steam launch/uninstall RESOLVED, real-HW verified 2026-10-16. macOS hardware pass: 1a/1b/2a PASS, D-UAT-05/06/08 resolved."
 total_items: 11
 pending_items: 0
 passed_items: 7
@@ -13,7 +13,7 @@ open_macos_bug_items: 0
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (code-fixed ab0500c6; HW re-verify BLOCKED by D-UAT-13, 2026-10-29), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (RESOLVED — real-HW verified on Windows 2026-10-29 via item 1d: incomplete install shows Resume Install, never Play), D-UAT-10 (DEFERRED tracked-debt 2026-07-20 — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven; macOS-only, revisit via /gsd-debug or later phase; NOT blocking Phase 21), D-UAT-11 (MINOR open — stale progress % after Delete Files cancel), D-UAT-12 (MINOR open — library card shows plain Install for an incomplete install), D-UAT-13 (MAJOR open — Play shown instead of Restart Steam to finish while Steam runs), D-UAT-14 (MAJOR open — cross-app depotfromapp content depot skipped)]
+open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (RESOLVED — code fix ab0500c6 real-HW verified on Windows 2026-10-29 once D-UAT-13 made the waiting state reachable; tile hint not separately observed), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (RESOLVED — real-HW verified on Windows 2026-10-29 via item 1d: incomplete install shows Resume Install, never Play), D-UAT-10 (DEFERRED tracked-debt 2026-07-20 — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven; macOS-only, revisit via /gsd-debug or later phase; NOT blocking Phase 21), D-UAT-11 (MINOR open — stale progress % after Delete Files cancel), D-UAT-12 (MINOR open — library card shows plain Install for an incomplete install), D-UAT-13 (RESOLVED — fix 128148bf3 real-HW verified on Windows 2026-10-29: hold at finalize, released when the old Steam exited, Play launched with no install dialog; open edge: hold is in-memory, lost on a GameLib restart while the old Steam runs), D-UAT-14 (MAJOR open — cross-app depotfromapp content depot skipped)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-10-29
 audit_acknowledged:
@@ -540,6 +540,11 @@ launched Steam.
 > Button stays disabled (nothing for GamerLib to do — user restarts Steam) but no longer looks like an
 > active download. +2 regression tests (MainButton.steamWaitingRestart.test.tsx); frontend suite 119/119,
 > tsc clean. **Needs real-HW re-verification** on the Civ VII detail page after a fresh build.
+>
+> **✅ REAL-HW VERIFIED — Windows 2026-10-29.** The button fix `ab0500c6` was first exercised live once
+> D-UAT-13 (fix `128148bf3`) made the waiting state reachable: with Steam left running, the detail page
+> showed "Restart Steam to finish" (operator: "ok, have the restart steam to finish.") instead of Play.
+> Not separately observed: the same hint on the Library tile.
 
 ## D-UAT-09 (2026-07-19) — cancelled/incomplete native install is registered as "Installed"; Play triggers a Steam install instead of launching
 
@@ -751,7 +756,8 @@ findings: D-UAT-11 (minor), D-UAT-12 (minor), D-UAT-13 (major).**
 - Depot plan (10:05:04): `selectAllDepots union across base + DLC apps -> 3 depot(s)` — 2951631
   (133,797,137 B), 2951632 (80,948,012,865 B), 2951633 (2 B); six non-English language depots
   correctly skipped. Installed; manifest `SizeOnDisk 81286160463`.
-- **D-UAT-07: not verifiable — blocked by D-UAT-13.** On completion, with Steam still running, the
+- **D-UAT-07: not verifiable at this point — blocked by D-UAT-13 (since fixed and re-verified, see
+  "D-UAT-13 RESOLVED" below).** On completion, with Steam still running, the
   detail page showed **Play**, not "Restart Steam to finish". D-UAT-13 reproduced on a first install
   (not only on the resume path), so the `steam-waiting-for-restart` state is not entered on Windows.
 - Steam restarted (new PID 13712, 11:15:23) → game shown installed with an **update queued**; the
@@ -780,6 +786,28 @@ findings: D-UAT-11 (minor), D-UAT-12 (minor), D-UAT-13 (major).**
 > owner app). Blast radius bounded here (204 MB, Steam self-heals before first launch), larger for a
 > title whose cross-app depot is big.
 
+> **✅ D-UAT-13 RESOLVED — fix `128148bf3`, real-HW verified on Windows 2026-10-29** (debug session
+> `.planning/debug/resolved/steam-waiting-for-restart-windows.md`). The diagnosis in the finding above
+> (resume-path skip, Windows-specific) was wrong: the Phase 23 `StateFlags=4` fast path made the
+> 1026-gated `steam-waiting-for-restart` state unreachable on every platform. `pollInstallOnce` now holds
+> a finished native install in that state while the Steam client that was alive at finalize still runs,
+> and releases it when that process exits.
+>
+> Live run, small game appId 264160, Steam pid 13712 running throughout (`gamelib.log`):
+>
+> - 12:06:19 `Writing StateFlags=4 full-ownership manifest for appId 264160`
+> - 12:06:22 `native install of appId 264160 finalized while the Steam client (pid 13712) is running —
+>   holding in steam-waiting-for-restart until it restarts (D-UAT-13)`
+> - 12:07:58 `the Steam client that was running when appId 264160 finalized (pid 13712) has exited —
+>   releasing steam-waiting-for-restart (D-UAT-13)`, then `install polling complete … badge flipped to
+>   installed`
+>
+> Operator: "ok, have the restart steam to finish." → "restarted steam, play button showing now" →
+> "game launched, no install dialog". New Steam pid after relaunch: 5608. **Not separately observed:** the
+> Library tile hint and alt-tab-to-Steam-and-back persistence (unit-tested only). **Open edge, not fixed:**
+> the hold is in-memory, so restarting GameLib while the old Steam still runs brings Play back (pending
+> todo `2026-10-29-steam-restart-hold-not-persisted-across-gamelib-restart.md`).
+
 ## Deferred Follow-Ups
 
 - test: D-UAT-07 / D-UAT-13
@@ -803,7 +831,7 @@ findings: D-UAT-11 (minor), D-UAT-12 (minor), D-UAT-13 (major).**
 | 4a | D-10 guided client install | SNI-06 (partial) | DEFERRED → Windows post-prod | Steam-client-detection / guided-install flow; deferred to Windows post-prod (2026-07-20). Guided-install UX differs per OS. |
 | 4b | D-11 prompt-to-launch | SNI-06 (partial) | DEFERRED → Windows post-prod | Deferred to Windows post-prod (2026-07-20). |
 | 4c | Continue-to-download | SNI-06 (partial) | DEFERRED → Windows post-prod | Deferred to Windows post-prod (2026-07-20). |
-| D-UAT-07 | GamePage "Restart Steam to finish" | SNI-04 | BLOCKED by D-UAT-13 (Windows 2026-10-29) | The waiting-for-restart state is never entered on Windows (Play shown with Steam running), so the button fix `ab0500c6` cannot be exercised. |
+| D-UAT-07 | GamePage "Restart Steam to finish" | SNI-04 | PASS (Windows 2026-10-29) | Was blocked by D-UAT-13. With the D-UAT-13 fix `128148bf3` the waiting state is entered on finalize while Steam runs and the detail page shows the disabled "Restart Steam to finish" (button fix `ab0500c6` exercised live); Play appeared only after Steam was exited and relaunched, and launched with no install dialog. Library tile hint not separately observed. |
 
 **Gate status (updated 2026-07-20 — remaining native-install UAT DEFERRED to Windows post-production):**
 Per user decision 2026-07-20, the remaining cross-platform native-install UAT items — **1c, 1d, 2b, 2c, 4a,

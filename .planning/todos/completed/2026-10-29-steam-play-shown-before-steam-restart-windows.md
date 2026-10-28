@@ -10,6 +10,8 @@ files:
 severity: major
 platform: windows
 ready: code
+resolved: 2026-10-29
+resolution: "fixed in 128148bf3: not Windows-specific; the Phase 23 StateFlags=4 fast path made the 1026-gated waiting state unreachable on every platform. pollInstallOnce now holds steam-waiting-for-restart while the Steam client alive at finalize still runs and releases when it exits. Verified on real Windows hardware 2026-10-29 (264160: hold at pid 13712, released on exit, Play launched with no install dialog). Not separately observed: Library tile hint, alt-tab persistence. Open edge filed: 2026-10-29-steam-restart-hold-not-persisted-across-gamelib-restart.md"
 ---
 
 Reproduced twice on Windows with Steam running throughout: Darkest Dungeon (resume path) and Total
