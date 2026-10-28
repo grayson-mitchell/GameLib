@@ -47,7 +47,10 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     is.launching ||
     is.installingWinetricksPackages ||
     is.installingRedist ||
-    is.preparingDrm
+    is.preparingDrm ||
+    // quick 261029-exu: a bridge install is marked installed when its manifest
+    // lands but keeps installing (redists, DRM support) until its own 'done'.
+    (is_installed && is.installing)
 
   // quick 261024-h5y: a bottle-route install parked at StateFlags 1026 has no
   // user-visible Steam to restart, so the button becomes an explicit
@@ -90,6 +93,9 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     }
     if (is.preparingDrm) {
       return t('label.drmSetup', 'Preparing Steam DRM support')
+    }
+    if (is_installed && is.installing) {
+      return t('status.steamFinishing', 'Finishing install…')
     }
     if (is.installingWinetricksPackages) {
       return t('label.winetricks', 'Installing Winetricks Packages')
