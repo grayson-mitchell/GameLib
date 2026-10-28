@@ -147,7 +147,9 @@ export function selectAllDepots(
  * Include a depot iff:
  *   - it is a real (numeric) depot with a manifest on the target branch
  *   - the USER OWNS IT (it appears in an owned package's depotids)
- *   - it is not a shared redistributable (depotfromapp / sharedinstall -> SharedDepots)
+ *   - it is not a shared redistributable (`sharedinstall` -> SharedDepots). A
+ *     `depotfromapp` depot is NOT shared by that alone: with its own manifests
+ *     and no `sharedinstall` it is ordinary content (D-UAT-14, see below)
  *   - its oslist matches the host OS, or it has none (platform-agnostic content)
  *   - its osarch matches, or it has none
  *   - its language matches the user's selection, or it has none
@@ -184,8 +186,33 @@ export function selectDepots(
     const ownedViaDlc = !!d.dlcappid && owned.apps.has(Number(d.dlcappid))
     if (!ownedDirectly && !ownedViaDlc) continue
 
-    // Shared redistributables live in SharedDepots, not InstalledDepots.
-    if (d?.depotfromapp || d?.sharedinstall) continue
+    // Shared redistributables (`sharedinstall`) live in SharedDepots, not
+    // InstalledDepots: Steam mounts them from a separate PARENT app (its content
+    // log shows "Dependency added: parent 228980, child <app>, depot 228988")
+    // and they never go into the game's own directory.
+    //
+    // `depotfromapp` alone is NOT that marker — it only names the app a depot's
+    // definition is shared with. D-UAT-14: Total War: PHARAOH DYNASTIES (2951630)
+    // declares depot 372531 with `depotfromapp: 372530`, its OWN public manifest
+    // and no `sharedinstall`; Steam mounts it into the base app's install dir and
+    // records it in InstalledDepots. Skipping it here (as every `depotfromapp`
+    // depot used to be) left Steam to download it as an "update" after adoption.
+    // Every real shared depot captured so far (35, across four PICS fixtures)
+    // carries `sharedinstall` AND has no manifests; the `gid` gate below also
+    // drops a manifest-less parent-app stub, so nothing here depends on
+    // `depotfromapp`.
+    //
+    // The key/manifest requests for such a depot go out under `ownerAppId` — the
+    // app whose PICS entry declared it (2951630) — which matches how Steam
+    // itself runs this depot (entirely inside the base app; app 372530 never
+    // appears in its content log).
+    if (d?.sharedinstall) {
+      logInfo(
+        `Steam depot selection: skipped depot ${id} (sharedinstall=${d.sharedinstall}, depotfromapp=${d.depotfromapp ?? 'none'}: shared redistributable, mounted from its parent app)`,
+        LogPrefix.Steam
+      )
+      continue
+    }
 
     const m = d?.manifests?.[branch]
     const gid = typeof m === 'string' ? m : m?.gid

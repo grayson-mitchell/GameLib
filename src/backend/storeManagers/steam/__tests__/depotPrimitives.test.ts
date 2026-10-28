@@ -4,6 +4,8 @@
 
 import { createCipheriv, randomBytes } from 'node:crypto'
 import { getEventListeners } from 'node:events'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { deflateRawSync } from 'node:zlib'
 import * as zlibNs from 'node:zlib'
 import * as lzma from 'lzma'
@@ -32,7 +34,12 @@ import {
   CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS,
   type CDNAuthTokenClient
 } from '../depot/cdnAuth'
-import { selectAllDepots, selectDepots, type OwnedSets } from '../depot/select'
+import {
+  selectAllDepots,
+  selectDepots,
+  type OwnedSets,
+  type SteamAppInfo
+} from '../depot/select'
 import {
   CContentServerDirectory_GetCDNAuthToken_Request,
   CContentServerDirectory_GetCDNAuthToken_Response as CdnAuthTokenResponse
@@ -3053,5 +3060,229 @@ describe('select', () => {
       )
       expect(result.map((d) => d.id)).toEqual(['21', '22'])
     })
+  })
+
+  // D-UAT-14 (debug/steam-depotfromapp-content-depot). `depotfromapp` only names
+  // the app a depot's definition is shared with; `sharedinstall` is what makes it
+  // a shared redistributable that Steam mounts from a PARENT app and records
+  // under SharedDepots. A `depotfromapp` depot that carries its own manifests
+  // and no `sharedinstall` is ordinary game content (InstalledDepots). Dropping
+  // it left Steam to fetch it as an "update" after adoption.
+  describe('cross-app depots: depotfromapp without sharedinstall (D-UAT-14)', () => {
+    // Real PICS entry of Total War: PHARAOH DYNASTIES (2951630), captured
+    // anonymously 2026-10-29, trimmed to the Windows depots the install covers.
+    // Oracle: Steam's own post-update appmanifest_2951630.acf (InstalledDepots
+    // gained 372531 with this exact gid/size; SharedDepots = 228988, 228990).
+    const pharaoh: SteamAppInfo = {
+      depots: {
+        '228988': {
+          config: { oslist: 'windows' },
+          depotfromapp: '228980',
+          sharedinstall: '1'
+        },
+        '228990': {
+          config: { oslist: 'windows' },
+          depotfromapp: '228980',
+          sharedinstall: '1'
+        },
+        '372531': {
+          config: { oslist: 'windows' },
+          manifests: {
+            public: {
+              gid: '1128077100884847891',
+              size: 204350459
+            }
+          },
+          depotfromapp: '372530'
+        },
+        '2951631': {
+          config: { oslist: 'windows' },
+          manifests: {
+            public: { gid: '4751638685327025982', size: 133797137 }
+          }
+        },
+        '2951632': {
+          config: { oslist: 'windows', osarch: '64' },
+          manifests: {
+            public: { gid: '1892476537990952622', size: 80948012865 }
+          }
+        },
+        '2951633': {
+          config: { language: 'english', oslist: 'windows', osarch: '64' },
+          manifests: { public: { gid: '8707746514799956810', size: 2 } }
+        }
+      }
+    }
+    // Package 0 grants 228988/228990/372531 (every account); the purchase
+    // package grants the three 29516xx depots.
+    const ownedAll = (): OwnedSets =>
+      makeOwned([], [228988, 228990, 372531, 2951631, 2951632, 2951633])
+    const skipMsg = (id: string): string | undefined =>
+      (logInfo as jest.Mock).mock.calls
+        .map(([m]) => String(m))
+        .find((m) => m.includes(`skipped depot ${id}`))
+
+    it('PHARAOH DYNASTIES: selects the cross-app content depot 372531 alongside the three own depots, and still skips the sharedinstall redists', () => {
+      const result = selectDepots(
+        pharaoh,
+        ownedAll(),
+        { os: 'windows' },
+        '2951630'
+      )
+      expect(result.map((d) => d.id).sort()).toEqual(
+        ['372531', '2951631', '2951632', '2951633'].sort()
+      )
+      expect(result.map((d) => d.id)).not.toContain('228988')
+      expect(result.map((d) => d.id)).not.toContain('228990')
+    })
+
+    it('the cross-app depot keeps its exact 64-bit gid string and size, and is stamped with the ENUMERATING app (2951630), not the depotfromapp app (372530)', () => {
+      const result = selectDepots(
+        pharaoh,
+        ownedAll(),
+        { os: 'windows' },
+        '2951630'
+      )
+      const cross = result.find((d) => d.id === '372531')
+      expect(cross).toBeDefined()
+      expect(cross!.manifest).toBe('1128077100884847891')
+      expect(typeof cross!.manifest).toBe('string')
+      expect(cross!.size).toBe(204350459)
+      // Steam's content_log shows the real client handling this depot entirely
+      // inside AppID 2951630 and never involving 372530, so key/manifest
+      // requests use the app whose PICS entry declared the depot.
+      expect(cross!.ownerAppId).toBe('2951630')
+    })
+
+    it('selectAllDepots (the production entry point) carries the cross-app depot through', () => {
+      const result = selectAllDepots(
+        pharaoh,
+        undefined,
+        ownedAll(),
+        { os: 'windows' },
+        '2951630'
+      )
+      expect(result.map((d) => d.id)).toContain('372531')
+      expect(result.map((d) => d.id)).not.toContain('228988')
+    })
+
+    it('ownership still gates a cross-app depot: not in any owned package -> not selected', () => {
+      const result = selectDepots(
+        pharaoh,
+        makeOwned([], [2951631, 2951632, 2951633]),
+        { os: 'windows' },
+        '2951630'
+      )
+      expect(result.map((d) => d.id)).not.toContain('372531')
+    })
+
+    it('the oslist filter still applies to a cross-app depot', () => {
+      const result = selectDepots(
+        pharaoh,
+        ownedAll(),
+        { os: 'macos' },
+        '2951630'
+      )
+      expect(result.map((d) => d.id)).not.toContain('372531')
+    })
+
+    const manifests = {
+      public: { gid: '999999999999999999', size: 10 }
+    }
+    // The predicate draws its boundary on (sharedinstall, manifests); the
+    // neighbours below walk each side of it, in both string and numeric forms.
+    it.each<[string, Record<string, unknown>, boolean]>([
+      [
+        'depotfromapp + own manifests, no sharedinstall (cross-app content): selected',
+        { depotfromapp: '372530', manifests },
+        true
+      ],
+      [
+        'numeric depotfromapp + own manifests, no sharedinstall: selected',
+        { depotfromapp: 372530, manifests },
+        true
+      ],
+      [
+        'neither flag, own manifests (ordinary depot): selected',
+        { manifests },
+        true
+      ],
+      [
+        'depotfromapp + sharedinstall + own manifests (SharedDepots rule wins): skipped',
+        { depotfromapp: '228980', sharedinstall: '1', manifests },
+        false
+      ],
+      [
+        'numeric depotfromapp + numeric sharedinstall + own manifests: skipped',
+        { depotfromapp: 228980, sharedinstall: 1, manifests },
+        false
+      ],
+      [
+        'sharedinstall alone (no depotfromapp) + own manifests: skipped',
+        { sharedinstall: '2', manifests },
+        false
+      ],
+      [
+        'depotfromapp + sharedinstall, no manifests (the real redist stub shape): skipped',
+        { depotfromapp: '228980', sharedinstall: '1' },
+        false
+      ],
+      [
+        'depotfromapp, no sharedinstall, NO manifests (parent-app stub, nothing to fetch): skipped',
+        { depotfromapp: '228980' },
+        false
+      ]
+    ])('%s', (_label, entry, selected) => {
+      const appinfo = {
+        depots: { '500': { config: {}, ...entry } }
+      } as SteamAppInfo
+      const result = selectDepots(
+        appinfo,
+        makeOwned([], [500]),
+        { os: 'windows' },
+        '1'
+      )
+      expect(result.map((d) => d.id)).toEqual(selected ? ['500'] : [])
+    })
+
+    it('logs why a sharedinstall depot was skipped (ids only), and logs nothing for the selected cross-app depot', () => {
+      selectDepots(pharaoh, ownedAll(), { os: 'windows' }, '2951630')
+      const msg = skipMsg('228988')
+      expect(msg).toBeDefined()
+      expect(msg).toContain('sharedinstall=1')
+      expect(msg).toContain('depotfromapp=228980')
+      expect(skipMsg('372531')).toBeUndefined()
+    })
+
+    // Regression guard on REAL data: four unmodified PICS captures (Dota 2,
+    // Half-Life 2, ...) where every depotfromapp depot is a sharedinstall
+    // redist with no manifests. Whatever the account owns, none may be selected.
+    it.each([
+      'appinfo-64bit.json',
+      'appinfo-32bit.json',
+      'appinfo-false-flag.json',
+      'appinfo-no-osarch.json'
+    ])(
+      'real PICS capture %s: no sharedinstall depot is ever selected, even when owned',
+      (name) => {
+        const appinfo = JSON.parse(
+          readFileSync(join(__dirname, 'fixtures', name), 'utf8')
+        ) as SteamAppInfo & { appid: string }
+        const numeric = Object.keys(appinfo.depots ?? {}).filter((k) =>
+          /^\d+$/.test(k)
+        )
+        const shared = numeric.filter((id) => appinfo.depots![id].sharedinstall)
+        expect(shared.length).toBeGreaterThan(0)
+
+        const result = selectDepots(
+          appinfo,
+          makeOwned([], numeric.map(Number)),
+          { os: 'windows' },
+          String(appinfo.appid)
+        )
+        expect(result.length).toBeGreaterThan(0)
+        for (const d of result) expect(shared).not.toContain(d.id)
+      }
+    )
   })
 })
