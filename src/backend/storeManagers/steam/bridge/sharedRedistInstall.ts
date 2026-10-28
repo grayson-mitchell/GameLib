@@ -294,7 +294,8 @@ async function runBounded(
       wait: false,
       protonVerb: 'run',
       skipPrefixCheckIKnowWhatImDoing: true,
-      onSpawn: unrefWineChild
+      onSpawn: unrefWineChild,
+      resolveOnExit: true
     })
     // A child that outlives its timeout may reject later; nothing is awaiting it by then.
     wine.catch(() => undefined)

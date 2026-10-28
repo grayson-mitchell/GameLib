@@ -53,3 +53,15 @@ measured:
 
 Done when: a reset first launch of 1363080 runs each `reg` call in under 1 s and each installer
 within a few seconds of its shell time, and the ledger settles on that launch.
+
+## Resolution (2026-10-29)
+
+Root cause: `runWineCommand` settled on the child's `close`, which waits for the wineserver the call
+starts (it inherits the piped stdout/stderr and lingers ~3 s after the last client leaves). None of the
+three candidates above (per-call env overhead, contention, `REG_TIMEOUT_MS`) was the cause. Fix: opt-in
+`WineCommandArgs.resolveOnExit`, used by `runBounded` in `sharedRedistInstall.ts`. Live gate on Manor
+Lords 1363080 (reset first launch, 2026-10-29): reg calls 0-1 s, vcredist x86 3 s, x64 2 s, DXSETUP 21 s,
+game start 31 s after the first reg query, ledger settled on that launch.
+
+Not shown fixed: the intermittent ~80 s wineserver stall (reproduced in a plain shell too; absent in the
+one live run). Reopen as a new todo if it recurs. Session: `.planning/debug/resolved/shared-redist-slow-wine-calls.md`.

@@ -1508,7 +1508,8 @@ async function runWineCommand({
   startFolder,
   skipPrefixCheckIKnowWhatImDoing = false,
   ignoreLogging = false,
-  onSpawn
+  onSpawn,
+  resolveOnExit = false
 }: WineCommandArgs): Promise<{
   stderr: string
   stdout: string
@@ -1625,7 +1626,10 @@ async function runWineCommand({
       stderr.push(data)
     })
 
-    child.on('close', async (code) => {
+    let settled = false
+    const settle = async (code: number | null) => {
+      if (settled) return
+      settled = true
       const response = {
         stderr: stderr.join(''),
         stdout: stdout.join(''),
@@ -1646,7 +1650,25 @@ async function runWineCommand({
       }
 
       res(response)
+    }
+
+    child.on('close', (code) => {
+      void settle(code)
     })
+
+    if (resolveOnExit) {
+      // See WineCommandArgs.resolveOnExit: the wineserver this call started holds the pipes open
+      // after the command is done. Give already-written output a moment to drain, then settle.
+      child.on('exit', (code) => {
+        const grace = setTimeout(() => {
+          child.stdout.destroy()
+          child.stderr.destroy()
+          void settle(code)
+        }, 250)
+        grace.unref?.()
+        child.on('close', () => clearTimeout(grace))
+      })
+    }
 
     child.on('error', (error) => {
       console.log(error)

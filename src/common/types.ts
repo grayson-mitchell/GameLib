@@ -817,6 +817,14 @@ export type WineCommandArgs = {
    * Omitted by every other caller, whose behaviour is unchanged.
    */
   onSpawn?: (child: ChildProcess) => void
+  /**
+   * Opt-in: settle on the wine child's `exit` (plus a short drain grace) instead of `close`.
+   * `close` waits for every holder of the stdout/stderr pipes to exit, and the wineserver that
+   * the call itself starts inherits them and lingers ~3 s after the last client leaves (longer
+   * while wineboot/winedevice are alive), so every call costs seconds beyond the command's own
+   * runtime. Omitted by every other caller, whose behaviour is unchanged.
+   */
+  resolveOnExit?: boolean
 }
 
 export interface SaveSyncArgs {
