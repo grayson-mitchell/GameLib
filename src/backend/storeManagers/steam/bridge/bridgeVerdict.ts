@@ -77,7 +77,9 @@ const bridgeVerdictSchema = z.object({
   launchTarget: z
     .object({
       executable: z.string().min(1).max(512),
-      installdir: z.string().min(1).max(512)
+      installdir: z.string().min(1).max(512),
+      // Optional: targets stored before this field existed stay valid.
+      workingdir: z.string().min(1).max(512).optional()
     })
     .optional(),
   // Quick 261024-br4: without this key the non-strict object strips `drm`
@@ -355,13 +357,17 @@ export function setBridgeIdentityFallback(
  */
 export function setBridgeLaunchTarget(
   appId: string,
-  target: { executable: string; installdir: string }
+  target: { executable: string; installdir: string; workingdir?: string }
 ): void {
   if (rejectNonNumeric('setBridgeLaunchTarget', appId)) return
 
   const valid = (value: string): boolean =>
     value.length > 0 && value.length <= 512
-  if (!valid(target.executable) || !valid(target.installdir)) {
+  if (
+    !valid(target.executable) ||
+    !valid(target.installdir) ||
+    (target.workingdir !== undefined && !valid(target.workingdir))
+  ) {
     logWarning(
       `bridgeVerdict: setBridgeLaunchTarget rejected an empty or oversized launch target for appId ${appId}`,
       LogPrefix.Steam
@@ -373,7 +379,8 @@ export function setBridgeLaunchTarget(
   const current = existing.bridge?.launchTarget
   if (
     current?.executable === target.executable &&
-    current.installdir === target.installdir
+    current.installdir === target.installdir &&
+    current.workingdir === target.workingdir
   ) {
     return
   }

@@ -272,7 +272,7 @@ export interface SteamBridgeVerdict {
    * with Windows separators, plus `installdir`). Used only when PICS cannot
    * answer at Play (a license-gated app with no open Steam session); the
    * absolute path is rebuilt through sanitizeInstalldir on every read. */
-  launchTarget?: { executable: string; installdir: string }
+  launchTarget?: { executable: string; installdir: string; workingdir?: string }
   /** Quick 261024-br4: Steam DRM detected in the game exe by the
    * post-install PE scan (`peSteamDrm.ts`). 'ceg' means the exe carries
    * Steam CEG resources, which only a Windows Steam client can serve, so the

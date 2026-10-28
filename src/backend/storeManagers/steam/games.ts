@@ -144,7 +144,10 @@ import {
 } from './bridge/drm/drmTrace'
 import { buildDrmPaths, newDrmLaunchId } from './bridge/drm/drmPaths'
 import { restoreBridgeSteamApiOriginals } from './bridge/originalRestore'
-import { resolveBridgeLaunchExe } from './bridge/launchTarget'
+import {
+  resolveBridgeLaunchExe,
+  resolveBridgeLaunchWorkingDir
+} from './bridge/launchTarget'
 import {
   ensureBridgeHelperReady,
   stopBridgeHelper
@@ -4165,6 +4168,18 @@ export default class SteamGame implements Game {
       // rule (gamelib-conventions): it needs the user's real CrossOver bottle
       // and Mac Steam's steamclient.dylib under the real HOME, so it inherits
       // process.env and no HOME/XDG entry is assigned.
+      // Real Steam starts the game in the install root (or the launch entry's
+      // workingdir), not the exe's own dir: Grim Dawn (x64/Grim Dawn.exe)
+      // finds database/ and Resources/ relative to its cwd. The helper's
+      // CreateProcessW passes a NULL lpCurrentDirectory, so the game inherits
+      // this cwd as its Windows current directory.
+      const launchCwd =
+        resolveBridgeLaunchWorkingDir(this.appId) ??
+        this.resolveBridgeGameInstallRoot(
+          exePath,
+          bridgeBottleSettings.wineCrossoverBottle
+        ) ??
+        dirname(exePath)
       const winePromise = runWineCommand({
         commandParts: drm
           ? [
@@ -4176,7 +4191,7 @@ export default class SteamGame implements Game {
         gameSettings: launchSettings,
         wait: false,
         protonVerb: 'run',
-        startFolder: dirname(exePath),
+        startFolder: launchCwd,
         skipPrefixCheckIKnowWhatImDoing: true
       })
       void winePromise.then(

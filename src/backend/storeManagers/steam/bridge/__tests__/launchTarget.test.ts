@@ -16,6 +16,8 @@ import { join } from 'node:path'
 import { logInfo, logWarning } from 'backend/logger'
 import {
   resolveBridgeLaunchExe,
+  resolveBridgeLaunchWorkingDir,
+  containWorkingDir,
   backfillBridgeLaunchTargets
 } from '../launchTarget'
 import { SteamUser } from '../../user'
@@ -439,5 +441,101 @@ describe('backfillBridgeLaunchTargets', () => {
 
     expect(await backfillBridgeLaunchTargets(client, ['230070'])).toBe(0)
     expect(logWarning).toHaveBeenCalled()
+  })
+})
+
+describe('resolveBridgeLaunchWorkingDir (Grim Dawn x64/ cwd regression)', () => {
+  const GD_ID = '219990'
+  const GD_ROOT = join(BRIDGE_STEAMAPPS_DIR, 'common', 'Grim Dawn')
+
+  beforeEach(() => {
+    jest.mocked(readBridgeVerdict).mockReset()
+    jest.mocked(logWarning).mockClear()
+    jest.mocked(getBridgeBottleSettings).mockReturnValue({
+      wineCrossoverBottle: 'GameLibSteamBridge'
+    } as never)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BRIDGE_STEAMAPPS_DIR)
+  })
+
+  it('defaults to the install root, not the exe dir, when the launch entry has no workingdir', () => {
+    jest.mocked(readBridgeVerdict).mockReturnValue({
+      launchTarget: { executable: 'x64/Grim Dawn.exe', installdir: 'Grim Dawn' }
+    })
+
+    expect(resolveBridgeLaunchWorkingDir(GD_ID)).toBe(GD_ROOT)
+  })
+
+  it('honours a workingdir relative to the install root', () => {
+    jest.mocked(readBridgeVerdict).mockReturnValue({
+      launchTarget: {
+        executable: 'x64/Grim Dawn.exe',
+        installdir: 'Grim Dawn',
+        workingdir: 'x64'
+      }
+    })
+
+    expect(resolveBridgeLaunchWorkingDir(GD_ID)).toBe(join(GD_ROOT, 'x64'))
+  })
+
+  it('falls back to the install root for an escaping workingdir', () => {
+    jest.mocked(readBridgeVerdict).mockReturnValue({
+      launchTarget: {
+        executable: 'x64/Grim Dawn.exe',
+        installdir: 'Grim Dawn',
+        workingdir: '..\\..\\elsewhere'
+      }
+    })
+
+    expect(resolveBridgeLaunchWorkingDir(GD_ID)).toBe(GD_ROOT)
+    expect(logWarning).toHaveBeenCalled()
+  })
+
+  it('returns undefined with no stored target, or for a non-numeric appId', () => {
+    jest.mocked(readBridgeVerdict).mockReturnValue(undefined)
+
+    expect(resolveBridgeLaunchWorkingDir(GD_ID)).toBeUndefined()
+    expect(resolveBridgeLaunchWorkingDir('../x')).toBeUndefined()
+  })
+
+  it('persists a PICS workingdir with the launch target', async () => {
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue({
+      getProductInfo: jest.fn().mockResolvedValue({
+        apps: {
+          219990: {
+            appinfo: {
+              config: {
+                installdir: 'Grim Dawn',
+                launch: {
+                  '0': {
+                    executable: 'x64/Grim Dawn.exe',
+                    workingdir: 'x64',
+                    config: { oslist: 'windows' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      })
+    } as never)
+    jest.mocked(setBridgeLaunchTarget).mockReset()
+
+    await resolveBridgeLaunchExe(GD_ID)
+
+    expect(setBridgeLaunchTarget).toHaveBeenCalledWith(GD_ID, {
+      executable: 'x64/Grim Dawn.exe',
+      installdir: 'Grim Dawn',
+      workingdir: 'x64'
+    })
+  })
+
+  it.each([
+    ['/etc', undefined],
+    ['C:\\Windows', undefined],
+    ['a/../../b', undefined],
+    ['', '/r'],
+    ['bin\\win64', join('/r', 'bin', 'win64')]
+  ])('containWorkingDir(%j)', (input, expected) => {
+    expect(containWorkingDir('/r', input)).toBe(expected)
   })
 })

@@ -84,7 +84,10 @@ import { knownFixSaysCeg } from '../drmKnownFix'
 import { placeShimForGame, detectDrmWrapper } from '../bridge/shimGenerate'
 import { detectSteamDrmInPe } from '../bridge/peSteamDrm'
 import { restoreBridgeSteamApiOriginals } from '../bridge/originalRestore'
-import { resolveBridgeLaunchExe } from '../bridge/launchTarget'
+import {
+  resolveBridgeLaunchExe,
+  resolveBridgeLaunchWorkingDir
+} from '../bridge/launchTarget'
 import {
   ensureBridgeHelperReady,
   stopBridgeHelper
@@ -411,7 +414,8 @@ jest.mock('../bridge/originalRestore', () => ({
 // ── bridge/launchTarget.ts mock (24-08 Task 1) — resolveBridgeLaunchExe used
 // by both installBridgeGame() (Task 2) and launch()'s bridge branch (Task 3).
 jest.mock('../bridge/launchTarget', () => ({
-  resolveBridgeLaunchExe: jest.fn()
+  resolveBridgeLaunchExe: jest.fn(),
+  resolveBridgeLaunchWorkingDir: jest.fn()
 }))
 
 // ── bridge/helperProcess.ts mock (24-06, widened Phase 51 Plan 01) —
@@ -2124,6 +2128,28 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     )
     expect(applierOrder).toBeLessThan(
       (runWineCommand as jest.Mock).mock.invocationCallOrder[0]
+    )
+  })
+
+  it('starts the game in the install root, not the exe dir (Grim Dawn x64/ cwd), or in the resolved workingdir when there is one', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(resolveBridgeLaunchWorkingDir as jest.Mock).mockReturnValue(undefined)
+
+    await new SteamGame(APP_ID).launch({} as any)
+    expect(runWineCommand).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        startFolder: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`
+      })
+    )
+    ;(resolveBridgeLaunchWorkingDir as jest.Mock).mockReturnValue(
+      `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/bin`
+    )
+    await new SteamGame(APP_ID).launch({} as any)
+    expect(runWineCommand).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        startFolder: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/bin`
+      })
     )
   })
 

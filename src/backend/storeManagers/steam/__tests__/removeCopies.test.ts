@@ -191,7 +191,8 @@ jest.mock('../bridge/allowlist', () => ({
 }))
 jest.mock('../bridge/shimGenerate', () => ({ placeShimForGame: jest.fn() }))
 jest.mock('../bridge/launchTarget', () => ({
-  resolveBridgeLaunchExe: jest.fn()
+  resolveBridgeLaunchExe: jest.fn(),
+  resolveBridgeLaunchWorkingDir: jest.fn()
 }))
 jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()

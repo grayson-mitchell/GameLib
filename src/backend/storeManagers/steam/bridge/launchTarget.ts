@@ -31,7 +31,7 @@
  * VR vs non-VR variants -- remain out of scope; Avernum 4/Hoard ship one).
  */
 
-import { join } from 'node:path'
+import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from '../user'
 import { getAnonymousPicsClient, isPublicOnlyEntry } from '../anonymousClient'
@@ -52,6 +52,7 @@ const NUMERIC_APP_ID = /^\d+$/
 
 interface AppLaunchEntry {
   executable?: string
+  workingdir?: string
   config?: { oslist?: string }
 }
 
@@ -72,6 +73,8 @@ interface AppLaunchInfo {
 interface WindowsLaunch {
   executable: string
   installdir?: string
+  /** PICS `config.launch.<n>.workingdir`: relative to the install dir, usually absent. */
+  workingdir?: string
 }
 
 /**
@@ -93,9 +96,15 @@ function pickWindowsLaunch(appinfo: unknown): WindowsLaunch | undefined {
         (candidate.config?.oslist == null || candidate.config.oslist === '')
     )
   if (!windowsEntry?.executable) return undefined
+  const workingdir =
+    typeof windowsEntry.workingdir === 'string' &&
+    windowsEntry.workingdir.length > 0
+      ? windowsEntry.workingdir
+      : undefined
   return {
     executable: windowsEntry.executable,
-    installdir: info?.config?.installdir
+    installdir: info?.config?.installdir,
+    ...(workingdir ? { workingdir } : {})
   }
 }
 
@@ -209,7 +218,8 @@ export async function resolveBridgeLaunchExe(
     if (launch && fromPics && launch.installdir) {
       setBridgeLaunchTarget(appId, {
         executable: launch.executable,
-        installdir: launch.installdir
+        installdir: launch.installdir,
+        ...(launch.workingdir ? { workingdir: launch.workingdir } : {})
       })
     }
 
@@ -260,6 +270,80 @@ export async function resolveBridgeLaunchExe(
 }
 
 /**
+ * Resolves a PICS `workingdir` (relative to the install dir, either separator)
+ * to an absolute directory that is contained in `installRoot`. Returns
+ * `installRoot` when there is no workingdir and `undefined` when the value is
+ * unsafe (absolute, drive-lettered, or escaping the install root), so the
+ * caller falls back to the install root.
+ */
+// ts-prune-ignore-next
+export function containWorkingDir(
+  installRoot: string,
+  workingdir: string | undefined
+): string | undefined {
+  if (!workingdir) return installRoot
+  const segments = workingdir.split(/[\\/]+/).filter((seg) => seg.length > 0)
+  if (
+    /^[a-zA-Z]:/.test(workingdir) ||
+    workingdir.startsWith('/') ||
+    workingdir.startsWith('\\') ||
+    workingdir.includes('\0') ||
+    segments.includes('..')
+  ) {
+    return undefined
+  }
+  const candidate = resolve(installRoot, ...segments)
+  const rel = relative(resolve(installRoot), candidate)
+  if (rel.startsWith('..' + sep) || rel === '..' || isAbsolute(rel)) {
+    return undefined
+  }
+  return candidate
+}
+
+/**
+ * The directory a bridge game's process must start in. Real Steam starts a
+ * game in its install root (or the launch entry's `workingdir`), NOT in the
+ * exe's own directory; Grim Dawn (`x64/Grim Dawn.exe`) looks for
+ * `database/` and `Resources/` relative to the cwd and null-derefs when it is
+ * started from `x64/`. Reads the launch target that resolveBridgeLaunchExe
+ * persisted moments earlier, so it needs no PICS round trip. Never throws;
+ * returns `undefined` when there is no stored target, so the caller falls back
+ * to the install root it can derive from the exe path.
+ */
+export function resolveBridgeLaunchWorkingDir(
+  appId: string
+): string | undefined {
+  if (!NUMERIC_APP_ID.test(appId)) return undefined
+  try {
+    const stored = readBridgeVerdict(appId)?.launchTarget
+    if (!stored) return undefined
+    const bottleName = getBridgeBottleSettings(appId).wineCrossoverBottle
+    const steamappsDir = getBottleSteamappsDir(bottleName)
+    const installdir = sanitizeInstalldir(
+      stored.installdir,
+      appId,
+      steamappsDir
+    )
+    const installRoot = join(steamappsDir, 'common', installdir)
+    const contained = containWorkingDir(installRoot, stored.workingdir)
+    if (contained === undefined) {
+      logWarning(
+        `resolveBridgeLaunchWorkingDir: ignoring unsafe workingdir for appId ${appId}, using the install root`,
+        LogPrefix.Steam
+      )
+      return installRoot
+    }
+    return contained
+  } catch (error) {
+    logWarning(
+      [`resolveBridgeLaunchWorkingDir: failed for appId ${appId}`, error],
+      LogPrefix.Steam
+    )
+    return undefined
+  }
+}
+
+/**
  * Phase 54: records a launch target for every installed bridge appId that
  * lacks one, from ONE bulk PICS call on a client the caller already holds
  * (an authenticated lease held by Refresh or sign-in). Never opens or
@@ -287,7 +371,8 @@ export async function backfillBridgeLaunchTargets(
       if (launch?.installdir) {
         setBridgeLaunchTarget(id, {
           executable: launch.executable,
-          installdir: launch.installdir
+          installdir: launch.installdir,
+          ...(launch.workingdir ? { workingdir: launch.workingdir } : {})
         })
         recorded++
       }

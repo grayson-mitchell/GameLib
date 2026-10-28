@@ -362,6 +362,28 @@ describe('setBridgeLaunchTarget', () => {
     })
   })
 
+  it('round-trips an optional workingdir and still reads a target stored without one', () => {
+    setBridgeLaunchTarget(APP_ID, {
+      executable: 'x64\\Grim Dawn.exe',
+      installdir: 'Grim Dawn',
+      workingdir: 'x64'
+    })
+    expect(readBridgeVerdict(APP_ID)?.launchTarget).toEqual({
+      executable: 'x64\\Grim Dawn.exe',
+      installdir: 'Grim Dawn',
+      workingdir: 'x64'
+    })
+
+    setBridgeLaunchTarget(APP_ID, {
+      executable: 'x64\\Grim Dawn.exe',
+      installdir: 'Grim Dawn'
+    })
+    expect(readBridgeVerdict(APP_ID)?.launchTarget).toEqual({
+      executable: 'x64\\Grim Dawn.exe',
+      installdir: 'Grim Dawn'
+    })
+  })
+
   it('rejects a non-numeric appId without touching the store', () => {
     setBridgeLaunchTarget(NON_NUMERIC_APP_ID, {
       executable: 'a.exe',
