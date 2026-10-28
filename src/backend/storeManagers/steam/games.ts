@@ -123,7 +123,8 @@ import { classifyDepotError } from './depotErrors'
 import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 // Phase 24 Plan 08 (R4/R7): allowlist-based bridge-vs-fallback routing.
 import { bridgeAllowlist } from './bridge/allowlist'
-import { placeShimForGame, detectDrmWrapper } from './bridge/shimGenerate'
+import { placeShimForGame } from './bridge/shimGenerate'
+import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
 import { detectSteamDrmInPe } from './bridge/peSteamDrm'
 import {
   drmLaunchSetup,
@@ -3682,10 +3683,21 @@ export default class SteamGame implements Game {
 
     // Phase 56 (D-12): steamclient-layer DRM mode branch, before any shim
     // placement (RESEARCH F10).
-    const launchDrmWrapper = detectDrmWrapper(exePath)
+    const { drmWrapper: launchDrmWrapper, drmExe } =
+      await detectLaunchDrmWrapper(
+        getBottleDir(bridgeBottleSettings.wineCrossoverBottle),
+        exePath
+      )
+    if (launchDrmWrapper === 'steamstub' && drmExe !== exePath) {
+      logInfo(
+        `SteamGame: appId ${this.appId} SteamStub .bind found on ${basename(drmExe)} (UE runtime exe)`,
+        LogPrefix.Steam
+      )
+    }
+    // CEG markers come from the exe that carries .bind (T-56-21-02).
     const launchCegMarkers =
       launchDrmWrapper === 'steamstub'
-        ? this.readLaunchExeCegMarkers(exePath)
+        ? this.readLaunchExeCegMarkers(drmExe)
         : []
     const hadDrmRunner = getDrmBridgeRunner(this.appId) !== undefined
     const wantsDrm =
@@ -3713,7 +3725,8 @@ export default class SteamGame implements Game {
       installRoot: drmInstallRoot ?? '',
       installdir: drmInstallRoot ? basename(drmInstallRoot) : '',
       drmWrapper: launchDrmWrapper,
-      cegMarkers: launchCegMarkers
+      cegMarkers: launchCegMarkers,
+      drmExe
     })
     if (drm.status === 'not-applicable') {
       // drmLaunchSetup cleared the clone runner, so the TCP launch must not

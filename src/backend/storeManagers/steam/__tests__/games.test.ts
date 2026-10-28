@@ -380,6 +380,28 @@ jest.mock('../bridge/shimGenerate', () => ({
   detectDrmWrapper: jest.fn()
 }))
 
+// Gap 11 (56-21): the UE-aware resolver. Default delegates to the mocked
+// detectDrmWrapper (drmExe = launch exe); a test overrides it via
+// __detectLaunchOverride to simulate a Shipping exe carrying .bind.
+jest.mock('../bridge/drm/drmScanExe', () => {
+  const override: { fn?: (exe: string) => unknown } = {}
+  return {
+    __detectLaunchOverride: override,
+    detectLaunchDrmWrapper: (_bottle: string, exe: string) =>
+      Promise.resolve(
+        override.fn
+          ? override.fn(exe)
+          : {
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
+              drmWrapper: require('../bridge/shimGenerate').detectDrmWrapper(
+                exe
+              ),
+              drmExe: exe
+            }
+      )
+  }
+})
+
 // Phase 56 (56-12): drmLaunchSetup is a plain function over a jest.fn() so it
 // survives resetMocks; the default is the not-applicable (TCP) result.
 jest.mock('../bridge/drm/drmLaunchSetup', () => {
@@ -10946,7 +10968,75 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           ),
           installdir: 'Grim Dawn',
           drmWrapper: 'steamstub',
-          cegMarkers: []
+          cegMarkers: [],
+          drmExe: exePath
+        })
+      })
+
+      describe('UE Shipping exe carries .bind (Gap 11)', () => {
+        const shipping = '/bottle/Game/Binaries/Win64/Game-Win64-Shipping.exe'
+        const override = () =>
+          jest.requireMock<{
+            __detectLaunchOverride: { fn?: (e: string) => unknown }
+          }>('../bridge/drm/drmScanExe').__detectLaunchOverride
+        afterEach(() => {
+          override().fn = undefined
+        })
+
+        it('routes to DRM mode, keeps the bootstrap as exePath, reads CEG from the Shipping exe', async () => {
+          const id = freshId()
+          override().fn = () => ({ drmWrapper: 'steamstub', drmExe: shipping })
+          __drmLaunchSetupMock.mockResolvedValue({
+            status: 'error',
+            step: 'runner-clone',
+            cause: 'c'
+          })
+          await new SteamGame(id).launch({} as never)
+          expect(__drmLaunchSetupMock.mock.calls[0][0]).toMatchObject({
+            exePath,
+            drmExe: shipping,
+            drmWrapper: 'steamstub'
+          })
+        })
+
+        it('keeps the CEG refusal when the Shipping exe carries CEG markers', async () => {
+          const id = freshId()
+          const realShipping = exePath + '.shipping.exe'
+          writeFileSync(realShipping, 'MZ')
+          override().fn = () => ({
+            drmWrapper: 'steamstub',
+            drmExe: realShipping
+          })
+          ;(detectSteamDrmInPe as jest.Mock).mockReturnValue({
+            parsed: true,
+            cegMarkers: ['STEAM_GUIDD'],
+            hasBindSection: true
+          })
+          ;(placeShimForGame as jest.Mock).mockResolvedValue({
+            status: 'placed',
+            shimPath: exePath,
+            drmWrapper: 'steamstub',
+            drm: { kind: 'ceg', markers: ['STEAM_GUIDD'] }
+          })
+          await new SteamGame(id).launch({} as never)
+          expect(detectSteamDrmInPe).toHaveBeenCalled()
+          expect(__drmLaunchSetupMock.mock.calls[0][0].cegMarkers).toEqual([
+            'STEAM_GUIDD'
+          ])
+          expect(infoLines().some((l) => l.startsWith('[bridge-drm] '))).toBe(
+            false
+          )
+        })
+
+        it('resolver none leaves the TCP path', async () => {
+          const id = freshId()
+          override().fn = () => ({ drmWrapper: 'none', drmExe: exePath })
+          await new SteamGame(id).launch({} as never)
+          expect(__drmLaunchSetupMock.mock.calls[0][0]).toMatchObject({
+            drmWrapper: 'none',
+            drmExe: exePath
+          })
+          expect(placeShimForGame).toHaveBeenCalledTimes(1)
         })
       })
 

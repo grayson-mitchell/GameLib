@@ -56,6 +56,7 @@ import {
   isGameLibShimBytes,
   placeShimForGame
 } from '../shimGenerate'
+import * as drmScanExe from '../drm/drmScanExe'
 import { scanSteamApiImports } from '../importScan'
 import { SHIM64_EXPORTED_SYMBOLS } from '../shimCoverage'
 import * as bridgeScan from '../bridgeScan'
@@ -2252,6 +2253,27 @@ describe('shimGenerate', () => {
       })
       expect(second.status).toBe('already-placed')
       expect('drmWrapper' in second && second.drmWrapper).toBe('steamstub')
+    })
+
+    it('stamps steamstub when only the UE Shipping exe carries .bind (Gap 11)', async () => {
+      writeFileSync(gameExePath, makePe('.text'))
+      scanOk()
+      const spy = jest
+        .spyOn(drmScanExe, 'detectLaunchDrmWrapper')
+        .mockResolvedValue({
+          drmWrapper: 'steamstub',
+          drmExe: join(root, 'Game-Win64-Shipping.exe')
+        })
+      try {
+        const res = await placeShimForGame('1234', gameExePath, {
+          shimSourcePath: realShimSourcePath
+        })
+        expect(res.status).toBe('placed')
+        expect('drmWrapper' in res && res.drmWrapper).toBe('steamstub')
+        expect('verdict' in res && res.verdict?.drmWrapper).toBe('steamstub')
+      } finally {
+        spy.mockRestore()
+      }
     })
 
     it('flags a no-steam-api verdict', async () => {

@@ -102,6 +102,7 @@ import {
 } from './peSections'
 import { runtimeLoadedSteamApiMarker } from './importParse'
 import { detectSteamDrmInPe } from './peSteamDrm'
+import { detectLaunchDrmWrapper } from './drm/drmScanExe'
 import {
   readInterfaceVersionStrings,
   resolveRequiredInterfaceVersions,
@@ -473,7 +474,26 @@ export async function placeShimForGame(
   const result = await placeShimForGameInner(appId, gameExePath, opts)
   if (result.status === 'error') return result
   const drm = detectExeSteamDrm(appId, resolve(gameExePath))
-  const flagged = withDrmWrapper(appId, gameExePath, result)
+  // Gap 11 (56-21): UE titles carry .bind on the Shipping exe, not the
+  // bootstrap; stamp from the same resolver launch routing uses.
+  const stampBottle = sanitizeBottleName(
+    opts?.bottleName ?? resolveBridgeBottleName(appId)
+  )
+  const launchWrapper = stampBottle
+    ? await detectLaunchDrmWrapper(
+        resolve(getBottleDir(stampBottle)),
+        resolve(gameExePath)
+      )
+    : undefined
+  const flagged = withDrmWrapper(
+    appId,
+    gameExePath,
+    result,
+    launchWrapper ?? {
+      drmWrapper: detectDrmWrapper(resolve(gameExePath)),
+      drmExe: resolve(gameExePath)
+    }
+  )
   return drm === undefined ? flagged : { ...flagged, drm }
 }
 
@@ -520,7 +540,8 @@ export function detectDrmWrapper(
 function withDrmWrapper(
   appId: string,
   gameExePath: string,
-  result: PlaceShimResultBase
+  result: PlaceShimResultBase,
+  launch: { drmWrapper: 'steamstub' | 'none' | undefined; drmExe: string }
 ): PlaceShimResultBase {
   if (
     result.status !== 'placed' &&
@@ -532,12 +553,14 @@ function withDrmWrapper(
     return result
   }
   const resolvedExe = resolve(gameExePath)
-  const wrapper = detectDrmWrapper(resolvedExe)
+  const wrapper = launch.drmWrapper
   const exeArch = readFileEffectiveArch(resolvedExe)
   const stamp = { exeArch, ...(wrapper ? { drmWrapper: wrapper } : {}) }
   if (wrapper !== 'steamstub') return { ...result, ...stamp }
   logInfo(
-    `placeShimForGame: appId ${appId} launch exe carries a SteamStub .bind section (drmWrapper=steamstub)`,
+    `placeShimForGame: appId ${appId} ${
+      launch.drmExe === resolvedExe ? 'launch exe' : 'UE runtime exe'
+    } carries a SteamStub .bind section (drmWrapper=steamstub)`,
     LogPrefix.Steam
   )
   const verdict = result.verdict
