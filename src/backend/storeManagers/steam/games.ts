@@ -2,7 +2,18 @@ import axios from 'axios'
 import i18next from 'i18next'
 import { shell } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
-import { rmSync } from 'node:fs'
+import {
+  chmodSync,
+  closeSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  readdirSync,
+  rmSync,
+  unlinkSync
+} from 'node:fs'
 import {
   basename,
   dirname,
@@ -13,6 +24,7 @@ import {
   sep
 } from 'node:path'
 import {
+  EnviromentVariable,
   ExtraInfo,
   GameInfo,
   GameSettings,
@@ -87,7 +99,9 @@ import {
   stopPerGameBridgeBottle,
   findBridgeInstallBottle,
   isCrossoverInstalled,
-  CROSSOVER_MISSING
+  CROSSOVER_MISSING,
+  getDrmBridgeRunner,
+  type DrmLaunchForm
 } from './bottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import { noteSteamAuthTrigger } from './authTrigger'
@@ -107,7 +121,27 @@ import { classifyDepotError } from './depotErrors'
 import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 // Phase 24 Plan 08 (R4/R7): allowlist-based bridge-vs-fallback routing.
 import { bridgeAllowlist } from './bridge/allowlist'
-import { placeShimForGame } from './bridge/shimGenerate'
+import { placeShimForGame, detectDrmWrapper } from './bridge/shimGenerate'
+import { detectSteamDrmInPe } from './bridge/peSteamDrm'
+import {
+  drmLaunchSetup,
+  type DrmLaunchReady
+} from './bridge/drm/drmLaunchSetup'
+import {
+  resolveBridgeMode,
+  formatDrmNoticeLine,
+  formatBridgeDrmAnchor,
+  drmStepError,
+  type DrmStep
+} from './bridge/drm/steamclientLayerMode'
+import {
+  DRM_TRACE_ENV,
+  MAX_DRM_TRACE_BYTES,
+  parseDrmTraceFile,
+  formatDrmTraceLine,
+  drmRelogPrefix
+} from './bridge/drm/drmTrace'
+import { buildDrmPaths, newDrmLaunchId } from './bridge/drm/drmPaths'
 import { restoreBridgeSteamApiOriginals } from './bridge/originalRestore'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import {
@@ -136,7 +170,11 @@ import {
   writeBridgeDrmVerdict
 } from './bridge/bridgeVerdict'
 import { isScanVerdictNowCovered } from './bridge/shimCoverage'
-import { builtBridgeShim64Path } from 'backend/constants/paths'
+import {
+  builtBridgeShim64Path,
+  appFolder,
+  userHome
+} from 'backend/constants/paths'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 
 /** The project-wide appId shape guard (clientSetup.ts, installFormIpc.ts,
@@ -618,6 +656,415 @@ const steamStubNoticeShownThisSession = new Set<string>()
 // for the same title cannot hide it. Session-scoped for the same reason as
 // decision 3 above.
 const steamStubForwardedNoticeShownThisSession = new Set<string>()
+
+// Phase 56 (56-12): steamclient-layer DRM launch helpers.
+//
+// These helpers are pure, or touch only GameLib's own trace dir. None of them
+// throws, and nothing runs at module load (sidecar exit contract).
+
+// ts-prune-ignore-next
+export type DrmDllPathChannel = 'env' | 'cx_env' | 'not-needed' | 'raw-only'
+// ts-prune-ignore-next
+export type DrmDllOverridesChannel =
+  | 'env'
+  | 'dll-option'
+  | 'cx_env'
+  | 'registry'
+  | 'raw-only'
+
+// 56-01-SUMMARY.md (.planning/phases/56-*/56-01-SUMMARY.md) records `dllpath_channel: not-needed`.
+// ts-prune-ignore-next
+export const DRM_DLLPATH_CHANNEL: DrmDllPathChannel = 'not-needed'
+// 56-01-SUMMARY.md records `dlloverrides_channel: dll-option`: carried as the wrapper's `--dll=<overrides>` argv.
+// ts-prune-ignore-next
+export const DRM_DLLOVERRIDES_CHANNEL: DrmDllOverridesChannel = 'dll-option'
+
+// The Research staging recipe (NotProton compat_run.sh). The genuine
+// steamclient64.dll loads native from its full SteamClientDll64 path, and
+// lsteamclient loads builtin from the clone.
+// ts-prune-ignore-next
+export const DRM_DLL_OVERRIDES = 'steamclient=n;steamclient64=n;lsteamclient=b'
+
+// ts-prune-ignore-next
+export const DRM_TRACE_KEEP_PER_APP = 8
+// ts-prune-ignore-next
+export const DRM_REGISTRY_TIMEOUT_MS = 30000
+// lsteamclient.so dlopens $STEAM_COMPAT_CLIENT_INSTALL_PATH/steamclient.dylib
+// (spike 043 step 2).
+// ts-prune-ignore-next
+export const MAC_STEAM_CLIENT_SUBPATH = [
+  'Library',
+  'Application Support',
+  'Steam',
+  'Steam.AppBundle',
+  'Steam',
+  'Contents',
+  'MacOS'
+] as const
+
+// ts-prune-ignore-next
+export type DrmLaunchEnvInput = {
+  appId: string
+  traceFile: string
+  macSteamClientDir: string
+  steamDirHost: string
+  windowsDllDir: string
+  unixDllDir: string
+  launchForm: DrmLaunchForm
+  dllPathChannel: DrmDllPathChannel
+  dllOverridesChannel: DrmDllOverridesChannel
+  base: readonly EnviromentVariable[]
+}
+// ts-prune-ignore-next
+export type DrmLaunchEnv =
+  | {
+      status: 'ok'
+      enviromentOptions: EnviromentVariable[]
+      commandPrefix: string[]
+      registryCommands: string[][]
+    }
+  | { status: 'error'; cause: string }
+
+// eslint-disable-next-line no-control-regex
+const DRM_CONTROL_CHARS = /[\x00-\x1f\x7f]/
+
+// ts-prune-ignore-next
+export function buildDrmLaunchEnvironment(
+  input: DrmLaunchEnvInput
+): DrmLaunchEnv {
+  try {
+    const invalid = (field: string): DrmLaunchEnv => ({
+      status: 'error',
+      cause: `invalid DRM launch input: ${field}`
+    })
+    if (typeof input.appId !== 'string' || !/^[0-9]{1,10}$/.test(input.appId)) {
+      return invalid('appId')
+    }
+    const pathFields = [
+      'traceFile',
+      'macSteamClientDir',
+      'steamDirHost',
+      'windowsDllDir',
+      'unixDllDir'
+    ] as const
+    for (const field of pathFields) {
+      const value = input[field]
+      if (
+        typeof value !== 'string' ||
+        !value.startsWith('/') ||
+        DRM_CONTROL_CHARS.test(value)
+      ) {
+        return invalid(field)
+      }
+    }
+    for (const field of ['steamDirHost', 'windowsDllDir', 'unixDllDir']) {
+      if (input[field as 'steamDirHost'].includes(':')) return invalid(field)
+    }
+
+    const raw = input.launchForm === 'raw WINELOADER+WINEPREFIX'
+    let pathChannel = input.dllPathChannel
+    let overridesChannel = input.dllOverridesChannel
+    if (pathChannel === 'raw-only') {
+      if (!raw) {
+        return {
+          status: 'error',
+          cause: 'channel raw-only needs the raw launch form'
+        }
+      }
+      pathChannel = 'env'
+    }
+    if (overridesChannel === 'raw-only') {
+      if (!raw) {
+        return {
+          status: 'error',
+          cause: 'channel raw-only needs the raw launch form'
+        }
+      }
+      overridesChannel = 'env'
+    }
+
+    let env: EnviromentVariable[] = input.base.map((e) => ({ ...e }))
+    const getKey = (key: string): string | undefined =>
+      env.find((e) => e.key.toLowerCase() === key.toLowerCase())?.value
+    const setKey = (key: string, value: string) => {
+      env = env.filter((e) => e.key.toLowerCase() !== key.toLowerCase())
+      env.push({ key, value })
+    }
+
+    setKey(DRM_TRACE_ENV, input.traceFile)
+    setKey('SteamGameId', input.appId)
+    setKey('SteamAppId', input.appId)
+    setKey('STEAM_COMPAT_CLIENT_INSTALL_PATH', input.macSteamClientDir)
+
+    const drmPath = [
+      input.steamDirHost,
+      input.windowsDllDir,
+      input.unixDllDir
+    ].join(':')
+    const commandPrefix: string[] = []
+    const registryCommands: string[][] = []
+    const cxTokens: string[] = []
+
+    if (overridesChannel === 'env') {
+      const existing = getKey('WINEDLLOVERRIDES') ?? ''
+      const ours = new Set(['steamclient', 'steamclient64', 'lsteamclient'])
+      const kept: string[] = []
+      for (const item of existing.split(';')) {
+        if (!item) continue
+        const eq = item.indexOf('=')
+        const names = (eq === -1 ? item : item.slice(0, eq))
+          .split(',')
+          .filter((n) => n && !ours.has(n.toLowerCase()))
+        if (names.length === 0) continue
+        kept.push(
+          eq === -1
+            ? names.join(',')
+            : `${names.join(',')}=${item.slice(eq + 1)}`
+        )
+      }
+      setKey('WINEDLLOVERRIDES', [...kept, DRM_DLL_OVERRIDES].join(';'))
+    } else if (overridesChannel === 'dll-option') {
+      // 56-01-SUMMARY.md 56-12 item: "Carry steamclient=n;steamclient64=n;lsteamclient=b
+      // through the `--dll=<overrides>` option (argv, so `bin/wine --dll=...`)".
+      commandPrefix.push('--dll=' + DRM_DLL_OVERRIDES)
+    } else if (overridesChannel === 'registry') {
+      for (const [name, mode] of [
+        ['steamclient', 'native'],
+        ['steamclient64', 'native'],
+        ['lsteamclient', 'builtin']
+      ]) {
+        registryCommands.push([
+          'reg',
+          'add',
+          'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides',
+          '/v',
+          name,
+          '/d',
+          mode,
+          '/f'
+        ])
+      }
+    } else if (overridesChannel === 'cx_env') {
+      cxTokens.push(`WINEDLLOVERRIDES='${DRM_DLL_OVERRIDES}'`)
+    }
+
+    if (pathChannel === 'env') {
+      const existing = getKey('WINEDLLPATH')
+      setKey('WINEDLLPATH', existing ? `${drmPath}:${existing}` : drmPath)
+    } else if (pathChannel === 'cx_env') {
+      cxTokens.push(`WINEDLLPATH='${drmPath}'`)
+    }
+
+    if (cxTokens.length > 0) {
+      if (cxTokens.some((t) => t.slice(t.indexOf("'") + 1, -1).includes("'"))) {
+        return invalid('CX_ENV value')
+      }
+      const existing = getKey('CX_ENV')
+      const joined = cxTokens.join(' ')
+      setKey('CX_ENV', existing ? `${existing} ${joined}` : joined)
+    }
+
+    return {
+      status: 'ok',
+      enviromentOptions: env,
+      commandPrefix,
+      registryCommands
+    }
+  } catch (error) {
+    return {
+      status: 'error',
+      cause: `invalid DRM launch input: ${String(error)}`
+    }
+  }
+}
+
+/**
+ * The helper passes this string verbatim to CreateProcessW (56-03), so it is
+ * the game's C:\ path, never the Z: mapping.
+ */
+// ts-prune-ignore-next
+export function drmBottleWinPath(
+  bottleDir: string,
+  hostPath: string
+): string | null {
+  if (
+    typeof bottleDir !== 'string' ||
+    typeof hostPath !== 'string' ||
+    DRM_CONTROL_CHARS.test(bottleDir) ||
+    DRM_CONTROL_CHARS.test(hostPath)
+  ) {
+    return null
+  }
+  const driveC = resolve(bottleDir, 'drive_c')
+  const rel = relative(driveC, resolve(hostPath))
+  if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) return null
+  return 'C:\\' + rel.split(sep).join('\\')
+}
+
+// ts-prune-ignore-next
+export function prepareDrmTraceFile(
+  appFolderPath: string,
+  appId: string,
+  now: number = Date.now()
+):
+  | { status: 'ok'; traceFile: string; traceRoot: string }
+  | { status: 'error'; cause: string } {
+  try {
+    const paths = buildDrmPaths(appFolderPath)
+    if (!paths)
+      return { status: 'error', cause: 'invalid app folder for DRM trace' }
+    mkdirSync(paths.traceRoot, { recursive: true, mode: 0o700 })
+    if (!lstatSync(paths.traceRoot).isDirectory()) {
+      return {
+        status: 'error',
+        cause: 'trace dir is a symlink or not a directory'
+      }
+    }
+    chmodSync(paths.traceRoot, 0o700)
+    const traceFile = paths.traceFile(appId, newDrmLaunchId(now))
+    if (!traceFile)
+      return { status: 'error', cause: 'invalid DRM trace file name' }
+
+    try {
+      const re = new RegExp(`^${appId}-([0-9]{1,16})\\.log$`)
+      const mine: { id: number; name: string }[] = []
+      for (const name of readdirSync(paths.traceRoot)) {
+        const m = re.exec(name)
+        if (!m) continue
+        const st = lstatSync(join(paths.traceRoot, name), {
+          throwIfNoEntry: false
+        })
+        if (!st || !st.isFile()) continue
+        mine.push({ id: Number(m[1]), name })
+      }
+      mine.sort((a, b) => b.id - a.id)
+      for (const old of mine.slice(DRM_TRACE_KEEP_PER_APP - 1)) {
+        unlinkSync(join(paths.traceRoot, old.name))
+      }
+    } catch (error) {
+      logWarning(
+        `SteamGame: DRM trace retention failed for appId ${appId}: ${String(error)}`,
+        LogPrefix.Steam
+      )
+    }
+    return { status: 'ok', traceFile, traceRoot: paths.traceRoot }
+  } catch (error) {
+    return { status: 'error', cause: String(error) }
+  }
+}
+
+// ts-prune-ignore-next
+export function relogDrmTrace(
+  appId: string,
+  traceFile: string
+):
+  | { status: 'relogged'; events: number; rejected: number }
+  | { status: 'missing' | 'refused' | 'oversize' | 'error'; detail: string } {
+  const notRelogged = (
+    status: 'missing' | 'refused' | 'oversize' | 'error',
+    detail: string
+  ) => {
+    logInfo(
+      `SteamGame: DRM trace for appId ${appId} not relogged (${status}: ${detail})`,
+      LogPrefix.Steam
+    )
+    return { status, detail } as const
+  }
+  try {
+    const st = lstatSync(traceFile, { throwIfNoEntry: false })
+    if (!st) return notRelogged('missing', 'no trace file')
+    if (!st.isFile()) return notRelogged('refused', 'not a regular file')
+    if (st.size > MAX_DRM_TRACE_BYTES) {
+      return notRelogged('oversize', `${st.size} bytes`)
+    }
+    const parsed = parseDrmTraceFile(readFileSync(traceFile, 'utf8'), appId)
+    if (parsed.status === 'oversize')
+      return notRelogged('oversize', 'text too large')
+    for (const ev of parsed.events) {
+      logInfo(drmRelogPrefix(appId) + formatDrmTraceLine(ev), LogPrefix.Steam)
+    }
+    logInfo(
+      `SteamGame: DRM trace for appId ${appId} relogged events=${parsed.events.length} rejected=${parsed.rejected}`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'relogged',
+      events: parsed.events.length,
+      rejected: parsed.rejected
+    }
+  } catch (error) {
+    return notRelogged('error', String(error))
+  }
+}
+
+// D-13 (56-12): the [bridge-notice] log line fires on every attempt; the dialog
+// and notify fire once per title and failed step per session. A different
+// failed step is new information, so it shows again. Keyed `${appId}|${step}`.
+const drmModeNoticeShownThisSession = new Set<string>()
+
+type DrmWineLaunch = {
+  ready: DrmLaunchReady
+  gameWinPath: string
+  traceFile: string
+  anchorLine: string
+  macSteamClientDir: string
+  // Test seam for the registry-channel branch; defaults to buildDrmLaunchEnvironment.
+  buildEnv?: (input: DrmLaunchEnvInput) => DrmLaunchEnv
+}
+
+function drmStepNoticeText(step: DrmStep): string {
+  switch (step) {
+    case 'steam-not-running':
+      return i18next.t(
+        'gamelib:steam.bridge.drm.step.steamNotRunning',
+        'Mac Steam is not running, and this game needs it. Open Steam, sign in, then press Play again.'
+      )
+    case 'unsupported-crossover':
+      return i18next.t(
+        'gamelib:steam.bridge.drm.step.unsupportedCrossover',
+        'This game needs a version of CrossOver that GameLib supports. The details name the version you have and the versions GameLib supports.'
+      )
+    case 'component-missing':
+      return i18next.t(
+        'gamelib:steam.bridge.drm.step.componentMissing',
+        'GameLib could not download the compatibility component this game needs. Check your internet connection, then press Play again.'
+      )
+    case 'component-verify':
+      return i18next.t(
+        'gamelib:steam.bridge.drm.step.componentVerify',
+        'The compatibility component GameLib downloaded failed its integrity check, so GameLib did not use it.'
+      )
+    case 'runner-clone':
+      return i18next.t(
+        'gamelib:steam.bridge.drm.step.runnerClone',
+        'GameLib could not prepare its own copy of CrossOver for this game.'
+      )
+    case 'runner-patch':
+      return i18next.t(
+        'gamelib:steam.bridge.drm.step.runnerPatch',
+        "GameLib could not prepare its own copy of CrossOver for this game, because CrossOver's files did not match what GameLib expects."
+      )
+    case 'valve-fetch':
+      return i18next.t(
+        'gamelib:steam.bridge.drm.step.valveFetch',
+        'GameLib could not download the Steam client files this game needs from Valve. Check your internet connection, then press Play again.'
+      )
+    case 'valve-verify':
+      return i18next.t(
+        'gamelib:steam.bridge.drm.step.valveVerify',
+        'The Steam client files downloaded from Valve failed their integrity check, so GameLib did not use them.'
+      )
+    case 'bottle-stage':
+      return i18next.t(
+        'gamelib:steam.bridge.drm.step.bottleStage',
+        "GameLib could not prepare this game's bottle to run it with its Steam DRM."
+      )
+    default: {
+      const unreachable: never = step
+      return String(unreachable)
+    }
+  }
+}
 
 export default class SteamGame implements Game {
   private readonly appId: string
@@ -3042,6 +3489,157 @@ export default class SteamGame implements Game {
     )
   }
 
+  /**
+   * D-13 (56-12): a steamclient-layer DRM mode step failed. Logs the
+   * [bridge-notice] line on every attempt, and shows the dialog plus notify
+   * once per (appId, step) per session, naming the failed step and its cause.
+   * Does not launch, and has no fallback to the Phase 52 forwarder or to
+   * bottled Steam. It never calls markBridgeFailedThisSession (RESEARCH A9 /
+   * F10: that would send the next Play to bottled Steam) and never sends
+   * steamBridgeSetupRequired, whose dialog offers the bottled fallback. The
+   * cause in the body is the 56-04-normalised readable form; the log line
+   * carries the tokenised form.
+   */
+  private maybeNotifyDrmModeFailed(step: DrmStep, cause: string): void {
+    logInfo(formatDrmNoticeLine(this.appId, step, cause), LogPrefix.Steam)
+    const key = `${this.appId}|${step}`
+    if (drmModeNoticeShownThisSession.has(key)) {
+      return
+    }
+    drmModeNoticeShownThisSession.add(key)
+    const title = i18next.t(
+      'gamelib:steam.bridge.drm.title',
+      'This game could not start'
+    )
+    const body =
+      drmStepNoticeText(step) +
+      ' ' +
+      i18next.t('gamelib:steam.bridge.drm.detail', 'Details: {{cause}}', {
+        cause
+      })
+    notify({ title, body })
+    const dialogFrameSent = showDialogBoxModalAuto({
+      title,
+      message: body,
+      type: 'MESSAGE'
+    })
+    logInfo(
+      `[bridge-notice] appId=${this.appId} dispatched=in-app-dialog+notify dialog-frame-sent=${dialogFrameSent} display=unconfirmed`,
+      LogPrefix.Steam
+    )
+  }
+
+  /**
+   * Reads the launch exe's CEG markers through the bounded PE reader (never
+   * the whole exe). 56-04's resolveBridgeMode sends a CEG-marked exe to 'tcp',
+   * so the existing CEG refusal keeps handling it; the markers are therefore
+   * read BEFORE drmLaunchSetup. Never throws.
+   */
+  private readLaunchExeCegMarkers(exePath: string): string[] {
+    let fd: number | null = null
+    try {
+      fd = openSync(exePath, 'r')
+      const handle = fd
+      const result = detectSteamDrmInPe((offset, length) => {
+        const buf = Buffer.alloc(length)
+        const n = readSync(handle, buf, 0, length, offset)
+        return n < length ? null : new Uint8Array(buf.buffer, buf.byteOffset, n)
+      })
+      if (result?.parsed) return result.cegMarkers
+      logWarning(
+        `SteamGame: CEG detection could not parse the exe as a PE for appId ${this.appId} -- treating as not CEG`,
+        LogPrefix.Steam
+      )
+      return []
+    } catch (error) {
+      logWarning(
+        `SteamGame: CEG detection could not read the exe for appId ${this.appId}: ${String(error)}`,
+        LogPrefix.Steam
+      )
+      return []
+    } finally {
+      if (fd !== null) {
+        try {
+          closeSync(fd)
+        } catch {
+          // nothing left to release
+        }
+      }
+    }
+  }
+
+  /**
+   * Phase 56 (D-11/D-12/D-13/D-15): launches a DRM-mode title as the helper
+   * `steam.exe <game exe>` under the clone runner. The Phase 52 forwarder is
+   * never reached in this mode. Every failure is a D-13 notice with no
+   * session mark.
+   */
+  private async launchDrmModeGame(
+    exePath: string,
+    installRoot: string,
+    ready: DrmLaunchReady
+  ): Promise<boolean> {
+    const macSteamClientDir = join(userHome, ...MAC_STEAM_CLIENT_SUBPATH)
+    if (!existsSync(join(macSteamClientDir, 'steamclient.dylib'))) {
+      this.maybeNotifyDrmModeFailed(
+        'steam-not-running',
+        drmStepError(
+          'steam-not-running',
+          `Mac Steam's steamclient.dylib was not found in ${macSteamClientDir}`
+        ).cause
+      )
+      return false
+    }
+    const trace = prepareDrmTraceFile(appFolder, this.appId)
+    if (trace.status === 'error') {
+      this.maybeNotifyDrmModeFailed(
+        'bottle-stage',
+        drmStepError('bottle-stage', trace.cause).cause
+      )
+      return false
+    }
+    const anchorLine = formatBridgeDrmAnchor({
+      appId: this.appId,
+      crossover: ready.anchor.crossover,
+      client: ready.anchor.client,
+      trace: trace.traceFile
+    })
+    if (!anchorLine) {
+      this.maybeNotifyDrmModeFailed(
+        'bottle-stage',
+        drmStepError('bottle-stage', 'invalid [bridge-drm] anchor fields').cause
+      )
+      return false
+    }
+    const gameWinPath = drmBottleWinPath(
+      getBottleDir(ready.bottleSettings.wineCrossoverBottle),
+      exePath
+    )
+    if (!gameWinPath) {
+      this.maybeNotifyDrmModeFailed(
+        'bottle-stage',
+        drmStepError(
+          'bottle-stage',
+          "game exe is not under the bottle's drive_c"
+        ).cause
+      )
+      return false
+    }
+    logInfo(
+      `SteamGame: DRM launch for appId ${this.appId} install root ${installRoot}`,
+      LogPrefix.Steam
+    )
+    // Not ready.bottleSettings-from-before: the settings computed before
+    // drmLaunchSetup predate the runner swap (56-11 contract).
+    return this.fireBridgeWineLaunch(exePath, ready.bottleSettings, {
+      ready,
+      gameWinPath,
+      traceFile: trace.traceFile,
+      anchorLine,
+      macSteamClientDir
+    })
+  }
+
   private async launchBridgeGame(): Promise<boolean> {
     const exePath = await resolveBridgeLaunchExe(this.appId)
     if (!exePath) {
@@ -3076,7 +3674,7 @@ export default class SteamGame implements Game {
     // existence gate, the shim refresh, the readiness gate, the config
     // handoff, AND the runWineCommand() gameSettings below, so the game
     // launches from the SAME bottle its exe was resolved against.
-    const bridgeBottleSettings = getBridgeBottleSettings(this.appId)
+    let bridgeBottleSettings = getBridgeBottleSettings(this.appId)
     if (
       !isBridgeBottleReady(bridgeBottleSettings.wineCrossoverBottle) ||
       !existsSync(exePath)
@@ -3091,6 +3689,57 @@ export default class SteamGame implements Game {
         fallbackAvailable: true
       })
       return false
+    }
+
+    // Phase 56 (D-12): steamclient-layer DRM mode branch, before any shim
+    // placement (RESEARCH F10).
+    const launchDrmWrapper = detectDrmWrapper(exePath)
+    const launchCegMarkers =
+      launchDrmWrapper === 'steamstub'
+        ? this.readLaunchExeCegMarkers(exePath)
+        : []
+    const hadDrmRunner = getDrmBridgeRunner(this.appId) !== undefined
+    const wantsDrm =
+      resolveBridgeMode(launchDrmWrapper, launchCegMarkers) ===
+      'steamclient-layer'
+    const drmInstallRoot = wantsDrm
+      ? this.resolveBridgeGameInstallRoot(
+          exePath,
+          bridgeBottleSettings.wineCrossoverBottle
+        )
+      : undefined
+    if (wantsDrm && !drmInstallRoot) {
+      this.maybeNotifyDrmModeFailed(
+        'bottle-stage',
+        drmStepError('bottle-stage', 'install root not resolved').cause
+      )
+      return false
+    }
+    // No signal is passed: the bridge launch has no abort controller.
+    const drm = await drmLaunchSetup({
+      appId: this.appId,
+      appFolder,
+      bottleName: bridgeBottleSettings.wineCrossoverBottle,
+      exePath,
+      installRoot: drmInstallRoot ?? '',
+      installdir: drmInstallRoot ? basename(drmInstallRoot) : '',
+      drmWrapper: launchDrmWrapper,
+      cegMarkers: launchCegMarkers
+    })
+    if (drm.status === 'not-applicable') {
+      // drmLaunchSetup cleared the clone runner, so the TCP launch must not
+      // keep the clone wineVersion (D-11).
+      if (hadDrmRunner) {
+        bridgeBottleSettings = getBridgeBottleSettings(this.appId)
+      }
+    } else if (drm.status === 'error') {
+      // D-13: no markBridgeFailedThisSession, no steamBridgeSetupRequired, no
+      // bottled Steam. The launcher's own 'done' status after launch()
+      // returns false clears any 'redist' progress 56-11 sent (D-05).
+      this.maybeNotifyDrmModeFailed(drm.step, drm.cause)
+      return false
+    } else {
+      return this.launchDrmModeGame(exePath, drmInstallRoot as string, drm)
     }
 
     // D-51-01: byte-identity no-op on every normal launch — only does real
@@ -3416,13 +4065,23 @@ export default class SteamGame implements Game {
    */
   private async fireBridgeWineLaunch(
     exePath: string,
-    bridgeBottleSettings: GameSettings
+    bridgeBottleSettings: GameSettings,
+    drm?: DrmWineLaunch
   ): Promise<boolean> {
     const reportLaunchFailure = (error: unknown) => {
       logWarning(
         [`SteamGame: bridge launch failed for appId ${this.appId}`, error],
         LogPrefix.Steam
       )
+      if (drm) {
+        // D-13: no session mark, no steamBridgeSetupRequired.
+        this.maybeNotifyDrmModeFailed(
+          'bottle-stage',
+          drmStepError('bottle-stage', 'wine launch failed: ' + String(error))
+            .cause
+        )
+        return
+      }
       markBridgeFailedThisSession(this.appId)
       sendFrontendMessage('steamBridgeSetupRequired', {
         appName: this.appId,
@@ -3437,6 +4096,13 @@ export default class SteamGame implements Game {
       if (bridgeLaunchBottles.get(this.appId) === launchRecord) {
         bridgeLaunchBottles.delete(this.appId)
       }
+    }
+    // D-15: the trace is re-logged once, when the game is gone.
+    let relogged = false
+    const relogOnce = () => {
+      if (!drm || relogged) return
+      relogged = true
+      relogDrmTrace(this.appId, drm.traceFile)
     }
 
     try {
@@ -3515,7 +4181,7 @@ export default class SteamGame implements Game {
       // 53-19 (D-53-06): measured per-title DLL override in this appId's own
       // bridge bottle (Overlooting nvapi64). Never rejects; .catch is
       // belt-and-braces for the same reason as above.
-      const launchSettings = await applyBridgeBottleDllOverrides(
+      let launchSettings = await applyBridgeBottleDllOverrides(
         this.appId,
         fixedSettings
       ).catch((error: unknown) => {
@@ -3525,6 +4191,94 @@ export default class SteamGame implements Game {
         )
         return fixedSettings
       })
+
+      let drmCommandPrefix: string[] = []
+      if (drm) {
+        const { ready } = drm
+        // One runner per bottle (D-11): a known fix must not swap it back.
+        if (
+          launchSettings.wineVersion.bin !==
+          ready.bottleSettings.wineVersion.bin
+        ) {
+          logWarning(
+            `SteamGame: a launch step changed the wine runner for appId ${this.appId}; restoring the DRM clone runner (D-11)`,
+            LogPrefix.Steam
+          )
+          launchSettings = {
+            ...launchSettings,
+            wineVersion: ready.bottleSettings.wineVersion,
+            winePrefix: ready.bottleSettings.winePrefix
+          }
+        }
+        const env = (drm.buildEnv ?? buildDrmLaunchEnvironment)({
+          appId: this.appId,
+          traceFile: drm.traceFile,
+          macSteamClientDir: drm.macSteamClientDir,
+          steamDirHost: ready.bottle.steamDirHost,
+          windowsDllDir: ready.runner.windowsDllDir,
+          unixDllDir: ready.runner.unixDllDir,
+          launchForm: ready.launchForm,
+          dllPathChannel: DRM_DLLPATH_CHANNEL,
+          dllOverridesChannel: DRM_DLLOVERRIDES_CHANNEL,
+          base: launchSettings.enviromentOptions ?? []
+        })
+        if (env.status === 'error') {
+          this.maybeNotifyDrmModeFailed(
+            'bottle-stage',
+            drmStepError('bottle-stage', env.cause).cause
+          )
+          return false
+        }
+        launchSettings = {
+          ...launchSettings,
+          enviromentOptions: env.enviromentOptions
+        }
+        drmCommandPrefix = env.commandPrefix
+
+        for (const cmd of env.registryCommands) {
+          let timer: ReturnType<typeof setTimeout> | undefined
+          const timeout = new Promise<'timeout'>((resolveTimeout) => {
+            timer = setTimeout(
+              () => resolveTimeout('timeout'),
+              DRM_REGISTRY_TIMEOUT_MS
+            )
+            timer.unref?.()
+          })
+          let failure: string | undefined
+          try {
+            const res = await Promise.race([
+              runWineCommand({
+                gameSettings: launchSettings,
+                commandParts: [...cmd],
+                wait: true,
+                protonVerb: 'run',
+                skipPrefixCheckIKnowWhatImDoing: true
+              }),
+              timeout
+            ])
+            if (res === 'timeout') {
+              failure = `timed out after ${DRM_REGISTRY_TIMEOUT_MS} ms`
+            } else if (res.code !== 0) {
+              // log-secret-gate-exempt: reg.exe stderr is wine's own diagnostic text, no credential.
+              failure = `code=${String(res.code)}, stderr=${String(res.stderr ?? '').slice(0, 200)}`
+            }
+          } catch (error) {
+            failure = String(error)
+          } finally {
+            if (timer) clearTimeout(timer)
+          }
+          if (failure !== undefined) {
+            this.maybeNotifyDrmModeFailed(
+              'bottle-stage',
+              drmStepError(
+                'bottle-stage',
+                `DLL override registry write failed: ${failure}`
+              ).cause
+            )
+            return false
+          }
+        }
+      }
 
       let handle: ReturnType<typeof startBottleProcessMonitor> = null
       if (installRoot) {
@@ -3536,6 +4290,7 @@ export default class SteamGame implements Game {
           onStopped: () => {
             clearLaunchRecord()
             stopBridgeHelper(this.appId)
+            relogOnce()
           }
         })
       } else {
@@ -3546,8 +4301,25 @@ export default class SteamGame implements Game {
       }
 
       bridgeLaunchBottles.set(this.appId, launchRecord)
+      if (drm) {
+        logInfo(drm.anchorLine, LogPrefix.Steam)
+        logInfo(
+          `SteamGame: launching appId ${this.appId} in steamclient-layer DRM mode (helper=${drm.ready.bottle.helperWinPath}, crossover=${drm.ready.anchor.crossover}, client=${drm.ready.anchor.client}, form=${drm.ready.launchForm})`,
+          LogPrefix.Steam
+        )
+      }
+      // The DRM launch is the declared real-profile arm of the two-profile
+      // rule (gamelib-conventions): it needs the user's real CrossOver bottle
+      // and Mac Steam's steamclient.dylib under the real HOME, so it inherits
+      // process.env and no HOME/XDG entry is assigned.
       const winePromise = runWineCommand({
-        commandParts: [exePath],
+        commandParts: drm
+          ? [
+              ...drmCommandPrefix,
+              drm.ready.bottle.helperWinPath,
+              drm.gameWinPath
+            ]
+          : [exePath],
         gameSettings: launchSettings,
         wait: false,
         protonVerb: 'run',
@@ -3558,11 +4330,15 @@ export default class SteamGame implements Game {
         () => {
           // With a monitor, its onStopped clears the record when the game is
           // gone; the launcher process exiting says nothing about the game.
-          if (!handle) clearLaunchRecord()
+          if (!handle) {
+            clearLaunchRecord()
+            relogOnce()
+          }
           handle?.launcherExited()
         },
         (error: unknown) => {
           clearLaunchRecord()
+          relogOnce()
           reportLaunchFailure(error)
           handle?.launcherExited()
         }

@@ -10,6 +10,7 @@
  *    cleared in beforeEach
  */
 import axios from 'axios'
+import i18next from 'i18next'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
@@ -28,7 +29,15 @@ import SteamGame, {
   markForcedWindowsViaBottle,
   clearForcedWindowsViaBottle,
   __resetLoggedEmptyGameInfoMissesForTests,
-  getBridgeRouteVerdict
+  getBridgeRouteVerdict,
+  buildDrmLaunchEnvironment,
+  drmBottleWinPath,
+  prepareDrmTraceFile,
+  relogDrmTrace,
+  DRM_DLLPATH_CHANNEL,
+  DRM_DLLOVERRIDES_CHANNEL,
+  DRM_TRACE_KEEP_PER_APP,
+  MAC_STEAM_CLIENT_SUBPATH
 } from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
@@ -54,8 +63,11 @@ import {
   getBridgeBottleSettings,
   provisionBridgeBottle,
   removePerGameBridgeBottle,
-  stopPerGameBridgeBottle
+  stopPerGameBridgeBottle,
+  getDrmBridgeRunner
 } from '../bottle'
+import type { DrmLaunchForm } from '../bottle'
+import type { DrmDllPathChannel, DrmDllOverridesChannel } from '../games'
 import { library, pendingFetches } from '../state'
 import { SteamUser } from '../user'
 import type { GameInfo, InstallParams } from 'common/types'
@@ -69,7 +81,8 @@ import {
 import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { knownFixSaysCeg } from '../drmKnownFix'
-import { placeShimForGame } from '../bridge/shimGenerate'
+import { placeShimForGame, detectDrmWrapper } from '../bridge/shimGenerate'
+import { detectSteamDrmInPe } from '../bridge/peSteamDrm'
 import { restoreBridgeSteamApiOriginals } from '../bridge/originalRestore'
 import { resolveBridgeLaunchExe } from '../bridge/launchTarget'
 import {
@@ -297,6 +310,7 @@ jest.mock('../bottle', () => {
     getBottleDir: jest.fn(),
     isBridgeBottleReady,
     getBridgeBottleSettings: jest.fn(),
+    getDrmBridgeRunner: jest.fn(),
     provisionBridgeBottle: jest.fn(),
     // quick/261016-u1w (D-D): per-game bridge bottle removal on uninstall.
     removePerGameBridgeBottle: jest.fn(),
@@ -353,7 +367,40 @@ jest.mock('../drmKnownFix', () => ({ knownFixSaysCeg: jest.fn() }))
 // ── bridge/shimGenerate.ts mock (24-05) — installBridgeGame()'s post-download
 // shim-placement hook.
 jest.mock('../bridge/shimGenerate', () => ({
-  placeShimForGame: jest.fn()
+  placeShimForGame: jest.fn(),
+  // Phase 56 (56-12): undefined under resetMocks, which keeps every existing
+  // test on the TCP path.
+  detectDrmWrapper: jest.fn()
+}))
+
+// Phase 56 (56-12): drmLaunchSetup is a plain function over a jest.fn() so it
+// survives resetMocks; the default is the not-applicable (TCP) result.
+jest.mock('../bridge/drm/drmLaunchSetup', () => {
+  const drmLaunchSetupMock = jest.fn()
+  return {
+    __drmLaunchSetupMock: drmLaunchSetupMock,
+    drmLaunchSetup: (...args: unknown[]) =>
+      drmLaunchSetupMock(...args) ??
+      Promise.resolve({ status: 'not-applicable', mode: 'tcp' })
+  }
+})
+
+// Phase 56 (56-12): detectSteamDrmInPe is undefined under resetMocks, which
+// games.ts treats as "not parsed".
+jest.mock('../bridge/peSteamDrm', () => ({
+  ...jest.requireActual('../bridge/peSteamDrm'),
+  detectSteamDrmInPe: jest.fn()
+}))
+
+// Phase 56 (56-12): no test writes under a real app folder.
+jest.mock('backend/constants/paths', () => ({
+  ...jest.requireActual('backend/constants/paths'),
+  appFolder: jest
+    .requireActual('node:path')
+    .join(
+      jest.requireActual('node:os').tmpdir(),
+      `gamelib drm games-test-${process.pid}`
+    )
 }))
 
 // quick 261026-lif: SteamGame.repair() delegates to the restore helper.
@@ -10497,5 +10544,1049 @@ describe('SteamGame shortcuts delegate to the shared module (261026-c7r)', () =>
     await expect(new SteamGame(APP_ID).addShortcuts(true)).rejects.toThrow(
       'boom'
     )
+  })
+})
+
+// ── Phase 56 (56-12): steamclient-layer DRM mode ─────────────────────────────
+describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
+  const realFs = jest.requireActual<typeof import('node:fs')>('node:fs')
+  const { logInfo, logWarning } = jest.requireMock('backend/logger')
+  const mockedAppFolder = jest.requireMock('backend/constants/paths')
+    .appFolder as string
+  const { formatDrmNoticeLine, formatBridgeDrmAnchor, DRM_STEPS } =
+    jest.requireActual('../bridge/drm/steamclientLayerMode')
+  const { formatDrmTraceLine, drmRelogPrefix } = jest.requireActual(
+    '../bridge/drm/drmTrace'
+  )
+  const tmpDirs: string[] = []
+  const makeTmp = () => {
+    const d = mkdtempSync(realJoin(tmpdir(), 'gamelib drm '))
+    tmpDirs.push(d)
+    return d
+  }
+  afterEach(() => {
+    for (const d of tmpDirs.splice(0))
+      realRmSync(d, { recursive: true, force: true })
+    realRmSync(mockedAppFolder, { recursive: true, force: true })
+  })
+
+  const traceLine = (
+    appId: string,
+    role: 'game' | 'helper' = 'game',
+    n = 1
+  ): string =>
+    formatDrmTraceLine({
+      appId,
+      pid: 100 + n,
+      role,
+      event: 'call',
+      name: `Fn${n}`
+    })
+
+  describe('helpers', () => {
+    const base = {
+      appId: '219990',
+      traceFile:
+        '/Users/a b/Library/Application Support/GameLib/steam-bridge/drm/trace/219990-1761084000123.log',
+      macSteamClientDir:
+        '/Users/a b/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS',
+      steamDirHost:
+        '/Users/a b/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-219990/drive_c/Program Files (x86)/Steam',
+      windowsDllDir:
+        '/Users/a b/Library/Application Support/GameLib/steam-bridge/drm/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-windows',
+      unixDllDir:
+        '/Users/a b/Library/Application Support/GameLib/steam-bridge/drm/runners/crossover-26.3.0.39832/CrossOver/lib/wine/x86_64-unix',
+      launchForm: 'bin/wine+CX_BOTTLE' as DrmLaunchForm,
+      dllPathChannel: 'not-needed' as DrmDllPathChannel,
+      dllOverridesChannel: 'dll-option' as DrmDllOverridesChannel,
+      base: [] as { key: string; value: string }[]
+    }
+    const okEnv = (over: Partial<typeof base> = {}) => {
+      const r = buildDrmLaunchEnvironment({ ...base, ...over })
+      if (r.status !== 'ok') throw new Error(r.cause)
+      return r
+    }
+    const keys = (r: { enviromentOptions: { key: string }[] }) =>
+      r.enviromentOptions.map((e) => e.key)
+
+    it('channel constants equal the 56-01 SUMMARY values', () => {
+      const text = realFs.readFileSync(
+        realJoin(
+          __dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          '.planning',
+          'phases',
+          '56-bridge-steamclient-layer-drm-mode-for-steamstub-titles',
+          '56-01-SUMMARY.md'
+        ),
+        'utf8'
+      )
+      expect(/^dllpath_channel: ([a-z_-]+)/m.exec(text)?.[1]).toBe(
+        DRM_DLLPATH_CHANNEL
+      )
+      expect(/^dlloverrides_channel: ([a-z_-]+)/m.exec(text)?.[1]).toBe(
+        DRM_DLLOVERRIDES_CHANNEL
+      )
+    })
+
+    it('always sets trace, SteamGameId, SteamAppId and the client dir once, replacing duplicates', () => {
+      const r = okEnv({
+        base: [
+          { key: 'FOO', value: 'bar' },
+          { key: 'steamappid', value: '1' },
+          { key: 'GAMELIB_DRM_TRACE_FILE', value: '/old' }
+        ]
+      })
+      const entries = Object.fromEntries(
+        r.enviromentOptions.map((e) => [e.key, e.value])
+      )
+      expect(entries.GAMELIB_DRM_TRACE_FILE).toBe(base.traceFile)
+      expect(entries.SteamGameId).toBe('219990')
+      expect(entries.SteamAppId).toBe('219990')
+      expect(entries.STEAM_COMPAT_CLIENT_INSTALL_PATH).toBe(
+        base.macSteamClientDir
+      )
+      expect(
+        keys(r).filter((k) => k.toLowerCase() === 'steamappid')
+      ).toHaveLength(1)
+      expect(keys(r)[0]).toBe('FOO')
+      expect(keys(r)).toHaveLength(5)
+    })
+
+    it("overrides channel 'env' rewrites WINEDLLOVERRIDES", () => {
+      const r = okEnv({
+        dllOverridesChannel: 'env',
+        base: [
+          { key: 'WINEDLLOVERRIDES', value: 'nvapi64=d;steamclient64,d3d9=b' }
+        ]
+      })
+      expect(
+        r.enviromentOptions.find((e) => e.key === 'WINEDLLOVERRIDES')?.value
+      ).toBe('nvapi64=d;d3d9=b;steamclient=n;steamclient64=n;lsteamclient=b')
+      expect(r.commandPrefix).toEqual([])
+      const bare = okEnv({ dllOverridesChannel: 'env' })
+      expect(
+        bare.enviromentOptions.find((e) => e.key === 'WINEDLLOVERRIDES')?.value
+      ).toBe('steamclient=n;steamclient64=n;lsteamclient=b')
+    })
+
+    it("overrides channel 'dll-option' puts --dll= in argv and adds no env", () => {
+      const r = okEnv()
+      expect(keys(r)).not.toContain('WINEDLLOVERRIDES')
+      expect(r.commandPrefix).toEqual([
+        '--dll=steamclient=n;steamclient64=n;lsteamclient=b'
+      ])
+    })
+
+    it("'cx_env' carries both variables in one CX_ENV entry", () => {
+      const r = okEnv({
+        dllOverridesChannel: 'cx_env',
+        dllPathChannel: 'cx_env',
+        base: [{ key: 'CX_ENV', value: 'A=1' }]
+      })
+      const drmPath = [
+        base.steamDirHost,
+        base.windowsDllDir,
+        base.unixDllDir
+      ].join(':')
+      expect(keys(r).filter((k) => k === 'CX_ENV')).toHaveLength(1)
+      expect(r.enviromentOptions.find((e) => e.key === 'CX_ENV')?.value).toBe(
+        `A=1 WINEDLLOVERRIDES='steamclient=n;steamclient64=n;lsteamclient=b' WINEDLLPATH='${drmPath}'`
+      )
+    })
+
+    it("'registry' yields three HKCU reg argv and never HKLM", () => {
+      const r = okEnv({ dllOverridesChannel: 'registry' })
+      const hk = 'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides'
+      expect(r.registryCommands).toEqual([
+        ['reg', 'add', hk, '/v', 'steamclient', '/d', 'native', '/f'],
+        ['reg', 'add', hk, '/v', 'steamclient64', '/d', 'native', '/f'],
+        ['reg', 'add', hk, '/v', 'lsteamclient', '/d', 'builtin', '/f']
+      ])
+      const all = JSON.stringify(r.registryCommands)
+      expect(all).not.toMatch(/HKEY_LOCAL_MACHINE|HKLM/)
+    })
+
+    it("path channel 'env' appends the base value; 'not-needed' adds nothing", () => {
+      const r = okEnv({
+        dllPathChannel: 'env',
+        base: [{ key: 'WINEDLLPATH', value: '/x' }]
+      })
+      expect(
+        r.enviromentOptions.find((e) => e.key === 'WINEDLLPATH')?.value
+      ).toBe(`${base.steamDirHost}:${base.windowsDllDir}:${base.unixDllDir}:/x`)
+      expect(keys(okEnv())).not.toContain('WINEDLLPATH')
+    })
+
+    it('raw-only is the env channel under the raw form and an error otherwise', () => {
+      const raw = okEnv({
+        launchForm: 'raw WINELOADER+WINEPREFIX',
+        dllPathChannel: 'raw-only',
+        dllOverridesChannel: 'raw-only'
+      })
+      expect(keys(raw)).toEqual(
+        expect.arrayContaining(['WINEDLLPATH', 'WINEDLLOVERRIDES'])
+      )
+      for (const over of [
+        { dllPathChannel: 'raw-only' as const },
+        { dllOverridesChannel: 'raw-only' as const }
+      ]) {
+        const r = buildDrmLaunchEnvironment({ ...base, ...over })
+        expect(r.status).toBe('error')
+        expect((r as { cause: string }).cause).toContain('raw-only')
+      }
+    })
+
+    it('rejects invalid inputs', () => {
+      const bad: Partial<typeof base>[] = [
+        { appId: 'abc' },
+        { traceFile: 'relative/x.log' },
+        { macSteamClientDir: 'rel' },
+        { steamDirHost: 'rel' },
+        { windowsDllDir: 'rel' },
+        { traceFile: '/x/\nx' },
+        { windowsDllDir: '/a:b' },
+        { steamDirHost: '/a:b' },
+        { dllPathChannel: 'cx_env', unixDllDir: "/it's:x" }
+      ]
+      for (const over of bad) {
+        expect(buildDrmLaunchEnvironment({ ...base, ...over }).status).toBe(
+          'error'
+        )
+      }
+      expect(
+        buildDrmLaunchEnvironment({
+          ...base,
+          dllPathChannel: 'cx_env',
+          unixDllDir: "/it's"
+        }).status
+      ).toBe('error')
+    })
+
+    it('drmBottleWinPath maps into drive_c and refuses escapes', () => {
+      expect(
+        drmBottleWinPath(
+          '/b/x',
+          '/b/x/drive_c/Program Files (x86)/Steam/steamapps/common/Grim Dawn/x64/Grim Dawn.exe'
+        )
+      ).toBe(
+        'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Grim Dawn\\x64\\Grim Dawn.exe'
+      )
+      expect(drmBottleWinPath('/b/x', '/elsewhere/g.exe')).toBeNull()
+      expect(drmBottleWinPath('/b/x', '/b/x/drive_c')).toBeNull()
+      expect(drmBottleWinPath('/b/x', '/b/x/drive_c/../g.exe')).toBeNull()
+      expect(drmBottleWinPath('/b/x', '/b/x/drive_c/a\n.exe')).toBeNull()
+    })
+
+    it('prepareDrmTraceFile makes a 0700 dir and prunes only this app', () => {
+      const root = makeTmp()
+      const traceRoot = realJoin(root, 'steam-bridge', 'drm', 'trace')
+      mkdirSync(traceRoot, { recursive: true })
+      for (let i = 1; i <= 10; i++) {
+        writeFileSync(realJoin(traceRoot, `219990-${i}.log`), 'x')
+      }
+      writeFileSync(realJoin(traceRoot, '5-1.log'), 'x')
+      writeFileSync(realJoin(traceRoot, 'notes.txt'), 'x')
+      const r = prepareDrmTraceFile(root, '219990', 1761084000123)
+      expect(r).toEqual({
+        status: 'ok',
+        traceFile: realJoin(traceRoot, '219990-1761084000123.log'),
+        traceRoot
+      })
+      expect(realFs.statSync(traceRoot).mode & 0o777).toBe(0o700)
+      expect(
+        realExistsSync(realJoin(traceRoot, '219990-1761084000123.log'))
+      ).toBe(false)
+      const left = realFs
+        .readdirSync(traceRoot)
+        .filter((n) => n.startsWith('219990-'))
+      expect(left).toHaveLength(DRM_TRACE_KEEP_PER_APP - 1)
+      expect(left).toContain('219990-10.log')
+      expect(left).not.toContain('219990-1.log')
+      expect(realExistsSync(realJoin(traceRoot, '5-1.log'))).toBe(true)
+      expect(realExistsSync(realJoin(traceRoot, 'notes.txt'))).toBe(true)
+    })
+
+    it('prepareDrmTraceFile refuses a symlinked trace dir and spares symlink targets', () => {
+      const root = makeTmp()
+      const elsewhere = makeTmp()
+      mkdirSync(realJoin(root, 'steam-bridge', 'drm'), { recursive: true })
+      realFs.symlinkSync(
+        elsewhere,
+        realJoin(root, 'steam-bridge', 'drm', 'trace')
+      )
+      const r = prepareDrmTraceFile(root, '219990')
+      expect(r.status).toBe('error')
+      expect((r as { cause: string }).cause).toContain('symlink')
+
+      const root2 = makeTmp()
+      const traceRoot = realJoin(root2, 'steam-bridge', 'drm', 'trace')
+      mkdirSync(traceRoot, { recursive: true })
+      const target = realJoin(elsewhere, 'precious')
+      writeFileSync(target, 'keep')
+      realFs.symlinkSync(target, realJoin(traceRoot, '219990-1.log'))
+      expect(prepareDrmTraceFile(root2, '219990', 99).status).toBe('ok')
+      expect(realExistsSync(target)).toBe(true)
+    })
+
+    it('relogDrmTrace relogs only valid lines for this app as canonical output', () => {
+      const dir = makeTmp()
+      const f = realJoin(dir, 't.log')
+      writeFileSync(
+        f,
+        [
+          traceLine('219990', 'game', 1),
+          traceLine('219990', 'game', 2),
+          traceLine('219990', 'helper', 3),
+          'forged line [drm-trace] nonsense',
+          traceLine('555', 'game', 4)
+        ].join('\n') + '\n'
+      )
+      ;(logInfo as jest.Mock).mockClear()
+      expect(relogDrmTrace('219990', f)).toEqual({
+        status: 'relogged',
+        events: 3,
+        rejected: 2
+      })
+      const relogged = (logInfo as jest.Mock).mock.calls.filter((c) =>
+        String(c[0]).startsWith(drmRelogPrefix('219990'))
+      )
+      expect(relogged).toHaveLength(3)
+      expect(relogged[0]).toEqual([
+        drmRelogPrefix('219990') + traceLine('219990', 'game', 1),
+        'Steam'
+      ])
+    })
+
+    it('relogDrmTrace refuses symlinks and directories, skips oversize and missing', () => {
+      const dir = makeTmp()
+      const target = realJoin(dir, 'real.log')
+      writeFileSync(target, traceLine('219990') + '\n')
+      const link = realJoin(dir, 'link.log')
+      realFs.symlinkSync(target, link)
+      ;(logInfo as jest.Mock).mockClear()
+      expect(relogDrmTrace('219990', link).status).toBe('refused')
+      expect(relogDrmTrace('219990', dir).status).toBe('refused')
+      expect(relogDrmTrace('219990', realJoin(dir, 'absent.log')).status).toBe(
+        'missing'
+      )
+      const big = realJoin(dir, 'big.log')
+      writeFileSync(big, 'x'.repeat(262145))
+      expect(relogDrmTrace('219990', big).status).toBe('oversize')
+      expect(
+        (logInfo as jest.Mock).mock.calls.filter((c) =>
+          String(c[0]).startsWith(drmRelogPrefix('219990'))
+        )
+      ).toHaveLength(0)
+    })
+  })
+
+  describe('launch', () => {
+    const { __drmLaunchSetupMock } = jest.requireMock<{
+      __drmLaunchSetupMock: jest.Mock
+    }>('../bridge/drm/drmLaunchSetup')
+    const dialogMock = jest.requireMock<{
+      showDialogBoxModalAuto: jest.Mock
+    }>('backend/dialog/dialog').showDialogBoxModalAuto
+    let idCounter = 0
+    let tmp: string
+    let bottleDir: string
+    let exePath: string
+    let tSpy: jest.SpyInstance
+    let envMock: { isMac: boolean; isWindows: boolean; isLinux: boolean }
+    const callOrder: string[] = []
+    const freshId = () => {
+      const id = String(880000 + ++idCounter)
+      library.set(id, makeEntry({ title: `DRM ${id}`, app_name: id }))
+      return id
+    }
+    const bottleFor = (id: string) => `GameLibSteamBridge-${id}`
+    const wineVersionClone = {
+      bin: '/clone dir/bin/wine',
+      name: 'clone',
+      type: 'crossover'
+    }
+    const readyFor = (id: string) => ({
+      status: 'ok' as const,
+      mode: 'steamclient-layer' as const,
+      appId: id,
+      launchForm: 'bin/wine+CX_BOTTLE' as const,
+      anchor: { crossover: '26.3.0.39832', client: '1761084000' },
+      progressSent: false,
+      runner: {
+        windowsDllDir: `${tmp}/runner dir/lib/wine/x86_64-windows`,
+        unixDllDir: `${tmp}/runner dir/lib/wine/x86_64-unix`
+      },
+      bottle: {
+        steamDirHost: `${bottleDir}/drive_c/Program Files (x86)/Steam`,
+        helperWinPath: 'C:\\Program Files (x86)\\Steam\\steam.exe'
+      },
+      bottleSettings: {
+        wineCrossoverBottle: bottleFor(id),
+        wineVersion: wineVersionClone,
+        winePrefix: bottleDir,
+        enviromentOptions: []
+      }
+    })
+    let onStopped: (() => void) | undefined
+    const dylib = () =>
+      realJoin(
+        jest.requireMock('backend/constants/paths').userHome as string,
+        ...MAC_STEAM_CLIENT_SUBPATH,
+        'steamclient.dylib'
+      )
+
+    beforeEach(() => {
+      __resetBridgeFailedSessionForTests()
+      __resetBridgeLaunchBottlesForTests()
+      library.clear()
+      pendingFetches.clear()
+      callOrder.length = 0
+      tmp = makeTmp()
+      bottleDir = realJoin(tmp, 'Bottles', 'b')
+      const exeDir = realJoin(
+        bottleDir,
+        'drive_c',
+        'Program Files (x86)',
+        'Steam',
+        'steamapps',
+        'common',
+        'Grim Dawn',
+        'x64'
+      )
+      mkdirSync(exeDir, { recursive: true })
+      exePath = realJoin(exeDir, 'Grim Dawn.exe')
+      writeFileSync(exePath, 'MZ')
+      envMock = jest.requireMock('backend/constants/environment')
+      envMock.isMac = true
+      envMock.isWindows = false
+      envMock.isLinux = false
+      tSpy = jest
+        .spyOn(i18next, 't')
+        .mockImplementation(((k: string) => k) as never)
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(exePath)
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(getBridgeBottleSettings as jest.Mock).mockImplementation(
+        (id: string) => ({
+          wineCrossoverBottle: bottleFor(id),
+          wineVersion: {
+            bin: '/stock/bin/wine',
+            name: 'stock',
+            type: 'crossover'
+          },
+          enviromentOptions: []
+        })
+      )
+      ;(getBottleDir as jest.Mock).mockReturnValue(bottleDir)
+      ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
+        realJoin(
+          bottleDir,
+          'drive_c',
+          'Program Files (x86)',
+          'Steam',
+          'steamapps'
+        )
+      )
+      ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
+        (_id: string, settings: unknown) => Promise.resolve(settings)
+      )
+      ;(installSteamBridgeSharedRedists as jest.Mock).mockResolvedValue(
+        undefined
+      )
+      ;(placeShimForGame as jest.Mock).mockImplementation(() => {
+        callOrder.push('shim')
+        return Promise.resolve({ status: 'placed', shimPath: exePath })
+      })
+      ;(detectDrmWrapper as jest.Mock).mockImplementation(() => {
+        callOrder.push('detect')
+        return 'steamstub'
+      })
+      ;(detectSteamDrmInPe as jest.Mock).mockReturnValue(undefined)
+      ;(startBottleProcessMonitor as jest.Mock).mockImplementation(
+        (args: { onStopped: () => void }) => {
+          onStopped = args.onStopped
+          return { launcherExited: jest.fn() }
+        }
+      )
+      ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+        status: 'ready',
+        ready: true,
+        port: 1,
+        secret: 's'
+      })
+      ;(writeBridgeConfig as jest.Mock).mockReturnValue({
+        status: 'written',
+        path: '/x'
+      })
+      ;(runWineCommand as jest.Mock).mockImplementation(() => {
+        callOrder.push('wine')
+        return Promise.resolve({ stdout: '', stderr: '', code: 0 })
+      })
+      onStopped = undefined
+      ;(logInfo as jest.Mock).mockClear()
+      ;(logWarning as jest.Mock).mockClear()
+      ;(notify as jest.Mock).mockClear()
+      dialogMock.mockClear()
+      ;(sendFrontendMessage as jest.Mock).mockClear()
+      ;(tellBottledSteamToLaunch as jest.Mock).mockClear()
+      ;(getDrmBridgeRunner as jest.Mock).mockReturnValue(undefined)
+      __drmLaunchSetupMock.mockReset()
+    })
+    afterEach(() => {
+      tSpy.mockRestore()
+      envMock.isMac = false
+      envMock.isWindows = false
+      envMock.isLinux = true
+    })
+
+    const infoLines = () =>
+      (logInfo as jest.Mock).mock.calls.map((c) => String(c[0]))
+    const shimLike = () => [
+      placeShimForGame,
+      ensureBridgeHelperReady,
+      writeBridgeConfig,
+      setupSteamClientForwarder
+    ]
+    const useDrmOk = (id: string) => {
+      __drmLaunchSetupMock.mockImplementation(() => {
+        callOrder.push('drm-setup')
+        return Promise.resolve(readyFor(id))
+      })
+      ;(existsSync as jest.Mock).mockImplementation(() => true)
+    }
+
+    describe('branch', () => {
+      it('runs drmLaunchSetup before any shim placement and never reaches the shim/forwarder path', async () => {
+        const id = freshId()
+        __drmLaunchSetupMock.mockImplementation(() => {
+          callOrder.push('drm-setup')
+          return Promise.resolve({
+            status: 'error',
+            step: 'steam-not-running',
+            cause: 'c'
+          })
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(callOrder).toEqual(['detect', 'drm-setup'])
+        for (const m of shimLike()) expect(m).not.toHaveBeenCalled()
+        expect(runWineCommand).not.toHaveBeenCalled()
+      })
+
+      it('hands drmLaunchSetup the exe, bottle, install root and wrapper', async () => {
+        const id = freshId()
+        __drmLaunchSetupMock.mockResolvedValue({
+          status: 'error',
+          step: 'runner-clone',
+          cause: 'c'
+        })
+        await new SteamGame(id).launch({} as never)
+        expect(__drmLaunchSetupMock).toHaveBeenCalledWith({
+          appId: id,
+          appFolder: mockedAppFolder,
+          bottleName: bottleFor(id),
+          exePath,
+          installRoot: realJoin(
+            bottleDir,
+            'drive_c',
+            'Program Files (x86)',
+            'Steam',
+            'steamapps',
+            'common',
+            'Grim Dawn'
+          ),
+          installdir: 'Grim Dawn',
+          drmWrapper: 'steamstub',
+          cegMarkers: []
+        })
+      })
+
+      it('CEG markers are read before drmLaunchSetup and the CEG refusal still runs', async () => {
+        const id = freshId()
+        ;(detectSteamDrmInPe as jest.Mock).mockReturnValue({
+          parsed: true,
+          cegMarkers: ['STEAM_GUIDD'],
+          hasBindSection: true
+        })
+        ;(placeShimForGame as jest.Mock).mockResolvedValue({
+          status: 'placed',
+          shimPath: exePath,
+          drmWrapper: 'steamstub',
+          drm: { kind: 'ceg', markers: ['STEAM_GUIDD'] }
+        })
+        await new SteamGame(id).launch({} as never)
+        expect(__drmLaunchSetupMock.mock.calls[0][0].cegMarkers).toEqual([
+          'STEAM_GUIDD'
+        ])
+        expect(placeShimForGame).toHaveBeenCalled()
+        expect(infoLines().some((l) => l.startsWith('[bridge-drm] '))).toBe(
+          false
+        )
+      })
+
+      it.each(['none', undefined])(
+        'wrapper %s continues on the TCP path unchanged',
+        async (wrapper) => {
+          const id = freshId()
+          ;(detectDrmWrapper as jest.Mock).mockReturnValue(wrapper)
+          expect(await new SteamGame(id).launch({} as never)).toBe(true)
+          expect(__drmLaunchSetupMock.mock.calls[0][0]).toMatchObject({
+            drmWrapper: wrapper,
+            cegMarkers: []
+          })
+          expect(detectSteamDrmInPe).not.toHaveBeenCalled()
+          expect(placeShimForGame).toHaveBeenCalledTimes(1)
+          expect(
+            (runWineCommand as jest.Mock).mock.calls[0][0].commandParts
+          ).toEqual([exePath])
+          expect(infoLines().some((l) => l.startsWith('[bridge-drm] '))).toBe(
+            false
+          )
+        }
+      )
+
+      it('not-applicable after a registered runner re-reads the bottle settings', async () => {
+        const id = freshId()
+        ;(detectDrmWrapper as jest.Mock).mockReturnValue('none')
+        ;(getDrmBridgeRunner as jest.Mock).mockReturnValue({})
+        let calls = 0
+        ;(getBridgeBottleSettings as jest.Mock).mockImplementation(() => {
+          calls++
+          return {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: {
+              bin: `/v${calls}/wine`,
+              name: `v${calls}`,
+              type: 'crossover'
+            },
+            enviromentOptions: []
+          }
+        })
+        await new SteamGame(id).launch({} as never)
+        const used = (runWineCommand as jest.Mock).mock.calls[0][0].gameSettings
+        expect(used.wineVersion.bin).toBe('/v2/wine')
+      })
+
+      it('an unresolved install root is a bottle-stage notice with no setup call', async () => {
+        const id = freshId()
+        ;(getBottleSteamappsDir as jest.Mock).mockReturnValue('/somewhere/else')
+        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(__drmLaunchSetupMock).not.toHaveBeenCalled()
+        expect(infoLines()).toContain(
+          formatDrmNoticeLine(id, 'bottle-stage', 'install root not resolved')
+        )
+        expect(runWineCommand).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('notices', () => {
+      it.each(DRM_STEPS as readonly string[])(
+        'step %s: logs, notifies once, no launch, no session breaker',
+        async (step) => {
+          const id = freshId()
+          __drmLaunchSetupMock.mockResolvedValue({
+            status: 'error',
+            step,
+            cause: 'cause text'
+          })
+          const game = new SteamGame(id)
+          expect(await game.launch({} as never)).toBe(false)
+          expect(infoLines()).toContain(
+            formatDrmNoticeLine(id, step, 'cause text')
+          )
+          expect(notify).toHaveBeenCalledTimes(1)
+          expect(dialogMock).toHaveBeenCalledTimes(1)
+          expect((notify as jest.Mock).mock.calls[0][0].title).toBe(
+            'gamelib:steam.bridge.drm.title'
+          )
+          expect(tSpy).toHaveBeenCalledWith(
+            'gamelib:steam.bridge.drm.detail',
+            'Details: {{cause}}',
+            { cause: 'cause text' }
+          )
+          const camel = step.replace(/-([a-z])/g, (_m, c: string) =>
+            c.toUpperCase()
+          )
+          expect(tSpy.mock.calls.map((c) => c[0])).toContain(
+            `gamelib:steam.bridge.drm.step.${camel}`
+          )
+          expect(
+            infoLines().some((l) =>
+              l.startsWith(
+                `[bridge-notice] appId=${id} dispatched=in-app-dialog+notify dialog-frame-sent=`
+              )
+            )
+          ).toBe(true)
+          // second launch: notice line again, no new dialog, setup reached again
+          expect(await game.launch({} as never)).toBe(false)
+          expect(__drmLaunchSetupMock).toHaveBeenCalledTimes(2)
+          expect(notify).toHaveBeenCalledTimes(1)
+          expect(dialogMock).toHaveBeenCalledTimes(1)
+          expect(
+            infoLines().filter(
+              (l) => l === formatDrmNoticeLine(id, step, 'cause text')
+            )
+          ).toHaveLength(2)
+          expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+          expect(
+            (sendFrontendMessage as jest.Mock).mock.calls.some(
+              (c) => c[0] === 'steamBridgeSetupRequired'
+            )
+          ).toBe(false)
+        }
+      )
+
+      it('a different step for the same appId shows the dialog again', async () => {
+        const id = freshId()
+        const game = new SteamGame(id)
+        __drmLaunchSetupMock.mockResolvedValue({
+          status: 'error',
+          step: 'runner-clone',
+          cause: 'a'
+        })
+        await game.launch({} as never)
+        __drmLaunchSetupMock.mockResolvedValue({
+          status: 'error',
+          step: 'valve-fetch',
+          cause: 'a'
+        })
+        await game.launch({} as never)
+        expect(dialogMock).toHaveBeenCalledTimes(2)
+      })
+
+      it('en/gamelib.json holds the 11 keys with the t() default strings', async () => {
+        const id = freshId()
+        const defaults = new Map<string, string>()
+        for (const step of DRM_STEPS as readonly string[]) {
+          tSpy.mockClear()
+          __drmLaunchSetupMock.mockResolvedValue({
+            status: 'error',
+            step,
+            cause: 'x'
+          })
+          await new SteamGame(id).launch({} as never)
+          for (const c of tSpy.mock.calls) {
+            if (typeof c[1] === 'string') defaults.set(String(c[0]), c[1])
+          }
+        }
+        // The spy returns the key, so the defaults come from the source: assert
+        // via the catalog against the strings declared in games.ts.
+        const catalog = JSON.parse(
+          realFs.readFileSync(
+            realJoin(
+              __dirname,
+              '..',
+              '..',
+              '..',
+              '..',
+              '..',
+              'public',
+              'locales',
+              'en',
+              'gamelib.json'
+            ),
+            'utf8'
+          )
+        ).steam.bridge.drm
+        const src = realFs.readFileSync(
+          realJoin(__dirname, '..', 'games.ts'),
+          'utf8'
+        )
+        const pairs: [string, string][] = [
+          ['gamelib:steam.bridge.drm.title', catalog.title],
+          ['gamelib:steam.bridge.drm.detail', catalog.detail],
+          ...Object.entries(catalog.step).map(
+            ([k, v]) =>
+              [`gamelib:steam.bridge.drm.step.${k}`, v as string] as [
+                string,
+                string
+              ]
+          )
+        ]
+        expect(pairs).toHaveLength(11)
+        for (const [key, value] of pairs) {
+          expect(defaults.has(key) || key.endsWith('title')).toBe(true)
+          const idx = src.indexOf(`'${key}'`)
+          expect(idx).toBeGreaterThan(-1)
+          const window = src.slice(idx, idx + 600)
+          expect(
+            window.includes(JSON.stringify(value)) ||
+              window.includes(`"${value}"`) ||
+              window.includes(`'${value}'`)
+          ).toBe(true)
+        }
+      })
+    })
+
+    describe('ok launch', () => {
+      const runCall = () => (runWineCommand as jest.Mock).mock.calls[0][0]
+      const traceFileOf = (call: {
+        gameSettings: { enviromentOptions: { key: string; value: string }[] }
+      }) =>
+        call.gameSettings.enviromentOptions.find(
+          (e) => e.key === 'GAMELIB_DRM_TRACE_FILE'
+        )!.value
+
+      it('launches steam.exe with the game C: path under the clone with the measured env', async () => {
+        const id = freshId()
+        useDrmOk(id)
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        const call = runCall()
+        expect(call.commandParts).toEqual(
+          [
+            '--dll=steamclient=n;steamclient64=n;lsteamclient=b',
+            'C:\\Program Files (x86)\\Steam\\steam.exe',
+            'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Grim Dawn\\x64\\Grim Dawn.exe'
+          ].slice(DRM_DLLOVERRIDES_CHANNEL === 'dll-option' ? 0 : 1)
+        )
+        expect(call.wait).toBe(false)
+        expect(call.protonVerb).toBe('run')
+        expect(call.gameSettings.wineVersion).toEqual(wineVersionClone)
+        const ready = readyFor(id)
+        const expected = buildDrmLaunchEnvironment({
+          appId: id,
+          traceFile: traceFileOf(call),
+          macSteamClientDir: realJoin(
+            jest.requireMock('backend/constants/paths').userHome,
+            ...MAC_STEAM_CLIENT_SUBPATH
+          ),
+          steamDirHost: ready.bottle.steamDirHost,
+          windowsDllDir: ready.runner.windowsDllDir,
+          unixDllDir: ready.runner.unixDllDir,
+          launchForm: ready.launchForm,
+          dllPathChannel: DRM_DLLPATH_CHANNEL,
+          dllOverridesChannel: DRM_DLLOVERRIDES_CHANNEL,
+          base: []
+        })
+        expect(
+          (expected as { enviromentOptions: unknown }).enviromentOptions
+        ).toEqual(call.gameSettings.enviromentOptions)
+        const env = Object.fromEntries(
+          call.gameSettings.enviromentOptions.map(
+            (e: { key: string; value: string }) => [e.key, e.value]
+          )
+        )
+        expect(env.SteamGameId).toBe(id)
+        expect(env.SteamAppId).toBe(id)
+        expect(traceFileOf(call)).toMatch(
+          new RegExp(
+            `${mockedAppFolder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/steam-bridge/drm/trace/${id}-[0-9]+\\.log$`
+          )
+        )
+        for (const k of Object.keys(env)) {
+          expect(k).not.toMatch(
+            /^(HOME|USERPROFILE|APPDATA|LOCALAPPDATA|XDG_.*)$/
+          )
+        }
+        for (const m of shimLike()) expect(m).not.toHaveBeenCalled()
+      })
+
+      it('known fixes, redists and dll overrides run on the clone settings, which win a wineVersion swap', async () => {
+        const id = freshId()
+        useDrmOk(id)
+        ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
+          (_i: string, settings: Record<string, unknown>) =>
+            Promise.resolve({
+              ...settings,
+              wineVersion: { bin: '/other/wine', name: 'o', type: 'crossover' }
+            })
+        )
+        await new SteamGame(id).launch({} as never)
+        expect(
+          (applySteamBridgeKnownFixes as jest.Mock).mock.calls[0][1]
+        ).toEqual(readyFor(id).bottleSettings)
+        expect(
+          (installSteamBridgeSharedRedists as jest.Mock).mock.calls[0][1]
+        ).toEqual(readyFor(id).bottleSettings)
+        expect(runCall().gameSettings.wineVersion).toEqual(wineVersionClone)
+      })
+
+      it('logs exactly one [bridge-drm] anchor, before wine, for the launch trace file', async () => {
+        const id = freshId()
+        useDrmOk(id)
+        ;(runWineCommand as jest.Mock).mockImplementation(() => {
+          callOrder.push('wine')
+          return Promise.resolve({ code: 0 })
+        })
+        ;(logInfo as jest.Mock).mockImplementation((line: string) => {
+          if (String(line).startsWith('[bridge-drm] ')) callOrder.push('anchor')
+        })
+        await new SteamGame(id).launch({} as never)
+        const anchors = infoLines().filter((l) => l.startsWith('[bridge-drm] '))
+        expect(anchors).toEqual([
+          formatBridgeDrmAnchor({
+            appId: id,
+            crossover: '26.3.0.39832',
+            client: '1761084000',
+            trace: traceFileOf(runCall())
+          })
+        ])
+        expect(callOrder.filter((c) => c === 'anchor' || c === 'wine')).toEqual(
+          ['anchor', 'wine']
+        )
+      })
+
+      it('re-logs the trace once the monitor reports the game gone', async () => {
+        const id = freshId()
+        useDrmOk(id)
+        await new SteamGame(id).launch({} as never)
+        const file = traceFileOf(runCall())
+        writeFileSync(
+          file,
+          [traceLine(id, 'game', 1), traceLine(id, 'game', 2)].join('\n') + '\n'
+        )
+        expect(onStopped).toBeDefined()
+        onStopped!()
+        onStopped!()
+        const lines = infoLines()
+        const anchorIdx = lines.findIndex((l) => l.startsWith('[bridge-drm] '))
+        const relogIdx = lines
+          .map((l, i) => (l.startsWith(drmRelogPrefix(id)) ? i : -1))
+          .filter((i) => i >= 0)
+        expect(relogIdx).toHaveLength(2)
+        expect(relogIdx[0]).toBeGreaterThan(anchorIdx)
+        expect(lines[relogIdx[0]]).toBe(
+          drmRelogPrefix(id) + traceLine(id, 'game', 1)
+        )
+      })
+
+      it('without a monitor the re-log happens when wine settles', async () => {
+        const id = freshId()
+        useDrmOk(id)
+        ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(null)
+        let release!: () => void
+        ;(runWineCommand as jest.Mock).mockImplementation(
+          () =>
+            new Promise((r) => {
+              release = () => r({ code: 0 })
+            })
+        )
+        await new SteamGame(id).launch({} as never)
+        writeFileSync(traceFileOf(runCall()), traceLine(id) + '\n')
+        release()
+        await flushAsync()
+        expect(
+          infoLines().filter((l) => l.startsWith(drmRelogPrefix(id)))
+        ).toHaveLength(1)
+      })
+
+      it('a missing Mac Steam steamclient.dylib is a steam-not-running notice', async () => {
+        const id = freshId()
+        useDrmOk(id)
+        ;(existsSync as jest.Mock).mockImplementation(
+          (p: string) => p !== dylib()
+        )
+        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        const line = infoLines().find((l) =>
+          l.includes(`appId=${id} reason=drm-steam-not-running`)
+        )
+        expect(line).toContain('steamclient.dylib')
+        expect(runWineCommand).not.toHaveBeenCalled()
+      })
+
+      it('an invalid anchor field gives a bottle-stage notice and no launch', async () => {
+        const id = freshId()
+        useDrmOk(id)
+        __drmLaunchSetupMock.mockResolvedValue({
+          ...readyFor(id),
+          anchor: { crossover: '26.3.0.39832', client: '17x' }
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(
+          infoLines().some((l) =>
+            l.includes(`appId=${id} reason=drm-bottle-stage`)
+          )
+        ).toBe(true)
+        expect(runWineCommand).not.toHaveBeenCalled()
+      })
+
+      it('a game exe outside the bottle drive_c gives a bottle-stage notice', async () => {
+        const id = freshId()
+        useDrmOk(id)
+        ;(getBottleDir as jest.Mock).mockReturnValue(realJoin(tmp, 'other'))
+        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(
+          infoLines().some((l) =>
+            l.includes(`appId=${id} reason=drm-bottle-stage`)
+          )
+        ).toBe(true)
+        expect(runWineCommand).not.toHaveBeenCalled()
+      })
+
+      it('a wine launch rejection is a bottle-stage notice without a session mark', async () => {
+        const id = freshId()
+        useDrmOk(id)
+        ;(runWineCommand as jest.Mock).mockRejectedValue(new Error('boom'))
+        const game = new SteamGame(id)
+        expect(await game.launch({} as never)).toBe(true)
+        await flushAsync()
+        const line = infoLines().find((l) =>
+          l.includes(`appId=${id} reason=drm-bottle-stage`)
+        )
+        expect(line).toContain('cause=wine')
+        expect(line).toContain('launch')
+        await game.launch({} as never)
+        expect(__drmLaunchSetupMock).toHaveBeenCalledTimes(2)
+        expect(
+          (sendFrontendMessage as jest.Mock).mock.calls.some(
+            (c) => c[0] === 'steamBridgeSetupRequired'
+          )
+        ).toBe(false)
+      })
+
+      it('a failing registry write gives a bottle-stage notice and no launch', async () => {
+        const id = freshId()
+        useDrmOk(id)
+        ;(runWineCommand as jest.Mock).mockResolvedValue({
+          code: 1,
+          stderr: 'denied'
+        })
+        const game = new SteamGame(id) as unknown as {
+          fireBridgeWineLaunch: (
+            e: string,
+            s: unknown,
+            d: unknown
+          ) => Promise<boolean>
+        }
+        const ready = readyFor(id)
+        const ok = await game.fireBridgeWineLaunch(
+          exePath,
+          ready.bottleSettings,
+          {
+            ready,
+            gameWinPath: 'C:\\g.exe',
+            traceFile: `${tmp}/t.log`,
+            anchorLine: '[bridge-drm] x',
+            macSteamClientDir: `${tmp}/mac`,
+            buildEnv: (
+              input: Parameters<typeof buildDrmLaunchEnvironment>[0]
+            ) =>
+              buildDrmLaunchEnvironment({
+                ...input,
+                dllOverridesChannel: 'registry'
+              })
+          }
+        )
+        expect(ok).toBe(false)
+        expect((runWineCommand as jest.Mock).mock.calls).toHaveLength(1)
+        expect((runWineCommand as jest.Mock).mock.calls[0][0].wait).toBe(true)
+        expect(
+          infoLines().some((l) =>
+            l.includes(`appId=${id} reason=drm-bottle-stage`)
+          )
+        ).toBe(true)
+        expect(startBottleProcessMonitor).not.toHaveBeenCalled()
+      })
+    })
   })
 })

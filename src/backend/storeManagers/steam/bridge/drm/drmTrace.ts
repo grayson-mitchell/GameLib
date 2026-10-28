@@ -19,8 +19,6 @@
  * pure, never throws, and caps its input size before any regex runs.
  */
 
-// Exported for games.ts (56-12), which passes the trace path to the launch.
-// ts-prune-ignore-next
 export const DRM_TRACE_ENV = 'GAMELIB_DRM_TRACE_FILE'
 
 export const MAX_DRM_TRACE_BYTES = 262144
