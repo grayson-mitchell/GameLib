@@ -107,11 +107,39 @@ jest.mock('axios', () => {
 // to the already-mocked SteamGame instance below (libraryManagerMap[runner]
 // .getGame(id)), and isEpicServiceOffline is never reached by these tests
 // (gated on runner === 'legendary', which none of the new tests use) ────────
-jest.mock('backend/utils', () => ({
-  ...jest.requireActual('backend/utils'),
-  getSteamLibraries: jest.fn(),
-  writeConfig: jest.fn()
-}))
+//
+// RE-ENTRANT FACTORY (fix for the Test-workflow red of 2026-10-26): the real
+// `backend/utils` sits inside import cycles (utils -> gog/presence -> utils, and
+// utils -> downloadmanager/downloadqueue -> steam/cancelDelete -> steam/
+// installLocation -> utils, utils -> storeManagers -> steam/library ->
+// installLocation -> utils). When `backend/utils` is first required through the
+// mock, `jest.requireActual` below runs the real module, whose own imports
+// require the mock AGAIN before the outer factory has returned -- so this
+// factory executes more than once, and the LAST to return wins the registry.
+// A bare `jest.fn()` per execution therefore handed `installLocation` one
+// `getSteamLibraries` and handed this file's `import` a different one:
+// `mockResolvedValue` on ours never reached the code under test, which got
+// `undefined` and threw "Cannot read properties of undefined (reading 'map')"
+// (Test 1b). Which module loads installLocation inside that window is an import-
+// order accident (quick-261027-cux added the downloadqueue edge; Phase 54
+// added the library edge), so the fns are minted ONCE, on this file's own
+// sandbox global, and every execution of the factory reuses them.
+jest.mock('backend/utils', () => {
+  const shared = globalThis as typeof globalThis & {
+    __installFlowsUtilsMocks?: {
+      getSteamLibraries: jest.Mock
+      writeConfig: jest.Mock
+    }
+  }
+  shared.__installFlowsUtilsMocks ??= {
+    getSteamLibraries: jest.fn(),
+    writeConfig: jest.fn()
+  }
+  return {
+    ...jest.requireActual('backend/utils'),
+    ...shared.__installFlowsUtilsMocks
+  }
+})
 
 // ── backend/constants/environment mock — pins a deterministic branch
 // regardless of the host OS running this test (mirrors skeletonFlows.test.ts /
