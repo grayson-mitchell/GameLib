@@ -388,13 +388,254 @@ describe('removeTcpBridgeArtifacts', () => {
   })
 })
 
-// Referenced by the Task 2 block below.
-export const _unused = {
-  readdirSync,
-  stageDrmBottle,
-  runWineCommand,
-  DRM_HELPER_WIN,
-  DRM_STEAMCLIENT64_WIN
-}
-export type _In = StageDrmBottleInput
-export type _GS = GameSettings
+describe('stageDrmBottle', () => {
+  const settings = { wineVersion: { name: 'clone' } } as unknown as GameSettings
+  let valveDir: string
+  let compDir: string
+  let runReg: jest.Mock
+  const pf = () => join(bottle, 'drive_c', 'Program Files (x86)')
+  const steamDir = () => join(pf(), 'Steam')
+
+  const input = (
+    over: Partial<StageDrmBottleInput> = {}
+  ): StageDrmBottleInput => ({
+    appId: '1',
+    bottleName: 'GameLibSteamBridge-1',
+    bottleSettings: settings,
+    exePath,
+    installRoot,
+    installdir: 'Grim Dawn',
+    valveClientDir: valveDir,
+    componentDir: compDir,
+    ...over
+  })
+  const deps = (over: Record<string, unknown> = {}) => ({
+    getBottleDir: () => bottle,
+    findUnreal: async () => null,
+    restoreOriginals: jest.fn(async () => ({ status: 'ok', outcomes: [] })),
+    runReg,
+    ...over
+  })
+  const run = (
+    over: Partial<StageDrmBottleInput> = {},
+    d: Record<string, unknown> = {}
+  ) => stageDrmBottle(input(over), deps(d) as never)
+
+  beforeEach(() => {
+    valveDir = join(tmp, 'valve')
+    compDir = join(tmp, 'comp')
+    for (const n of ['steamclient64.dll', 'tier0_s64.dll', 'vstdlib_s64.dll']) {
+      write(join(valveDir, n), 'MZ-valve-' + n)
+    }
+    for (const n of ['lsteamclient.dll', 'steam.exe']) {
+      write(join(compDir, n), 'MZ-comp-' + n)
+    }
+    runReg = jest.fn(async () => ({ code: 0 }))
+    ;(runWineCommand as jest.Mock).mockReset()
+  })
+
+  const expectErr = async (
+    p: ReturnType<typeof run>,
+    contains?: string
+  ): Promise<void> => {
+    const r = await p
+    expect(r.status).toBe('error')
+    if (r.status === 'error') {
+      expect(r.step).toBe('bottle-stage')
+      if (contains) expect(r.cause).toContain(contains)
+    }
+    expect(runReg).not.toHaveBeenCalled()
+  }
+
+  it('stages a bottle on the happy path', async () => {
+    const r = await run()
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.steamDirHost).toBe(steamDir())
+    expect(r.helperWinPath).toBe(DRM_HELPER_WIN)
+    expect(r.helperWinPath).toBe('C:\\Program Files (x86)\\Steam\\steam.exe')
+    expect(r.steamClient64WinPath).toBe(DRM_STEAMCLIENT64_WIN)
+    expect(r.staged).toHaveLength(5)
+    expect(readFileSync(join(steamDir(), 'steam.exe'), 'utf8')).toBe(
+      'MZ-comp-steam.exe'
+    )
+    expect(readFileSync(join(steamDir(), 'tier0_s64.dll'), 'utf8')).toBe(
+      'MZ-valve-tier0_s64.dll'
+    )
+    expect(runReg.mock.calls.map((c) => c[0])).toEqual(
+      buildDrmRegistryCommands()
+    )
+    expect(r.registryWritten).toBe(true)
+  })
+
+  it('is idempotent once the bottle is staged', async () => {
+    await run()
+    write(join(bottle, 'user.reg'), STAGED_REG)
+    runReg.mockClear()
+    const f = join(steamDir(), 'lsteamclient.dll')
+    utimesSync(f, 1000, 1000)
+    const before = statSync(f).mtimeMs
+    const r = await run()
+    expect(r).toMatchObject({
+      status: 'ok',
+      staged: [],
+      restored: [],
+      removed: [],
+      registryWritten: false
+    })
+    expect(runReg).toHaveBeenCalledTimes(0)
+    expect(statSync(f).mtimeMs).toBe(before)
+  })
+
+  it('replaces a stale staged file and clears a crashed temp', async () => {
+    mkdirSync(steamDir(), { recursive: true })
+    write(join(steamDir(), 'steam.exe'), 'MZ-stale')
+    write(join(steamDir(), 'steam.exe.gamelib-stage-tmp'), 'junk')
+    const r = await run()
+    expect(r.status).toBe('ok')
+    expect(readFileSync(join(steamDir(), 'steam.exe'), 'utf8')).toBe(
+      'MZ-comp-steam.exe'
+    )
+    expect(
+      readdirSync(steamDir()).filter((n) => n.endsWith('.gamelib-stage-tmp'))
+    ).toEqual([])
+  })
+
+  it('swaps and cleans before staging, and refuses early', async () => {
+    const live = join(installRoot, 'steam_api64.dll')
+    write(live, SHIM)
+    write(join(installRoot, 'gamelib_bridge.cfg'), 'cfg')
+    await expectErr(run(), 'no restorable original')
+    expect(existsSync(join(steamDir(), 'steamclient64.dll'))).toBe(false)
+    expect(readFileSync(live)).toEqual(SHIM)
+    expect(existsSync(join(installRoot, 'gamelib_bridge.cfg'))).toBe(true)
+
+    write(live + '.gamelib-orig', ORIG)
+    const r = await run()
+    expect(r.status).toBe('ok')
+    expect(readFileSync(live)).toEqual(ORIG)
+    expect(existsSync(join(installRoot, 'gamelib_bridge.cfg'))).toBe(false)
+  })
+
+  it.each([
+    ['non-numeric appId', () => ({ appId: 'abc' }), 'appId'],
+    ['bad bottle name', () => ({ bottleName: '../x' }), 'bottle name'],
+    ['exe outside bottle', () => ({ exePath: join(tmp, 'x.exe') }), 'exe'],
+    [
+      'install root outside bottle',
+      () => ({ installRoot: tmp }),
+      'install root'
+    ]
+  ])('refuses %s', async (_n, over, cause) => {
+    await expectErr(run((over as () => Partial<StageDrmBottleInput>)()), cause)
+    expect(existsSync(steamDir()) && readdirSync(steamDir())).not.toContain(
+      'steam.exe'
+    )
+  })
+
+  it('refuses a 32-bit prefix', async () => {
+    rmSync(pf(), { recursive: true, force: true })
+    mkdirSync(join(bottle, 'drive_c', 'Program Files'), { recursive: true })
+    write(join(bottle, 'drive_c', 'Program Files', 'Game', 'Game.exe'), 'MZ')
+    await expectErr(
+      run({
+        exePath: join(bottle, 'drive_c', 'Program Files', 'Game', 'Game.exe'),
+        installRoot: join(bottle, 'drive_c', 'Program Files', 'Game')
+      }),
+      '64-bit'
+    )
+  })
+
+  it('refuses a symlinked Steam dir', async () => {
+    const real = join(tmp, 'elsewhere')
+    mkdirSync(real)
+    rmSync(steamDir(), { recursive: true, force: true })
+    symlinkSync(real, steamDir())
+    await expectErr(run(), 'symlink')
+    expect(readdirSync(real)).toEqual([])
+  })
+
+  it('refuses a bottle holding a Steam client', async () => {
+    write(join(steamDir(), 'steamui.dll'), 'MZ')
+    await expectErr(run(), 'Steam client')
+  })
+
+  it('refuses a missing source', async () => {
+    rmSync(join(valveDir, 'tier0_s64.dll'))
+    await expectErr(run(), 'tier0_s64.dll')
+  })
+
+  it('refuses a symlinked source', async () => {
+    const t = join(tmp, 'real.dll')
+    write(t, 'MZ-x')
+    rmSync(join(compDir, 'lsteamclient.dll'))
+    symlinkSync(t, join(compDir, 'lsteamclient.dll'))
+    await expectErr(run(), 'lsteamclient.dll')
+  })
+
+  it('refuses a non-PE source', async () => {
+    write(join(compDir, 'steam.exe'), 'ELF-nope')
+    await expectErr(run(), 'steam.exe')
+  })
+
+  it('refuses a symlinked destination', async () => {
+    const t = join(tmp, 'victim.exe')
+    write(t, 'victim')
+    mkdirSync(steamDir(), { recursive: true })
+    symlinkSync(t, join(steamDir(), 'steam.exe'))
+    await expectErr(run(), 'symlink')
+    expect(readFileSync(t, 'utf8')).toBe('victim')
+  })
+
+  it('refuses a pre-aborted signal', async () => {
+    const ac = new AbortController()
+    ac.abort()
+    await expectErr(run({ signal: ac.signal }), 'aborted')
+    expect(existsSync(join(steamDir(), 'steam.exe'))).toBe(false)
+  })
+
+  it('maps a failing reg add to bottle-stage', async () => {
+    runReg.mockResolvedValue({ code: 1, stderr: 'boom' })
+    const r = await run()
+    expect(r.status).toBe('error')
+    if (r.status === 'error') {
+      expect(r.step).toBe('bottle-stage')
+      expect(r.cause).toMatch(/^reg add SteamClientDll64 failed/)
+    }
+  })
+
+  it('times out a reg add and clears its timer', async () => {
+    const clear = jest.spyOn(global, 'clearTimeout')
+    runReg.mockImplementation(() => new Promise(() => undefined))
+    const r = await run({}, { regTimeoutMs: 20 })
+    expect(r.status).toBe('error')
+    if (r.status === 'error') expect(r.cause).toContain('timed out')
+    expect(runReg).toHaveBeenCalledTimes(1)
+    expect(clear).toHaveBeenCalled()
+    clear.mockRestore()
+  })
+
+  it('never rejects when the runner throws', async () => {
+    runReg.mockRejectedValue(new Error('spawn failed'))
+    await expect(run()).resolves.toMatchObject({
+      status: 'error',
+      step: 'bottle-stage'
+    })
+  })
+
+  it('uses runWineCommand by default with the bottle settings', async () => {
+    ;(runWineCommand as jest.Mock).mockResolvedValue({ code: 0, stderr: '' })
+    const d = deps()
+    delete (d as { runReg?: unknown }).runReg
+    const r = await stageDrmBottle(input(), d as never)
+    expect(r.status).toBe('ok')
+    expect(runWineCommand).toHaveBeenCalledTimes(4)
+    expect(runWineCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        wait: false,
+        protonVerb: 'run',
+        gameSettings: settings
+      })
+    )
+  })
+})

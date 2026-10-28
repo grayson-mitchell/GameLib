@@ -422,16 +422,254 @@ export function removeTcpBridgeArtifacts(
   }
 }
 
-// Internal helpers kept referenced for the orchestration added next.
-// ts-prune-ignore-next
-export const _internal = {
-  bottleHostToWinPath,
-  readHeadCapped,
-  createHash,
-  copyFileSync,
-  mkdirSync,
-  realpathSync,
-  constants,
-  drmStepError
+const MAX_SOURCE_BYTES = 256 * 1024 * 1024
+const STAGE_TMP_SUFFIX = '.gamelib-stage-tmp'
+
+const sha256 = (p: string): string =>
+  createHash('sha256').update(readFileSync(p)).digest('hex')
+
+function lstatOrNull(p: string) {
+  try {
+    return lstatSync(p)
+  } catch {
+    return null
+  }
 }
-export type _R = DrmStepResult<StageDrmBottleOk>
+
+/** A source is a regular, non-symlink, non-empty, bounded file starting 'MZ'. */
+function sourceOk(path: string): boolean {
+  const st = lstatOrNull(path)
+  if (!st || st.isSymbolicLink() || !st.isFile()) return false
+  if (st.size <= 0 || st.size > MAX_SOURCE_BYTES) return false
+  const head = readHeadCapped(path, 2)
+  return head !== null && head.length === 2 && head.toString('latin1') === 'MZ'
+}
+
+async function runRegArgv(
+  commands: string[][],
+  run: NonNullable<StageDrmBottleDeps['runReg']>,
+  timeoutMs: number
+): Promise<string | null> {
+  for (const commandParts of commands) {
+    const valueName = commandParts[4]
+    // The timer is unref'd (sidecar exit contract, half 1) and cleared once the
+    // race settles.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<'timeout'>((resolveTimeout) => {
+      timer = setTimeout(() => resolveTimeout('timeout'), timeoutMs)
+      timer.unref?.()
+    })
+    try {
+      const res = await Promise.race([run(commandParts), timeout])
+      if (res === 'timeout') {
+        return `reg add ${valueName} timed out after ${timeoutMs} ms`
+      }
+      if (res.code !== 0) {
+        return `reg add ${valueName} failed code=${String(res.code)} stderr=${String(res.stderr ?? '').slice(0, 120)}`
+      }
+    } catch (err) {
+      return `reg add ${valueName} failed: ${String(err)}`
+    } finally {
+      if (timer) clearTimeout(timer)
+    }
+  }
+  return null
+}
+
+/**
+ * Stages a DRM-mode bottle from the title's existing bridge bottle. Never
+ * throws; every failure is a `bottle-stage` DrmStepError.
+ */
+// ts-prune-ignore-next
+export async function stageDrmBottle(
+  input: StageDrmBottleInput,
+  deps: StageDrmBottleDeps = {}
+): Promise<DrmStepResult<StageDrmBottleOk>> {
+  const fail = (cause: unknown) => drmStepError('bottle-stage', cause)
+  try {
+    // 1. Validate (no writes).
+    if (!/^\d+$/.test(input.appId)) return fail('invalid appId')
+    const name = sanitizeBottleName(input.bottleName)
+    if (!name) return fail('invalid bottle name')
+    const bottleDir = resolve((deps.getBottleDir ?? getBottleDir)(name))
+    const driveC = join(bottleDir, 'drive_c')
+    const exePath = resolve(input.exePath)
+    const installRoot = resolve(input.installRoot)
+    if (!isContainedWithin(driveC, exePath) || !/\.exe$/i.test(exePath)) {
+      return fail('exe outside bottle drive_c')
+    }
+    if (!isContainedWithin(driveC, installRoot)) {
+      return fail('install root outside bottle drive_c')
+    }
+    if (input.signal?.aborted) return fail('aborted')
+
+    // 2. Steam dir pre-checks (no writes).
+    const pf86 = join(driveC, DRM_STEAM_DIR_SEGMENTS[0])
+    const pf86Stat = lstatOrNull(pf86)
+    if (!pf86Stat || pf86Stat.isSymbolicLink() || !pf86Stat.isDirectory()) {
+      return fail('bottle is not a 64-bit prefix (no Program Files (x86))')
+    }
+    const steamDirHost = join(pf86, DRM_STEAM_DIR_SEGMENTS[1])
+    const steamStat = lstatOrNull(steamDirHost)
+    if (steamStat) {
+      if (steamStat.isSymbolicLink() || !steamStat.isDirectory()) {
+        return fail('Steam dir is a symlink or not a directory')
+      }
+      if (
+        !isContainedWithin(realpathSync(driveC), realpathSync(steamDirHost))
+      ) {
+        return fail('Steam dir resolves outside bottle drive_c (symlink)')
+      }
+      if (lstatOrNull(join(steamDirHost, 'steamui.dll'))) {
+        return fail(
+          'bottle has a Steam client install (steamui.dll); refusing to overwrite it'
+        )
+      }
+    }
+
+    // 3. Source pre-checks (no writes). Shas are not re-verified here: 56-07
+    // checks the Valve files against the manifest sha2 and 56-10 checks the
+    // component against its pinned shas.
+    const sources: { name: string; src: string }[] = [
+      ...DRM_VALVE_FILES.map((n) => ({
+        name: n as string,
+        src: join(input.valveClientDir, n)
+      })),
+      ...DRM_COMPONENT_FILES.map((n) => ({
+        name: n as string,
+        src: join(input.componentDir, n)
+      }))
+    ]
+    for (const s of sources) {
+      if (!sourceOk(s.src)) {
+        return fail(`source ${s.name} missing or not a regular PE file`)
+      }
+    }
+
+    // 4. Originals and cleanup: the first mutation, after every pre-check.
+    if (input.signal?.aborted) return fail('aborted')
+    const ctx: WalkCtx = {
+      appId: input.appId,
+      bottleDir,
+      exePath,
+      installRoot,
+      installdir: input.installdir,
+      signal: input.signal,
+      deps
+    }
+    const swap = await restoreDrmOriginals(ctx)
+    if (!swap.ok) return fail(swap.cause)
+    const runtimeDllPaths = (await walkRuntimeDlls(ctx)).map((d) => d.path)
+    const cleaned = removeTcpBridgeArtifacts(ctx, runtimeDllPaths)
+    if (!cleaned.ok) return fail(cleaned.cause)
+
+    // 5. Stage files.
+    if (input.signal?.aborted) return fail('aborted')
+    if (!steamStat) mkdirSync(steamDirHost)
+    if (!isContainedWithin(realpathSync(driveC), realpathSync(steamDirHost))) {
+      return fail('Steam dir resolves outside bottle drive_c (symlink)')
+    }
+    const staged: string[] = []
+    for (const s of sources) {
+      const dest = join(steamDirHost, s.name)
+      if (
+        bottleHostToWinPath(bottleDir, dest) !==
+        `${DRM_STEAM_DIR_WIN}\\${s.name}`
+      ) {
+        return fail('staged path not under drive_c')
+      }
+      const dst = lstatOrNull(dest)
+      if (dst && (dst.isSymbolicLink() || !dst.isFile())) {
+        return fail(`staged target ${s.name} is a symlink or not a file`)
+      }
+      if (
+        dst &&
+        dst.size === lstatSync(s.src).size &&
+        sha256(dest) === sha256(s.src)
+      ) {
+        continue
+      }
+      const tmp = dest + STAGE_TMP_SUFFIX
+      try {
+        if (lstatOrNull(tmp)) unlinkSync(tmp)
+        copyFileSync(s.src, tmp, constants.COPYFILE_EXCL)
+        renameSync(tmp, dest)
+        staged.push(s.name)
+      } catch (err) {
+        try {
+          unlinkSync(tmp)
+        } catch {
+          // nothing to clean up
+        }
+        return fail(`stage ${s.name} failed: ${String(err)}`)
+      }
+    }
+
+    // 6. Registry (D-07, D-21): HKCU only.
+    let registryWritten = false
+    const regStat = lstatOrNull(join(bottleDir, 'user.reg'))
+    let alreadyStaged = false
+    if (regStat && regStat.isFile() && regStat.size <= MAX_USER_REG_BYTES) {
+      try {
+        alreadyStaged = drmRegistryStagedInUserReg(
+          readFileSync(join(bottleDir, 'user.reg'), 'utf8')
+        )
+      } catch {
+        alreadyStaged = false
+      }
+    }
+    if (!alreadyStaged) {
+      if (input.signal?.aborted) return fail('aborted')
+      let commands: string[][]
+      try {
+        commands = buildDrmRegistryCommands()
+      } catch (err) {
+        return fail(err)
+      }
+      const run =
+        deps.runReg ??
+        ((commandParts: string[]) =>
+          runWineCommand({
+            gameSettings: input.bottleSettings,
+            commandParts,
+            // reg.exe's own exit code proves the write; `wineserver --wait`
+            // blocks until the bottle's wineserver exits, which can be never.
+            wait: false,
+            protonVerb: 'run'
+          }))
+      const err = await runRegArgv(
+        commands,
+        run,
+        deps.regTimeoutMs ?? DRM_REG_ADD_TIMEOUT_MS
+      )
+      if (err) {
+        logWarning(
+          `stageDrmBottle: appId ${input.appId} ${err}`,
+          LogPrefix.Steam
+        )
+        return fail(err)
+      }
+      registryWritten = true
+      logInfo(
+        `stageDrmBottle: appId ${input.appId} registered ${DRM_STEAMCLIENT64_WIN} under HKCU ActiveProcess`,
+        LogPrefix.Steam
+      )
+    }
+
+    return {
+      status: 'ok',
+      steamDirHost,
+      steamDirWin: DRM_STEAM_DIR_WIN,
+      helperHostPath: join(steamDirHost, 'steam.exe'),
+      helperWinPath: DRM_HELPER_WIN,
+      steamClient64WinPath: DRM_STEAMCLIENT64_WIN,
+      restored: swap.restored,
+      removed: cleaned.removed,
+      foreignSteamClientLeft: cleaned.foreignSteamClientLeft,
+      staged,
+      registryWritten
+    }
+  } catch (err) {
+    return fail(err)
+  }
+}
