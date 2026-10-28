@@ -34,3 +34,19 @@ Fix direction:
 ## Re-gate 2026-10-23 (plan 51-27, 51-UAT item 16: blocked)
 
 The login half of 51-24 is still unproven live. Bottled Steam auto-signed-in with remembered credentials despite the sign-out (steamui_login.txt went WaitingForNetwork, WaitingForServerResponse, WaitingForLibraryReady, Success with no WaitingForCredentials), so `cause=none` was correct. To exercise `cause=login` the sign-out must also clear remembered credentials (untick "remember me" or remove the account). The self-update half was not exercised (no update pending).
+
+## Closed 2026-10-28: login cause passes live (51-UAT item 16)
+
+Packaged debug bundle built 2026-10-26 (after 51-24), HEAD `e5fbd8ef7`. This time bottled Steam was
+signed out and its saved account removed, so `config/loginusers.vdf` held no account and it could
+not auto-sign-in.
+
+- Play 21:48:58. `steamui_login.txt` reached `WaitingForCredentials` at 21:49:05, and
+  `[bottle-waiting] appId=206020 cause=login` was logged at 21:49:20, 22s after Play.
+- The game page led with "Most likely: Steam needs you to sign in." After the operator signed in,
+  the game started (21:51:27) and the waiting message cleared.
+- Bootstrap also logged `Verifying installation...` at Steam startup, and the classifier still
+  named login rather than self-update.
+
+Not proven live: the self-update `Downloading update` half. No update was pending at either gate,
+so it rests on the 51-24 fixtures.

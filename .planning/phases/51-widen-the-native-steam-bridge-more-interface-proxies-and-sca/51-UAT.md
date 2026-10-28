@@ -128,7 +128,7 @@ result: issue — 2026-10-23, HEAD c8729c36a packaged debug bundle. Operator: "1
 ### 16. Re-gate of item 11 — Waiting for Steam names sign-in (Avernum 4, 206020)
 
 expected: With bottled Steam signed out (Steam > Sign out in the GameLibSteam client), Play on Avernum 4 shows "Waiting for Steam…" within roughly 20s naming the sign-in cause; `[bottle-waiting] appId=206020 cause=login` is logged within 35s of Play; after signing in the game starts and the waiting state clears. If bottled Steam has an update pending, `cause=self-update` is logged during its `Downloading update` phase; otherwise that half is fixture-proven only (51-24).
-result: skipped — deferred 2026-10-26 by operator decision to todo `2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md` (ready: live-gate), which tracks the login-cause live check. The "stuck on Launching" issue found here is fixed (todo completed). Original result: blocked — 2026-10-23, HEAD c8729c36a packaged debug bundle. Precondition not reached, not a classifier failure. Operator: "did not see message saying waiting for steam, also after quite game game page still says 'launching'". Bottled Steam's steamui_login.txt shows both launches (17:22:59-17:23:11 and 17:24:39-17:24:51) going WaitingForNetwork, WaitingForServerResponse, WaitingForLibraryReady, Success with no WaitingForCredentials: Steam auto-signed-in with remembered credentials despite the sign-out, so `[bottle-waiting] appId=206020 cause=none` (line 171) is correct. The login half of 51-24 stays unproven live; to exercise cause=login the sign-out must also clear remembered credentials (untick remember me or remove the account). The self-update half was not exercised (no update pending). NEW ISSUE found during this item: after quitting Avernum 4 the game page stays on "Launching". The backend saw the stop both times (`matched process(es) gone after 65s of play — game stopped` line 200; `gone after 34s` line 218, each followed by refreshLibrary origin=game-status), but `SteamGame.stop: ... no-op` plus "Aborting not possible. Could not find a matching abort controller for 206020" (lines 196-199) and `raiseFrontmostBottledProcess [launch]: no matching process within ~18s` (lines 169, 212) precede it. Filed as todo 2026-10-23-game-page-stuck-on-launching-after-bottled-steam-game-exits.md.
+result: pass — 2026-10-28, packaged debug bundle (built 2026-10-26, after 51-24), HEAD e5fbd8ef7, live gate run from the todo. Precondition reached this time: bottled Steam signed out and its saved account removed (`config/loginusers.vdf` held no account), so it could not auto-sign-in. Play 21:48:58 (`steam.exe -silent -applaunch 206020`); steamui_login.txt `SetLoginState: WaitingForCredentials` 21:49:05; `[bottle-waiting] appId=206020 cause=login` 21:49:20, 22s after Play. Bootstrap also logged `Verifying installation...` at 21:49:00 and the classifier still named login, not self-update. Game page, verbatim: "Waiting for Steam… The Windows Steam client has not started the game yet. Most likely: Steam needs you to sign in. Its login window may be hidden behind other windows." followed by the self-update and running-elsewhere causes as likely causes. Operator signed in (21:51:00 to `Success` 21:51:24); `bottleProcessMonitor [206020]: matched process(es) — game started` 21:51:27; operator: "signed in, game started, waiting message cleared". The self-update half stays fixture-proven only (no update pending). Earlier history: skipped 2026-10-26 (deferred to the todo); blocked 2026-10-23 because Steam auto-signed-in with remembered credentials. Original result: blocked — 2026-10-23, HEAD c8729c36a packaged debug bundle. Precondition not reached, not a classifier failure. Operator: "did not see message saying waiting for steam, also after quite game game page still says 'launching'". Bottled Steam's steamui_login.txt shows both launches (17:22:59-17:23:11 and 17:24:39-17:24:51) going WaitingForNetwork, WaitingForServerResponse, WaitingForLibraryReady, Success with no WaitingForCredentials: Steam auto-signed-in with remembered credentials despite the sign-out, so `[bottle-waiting] appId=206020 cause=none` (line 171) is correct. The login half of 51-24 stays unproven live; to exercise cause=login the sign-out must also clear remembered credentials (untick remember me or remove the account). The self-update half was not exercised (no update pending). NEW ISSUE found during this item: after quitting Avernum 4 the game page stays on "Launching". The backend saw the stop both times (`matched process(es) gone after 65s of play — game stopped` line 200; `gone after 34s` line 218, each followed by refreshLibrary origin=game-status), but `SteamGame.stop: ... no-op` plus "Aborting not possible. Could not find a matching abort controller for 206020" (lines 196-199) and `raiseFrontmostBottledProcess [launch]: no matching process within ~18s` (lines 169, 212) precede it. Filed as todo 2026-10-23-game-page-stuck-on-launching-after-bottled-steam-game-exits.md.
 
 ### 17. XCOM: Enemy Unknown (200510) through bottled Steam (confirms the CEG diagnosis)
 
@@ -223,10 +223,10 @@ result: pass — 2026-10-26, packaged debug bundle. Dialog arms (a)-(e) passed; 
 ## Summary
 
 total: 24
-passed: 15
+passed: 16
 issues: 6
 pending: 0
-skipped: 3
+skipped: 2
 blocked: 0
 
 Run 2026-10-22 on a fresh Apple-silicon Mac (no prior Steam, CrossOver or bottles). Items 1-4, 7 and 12 ran with the sidecar at 171b4cbf2; items 5, 6, 8-11 and 13 ran at c1a641a21+ (c1a641a21 fixed backslash launch-exe paths mid-gate; 541544990 grew the allowlist).
@@ -242,7 +242,7 @@ Re-gate 2026-10-23 (plan 51-27, packaged build at c8729c36a): item 14 passes and
 Items 21-24 added 2026-10-26 by quick 261026-rb4: one pending live check for each 51-REVIEW-FIX finding still marked "fixed: requires human verification" (WR-01 item 21, WR-08 item 22, WR-09 item 23, WR-11 item 24). Items 21 and 23 stage their precondition, with an undo step, because it does not occur naturally on this Mac. Sub-checks that cannot be produced live are named in each item as desk-covered or uncovered.
 
 
-Closeout 2026-10-26: items 21-24 (51-REVIEW-FIX human verification) all pass. Item 16 is deferred to its live-gate todo by operator decision (blocked → skipped). Each `## Gaps` entry now carries a resolution: 4 resolved by later items or completed todos, 2 accepted as knownBad (Hoard, ELEX), and 2 deferred with item 16. No item is pending or blocked.
+Closeout 2026-10-26: items 21-24 (51-REVIEW-FIX human verification) all pass. Item 16 is deferred to its live-gate todo by operator decision (blocked → skipped). Item 16 then passed 2026-10-28 from that todo. Each `## Gaps` entry now carries a resolution: 4 resolved by later items or completed todos, 2 accepted as knownBad (Hoard, ELEX), and 2 deferred with item 16. No item is pending or blocked.
 
 ## Gaps
 
@@ -288,15 +288,15 @@ Closeout 2026-10-26: items 21-24 (51-REVIEW-FIX human verification) all pass. It
   missing: ["wire the x64 core interfaces after a live accessor probe", "normalise separators in screenDepotPlanForSteamApi"]
   debug_session: ".planning/todos/pending/2026-10-22-wire-win64-core-steam-interfaces.md"
 - truth: "Waiting for Steam names the detected cause for a signed-out bottled Steam"
-  status: deferred
-  resolution: "Classifier extended in 51-24; the live check for the login cause is deferred with item 16 to todo 2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download (ready: live-gate)."
+  status: resolved
+  resolution: "Classifier extended in 51-24; login cause proven live by item 16 on 2026-10-28. The self-update download half is fixture-proven only (no update pending at either gate)."
   reason: "cause=none for the whole wait while the operator sat at the sign-in prompt; self-update also unnamed during its download phase"
   severity: minor
   test: 11
   root_cause: "classifyBottledSteamBlock matches only LogonFailure for login and only 'Installing update...' for self-update"
   artifacts: [src/backend/storeManagers/steam/bottleLaunchSignals.ts]
   missing: ["sign-in prompt and update-download detection"]
-  debug_session: ".planning/todos/pending/2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md"
+  debug_session: ".planning/todos/completed/2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md"
 - truth: "ELEX (411300) reaches its main menu through the Win64 bridge"
   status: accepted
   resolution: "Hang past the bridge handshake is undiagnosed; 411300 is on knownBad as does-not-run by operator decision."
@@ -308,15 +308,15 @@ Closeout 2026-10-26: items 21-24 (51-REVIEW-FIX human verification) all pass. It
   missing: ["none planned: 411300 is knownBad does-not-run"]
   debug_session: ".planning/todos/pending/2026-10-22-wire-win64-core-steam-interfaces.md"
 - truth: "Waiting for Steam names the sign-in cause for a signed-out bottled Steam"
-  status: deferred
-  resolution: "Deferred 2026-10-26 by operator decision to todo 2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download (ready: live-gate)."
+  status: resolved
+  resolution: "Resolved 2026-10-28: item 16 passes live (cause=login 22s after Play with the saved account removed). Todo 2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download completed."
   reason: "Re-gate item 16 blocked: bottled Steam auto-signed-in with remembered credentials, so the login state was never reached"
   severity: minor
   test: 16
   root_cause: "test precondition: sign-out did not clear remembered credentials"
   artifacts: [src/backend/storeManagers/steam/bottleLaunchSignals.ts]
   missing: ["re-run with remembered credentials cleared"]
-  debug_session: ".planning/todos/pending/2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md"
+  debug_session: ".planning/todos/completed/2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md"
 - truth: "A bottled-Steam game's page returns from Launching to Play after the game exits"
   status: resolved
   resolution: "Todo 2026-10-23-game-page-stuck-on-launching-after-bottled-steam-game-exits completed."
