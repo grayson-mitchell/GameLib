@@ -99,3 +99,65 @@ permission texts are reproduced above.
 | lib/libswresample.4.dylib           | a85f79423da1fafc749414b9de9a9234825e2827ecfaf5bbecacfe1670f229d1 | 225704   |
 | lib/libswscale.7.dylib              | 8e8b54f2d38a18f76ce079e140b60730a9cc274621e921f3a98a40ee18422fc8 | 1151888  |
 | lib/libz.1.dylib                    | 5d5ff2be35d261fb91b951d8c341574381c8d28fcf4f8f8b68b8dccdf3fc8a3e | 114040   |
+
+## On-demand component: `steamclient-layer-cx26.3.0.39832` (macOS, x86_64)
+
+GameLib does not bundle this component. It is downloaded only on the first
+launch of a SteamStub (`.bind`) title through the native Steam bridge's DRM
+mode, only on macOS with an allowlisted CrossOver build (today 26.3.0.39832).
+It is installed under GameLib's app-data `steam-bridge/drm/component/`
+directory, never in a game folder. GameLib distributes it from its own release
+page and verifies it against sha256 sums pinned in the application before every
+use.
+
+Release page (archive, NOTICE, licence texts and corresponding source):
+https://github.com/grayson-mitchell/GameLib/releases/tag/steamclient-layer-cx26.3.0.39832
+
+`lsteamclient.so` is deliberately unsigned, because Wine builtins fail to load
+once codesigned. GameLib keeps it in a 0700 app-data directory, checks its
+pinned sha256 before each use, and removes any signature after extraction. This
+widens trust to that one verified file.
+
+### lsteamclient - Steamworks SDK License
+
+`lsteamclient.dll` and `lsteamclient.so`. They are built by GameLib from Proton
+`lsteamclient` at commit `164e0ccd2ea2b1ec2e5d08dc97f65b184c2539ca`, with
+NotProton's three overlay files at `8db22adb237e6ea640a5af148b69b93709daf50c`,
+using `pnpm build:lsteamclient`. The licence text is `LICENSE.lsteamclient` in
+the archive. GameLib's GPL-3.0-only code never links against
+lsteamclient.dll or lsteamclient.so; Wine loads them at run time inside the
+game's Wine process.
+
+### ntdll detour payload - GPL-3.0
+
+`detour-cx26.3.0.39832.bin`. It is ported from NotProton `ntdll-patch`, and its
+source and `COPYING` are in `native/steam-bridge/steamclient-layer/ntdll-patch/`.
+
+### Game-process helper steam.exe - BSD-3-Clause
+
+`steam.exe`. It is ported from NotProton `steam-shim` (Proton `steam_helper`).
+Its full licence text is in the component `NOTICE` and in
+`native/steam-bridge/steamclient-layer/helper/LICENSE`.
+
+### Not distributed by GameLib
+
+Valve's `steamclient64.dll`, `tier0_s64.dll` and `vstdlib_s64.dll` are
+downloaded by the user's machine from Valve's CDN (D-04).
+
+### Licence texts
+
+The archive carries `LICENSE.lsteamclient` and `NOTICE`. The GPL-3.0 text
+(`COPYING`) and the helper `LICENSE` are uploaded beside the archive on the
+release page.
+
+### Pinned sha256 sums
+
+| path                                    | licence                | sha256                                                           | size     |
+| --------------------------------------- | ---------------------- | ---------------------------------------------------------------- | -------- |
+| LICENSE.lsteamclient                    | licence-text           | 80fda9147f8ee707cd18d1d6d71b307063fa3a02057a7c789de47f7c003510f1 | 7435     |
+| NOTICE                                  | licence-text           | dd9c7c74ca5e2b62a82bb32926b45333d7b2fd7f1dd8a917b2feb0579f1c11bc | 4017     |
+| detour-cx26.3.0.39832.bin               | GPL-3.0                | e35b834408599c45f30b23a6d2bf38acfa5c3df4d15206617c471e23a4a01bfb | 832      |
+| lsteamclient.dll                        | Steamworks-SDK-License | 22bb19413ce1f66c771c2d54260f6811480375db66c74e60c66a02d307b5cb76 | 33904653 |
+| lsteamclient.so                         | Steamworks-SDK-License | dd48289787223d9e0f75a97da3cc15aa616faa382741e39a5a433fa5cfa5167d | 2388896  |
+| steam.exe                               | BSD-3-Clause           | 4a67c58a41792e8a784bea7338adaf3d7d3713dc6d20ccaf61895edfdb32e6ba | 193536   |
+| steamclient-layer-cx26.3.0.39832.tar.gz | archive                | c58a40c67c5d9093970227327bcceb5c2e457bc81b0a58559d9cb65777aeb187 | 5359548  |

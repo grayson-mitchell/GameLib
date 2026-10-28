@@ -416,7 +416,7 @@ describe('THIRD-PARTY-NOTICES.md', () => {
     for (const e of Object.values(STEAMCLIENT_LAYER_CATALOGUE)) {
       expect(doc).toContain(steamclientLayerReleasePageUrl(e))
     }
-    expect(doc).toContain(
+    expect(doc.replace(/\s+/g, ' ')).toContain(
       'never links against lsteamclient.dll or lsteamclient.so'
     )
     expect(doc).toContain('steamclient64.dll')
