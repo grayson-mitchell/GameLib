@@ -243,17 +243,21 @@ const GameCard = ({
         </SvgButton>
       )
     }
-    // D-08: hide the Stop button for Steam while Playing (observe-only) — GameLib
-    // never owns the Steam process, so Stop cannot work. Falls through to the
-    // installed-game play icon; the Playing badge still shows via gameCardStatus.
-    if (isPlaying && !isSteam) {
+    // Stop shows for Steam too, matching the game page's MainButton: D-08's
+    // observe-only rule predates bridge launches, which SteamGame.stop() can
+    // end. The just-played tile swaps its PLAY label for STOP, not an icon.
+    if (isPlaying) {
       return (
         <SvgButton
           className="cancelIcon"
           onClick={async () => handlePlay(runner)}
           title={`${t('label.playing.stop')} (${title})`}
         >
-          <StopIconAlt />
+          {justPlayed ? (
+            <span>{tGamelib('gamelib:library.stopTile', 'STOP')}</span>
+          ) : (
+            <StopIconAlt />
+          )}
         </SvgButton>
       )
     }
@@ -359,11 +363,10 @@ const GameCard = ({
       icon: <Cancel />
     },
     {
-      // stop if running — hidden for Steam (D-08: observe-only, GameLib does not
-      // own the Steam process, so Stop cannot work)
+      // stop if running (Steam included, as on the game page)
       label: t('label.playing.stop'),
       onclick: async () => handlePlay(runner),
-      show: isPlaying && !isSteam,
+      show: isPlaying,
       icon: <Cancel />
     },
     {

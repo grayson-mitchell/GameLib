@@ -310,6 +310,7 @@
             "signedOutTitle": "Your Steam sign-in expired",
             "syncing": "Syncing your Steam library…"
         },
+        "stopTile": "STOP",
         "storeOther": "Other",
         "tileSize": {
             "label": "Tile size",

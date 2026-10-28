@@ -723,7 +723,8 @@ body:not(.controllerLayout):not(.keyboardNav)
   transition: all 300ms;
 }
 
-.playIcon > span {
+.playIcon > span,
+.cancelIcon > span {
   font-family: var(--secondary-font-family);
   border-radius: 5px;
   color: #1d1d1d;
@@ -739,6 +740,15 @@ body:not(.controllerLayout):not(.keyboardNav)
 .playIcon:hover > span {
   transition: 300ms;
   background: var(--success-hover);
+}
+
+.cancelIcon > span {
+  background: var(--cancel-button, var(--warning));
+}
+
+.cancelIcon:hover > span {
+  transition: 300ms;
+  background: var(--cancel-button-overlay, var(--status-warning-hover));
 }
 
 .playIcon[disabled] > span {
