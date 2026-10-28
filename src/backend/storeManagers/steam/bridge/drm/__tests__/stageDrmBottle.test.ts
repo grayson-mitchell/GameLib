@@ -725,4 +725,14 @@ describe('stageDrmBottle', () => {
       })
     )
   })
+
+  it('settles the default reg call on reg.exe exit, not pipe close', async () => {
+    ;(runWineCommand as jest.Mock).mockResolvedValue({ code: 0, stderr: '' })
+    const d = deps()
+    delete (d as { runReg?: unknown }).runReg
+    await stageDrmBottle(input(), d as never)
+    for (const [args] of (runWineCommand as jest.Mock).mock.calls) {
+      expect(args).toEqual(expect.objectContaining({ resolveOnExit: true }))
+    }
+  })
 })

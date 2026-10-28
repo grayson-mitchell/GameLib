@@ -732,7 +732,12 @@ export async function stageDrmBottle(
             // reg.exe's own exit code proves the write; `wineserver --wait`
             // blocks until the bottle's wineserver exits, which can be never.
             wait: false,
-            protonVerb: 'run'
+            protonVerb: 'run',
+            // The first call after endPerGameBridgeBottleSession starts a fresh
+            // wineserver that inherits the pipes and outlives reg.exe, so
+            // settling on 'close' timed the server, not the write (219990,
+            // debug drm-bottle-stage-reg-add-hang).
+            resolveOnExit: true
           }))
       const err = await runRegArgv(
         commands,
