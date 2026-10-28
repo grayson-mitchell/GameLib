@@ -397,3 +397,100 @@ describe('real staging dir', () => {
     })
   })
 })
+
+describe('THIRD-PARTY-NOTICES.md', () => {
+  const doc = readFileSync('THIRD-PARTY-NOTICES.md', 'utf8')
+  it('keeps the gst-libav section', () => {
+    expect(doc).toContain(
+      '## On-demand overlay: `gst-libav-1.24.13` (macOS, x86_64)'
+    )
+    expect(doc).toContain(
+      'cd114a81e5b9f0813d745b289e7e341157df3bdedea6af338c1b977b39edc31b'
+    )
+  })
+  it('has the Steamworks component section and release page', () => {
+    expect(doc).toContain(
+      `## On-demand component: \`steamclient-layer-cx${BUILD}\` (macOS, x86_64)`
+    )
+    expect(doc).toMatch(/^### lsteamclient - Steamworks SDK License/m)
+    for (const e of Object.values(STEAMCLIENT_LAYER_CATALOGUE)) {
+      expect(doc).toContain(steamclientLayerReleasePageUrl(e))
+    }
+    expect(doc).toContain(
+      'never links against lsteamclient.dll or lsteamclient.so'
+    )
+    expect(doc).toContain('steamclient64.dll')
+  })
+  it('lists every pin on a row with its path', () => {
+    const rows = doc.split('\n').filter((l) => l.startsWith('|'))
+    for (const e of Object.values(STEAMCLIENT_LAYER_CATALOGUE)) {
+      for (const f of e.files) {
+        expect(
+          rows.some((r) => r.includes(f.path) && r.includes(f.sha256))
+        ).toBe(true)
+      }
+      expect(
+        rows.some(
+          (r) => r.includes(e.release.asset) && r.includes(e.archiveSha256)
+        )
+      ).toBe(true)
+    }
+  })
+})
+
+describe('package scripts', () => {
+  const scripts = JSON.parse(readFileSync('package.json', 'utf8')).scripts
+  it('has the two operator scripts', () => {
+    expect(scripts['build:drm-native']).toBe(
+      'node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildDrmNativeParts.ts'
+    )
+    expect(scripts['build:steamclient-layer-archive']).toBe(
+      'node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSteamClientLayerArchive.ts'
+    )
+    expect(scripts['build:lsteamclient']).toBe(
+      'node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildLsteamclient.ts'
+    )
+  })
+})
+
+describe('packaging separation', () => {
+  const FORBIDDEN =
+    /lsteamclient|steamclient-layer|buildDrmNativeParts|buildLsteamclient|buildSteamClientLayerArchive/
+  // Comment lines are stripped so that a later plan's removal note (56-13 in
+  // buildSteamBridgeShims.ts) can never turn this gate red.
+  const code = (path: string, yaml = false) =>
+    readFileSync(path, 'utf8')
+      .split('\n')
+      .filter((l) => {
+        const t = l.trim()
+        return yaml
+          ? !t.startsWith('#')
+          : !(t.startsWith('//') || t.startsWith('/*') || t.startsWith('*'))
+      })
+  it.each([
+    'src-tauri/tauri.conf.json',
+    'meta/signMachOResources.ts',
+    'meta/buildSteamBridgeShims.ts'
+  ])('%s never references the component', (path) => {
+    expect(code(path).filter((l) => FORBIDDEN.test(l))).toEqual([])
+  })
+  it('no workflow references the component', () => {
+    for (const f of readdirSync('.github/workflows')) {
+      if (!f.endsWith('.yml')) continue
+      const hits = code(join('.github/workflows', f), true).filter((l) =>
+        FORBIDDEN.test(l)
+      )
+      expect(hits).toEqual([])
+    }
+  })
+  it('commits no binary beside the sources', () => {
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((d) =>
+        d.isDirectory() ? walk(join(dir, d.name)) : [join(dir, d.name)]
+      )
+    const bad = walk('native/steam-bridge/steamclient-layer').filter((p) =>
+      /\.(dll|so|bin|exe|tar\.gz)$/.test(p)
+    )
+    expect(bad).toEqual([])
+  })
+})
