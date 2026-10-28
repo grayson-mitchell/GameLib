@@ -538,12 +538,14 @@ Plans:
 
 **Goal:** Launching GameLib, browsing the library, opening a game page and pressing Play never open an authenticated steam-user CM session, so none of them can sign the user's Mac Steam Friends list out. Debug session `friends-signout-steam-user` showed that any authenticated logon for the account, landing while Mac Steam's Friends is connected, signs Friends out or locks it Offline, and that only a Mac Steam restart recovers it (`steam://friends/status/online` and a Mac Steam reconnect do not; see its "Follow-up 2026-10-26"). The launch logon is currently a race between the boot sign-in probe (`'boot-probe'` unlocks `authTrigger.ts`'s sticky gate) and the mount refresh; make the deferral deterministic so launch shows the cached library and never logs on. Public PICS reads (platform capture, game page, install location, bridge launch target) move to an anonymous CM session, degrading benignly for `public_only` apps. An authenticated session opens only for an explicit Refresh, sign-in and depot installs, through one gated entry point. The Web API owned-games path is out of scope (Valve refuses SteamClient refresh tokens for access tokens without an authenticated CM session; `54-RESEARCH.md`). On macOS that entry point also wraps every authenticated logon in the go-offline trick, which spike 046 showed GameLib can drive itself: if Mac Steam is logged on, `steam://open/gooffline`, wait for the user-initiated `LogOff()` in Mac Steam's `connection_log.txt`, log on, then `steam://open/goonline` in a `finally` (only if the wrap took Steam offline). If the LogOff is not seen, fall back to a guided "Go Offline" step and never log on silently. The entry point owns every CM logon: steam-user `autoRelogin` off, and the canary `relog()` and any reconnect go back through the wrap (`.planning/debug/friends-signout-steam-user.md`, "Verdict 2026-10-27"). Platform-routed installs remain follow-up work. Update `.planning/research/STEAM-STACK.md` with the anonymous-PICS and on-demand-session change. Source todo: `2026-10-24-friends-sign-out-steam-user-logon.md`.
 **Success Criteria:**
+
 1. A cold launch with a signed-in account logs no authenticated logon, whichever of the boot probe and mount refresh lands first (unit test over both orderings; runtime `[Steam] CM logon mode=` log line shows none with `authenticated`).
 2. Opening a game page, Play (including the bridge launch target), install-location and platform-capture lookups run on an anonymous CM session; `public_only` apps degrade without error (fixture-backed test).
 3. Authenticated `logOn` is reachable only from an allow-listed entry point for explicit Refresh, sign-in and depot installs (source gate with an anti-vacuity floor); `depot.ts` reads the persisted SteamID, not `client.steamID`.
 4. Mac UAT: launch, browse, game page and Play leave Mac Steam Friends signed in with status changeable; the anonymous session alone does not flip Friends.
 5. `STEAM-STACK.md` records the change and why.
 6. On macOS every authenticated logon (Refresh, sign-in, depot install, and any reconnect or relog) runs inside the go-offline wrap: unit tests cover Steam already offline (no toggle, no `goonline`), LogOff seen, LogOff not seen (guided fallback, no logon), and logon failure (`goonline` still fires); `autoRelogin` is off. Mac UAT: an explicit Refresh and a depot install with Mac Steam online leave Friends signed in with status changeable.
+
 **Requirements**: TBD
 **Depends on:** Phase 53
 **Plans:** 14/14 plans complete
@@ -633,9 +635,15 @@ Plans:
 **Plans:** 26/34 plans complete
 
 Plans:
+
 - [x] TBD (run /gsd-plan-phase 56 to break down) (completed 2026-10-28)
 
+**Cross-cutting constraints:**
+
+- D-15/D-16: the census reports 219990 verified with `game call <name>` or `game log init`; helper lines and Mac Steam In-Game never count
+
 Gap closure (56-VERIFICATION gaps_found, live gate FAIL at item 4):
+
 - [x] 56-17-PLAN.md — desk diagnosis of Gap 7 (Grim Dawn crash) and Gap 9 (second-launch bottle-stage hang)
 - [x] 56-18-PLAN.md — Gap 10: confirm notice display in the log, bring window forward, fix the found cause
 - [x] 56-19-PLAN.md — Gap 2 route notice consults DRM routing; Gap 11 UE-aware .bind resolver + Ranch todo
@@ -648,6 +656,7 @@ Gap closure (56-VERIFICATION gaps_found, live gate FAIL at item 4):
 - [x] 56-26-PLAN.md — run the re-run gate (operator), verdict, close or update gap todos
 
 Gap closure round 3 (56-VERIFICATION gaps_found, live gate 56-25 FAIL at item 3: first-stage hang on a fresh bottle):
+
 - [ ] 56-27-PLAN.md — IN-01: terminal 'done' after a DRM-setup failure (Steam launch never gets the launcher's done)
 - [ ] 56-28-PLAN.md — CR-02/IN-06: CEG signal from the resolver's drmExe
 - [ ] 56-29-PLAN.md — CR-01: symlink-safe Shipping-exe containment, lexical drmExe, logged rejections
@@ -665,4 +674,5 @@ Gap closure round 3 (56-VERIFICATION gaps_found, live gate 56-25 FAIL at item 3:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 57 to break down)
