@@ -193,6 +193,19 @@ describe('readBridgeVerdict: fail-safe on a malformed stored value', () => {
   })
 })
 
+describe('readBridgeVerdict: a scan stamped with a pre-D-20 export-set version', () => {
+  it('still parses and keeps its stamp (the stamp is diagnostic only)', () => {
+    // 0e9480d1f340 is the SHIM_EXPORT_SET_VERSION before 56-14 (D-20).
+    const stale = makeScanVerdict({ shimExportSetVersion: '0e9480d1f340' })
+    mockedStore.set(APP_ID, { bridge: { scan: stale } })
+
+    const read = readBridgeVerdict(APP_ID)
+
+    expect(read?.scan).toEqual(stale)
+    expect(mockedLogWarning).not.toHaveBeenCalled()
+  })
+})
+
 describe('clearBridgeScanVerdict', () => {
   it('removes scan but keeps the rest of the bridge verdict', () => {
     writeBridgeScanVerdict(APP_ID, makeScanVerdict())

@@ -80,6 +80,12 @@ const realInventory = JSON.parse(
   )
 ) as NullSretInventory
 
+// Names retired by D-20 (56-14). Built by concatenation so the repo-wide
+// absence grep over src/meta/native finds only live code, not these pins.
+const RETIRED_ENTRY = 'GameLibBridge_' + 'CreateInterface'
+const RETIRED_FLAG = 'g_bridge_steamstub' + '_path_active'
+const RETIRED_SLOT_DEFINE = 'BRIDGE_CONTROL_SLOT_' + 'CREATE_INTERFACE'
+
 describe('gen_vtables', () => {
   describe('manifest inputs (D-09 -- never a vendored Valve .h)', () => {
     it('the generator source only references meta/sdk, never a .h include', () => {
@@ -1807,9 +1813,7 @@ describe('gen_vtables', () => {
         const c = gen(synthetic)
         const fnAt = c.indexOf('static void *x64_null_object_for_version')
         expect(fnAt).toBeGreaterThan(c.indexOf('#if defined(__x86_64__)'))
-        expect(fnAt).toBeLessThan(
-          c.indexOf('g_bridge_steamstub_path_active = 0')
-        )
+        expect(fnAt).toBeLessThan(c.indexOf('// 51-15: forward declaration'))
         expect(c).toContain(
           'if (version == NULL) return (void *)&g_x64_null_object_instance;'
         )
@@ -2170,44 +2174,21 @@ describe('gen_vtables', () => {
     })
   })
 
-  describe('Phase 52: GameLibBridge_CreateInterface (52-07)', () => {
+  describe('Phase 56: D-20 shim-side forwarder support removed (56-14)', () => {
     const manifests = [isteamuser, isteamfriends]
-    function cBody(): string {
-      const c = generateShimC(manifests)
-      const at = c.indexOf('void *GameLibBridge_CreateInterface(')
-      expect(at).toBeGreaterThan(-1)
-      return c.slice(at, c.indexOf('\n}\n', at) + 3)
-    }
 
-    it('Phase 52: x64 .def lists it, x86 .def does not', () => {
-      expect(generateDefFile(manifests, 'x64')).toMatch(
-        /^\s*GameLibBridge_CreateInterface\s*$/m
-      )
-      expect(generateDefFile(manifests, 'x86')).not.toContain(
-        'GameLibBridge_CreateInterface'
-      )
+    it('neither .def lists the retired SteamStub entry point', () => {
+      expect(generateDefFile(manifests, 'x64')).not.toContain(RETIRED_ENTRY)
+      expect(generateDefFile(manifests, 'x86')).not.toContain(RETIRED_ENTRY)
     })
 
-    it('Phase 52: control slot define equals protocol.ts CONTROL_SLOT.createInterface', () => {
+    it('the shim C has no SteamStub entry point, path flag or slot-3 define', () => {
       const c = generateShimC(manifests)
-      const m = c.match(/#define BRIDGE_CONTROL_SLOT_CREATE_INTERFACE (\d+)/)
-      expect(m).not.toBeNull()
-      expect(Number(m![1])).toBe(CONTROL_SLOT.createInterface)
-    })
-
-    it('Phase 52: body is native-backed and never returns the null object', () => {
-      const b = cBody()
-      expect(b).toContain('BRIDGE_CONTROL_SLOT_CREATE_INTERFACE')
-      expect(b).toContain('resolve_iface_by_exact_version')
-      expect(b).not.toContain('g_x64_null_object_instance')
-    })
-
-    it('Phase 52: lives inside the x64-only block', () => {
-      const c = generateShimC(manifests)
-      const at = c.indexOf('void *GameLibBridge_CreateInterface(')
-      const guard = c.lastIndexOf('#if defined(__x86_64__)', at)
-      expect(guard).toBeGreaterThan(-1)
-      expect(c.slice(guard, at)).not.toContain('#endif')
+      expect(c).not.toContain(RETIRED_ENTRY)
+      expect(c).not.toContain(RETIRED_FLAG)
+      expect(c).not.toContain(RETIRED_SLOT_DEFINE)
+      // later slots keep their numbers
+      expect(c).toContain('#define BRIDGE_CONTROL_SLOT_REPORT_VERSION 4')
     })
   })
 
@@ -2297,24 +2278,29 @@ describe('gen_vtables', () => {
       return dispatch.slice(start, dispatch.indexOf('\n    }', start))
     }
 
-    const FLAG = 'if (!g_bridge_steamstub_path_active)'
+    // D-20: x64 compiles only the local answer; the wire body is x86-only.
+    const x64Slice = (b: string): string => {
+      const at = b.indexOf('#if defined(__x86_64__)')
+      const elseAt = b.indexOf('\n#else\n', at)
+      expect(at).toBeGreaterThan(-1)
+      expect(elseAt).toBeGreaterThan(at)
+      expect(b).toContain('\n#endif')
+      return b.slice(at, elseAt)
+    }
     const assertGated = (b: string): void => {
-      const flagAt = b.indexOf(FLAG)
-      const txAt = b.indexOf('bridge_transact(')
-      expect(flagAt).toBeGreaterThan(-1)
-      expect(txAt).toBeGreaterThan(flagAt)
-      const local = b.slice(flagAt, txAt)
+      const local = x64Slice(b)
       expect(local).not.toContain('bridge_transact(')
       expect(local).toContain('resolve_iface_by_exact_version(pchVersion)')
-      expect(b.slice(0, flagAt)).toContain('#if defined(__x86_64__)')
       expect(local).toContain(
         'return local != NULL ? local : x64_null_object_for_version(pchVersion);'
       )
-      expect(b.slice(txAt)).toContain('if (present == 0) return NULL;')
+      expect(b.slice(b.indexOf('\n#else\n'))).toContain(
+        'if (present == 0) return NULL;'
+      )
     }
 
     it.each(['SteamClient017', 'SteamClient014'])(
-      'CR-01: %s GetISteamUser gates forwarding behind the SteamStub flag with a null-object fallback',
+      'CR-01: %s GetISteamUser answers locally on x64 with a null-object fallback',
       (iface) => {
         const b = fnBody(shim, `vt_${iface}_GetISteamUser`)
         assertGated(b)
@@ -2322,7 +2308,7 @@ describe('gen_vtables', () => {
       }
     )
 
-    it('CR-01: every wire GetISteam* lookup in 017 and 014 has the flag branch', () => {
+    it('CR-01: every wire GetISteam* lookup in 017 and 014 has the x64 local branch', () => {
       let seen = 0
       for (const m of [c17, c14]) {
         for (const method of m.methods) {
@@ -2347,21 +2333,16 @@ describe('gen_vtables', () => {
       RunFrame: ''
     }
     const assertOffPathGated = (b: string, ret: string): void => {
-      const flagAt = b.indexOf(FLAG)
-      const txAt = b.indexOf('bridge_transact(')
-      expect(flagAt).toBeGreaterThan(-1)
-      expect(txAt).toBeGreaterThan(flagAt)
-      expect(b.slice(0, flagAt)).toContain('#if defined(__x86_64__)')
-      const local = b.slice(flagAt, txAt)
+      const local = x64Slice(b)
       expect(local).toMatch(
         new RegExp(
-          `gamelib_stubcall_note\\(gamelib_sc, [^;]*GAMELIB_STUBCALL_KIND_OFFPATH\\);\\n\\s*return${ret};\\n\\s*\\}`
+          `gamelib_stubcall_note\\(gamelib_sc, [^;]*GAMELIB_STUBCALL_KIND_OFFPATH\\);\\n\\s*return${ret};$`
         )
       )
       expect(local).not.toContain('bridge_transact(')
     }
 
-    it('WR-09: every wire method of 017 and 014 is gated ahead of bridge_transact', () => {
+    it('WR-09: every wire method of 017 and 014 answers locally on x64', () => {
       for (const m of [c17, c14]) {
         let nonLookups = 0
         for (const method of m.methods) {
@@ -2381,7 +2362,7 @@ describe('gen_vtables', () => {
 
     it('WR-09: a non-SteamClient wire method has no SteamStub flag', () => {
       const out = generateShimC([isteamuser])
-      expect(out).not.toContain('if (!g_bridge_steamstub_path_active)')
+      expect(out).not.toContain(RETIRED_FLAG)
     })
 
     it('WR-09: generation refuses a SteamClient non-lookup wire method with no off-path value', () => {
@@ -2436,18 +2417,9 @@ describe('gen_vtables', () => {
         'vt_SteamClient014_GetISteamMatchmaking'
       ]) {
         const b = fnBody(committed, name)
-        expect(b).toContain(FLAG)
+        assertGated(b)
         expect(b).toContain('x64_null_object_for_version(')
       }
-    })
-
-    it('CR-01: GameLibBridge_CreateInterface sets the flag after the NULL check and never returns the null object', () => {
-      const b = fnBody(shim, 'void *GameLibBridge_CreateInterface')
-      const nullAt = b.indexOf('if (pszName == NULL) return NULL;')
-      const setAt = b.indexOf('g_bridge_steamstub_path_active = 1;')
-      expect(nullAt).toBeGreaterThan(-1)
-      expect(setAt).toBeGreaterThan(nullAt)
-      expect(b).not.toContain('g_x64_null_object_instance')
     })
 
     it('a stub-mode SteamClient GetISteam* keeps the old local lookup', () => {
@@ -2459,7 +2431,7 @@ describe('gen_vtables', () => {
       const out = generateShimC([stubbed])
       const b = fnBody(out, 'vt_SteamClient017_GetISteamUser')
       expect(b).toContain('x64_null_object_for_version(')
-      expect(b).not.toContain('g_bridge_steamstub_path_active')
+      expect(b).not.toContain(RETIRED_FLAG)
       expect(b).not.toContain('bridge_transact(')
     })
 
@@ -3895,12 +3867,13 @@ describe('WR-03: shim authenticates every socket with the per-launch secret', ()
       expect(hs).toContain('g_bridge_secret')
       expect(hs).not.toContain('bridge_transact')
 
-      // Both explicit HELLO senders carry the secret; none sends NULL, 0.
+      // The explicit HELLO sender carries the secret; none sends NULL, 0.
+      // (D-20 removed the SteamStub entry point, the second sender.)
       expect(src).not.toContain('BRIDGE_CONTROL_SLOT_HELLO, NULL, 0')
       const helloCalls = src.match(
         /bridge_transact\(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, [^;]*;/g
       )
-      expect(helloCalls).toHaveLength(2)
+      expect(helloCalls).toHaveLength(1)
       for (const c of helloCalls!) {
         expect(c).toContain(
           '(const uint8_t *)g_bridge_secret, BRIDGE_SECRET_HEX_LEN'

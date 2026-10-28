@@ -21,6 +21,7 @@ import {
   familyOfInterfaceVersion,
   resolveRequiredInterfaceVersions
 } from '../interfaceVersions'
+import { SHIM64_GENERATED_EXPORTS } from '../shimExports.generated'
 import {
   SHIM_EXPORTED_SYMBOLS,
   SHIM64_EXPORTED_SYMBOLS,
@@ -356,6 +357,59 @@ describe('SHIM_EXPORT_SET_VERSION / computeExportSetVersion', () => {
       x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
     }
     expect(computeExportSetVersion(inputs)).toBe(SHIM_EXPORT_SET_VERSION)
+  })
+})
+
+// D-20 (56-14): removing GameLibBridge_CreateInterface changed the x64 export
+// set. SHIM_EXPORT_SET_VERSION is derived, so it moved on its own. The stamp is
+// diagnostic only (IN-01): isScanVerdictNowCovered decides by per-arch
+// membership and never reads it, so the cost of the change is zero forced
+// rescans.
+// Value measured on HEAD 7ceee46ab, before D-20.
+const PRE_D20_SHIM_EXPORT_SET_VERSION = '0e9480d1f340'
+
+describe('D-20: export set changes when GameLibBridge_CreateInterface is removed (56-14)', () => {
+  test('SHIM_EXPORT_SET_VERSION differs from the pre-removal value', () => {
+    expect(SHIM_EXPORT_SET_VERSION).toMatch(/^[0-9a-f]{12}$/)
+    expect(SHIM_EXPORT_SET_VERSION).not.toBe(PRE_D20_SHIM_EXPORT_SET_VERSION)
+  })
+
+  test('the x64 export tables no longer list GameLibBridge_CreateInterface', () => {
+    expect(SHIM64_EXPORTED_SYMBOLS.has('GameLibBridge_CreateInterface')).toBe(
+      false
+    )
+    expect(SHIM64_GENERATED_EXPORTS).not.toContain(
+      'GameLibBridge_CreateInterface'
+    )
+  })
+
+  test('a stale-stamped scan verdict is judged by symbol membership alone', () => {
+    // isScanVerdictNowCovered takes only { arch, missingSymbols }: the stamp
+    // is not an input, so a pre-D-20 stamp cannot change the answer.
+    const staleCovered = {
+      status: 'miss' as const,
+      arch: 'x64' as const,
+      missingSymbols: ['SteamAPI_ISteamUser_GetSteamID'],
+      shimExportSetVersion: PRE_D20_SHIM_EXPORT_SET_VERSION
+    }
+    const currentCovered = {
+      ...staleCovered,
+      shimExportSetVersion: SHIM_EXPORT_SET_VERSION
+    }
+    expect(isScanVerdictNowCovered(staleCovered)).toBe(true)
+    expect(isScanVerdictNowCovered(currentCovered)).toBe(true)
+  })
+
+  test('a stale-stamped miss on a symbol the shim does not export stays uncovered', () => {
+    const stale = {
+      status: 'miss' as const,
+      arch: 'x64' as const,
+      missingSymbols: ['SteamAPI_NoSuchExportEver'],
+      shimExportSetVersion: PRE_D20_SHIM_EXPORT_SET_VERSION
+    }
+    const current = { ...stale, shimExportSetVersion: SHIM_EXPORT_SET_VERSION }
+    expect(isScanVerdictNowCovered(stale)).toBe(false)
+    expect(isScanVerdictNowCovered(current)).toBe(false)
   })
 })
 

@@ -51,10 +51,7 @@
 // is a GameLib per-appId helper before any real interface call is issued.
 #define BRIDGE_CONTROL_ORDINAL 0xffff
 #define BRIDGE_CONTROL_SLOT_HELLO 2
-// Phase 52 (52-02): protocol.ts CONTROL_SLOT.createInterface == helper
-// CONTROL_SLOT_CREATE_INTERFACE. Asks the native client whether it accepts an
-// interface version (reply: 4-byte LE int32 present).
-#define BRIDGE_CONTROL_SLOT_CREATE_INTERFACE 3
+// Slot 3 was retired in Phase 56 (56-14, D-20); never reuse it.
 // Phase 53 (53-04, D-53-07): the flat ISteamClient_GetISteam* lookup tells the
 // helper which unserved interface version a game asked for (the helper handler
 // lands in 53-06; an unhandled slot is a harmless error response).
@@ -3738,10 +3735,6 @@ static void *x64_null_object_for_version(const char *version) {
   if (found != NULL) return found;
   return (void *)&g_x64_null_object_instance;
 }
-// CR-01: set only by GameLibBridge_CreateInterface (the SteamStub entry point,
-// reached only via steamclient64.dll). While clear, SteamClient GetISteam*
-// lookups take the pre-phase local path (proxy or null object).
-static volatile int g_bridge_steamstub_path_active = 0;
 #endif
 
 // 51-15: forward declaration only -- the full definition (and
@@ -9873,29 +9866,26 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION010 g_steamremotestorage_i
 static int32_t THISCALL vt_SteamClient017_CreateSteamPipe(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 1;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 1;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(16, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
 static int THISCALL vt_SteamClient017_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -9903,18 +9893,17 @@ static int THISCALL vt_SteamClient017_BReleaseSteamPipe(void *self, int32_t hSte
   if (!bridge_transact(16, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
 static int32_t THISCALL vt_SteamClient017_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 1;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 1;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -9922,18 +9911,17 @@ static int32_t THISCALL vt_SteamClient017_ConnectToGlobalUser(void *self, int32_
   if (!bridge_transact(16, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
 static int32_t THISCALL vt_SteamClient017_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
@@ -9950,35 +9938,33 @@ static int32_t THISCALL vt_SteamClient017_CreateLocalUser(void *self, int32_t * 
   }
   respOff += 4;
   return ret;
+#endif
 }
 
 // slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
 static void THISCALL vt_SteamClient017_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return;
+#else
   uint8_t argbuf[8];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
   memcpy(argbuf + argOff, &hUser, 4); argOff += 4;
   uint8_t retbuf[1]; uint32_t retlen = 0;
   bridge_transact(16, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+#endif
 }
 
 // slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamUser(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10009,17 +9995,16 @@ static void * THISCALL vt_SteamClient017_GetISteamUser(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamGameServer(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10050,6 +10035,7 @@ static void * THISCALL vt_SteamClient017_GetISteamGameServer(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 7: SetLocalIPBinding(uint32 unIP, uint32 usPort) -> void | __thiscall ret 8 (STUB)
@@ -10063,11 +10049,9 @@ static void THISCALL vt_SteamClient017_SetLocalIPBinding(void *self, uint32_t du
 static void * THISCALL vt_SteamClient017_GetISteamFriends(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10098,17 +10082,16 @@ static void * THISCALL vt_SteamClient017_GetISteamFriends(void *self, int32_t hS
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8
 static void * THISCALL vt_SteamClient017_GetISteamUtils(void *self, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4104];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -10138,17 +10121,16 @@ static void * THISCALL vt_SteamClient017_GetISteamUtils(void *self, int32_t hSte
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamMatchmaking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10179,17 +10161,16 @@ static void * THISCALL vt_SteamClient017_GetISteamMatchmaking(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamMatchmakingServers(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10220,17 +10201,16 @@ static void * THISCALL vt_SteamClient017_GetISteamMatchmakingServers(void *self,
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamGenericInterface(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10261,17 +10241,16 @@ static void * THISCALL vt_SteamClient017_GetISteamGenericInterface(void *self, i
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamUserStats(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10302,17 +10281,16 @@ static void * THISCALL vt_SteamClient017_GetISteamUserStats(void *self, int32_t 
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamGameServerStats(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -10343,17 +10321,16 @@ static void * THISCALL vt_SteamClient017_GetISteamGameServerStats(void *self, in
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamApps(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10384,17 +10361,16 @@ static void * THISCALL vt_SteamClient017_GetISteamApps(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamNetworking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10425,17 +10401,16 @@ static void * THISCALL vt_SteamClient017_GetISteamNetworking(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamRemoteStorage(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -10466,17 +10441,16 @@ static void * THISCALL vt_SteamClient017_GetISteamRemoteStorage(void *self, int3
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamScreenshots(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -10507,38 +10481,37 @@ static void * THISCALL vt_SteamClient017_GetISteamScreenshots(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 19: RunFrame() -> void | __thiscall ret 0
 static void THISCALL vt_SteamClient017_RunFrame(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "RunFrame", 19, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "RunFrame", 19, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[1]; uint32_t retlen = 0;
   bridge_transact(16, 19, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
+#endif
 }
 
 // slot 20: GetIPCCallCount() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamClient017_GetIPCCallCount(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "GetIPCCallCount", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "GetIPCCallCount", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(16, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   uint32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 21: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
@@ -10552,28 +10525,25 @@ static void THISCALL vt_SteamClient017_SetWarningMessageHook(void *self, uint32_
 static int THISCALL vt_SteamClient017_BShutdownIfAllPipesClosed(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient017", "BShutdownIfAllPipesClosed", 22, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "BShutdownIfAllPipesClosed", 22, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(16, 22, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 23: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamHTTP(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -10604,17 +10574,16 @@ static void * THISCALL vt_SteamClient017_GetISteamHTTP(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 24: DEPRECATED_GetISteamUnifiedMessages(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_DEPRECATED_GetISteamUnifiedMessages(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -10645,17 +10614,16 @@ static void * THISCALL vt_SteamClient017_DEPRECATED_GetISteamUnifiedMessages(voi
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 25: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamController(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10686,17 +10654,16 @@ static void * THISCALL vt_SteamClient017_GetISteamController(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 26: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamUGC(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10727,17 +10694,16 @@ static void * THISCALL vt_SteamClient017_GetISteamUGC(void *self, int32_t hSteam
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 27: GetISteamAppList(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamAppList*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamAppList(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -10768,17 +10734,16 @@ static void * THISCALL vt_SteamClient017_GetISteamAppList(void *self, int32_t hS
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 28: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamMusic(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -10809,17 +10774,16 @@ static void * THISCALL vt_SteamClient017_GetISteamMusic(void *self, int32_t hSte
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 29: GetISteamMusicRemote(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusicRemote*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamMusicRemote(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -10850,17 +10814,16 @@ static void * THISCALL vt_SteamClient017_GetISteamMusicRemote(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 30: GetISteamHTMLSurface(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTMLSurface*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamHTMLSurface(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -10891,6 +10854,7 @@ static void * THISCALL vt_SteamClient017_GetISteamHTMLSurface(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 31: DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
@@ -10918,11 +10882,9 @@ static void THISCALL vt_SteamClient017_Set_SteamAPI_CCheckCallbackRegisteredInPr
 static void * THISCALL vt_SteamClient017_GetISteamInventory(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -10953,17 +10915,16 @@ static void * THISCALL vt_SteamClient017_GetISteamInventory(void *self, int32_t 
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 35: GetISteamVideo(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamVideo*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamVideo(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -10994,17 +10955,16 @@ static void * THISCALL vt_SteamClient017_GetISteamVideo(void *self, int32_t hSte
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 36: GetISteamParentalSettings(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParentalSettings*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient017_GetISteamParentalSettings(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -11035,6 +10995,7 @@ static void * THISCALL vt_SteamClient017_GetISteamParentalSettings(void *self, i
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 static vfn g_steamclient017_vtbl[37] = {
@@ -13204,29 +13165,26 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION013 g_steamremotestorage_i
 static int32_t THISCALL vt_SteamClient014_CreateSteamPipe(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 1;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 1;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(22, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
 static int THISCALL vt_SteamClient014_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -13234,18 +13192,17 @@ static int THISCALL vt_SteamClient014_BReleaseSteamPipe(void *self, int32_t hSte
   if (!bridge_transact(22, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
 static int32_t THISCALL vt_SteamClient014_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 1;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 1;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -13253,18 +13210,17 @@ static int32_t THISCALL vt_SteamClient014_ConnectToGlobalUser(void *self, int32_
   if (!bridge_transact(22, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
 static int32_t THISCALL vt_SteamClient014_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
@@ -13281,35 +13237,33 @@ static int32_t THISCALL vt_SteamClient014_CreateLocalUser(void *self, int32_t * 
   }
   respOff += 4;
   return ret;
+#endif
 }
 
 // slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
 static void THISCALL vt_SteamClient014_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return;
+#else
   uint8_t argbuf[8];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
   memcpy(argbuf + argOff, &hUser, 4); argOff += 4;
   uint8_t retbuf[1]; uint32_t retlen = 0;
   bridge_transact(22, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+#endif
 }
 
 // slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamUser(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -13340,17 +13294,16 @@ static void * THISCALL vt_SteamClient014_GetISteamUser(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamGameServer(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -13381,6 +13334,7 @@ static void * THISCALL vt_SteamClient014_GetISteamGameServer(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 7: SetLocalIPBinding(uint32 unIP, uint32 usPort) -> void | __thiscall ret 8 (STUB)
@@ -13394,11 +13348,9 @@ static void THISCALL vt_SteamClient014_SetLocalIPBinding(void *self, uint32_t du
 static void * THISCALL vt_SteamClient014_GetISteamFriends(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -13429,17 +13381,16 @@ static void * THISCALL vt_SteamClient014_GetISteamFriends(void *self, int32_t hS
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8
 static void * THISCALL vt_SteamClient014_GetISteamUtils(void *self, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4104];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -13469,17 +13420,16 @@ static void * THISCALL vt_SteamClient014_GetISteamUtils(void *self, int32_t hSte
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamMatchmaking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -13510,17 +13460,16 @@ static void * THISCALL vt_SteamClient014_GetISteamMatchmaking(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamMatchmakingServers(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -13551,17 +13500,16 @@ static void * THISCALL vt_SteamClient014_GetISteamMatchmakingServers(void *self,
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamGenericInterface(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -13592,17 +13540,16 @@ static void * THISCALL vt_SteamClient014_GetISteamGenericInterface(void *self, i
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamUserStats(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -13633,17 +13580,16 @@ static void * THISCALL vt_SteamClient014_GetISteamUserStats(void *self, int32_t 
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamGameServerStats(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -13674,17 +13620,16 @@ static void * THISCALL vt_SteamClient014_GetISteamGameServerStats(void *self, in
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamApps(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -13715,17 +13660,16 @@ static void * THISCALL vt_SteamClient014_GetISteamApps(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamNetworking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -13756,17 +13700,16 @@ static void * THISCALL vt_SteamClient014_GetISteamNetworking(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamRemoteStorage(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -13797,17 +13740,16 @@ static void * THISCALL vt_SteamClient014_GetISteamRemoteStorage(void *self, int3
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamScreenshots(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -13838,38 +13780,37 @@ static void * THISCALL vt_SteamClient014_GetISteamScreenshots(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 19: RunFrame() -> void | __thiscall ret 0
 static void THISCALL vt_SteamClient014_RunFrame(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "RunFrame", 19, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "RunFrame", 19, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[1]; uint32_t retlen = 0;
   bridge_transact(22, 19, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
+#endif
 }
 
 // slot 20: GetIPCCallCount() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamClient014_GetIPCCallCount(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "GetIPCCallCount", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "GetIPCCallCount", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(22, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   uint32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 21: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
@@ -13883,28 +13824,25 @@ static void THISCALL vt_SteamClient014_SetWarningMessageHook(void *self, uint32_
 static int THISCALL vt_SteamClient014_BShutdownIfAllPipesClosed(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient014", "BShutdownIfAllPipesClosed", 22, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "BShutdownIfAllPipesClosed", 22, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(22, 22, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 23: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamHTTP(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -13935,17 +13873,16 @@ static void * THISCALL vt_SteamClient014_GetISteamHTTP(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 24: GetISteamUnifiedMessages(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUnifiedMessages*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamUnifiedMessages(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -13976,17 +13913,16 @@ static void * THISCALL vt_SteamClient014_GetISteamUnifiedMessages(void *self, in
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 25: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamController(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -14017,17 +13953,16 @@ static void * THISCALL vt_SteamClient014_GetISteamController(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 26: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamUGC(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -14058,17 +13993,16 @@ static void * THISCALL vt_SteamClient014_GetISteamUGC(void *self, int32_t hSteam
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 27: GetISteamAppList(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamAppList*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamAppList(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -14099,17 +14033,16 @@ static void * THISCALL vt_SteamClient014_GetISteamAppList(void *self, int32_t hS
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 28: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient014_GetISteamMusic(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -14140,6 +14073,7 @@ static void * THISCALL vt_SteamClient014_GetISteamMusic(void *self, int32_t hSte
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 static vfn g_steamclient014_vtbl[29] = {
@@ -14930,29 +14864,26 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION016 g_steamremotestorage_i
 static int32_t THISCALL vt_SteamClient020_CreateSteamPipe(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 1;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 1;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(25, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
 static int THISCALL vt_SteamClient020_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -14960,18 +14891,17 @@ static int THISCALL vt_SteamClient020_BReleaseSteamPipe(void *self, int32_t hSte
   if (!bridge_transact(25, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
 static int32_t THISCALL vt_SteamClient020_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 1;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 1;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -14979,18 +14909,17 @@ static int32_t THISCALL vt_SteamClient020_ConnectToGlobalUser(void *self, int32_
   if (!bridge_transact(25, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
 static int32_t THISCALL vt_SteamClient020_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
@@ -15007,35 +14936,33 @@ static int32_t THISCALL vt_SteamClient020_CreateLocalUser(void *self, int32_t * 
   }
   respOff += 4;
   return ret;
+#endif
 }
 
 // slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
 static void THISCALL vt_SteamClient020_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return;
+#else
   uint8_t argbuf[8];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
   memcpy(argbuf + argOff, &hUser, 4); argOff += 4;
   uint8_t retbuf[1]; uint32_t retlen = 0;
   bridge_transact(25, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+#endif
 }
 
 // slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamUser(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15066,17 +14993,16 @@ static void * THISCALL vt_SteamClient020_GetISteamUser(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamGameServer(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15107,6 +15033,7 @@ static void * THISCALL vt_SteamClient020_GetISteamGameServer(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 7: SetLocalIPBinding(const SteamIPAddress_t* unIP, uint32 usPort) -> void | __thiscall ret 8 (STUB)
@@ -15120,11 +15047,9 @@ static void THISCALL vt_SteamClient020_SetLocalIPBinding(void *self, uint32_t du
 static void * THISCALL vt_SteamClient020_GetISteamFriends(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15155,17 +15080,16 @@ static void * THISCALL vt_SteamClient020_GetISteamFriends(void *self, int32_t hS
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8
 static void * THISCALL vt_SteamClient020_GetISteamUtils(void *self, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4104];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -15195,17 +15119,16 @@ static void * THISCALL vt_SteamClient020_GetISteamUtils(void *self, int32_t hSte
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamMatchmaking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15236,17 +15159,16 @@ static void * THISCALL vt_SteamClient020_GetISteamMatchmaking(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamMatchmakingServers(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15277,17 +15199,16 @@ static void * THISCALL vt_SteamClient020_GetISteamMatchmakingServers(void *self,
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamGenericInterface(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15318,17 +15239,16 @@ static void * THISCALL vt_SteamClient020_GetISteamGenericInterface(void *self, i
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamUserStats(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15359,17 +15279,16 @@ static void * THISCALL vt_SteamClient020_GetISteamUserStats(void *self, int32_t 
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamGameServerStats(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -15400,17 +15319,16 @@ static void * THISCALL vt_SteamClient020_GetISteamGameServerStats(void *self, in
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamApps(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15441,17 +15359,16 @@ static void * THISCALL vt_SteamClient020_GetISteamApps(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamNetworking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15482,17 +15399,16 @@ static void * THISCALL vt_SteamClient020_GetISteamNetworking(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamRemoteStorage(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -15523,17 +15439,16 @@ static void * THISCALL vt_SteamClient020_GetISteamRemoteStorage(void *self, int3
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamScreenshots(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -15564,6 +15479,7 @@ static void * THISCALL vt_SteamClient020_GetISteamScreenshots(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 19: GetISteamGameSearch(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameSearch*/* | __thiscall ret 12 (STUB)
@@ -15584,32 +15500,30 @@ static void * THISCALL vt_SteamClient020_GetISteamGameSearch(void *self, int32_t
 static void THISCALL vt_SteamClient020_RunFrame(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "RunFrame", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "RunFrame", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[1]; uint32_t retlen = 0;
   bridge_transact(25, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
+#endif
 }
 
 // slot 21: GetIPCCallCount() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamClient020_GetIPCCallCount(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "GetIPCCallCount", 21, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "GetIPCCallCount", 21, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(25, 21, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   uint32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 22: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
@@ -15623,28 +15537,25 @@ static void THISCALL vt_SteamClient020_SetWarningMessageHook(void *self, uint32_
 static int THISCALL vt_SteamClient020_BShutdownIfAllPipesClosed(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient020", "BShutdownIfAllPipesClosed", 23, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "BShutdownIfAllPipesClosed", 23, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(25, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 24: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamHTTP(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -15675,17 +15586,16 @@ static void * THISCALL vt_SteamClient020_GetISteamHTTP(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 25: DEPRECATED_GetISteamUnifiedMessages(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_DEPRECATED_GetISteamUnifiedMessages(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -15716,17 +15626,16 @@ static void * THISCALL vt_SteamClient020_DEPRECATED_GetISteamUnifiedMessages(voi
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 26: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamController(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15757,17 +15666,16 @@ static void * THISCALL vt_SteamClient020_GetISteamController(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 27: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamUGC(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15798,17 +15706,16 @@ static void * THISCALL vt_SteamClient020_GetISteamUGC(void *self, int32_t hSteam
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 28: GetISteamAppList(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamAppList*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamAppList(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -15839,17 +15746,16 @@ static void * THISCALL vt_SteamClient020_GetISteamAppList(void *self, int32_t hS
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 29: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamMusic(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -15880,17 +15786,16 @@ static void * THISCALL vt_SteamClient020_GetISteamMusic(void *self, int32_t hSte
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 30: GetISteamMusicRemote(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusicRemote*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamMusicRemote(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -15921,17 +15826,16 @@ static void * THISCALL vt_SteamClient020_GetISteamMusicRemote(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 31: GetISteamHTMLSurface(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTMLSurface*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamHTMLSurface(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -15962,6 +15866,7 @@ static void * THISCALL vt_SteamClient020_GetISteamHTMLSurface(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 32: DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
@@ -15989,11 +15894,9 @@ static void THISCALL vt_SteamClient020_Set_SteamAPI_CCheckCallbackRegisteredInPr
 static void * THISCALL vt_SteamClient020_GetISteamInventory(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -16024,17 +15927,16 @@ static void * THISCALL vt_SteamClient020_GetISteamInventory(void *self, int32_t 
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 36: GetISteamVideo(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamVideo*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamVideo(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -16065,17 +15967,16 @@ static void * THISCALL vt_SteamClient020_GetISteamVideo(void *self, int32_t hSte
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 37: GetISteamParentalSettings(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParentalSettings*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient020_GetISteamParentalSettings(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -16106,6 +16007,7 @@ static void * THISCALL vt_SteamClient020_GetISteamParentalSettings(void *self, i
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 38: GetISteamInput(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInput*/* | __thiscall ret 12 (STUB)
@@ -16212,29 +16114,26 @@ static struct FakeSteamClient020 g_steamclient020_instance = { g_steamclient020_
 static int32_t THISCALL vt_SteamClient021_CreateSteamPipe(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 1;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 1;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(26, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
 static int THISCALL vt_SteamClient021_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -16242,18 +16141,17 @@ static int THISCALL vt_SteamClient021_BReleaseSteamPipe(void *self, int32_t hSte
   if (!bridge_transact(26, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
 static int32_t THISCALL vt_SteamClient021_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 1;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 1;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -16261,18 +16159,17 @@ static int32_t THISCALL vt_SteamClient021_ConnectToGlobalUser(void *self, int32_
   if (!bridge_transact(26, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
 static int32_t THISCALL vt_SteamClient021_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
@@ -16289,35 +16186,33 @@ static int32_t THISCALL vt_SteamClient021_CreateLocalUser(void *self, int32_t * 
   }
   respOff += 4;
   return ret;
+#endif
 }
 
 // slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
 static void THISCALL vt_SteamClient021_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return;
+#else
   uint8_t argbuf[8];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
   memcpy(argbuf + argOff, &hUser, 4); argOff += 4;
   uint8_t retbuf[1]; uint32_t retlen = 0;
   bridge_transact(26, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+#endif
 }
 
 // slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamUser(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -16348,17 +16243,16 @@ static void * THISCALL vt_SteamClient021_GetISteamUser(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamGameServer(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -16389,6 +16283,7 @@ static void * THISCALL vt_SteamClient021_GetISteamGameServer(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 7: SetLocalIPBinding(const SteamIPAddress_t* unIP, uint32 usPort) -> void | __thiscall ret 8 (STUB)
@@ -16402,11 +16297,9 @@ static void THISCALL vt_SteamClient021_SetLocalIPBinding(void *self, uint32_t du
 static void * THISCALL vt_SteamClient021_GetISteamFriends(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -16437,17 +16330,16 @@ static void * THISCALL vt_SteamClient021_GetISteamFriends(void *self, int32_t hS
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8
 static void * THISCALL vt_SteamClient021_GetISteamUtils(void *self, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4104];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -16477,17 +16369,16 @@ static void * THISCALL vt_SteamClient021_GetISteamUtils(void *self, int32_t hSte
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamMatchmaking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -16518,17 +16409,16 @@ static void * THISCALL vt_SteamClient021_GetISteamMatchmaking(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamMatchmakingServers(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -16559,17 +16449,16 @@ static void * THISCALL vt_SteamClient021_GetISteamMatchmakingServers(void *self,
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamGenericInterface(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -16600,17 +16489,16 @@ static void * THISCALL vt_SteamClient021_GetISteamGenericInterface(void *self, i
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamUserStats(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -16641,17 +16529,16 @@ static void * THISCALL vt_SteamClient021_GetISteamUserStats(void *self, int32_t 
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamGameServerStats(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -16682,17 +16569,16 @@ static void * THISCALL vt_SteamClient021_GetISteamGameServerStats(void *self, in
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamApps(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -16723,17 +16609,16 @@ static void * THISCALL vt_SteamClient021_GetISteamApps(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamNetworking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -16764,17 +16649,16 @@ static void * THISCALL vt_SteamClient021_GetISteamNetworking(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamRemoteStorage(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -16805,17 +16689,16 @@ static void * THISCALL vt_SteamClient021_GetISteamRemoteStorage(void *self, int3
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamScreenshots(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -16846,6 +16729,7 @@ static void * THISCALL vt_SteamClient021_GetISteamScreenshots(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 19: GetISteamGameSearch(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameSearch*/* | __thiscall ret 12 (STUB)
@@ -16866,32 +16750,30 @@ static void * THISCALL vt_SteamClient021_GetISteamGameSearch(void *self, int32_t
 static void THISCALL vt_SteamClient021_RunFrame(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "RunFrame", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "RunFrame", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[1]; uint32_t retlen = 0;
   bridge_transact(26, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
+#endif
 }
 
 // slot 21: GetIPCCallCount() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamClient021_GetIPCCallCount(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "GetIPCCallCount", 21, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "GetIPCCallCount", 21, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(26, 21, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   uint32_t ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 22: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
@@ -16905,28 +16787,25 @@ static void THISCALL vt_SteamClient021_SetWarningMessageHook(void *self, uint32_
 static int THISCALL vt_SteamClient021_BShutdownIfAllPipesClosed(void *self) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    static volatile LONG gamelib_sc[2];
-    gamelib_stubcall_note(gamelib_sc, "SteamClient021", "BShutdownIfAllPipesClosed", 23, GAMELIB_STUBCALL_KIND_OFFPATH);
-    return 0;
-  }
-#endif
+  static volatile LONG gamelib_sc[2];
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "BShutdownIfAllPipesClosed", 23, GAMELIB_STUBCALL_KIND_OFFPATH);
+  return 0;
+#else
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(26, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
   int ret; memcpy(&ret, retbuf, 4);
   return ret;
+#endif
 }
 
 // slot 24: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamHTTP(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -16957,17 +16836,16 @@ static void * THISCALL vt_SteamClient021_GetISteamHTTP(void *self, int32_t hStea
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 25: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamController(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -16998,17 +16876,16 @@ static void * THISCALL vt_SteamClient021_GetISteamController(void *self, int32_t
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 26: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamUGC(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
@@ -17039,17 +16916,16 @@ static void * THISCALL vt_SteamClient021_GetISteamUGC(void *self, int32_t hSteam
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 27: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamMusic(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -17080,17 +16956,16 @@ static void * THISCALL vt_SteamClient021_GetISteamMusic(void *self, int32_t hSte
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 28: GetISteamMusicRemote(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusicRemote*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamMusicRemote(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -17121,17 +16996,16 @@ static void * THISCALL vt_SteamClient021_GetISteamMusicRemote(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 29: GetISteamHTMLSurface(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTMLSurface*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamHTMLSurface(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -17162,6 +17036,7 @@ static void * THISCALL vt_SteamClient021_GetISteamHTMLSurface(void *self, int32_
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 30: DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
@@ -17189,11 +17064,9 @@ static void THISCALL vt_SteamClient021_Set_SteamAPI_CCheckCallbackRegisteredInPr
 static void * THISCALL vt_SteamClient021_GetISteamInventory(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -17224,17 +17097,16 @@ static void * THISCALL vt_SteamClient021_GetISteamInventory(void *self, int32_t 
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 34: GetISteamVideo(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamVideo*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamVideo(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -17265,17 +17137,16 @@ static void * THISCALL vt_SteamClient021_GetISteamVideo(void *self, int32_t hSte
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 35: GetISteamParentalSettings(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParentalSettings*/* | __thiscall ret 12
 static void * THISCALL vt_SteamClient021_GetISteamParentalSettings(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
 #if defined(__x86_64__)
-  if (!g_bridge_steamstub_path_active) {
-    void *local = resolve_iface_by_exact_version(pchVersion);
-    return local != NULL ? local : x64_null_object_for_version(pchVersion);
-  }
-#endif
+  void *local = resolve_iface_by_exact_version(pchVersion);
+  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+#else
   uint8_t argbuf[4108];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
@@ -17306,6 +17177,7 @@ static void * THISCALL vt_SteamClient021_GetISteamParentalSettings(void *self, i
   memcpy(&present, retbuf, 4);
   if (present == 0) return NULL;
   return resolve_iface_by_exact_version(pchVersion);
+#endif
 }
 
 // slot 36: GetISteamInput(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInput*/* | __thiscall ret 12 (STUB)
@@ -31312,31 +31184,6 @@ int SteamInternal_GameServer_Init_V2(uint32_t unIP, uint16_t usGamePort, uint16_
 int SteamInternal_GameServer_Init(uint32_t unIP, uint16_t usLegacySteamPort, uint16_t usGamePort, uint16_t usQueryPort, int eServerMode, const char *pchVersionString) {
   (void)unIP; (void)usLegacySteamPort; (void)usGamePort; (void)usQueryPort; (void)eServerMode; (void)pchVersionString;
   return 0;
-}
-void *GameLibBridge_CreateInterface(const char *pszName, int *pRc) {
-  static int s_hello_sent = 0;
-  static uint8_t s_req[4 + 4096];
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (pRc != NULL) *pRc = 1;
-  if (pszName == NULL) return NULL;
-#if defined(__x86_64__)
-  g_bridge_steamstub_path_active = 1;
-#endif
-  size_t n = strlen(pszName);
-  if (n > 4096) return NULL;
-  if (!s_hello_sent) {
-    uint8_t hb[1]; uint32_t hl = 0;
-    if (bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, (const uint8_t *)g_bridge_secret, BRIDGE_SECRET_HEX_LEN, hb, sizeof(hb), &hl)) s_hello_sent = 1;
-  }
-  s_req[0] = (uint8_t)(n & 0xff); s_req[1] = (uint8_t)((n >> 8) & 0xff); s_req[2] = (uint8_t)((n >> 16) & 0xff); s_req[3] = (uint8_t)((n >> 24) & 0xff);
-  memcpy(s_req + 4, pszName, n);
-  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_CREATE_INTERFACE, s_req, (uint32_t)(4 + n), retbuf, sizeof(retbuf), &retlen)) return NULL;
-  if (retlen != 4) return NULL;
-  uint32_t present = (uint32_t)retbuf[0] | ((uint32_t)retbuf[1] << 8) | ((uint32_t)retbuf[2] << 16) | ((uint32_t)retbuf[3] << 24);
-  if (present == 0) return NULL;
-  void *p = resolve_iface_by_exact_version(pszName);
-  if (pRc != NULL) *pRc = p != NULL ? 0 : 1;
-  return p;
 }
 #endif
 

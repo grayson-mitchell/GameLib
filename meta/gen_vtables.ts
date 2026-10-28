@@ -1307,10 +1307,9 @@ const FLAT_EXPORT_BODIES: Record<
 // SteamAPI_GetHSteamUser -- exporting these five on x86 would mean widening the
 // whole family to x86 (a separate decision against D-51-13).
 //
-// Phase 52 (52-07) adds GameLibBridge_CreateInterface, the SteamStub-path entry
-// the 52-03 steamclient64 forwarder resolves via GetProcAddress. The five
-// SteamInternal_* exports above already shipped in i94; they are unchanged.
-// x86 stays deferred (orchestrator decision 6).
+// Phase 56 (56-14, D-20) removed the Phase 52 SteamStub-path export along with
+// its forwarder; SteamStub titles now run in steamclient-layer DRM mode with no
+// shim. x86 stays deferred (orchestrator decision 6).
 export const MODERN_LOOKUP_FLAT_EXPORTS = [
   'SteamInternal_CreateInterface',
   'SteamAPI_GetHSteamUser',
@@ -1320,8 +1319,7 @@ export const MODERN_LOOKUP_FLAT_EXPORTS = [
   'SteamInternal_FindOrCreateUserInterface',
   'SteamInternal_FindOrCreateGameServerInterface',
   'SteamInternal_GameServer_Init_V2',
-  'SteamInternal_GameServer_Init',
-  'GameLibBridge_CreateInterface'
+  'SteamInternal_GameServer_Init'
 ] as const
 
 const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
@@ -1423,37 +1421,6 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
     'int SteamInternal_GameServer_Init(uint32_t unIP, uint16_t usLegacySteamPort, uint16_t usGamePort, uint16_t usQueryPort, int eServerMode, const char *pchVersionString) {\n' +
     '  (void)unIP; (void)usLegacySteamPort; (void)usGamePort; (void)usQueryPort; (void)eServerMode; (void)pchVersionString;\n' +
     '  return 0;\n' +
-    '}',
-  // Phase 52 (52-07): called by the steamclient64 forwarder on the SteamStub
-  // check path. Returns the shim proxy for the EXACT version only when the
-  // native client confirmed it (CONTROL slot 3); otherwise NULL with rc=1.
-  // NEVER the x64 null object: a fake answer here would let SteamStub believe
-  // a client exists that does not.
-  GameLibBridge_CreateInterface:
-    'void *GameLibBridge_CreateInterface(const char *pszName, int *pRc) {\n' +
-    '  static int s_hello_sent = 0;\n' +
-    '  static uint8_t s_req[4 + 4096];\n' +
-    '  uint8_t retbuf[4]; uint32_t retlen = 0;\n' +
-    '  if (pRc != NULL) *pRc = 1;\n' +
-    '  if (pszName == NULL) return NULL;\n' +
-    '#if defined(__x86_64__)\n' +
-    '  g_bridge_steamstub_path_active = 1;\n' +
-    '#endif\n' +
-    '  size_t n = strlen(pszName);\n' +
-    '  if (n > 4096) return NULL;\n' +
-    '  if (!s_hello_sent) {\n' +
-    '    uint8_t hb[1]; uint32_t hl = 0;\n' +
-    '    if (bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, (const uint8_t *)g_bridge_secret, BRIDGE_SECRET_HEX_LEN, hb, sizeof(hb), &hl)) s_hello_sent = 1;\n' +
-    '  }\n' +
-    '  s_req[0] = (uint8_t)(n & 0xff); s_req[1] = (uint8_t)((n >> 8) & 0xff); s_req[2] = (uint8_t)((n >> 16) & 0xff); s_req[3] = (uint8_t)((n >> 24) & 0xff);\n' +
-    '  memcpy(s_req + 4, pszName, n);\n' +
-    '  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_CREATE_INTERFACE, s_req, (uint32_t)(4 + n), retbuf, sizeof(retbuf), &retlen)) return NULL;\n' +
-    '  if (retlen != 4) return NULL;\n' +
-    '  uint32_t present = (uint32_t)retbuf[0] | ((uint32_t)retbuf[1] << 8) | ((uint32_t)retbuf[2] << 16) | ((uint32_t)retbuf[3] << 24);\n' +
-    '  if (present == 0) return NULL;\n' +
-    '  void *p = resolve_iface_by_exact_version(pszName);\n' +
-    '  if (pRc != NULL) *pRc = p != NULL ? 0 : 1;\n' +
-    '  return p;\n' +
     '}'
 }
 
@@ -2007,7 +1974,7 @@ function isSteamClientVersionLookupMethod(
 
 /**
  * WR-09 (52-20): the value each ISteamClient non-lookup wire method answers
- * LOCALLY for an ordinary x64 title (one not on the SteamStub path). These
+ * LOCALLY for an ordinary x64 title (every x64 title since D-20). These
  * are the pre-phase answers at 7ed535984 -- CreateSteamPipe and
  * ConnectToGlobalUser were `helperFallback: 1` there. Every other
  * non-lookup method answers '0' (int32 return) or nothing (void).
@@ -2018,23 +1985,24 @@ export const STEAM_CLIENT_OFF_PATH_VALUES: Readonly<Record<string, string>> = {
 }
 
 /**
- * The `g_bridge_steamstub_path_active` gate for a SteamClient-family
- * non-lookup wire method (WR-09): off the SteamStub path it returns its
- * pre-phase local value ahead of bridge_transact, so an ordinary title can
- * never reach the helper's live native ISteamClient. Returns '' for every
- * other method. Throws for a shape with no safe off-path value.
+ * The x64 local-answer gate for a SteamClient-family non-lookup wire method
+ * (WR-09): on x64 it returns its pre-phase local value and the wire body is
+ * compiled for x86 only (D-20 removed the SteamStub entry point that used to
+ * switch the wire path on). `prefix` opens the x64 branch and the `#else`;
+ * `suffix` is the closing `#endif`. Both are '' for every other method.
+ * Throws for a shape with no safe local value.
  */
 function steamClientOffPathGate(
   manifest: InterfaceManifest,
   method: MethodSignature
-): string {
+): { prefix: string; suffix: string } {
   const methodMode = method.mode ?? manifest.mode
   if (
     manifest.family !== STEAM_CLIENT_FAMILY ||
     methodMode !== 'wire' ||
     isSteamClientVersionLookupMethod(manifest, method)
   ) {
-    return ''
+    return { prefix: '', suffix: '' }
   }
   // out-value params (CreateLocalUser's phSteamPipe) are left untouched
   // off-path, exactly as the pre-phase stub did; out-buffer has no such
@@ -2047,7 +2015,7 @@ function steamClientOffPathGate(
     hasOut
   ) {
     throw new Error(
-      `SteamClient wire method ${manifest.interface}.${method.name} has no off-SteamStub-path value: ` +
+      `SteamClient wire method ${manifest.interface}.${method.name} has no x64 local value: ` +
         `sret, string, pointer returns and out-buffer params need a deliberate local answer`
     )
   }
@@ -2057,15 +2025,15 @@ function steamClientOffPathGate(
     value = ` ${entry ?? (method.returnKind === 'int64' ? '0LL' : '0')}`
   }
   const site = stubCallSite(manifest, method, 'OFFPATH')
-  return (
-    `#if defined(__x86_64__)\n` +
-    `  if (!g_bridge_steamstub_path_active) {\n` +
-    `  ${site.decl}` +
-    `  ${site.call}` +
-    `    return${value};\n` +
-    `  }\n` +
-    `#endif\n`
-  )
+  return {
+    prefix:
+      `#if defined(__x86_64__)\n` +
+      `${site.decl}` +
+      `${site.call}` +
+      `  return${value};\n` +
+      `#else\n`,
+    suffix: `#endif\n`
+  }
 }
 
 /**
@@ -2113,7 +2081,7 @@ function emitSteamClientVersionLookupStub(
 }
 
 /**
- * Phase 52: the FORWARDED GetISteamXxx lookup. Asks the native client (over
+ * Phase 52: the FORWARDED GetISteamXxx lookup (x86 only since D-20). Asks the native client (over
  * the wire, helper-side flat SteamAPI_ISteamClient_GetISteamXxx on
  * SteamClient()) whether it serves `pchVersion`; the helper answers a 4-byte
  * presence int (never the native pointer -- it is meaningless in the Wine
@@ -2121,9 +2089,9 @@ function emitSteamClientVersionLookupStub(
  * only when native answered non-NULL, otherwise NULL. It never fabricates an
  * answer locally on this path (T-52-02).
  *
- * CR-01: that forwarded path runs only AFTER the SteamStub entry point
- * (GameLibBridge_CreateInterface) has set g_bridge_steamstub_path_active.
- * Ordinary x64 titles take the pre-phase local path: proxy or null object.
+ * D-20: x64 has no forwarded lookup; it compiles only the local answer (proxy
+ * or null object). The x86 branch is the remaining 52-01 wire path, which no
+ * x86 export reaches (no x86 export hands out an ISteamClient).
  */
 function emitSteamClientForwardedLookup(
   manifest: InterfaceManifest,
@@ -2144,17 +2112,16 @@ function emitSteamClientForwardedLookup(
     `static void * THISCALL ${funcName}(${signatureParams}) {\n` +
     `  (void)self;\n` +
     `#if defined(__x86_64__)\n` +
-    `  if (!g_bridge_steamstub_path_active) {\n` +
-    `    void *local = resolve_iface_by_exact_version(${versionParam.name});\n` +
-    `    return local != NULL ? local : x64_null_object_for_version(${versionParam.name});\n` +
-    `  }\n` +
-    `#endif\n` +
+    `  void *local = resolve_iface_by_exact_version(${versionParam.name});\n` +
+    `  return local != NULL ? local : x64_null_object_for_version(${versionParam.name});\n` +
+    `#else\n` +
     `${argBufDecl}\n` +
     `  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;\n` +
     `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;\n` +
     `  memcpy(&present, retbuf, 4);\n` +
     `  if (present == 0) return NULL;\n` +
     `  return resolve_iface_by_exact_version(${versionParam.name});\n` +
+    `#endif\n` +
     `}\n`
   )
 }
@@ -2245,7 +2212,10 @@ function emitVtableStub(
   }
 
   const { decl: argBufDecl, lenExpr: argLenExpr } = packArgsBlock(method)
-  const offPathGate = steamClientOffPathGate(manifest, method)
+  const { prefix: offPathGate, suffix: offPathEnd } = steamClientOffPathGate(
+    manifest,
+    method
+  )
 
   if (stringReturn) {
     // CR-01: a register-return const char* cannot marshal a remote
@@ -2310,6 +2280,7 @@ function emitVtableStub(
       `${argBufDecl}\n` +
       `  uint8_t retbuf[1]; uint32_t retlen = 0;\n` +
       `  bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen);\n` +
+      offPathEnd +
       `}\n`
     )
   }
@@ -2334,6 +2305,7 @@ function emitVtableStub(
       `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < ${retWidth}) return 0;\n` +
       `  ${returnType} ret; memcpy(&ret, retbuf, ${retWidth});\n` +
       `  return ret;\n` +
+      offPathEnd +
       `}\n`
     )
   }
@@ -2427,6 +2399,7 @@ function emitVtableStub(
     `  ${returnType} ret; memcpy(&ret, retbuf, ${retWidth});\n` +
     `${decodeLines.join('\n')}\n` +
     `  return ret;\n` +
+    offPathEnd +
     `}\n`
   )
 }
@@ -3102,10 +3075,7 @@ export function generateShimC(
 // is a GameLib per-appId helper before any real interface call is issued.
 #define BRIDGE_CONTROL_ORDINAL 0xffff
 #define BRIDGE_CONTROL_SLOT_HELLO 2
-// Phase 52 (52-02): protocol.ts CONTROL_SLOT.createInterface == helper
-// CONTROL_SLOT_CREATE_INTERFACE. Asks the native client whether it accepts an
-// interface version (reply: 4-byte LE int32 present).
-#define BRIDGE_CONTROL_SLOT_CREATE_INTERFACE 3
+// Slot 3 was retired in Phase 56 (56-14, D-20); never reuse it.
 // Phase 53 (53-04, D-53-07): the flat ISteamClient_GetISteam* lookup tells the
 // helper which unserved interface version a game asked for (the helper handler
 // lands in 53-06; an unhandled slot is a harmless error response).
@@ -3586,11 +3556,7 @@ ${Array.from({ length: X64_NULL_OBJECT_SLOTS }, (_, i) => `  (vfn)vt_x64_null_s$
 };
 struct GLibX64NullObject { vfn *vptr; };
 static struct GLibX64NullObject g_x64_null_object_instance = { g_x64_null_object_vtbl };
-${emitX64NullSretObjects(manifests, options.x64NullSretInventory)}// CR-01: set only by GameLibBridge_CreateInterface (the SteamStub entry point,
-// reached only via steamclient64.dll). While clear, SteamClient GetISteam*
-// lookups take the pre-phase local path (proxy or null object).
-static volatile int g_bridge_steamstub_path_active = 0;
-#endif
+${emitX64NullSretObjects(manifests, options.x64NullSretInventory)}#endif
 
 // 51-15: forward declaration only -- the full definition (and
 // g_iface_table itself) lives in emitIfaceTableAndBareAccessors's output

@@ -4,7 +4,6 @@
 // regenerate it instead.
 
 export const SHIM64_GENERATED_EXPORTS: readonly string[] = [
-  'GameLibBridge_CreateInterface',
   'SteamAPI_GetHSteamPipe',
   'SteamAPI_GetHSteamUser',
   'SteamAPI_GetSteamInstallPath',
