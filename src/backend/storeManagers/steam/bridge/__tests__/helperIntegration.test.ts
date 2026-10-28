@@ -441,13 +441,11 @@ describeDarwinOnly(
       }
     }, 30000)
 
-    // Phase 52 (52-02): CONTROL CREATE_INTERFACE against a helper with no
-    // signed-in client (the fake HOME has no Steam, so g_inited stays 0).
-    // The real-profile arm -- a signed-in client answering `native=present`
-    // -- is deliberately left to the live gate (52-11), the named
-    // real-profile arm for this behavior.
-    test('CREATE_INTERFACE answers STATUS_ERR with no client, rejects malformed frames, logs FWD, and unknown slots stay refused', async () => {
-      const stageDir = mkdtempSync(join(profile.root, 'create-interface-'))
+    // D-20 (56-14): CONTROL slot 3 was Phase 52's interface probe. The handler
+    // is gone, so the helper refuses it like any unknown slot and writes no FWD
+    // line. A live FWD CreateInterface line can now only come from an old build.
+    test('retired CONTROL slot 3 answers STATUS_ERR and logs no FWD line (D-20)', async () => {
+      const stageDir = mkdtempSync(join(profile.root, 'retired-slot-3-'))
       const child = spawn(
         compiledHelperPath,
         ['--appid', '480', '--port', '0'],
@@ -462,18 +460,15 @@ describeDarwinOnly(
         stderr += data.toString()
       })
 
-      const nameFrame = (
-        requestId: number,
-        name: string,
-        declared?: number
-      ) => {
+      // Well-formed name blob: 4-byte LE length + ascii, as the old slot took.
+      const nameFrame = (requestId: number, name: string) => {
         const bytes = Buffer.from(name, 'ascii')
         const len = Buffer.alloc(4)
-        len.writeUInt32LE(declared ?? bytes.length, 0)
+        len.writeUInt32LE(bytes.length, 0)
         return encodeRequest(
           requestId,
           CONTROL_ORDINAL,
-          CONTROL_SLOT.createInterface,
+          3,
           Buffer.concat([len, bytes])
         )
       }
@@ -506,36 +501,16 @@ describeDarwinOnly(
         const socket = await connect()
         await authenticate(socket)
         try {
-          const ok = await sendFrameOnSocket(
+          const retired = await sendFrameOnSocket(
             socket,
             nameFrame(1, 'SteamClient017')
           )
-          expect(ok.status).toBe(STATUS_ERR)
-
-          // Malformed: argLen < 4, len 0, len > 4096.
-          const short = await sendFrameOnSocket(
-            socket,
-            encodeRequest(
-              2,
-              CONTROL_ORDINAL,
-              CONTROL_SLOT.createInterface,
-              Buffer.from([1, 2])
-            )
-          )
-          expect(short.status).toBe(STATUS_ERR)
-          expect(
-            (await sendFrameOnSocket(socket, nameFrame(3, ''))).status
-          ).toBe(STATUS_ERR)
-          const huge = await sendFrameOnSocket(
-            socket,
-            nameFrame(4, 'SteamClient017', 5000)
-          )
-          expect(huge.status).toBe(STATUS_ERR)
+          expect(retired.status).toBe(STATUS_ERR)
 
           // Unknown CONTROL slot (9 and 10 became real slots in quick k51).
           const unknownSlot = await sendFrameOnSocket(
             socket,
-            encodeRequest(5, CONTROL_ORDINAL, 11)
+            encodeRequest(2, CONTROL_ORDINAL, 11)
           )
           expect(unknownSlot.status).toBe(STATUS_ERR)
         } finally {
@@ -547,16 +522,14 @@ describeDarwinOnly(
         try {
           const health = await sendFrameOnSocket(
             fresh,
-            encodeControl(6, 'health')
+            encodeControl(3, 'health')
           )
           expect(health.status).toBe(STATUS_OK)
         } finally {
           fresh.destroy()
         }
 
-        expect(stderr).toMatch(
-          /FWD CreateInterface ver=SteamClient017 native=no-client/
-        )
+        expect(stderr).not.toMatch(/FWD CreateInterface/)
       } finally {
         child.kill()
       }
@@ -1325,7 +1298,6 @@ describeDarwinOnly(
             Buffer.from('abcd')
           ])
           for (const [id, slot, blob] of [
-            [4, CONTROL_SLOT.createInterface, nameBlob],
             [5, CONTROL_SLOT.reportVersion, nameBlob],
             [6, CONTROL_SLOT.reportInit, Buffer.alloc(8)],
             [9, CONTROL_SLOT.reportNullSret, nullSretBlob],

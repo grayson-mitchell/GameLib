@@ -55,7 +55,7 @@
  * via `gamelib_bridge.cfg`. HELLO (slot 2) carries it in the arg blob; the
  * helper marks a connection authenticated only on a constant-time match.
  * HEALTH and HELLO are the only slots served unauthenticated; WHOAMI,
- * CREATE_INTERFACE, REPORT_VERSION, REPORT_INIT, DRAIN and every interface
+ * REPORT_VERSION, REPORT_INIT, DRAIN and every interface
  * ordinal require an authenticated connection (refused with STATUS_ERR).
  * Threat model: other OS users and processes that cannot read this user's
  * files are in scope. A same-user attacker can read the cfg and the stored
@@ -114,10 +114,8 @@ export const CONTROL_SLOT = {
   // to a per-appId GameLib helper (not a stale/foreign listener on the
   // port it read out of gamelib_bridge.cfg) before issuing any real call.
   hello: 2,
-  // Phase 52 (52-02): shim export GameLibBridge_CreateInterface asks the
-  // native client whether it accepts an interface version; the reply is a
-  // 4-byte present flag.
-  createInterface: 3,
+  // Slot 3 was the Phase 52 interface-probe slot; retired in Phase 56
+  // (56-14, D-20). Never reuse it: an old shim could still send it.
   // D-53-07 (53-04 shim side, 53-06 helper side): the shim reports a flat
   // API version it could not serve; the helper logs `NOVER`.
   reportVersion: 4,

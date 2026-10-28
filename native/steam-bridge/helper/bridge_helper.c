@@ -80,7 +80,7 @@
  * AUTHENTICATION (Phase 55 WR-03): the loopback listener is reachable by any
  * local user, and the callback ring can hold a Steam web-API auth ticket.
  * HEALTH and HELLO are the ONLY slots served on an unauthenticated
- * connection. WHOAMI, CREATE_INTERFACE, REPORT_VERSION, REPORT_INIT,
+ * connection. WHOAMI, REPORT_VERSION, REPORT_INIT,
  * REPORT_NULL_SRET, REPORT_STUB_CALL, REQUEST_CURRENT_STATS,
  * REPORT_CB_DISPATCH, DRAIN and
  * every interface ordinal answer STATUS_ERR (empty ret, connection kept
@@ -135,12 +135,8 @@
  *     with no log. Logged as `CBDISP iCallback=<id> targets=<n> held=<h>`
  *     (max 32 lines plus one cap line). Never pumps, never logs CALL.
  *
- *   - CREATE_INTERFACE (slot 3, Phase 52 / ROADMAP Scope 1): argBlob is a
- *     4-byte LE length + interface-version bytes (e.g. "SteamClient017").
- *     Asks the genuine native client (SteamInternal_CreateInterface)
- *     whether it accepts that version; reply is a 4-byte LE int32 present
- *     flag. STATUS_ERR before InitFlat succeeds or on a malformed request.
- *     The helper never decides acceptance itself.
+ *   - Slot 3 (Phase 52 CREATE_INTERFACE) was retired in Phase 56 (56-14, D-20)
+ *     and is refused as an unknown slot; never reuse it.
  *
  * T-51-01 (mitigate, carries forward T-24-01): binds INADDR_LOOPBACK only
  * -- never a routable/all-interfaces bind, per helper.
@@ -207,9 +203,7 @@
 #define CONTROL_SLOT_WHOAMI 1
 // D-51-01: the shim's own connect-time handshake slot (see module doc).
 #define CONTROL_SLOT_HELLO 2
-// Phase 52 (52-02): ask the native client whether it accepts an interface
-// version (backs the shim's GameLibBridge_CreateInterface export).
-#define CONTROL_SLOT_CREATE_INTERFACE 3
+// Slot 3 retired in Phase 56 (56-14, D-20); never reuse it.
 // D-53-07 (53-04): the shim reports a flat-API version it could not serve.
 #define CONTROL_SLOT_REPORT_VERSION 4
 // D-53-15 (quick 261025-kax): the shim reports the GAME's own SteamAPI_Init
@@ -297,11 +291,6 @@ static int                  g_cbdisp_cap_noted = 0;
 #define STATS_LOG_MAX 32
 #define CBDISP_LOG_MAX 32
 #define CBDISP_MAX_TARGETS 512
-
-// Phase 52: NULL-tolerant -- a Steam build without this export degrades
-// CREATE_INTERFACE to STATUS_ERR, never FATAL (T-52-10).
-typedef void *(*SteamInternalCreateInterface_t)(const char *);
-static SteamInternalCreateInterface_t g_SteamInternal_CreateInterface;
 
 // True once SteamAPI_InitFlat succeeded against a live session -- gates
 // CONTROL WHOAMI and every real interface dispatch. HEALTH (and HELLO) are
@@ -431,12 +420,6 @@ static int load_steam_api(void) {
 
   InitFlat   = (InitFlat_t)dlsym(g_dylib_handle, "SteamAPI_InitFlat");
   RunCB      = (RunCallbacks_t)dlsym(g_dylib_handle, "SteamAPI_RunCallbacks");
-
-  g_SteamInternal_CreateInterface =
-      (SteamInternalCreateInterface_t)dlsym(g_dylib_handle, "SteamInternal_CreateInterface");
-  if (!g_SteamInternal_CreateInterface) {
-    logts("WARN", "SteamInternal_CreateInterface not exported -- CREATE_INTERFACE answers STATUS_ERR");
-  }
 
   // 51-10: every per-interface accessor/flat-function dlsym now lives in
   // the generated bridge_dispatch_init() (bridge_dispatch.h), called from
@@ -810,39 +793,6 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       uint8_t retbuf[8];
       memcpy(retbuf, &id, 8); // raw bytes, never parsed to a JS number
       send_response(fd, requestId, STATUS_OK, retbuf, 8);
-      return;
-    }
-    if (slot == CONTROL_SLOT_CREATE_INTERFACE) {
-      // T-52-07: bounds-check before any copy into the fixed buffer.
-      if (argBlob == NULL || argLen < 4) {
-        send_response(fd, requestId, STATUS_ERR, NULL, 0);
-        return;
-      }
-      uint32_t len;
-      memcpy(&len, argBlob, 4);
-      if (len == 0 || len > 4096 || (uint64_t)4 + len > argLen) {
-        send_response(fd, requestId, STATUS_ERR, NULL, 0);
-        return;
-      }
-      char name[4097];
-      memcpy(name, argBlob + 4, len);
-      name[len] = '\0';
-      char safe[132];
-      sanitize_ver(name, safe, sizeof safe);
-      char msg[256];
-      if (!g_inited || g_SteamInternal_CreateInterface == NULL) {
-        snprintf(msg, sizeof msg, "FWD CreateInterface ver=%s native=no-client", safe);
-        logts("FWD", msg);
-        send_response(fd, requestId, STATUS_ERR, NULL, 0);
-        return;
-      }
-      // T-52-08: every request asks the native client; no cache, no table.
-      void *iface = g_SteamInternal_CreateInterface(name);
-      int32_t present = iface != NULL ? 1 : 0;
-      snprintf(msg, sizeof msg, "FWD CreateInterface ver=%s native=%s", safe,
-               present ? "present" : "NULL");
-      logts("FWD", msg);
-      send_response(fd, requestId, STATUS_OK, (const uint8_t *)&present, 4);
       return;
     }
     if (slot == CONTROL_SLOT_REPORT_VERSION) {

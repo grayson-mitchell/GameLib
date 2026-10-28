@@ -166,8 +166,11 @@ describe('protocol -- interface ordinals + CONTROL reservation (review finding #
     expect(CONTROL_SLOT.whoami).toBe(1)
   })
 
-  it('CONTROL_SLOT.createInterface is 3 and all slots are distinct', () => {
-    expect(CONTROL_SLOT.createInterface).toBe(3)
+  it('slot 3 is retired (D-20): no probe key, no slot equals 3, all slots distinct', () => {
+    expect(CONTROL_SLOT).not.toHaveProperty('create' + 'Interface')
+    expect(Object.values(CONTROL_SLOT)).not.toContain(3)
+    expect(CONTROL_SLOT.reportVersion).toBe(4)
+    expect(CONTROL_SLOT.reportInit).toBe(5)
     const values = Object.values(CONTROL_SLOT)
     expect(new Set(values).size).toBe(values.length)
   })
