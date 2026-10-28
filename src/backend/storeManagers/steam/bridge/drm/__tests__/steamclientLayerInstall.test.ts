@@ -135,8 +135,15 @@ const run = (
 describe('ensureSteamclientLayerComponent', () => {
   it('downloads, signs off, installs and reports ok', async () => {
     const { entry, archive, data } = synthetic()
-    const fetchArchive = jest.fn(async () => archive)
-    const runCodesign = okCodesign()
+    const fetchArchive = jest.fn(
+      async (_url: string, _o: { maxBytes: number }) => archive
+    )
+    const runCodesign = jest.fn(async (_a: readonly string[], _o: unknown) => ({
+      code: 0,
+      stdout: '',
+      stderr: '',
+      timedOut: false
+    }))
     const onFetchStart = jest.fn()
     const r = await run(entry, { fetchArchive, runCodesign, onFetchStart })
     expect(r.status).toBe('ok')
@@ -161,7 +168,7 @@ describe('ensureSteamclientLayerComponent', () => {
     expect(fetchArchive.mock.calls[0][1].maxBytes).toBe(entry.archiveSize)
     expect(onFetchStart).toHaveBeenCalledTimes(1)
     expect(runCodesign).toHaveBeenCalledTimes(1)
-    const args = runCodesign.mock.calls[0][0] as string[]
+    const args = runCodesign.mock.calls[0][0]
     expect(args[0]).toBe('--remove-signature')
     expect(basename(args[1])).toBe('lsteamclient.so')
     expect(basename(dirname(args[1]))).toMatch(
@@ -289,14 +296,11 @@ describe('ensureSteamclientLayerComponent', () => {
       })()
     ]
     for (const m of mismatched) {
-      const entry =
-        m.archive === m.entry.archiveSha256
-          ? m.entry
-          : {
-              ...m.entry,
-              archiveSha256: sha(m.archive),
-              archiveSize: m.archive.length
-            }
+      const entry = {
+        ...m.entry,
+        archiveSha256: sha(m.archive),
+        archiveSize: m.archive.length
+      }
       const r = await run(entry, {
         fetchArchive: async () => m.archive,
         runCodesign: okCodesign()
