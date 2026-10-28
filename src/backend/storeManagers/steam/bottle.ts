@@ -13,7 +13,7 @@
  * loginusers.vdf/sentry files; login state is only ever set by the
  * guided-setup flow (17-06) confirming the user completed login.
  */
-import { dirname, join, relative, resolve } from 'path'
+import { dirname, isAbsolute, join, relative, resolve } from 'path'
 import {
   existsSync,
   mkdirSync,
@@ -1390,7 +1390,7 @@ function resolveCrossoverWine(label: string): WineInstallation | undefined {
  * to globalSettings.wineVersion only when CrossOver is not present on disk —
  * identical to today's behavior for dev/CI/non-macOS.
  */
-export function getBridgeBottleSettings(appId: string): GameSettings {
+function stockBridgeBottleSettings(appId: string): GameSettings {
   const globalSettings = GlobalConfig.get().getSettings()
   const resolved = resolveBridgeBottleName(appId)
   if (!resolved) {
@@ -1405,6 +1405,201 @@ export function getBridgeBottleSettings(appId: string): GameSettings {
       resolveCrossoverWine('CrossOver (bridge bottle runtime)') ??
       globalSettings.wineVersion
   }
+}
+
+/**
+ * Phase 56 (56-11): DRM-mode runner for a bridge bottle (D-11).
+ *
+ * A SteamStub title keeps its own `GameLibSteamBridge-<appid>` bottle, and
+ * only the runner changes, to GameLib's patched CrossOver clone. Every wine
+ * spawn for that appId must use the same runner, or the bottle's wineserver is
+ * started by one runner and joined by another (RESEARCH "Runner clone").
+ *
+ * The registry below is in-memory and session-scoped. It is filled only by
+ * `drmLaunchSetup` and does nothing at module load (sidecar exit contract).
+ */
+export type DrmLaunchForm = 'bin/wine+CX_BOTTLE' | 'raw WINELOADER+WINEPREFIX'
+
+// 56-01-SUMMARY.md (.planning/phases/56-bridge-steamclient-layer-drm-mode-for-steamstub-titles/56-01-SUMMARY.md) records: "launch_form: bin/wine+CX_BOTTLE"
+// ts-prune-ignore-next
+export const DRM_LAUNCH_FORM: DrmLaunchForm = 'bin/wine+CX_BOTTLE'
+
+/**
+ * The runner paths bottle.ts needs. 56-08's `RunnerReady` is passed as is: it
+ * is a structural superset. bottle.ts does not import the drm modules, which
+ * keeps the static import graph acyclic.
+ */
+// ts-prune-ignore-next
+export type DrmBridgeRunner = {
+  crossoverBuild: string
+  runnerDir: string
+  cxRoot: string
+  wrapperBin: string
+  wineloaderBin: string
+  wineserverBin: string
+  windowsDllDir: string
+  unixDllDir: string
+}
+
+const DRM_RUNNER_CXROOT_RE =
+  /\/steam-bridge\/drm\/runners\/crossover-([0-9]{1,4}(?:\.[0-9]{1,6}){2,4})\/CrossOver$/
+
+const DRM_RUNNER_FIELDS = [
+  'crossoverBuild',
+  'runnerDir',
+  'cxRoot',
+  'wrapperBin',
+  'wineloaderBin',
+  'wineserverBin',
+  'windowsDllDir',
+  'unixDllDir'
+] as const
+
+function isValidDrmRunner(runner: DrmBridgeRunner): boolean {
+  if (!runner || typeof runner !== 'object') return false
+  for (const field of DRM_RUNNER_FIELDS) {
+    const value = runner[field]
+    // eslint-disable-next-line no-control-regex
+    if (typeof value !== 'string' || !value || /[\x00-\x1f\x7f]/.test(value)) {
+      return false
+    }
+  }
+  const { cxRoot } = runner
+  if (!isAbsolute(cxRoot)) return false
+  const match = DRM_RUNNER_CXROOT_RE.exec(cxRoot)
+  if (!match || match[1] !== runner.crossoverBuild) return false
+  return (
+    runner.runnerDir === dirname(cxRoot) &&
+    runner.wrapperBin === join(cxRoot, 'bin', 'wine') &&
+    runner.wineloaderBin === join(cxRoot, 'bin', 'wineloader') &&
+    runner.wineserverBin === join(cxRoot, 'bin', 'wineserver') &&
+    runner.windowsDllDir === join(cxRoot, 'lib', 'wine', 'x86_64-windows') &&
+    runner.unixDllDir === join(cxRoot, 'lib', 'wine', 'x86_64-unix')
+  )
+}
+
+// 56-01-SUMMARY.md, consequences for 56-11: "swap the wine version to `bin: <clone>/bin/wine`
+// with `wineserver: <clone>/bin/wineserver`, keep `type: 'crossover'`".
+// ts-prune-ignore-next
+export function drmRunnerWineInstallation(
+  runner: DrmBridgeRunner,
+  form: DrmLaunchForm
+): WineInstallation | null {
+  try {
+    if (form !== 'bin/wine+CX_BOTTLE' && form !== 'raw WINELOADER+WINEPREFIX') {
+      return null
+    }
+    if (!isValidDrmRunner(runner)) return null
+    const name = `CrossOver ${runner.crossoverBuild} (GameLib DRM runner)`
+    if (form === 'bin/wine+CX_BOTTLE') {
+      return {
+        bin: runner.wrapperBin,
+        wineserver: runner.wineserverBin,
+        type: 'crossover',
+        name
+      }
+    }
+    return {
+      bin: runner.wineloaderBin,
+      wineserver: runner.wineserverBin,
+      type: 'wine',
+      name
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The DRM-mode settings for a title's OWN bridge bottle: same bottle name as
+ * the stock settings (D-11, no new bottle), runner swapped to the clone in the
+ * 56-01 launch form. Launch-time env (WINEDLLOVERRIDES, WINEDLLPATH, trace
+ * file) is 56-12's. Throws for a bad appId or an invalid runner.
+ */
+// ts-prune-ignore-next
+export function getDrmBridgeBottleSettings(
+  appId: string,
+  runner: DrmBridgeRunner,
+  form: DrmLaunchForm = DRM_LAUNCH_FORM
+): GameSettings {
+  const stock = stockBridgeBottleSettings(appId)
+  const wineVersion = drmRunnerWineInstallation(runner, form)
+  if (!wineVersion) {
+    throw new Error(
+      `getDrmBridgeBottleSettings: invalid DRM runner for appId "${appId}"`
+    )
+  }
+  if (form === 'bin/wine+CX_BOTTLE') {
+    return { ...stock, wineVersion }
+  }
+  const kept = (stock.enviromentOptions ?? []).filter((e) => {
+    const key = String(e.key).toUpperCase()
+    return key !== 'WINELOADER' && key !== 'WINESERVER'
+  })
+  return {
+    ...stock,
+    wineVersion,
+    winePrefix: getBottleDir(stock.wineCrossoverBottle),
+    enviromentOptions: [
+      ...kept,
+      { key: 'WINELOADER', value: runner.wineloaderBin },
+      { key: 'WINESERVER', value: runner.wineserverBin }
+    ]
+  }
+}
+
+const drmBridgeRunners = new Map<
+  string,
+  { runner: DrmBridgeRunner; form: DrmLaunchForm }
+>()
+
+// ts-prune-ignore-next
+export function setDrmBridgeRunner(
+  appId: string,
+  runner: DrmBridgeRunner,
+  form: DrmLaunchForm = DRM_LAUNCH_FORM
+): boolean {
+  if (!/^[0-9]{1,10}$/.test(String(appId))) return false
+  if (!drmRunnerWineInstallation(runner, form)) return false
+  const copy = {} as DrmBridgeRunner
+  for (const field of DRM_RUNNER_FIELDS) copy[field] = runner[field]
+  drmBridgeRunners.set(appId, { runner: copy, form })
+  logInfo(
+    `bottle: appId ${appId} uses DRM runner crossover-${copy.crossoverBuild}`,
+    LogPrefix.Steam
+  )
+  return true
+}
+
+// ts-prune-ignore-next
+export function clearDrmBridgeRunner(appId: string): void {
+  drmBridgeRunners.delete(appId)
+}
+
+// ts-prune-ignore-next
+export function getDrmBridgeRunner(
+  appId: string
+): { runner: DrmBridgeRunner; form: DrmLaunchForm } | undefined {
+  return drmBridgeRunners.get(appId)
+}
+
+function drmRunnerBinDir(appId: string): string | undefined {
+  const entry = drmBridgeRunners.get(appId)
+  return entry ? join(entry.runner.cxRoot, 'bin') : undefined
+}
+
+/**
+ * While a DRM runner is registered for this appId (56-11), every caller gets
+ * the clone runner, so the redist, known-fix, registry and launch spawns for
+ * the title share one wineserver. The bottle name never changes.
+ * See stockBridgeBottleSettings for the stock resolution.
+ */
+export function getBridgeBottleSettings(appId: string): GameSettings {
+  const entry = drmBridgeRunners.get(appId)
+  if (entry) {
+    return getDrmBridgeBottleSettings(appId, entry.runner, entry.form)
+  }
+  return stockBridgeBottleSettings(appId)
 }
 
 // quick/261016-u1w (D-C): matches a per-game bridge bottle name
@@ -1681,7 +1876,8 @@ export async function stopPerGameBridgeBottle(
     `stopPerGameBridgeBottle: wineserver -k for bottle "${name}" (appId ${appId})`,
     LogPrefix.Steam
   )
-  await killBottleWineServer(name)
+  // D-11: a registered DRM runner's own wineserver, one runner per bottle.
+  await killBottleWineServer(name, drmRunnerBinDir(appId))
   return { status: 'stopped' }
 }
 
@@ -1710,7 +1906,8 @@ export async function endPerGameBridgeBottleSession(
       `endPerGameBridgeBottleSession: wineserver -k for bottle "${name}" (appId ${appId})`,
       LogPrefix.Steam
     )
-    return await killBottleWineServer(name, undefined, timeoutMs)
+    // D-11: a registered DRM runner's own wineserver, one runner per bottle.
+    return await killBottleWineServer(name, drmRunnerBinDir(appId), timeoutMs)
   } catch (error) {
     logWarning(
       [`endPerGameBridgeBottleSession: failed for appId "${appId}"`, error],

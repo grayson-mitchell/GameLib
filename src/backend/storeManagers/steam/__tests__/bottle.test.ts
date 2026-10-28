@@ -21,7 +21,7 @@ import {
 // below. Distinct local name so it never collides with the mocked
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { readFileSync as readRealFile } from 'node:fs'
-import { join as joinPath } from 'node:path'
+import { dirname as dirnameOf, join as joinPath } from 'node:path'
 import { app } from 'backend/platform'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
@@ -58,8 +58,15 @@ import {
   removePerGameBridgeBottle,
   stopPerGameBridgeBottle,
   endPerGameBridgeBottleSession,
-  findBridgeInstallBottle
+  findBridgeInstallBottle,
+  DRM_LAUNCH_FORM,
+  drmRunnerWineInstallation,
+  getDrmBridgeBottleSettings,
+  setDrmBridgeRunner,
+  clearDrmBridgeRunner,
+  getDrmBridgeRunner
 } from '../bottle'
+import type { DrmBridgeRunner } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
 
@@ -1927,6 +1934,185 @@ describe('bottle.ts', () => {
         })
 
         expect(() => getBridgeBottleSettings('abc')).toThrow(/abc/)
+      })
+    })
+
+    describe('Phase 56 DRM runner (56-11)', () => {
+      const CX_ROOT =
+        '/Users/a b/Library/Application Support/GameLib/steam-bridge/drm/runners/crossover-26.3.0.39832/CrossOver'
+      const R: DrmBridgeRunner = {
+        crossoverBuild: '26.3.0.39832',
+        runnerDir: dirnameOf(CX_ROOT),
+        cxRoot: CX_ROOT,
+        wrapperBin: CX_ROOT + '/bin/wine',
+        wineloaderBin: CX_ROOT + '/bin/wineloader',
+        wineserverBin: CX_ROOT + '/bin/wineserver',
+        windowsDllDir: CX_ROOT + '/lib/wine/x86_64-windows',
+        unixDllDir: CX_ROOT + '/lib/wine/x86_64-unix'
+      }
+      const CX = 'bin/wine+CX_BOTTLE' as const
+      const RAW = 'raw WINELOADER+WINEPREFIX' as const
+
+      beforeEach(() => {
+        mockedGetNodefault.mockReturnValue(undefined)
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () =>
+            ({
+              wineVersion: defaultWine,
+              enviromentOptions: [{ key: 'winedebug', value: '-all' }]
+            }) as unknown as GameSettings
+        })
+        mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      })
+      afterEach(() => {
+        for (const id of ['219990', '206040']) clearDrmBridgeRunner(id)
+      })
+
+      test('DRM_LAUNCH_FORM equals launch_form in 56-01-SUMMARY.md', () => {
+        const text = readRealFile(
+          joinPath(
+            __dirname,
+            '..',
+            '..',
+            '..',
+            '..',
+            '..',
+            '.planning',
+            'phases',
+            '56-bridge-steamclient-layer-drm-mode-for-steamstub-titles',
+            '56-01-SUMMARY.md'
+          ),
+          'utf8'
+        )
+        const m = /^launch_form: (.+)$/m.exec(text)
+        expect(m?.[1]).toBe(DRM_LAUNCH_FORM)
+      })
+
+      test('wine installation for both forms', () => {
+        expect(drmRunnerWineInstallation(R, CX)).toEqual({
+          bin: CX_ROOT + '/bin/wine',
+          wineserver: CX_ROOT + '/bin/wineserver',
+          type: 'crossover',
+          name: 'CrossOver 26.3.0.39832 (GameLib DRM runner)'
+        })
+        expect(drmRunnerWineInstallation(R, RAW)).toEqual({
+          bin: CX_ROOT + '/bin/wineloader',
+          wineserver: CX_ROOT + '/bin/wineserver',
+          type: 'wine',
+          name: 'CrossOver 26.3.0.39832 (GameLib DRM runner)'
+        })
+      })
+
+      test('rejects invalid runners and forms', () => {
+        const bad = (o: Partial<DrmBridgeRunner>) =>
+          drmRunnerWineInstallation({ ...R, ...o }, CX)
+        expect(
+          bad({
+            cxRoot:
+              'relative/steam-bridge/drm/runners/crossover-26.3.0.39832/CrossOver'
+          })
+        ).toBeNull()
+        expect(bad({ cxRoot: '/x/CrossOver' })).toBeNull()
+        expect(bad({ crossoverBuild: '26.3.0.1' })).toBeNull()
+        expect(bad({ crossoverBuild: '26.3' })).toBeNull()
+        expect(
+          bad({
+            wrapperBin:
+              '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine'
+          })
+        ).toBeNull()
+        expect(bad({ wineserverBin: R.wineserverBin + '\n' })).toBeNull()
+        expect(bad({ wineloaderBin: R.wineloaderBin + '\0' })).toBeNull()
+        expect(
+          drmRunnerWineInstallation(R, 'other' as unknown as typeof CX)
+        ).toBeNull()
+      })
+
+      test('CX variant keeps the bottle name and swaps only the runner', () => {
+        const stock = getBridgeBottleSettings('219990')
+        const drm = getDrmBridgeBottleSettings('219990', R, CX)
+        expect(drm.wineCrossoverBottle).toBe('GameLibSteamBridge-219990')
+        expect(drm.wineCrossoverBottle).toBe(stock.wineCrossoverBottle)
+        expect(drm.wineVersion).toEqual(drmRunnerWineInstallation(R, CX))
+        expect({ ...drm, wineVersion: undefined }).toEqual({
+          ...stock,
+          wineVersion: undefined
+        })
+      })
+
+      test('raw variant sets prefix and replaces WINELOADER/WINESERVER entries', () => {
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () =>
+            ({
+              wineVersion: defaultWine,
+              enviromentOptions: [
+                { key: 'wineloader', value: '/old' },
+                { key: 'FOO', value: '1' }
+              ]
+            }) as unknown as GameSettings
+        })
+        const drm = getDrmBridgeBottleSettings('219990', R, RAW)
+        expect(drm.wineVersion.type).toBe('wine')
+        expect(drm.winePrefix).toBe(getBottleDir('GameLibSteamBridge-219990'))
+        const env = drm.enviromentOptions
+        expect(env.filter((e) => e.key === 'WINELOADER')).toEqual([
+          { key: 'WINELOADER', value: R.wineloaderBin }
+        ])
+        expect(env.filter((e) => e.key === 'WINESERVER')).toEqual([
+          { key: 'WINESERVER', value: R.wineserverBin }
+        ])
+        expect(env.some((e) => e.key === 'wineloader')).toBe(false)
+        expect(env.some((e) => e.key === 'FOO')).toBe(true)
+      })
+
+      test('getDrmBridgeBottleSettings throws on bad appId or runner', () => {
+        expect(() => getDrmBridgeBottleSettings('abc', R, CX)).toThrow('abc')
+        expect(() =>
+          getDrmBridgeBottleSettings('219990', { ...R, cxRoot: '/x' }, CX)
+        ).toThrow('invalid DRM runner')
+      })
+
+      test('registry routes only the registered appId, and clears', () => {
+        const stock206 = getBridgeBottleSettings('206040').wineVersion
+        expect(setDrmBridgeRunner('219990', R)).toBe(true)
+        expect(getBridgeBottleSettings('219990').wineVersion).toEqual(
+          drmRunnerWineInstallation(R, DRM_LAUNCH_FORM)
+        )
+        expect(getDrmBridgeRunner('219990')?.runner.runnerDir).toBe(R.runnerDir)
+        expect(getBridgeBottleSettings('206040').wineVersion).toEqual(stock206)
+        clearDrmBridgeRunner('219990')
+        expect(getDrmBridgeRunner('219990')).toBeUndefined()
+        expect(getBridgeBottleSettings('219990').wineVersion).toEqual(
+          defaultWine
+        )
+      })
+
+      test('registry refuses bad appId or runner', () => {
+        expect(setDrmBridgeRunner('abc', R)).toBe(false)
+        expect(setDrmBridgeRunner('219990', { ...R, cxRoot: '/x' })).toBe(false)
+        expect(getDrmBridgeRunner('219990')).toBeUndefined()
+        expect(getDrmBridgeRunner('abc')).toBeUndefined()
+      })
+
+      test('stop and end-session run the clone wineserver', async () => {
+        const dir = getBottleDir('GameLibSteamBridge-219990')
+        mockedExistsSync.mockImplementation((path: string) => path === dir)
+        setDrmBridgeRunner('219990', R)
+        await stopPerGameBridgeBottle('219990')
+        let call = mockedSpawnAsync.mock.calls.at(-1)!
+        expect(call[0]).toBe(CX_ROOT + '/bin/wineserver')
+        expect(call[1]).toEqual(['-k'])
+        expect(call[2]?.env?.WINEPREFIX).toBe(dir)
+        expect(call[2]?.env?.CX_ROOT).toBe(CX_ROOT)
+        mockedSpawnAsync.mockClear()
+        await endPerGameBridgeBottleSession(
+          '219990',
+          'GameLibSteamBridge-219990',
+          5000
+        )
+        call = mockedSpawnAsync.mock.calls.at(-1)!
+        expect(call[0]).toBe(CX_ROOT + '/bin/wineserver')
+        expect(call[2]?.timeout).toBe(5000)
       })
     })
 
