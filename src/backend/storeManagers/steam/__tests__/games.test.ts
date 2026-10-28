@@ -190,7 +190,8 @@ jest.mock('backend/platform', () => ({
     getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
     // Plain method (not jest.fn()) so it survives resetMocks -- publicDir in
     // constants/paths.ts resolves it at module-load time (see __mocks__/electron.ts).
-    getAppPath: () => '/tmp/mock-path'
+    getAppPath: () => '/tmp/mock-path',
+    raiseMainWindow: jest.fn()
   },
   dialog: {
     showMessageBox: jest.fn()
@@ -10954,6 +10955,51 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           ).toBe(false)
         }
       )
+
+      it('raises the main window before the dialog and logs display=confirmed on ack, display=unconfirmed on timeout', async () => {
+        const { app } = jest.requireMock<{
+          app: { raiseMainWindow: jest.Mock }
+        }>('backend/platform')
+        const { acknowledgeDialogDisplay } = jest.requireActual<
+          typeof import('backend/dialog/displayAck')
+        >('backend/dialog/displayAck')
+        jest.useFakeTimers()
+        try {
+          const confirmedId = freshId()
+          __drmLaunchSetupMock.mockResolvedValue({
+            status: 'error',
+            step: 'runner-clone',
+            cause: 'c'
+          })
+          await new SteamGame(confirmedId).launch({} as never)
+          expect(app.raiseMainWindow).toHaveBeenCalledTimes(1)
+          expect(app.raiseMainWindow.mock.invocationCallOrder[0]).toBeLessThan(
+            dialogMock.mock.invocationCallOrder[0]
+          )
+          const ackId = dialogMock.mock.calls[0][0].ackId as string
+          expect(typeof ackId).toBe('string')
+          expect(infoLines().some((l) => l.includes('display=pending'))).toBe(
+            true
+          )
+          expect(acknowledgeDialogDisplay(ackId)).toBe(true)
+          expect(
+            infoLines().some((l) =>
+              l.startsWith(
+                `[bridge-notice] appId=${confirmedId} display=confirmed elapsedMs=`
+              )
+            )
+          ).toBe(true)
+
+          const timedOutId = freshId()
+          await new SteamGame(timedOutId).launch({} as never)
+          jest.advanceTimersByTime(15_000)
+          expect(infoLines()).toContain(
+            `[bridge-notice] appId=${timedOutId} display=unconfirmed timeout=15000`
+          )
+        } finally {
+          jest.useRealTimers()
+        }
+      })
 
       it('a different step for the same appId shows the dialog again', async () => {
         const id = freshId()

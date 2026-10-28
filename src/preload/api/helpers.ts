@@ -3,6 +3,7 @@ import { tauriCreateNewWindow } from './tauriChildWindows'
 import { SHOW_ABOUT_DIALOG_EVENT } from 'common/aboutDialogEvent'
 
 export const notify = makeListenerCaller('notify')
+export const dialogDisplayed = makeListenerCaller('dialogDisplayed')
 export const openLoginPage = makeListenerCaller('openLoginPage')
 export const openSidInfoPage = makeListenerCaller('openSidInfoPage')
 export const openSupportPage = makeListenerCaller('openSupportPage')

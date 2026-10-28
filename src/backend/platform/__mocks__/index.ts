@@ -68,7 +68,8 @@ const app = {
   // through this manual mock (auto-applied to every suite that explicitly
   // calls `jest.mock('backend/platform')`) rather than getting a TypeError
   // from an undefined member.
-  hide: jest.fn()
+  hide: jest.fn(),
+  raiseMainWindow: jest.fn()
 }
 
 class Notification {

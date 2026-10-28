@@ -260,6 +260,15 @@ export const RUST_APP_RELAUNCH = 'app_relaunch' as const
 export const RUST_APP_HIDE = 'app_hide' as const
 
 /**
+ * Rust-side channel name: bring the main GameLib window to the front
+ * (`unminimize()` + `show()` + `set_focus()`). Backs `electronStub.ts`'s
+ * `app.raiseMainWindow()`, called before a bridge-notice dialog so a failure
+ * that happens while a game is in front is not rendered into a hidden window.
+ * Takes no args; resolves null. Never called for unrelated dialogs.
+ */
+export const RUST_MAIN_WINDOW_RAISE = 'main_window_raise' as const
+
+/**
  * Rust-side channel name: write text to the OS clipboard via `tauri-plugin-clipboard-manager`
  * (Phase 34.3 Plan 03, D-01/D-02). Backs `electronStub.ts`'s `clipboard.writeText()`.
  * Fire-and-forget from the caller's perspective (D-03, mirrors real Electron's void-returning
@@ -514,6 +523,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_APP_EXIT,
   RUST_APP_RELAUNCH,
   RUST_APP_HIDE,
+  RUST_MAIN_WINDOW_RAISE,
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_CLIPBOARD_READ_TEXT,
   RUST_TRAY_SET_ICON,

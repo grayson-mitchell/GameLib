@@ -8048,6 +8048,18 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             }
             Ok(Value::Null)
         }
+        // Bring the main window to the front before a bridge-notice dialog. Same three calls as
+        // the tray About arm (`open_about_window_from_tray`); takes no args, so there is no
+        // injection surface. A missing window is reported, not fatal.
+        "main_window_raise" => {
+            let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
+                return Err("main_window_raise:no-main-window".to_string());
+            };
+            let _ = window.unminimize();
+            let _ = window.show();
+            let _ = window.set_focus();
+            Ok(Value::Null)
+        }
         // Swap the real Tauri tray's icon (Phase 34.1 Plan 06, D-11). Backs the sidecar's
         // `changeTrayColor` registration (`appShellFlowRegistration.ts`), which reads
         // `trayIconVariant` from `GlobalConfig` and forwards it here as `{ variant }` (auto /

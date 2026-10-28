@@ -1,6 +1,6 @@
 import axios from 'axios'
 import i18next from 'i18next'
-import { shell } from 'backend/platform'
+import { app, shell } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
 import {
   chmodSync,
@@ -36,6 +36,7 @@ import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
+import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
 import { getFileSize } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
@@ -3410,13 +3411,27 @@ export default class SteamGame implements Game {
         cause
       })
     notify({ title, body })
+    // The failure usually lands while the game is in front. Bring GameLib up first, or the
+    // dialog renders into a window nobody can see (display=unconfirmed in the 56-16 gate).
+    app.raiseMainWindow()
+    const ackId = newDialogAckId()
+    const appId = this.appId
+    trackDialogDisplay(ackId, (result) => {
+      logInfo(
+        result.confirmed
+          ? `[bridge-notice] appId=${appId} display=confirmed elapsedMs=${result.elapsedMs}`
+          : `[bridge-notice] appId=${appId} display=unconfirmed timeout=${result.timeoutMs}`,
+        LogPrefix.Steam
+      )
+    })
     const dialogFrameSent = showDialogBoxModalAuto({
       title,
       message: body,
-      type: 'MESSAGE'
+      type: 'MESSAGE',
+      ackId
     })
     logInfo(
-      `[bridge-notice] appId=${this.appId} dispatched=in-app-dialog+notify dialog-frame-sent=${dialogFrameSent} display=unconfirmed`,
+      `[bridge-notice] appId=${this.appId} dispatched=in-app-dialog+notify dialog-frame-sent=${dialogFrameSent} display=pending`,
       LogPrefix.Steam
     )
   }

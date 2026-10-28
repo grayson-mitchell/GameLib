@@ -194,6 +194,8 @@ export type DialogModalOptions = {
   type?: DialogType
   className?: string
   onClose?: () => void
+  /** Backend correlation id; the renderer acks it once the dialog is on screen. */
+  ackId?: string
 }
 
 export interface ExternalLinkDialogOptions {

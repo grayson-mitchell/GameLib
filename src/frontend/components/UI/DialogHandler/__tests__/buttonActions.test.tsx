@@ -62,8 +62,10 @@ let capturedOnMessage: OnMessage | undefined
       api: {
         handleShowDialog: (cb: OnMessage) => () => void
         openExternalUrl: typeof mockOpenExternalUrl
+        logInfo: (message: unknown) => void
       }
     }
+    document: { visibilityState: string; hasFocus: () => boolean }
   }
 ).window = {
   api: {
@@ -73,9 +75,15 @@ let capturedOnMessage: OnMessage | undefined
         capturedOnMessage = undefined
       }
     },
-    openExternalUrl: mockOpenExternalUrl
+    openExternalUrl: mockOpenExternalUrl,
+    logInfo: jest.fn()
   }
 }
+;(
+  globalThis as unknown as {
+    document: { visibilityState: string; hasFocus: () => boolean }
+  }
+).document = { visibilityState: 'visible', hasFocus: () => true }
 
 jest.mock('../components/MessageBoxModal', () => ({
   __esModule: true,
@@ -114,6 +122,7 @@ jest.mock('react', () => {
       }
       return undefined
     },
+    useRef: (initial: unknown) => ({ current: initial }),
     useEffect: (fn: () => void) => {
       fn()
     }

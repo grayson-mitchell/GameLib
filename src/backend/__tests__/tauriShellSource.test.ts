@@ -394,6 +394,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // sidecar caller depends on -- that guards the CALLER, not this arm's behavior. The macOS
       // hide itself is unproven by any automated test.
       'app_hide',
+      // Bridge-notice display hardening (debug bridge-notice-display-unconfirm): raises the main
+      // window before a bridge-notice dialog. Same unminimize/show/set_focus calls as the tray
+      // About arm; no args, no pure logic to unit-test, so its proof is live only.
+      'main_window_raise',
       // Phase 35 Plan 08 (D-08/D-05, REQ-35-06) legitimately added exactly these two wake-lock
       // arms, replacing electronStub's `powerSaveBlocker` logged no-op; this gate only pins that
       // no OTHER, undeclared arm has crept in since.

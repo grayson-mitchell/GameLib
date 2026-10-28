@@ -18,6 +18,7 @@ import {
   ExternalLinkDialogOptions,
   HelpItem
 } from 'frontend/types'
+import { reduceDialogRequest } from './dialogQueue'
 import { withTranslation } from 'react-i18next'
 import { getGameInfo, getLegendaryConfig } from '../helpers'
 import { i18n, t, TFunction } from 'i18next'
@@ -202,6 +203,7 @@ interface StateProps {
   activeController: string
   connectivity: { status: ConnectivityStatus; retryIn: number }
   dialogModalOptions: DialogModalOptions
+  dialogQueue: DialogModalOptions[]
   externalLinkDialogOptions: ExternalLinkDialogOptions
   showRedeemKeyDialog: boolean
   sideloadedLibrary: GameInfo[]
@@ -576,6 +578,7 @@ class GlobalState extends PureComponent<Props> {
     },
     sideloadedLibrary: applyGameOverrides(sideloadLibrary.get('games', [])),
     dialogModalOptions: { showDialog: false },
+    dialogQueue: [],
     externalLinkDialogOptions: { showDialog: false },
     showRedeemKeyDialog: false,
     hideChangelogsOnStartup: globalSettings?.hideChangelogsOnStartup || false,
@@ -811,12 +814,15 @@ class GlobalState extends PureComponent<Props> {
     configStore.set('games.customCategories', newCustomCategories)
   }
 
-  handleShowDialogModal = ({
-    showDialog = true,
-    ...options
-  }: DialogModalOptions) => {
-    this.setState({
-      dialogModalOptions: { showDialog, ...options }
+  handleShowDialogModal = (request: DialogModalOptions) => {
+    // Functional update: a button click closes then opens a follow-up in the
+    // same batch, and each call must see the previous one's result.
+    this.setState((prev: StateProps) => {
+      const next = reduceDialogRequest(
+        { current: prev.dialogModalOptions, queue: prev.dialogQueue },
+        request
+      )
+      return { dialogModalOptions: next.current, dialogQueue: next.queue }
     })
   }
 

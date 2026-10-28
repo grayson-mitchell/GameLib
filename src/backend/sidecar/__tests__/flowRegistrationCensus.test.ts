@@ -63,7 +63,7 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   //
   // Quick 261026-b9r (2026-10-26): invoke 9 -> 10 (getAppManagementStatus), send 12 -> 14
   // (openAppManagementSettings, relaunchApp).
-  'appShellFlowRegistration.ts': { invoke: 10, send: 14 },
+  'appShellFlowRegistration.ts': { invoke: 10, send: 15 },
   'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
   'dialogFlowRegistration.ts': { invoke: 1, send: 0 },
   'downloadQueueFlowRegistration.ts': { invoke: 1, send: 4 },

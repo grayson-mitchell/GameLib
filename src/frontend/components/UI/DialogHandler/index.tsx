@@ -1,8 +1,9 @@
 import { ButtonOptions, DialogType } from 'common/types'
 import type { IpcRendererEvent } from 'backend/platform'
 import ContextProvider from 'frontend/state/ContextProvider'
+import { ackWhenVisible } from './ackWhenVisible'
 import { configStore } from 'frontend/helpers/electronStores'
-import { useEffect, useContext } from 'react'
+import { useEffect, useContext, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -67,6 +68,9 @@ export default function DialogHandler() {
   const { dialogModalOptions, showDialogModal } = useContext(ContextProvider)
   const navigate = useNavigate()
   const { t } = useTranslation()
+  // Read from inside the long-lived listener without resubscribing it.
+  const dialogOpenRef = useRef(false)
+  dialogOpenRef.current = Boolean(dialogModalOptions.showDialog)
 
   useEffect(() => {
     const onMessage = (
@@ -74,7 +78,8 @@ export default function DialogHandler() {
       title: string,
       message: string,
       type: DialogType,
-      buttons?: Array<ButtonOptions>
+      buttons?: Array<ButtonOptions>,
+      ackId?: string
     ) => {
       // 37-02 (D-07): attach a real onClick for any button carrying a
       // recognized `action` discriminator BEFORE showDialogModal renders it.
@@ -91,7 +96,14 @@ export default function DialogHandler() {
             }
           : button
       )
-      showDialogModal({ title, message, type, buttons: mappedButtons })
+      // Renderer-side half of the display check: the backend can only log
+      // "frame sent", so record here that the frame arrived, whether it
+      // replaces an open dialog (the renderer holds one at a time), and the
+      // document state. Title only, never the body.
+      window.api.logInfo(
+        `[dialog] showDialog frame received title="${title}" ackId=${ackId ?? 'none'} replacesOpenDialog=${dialogOpenRef.current} visibility=${document.visibilityState} hasFocus=${document.hasFocus()}`
+      )
+      showDialogModal({ title, message, type, buttons: mappedButtons, ackId })
     }
 
     const removeHandleShowDialogListener =
@@ -102,6 +114,14 @@ export default function DialogHandler() {
       removeHandleShowDialogListener()
     }
   }, [navigate, t, showDialogModal])
+
+  // Ack only once THIS dialog is the one rendered (a queued dialog waits its turn) and the
+  // document is visible; the backend turns the ack into `display=confirmed`.
+  const { showDialog: dialogOpen, ackId: openAckId } = dialogModalOptions
+  useEffect(() => {
+    if (!dialogOpen || !openAckId) return undefined
+    return ackWhenVisible(openAckId, window.api.dialogDisplayed, document)
+  }, [dialogOpen, openAckId])
 
   return (
     <>

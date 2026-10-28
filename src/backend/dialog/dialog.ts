@@ -42,6 +42,8 @@ function showDialogBoxModalAuto(props: {
   message: string
   type: DialogType
   buttons?: Array<ButtonOptions>
+  /** Correlation id the renderer echoes back via `dialogDisplayed` (see displayAck.ts). */
+  ackId?: string
 }): boolean {
   if (props.event) {
     props.event.sender.send(
@@ -59,7 +61,8 @@ function showDialogBoxModalAuto(props: {
         props.title,
         props.message,
         props.type,
-        props.buttons
+        props.buttons,
+        props.ackId
       )
     } catch (error) {
       logWarning(['showDialogBoxModalAuto:', error], LogPrefix.Backend)

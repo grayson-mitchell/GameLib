@@ -2,7 +2,7 @@
  * Curated app-shell channel registration (Phase 34.1 Plan 04,
  * D-03/D-08/D-09/D-13, REQ-34.1-05/REQ-34.1-09/REQ-34.1-12).
  *
- * Registers the 24 sidecar-routed app-shell channels (10 invoke + 14 send) onto electronStub's
+ * Registers the 25 sidecar-routed app-shell channels (10 invoke + 15 send) onto electronStub's
  * `ipcMain` recorder, importing the REAL `backend/appshell/*` functions
  * extracted by Plan 34.1-02 unchanged (mirrors `installFlowRegistration.ts`'s
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
@@ -32,7 +32,7 @@
  *       pre-existing install's `games.recent` is full of entries that do not
  *       carry one, and stranding those is worse than a probe
  *
- *   send (14, `ipcMain.on`):
+ *   send (15, `ipcMain.on`):
  *     - `openAppManagementSettings` (quick 261026-b9r) -> opens ONLY the
  *       fixed Privacy_AppBundles URL (no renderer-supplied URL); `relaunchApp`
  *       -> `app.relaunch()` then `app.quit()`, the same pair `resetHeroic` uses
@@ -40,6 +40,7 @@
  *     - `notify` -> `backend/dialog/dialog`'s `notify()` (`main.ts:538`),
  *       reaching `electronStub.Notification` -> the existing
  *       `notification_show` rustInvoke arm (Phase 33)
+ *     - `dialogDisplayed` -> `dialog/displayAck`'s `acknowledgeDialogDisplay()` (renderer ack that a showDialog frame is on screen)
  *     - `quit` -> `backend/utils`'s `handleExit()` (`main.ts:680`), reaching
  *       `electronStub.app.exit()` -> the existing `app_exit` rustInvoke arm
  *     - `openReleases`/`openCustomThemesWiki`/`openWebviewPage` -> thin
@@ -181,6 +182,7 @@ import {
   APP_MANAGEMENT_SETTINGS_URL
 } from '../appshell/appManagement'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
+import { acknowledgeDialogDisplay } from '../dialog/displayAck'
 import { handleExit, openUrlOrFile, detectVCRedist } from '../utils'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { GlobalConfig } from '../config'
@@ -258,7 +260,7 @@ function syncTrayIcon(): void {
 }
 
 /**
- * Registers the 24 app-shell channels (10 invoke + 14 send). Called once from
+ * Registers the 25 app-shell channels (10 invoke + 15 send). Called once from
  * `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
@@ -319,6 +321,16 @@ export function registerAppShellFlows(
       notify(args[0] as { title: string; body: string })
     } catch (error) {
       logSendFailure('notify', error)
+    }
+  })
+
+  // The renderer echoes the correlation id of a showDialog frame once the dialog is on screen
+  // (see ../dialog/displayAck.ts). An unknown or repeated id is ignored.
+  ipcMain.on('dialogDisplayed', (_event: unknown, ...args: unknown[]) => {
+    try {
+      acknowledgeDialogDisplay(args[0])
+    } catch (error) {
+      logSendFailure('dialogDisplayed', error)
     }
   })
 

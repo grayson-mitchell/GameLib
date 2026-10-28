@@ -82,6 +82,7 @@ import { requestRustInvoke } from '../sidecar/sidecarRpc'
 import {
   RUST_APP_EXIT,
   RUST_APP_HIDE,
+  RUST_MAIN_WINDOW_RAISE,
   RUST_APP_RELAUNCH,
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_DIALOG_MESSAGE,
@@ -375,6 +376,17 @@ export const app = {
     requestRustInvoke(RUST_APP_HIDE, []).catch((error) => {
       console.warn(
         `[electronStub] app.hide(): ${RUST_APP_HIDE} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+    })
+  },
+  // Raises the real GameLib window (unminimize + show + focus) through the Rust shell. The
+  // fakeWindow's show()/focus() stay no-ops because other callers use them; this is the one
+  // explicit opt-in, used only before a bridge-notice dialog. Best-effort, never throws.
+  raiseMainWindow: (): void => {
+    requestRustInvoke(RUST_MAIN_WINDOW_RAISE, []).catch((error) => {
+      console.warn(
+        `[electronStub] app.raiseMainWindow(): ${RUST_MAIN_WINDOW_RAISE} failed:`,
         error instanceof Error ? error.message : String(error)
       )
     })

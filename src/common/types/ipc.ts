@@ -96,6 +96,7 @@ interface SyncIPCFunctions {
   setZoomFactor: (zoomFactor: string) => void
   changeLanguage: (language: string) => void
   notify: (args: { title: string; body: string }) => void
+  dialogDisplayed: (ackId: string) => void
   frontendReady: () => void
   lock: (playing: boolean) => void
   unlock: () => void
@@ -746,7 +747,8 @@ interface FrontendMessages {
     title: string,
     message: string,
     type: DialogType,
-    buttons?: Array<ButtonOptions>
+    buttons?: Array<ButtonOptions>,
+    ackId?: string
   ) => void
   changedDMQueueInformation: (
     elements: DMQueueElement[],
