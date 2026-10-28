@@ -28,7 +28,7 @@ import { sendFrontendMessage } from '../../ipc'
 
 /**
  * True only on confirmed Apple silicon (i386 still runs on an Intel Mac, so
- * never `!isIntelMac` or a bare `isMac` -- 260821-le0), when the title is not
+ * never "not an Intel Mac" or a bare `isMac` -- 260821-le0), when the title is not
  * already Mach-O verified, and the known fix says macArch "32".
  */
 export function knownFixSaysMac32(
