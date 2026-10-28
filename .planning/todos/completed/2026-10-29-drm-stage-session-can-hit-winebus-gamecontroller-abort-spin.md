@@ -30,3 +30,6 @@ The hang is no longer a rare residual: it blocks every first DRM launch on a fre
 A 3 s `sample` of the spinning winedevice in the Ranch hang shows 20 of 20 samples on the main thread in `-[IOHIDDeviceClass valueAvailableCallback:]` > `IOHIDQueueClass copyNextValue:` > `_IOHIDValueCreateWithElementValuePtr` (IOKit HID): a controller/HID value-callback spin, not an abort. That answers the open question about the failure mode; the cause of the first-launch dependence is still unproven.
 No wine log exists for the stage session (see the stage-session logging todo), so the launch 1 hang left no trace beyond `ps` and the SIDECAR timeout lines. The processes exit on their own after about 90 s.
 Candidate directions stay as above; any fix needs a live gate on a fresh bottle, since a staged bottle never reproduces it.
+
+## Resolution (2026-10-29)
+Resolved by debug session drm-stage-winebus-hid-spin (.planning/debug/resolved/drm-stage-winebus-hid-spin.md). Cause: a HID gamepad GameController does not claim (PowerA Switch 2 wired pad) faults winebus IOHID in winedevice; the stage hangs when that lands during wineboot --init. Fix: one retry after ending the stage session, with a cwd-based kill that reaches winedevice. Root cause tracked in 2026-10-29-winebus-iohid-wedges-on-powera-switch2-pad.md.
