@@ -36,7 +36,7 @@ and never committed.
 | `unix_steam_input_manual.cpp` | `3f9e3390a9c4b060a367a312d61f84fc3690141ef34811484b3c21481d7583a7` |
 
 - `unixlib.cpp` and `unix_steam_input_manual.cpp` are committed byte-for-byte.
-- GameLib `steamclient_main.c` sha256 (as committed): `8c73e894781829e395e586306bec9aa29a5bae76b06678149d646feed20b7bbe`.
+- GameLib `steamclient_main.c` sha256 (as committed): `b59c4e88e55dd4330d3b9a5b0fc9901391f189550d5b05b01c41ab71b8d989e1`.
 - Strip rule: deleting every block from a line whose trimmed content is
   `/* GAMELIB-DRM-TRACE BEGIN (Phase 56 D-15/D-16) */` through the line whose trimmed content is
   `/* GAMELIB-DRM-TRACE END */`, marker lines included, reproduces the upstream bytes exactly. There

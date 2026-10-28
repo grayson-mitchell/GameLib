@@ -609,7 +609,7 @@ void *CDECL CreateInterface(const char *name, int *return_code)
     if (!load_steamclient()) return NULL;
     if (STEAMCLIENT_CALL( steamclient_CreateInterface, &params )) return NULL;
     /* GAMELIB-DRM-TRACE BEGIN (Phase 56 D-15/D-16) */
-    if (params._ret) gamelib_trace_create_interface( name );
+    if (params._ret.handle) gamelib_trace_create_interface( name );
     /* GAMELIB-DRM-TRACE END */
     return create_win_interface( name, params._ret );
 }
