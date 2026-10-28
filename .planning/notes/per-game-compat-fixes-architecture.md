@@ -134,3 +134,85 @@ the `GST_PLUGIN_PATH` that points at it. A binary payload stays tier 2 (bundled/
 remote). Unverified: whether CrossOver's GStreamer honours `GST_PLUGIN_PATH` and loads an
 externally built 1.24.x plugin. A spike settles that before the key is designed. Detail in
 `.planning/todos/pending/2026-10-25-unclaimed-world-mainmenu-wmv-fails-in-wine-media-foundation.md`.
+
+## External formats (researched 2026-10-29)
+
+Update (quick 261029-8ws, 2026-10-29): we looked at what other Wine launchers and tools publish as
+per-game fix data. On macOS nobody else publishes structured, reusable per-game fix data;
+umu-protonfixes is the one large open dataset.
+
+| Format | What it is | Licence / reuse | Verdict |
+| --- | --- | --- | --- |
+| umu-protonfixes (Open-Wine-Components; used by Proton-GE, Lutris, Heroic on Linux) | One Python file per game keyed by Steam appId, in per-store dirs (gamefixes-steam, -gog, -egs, -amazon, -humble, -itchio, -ubisoft, -ea, -battlenet, -umu, -zoomplatform) | BSD-2-Clause | Offline seed source, not a runtime format. It is Python code targeting Proton on Linux, so it cannot be loaded as data and nothing in it is Mac-validated. |
+| Lutris installers | YAML install scripts tied to Lutris's installer flow | Licence of the community installer database not found | Ideas only. |
+| CrossTie (CodeWeavers) | CrossOver install recipes (application profile, pre-install dependencies, install, post-install) for installing apps, not launch-time game fixes | No reuse terms found | No. |
+| Whisky (discontinued April 2025), Mythic (Swift launcher, engine on Apple GPTK plus a Whisky-derived Wine), Sikarugir (renamed Kegworks; hand-built per-game wrappers) | No shareable per-game fix database found | n/a | No. |
+
+### protonfixes, measured
+
+Measured from a master tarball on 2026-10-29: 314 files in gamefixes-steam and 490 across all
+gamefixes-* dirs. Helper call tally across all 490 files, method `grep -ho 'util\.[a-z_]+'`:
+
+| Helper | Calls | GameLib mapping |
+| --- | --- | --- |
+| protontricks | 413 | `winetricks` |
+| winedll_override | 91 | `dllOverrides` (unbuilt) |
+| set_environment | 80 | `envVariables` |
+| regedit_add | 54 | `registry` |
+| replace_command | 49 | proposed `exeOverride` |
+| append_argument | 39 | proposed `launchArgs` |
+| protonprefix | 23 | — |
+| set_cpu_topology_limit | 20 | expressible today as `envVariables` WINE_CPU_TOPOLOGY |
+| disable_esync | 19 | does not apply on macOS |
+| disable_fsync | 18 | does not apply on macOS |
+| get_game_install_path | 17 | — |
+| set_ini_options | 13 | proposed `configEdits` (set_xml_options also exists) |
+| import_saves_folder | 10 | — |
+| del_environment | 9 | — |
+| disable_nvapi | 5 | does not apply on macOS |
+
+### Lutris vocabulary
+
+Runner `overrides` (DLL overrides n / b / n,b / b,n / disabled), `system.env`, tasks `set_regedit`,
+`delete_registry_key`, `set_regedit_file`, `winetricks`, `winekill`, directives `write_config`
+(INI), `write_json`, `merge`, `extract`, `execute`. docs/installers.rst documents no checksum
+support for downloaded files.
+
+### Proposed tier-2 (format) additions, in priority order
+
+1. `dllOverrides`: already in decision 3, still unbuilt; second by protonfixes usage (91). Must be
+   registry-backed (`AppDefaults\<exe>\DllOverrides`) because CrossOver's wine wrapper drops
+   WINEDLLOVERRIDES (spike 031, decision 3).
+2. `launchArgs` + `exeOverride` (append_argument 39 + replace_command 49 = 88). Neither runs new
+   code, so both are tier-1 candidates; tier placement is an operator decision.
+3. `registryDelete`: Lutris has delete_registry_key; GameLib's `registry` only adds.
+4. `configEdits` (INI/XML/JSON option edits). Conflicts with decision 4 ("never modify game
+   files") unless scoped to config files and recorded in the decision-5 ledger. Operator decision.
+5. `platforms` moves up in priority: imported Linux-origin fixes need scoping to the runtime
+   (CrossOver / Wine / GPTK) they were validated on.
+
+### Option: split tier 2 by risk
+
+**Status: recorded, not decided.** Adopting it would revise quick 261025-thk's "tier 1 cannot set
+registry values, drop DLLs or change the shim" (decisions 1 and 6). This section does not change
+those decisions. The two halves:
+
+- Remote-eligible with strict validation: settings-only keys, i.e. `dllOverrides` and `registry`
+  scoped to `AppDefaults\<exe>` and `HKCU\Software\Wine`, argued as no riskier than tier 1's
+  `runInPrefix` / `winetricks`.
+- Bundled or signed-only: `overlays` (binary payloads) and `shimFeatures` (they change code
+  running in the game process).
+
+### Follow-ups
+
+- `.planning/todos/pending/2026-10-29-known-fix-dlloverrides-key.md`
+- `.planning/todos/pending/2026-10-29-known-fix-launchargs-exeoverride-keys.md`
+- `.planning/todos/pending/2026-10-29-protonfixes-import-dev-tool.md`
+
+### Sources
+
+- https://github.com/Open-Wine-Components/umu-protonfixes
+- https://raw.githubusercontent.com/lutris/lutris/master/docs/installers.rst
+- https://codeweavers.helpjuice.com/en_US/crosstie-data-startpage
+- https://github.com/Sikarugir-App/Sikarugir
+- https://github.com/mythicapp
