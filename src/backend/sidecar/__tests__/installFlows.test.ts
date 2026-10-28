@@ -110,20 +110,23 @@ jest.mock('axios', () => {
 //
 // RE-ENTRANT FACTORY (fix for the Test-workflow red of 2026-10-26): the real
 // `backend/utils` sits inside import cycles (utils -> gog/presence -> utils, and
-// utils -> downloadmanager/downloadqueue -> steam/cancelDelete -> steam/
-// installLocation -> utils, utils -> storeManagers -> steam/library ->
-// installLocation -> utils). When `backend/utils` is first required through the
-// mock, `jest.requireActual` below runs the real module, whose own imports
-// require the mock AGAIN before the outer factory has returned -- so this
-// factory executes more than once, and the LAST to return wins the registry.
-// A bare `jest.fn()` per execution therefore handed `installLocation` one
+// utils -> storeManagers -> gog/library -> gog/redist -> downloadmanager/
+// downloadqueue -> steam/cancelDelete -> steam/library -> steam/depot ->
+// steam/installLocation -> utils, measured by instrumenting installLocation's
+// first load). When `backend/utils` is first required through the mock,
+// `jest.requireActual` below runs the real module, whose own imports require
+// the mock AGAIN before the outer factory has returned -- so this factory
+// executes more than once, and the LAST to return wins the registry. A bare
+// `jest.fn()` per execution therefore handed `installLocation` one
 // `getSteamLibraries` and handed this file's `import` a different one:
 // `mockResolvedValue` on ours never reached the code under test, which got
 // `undefined` and threw "Cannot read properties of undefined (reading 'map')"
-// (Test 1b). Which module loads installLocation inside that window is an import-
-// order accident (quick-261027-cux added the downloadqueue edge; Phase 54
-// added the library edge), so the fns are minted ONCE, on this file's own
-// sandbox global, and every execution of the factory reuses them.
+// (Test 1b). Whether installLocation is first loaded inside that window is an
+// import-order accident, not a property of anything this suite tests: the
+// downloadqueue -> cancelDelete edge from quick-261027-cux (eceb1ef9b) is the
+// first commit that flipped it (git-bisected), and later boot-order changes
+// keep it flipped. So the fns are minted ONCE, on this file's own sandbox
+// global, and every execution of the factory reuses them.
 jest.mock('backend/utils', () => {
   const shared = globalThis as typeof globalThis & {
     __installFlowsUtilsMocks?: {
