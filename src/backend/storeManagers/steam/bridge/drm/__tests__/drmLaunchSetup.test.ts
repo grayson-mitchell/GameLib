@@ -386,6 +386,82 @@ describe('drmLaunchSetup', () => {
     expect(res.progressSent).toBe(false)
   })
 
+  describe('terminal done after failure (56-27, IN-01)', () => {
+    const progressDeps = () => ({
+      ensureComponent: jest.fn(async (_o: Any, d: Any) => {
+        d.onFetchStart()
+        return { status: 'ok', ...COMPONENT }
+      })
+    })
+    const doneOf = (id: string) => ({
+      appName: id,
+      runner: 'steam',
+      status: 'done'
+    })
+
+    test('progress then stage error sends done last', async () => {
+      const id = freshId()
+      const deps = makeDeps([], {
+        ...progressDeps(),
+        stageBottle: jest.fn(async () => ({
+          status: 'error',
+          step: 'bottle-stage',
+          cause: 'boom'
+        }))
+      } as Any)
+      const res = (await drmLaunchSetup(makeInput(id), deps)) as Any
+      expect(res.status).toBe('error')
+      expect(res.step).toBe('bottle-stage')
+      const calls = deps.sendStatus.mock.calls
+      expect(calls[calls.length - 1][0]).toEqual(doneOf(id))
+    })
+
+    test('progress then stage throw sends done and returns bottle-stage error', async () => {
+      const id = freshId()
+      const deps = makeDeps([], {
+        ...progressDeps(),
+        stageBottle: jest.fn(async () => {
+          throw new Error('kaboom')
+        })
+      } as Any)
+      const res = (await drmLaunchSetup(makeInput(id), deps)) as Any
+      expect(res.status).toBe('error')
+      expect(res.step).toBe('bottle-stage')
+      const calls = deps.sendStatus.mock.calls
+      expect(calls[calls.length - 1][0]).toEqual(doneOf(id))
+    })
+
+    test('no progress and stage error sends nothing', async () => {
+      const deps = makeDeps([], {
+        stageBottle: jest.fn(async () => ({
+          status: 'error',
+          step: 'bottle-stage',
+          cause: 'boom'
+        }))
+      } as Any)
+      await drmLaunchSetup(makeInput(freshId()), deps)
+      expect(deps.sendStatus).not.toHaveBeenCalled()
+    })
+
+    test('Mac Steam not running sends nothing', async () => {
+      const deps = makeDeps([], {
+        isMacSteamRunning: jest.fn(async () => false)
+      } as Any)
+      const res = (await drmLaunchSetup(makeInput(freshId()), deps)) as Any
+      expect(res.status).toBe('error')
+      expect(deps.sendStatus).not.toHaveBeenCalled()
+    })
+
+    test('progress then success sends no done', async () => {
+      const deps = makeDeps([], progressDeps() as Any)
+      const res = (await drmLaunchSetup(makeInput(freshId()), deps)) as Any
+      expect(res.status).toBe('ok')
+      expect(
+        deps.sendStatus.mock.calls.some((c: Any) => c[0].status === 'done')
+      ).toBe(false)
+    })
+  })
+
   test('registration refused gives a bottle-stage error and no stage call', async () => {
     const deps = makeDeps([], { registerRunner: jest.fn(() => false) } as Any)
     const res = (await drmLaunchSetup(makeInput(freshId()), deps)) as Any

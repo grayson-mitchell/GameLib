@@ -342,6 +342,22 @@ async function runSetup(
     ) {
       clearRunner(appId)
     }
+    // 56-27 (IN-01): the Steam launch never reaches launcher.ts's 'done', so a
+    // failure after progress must end the card's 'drm-setup' status itself.
+    if (progressSent) {
+      try {
+        sendStatus({ appName: appId, runner: 'steam', status: 'done' })
+        logInfo(
+          `drm setup: appId ${appId} sent terminal status done after ${stage}`,
+          LogPrefix.Steam
+        )
+      } catch (err) {
+        logWarning(
+          `drm setup: appId ${appId} terminal status send failed: ${messageOf(err)}`,
+          LogPrefix.Steam
+        )
+      }
+    }
     return result
   }
 
@@ -356,101 +372,108 @@ async function runSetup(
     }
   }
 
-  // 1. Mac Steam
-  let running: boolean | ReturnType<typeof drmStepError>
-  try {
-    running = await (deps.isMacSteamRunning
-      ? deps.isMacSteamRunning()
-      : isMacSteamRunning(deps.macSteamProbeTimeoutMs))
-  } catch (err) {
-    running = drmStepError(
-      'steam-not-running',
-      'could not check Mac Steam: ' + messageOf(err)
-    )
-  }
-  if (running !== true) {
-    return fail(
-      'steam-check',
-      running === false
-        ? drmStepError('steam-not-running', 'Mac Steam is not running')
-        : running
-    )
-  }
-
-  // 2-5. CrossOver allowlist, component, runner, Valve client
-  const downloads = await ensureDrmDownloads(appFolder, deps, progress)
-  if (downloads.status === 'error') {
-    return fail(downloads.stage, downloads.error)
-  }
-  const { crossover, component, runner, valveClient } = downloads
-
-  // 6. Bottle staging
-  let bottleSettings: GameSettings
-  try {
-    bottleSettings = buildBottleSettings(appId, runner, DRM_LAUNCH_FORM)
-  } catch (err) {
-    return fail('bottle-stage', drmStepError('bottle-stage', err))
-  }
-  try {
-    if (getRunner(appId)?.runner.runnerDir !== runner.runnerDir) {
-      // 56-01-SUMMARY.md, consequences for 56-11: "56-11 should stop a still-running
-      // stock wineserver for the appId before the first clone launch (D-11)".
-      // Required by 56-01; also cheap and bounded. It runs BEFORE registration
-      // so the stop uses the previous runner's wineserver.
-      await endBottleSession(
-        appId,
-        input.bottleName,
-        DRM_END_SESSION_TIMEOUT_MS
+  const body = async (): Promise<DrmLaunchSetupResult> => {
+    // 1. Mac Steam
+    let running: boolean | ReturnType<typeof drmStepError>
+    try {
+      running = await (deps.isMacSteamRunning
+        ? deps.isMacSteamRunning()
+        : isMacSteamRunning(deps.macSteamProbeTimeoutMs))
+    } catch (err) {
+      running = drmStepError(
+        'steam-not-running',
+        'could not check Mac Steam: ' + messageOf(err)
       )
-      if (!registerRunner(appId, runner, DRM_LAUNCH_FORM)) {
-        return fail(
-          'bottle-stage',
-          drmStepError('bottle-stage', 'DRM runner registration refused')
-        )
-      }
     }
+    if (running !== true) {
+      return fail(
+        'steam-check',
+        running === false
+          ? drmStepError('steam-not-running', 'Mac Steam is not running')
+          : running
+      )
+    }
+
+    // 2-5. CrossOver allowlist, component, runner, Valve client
+    const downloads = await ensureDrmDownloads(appFolder, deps, progress)
+    if (downloads.status === 'error') {
+      return fail(downloads.stage, downloads.error)
+    }
+    const { crossover, component, runner, valveClient } = downloads
+
+    // 6. Bottle staging
+    let bottleSettings: GameSettings
+    try {
+      bottleSettings = buildBottleSettings(appId, runner, DRM_LAUNCH_FORM)
+    } catch (err) {
+      return fail('bottle-stage', drmStepError('bottle-stage', err))
+    }
+    try {
+      if (getRunner(appId)?.runner.runnerDir !== runner.runnerDir) {
+        // 56-01-SUMMARY.md, consequences for 56-11: "56-11 should stop a still-running
+        // stock wineserver for the appId before the first clone launch (D-11)".
+        // Required by 56-01; also cheap and bounded. It runs BEFORE registration
+        // so the stop uses the previous runner's wineserver.
+        await endBottleSession(
+          appId,
+          input.bottleName,
+          DRM_END_SESSION_TIMEOUT_MS
+        )
+        if (!registerRunner(appId, runner, DRM_LAUNCH_FORM)) {
+          return fail(
+            'bottle-stage',
+            drmStepError('bottle-stage', 'DRM runner registration refused')
+          )
+        }
+      }
+    } catch (err) {
+      return fail('bottle-stage', drmStepError('bottle-stage', err))
+    }
+    const stage = deps.stageBottle ?? stageDrmBottle
+    const stageInput: StageDrmBottleInput = {
+      appId,
+      bottleName: input.bottleName,
+      bottleSettings,
+      exePath: input.exePath,
+      installRoot: input.installRoot,
+      installdir: input.installdir,
+      valveClientDir: valveClient.clientDir,
+      componentDir: component.componentDir,
+      ...(input.drmExe && resolve(input.drmExe) !== resolve(input.exePath)
+        ? { extraExeDirs: [dirname(input.drmExe)] }
+        : {}),
+      signal: input.signal
+    }
+    const staged = await run('bottle-stage', () => stage(stageInput))
+    if (staged.status === 'error') return fail('bottle-stage', staged)
+    const { status: _status, ...stagedBottle } = staged
+
+    logInfo(
+      `drm setup: appId ${appId} ready crossover=${crossover.crossoverBuild} client=${valveClient.manifestVersion} component=${component.source} runner=${runner.source} valve=${valveClient.source}`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'ok',
+      mode: 'steamclient-layer',
+      appId,
+      crossover,
+      component,
+      runner,
+      valveClient,
+      bottle: stagedBottle,
+      bottleSettings,
+      launchForm: DRM_LAUNCH_FORM,
+      anchor: {
+        crossover: crossover.crossoverBuild,
+        client: valveClient.manifestVersion
+      },
+      progressSent
+    }
+  }
+  try {
+    return await body()
   } catch (err) {
     return fail('bottle-stage', drmStepError('bottle-stage', err))
-  }
-  const stage = deps.stageBottle ?? stageDrmBottle
-  const stageInput: StageDrmBottleInput = {
-    appId,
-    bottleName: input.bottleName,
-    bottleSettings,
-    exePath: input.exePath,
-    installRoot: input.installRoot,
-    installdir: input.installdir,
-    valveClientDir: valveClient.clientDir,
-    componentDir: component.componentDir,
-    ...(input.drmExe && resolve(input.drmExe) !== resolve(input.exePath)
-      ? { extraExeDirs: [dirname(input.drmExe)] }
-      : {}),
-    signal: input.signal
-  }
-  const staged = await run('bottle-stage', () => stage(stageInput))
-  if (staged.status === 'error') return fail('bottle-stage', staged)
-  const { status: _status, ...stagedBottle } = staged
-
-  logInfo(
-    `drm setup: appId ${appId} ready crossover=${crossover.crossoverBuild} client=${valveClient.manifestVersion} component=${component.source} runner=${runner.source} valve=${valveClient.source}`,
-    LogPrefix.Steam
-  )
-  return {
-    status: 'ok',
-    mode: 'steamclient-layer',
-    appId,
-    crossover,
-    component,
-    runner,
-    valveClient,
-    bottle: stagedBottle,
-    bottleSettings,
-    launchForm: DRM_LAUNCH_FORM,
-    anchor: {
-      crossover: crossover.crossoverBuild,
-      client: valveClient.manifestVersion
-    },
-    progressSent
   }
 }
 
