@@ -13,9 +13,9 @@ import { randomUUID } from 'crypto'
  * exists between a dispatch and its ack/timeout).
  */
 
-export const DIALOG_ACK_TIMEOUT_MS = 15_000
+const DIALOG_ACK_TIMEOUT_MS = 15_000
 
-export type DialogDisplayResult =
+type DialogDisplayResult =
   | { confirmed: true; elapsedMs: number }
   | { confirmed: false; timeoutMs: number }
 
