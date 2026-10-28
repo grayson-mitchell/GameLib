@@ -68,3 +68,22 @@ games come from Web API `IPlayerService/GetOwnedGames` with an access token
 - depot installs: still need an authenticated session (ownership, depot keys, manifest request
   codes). Connect only for the install and log off after; Friends will still drop during an install
   unless another route is found. Whether Friends recovers by itself after logoff is untested.
+
+## Closed 2026-10-28: fixed by Phase 54
+
+Phase 54 (_Steam library without an authenticated CM session at launch_) was created to action this
+todo (`STATE.md`, Phase 54 entry). `54-VERIFICATION.md`: `status: passed`, 6/6. SC4: "launch/browse/game
+page/Play leave Friends signed in".
+
+- Launching, browsing, opening game pages and pressing Play no longer log on to the CM as the user.
+  Public data comes from an anonymous session. `54-UAT.md` items 1-4 pass: 0 authenticated logons,
+  operator Friends signed in.
+- Explicit Refresh, installs, sign-in and key redeem still need an authenticated logon. They now run
+  inside a go-offline wrap, so Mac Steam goes offline for the logon and comes back online after.
+  Friends drops briefly and comes back without a hand sign-in (items 5-6). The edge cases pass: Steam
+  already offline (7), a game running (8), quit, kill and boot-restore mid-wrap (10-12), and the
+  user's own offline choice is kept (13). Items 5-8 and 10-13 were re-run 2026-10-28 on
+  `20c1fe9d5`/`95a89d8d3`.
+
+Still true: any authenticated logon for the account drops Friends for a moment. The wrap manages that
+drop rather than removing it, as the fix shape above expected for depot installs.
