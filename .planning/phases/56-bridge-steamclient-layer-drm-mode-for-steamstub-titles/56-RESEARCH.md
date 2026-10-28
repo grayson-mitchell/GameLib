@@ -613,17 +613,23 @@ Reuse `sendGameStatusUpdate({ appName, runner: 'steam', status: 'redist', contex
 | A8 | `steamclient_init_registry` is exported by the overlay's `lsteamclient.dll` build at the pinned commit (verified in the scratch Proton tree and NotProton overlay source; not verified in a built binary) | F7 | Helper falls back to the NotProton `steam_client_init` + vtable path (needs Steamworks headers) |
 | A9 | DRM-mode failures must not use `markBridgeFailedThisSession` (my reading of D-13's "no reroute to bottled Steam" against games.ts:2816) | F10 | If used, the next Play silently goes to bottled Steam |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does the CX 26.3.0 source drop configure and link `lsteamclient` x86_64 on this toolchain?**
    - Known: CX drop is downloadable; upstream NotProton uses stock Wine 11.15 instead; the fork used a CX drop earlier.
    - Unclear: whether CodeWeavers' tree includes everything `setup-wine-tree.sh` assumes, and whether the resulting `.so` runs on the clone.
    - Recommendation: first native task, time-boxed; fall back to Wine 11.15 and ask the user to amend D-01.
+   - RESOLVED (by plan: live build): D-19, carried out by 56-02 Task 3 (time-boxed CX drop, falling back to Wine 11.15).
 2. **Version drift of the fetched client (A4).** Recommend recording the manifest `version` in the cache and in the `[bridge-drm]` anchor so any failure can be tied to a client build; no pinning.
+   - RESOLVED: 56-07 records the manifest `version`, and 56-12 writes it into the `[bridge-drm]` anchor's `client=` field.
 3. **Distribution form of the Steamworks-licensed component (F6).** Needs a user decision between archive-in-bundle and on-demand release asset. Recommend on-demand release asset (existing precedent).
+   - RESOLVED: D-18 (on-demand release asset), carried out by 56-10.
 4. **Does the existing per-title bottle run unchanged under the clone (A3)?** Test with `notepad.exe` first, then Grim Dawn.
+   - RESOLVED (by plan: live probe): 56-01's runner-clone probe; 56-08/56-11/56-12 follow its `launch_form`.
 5. **Where does the genuine `steamclient64.dll` live for `SteamClientDll64`?** NotProton puts it in the prefix's `C:\Program Files (x86)\Steam\`. Putting it beside the game exe (as the forwarder was) is not recommended: `SteamStub` reads the registry value, and a game-dir copy would be touched by Steam depot verification.
+   - RESOLVED: 56-09 stages it in the prefix's `C:\Program Files (x86)\Steam\`.
 6. **Does the user want the shim-side forwarder support removed now (F9)?** It forces one scan-verdict refresh. Recommend yes.
+   - RESOLVED: D-20 (remove now), carried out by 56-14. 56-14 found that no forced rescan actually happens.
 
 ## Sources
 
