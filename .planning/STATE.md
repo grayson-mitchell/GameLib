@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
 Plan: 16 of 16
 Status: Ready to execute
-Last activity: 2026-10-29 -- Completed quick task 261029-8ws: record external fix-format research
+Last activity: 2026-10-29 -- Completed quick task 261029-bv7: record Windows Stores-embed W9 + W10 live results
 
 Progress: [██████████] 100%
 
@@ -472,6 +472,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261027-m1r | Wine PE harness (P55-9) for x86 callback 168 `__thiscall` dispatch: zig-built 32-bit exe + real x86 `steam_api.dll` under CrossOver wineloader, in-process fake helper answering CONTROL slot 6 with a canned 168 frame. ECX/payload/iCallback/return-into-shim/ESP-balanced all PASS; no-callee-pop mutant crashes (negative control). `pnpm test:x86-callback-wine` 12/12; self-skips without CrossOver/zig. Todo closed harness-confirmed; no real 32-bit title exercised live. | 2026-10-27 | `c9a679272` | Verified | [261027-m1r-wine-pe-harness-for-x86-bridge-callback](./quick/261027-m1r-wine-pe-harness-for-x86-bridge-callback/) |
 | 261027-n77 | Tier-2 known-fix `overlays` (plugin-directory target): profiles name a catalogue id only; the catalogue pins a GitHub release asset (sha256 `57e5f74b…`, 8279592 B) plus 10 per-file sums. Strict in-Node tar reader, verify-before-parse and re-verify-before-rename, 120 s unref'd deadline, warn-and-launch-without on any failure. `GST_PLUGIN_PATH` appended + deduped on the Steam bridge and non-Steam paths; known-fix env logged at launch. 284100 profile entry, LGPL notice (About line, THIRD-PARTY-NOTICES.md), publish checklist. Asset published 2026-10-27; live gate passed (overlay downloaded, main menu reached); 284100 knownBad lifted. | 2026-10-27 | `eced60c9d` | Done | [261027-n77-known-fix-overlays-plugin-directory-targ](./quick/261027-n77-known-fix-overlays-plugin-directory-targ/) |
 | 261029-8ws | Record external fix-format research (protonfixes/Lutris/CrossTie/Whisky-Mythic-Sikarugir) in the compat-fixes note; file dllOverrides, launchArgs/exeOverride and protonfixes-import todos | 2026-10-29 | 07e448d18 | Done | [261029-8ws-record-external-fix-format-research-and-](./quick/261029-8ws-record-external-fix-format-research-and-/) |
+| 261029-bv7 | Windows Stores-embed live gate closed: W9 (local packaged debug NSIS at ae9cb5f36 repeats Steam/GOG in slot) and W10 (38-E01 P1-P5 against the shipped app; HWND sampler: embed at client 256,119 1024x711, hides on Library, returns to same rect; P4 by process exit only) PASS; macOS/Linux compile discharged by CI. Todo moved to completed; 38-E01 gains shipped_app_2026_10_29; filed off-Windows embed follow-ups and intermittent Retrying-banner todos | 2026-10-29 | 6cf84c0ea | Done | [261029-bv7-record-windows-stores-embed-w9-w10-live-](./quick/261029-bv7-record-windows-stores-embed-w9-w10-live-/) |
 
 ## Session Continuity
 
