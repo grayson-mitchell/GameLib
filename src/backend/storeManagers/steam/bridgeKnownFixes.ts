@@ -195,7 +195,7 @@ export async function applySteamBridgeKnownFixes(
 
     if (profile?.registry !== undefined) {
       // First, so later fix steps see the marker. wait: false follows
-      // steamClientSetup.ts: reg.exe's exit code proves the write and
+      // drm/stageDrmBottle.ts: reg.exe's exit code proves the write and
       // `wineserver --wait` can block forever. Values already present in the
       // bottle's system.reg/user.reg are skipped, and a timed-out reg add is
       // killed (quick 261027-m1m).

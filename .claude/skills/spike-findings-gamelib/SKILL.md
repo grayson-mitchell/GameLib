@@ -36,7 +36,8 @@ feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 20
 
 **macOS native Steam bridge (004–008):**
 - Bridge at the `steam_api` flat layer, **out-of-process** (PE shim → TCP → native helper loading
-  `libsteam_api.dylib`); NOT the in-process `lsteamclient` thunk (blocked/Valve-scale).
+  `libsteam_api.dylib`); SteamStub `.bind` titles use the in-process `lsteamclient`
+  steamclient-layer DRM mode instead (spike 044, Phase 56); see references/macos-steam-bridge.md.
 - Proxy the running signed-in native Mac Steam; never replicate auth. Supply the game's real AppID.
 - A drop-in shim must export **every** symbol the game imports (objdump the exe) or it won't load.
 - Unmodified games use **C++ vtables**; the MSVC-`__thiscall` vtable mechanism is PROVEN (006).

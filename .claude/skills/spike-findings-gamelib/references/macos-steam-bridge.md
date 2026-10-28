@@ -11,9 +11,12 @@ up to and including a real commercial game** (spikes 005–008) — what remains
 
 - **Bridge at the `steam_api` flat-API layer, OUT-OF-PROCESS.** A PE32 `steam_api.dll` shim in
   the bottle marshals Steamworks calls over **TCP (localhost)** to a native Mach-O helper that
-  loads the real `libsteam_api.dylib`. Do NOT pursue the Linux-style in-process `lsteamclient`
-  winelib thunk — it is blocked on macOS (no build toolchain; Rosetta/protobuf interconnect) and
-  is Valve/CodeWeavers-scale. *(004a/004b)*
+  loads the real `libsteam_api.dylib`. This TCP shim stays the path for every ordinary title.
+  *(Superseded 2026-10-28: the earlier "do NOT pursue the in-process `lsteamclient` winelib
+  thunk" rule (004a/004b) no longer holds. NotProton ships `lsteamclient` publicly and spike 044
+  proved it live on 2026-10-27. GameLib uses it only for SteamStub (`.bind`) titles, in Phase 56's
+  steamclient-layer DRM mode. It is built against the CrossOver 26.3.0 source drop or Wine 11.15
+  headers (56-02) and ships as an on-demand release asset, never in the signed bundle (D-18).)*
 - **Proxy the running, signed-in native Mac Steam — never replicate auth.** `SteamAPI_Init`
   succeeds because it's the genuine client; DRM is genuinely satisfied. The helper hardcodes
   nothing. *(004b/004c/005a)*
@@ -72,7 +75,10 @@ output silently vanishes). Use `bin/wine` and run `wineserver -k` between runs.
 
 ## What to Avoid
 
-- **Don't build a macOS `lsteamclient` / in-process winelib thunk.** Blocked and Valve-scale (004a).
+- **Don't route an ordinary (non-`.bind`) title through `lsteamclient`, and don't put
+  `lsteamclient.so` in the signed `.app`:** a codesigned Wine builtin does not load (56-RESEARCH
+  F6); it ships unsigned as the D-18 asset. (Supersedes 004a's "don't build lsteamclient",
+  disproved by spike 044.)
 - **Don't ship only the flat-export shim and expect unmodified games to work.** A real game calls
   `SteamUser()->GetSteamID()` through the **C++ vtable**, not the flat `SteamAPI_ISteamUser_*`
   export. Generate the vtable layout + `__thiscall`/`ret N`/sret marshaling — L4D2-launcher's

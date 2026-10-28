@@ -555,8 +555,9 @@ function withDrmWrapper(
  * `peSteamDrm.ts` scanner -- never slurps the exe (T-br4-02), and the fd is
  * always closed. Returns undefined when the PE did not parse or the read
  * failed (logged, treated as not CEG). A SteamStub `.bind` section is
- * logged only: it never changes routing (SteamStub is in scope for the
- * bridge; bottled Steam is a narrow fallback).
+ * logged here. Routing happens at launch: games.ts sends a `.bind` exe with
+ * no CEG markers to steamclient-layer DRM mode before any shim placement
+ * (Phase 56, D-12).
  */
 function detectExeSteamDrm(
   appId: string,
@@ -580,7 +581,7 @@ function detectExeSteamDrm(
     }
     if (result.hasBindSection) {
       logInfo(
-        `placeShimForGame: SteamStub .bind section present in the exe for appId ${appId} (informational, no routing change)`,
+        `placeShimForGame: SteamStub .bind section present in the exe for appId ${appId} (launch routes it to steamclient-layer DRM mode, Phase 56)`,
         LogPrefix.Steam
       )
     }

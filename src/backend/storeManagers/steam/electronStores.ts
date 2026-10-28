@@ -222,7 +222,8 @@ export interface SteamBridgeScanVerdict {
    * bridge bottle dir (forward slashes). Absent means it was never recorded. */
   originalFingerprints?: Record<string, { size: number; sha1: string }>
   /** Phase 52: set by placeShimForGame when the launch exe carries a `.bind`
-   * section; gates SteamStub forwarder setup. Absent means none detected. */
+   * section. Phase 56 (D-12): such a title launches in steamclient-layer DRM
+   * mode. Absent means none detected. */
   drmWrapper?: 'steamstub'
   /** Phase 53 (D-53-04): what the Mono managed scan found. `mono` counts the
    * managed assemblies read and the steam_api imports of families the shim

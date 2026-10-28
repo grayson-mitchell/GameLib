@@ -41,8 +41,10 @@ export function parsePeSectionNames(buf: Buffer): string[] {
   return names
 }
 
-/** Assumption A3: a `.bind` section marks SteamStub. Informational; it only
- * gates forwarder setup. Exact, case-sensitive match. */
+/** Assumption A3: a `.bind` section marks SteamStub. Exact, case-sensitive
+ * match. Since Phase 56 (D-12) a launch exe with `.bind` and no CEG markers
+ * runs in steamclient-layer DRM mode (drm/steamclientLayerMode.ts
+ * resolveBridgeMode). */
 export function hasSteamStubSection(names: readonly string[]): boolean {
   return names.includes('.bind')
 }
