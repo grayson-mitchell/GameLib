@@ -1,0 +1,17 @@
+---
+created: 2026-10-29
+title: "The DRM bottle-stage wine session writes no wine log, so a stage hang leaves no wine trace"
+area: steam-bridge
+severity: medium
+platform: macos
+ready: code
+source: "phase 56 live gate (56-26), launches 1 and 7, 2026-10-29"
+---
+
+## Problem
+
+56-20's per-launch wine log (`<appId>-<n>.wine.log`) covers only the game launch. The stage `reg add` runs earlier in its own wine session with no appender, so both stage hangs (Grim Dawn launch 1, Ranch launch 7) left only `ps` captures and the SIDECAR timeout and `bottle processes at timeout:` lines. Launch 1 produced no wine log at all.
+
+## Next
+
+Route the stage session's output into a stage wine log (same dir, own suffix) so the winebus/IOHID fix plan has a trace; capture it before the timeout kills anything.

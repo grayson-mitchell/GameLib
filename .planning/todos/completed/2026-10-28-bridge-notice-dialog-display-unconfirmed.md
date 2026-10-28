@@ -32,3 +32,6 @@ Root cause not reproduced; both candidate causes are fixed. Debug session:
 Live 2026-10-29 on Grim Dawn 219990 with Mac Steam quit (steam-not-running): GameLib in front,
 `display=confirmed elapsedMs=69`; GameLib hidden with Cmd+H, window raised and
 `display=confirmed elapsedMs=81`. The queue was not exercised live (unit tests only).
+
+## 56-26 gate result (G10)
+Confirmed live. Two notices fired in the run (drm-bottle-stage for 219990 on launch 1 and for 1119730 on launch 7); each `dispatched=` line was followed by `display=confirmed` (elapsedMs 46 and 44), none `display=unconfirmed`; the operator saw both dialogs.

@@ -26,3 +26,6 @@ the stub. Observed: 2-3 s exits with helper SIGTERM, census `no HELLO`.
 56-19 added `detectLaunchDrmWrapper` (drm/drmScanExe.ts). 56-21 wires it into games.ts (CEG
 markers must be read from `drmExe`). 56-26 records whether Ranch then reaches its menu; the
 spike 040 exit-53 variant may still apply once routed.
+
+## Closed by 56-26
+Gap 11 routing passed (live gate item 16, scored `issue` only on the contract's literal anchor wording). Launch 7: `SteamStub .bind found on Ranch_Simulator-Win64-Shipping.exe (UE runtime exe)` and `bottle: appId 1119730 uses DRM runner` were logged at 09:12:45, and the failure was `reason=drm-bottle-stage`, not the ordinary-bridge-path `reason=stubbed:` notice. Decision rule: this todo's defect is the routing, and the pre-stage lines prove the route directly; the `[bridge-drm]` anchor can't print when the stage hangs. Whether Ranch then reaches its menu is NOT closed: launch 7 failed at bottle-stage (winebus/IOHID spin on a fresh bottle) and the spike 040 exit-53 variant remains untested. That is tracked by the winebus todo. The Phase 52 `gamelib_bridge.cfg` leftovers in the Ranch bottle were still present.

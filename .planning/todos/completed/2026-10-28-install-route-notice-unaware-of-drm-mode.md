@@ -17,3 +17,6 @@ Installing Grim Dawn (a SteamStub title routed to DRM mode) showed the "may not 
 ## Next
 
 Make the route notice consult the DRM routing before warning.
+
+## 56-26 gate result (G2)
+Confirmed live. Zero `requires a user notice before any install` lines for appId 219990 across the reinstall; no route-notice dialog appeared. The only install-time dialog was an unrelated sign-in refusal (no stored Steam refresh token), filed separately.

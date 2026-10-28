@@ -19,3 +19,6 @@ The on-disk exe is SteamStub-encrypted, so only the minidump memory is useful.
 ## Next
 
 Check what +0x1d10a dereferences in the minidump, and whether the layer returns a null ISteamController interface or a null action-set result.
+
+## 56-26 gate result (item 4, Gap 7 regression)
+Confirmed live. Grim Dawn, reinstalled through the bridge, reached its interactive main menu in DRM mode from the install-root launch on launches 1b, 2 and 3 (operator "menu reached"; census 219990 verified, `game call ISteamUser_SteamUser017_GetSteamID`). Launch 1, the first Play, did not reach the menu for an unrelated reason: the bottle-stage `reg add` timed out (winebus/IOHID spin, see the winebus todo). No post-GetActionSetHandle crash recurred.

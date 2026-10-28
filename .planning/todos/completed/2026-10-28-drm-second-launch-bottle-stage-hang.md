@@ -19,3 +19,6 @@ A first DRM launch in a bottle works, but every later DRM launch in the same bot
 ## Next
 
 Sample the spinning winedevice, check for a stock versus clone wineserver mismatch on the bottle, and test ending the bottle session after game exit (D-11).
+
+## 56-26 gate result (G9)
+Confirmed live. Repeat launches on staged bottles passed bottle-stage with one anchor, zero `reason=drm-bottle-stage`, zero timeouts and zero `registry not staged:`: Grim Dawn launches 2 and 3, Raft launches 5 and 6 (and Raft 4). The remaining hang is on the FIRST stage of a fresh bottle (launch 1, Ranch launch 7), tracked by the winebus todo.

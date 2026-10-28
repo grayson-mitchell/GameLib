@@ -23,3 +23,6 @@ Send a final status after the redist step completes or fails.
 ## Resolution (56-20)
 
 `installBridgeGame` (games.ts) now sends `sendGameStatusUpdate({ appName, runner: "steam", status: "done" })` in a `finally` after `installSteamBridgeSharedRedists` settles, whether it resolves or rejects. Live confirmation is left to 56-22; 56-26 decides closure.
+
+## Closed by 56-26
+Item G3 (live gate item 13) passed: after the reinstall finished with the dev pid unchanged, the operator reported Play enabled (not stuck on redist), and the click reached the backend (`drm setup: appId 219990` lines within 20 s). A different, intermittent stale-`redist` status after a DRM-setup failure is filed separately.
