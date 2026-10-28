@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 56 context gathered
-last_updated: "2026-10-28T03:33:29.116Z"
-last_activity: 2026-10-28 -- Phase 56 planning complete
+last_updated: "2026-10-28T03:43:30.612Z"
+last_activity: 2026-10-28
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 124
-  completed_plans: 108
+  completed_plans: 109
   percent: 83
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 56 — bridge steamclient-layer DRM mode for SteamStub titles
+**Current focus:** Phase 56 — bridge-steamclient-layer-drm-mode-for-steamstub-titles
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -71,12 +71,12 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 55
-Plan: Not started
+Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
+Plan: 2 of 16
 Status: Ready to execute
-Last activity: 2026-10-28 -- Phase 56 planning complete
+Last activity: 2026-10-28
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -199,6 +199,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 54 P04 | 40min | 2 tasks | 5 files |
 | Phase 54 P07 | 20min | 2 tasks | 9 files |
 | Phase 54 P11 | 30min | 3 tasks | 2 files |
+| Phase 56 P01 | 25min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -281,6 +282,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 53]: 53-11: NOVER hard-fails Unity only; placement coverage-miss lines are not a downgrade input
 - [Phase 53]: 53-14: GetAuthSessionTicket forwarded and succeeds; 427410 loading hang survives, auth-ticket hypothesis refuted
 - [Phase 55]: 55-03: CBQ logging via literal-format logts_f; RunCB never called after ManualDispatch_Init
+- [Phase 56]: 56-01: launch_form=bin/wine+CX_BOTTLE; overrides via --dll/CX_ENV/registry, never plain env — wrapper strips WINEDLLOVERRIDES
 
 ### Pending Todos
 
@@ -466,9 +468,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-27T22:41:07.208Z
+Last session: 2026-10-28T03:43:25.925Z
 Stopped at: Phase 56 context gathered
-Resume file: .planning/phases/56-bridge-steamclient-layer-drm-mode-for-steamstub-titles/56-CONTEXT.md
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
