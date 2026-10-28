@@ -1,0 +1,84 @@
+GameLib steamclient-layer component - NOTICE
+
+This component is downloaded by GameLib on the first DRM-mode launch of a
+SteamStub title on macOS (D-05, D-18). It is published as one release asset
+per allowlisted CrossOver build at
+https://github.com/grayson-mitchell/GameLib/releases/tag/steamclient-layer-cx<build>
+and is installed under GameLib's app-data directory
+steam-bridge/drm/component/steamclient-layer-cx<build>/. It is not part of the
+signed GameLib application, and GameLib verifies it against sha256 sums pinned
+in that application before every use.
+
+Licence of each file
+--------------------
+
+- lsteamclient.dll and lsteamclient.so: Steamworks SDK License. GameLib builds
+  them from Proton lsteamclient at 164e0ccd2ea2b1ec2e5d08dc97f65b184c2539ca,
+  with NotProton's three overlay files at
+  8db22adb237e6ea640a5af148b69b93709daf50c and GameLib's trace additions,
+  contributed under the same licence. The licence text is LICENSE.lsteamclient.
+- detour-cx<build>.bin: GPL-3.0. It is ported from NotProton ntdll-patch.
+- steam.exe: BSD-3-Clause. It is ported from NotProton steam-shim (Proton
+  steam_helper).
+- LICENSE.lsteamclient: Valve's Steamworks SDK License text, copied unmodified
+  from Proton.
+- NOTICE: this file.
+
+Separation
+----------
+
+GameLib's GPL-3.0-only code never links against lsteamclient.dll or lsteamclient.so.
+Wine loads those files at run time inside the game's Wine process, and no
+GameLib process loads them. The GPL-3.0 detour payload is not linked with them
+either: GameLib writes it into its own copy of CrossOver's ntdll.dll, where it
+redirects the exports of Valve's genuine steamclient64.dll at run time.
+
+Corresponding source
+--------------------
+
+For detour-cx<build>.bin and steam.exe: the GameLib repository at the commit
+tagged steamclient-layer-cx<build>, under
+native/steam-bridge/steamclient-layer/ntdll-patch/ (with COPYING, the GPL-3.0
+text) and native/steam-bridge/steamclient-layer/helper/. They are built with
+"pnpm build:drm-native" (meta/buildDrmNativeParts.ts). The lsteamclient overlay
+and pins are in native/steam-bridge/steamclient-layer/lsteamclient/, built with
+"pnpm build:lsteamclient". The archive is built with
+"pnpm build:steamclient-layer-archive".
+
+Not in this component
+---------------------
+
+Valve's steamclient64.dll, tier0_s64.dll and vstdlib_s64.dll. The user's
+machine downloads those from Valve's own CDN; GameLib never distributes them
+(D-04).
+
+steam.exe - BSD-3-Clause licence text
+-------------------------------------
+
+Copyright (c) 2015, 2019, 2020, 2021, 2022 Valve Corporation
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
