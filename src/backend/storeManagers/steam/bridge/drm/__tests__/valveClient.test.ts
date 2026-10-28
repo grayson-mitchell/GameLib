@@ -333,7 +333,7 @@ describe('ensureValveClient', () => {
     f.fetchText.mockResolvedValue(
       manifestFor('bins_win64.fixture.zip').replace(
         /("bins_win64"[\s\S]*?"sha2"\s+)"[^"]*"/,
-        `$1"${'0'.repeat(64)}"`
+        `$1"${'a'.repeat(64)}"`
       )
     )
     const r = await ensureValveClient({ appFolder }, f)
@@ -507,9 +507,9 @@ describe('ensureValveClient', () => {
     }
   })
 
-  it('does nothing at import time', () => {
-    jest.isolateModules(() => {
-      require('../valveClient')
+  it('does nothing at import time', async () => {
+    await jest.isolateModulesAsync(async () => {
+      await import('../valveClient')
     })
     expect(hasAbortController('drm-valve-client:manifest')).toBe(false)
     expect(hasAbortController('drm-valve-client:package')).toBe(false)
