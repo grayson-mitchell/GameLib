@@ -274,7 +274,9 @@ const ENRICHMENT_CHANNELS = [
   'steamgriddb.setApiKey',
   'steamgriddb.searchGame',
   'steamgriddb.getGrids',
-  'steamgriddb.getHeroes'
+  'steamgriddb.getHeroes',
+  // Quick 261027-ch9 (a2385f6bf): +1 invoke, the 15th enrichment channel
+  'getGamelibFixStatus'
 ]
 
 const ALL_CHANNELS = [
@@ -570,7 +572,7 @@ describe('completeness — all 66 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 67 channels are handle-kind and exactly 2 are listen-kind (Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
+  it('exactly 68 channels are handle-kind and exactly 2 are listen-kind (Quick 261027-ch9, a2385f6bf: 67/2 -> 68/2, +1 invoke getGamelibFixStatus, +0 send; Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
@@ -586,7 +588,7 @@ describe('completeness — all 66 channels are registered with the right kind, a
     // kind-swapped — handle count is unaffected (65), listen count drops by exactly 1 (5 -> 4).
     // Quick 261012-ca6: `addShortcut`/`removeShortcut` moved from send to invoke -- 65+2=67
     // invoke, 4-2=2 send; the declared total of 66 is unchanged.
-    expect(handleChannels.length).toBe(67)
+    expect(handleChannels.length).toBe(68)
     expect(listenChannels.length).toBe(2)
   })
 
@@ -617,12 +619,12 @@ describe('completeness — all 66 channels are registered with the right kind, a
     }
   )
 
-  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 14, totalling 66 (Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
+  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 15, totalling 67 (Quick 261027-ch9, a2385f6bf: enrichment 14 -> 15; Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
     const counts = MODULES.map((m) => m.declaredChannels.length)
     // Measured (jest failure ACTUAL) and independently re-derived (64 prior total + 3 new = 67,
-    // then -1 for winetricksInstall's retirement = 66) — agree.
-    expect(counts).toEqual([11, 12, 7, 14, 8, 14])
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(66)
+    // then -1 for winetricksInstall's retirement = 66, then +1 getGamelibFixStatus = 67) — agree.
+    expect(counts).toEqual([11, 12, 7, 14, 8, 15])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(67)
   })
 
   afterAll(() => {

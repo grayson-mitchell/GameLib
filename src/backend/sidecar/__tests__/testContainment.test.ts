@@ -935,6 +935,14 @@ const IN_SCOPE_SUITES = [
  * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock kit
  * Block B gates on. A `readdirSync` recount at this task's execution time puts the directory at 72
  * `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 68 below.
+ *
+ * `stdinEofRelease.test.ts` (debug/sidecar-survives-force-quit) is structurally contained: it
+ * mocks the logger, abort handler, download queue and `SteamUser` and drives `releaseOnStdinEof`
+ * over a `PassThrough`; no child process, no filesystem, no HOME access.
+ * `steamNativeInstallDefault.test.ts` (Quick 261024-exo) is classified on the same basis as
+ * `dismissedSignInNoticesSetting.test.ts`, whose harness it copies: a disposable per-file profile
+ * under `os.tmpdir()`, no child process. Neither was classified by its landing commit; the
+ * T-34.2-83 tripwire caught it (Phase 56 plan 30).
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -998,6 +1006,8 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'steamFlows.test.ts',
   'steamFocusRefreshWire.test.ts',
   'steamgridSecretStore.test.ts',
+  'steamNativeInstallDefault.test.ts',
+  'stdinEofRelease.test.ts',
   'storeEmbedFlows.test.ts',
   'storeEmbedWireContract.test.ts',
   'storeLayer.test.ts',
