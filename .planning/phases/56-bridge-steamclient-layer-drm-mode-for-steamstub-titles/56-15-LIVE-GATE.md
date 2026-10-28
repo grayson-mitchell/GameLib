@@ -243,7 +243,35 @@ result: pending
 
 ## Run record
 
-(Plan 56-15 Task 4 appends the publish record and the PC1-PC5, PC7-PC10 observed values here. Plan 56-16 appends the rest.)
+### Publish record (plan 56-15 Task 4, 2026-10-28)
+
+- Approval: on 2026-10-28 the operator answered "Push main, then publish" to the orchestrator's question about pushing main and publishing the pre-release; they then chose "Fix the blockers, then push" for the pre-push hook failures. Resume signal after publishing: "done release resume 56-15".
+- Contract: contract not separately reviewed by operator; proceeding on the publish approval.
+- The operator ran `gh release create` themselves (the agent's attempt was denied by the permission system and not retried). No agent ran any `gh release` write command.
+- Release: https://github.com/grayson-mitchell/GameLib/releases/tag/steamclient-layer-cx26.3.0.39832, isPrerelease true, target 94fc98d7a9ebb09b54edd16bbe75b48594a9a2f2 (origin/main; holds the 11 files under native/steam-bridge/steamclient-layer).
+- Asset digests (gh release view), each equal to its SHA256SUMS line or to the staged file:
+  - steamclient-layer-cx26.3.0.39832.tar.gz sha256 c58a40c67c5d9093970227327bcceb5c2e457bc81b0a58559d9cb65777aeb187, 5359548 bytes
+  - COPYING sha256 3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986, 35149 bytes
+  - LICENSE sha256 3df3b1723e04307176b7ffe1f424514d5f871d03d2c2f668652bc8b6dfcd72af, 1511 bytes
+  - SHA256SUMS sha256 9d9233f66332fd370342bb460faf38f1a5e4f1f288cfed8ae380a1c44230a00a, 254 bytes (equals the staged file)
+- Fresh-directory download of the archive URL: sha256 and size (5359548) equal `archiveSha256` and `archiveSize` in src/common/steamclientLayerCatalogue.ts. Pins were not re-pinned (`pinned: match` re-run on 94fc98d7a).
+- Session dir: `/tmp/gamelib-gate-20261028T081115Z/` (contains pre-session-gamelib.log and pre-session-gamelib.log.old; terminal.log started with the PC5 listing). 56-16 reuses it.
+
+### Preflight (PC1-PC5, PC7-PC10; PC6 is left to 56-16)
+
+| ID   | Observed                                                                                          | Result |
+| ---- | ------------------------------------------------------------------------------------------------- | ------ |
+| PC1  | `pgrep -x steam_osx` printed pid 74207                                                            | pass   |
+| PC2  | ps grep for Windows Steam processes printed nothing                                               | pass   |
+| PC3  | CFBundleVersion `26.3.0.39832`                                                                    | pass   |
+| PC4  | `pnpm build-steam-bridge`, `pnpm exec vite build`, `pnpm build:sidecar-sea` all exit 0            | pass   |
+| PC5  | session dir created; both prior sidecar logs copied (56106 and 6507 bytes)                        | pass   |
+| PC7  | BOTTLE(219990) absent                                                                             | pass   |
+| PC8  | COMPDIR absent                                                                                    | pass   |
+| PC9  | archive URL ends at HTTP/2 200                                                                    | pass   |
+| PC10 | appmanifest_648800.acf and appmanifest_1119730.acf both present                                   | pass   |
+
+Note for 56-16: PC4 rebuilt build/main/sidecar.js; PC6 requires the operator to restart `pnpm tauri:dev` AFTER this point under `tee -a <session>/terminal.log`.
 
 ## Gaps
 
