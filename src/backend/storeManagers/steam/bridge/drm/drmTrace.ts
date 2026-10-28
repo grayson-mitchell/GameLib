@@ -64,7 +64,6 @@ const TRACE_CREATE_RE =
 const TRACE_CALL_RE =
   /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=call name=([A-Za-z0-9_]{1,128})$/
 
-// eslint-disable-next-line no-control-regex
 const ANCHOR_RE =
   // eslint-disable-next-line no-control-regex
   /^\[bridge-drm\] appId=([0-9]{1,10}) mode=steamclient-layer crossover=([0-9]{1,4}(?:\.[0-9]{1,6}){2,4}) client=([0-9]{1,20}) trace=(\/[^\x00-\x1f\x7f]{0,1023})$/

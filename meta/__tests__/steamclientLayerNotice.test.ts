@@ -5,6 +5,7 @@
  */
 
 import { createHash } from 'crypto'
+import { homedir } from 'os'
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -376,7 +377,7 @@ describe('real staging dir', () => {
           files: real(),
           committedNotice: noticeBytes,
           caveSize: DETOUR_BUILD_ROWS[BUILD].caveSize,
-          homeDir: require('os').homedir()
+          homeDir: homedir()
         })
       ).toEqual({ ok: true })
     })

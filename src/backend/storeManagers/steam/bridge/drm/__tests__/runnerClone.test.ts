@@ -688,7 +688,7 @@ describe('ensureRunnerClone build path', () => {
   const patchFailures: Array<[string, FakeOpts]> = [
     [
       'a loader missing disable-library-validation',
-      { stockKeys: STOCK_LOADER_ENTITLEMENTS.slice(0, 2) as string[] }
+      { stockKeys: STOCK_LOADER_ENTITLEMENTS.slice(0, 2) }
     ],
     ['a codesign --force failure', { forceExit: 1 }],
     ['a post-sign dump without dyld', { skipDyld: true }],
@@ -1113,7 +1113,6 @@ const realOn =
       { appFolder: root, crossover: found, component },
       {}
     )
-    // eslint-disable-next-line no-console
     console.log(
       'real runner arm',
       JSON.stringify({
