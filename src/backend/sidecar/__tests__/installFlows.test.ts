@@ -107,11 +107,31 @@ jest.mock('axios', () => {
 // to the already-mocked SteamGame instance below (libraryManagerMap[runner]
 // .getGame(id)), and isEpicServiceOffline is never reached by these tests
 // (gated on runner === 'legendary', which none of the new tests use) ────────
-jest.mock('backend/utils', () => ({
-  ...jest.requireActual('backend/utils'),
-  getSteamLibraries: jest.fn(),
-  writeConfig: jest.fn()
-}))
+//
+// Phase 56 plan 30: `jest.requireActual('backend/utils')` loads the real utils
+// module, which transitively requires `backend/utils` AGAIN (via
+// `utils/helperBinaries` and `storeManagers/gog/presence`, the latter added
+// by the gog presence boot wiring) while this factory is still running. Jest
+// has not cached the mock yet, so it re-runs the factory and hands those
+// importers (notably `steam/installLocation`) a DIFFERENT `jest.fn()` than the
+// one this file imports -- Test 1b then arranged `mockResolvedValue` on one
+// instance while the handler called the other (returned undefined, `.map` of
+// undefined). Pinning the two stubs to one shared instance per test file makes
+// every factory run return the same functions.
+type SharedUtilsStubs = { getSteamLibraries: jest.Mock; writeConfig: jest.Mock }
+jest.mock('backend/utils', () => {
+  const holder = globalThis as unknown as {
+    __installFlowsUtils?: SharedUtilsStubs
+  }
+  holder.__installFlowsUtils ??= {
+    getSteamLibraries: jest.fn(),
+    writeConfig: jest.fn()
+  }
+  return {
+    ...jest.requireActual('backend/utils'),
+    ...holder.__installFlowsUtils
+  }
+})
 
 // ── backend/constants/environment mock — pins a deterministic branch
 // regardless of the host OS running this test (mirrors skeletonFlows.test.ts /
