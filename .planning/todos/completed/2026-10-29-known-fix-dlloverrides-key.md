@@ -22,3 +22,7 @@ See "External formats (researched 2026-10-29)" in `.planning/notes/per-game-comp
 ## Next
 
 Implement as a registry-backed key writing `AppDefaults\<exe>\DllOverrides`, because CrossOver's wine wrapper drops WINEDLLOVERRIDES (spike 031). Reuse the existing registry applier path in `knownFixesRegistry.ts` (`applyRegistryFixes` / `applyKnownFixProfileRegistry`) where possible. Add `dllOverrides` to `TIER2_PROFILE_KEYS` and never to `TIER1_KNOWN_FIX_KEYS`, and update the comments in `knownFixes.ts` that say it is not built yet.
+
+## Resolution (2026-10-29)
+
+Resolved by quick 261029-gow. Value shape `[{ exe, dlls: { <dll>: <mode> } }]`; modes `native`, `builtin`, `native,builtin`, `builtin,native`, `disabled` (`disabled` writes ''). Written as `HKCU\Software\Wine\AppDefaults\<exe>\DllOverrides` REG_SZ via `applyRegistryFixes` (views [64]) from both `applyKnownFixProfileRegistry` and `applySteamBridgeKnownFixes`. No bottle-wide fallback; an entry without a valid exe is skipped. No reversal (the decision 5 ledger is still unbuilt). The hardcoded 3410180 table in `bridge/bottleDllOverrides.ts` is left as is.

@@ -156,7 +156,7 @@ gamefixes-* dirs. Helper call tally across all 490 files, method `grep -ho 'util
 | Helper | Calls | GameLib mapping |
 | --- | --- | --- |
 | protontricks | 413 | `winetricks` |
-| winedll_override | 91 | `dllOverrides` (unbuilt) |
+| winedll_override | 91 | `dllOverrides` (built, quick 261029-gow) |
 | set_environment | 80 | `envVariables` |
 | regedit_add | 54 | `registry` |
 | replace_command | 49 | proposed `exeOverride` |
@@ -180,7 +180,7 @@ support for downloaded files.
 
 ### Proposed tier-2 (format) additions, in priority order
 
-1. `dllOverrides`: already in decision 3, still unbuilt; second by protonfixes usage (91). Must be
+1. `dllOverrides`: built by quick 261029-gow (tier 2, registry-backed); second by protonfixes usage (91). Must be
    registry-backed (`AppDefaults\<exe>\DllOverrides`) because CrossOver's wine wrapper drops
    WINEDLLOVERRIDES (spike 031, decision 3).
 2. `launchArgs` + `exeOverride` (append_argument 39 + replace_command 49 = 88). Neither runs new
