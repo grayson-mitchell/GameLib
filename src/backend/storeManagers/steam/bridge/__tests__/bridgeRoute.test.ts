@@ -285,6 +285,52 @@ describe('resolveBridgeRoute', () => {
     expect(other.noticeRequired).toBe(true)
   })
 
+  describe('row 7: DRM-mode title owes no scan-miss notice (quick 261029-avh)', () => {
+    const drmMiss = (
+      extra: SteamBridgeVerdict = {},
+      arch: 'x86' | 'x64' = 'x86'
+    ): SteamBridgeVerdict => {
+      const v = uncoveredMiss(extra, arch)
+      return { ...v, scan: { ...v.scan!, drmWrapper: 'steamstub' } }
+    }
+
+    it('steamstub miss -> bridge / scan-miss, symbols carried, no notice; non-DRM twin still owes one', () => {
+      const drm = resolveBridgeRoute({ ...baseInput, verdict: drmMiss() })
+      expect(drm.route).toBe('bridge')
+      expect(drm.reason).toBe('scan-miss')
+      expect(drm.missingSymbols).toEqual(['NotARealSymbol_v999'])
+      expect(drm.noticeRequired).toBe(false)
+      const plain = resolveBridgeRoute({
+        ...baseInput,
+        verdict: uncoveredMiss()
+      })
+      expect(plain.noticeRequired).toBe(true)
+    })
+
+    it('Grim Dawn shape (x64, steamstub, win64 shim present, steamApi both) -> no notice', () => {
+      const result = resolveBridgeRoute({
+        ...baseInput,
+        win64ShimPresent: true,
+        verdict: drmMiss({ steamApi: 'both' }, 'x64')
+      })
+      expect(result.route).toBe('bridge')
+      expect(result.reason).toBe('scan-miss')
+      expect(result.noticeRequired).toBe(false)
+    })
+
+    it('known-bad does-not-run is still carried, notice still suppressed', () => {
+      const result = resolveBridgeRoute({
+        ...baseInput,
+        knownBadReason: 'does-not-run',
+        verdict: drmMiss()
+      })
+      expect(result.route).toBe('bridge')
+      expect(result.reason).toBe('scan-miss')
+      expect(result.knownBadReason).toBe('does-not-run')
+      expect(result.noticeRequired).toBe(false)
+    })
+  })
+
   it('row 7: precedes seed', () => {
     const result = resolveBridgeRoute({
       ...baseInput,

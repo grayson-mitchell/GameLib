@@ -31,13 +31,15 @@ import type {
   SteamBridgeRouteVerdict
 } from 'common/types/steam'
 import { isScanVerdictNowCovered } from './shimCoverage'
+import { resolveBridgeMode } from './drm/steamclientLayerMode'
 
 /** D-51-08/11/13: the subset of `SteamBridgeRouteReason` values whose
  * landing requires a one-time notice before the user proceeds (D-51-08's
  * `noticeAcknowledgedFor` clears it). 'known-bad' lands on bottle for a
  * 'drm-wrapped' title and is an informational bridge-route notice for any
  * other known-bad reason (amended 2026-10-23). 'scan-miss' is an
- * informational bridge-route notice since quick 261023-oq7. Exported for 51-16's dialog/notice
+ * informational bridge-route notice since quick 261023-oq7, except for a
+ * DRM-mode (steamclient-layer) title, which owes none (quick 261029-avh). Exported for 51-16's dialog/notice
  * wiring and for this module's own tests. */
 export const NOTICE_REASONS: ReadonlySet<SteamBridgeRouteReason> = new Set([
   'known-bad',
@@ -107,7 +109,10 @@ function isAcknowledged(
  *  7. A persisted scan miss not yet auto-cleared -> bridge / 'scan-miss'
  *     with the missing symbols; notice (informational) required unless
  *     acknowledged for 'scan-miss'. Amended 2026-10-23 (quick 261023-oq7):
- *     this used to be a bottle row. It precedes seed (row 8).
+ *     this used to be a bottle row. It precedes seed (row 8). quick
+ *     261029-avh: a scan miss on a title whose persisted scan carries
+ *     drmWrapper 'steamstub' (steamclient-layer DRM mode, Phase 56 D-12)
+ *     owes no notice, because DRM mode launches before any shim placement.
  *  8. Seed membership -> bridge / 'seed'.
  *  9. The title ships no `steam_api*.dll` at all -> bridge / 'no-steam-api'.
  *  10/11. A clean scan -> bridge / 'scan-clean'; anything else reaching this
@@ -277,11 +282,21 @@ export function resolveBridgeRoute(
   // the recorded missingSymbols drive shim widening. A `<dll>@runtime-loaded`
   // marker (51-22, CR-04) is a miss without that load-time failure, and
   // such titles may play.
+  // quick 261029-avh: a title the launch path will run in steamclient-layer
+  // DRM mode (Phase 56 D-12) owes no notice -- DRM mode launches before any
+  // shim placement, so the shim's missing symbols (and the known-bad list's
+  // non-DRM, shim-path reasons) are irrelevant to it. The rule is the launch
+  // path's own resolveBridgeMode. CEG markers are passed as undefined: a CEG
+  // title never reaches here (verdict.drm === 'ceg' routes to bottle at row
+  // 4, and a user-forced 'bridge' returned at row 6). Routing and the persisted
+  // verdict are untouched; only the notice is suppressed.
   if (scanMiss) {
+    const drmMode =
+      resolveBridgeMode(scan.drmWrapper, undefined) === 'steamclient-layer'
     return toBridge('scan-miss', {
       knownBadReason,
       missingSymbols,
-      noticeRequired: !isAcknowledged(verdict, 'scan-miss')
+      noticeRequired: drmMode ? false : !isAcknowledged(verdict, 'scan-miss')
     })
   }
 
