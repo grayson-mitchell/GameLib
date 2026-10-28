@@ -219,105 +219,6 @@ export function shim64OutputPath(arch: string = resolveBridgeArch()): string {
 }
 
 /**
- * Phase 52 (52-03): the SteamStub forwarder's bundled location, beside the
- * shims. Must match `builtBridgeSteamClient64Path` in
- * src/backend/constants/paths.ts. x64 only (the x86 steamclient.dll is
- * deferred, decision 6).
- */
-// ts-prune-ignore-next
-export const STEAMCLIENT_FWD_SOURCE_PATH = join(
-  'native',
-  'steam-bridge',
-  'steamclient',
-  'steamclient_fwd.c'
-)
-
-/** 52-26 (item 22): GameLib's own VS_VERSIONINFO for the forwarder (the genuine
- * client and the game exe both carry a resource directory; the forwarder had
- * none). Strings are GameLib's -- no Valve identity, no answer. */
-// ts-prune-ignore-next
-export const STEAMCLIENT_FWD_RC_PATH = join(
-  'native',
-  'steam-bridge',
-  'steamclient',
-  'steamclient_fwd.rc'
-)
-
-/** Forwarder compile inputs that are absent on disk, in argv order (52-REVIEW WR-01). */
-// ts-prune-ignore-next
-export function missingSteamClient64Inputs(
-  exists: (p: string) => boolean = existsSync
-): string[] {
-  return [STEAMCLIENT_FWD_SOURCE_PATH, STEAMCLIENT_FWD_RC_PATH].filter(
-    (p) => !exists(p)
-  )
-}
-
-// ts-prune-ignore-next
-export function steamClient64OutputPath(
-  arch: string = resolveBridgeArch()
-): string {
-  return join(bundledBinDir(arch), 'steamclient64.dll')
-}
-
-/** Phase 52 (52-03): zig argv for the forwarder -- no .def (the source's
- * dllexport is the only export) and no ws2_32 (it uses kernel32 only). The
- * GameLib VS_VERSIONINFO .rc (52-26) is compiled by zig's built-in resource
- * compiler. The .rc must follow the .c (the import-lib name derives from the
- * first source). */
-// ts-prune-ignore-next
-export function buildSteamClient64CompileArgv(
-  zigBinPath: string,
-  arch: string = resolveBridgeArch()
-): { command: string; args: string[] } {
-  return {
-    command: zigBinPath,
-    args: [
-      'cc',
-      '-target',
-      'x86_64-windows-gnu',
-      '-shared',
-      ...SHIM_RELEASE_CFLAGS,
-      '-o',
-      steamClient64OutputPath(arch),
-      STEAMCLIENT_FWD_SOURCE_PATH,
-      STEAMCLIENT_FWD_RC_PATH
-    ]
-  }
-}
-
-/** Measured (52-03): zig names the .pdb after the -o output and the import
- * .lib after the SOURCE file. */
-// ts-prune-ignore-next
-export const STEAMCLIENT64_BUILD_BYPRODUCTS = [
-  'steamclient64.pdb',
-  'steamclient_fwd.lib'
-] as const
-
-// ts-prune-ignore-next
-export function steamClient64ByproductPaths(
-  arch: string = resolveBridgeArch()
-): string[] {
-  return STEAMCLIENT64_BUILD_BYPRODUCTS.map((name) =>
-    join(bundledBinDir(arch), name)
-  )
-}
-
-// ts-prune-ignore-next
-export function pruneSteamClient64BuildByproducts(
-  arch: string = resolveBridgeArch()
-): void {
-  for (const path of steamClient64ByproductPaths(arch)) {
-    rmSync(path, { force: true })
-    if (existsSync(path)) {
-      throw new Error(
-        `Failed to remove steamclient64 build byproduct -- still present at ${path}`
-      )
-    }
-  }
-}
-
-/**
  * `zig cc -shared`'s OWN debug-symbol (`.pdb`) and import-library (`.lib`)
  * linker byproducts -- not build output this repo or its runtime ever reads.
  * They added 2,822,208 B to every shipped macOS `.app` (todo item 6,
@@ -677,36 +578,6 @@ async function compileShim64(): Promise<void> {
   pruneShim64BuildByproducts()
 }
 
-async function compileSteamClient64(): Promise<void> {
-  const missing = missingSteamClient64Inputs()
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing steamclient forwarder input(s) (${missing.join(', ')}) (52-03, 52-26)`
-    )
-  }
-
-  const zigBinPath = await downloadZig()
-  mkdirSync(bundledBinDir(), { recursive: true })
-  const { command, args } = buildSteamClient64CompileArgv(zigBinPath)
-  console.log(`Compile gate (steamclient64): ${command} ${args.join(' ')}`)
-  const result = await spawnArgv(command, args)
-
-  if (result.code !== 0) {
-    throw new Error(
-      `COMPILE GATE FAILED (52-03, steamclient64): zig cc exited ${result.code}:\n${result.stderr}`
-    )
-  }
-  if (!existsSync(steamClient64OutputPath())) {
-    throw new Error(
-      `COMPILE GATE FAILED (52-03, steamclient64): zig cc exited 0 but no .dll was emitted at ${steamClient64OutputPath()}`
-    )
-  }
-  console.log(
-    `Compile gate PASSED (steamclient64) -> ${steamClient64OutputPath()}`
-  )
-  pruneSteamClient64BuildByproducts()
-}
-
 // Self-invoked only (the JEST_WORKER_ID guard below); kept `export` because
 // meta/__tests__/buildSteamBridgeShims.test.ts's B5 case slices compileShim's
 // body by searching the source text for the literal string
@@ -718,7 +589,6 @@ export async function main(): Promise<void> {
   await stageSteamAppId()
   await compileShim()
   await compileShim64()
-  await compileSteamClient64()
 }
 
 // See meta/gen_vtables.ts for why this can't use the usual
