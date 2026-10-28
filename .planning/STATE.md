@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
 Plan: 26 of 26 complete (56-25 done; 56-22..56-24 closed as superseded by 98837f09b / 5ff2dbd8c, operator ruling 2026-10-29)
 Status: Ready to execute
-Last activity: 2026-10-28
+Last activity: 2026-10-29 - Completed quick task 261029-d7v: DRM-mode launch setup gets its own status label
 
 Progress: [██████████] 100%
 
@@ -477,6 +477,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261027-m1r | Wine PE harness (P55-9) for x86 callback 168 `__thiscall` dispatch: zig-built 32-bit exe + real x86 `steam_api.dll` under CrossOver wineloader, in-process fake helper answering CONTROL slot 6 with a canned 168 frame. ECX/payload/iCallback/return-into-shim/ESP-balanced all PASS; no-callee-pop mutant crashes (negative control). `pnpm test:x86-callback-wine` 12/12; self-skips without CrossOver/zig. Todo closed harness-confirmed; no real 32-bit title exercised live. | 2026-10-27 | `c9a679272` | Verified | [261027-m1r-wine-pe-harness-for-x86-bridge-callback](./quick/261027-m1r-wine-pe-harness-for-x86-bridge-callback/) |
 | 261027-n77 | Tier-2 known-fix `overlays` (plugin-directory target): profiles name a catalogue id only; the catalogue pins a GitHub release asset (sha256 `57e5f74b…`, 8279592 B) plus 10 per-file sums. Strict in-Node tar reader, verify-before-parse and re-verify-before-rename, 120 s unref'd deadline, warn-and-launch-without on any failure. `GST_PLUGIN_PATH` appended + deduped on the Steam bridge and non-Steam paths; known-fix env logged at launch. 284100 profile entry, LGPL notice (About line, THIRD-PARTY-NOTICES.md), publish checklist. Asset published 2026-10-27; live gate passed (overlay downloaded, main menu reached); 284100 knownBad lifted. | 2026-10-27 | `eced60c9d` | Done | [261027-n77-known-fix-overlays-plugin-directory-targ](./quick/261027-n77-known-fix-overlays-plugin-directory-targ/) |
 | 261029-8ws | Record external fix-format research (protonfixes/Lutris/CrossTie/Whisky-Mythic-Sikarugir) in the compat-fixes note; file dllOverrides, launchArgs/exeOverride and protonfixes-import todos | 2026-10-29 | 07e448d18 | Done | [261029-8ws-record-external-fix-format-research-and-](./quick/261029-8ws-record-external-fix-format-research-and-/) |
+| 261029-d7v | DRM-mode launch setup sends its own `'drm-setup'` status, labelled "Preparing Steam DRM support (<step>)", instead of borrowing `'redist'` ("Installing Redistributables"). | 2026-10-29 | 5c163c76a | Tests + codecheck green; not seen live | [261029-d7v-drm-launch-setup-own-status-label](./quick/261029-d7v-drm-launch-setup-own-status-label/) |
 | fast | `dialogDisplayed` (send-kind, added by `509bcb01b`) bucketed in `IPC-PORT-INVENTORY.md`; Unique channels 229 → 230, Ported 74 → 75. `pnpm planning-gates` 12/12. | 2026-10-29 | `28c85c608` | Done | — |
 | fast | Library tile shows Stop for a playing Steam game (context menu too), and the recently-played first tile swaps PLAY for a STOP label; D-08 card hide dropped to match MainButton. Not live-tested. | 2026-10-29 | `78f657b58` | Done | — |
 
