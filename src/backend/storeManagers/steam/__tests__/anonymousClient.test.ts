@@ -13,8 +13,7 @@ jest.mock('backend/logger', () => ({
 // cannot wipe the constructor between tests. `instances` records every
 // construction; the per-instance methods are fresh jest.fn()s each time.
 jest.mock('steam-user', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { EventEmitter } = require('events')
+  const { EventEmitter } = jest.requireActual<typeof import('events')>('events')
   class FakeSteamUser extends EventEmitter {
     static instances: FakeSteamUser[] = []
     options: Record<string, unknown>

@@ -172,7 +172,7 @@ function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
             if (!err) return resolve(true)
             const code: unknown = (err as { code?: unknown }).code
             if (code === 1) return resolve(false)
-            reject(err)
+            reject(err instanceof Error ? err : new Error(String(err)))
           }
         )
       }),

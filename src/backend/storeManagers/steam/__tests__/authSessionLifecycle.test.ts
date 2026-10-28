@@ -74,8 +74,7 @@ jest.mock('steam-session', () => ({
 }))
 
 jest.mock('steam-user', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { EventEmitter } = require('events')
+  const { EventEmitter } = jest.requireActual<typeof import('events')>('events')
   class FakeSteamUser extends EventEmitter {
     static instances: FakeSteamUser[] = []
     static ctorOpts: unknown[] = []
@@ -148,8 +147,8 @@ import { SteamUser } from '../user'
 import { logInfo, logWarning } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 
-const FakeLib = jest.requireMock('steam-user') as any
-const macMock = jest.requireMock('../macSteamOffline') as any
+const FakeLib = jest.requireMock('steam-user')
+const macMock = jest.requireMock('../macSteamOffline')
 
 const internals = SteamUser as unknown as Record<string, any>
 

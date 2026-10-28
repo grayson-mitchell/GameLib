@@ -38,7 +38,7 @@ export const GAMEMAKER_MSAA_PROBE =
 // Bounds memory: the exe is read once into a Buffer.
 const MAX_EXE_SCAN_BYTES = 512 * 1024 * 1024
 
-export type GameMakerRunnerSignals = {
+type GameMakerRunnerSignals = {
   match: boolean
   dataWin: boolean
   d3d11Import: boolean

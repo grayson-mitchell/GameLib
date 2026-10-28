@@ -61,7 +61,7 @@ type PeSteamDrmResult = {
  * Ranged read callback. Returns null, or fewer than `length` bytes, when the
  * range runs past EOF. Any short read is treated as a bounds failure.
  */
-export type PeReader = (offset: number, length: number) => Uint8Array | null
+type PeReader = (offset: number, length: number) => Uint8Array | null
 
 const unparsed = (): PeSteamDrmResult => ({
   parsed: false,

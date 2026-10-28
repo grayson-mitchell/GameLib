@@ -105,6 +105,13 @@ export default tseslint.config(
     // not product code. A .ts harness there is outside tsconfig.eslint.json, so
     // the production scope would report it as a parsing ERROR and turn
     // `pnpm lint` (and the pre-push hook) red.
-    ignores: ['build/', '.planning/', '**/*.js', '**/*.cjs', '**/*.mjs']
+    ignores: [
+      'build/',
+      '.planning/',
+      '.claude/',
+      '**/*.js',
+      '**/*.cjs',
+      '**/*.mjs'
+    ]
   }
 )

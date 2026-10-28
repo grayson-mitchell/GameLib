@@ -444,7 +444,7 @@ export function parseRegQueryDword(stdout: string): number | null {
 }
 
 /** Wine's per-user driver selection key (Graphics value picks the display driver). */
-export const WINE_DRIVERS_KEY = 'HKEY_CURRENT_USER\\Software\\Wine\\Drivers'
+const WINE_DRIVERS_KEY = 'HKEY_CURRENT_USER\\Software\\Wine\\Drivers'
 
 /** `reg query` argv for the Wine display driver choice (Graphics). */
 export function buildWineGraphicsQueryParts(): string[] {
