@@ -259,7 +259,11 @@ const EOS_OVERLAY_CHANNELS = [
 // declared list — measured directly off that file's own `registerEnrichmentFlows()` body (9
 // pre-existing Phase 34.2 Plan 06 channels + `getGogDiscounts` + the 5 `steamgriddb.*` channels
 // this plan ports out of Describe 7's deferred set), not guessed. All 14 are invoke-kind
-// (`ipcMain.handle`) — `flowRegistrationCensus.test.ts`'s own pin agrees: `{ invoke: 14, send: 0 }`.
+// (`ipcMain.handle`) — `flowRegistrationCensus.test.ts`'s own pin agreed: `{ invoke: 14, send: 0 }`.
+// Quick 261027-ch9 (2026-10-27): 14 -> 15 -- `getGamelibFixStatus` (bundled/local known-fix
+// presence for the Install info tick row) joined `registerEnrichmentFlows()`; invoke-kind, and
+// the census pin moved in the same commit to `{ invoke: 15, send: 0 }`. This list was left at 14,
+// so Describes 5 and 6 below went red on CI from the first push after that commit.
 const ENRICHMENT_CHANNELS = [
   'getWikiGameInfo',
   'getAnticheatInfo',
@@ -274,7 +278,8 @@ const ENRICHMENT_CHANNELS = [
   'steamgriddb.setApiKey',
   'steamgriddb.searchGame',
   'steamgriddb.getGrids',
-  'steamgriddb.getHeroes'
+  'steamgriddb.getHeroes',
+  'getGamelibFixStatus'
 ]
 
 const ALL_CHANNELS = [
@@ -562,7 +567,7 @@ const SEND_CHANNELS = [
   // retirement affects.
 ]
 
-describe('completeness — all 66 channels are registered with the right kind, across all six modules together (Phase 34.5 Plan 13, REQ-34.5-10; Phase 34.6 Plan 08 added the EOS overlay module; Phase 34.6 Plan 09 added enrichmentFlowRegistration.ts; Phase 34.6 Plan 10 added the last 3 late-discovered channels to registerRunnerMiscFlows; Phase 45 Plan 02 retired winetricksInstall, 67 -> 66)', () => {
+describe('completeness — all 67 channels are registered with the right kind, across all six modules together (Phase 34.5 Plan 13, REQ-34.5-10; Phase 34.6 Plan 08 added the EOS overlay module; Phase 34.6 Plan 09 added enrichmentFlowRegistration.ts; Phase 34.6 Plan 10 added the last 3 late-discovered channels to registerRunnerMiscFlows; Phase 45 Plan 02 retired winetricksInstall, 67 -> 66; Quick 261027-ch9 added getGamelibFixStatus to enrichmentFlowRegistration.ts, 66 -> 67)', () => {
   beforeAll(() => {
     // Restore from the canonical snapshot (see the module-scope comment near the top of this
     // file) rather than re-invoking the six `registerXFlows()` functions — some of them are
@@ -570,7 +575,7 @@ describe('completeness — all 66 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 67 channels are handle-kind and exactly 2 are listen-kind (Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
+  it('exactly 68 channels are handle-kind and exactly 2 are listen-kind (Quick 261027-ch9, 2026-10-27: 67/2 -> 68/2, +1 invoke getGamelibFixStatus +0 send; Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
@@ -586,7 +591,10 @@ describe('completeness — all 66 channels are registered with the right kind, a
     // kind-swapped — handle count is unaffected (65), listen count drops by exactly 1 (5 -> 4).
     // Quick 261012-ca6: `addShortcut`/`removeShortcut` moved from send to invoke -- 65+2=67
     // invoke, 4-2=2 send; the declared total of 66 is unchanged.
-    expect(handleChannels.length).toBe(67)
+    // Quick 261027-ch9 (2026-10-27): `getGamelibFixStatus` is a new invoke-kind channel on
+    // registerEnrichmentFlows -- 67+1=68 invoke, 2 send. Measured (jest failure ACTUAL: Received
+    // 68) and re-derived from the channel's own `ipcMain.handle` site -- agree.
+    expect(handleChannels.length).toBe(68)
     expect(listenChannels.length).toBe(2)
   })
 
@@ -617,12 +625,13 @@ describe('completeness — all 66 channels are registered with the right kind, a
     }
   )
 
-  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 14, totalling 66 (Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
+  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 15, totalling 67 (Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12; Quick 261027-ch9: registerEnrichmentFlows grew 14 -> 15)', () => {
     const counts = MODULES.map((m) => m.declaredChannels.length)
     // Measured (jest failure ACTUAL) and independently re-derived (64 prior total + 3 new = 67,
     // then -1 for winetricksInstall's retirement = 66) — agree.
-    expect(counts).toEqual([11, 12, 7, 14, 8, 14])
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(66)
+    // Quick 261027-ch9: +1 for `getGamelibFixStatus` on the enrichment module = 67.
+    expect(counts).toEqual([11, 12, 7, 14, 8, 15])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(67)
   })
 
   afterAll(() => {
