@@ -5,8 +5,25 @@
  * (a live capture of Valve's steam_client_win64 manifest and tiny zips).
  */
 
-import { readFileSync } from 'fs'
+import { createHash } from 'crypto'
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+  copyFileSync
+} from 'fs'
+import { tmpdir } from 'os'
 import { join } from 'path'
+import {
+  callAllAbortControllers,
+  hasAbortController
+} from 'backend/utils/aborthandler/aborthandler'
 
 const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
@@ -19,10 +36,15 @@ jest.mock('backend/logger', () => ({
 }))
 
 import {
+  MAX_VALVE_DLL_BYTES,
   MAX_VALVE_MANIFEST_BYTES,
   MAX_VALVE_PACKAGE_BYTES,
   VALVE_CLIENT_BASES,
   VALVE_CLIENT_DLLS,
+  ValveFetchText,
+  ValveFetchToFile,
+  ValveUnzipRunner,
+  ensureValveClient,
   isAllowedValveUrl,
   parseValveClientManifest,
   valveManifestUrl,
@@ -183,5 +205,313 @@ describe('valveClient.ts source discipline', () => {
     expect(src).not.toMatch(/from 'backend\/launcher'/)
     expect(src).not.toMatch(/from 'backend\/utils'/)
     expect(src).not.toMatch(/backend\/constants\/paths/)
+  })
+})
+
+describe('ensureValveClient', () => {
+  const haveUnzip = existsSync('/usr/bin/unzip')
+  const itUnzip = haveUnzip ? it : it.skip
+  let appFolder: string
+  let valveRoot: string
+
+  beforeEach(() => {
+    appFolder = mkdtempSync(join(tmpdir(), 'valve-client-test-'))
+    valveRoot = join(appFolder, 'steam-bridge', 'drm', 'valve-client')
+    mockLogWarning.mockClear()
+    mockLogInfo.mockClear()
+  })
+  afterEach(() => {
+    callAllAbortControllers()
+    rmSync(appFolder, { recursive: true, force: true })
+  })
+
+  const sha256 = (b: Buffer) => createHash('sha256').update(b).digest('hex')
+
+  /** Manifest text whose bins_win64 node describes the given zip. */
+  function manifestFor(zipName: string): string {
+    const zip = readFileSync(join(FIXTURES, zipName))
+    return withBinsField('size', String(zip.length))
+      .replace(
+        /("bins_win64"[\s\S]*?"file"\s+)"[^"]*"/,
+        `$1"bins_win64.zip.${'ab'.repeat(20)}"`
+      )
+      .replace(/("bins_win64"[\s\S]*?"sha2"\s+)"[^"]*"/, `$1"${sha256(zip)}"`)
+  }
+
+  function fakes(zipName: string) {
+    const fetchText = jest.fn<
+      ReturnType<ValveFetchText>,
+      Parameters<ValveFetchText>
+    >(async () => manifestFor(zipName))
+    const fetchToFile = jest.fn<
+      ReturnType<ValveFetchToFile>,
+      Parameters<ValveFetchToFile>
+    >(async (_url, dest) => {
+      copyFileSync(join(FIXTURES, zipName), dest)
+      return { bytes: readFileSync(dest).length }
+    })
+    return { fetchText, fetchToFile }
+  }
+
+  const rejecting = () => ({
+    fetchText: jest.fn(async () => {
+      throw new Error('offline')
+    }) as unknown as ValveFetchText,
+    fetchToFile: jest.fn(async () => {
+      throw new Error('offline')
+    }) as unknown as ValveFetchToFile
+  })
+
+  const noPartials = () => {
+    const entries = existsSync(valveRoot) ? readdirSync(valveRoot) : []
+    expect(entries).toEqual([])
+  }
+
+  itUnzip(
+    'downloads, verifies, extracts and caches the three DLLs',
+    async () => {
+      const f = fakes('bins_win64.fixture.zip')
+      const onFetchStart = jest.fn()
+      const r = await ensureValveClient({ appFolder }, { ...f, onFetchStart })
+      expect(r.status).toBe('ok')
+      if (r.status !== 'ok') return
+      expect(r.source).toBe('download')
+      expect(r.manifestVersion).toBe('1792618285')
+      expect(r.clientDir).toBe(join(valveRoot, '1792618285'))
+      for (const [key, name] of [
+        ['steamclient64', 'steamclient64.dll'],
+        ['tier0', 'tier0_s64.dll'],
+        ['vstdlib', 'vstdlib_s64.dll']
+      ] as const) {
+        expect(lstatSync(r.dlls[key]).isFile()).toBe(true)
+        expect(readFileSync(r.dlls[key], 'utf8')).toBe(
+          `gamelib valve-client fixture ${name}\n`
+        )
+      }
+      expect(readdirSync(r.clientDir).sort()).toEqual([
+        'steamclient64.dll',
+        'tier0_s64.dll',
+        'valve-client.json',
+        'vstdlib_s64.dll'
+      ])
+      expect(onFetchStart).toHaveBeenCalledTimes(1)
+      expect(f.fetchText.mock.calls[0][0]).toBe(
+        'https://client-update.akamai.steamstatic.com/steam_client_win64'
+      )
+    }
+  )
+
+  itUnzip('reuses the cache offline with zero network calls', async () => {
+    await ensureValveClient({ appFolder }, fakes('bins_win64.fixture.zip'))
+    const off = rejecting()
+    const onFetchStart = jest.fn()
+    const r = await ensureValveClient({ appFolder }, { ...off, onFetchStart })
+    expect(r.status === 'ok' && r.source).toBe('cache')
+    expect(off.fetchText).not.toHaveBeenCalled()
+    expect(off.fetchToFile).not.toHaveBeenCalled()
+    expect(onFetchStart).not.toHaveBeenCalled()
+  })
+
+  itUnzip('re-downloads when a cached DLL was edited', async () => {
+    const first = await ensureValveClient(
+      { appFolder },
+      fakes('bins_win64.fixture.zip')
+    )
+    if (first.status !== 'ok') throw new Error('setup failed')
+    writeFileSync(first.dlls.tier0, 'tampered')
+    const f = fakes('bins_win64.fixture.zip')
+    const r = await ensureValveClient({ appFolder }, f)
+    expect(r.status === 'ok' && r.source).toBe('download')
+    expect(f.fetchToFile).toHaveBeenCalledTimes(1)
+    if (r.status === 'ok') {
+      expect(readFileSync(r.dlls.tier0, 'utf8')).toContain('tier0_s64.dll')
+    }
+  })
+
+  it('rejects a package whose sha256 differs from the manifest', async () => {
+    const f = fakes('bins_win64.fixture.zip')
+    f.fetchText.mockResolvedValue(
+      manifestFor('bins_win64.fixture.zip').replace(
+        /("bins_win64"[\s\S]*?"sha2"\s+)"[^"]*"/,
+        `$1"${'0'.repeat(64)}"`
+      )
+    )
+    const r = await ensureValveClient({ appFolder }, f)
+    expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
+    if (r.status === 'error') expect(r.cause).toContain('sha256')
+    noPartials()
+  })
+
+  it('rejects a package one byte short of the manifest size', async () => {
+    const f = fakes('bins_win64.fixture.zip')
+    f.fetchToFile.mockImplementation(async (_u, dest) => {
+      const b = readFileSync(join(FIXTURES, 'bins_win64.fixture.zip'))
+      writeFileSync(dest, b.subarray(0, b.length - 1))
+      return { bytes: b.length - 1 }
+    })
+    const r = await ensureValveClient({ appFolder }, f)
+    expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
+    if (r.status === 'error') expect(r.cause).toContain('size')
+    noPartials()
+  })
+
+  itUnzip('never writes hostile or nested zip entries', async () => {
+    const r = await ensureValveClient(
+      { appFolder },
+      fakes('bins_win64.hostile.fixture.zip')
+    )
+    expect(r.status).toBe('ok')
+    expect(existsSync(join(appFolder, 'escape.txt'))).toBe(false)
+    expect(existsSync(join(valveRoot, 'escape.txt'))).toBe(false)
+    expect(existsSync(join(tmpdir(), 'escape.txt'))).toBe(false)
+    if (r.status === 'ok') {
+      expect(readFileSync(r.dlls.steamclient64, 'utf8')).toBe(
+        'gamelib valve-client fixture steamclient64.dll\n'
+      )
+    }
+  })
+
+  itUnzip('rejects a symlink entry', async () => {
+    const r = await ensureValveClient(
+      { appFolder },
+      fakes('bins_win64.symlink.fixture.zip')
+    )
+    expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
+    if (r.status === 'error') expect(r.cause).toContain('regular file')
+    noPartials()
+  })
+
+  itUnzip('rejects a package missing one DLL', async () => {
+    const r = await ensureValveClient(
+      { appFolder },
+      fakes('bins_win64.missing.fixture.zip')
+    )
+    expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
+    noPartials()
+  })
+
+  it('refuses an oversize listed entry before extracting', async () => {
+    const f = fakes('bins_win64.fixture.zip')
+    const calls: string[][] = []
+    const runUnzip: ValveUnzipRunner = async (args) => {
+      calls.push([...args])
+      return {
+        code: 0,
+        timedOut: false,
+        stderr: '',
+        stdout: [
+          `${MAX_VALVE_DLL_BYTES + 1}  10-21-2026 00:00   steamclient64.dll`,
+          '43  10-21-2026 00:00   tier0_s64.dll',
+          '45  10-21-2026 00:00   vstdlib_s64.dll'
+        ].join('\n')
+      }
+    }
+    const r = await ensureValveClient({ appFolder }, { ...f, runUnzip })
+    expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
+    expect(calls).toHaveLength(1)
+    expect(calls[0][0]).toBe('-l')
+    noPartials()
+  })
+
+  it('falls back to the second base for the manifest and package', async () => {
+    const f = fakes('bins_win64.fixture.zip')
+    f.fetchText.mockRejectedValueOnce(new Error('first base down'))
+    await ensureValveClient({ appFolder }, f)
+    expect(f.fetchText.mock.calls[1][0]).toBe(
+      'https://steamcdn-a.akamaihd.net/client/steam_client_win64'
+    )
+    expect(f.fetchToFile.mock.calls[0][0]).toMatch(
+      /^https:\/\/steamcdn-a\.akamaihd\.net\/client\/bins_win64\.zip\./
+    )
+  })
+
+  it('reports valve-fetch with the last error when every base fails', async () => {
+    const off = rejecting()
+    ;(off.fetchText as jest.Mock).mockRejectedValue(new Error('last-boom'))
+    const r = await ensureValveClient({ appFolder }, off)
+    expect(r).toMatchObject({ status: 'error', step: 'valve-fetch' })
+    if (r.status === 'error') expect(r.cause).toContain('last-boom')
+  })
+
+  it('rejects a malformed manifest without fetching the package', async () => {
+    const f = fakes('bins_win64.fixture.zip')
+    f.fetchText.mockResolvedValue('"win64"\n{ "version" "1" }')
+    const r = await ensureValveClient({ appFolder }, f)
+    expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
+    expect(f.fetchToFile).not.toHaveBeenCalled()
+  })
+
+  it('times out a hanging package fetch and unregisters controllers', async () => {
+    const f = fakes('bins_win64.fixture.zip')
+    f.fetchToFile.mockImplementation(() => new Promise(() => undefined))
+    const r = await ensureValveClient(
+      { appFolder },
+      { ...f, packageTimeoutMs: 30 }
+    )
+    expect(r).toMatchObject({ status: 'error', step: 'valve-fetch' })
+    if (r.status === 'error') expect(r.cause).toContain('timed out')
+    expect(hasAbortController('drm-valve-client:manifest')).toBe(false)
+    expect(hasAbortController('drm-valve-client:package')).toBe(false)
+    noPartials()
+  })
+
+  it('ends a hanging fetch when callAllAbortControllers() runs', async () => {
+    const f = fakes('bins_win64.fixture.zip')
+    f.fetchToFile.mockImplementation(() => new Promise(() => undefined))
+    const pending = ensureValveClient({ appFolder }, f)
+    while (!hasAbortController('drm-valve-client:package')) {
+      await new Promise((r) => setTimeout(r, 5))
+    }
+    callAllAbortControllers()
+    const r = await pending
+    expect(r).toMatchObject({ status: 'error', step: 'valve-fetch' })
+    if (r.status === 'error') expect(r.cause).toContain('aborted')
+    expect(hasAbortController('drm-valve-client:manifest')).toBe(false)
+    expect(hasAbortController('drm-valve-client:package')).toBe(false)
+  })
+
+  itUnzip('shares one run between concurrent calls', async () => {
+    const f = fakes('bins_win64.fixture.zip')
+    const [a, b] = await Promise.all([
+      ensureValveClient({ appFolder }, f),
+      ensureValveClient({ appFolder }, f)
+    ])
+    expect(a.status).toBe('ok')
+    expect(b.status).toBe('ok')
+    expect(f.fetchText).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses a relative app folder without fetching', async () => {
+    const f = fakes('bins_win64.fixture.zip')
+    const r = await ensureValveClient({ appFolder: 'relative/dir' }, f)
+    expect(r).toEqual({
+      status: 'error',
+      step: 'valve-fetch',
+      cause: 'invalid app folder'
+    })
+    expect(f.fetchText).not.toHaveBeenCalled()
+  })
+
+  it('refuses a symlinked valve-client root', async () => {
+    const elsewhere = mkdtempSync(join(tmpdir(), 'valve-client-elsewhere-'))
+    try {
+      mkdirSync(join(appFolder, 'steam-bridge', 'drm'), { recursive: true })
+      symlinkSync(elsewhere, valveRoot)
+      const f = fakes('bins_win64.fixture.zip')
+      const r = await ensureValveClient({ appFolder }, f)
+      expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
+      expect(readdirSync(elsewhere)).toEqual([])
+      expect(f.fetchText).not.toHaveBeenCalled()
+    } finally {
+      rmSync(elsewhere, { recursive: true, force: true })
+    }
+  })
+
+  it('does nothing at import time', () => {
+    jest.isolateModules(() => {
+      require('../valveClient')
+    })
+    expect(hasAbortController('drm-valve-client:manifest')).toBe(false)
+    expect(hasAbortController('drm-valve-client:package')).toBe(false)
   })
 })
