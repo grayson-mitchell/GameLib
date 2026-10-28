@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
 Plan: 16 of 16
 Status: Ready to execute
-Last activity: 2026-10-28
+Last activity: 2026-10-28 - Completed quick task 261028-k7l: generic GameMaker D3D11 runner DXVK default on the Steam bridge
 
 Progress: [██████████] 99%
 
@@ -448,6 +448,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261027-tot | Steam setup downloads visible in Downloads: `downloadSetupPayload()` wraps the client-installer and bottle `downloadFile` calls and pushes `steamSetupDownloadProgress`; a new "Setup" section shows byte-progress rows ("Steam client installer" / "Steam for CrossOver"). Client-not-installed/never-launched diversions now return `deferredToSetup` instead of a finished failure (the bottle diversion was already fixed by 261024-cjq). 3 keys filled in 48 non-en catalogs; todo closed. | 2026-10-27 | ec864ad2b | jest green (setup/clientSetup/bottle/games/DM/preload); codecheck red only on Phase 54's RED `anonymousClient.test.ts`; lint-translations 0 hard, churn-guard clean, planning-gates 12/12; live gate: client row pass 2026-10-28, bottle row pending | [261027-tot-steam-client-and-bottle-setup-downloads-](./quick/261027-tot-steam-client-and-bottle-setup-downloads-/) |
 | fast-261028 | Inventory gap closed: Phase 54 WR-05 channel `steamGoOfflineCancel` (invoke, `steamAuthFlowRegistration.ts`) added to `IPC-PORT-INVENTORY.md` as its own PORTED bucket; Unique channels 228 → 229, Ported to sidecar 73 → 74. Fixes the red `preload-surface-gate.py`. | 2026-10-28 | (this commit) | planning-gates 12/12, gate self-test OK | — |
 | fast | 55-REVIEW-FIX brought up to date: WR-03 (skipped on 2026-10-26) moved to Fixed Issues, citing quick 261027-9vr (`bad35fc50`, `36f015607`, `26d37a064`, `50c3024cc`) and its live gate (`30c6b2bd5`). Frontmatter set to `fixed: 5`, `skipped: 0`, `status: all_fixed`. WR-01 human check recorded as met (55-UAT run 2, `cross_thread_unregister_waits`, SECURITY T-55-16). Phase 55 folder now reads green in gsd-phase-status. | 2026-10-28 | (this commit) | Done | — |
+| 261028-k7l | Generic GameMaker D3D11 runner default on the Steam bridge: CrossOver launch gets `CX_GRAPHICS_BACKEND=dxvk` when `data.win` sits beside the exe, the PE imports `d3d11.dll`, and the exe holds `GR_D3D_Device->CheckMultisampleQualityLevels` (replaces the unbuildable runner>=2024 check). User env > tier-1 > default. `1603180-steam.json` kept as regression pin. Closes the GameMaker MSAA-probe todo. | 2026-10-28 | `985c2a950` | Live-gated: Mining Mechs with pin moved aside, default applied, bridge verified, no dialogs. jest 118/118, codecheck clean. | [261028-k7l-generic-gamemaker-2024-d3d11-runner-dete](./quick/261028-k7l-generic-gamemaker-2024-d3d11-runner-dete/) |
 
 ## Deferred Items
 
