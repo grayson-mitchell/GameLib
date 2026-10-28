@@ -25,7 +25,7 @@
  *   deadline and abort id.
  */
 import { spawn } from 'child_process'
-import { isAbsolute } from 'path'
+import { dirname, isAbsolute, resolve } from 'path'
 import type { GameSettings, GameStatus } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
@@ -91,6 +91,8 @@ export type DrmLaunchSetupInput = {
   installdir: string
   drmWrapper: 'steamstub' | 'none' | undefined
   cegMarkers?: readonly string[]
+  /** The exe that carries .bind when it is not exePath (UE Shipping exe). */
+  drmExe?: string
   signal?: AbortSignal
 }
 
@@ -365,6 +367,9 @@ async function runSetup(
     installdir: input.installdir,
     valveClientDir: valveClient.clientDir,
     componentDir: component.componentDir,
+    ...(input.drmExe && resolve(input.drmExe) !== resolve(input.exePath)
+      ? { extraExeDirs: [dirname(input.drmExe)] }
+      : {}),
     signal: input.signal
   }
   const staged = await run('bottle-stage', () => stage(stageInput))

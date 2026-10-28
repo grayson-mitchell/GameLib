@@ -202,6 +202,8 @@ export type StageDrmBottleInput = {
   installdir: string
   valveClientDir: string
   componentDir: string
+  /** Gap 11: extra exe dirs (UE Shipping exe) whose TCP artifacts are cleaned. */
+  extraExeDirs?: string[]
   signal?: AbortSignal
 }
 
@@ -384,7 +386,8 @@ export async function restoreDrmOriginals(
 // ts-prune-ignore-next
 export function removeTcpBridgeArtifacts(
   ctx: Pick<WalkCtx, 'appId' | 'bottleDir' | 'exePath' | 'installRoot'>,
-  runtimeDllPaths: string[]
+  runtimeDllPaths: string[],
+  extraExeDirs: string[] = []
 ):
   | { ok: true; removed: string[]; foreignSteamClientLeft: string[] }
   | { ok: false; cause: string } {
@@ -395,9 +398,13 @@ export function removeTcpBridgeArtifacts(
   try {
     const dllDirs = runtimeDllPaths.map((p) => dirname(p))
     const cfgDirs = new Set(
-      [exeDir, join(exeDir, 'compat'), join(exeDir, 'x64'), ...dllDirs].map(
-        (d) => resolve(d)
-      )
+      [
+        exeDir,
+        join(exeDir, 'compat'),
+        join(exeDir, 'x64'),
+        ...extraExeDirs,
+        ...dllDirs
+      ].map((d) => resolve(d))
     )
     for (const dir of cfgDirs) {
       const cfg = join(dir, BRIDGE_CONFIG_FILENAME)
@@ -421,6 +428,7 @@ export function removeTcpBridgeArtifacts(
     const fwdDirs = new Set(
       [
         exeDir,
+        ...extraExeDirs,
         ...runtimeDllPaths
           .filter((p) => basename(p).toLowerCase() === 'steam_api64.dll')
           .map((p) => dirname(p))
@@ -572,6 +580,12 @@ export async function stageDrmBottle(
     if (!isContainedWithin(driveC, installRoot)) {
       return fail('install root outside bottle drive_c')
     }
+    const extraExeDirs = (input.extraExeDirs ?? []).map((d) => resolve(d))
+    for (const d of extraExeDirs) {
+      if (!isContainedWithin(driveC, d)) {
+        return fail('extra exe dir outside bottle drive_c')
+      }
+    }
     if (input.signal?.aborted) return fail('aborted')
 
     // 2. Steam dir pre-checks (no writes).
@@ -631,7 +645,7 @@ export async function stageDrmBottle(
     const swap = await restoreDrmOriginals(ctx)
     if (!swap.ok) return fail(swap.cause)
     const runtimeDllPaths = (await walkRuntimeDlls(ctx)).map((d) => d.path)
-    const cleaned = removeTcpBridgeArtifacts(ctx, runtimeDllPaths)
+    const cleaned = removeTcpBridgeArtifacts(ctx, runtimeDllPaths, extraExeDirs)
     if (!cleaned.ok) return fail(cleaned.cause)
 
     // 5. Stage files.

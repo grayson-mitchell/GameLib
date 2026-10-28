@@ -412,6 +412,16 @@ describe('removeTcpBridgeArtifacts', () => {
     expect(readFileSync(b)).toEqual(Buffer.from('MZ-game-own'))
   })
 
+  it('cleans cfg and forwarder in extraExeDirs', () => {
+    const shipping = join(installRoot, 'Game', 'Binaries', 'Win64')
+    write(join(shipping, 'gamelib_bridge.cfg'), 'cfg')
+    write(join(shipping, 'steamclient64.dll'), FORWARDER)
+    const r = removeTcpBridgeArtifacts(ctx(), [], [shipping])
+    expect(r.ok).toBe(true)
+    expect(existsSync(join(shipping, 'gamelib_bridge.cfg'))).toBe(false)
+    expect(existsSync(join(shipping, 'steamclient64.dll'))).toBe(false)
+  })
+
   it('never reads a steamclient64.dll over 4 MiB', () => {
     const a = join(installRoot, 'steamclient64.dll')
     write(a, Buffer.concat([FORWARDER, Buffer.alloc(5 * 1024 * 1024)]))
@@ -563,6 +573,27 @@ describe('stageDrmBottle', () => {
     expect(r.status).toBe('ok')
     expect(readFileSync(live)).toEqual(ORIG)
     expect(existsSync(join(installRoot, 'gamelib_bridge.cfg'))).toBe(false)
+  })
+
+  it('removes Shipping-dir artifacts through extraExeDirs', async () => {
+    const shipping = join(installRoot, 'Game', 'Binaries', 'Win64')
+    write(join(shipping, 'gamelib_bridge.cfg'), 'cfg')
+    write(join(shipping, 'steamclient64.dll'), FORWARDER)
+    const r = await run({ extraExeDirs: [shipping] })
+    expect(r.status).toBe('ok')
+    expect(existsSync(join(shipping, 'gamelib_bridge.cfg'))).toBe(false)
+    expect(existsSync(join(shipping, 'steamclient64.dll'))).toBe(false)
+  })
+
+  it('rejects an extraExeDirs entry outside drive_c and removes nothing', async () => {
+    write(join(installRoot, 'gamelib_bridge.cfg'), 'cfg')
+    await expectErr(run({ extraExeDirs: [tmp] }), 'extra exe dir')
+    expect(existsSync(join(installRoot, 'gamelib_bridge.cfg'))).toBe(true)
+  })
+
+  it('behaves as before with extraExeDirs [] ', async () => {
+    const r = await run({ extraExeDirs: [] })
+    expect(r.status).toBe('ok')
   })
 
   it.each([

@@ -231,6 +231,22 @@ describe('drmLaunchSetup', () => {
     })
   })
 
+  test('passes extraExeDirs only when drmExe differs from exePath', async () => {
+    const run = async (drmExe?: string) => {
+      const deps = makeDeps([])
+      await drmLaunchSetup(
+        makeInput(freshId(), { exePath: '/games/x/boot.exe', drmExe }),
+        deps
+      )
+      return deps.stageBottle.mock.calls[0][0]
+    }
+    expect((await run('/games/x/B/Win64/s.exe')).extraExeDirs).toEqual([
+      '/games/x/B/Win64'
+    ])
+    expect((await run('/games/x/boot.exe')).extraExeDirs).toBeUndefined()
+    expect((await run(undefined)).extraExeDirs).toBeUndefined()
+  })
+
   test('Mac Steam not running or probe failure stops before everything', async () => {
     const order: string[] = []
     const deps = makeDeps(order, {
