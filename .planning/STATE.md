@@ -4,14 +4,14 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 56 context gathered
-last_updated: "2026-10-28T10:29:41.186Z"
-last_activity: 2026-10-28 -- Phase 56 planning complete
+last_updated: "2026-10-28T19:08:01.841Z"
+last_activity: 2026-10-29
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 5
   total_plans: 134
-  completed_plans: 124
-  percent: 83
+  completed_plans: 125
+  percent: 71
 ---
 
 # Project State
@@ -72,11 +72,11 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
-Plan: 16 of 16
+Plan: 17 of 26 complete (56-17 done)
 Status: Ready to execute
-Last activity: 2026-10-29 -- Completed quick task 261029-avh: install route notice consults DRM routing
+Last activity: 2026-10-29 -- Completed 56-17 desk diagnosis (Gaps 7, 9)
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 65%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -202,6 +202,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 56 P01 | 25min | 3 tasks | 1 files |
 | Phase 56 P05 | 15min | 2 tasks | 4 files |
 | Phase 56 P09 | 25min | 2 tasks | 2 files |
+| Phase 56 P17 | 25min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -288,6 +289,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 56]: 56-01: launch_form=bin/wine+CX_BOTTLE; overrides via --dll/CX_ENV/registry, never plain env — wrapper strips WINEDLLOVERRIDES
 - [Phase 56]: 56-05: ISteamClient_* and SetMinidumpSteamID calls do not count as game calls beyond init for DRM census
 - [Phase 56]: 56-09: stageDrmBottle carries own HKCU registry builder and path mapping; no steamClientSetup import
+- [Phase 56]: 56-17: Gap 7 root cause x64 cwd (98837f09b); Gap 9 trigger strict SteamPath check (5ff2dbd8c); winebus abort-spin residual
 
 ### Pending Todos
 
@@ -479,7 +481,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-28T10:00:55.489Z
+Last session: 2026-10-28T19:07:56.175Z
 Stopped at: Phase 56 context gathered
 Resume file: None
 
