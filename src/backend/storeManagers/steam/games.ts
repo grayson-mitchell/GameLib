@@ -12,7 +12,8 @@ import {
   readSync,
   readdirSync,
   rmSync,
-  unlinkSync
+  unlinkSync,
+  writeSync
 } from 'node:fs'
 import {
   basename,
@@ -893,6 +894,70 @@ export function drmBottleWinPath(
   return 'C:\\' + rel.split(sep).join('\\')
 }
 
+/** `<id>.log` -> `<id>.wine.log`: the wine child's output beside its trace. */
+// ts-prune-ignore-next
+export function drmWineLogPathFor(traceFile: string): string {
+  return traceFile.replace(/\.log$/, '.wine.log')
+}
+
+/** GAMELIB_DRM_WINEDEBUG allowlist (T-56-20-01); anything else is ignored. */
+// ts-prune-ignore-next
+export function drmWineDebugFromEnv(
+  value: string | undefined
+): string | undefined {
+  return value !== undefined && /^[A-Za-z0-9_+\-,.]{1,200}$/.test(value)
+    ? value
+    : undefined
+}
+
+/** Synchronous, size-capped (T-56-20-02), 0600 append sink for the wine log. */
+// ts-prune-ignore-next
+export function createDrmWineLogAppender(
+  path: string,
+  maxBytes: number = 8 * 1024 * 1024
+): { write: (chunk: string) => void; close: () => void } {
+  let fd: number | null = null
+  let written = 0
+  let truncated = false
+  try {
+    fd = openSync(path, 'a', 0o600)
+  } catch (error) {
+    logWarning(
+      `SteamGame: DRM wine log unavailable: ${String(error)}`,
+      LogPrefix.Steam
+    )
+  }
+  return {
+    write: (chunk: string) => {
+      if (fd === null || truncated) return
+      try {
+        const buf = Buffer.from(chunk, 'utf8')
+        if (written + buf.length > maxBytes) {
+          const room = Math.max(0, maxBytes - written)
+          if (room > 0) writeSync(fd, buf, 0, room)
+          writeSync(fd, `\n[gamelib] wine log truncated at ${maxBytes} bytes\n`)
+          written = maxBytes
+          truncated = true
+          return
+        }
+        writeSync(fd, buf)
+        written += buf.length
+      } catch {
+        truncated = true
+      }
+    },
+    close: () => {
+      if (fd === null) return
+      try {
+        closeSync(fd)
+      } catch {
+        // nothing to clean up
+      }
+      fd = null
+    }
+  }
+}
+
 // ts-prune-ignore-next
 export function prepareDrmTraceFile(
   appFolderPath: string,
@@ -932,6 +997,9 @@ export function prepareDrmTraceFile(
       mine.sort((a, b) => b.id - a.id)
       for (const old of mine.slice(DRM_TRACE_KEEP_PER_APP - 1)) {
         unlinkSync(join(paths.traceRoot, old.name))
+        rmSync(drmWineLogPathFor(join(paths.traceRoot, old.name)), {
+          force: true
+        })
       }
     } catch (error) {
       logWarning(
@@ -4100,6 +4168,21 @@ export default class SteamGame implements Game {
           ...launchSettings,
           enviromentOptions: env.enviromentOptions
         }
+        // Dev-only diagnostic channel list (56-20); validated, DRM launches only.
+        const wineDebug = drmWineDebugFromEnv(process.env.GAMELIB_DRM_WINEDEBUG)
+        if (wineDebug) {
+          launchSettings = {
+            ...launchSettings,
+            enviromentOptions: [
+              ...(launchSettings.enviromentOptions ?? []),
+              { key: 'WINEDEBUG', value: wineDebug }
+            ]
+          }
+          logInfo(
+            `SteamGame: drm launch appId ${this.appId}: WINEDEBUG=${wineDebug} (GAMELIB_DRM_WINEDEBUG)`,
+            LogPrefix.Steam
+          )
+        }
         drmCommandPrefix = env.commandPrefix
 
         for (const cmd of env.registryCommands) {
@@ -4191,6 +4274,15 @@ export default class SteamGame implements Game {
           bridgeBottleSettings.wineCrossoverBottle
         ) ??
         dirname(exePath)
+      const wineLog = drm
+        ? createDrmWineLogAppender(drmWineLogPathFor(drm.traceFile))
+        : null
+      if (drm) {
+        logInfo(
+          `SteamGame: drm launch appId ${this.appId}: wine log ${drmWineLogPathFor(drm.traceFile)}`,
+          LogPrefix.Steam
+        )
+      }
       const winePromise = runWineCommand({
         commandParts: drm
           ? [
@@ -4203,8 +4295,12 @@ export default class SteamGame implements Game {
         wait: false,
         protonVerb: 'run',
         startFolder: launchCwd,
-        skipPrefixCheckIKnowWhatImDoing: true
+        skipPrefixCheckIKnowWhatImDoing: true,
+        ...(wineLog
+          ? { options: { onOutput: (chunk: string) => wineLog.write(chunk) } }
+          : {})
       })
+      void winePromise.finally(() => wineLog?.close()).catch(() => undefined)
       void winePromise.then(
         () => {
           // With a monitor, its onStopped clears the record when the game is

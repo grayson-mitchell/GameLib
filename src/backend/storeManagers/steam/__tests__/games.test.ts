@@ -33,6 +33,9 @@ import SteamGame, {
   buildDrmLaunchEnvironment,
   drmBottleWinPath,
   prepareDrmTraceFile,
+  drmWineLogPathFor,
+  drmWineDebugFromEnv,
+  createDrmWineLogAppender,
   relogDrmTrace,
   DRM_DLLPATH_CHANNEL,
   DRM_DLLOVERRIDES_CHANNEL,
@@ -10606,6 +10609,46 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       expect(left).not.toContain('219990-1.log')
       expect(realExistsSync(realJoin(traceRoot, '5-1.log'))).toBe(true)
       expect(realExistsSync(realJoin(traceRoot, 'notes.txt'))).toBe(true)
+    })
+
+    it('56-20: drmWineLogPathFor, drmWineDebugFromEnv and the bounded appender', () => {
+      expect(drmWineLogPathFor('/x/219990-17.log')).toBe(
+        '/x/219990-17.wine.log'
+      )
+      expect(drmWineDebugFromEnv('+seh,+steamclient')).toBe('+seh,+steamclient')
+      for (const bad of ['a b', 'a"b', '$X', 'a;b', 'a'.repeat(201), '']) {
+        expect(drmWineDebugFromEnv(bad)).toBeUndefined()
+      }
+      expect(drmWineDebugFromEnv(undefined)).toBeUndefined()
+
+      const root = makeTmp()
+      const path = realJoin(root, 'a.wine.log')
+      const app = createDrmWineLogAppender(path, 10)
+      app.write('12345')
+      app.write('678901234')
+      app.write('ignored')
+      app.close()
+      const body = realFs.readFileSync(path, 'utf8')
+      expect(body.startsWith('1234567890')).toBe(true)
+      expect(body).toContain('[gamelib] wine log truncated at 10 bytes')
+      expect(body).not.toContain('ignored')
+    })
+
+    it('56-20: pruning a trace file also removes its wine log', () => {
+      const root = makeTmp()
+      const traceRoot = realJoin(root, 'steam-bridge', 'drm', 'trace')
+      mkdirSync(traceRoot, { recursive: true })
+      for (let i = 1; i <= 10; i++) {
+        writeFileSync(realJoin(traceRoot, `219990-${i}.log`), 'x')
+        writeFileSync(realJoin(traceRoot, `219990-${i}.wine.log`), 'x')
+      }
+      prepareDrmTraceFile(root, '219990', 1761084000123)
+      expect(realExistsSync(realJoin(traceRoot, '219990-1.wine.log'))).toBe(
+        false
+      )
+      expect(realExistsSync(realJoin(traceRoot, '219990-10.wine.log'))).toBe(
+        true
+      )
     })
 
     it('prepareDrmTraceFile refuses a symlinked trace dir and spares symlink targets', () => {
