@@ -12,6 +12,7 @@ import { drmStepError } from '../steamclientLayerMode'
 import {
   drmLaunchSetup,
   isMacSteamRunning,
+  prefetchDrmDownloads,
   DRM_END_SESSION_TIMEOUT_MS,
   DRM_PROGRESS_CONTEXT,
   type DrmLaunchSetupDeps,
@@ -499,5 +500,84 @@ describe('drmLaunchSetup', () => {
     ]) {
       expect(code).not.toMatch(re)
     }
+  })
+})
+
+describe('prefetchDrmDownloads (quick 261029-e2t)', () => {
+  const prefetchInput = (appId: string) => ({
+    appId,
+    appFolder: APP_FOLDER,
+    drmWrapper: 'steamstub' as const
+  })
+
+  it('runs steps 2-5 only: no Steam check, no runner registration, no bottle', async () => {
+    const order: string[] = []
+    const deps = makeDeps(order)
+    const res = await prefetchDrmDownloads(prefetchInput(freshId()), deps)
+    expect(res).toEqual({ status: 'ok' })
+    expect(order).toEqual(['crossover', 'component', 'runner', 'valve'])
+    expect(deps.isMacSteamRunning).not.toHaveBeenCalled()
+    expect(deps.registerRunner).not.toHaveBeenCalled()
+    expect(deps.clearRunner).not.toHaveBeenCalled()
+    expect(deps.endBottleSession).not.toHaveBeenCalled()
+    expect(deps.stageBottle).not.toHaveBeenCalled()
+  })
+
+  it("reports fetch progress as 'drm-setup'", async () => {
+    const id = freshId()
+    const deps = makeDeps([], {
+      ensureComponent: jest.fn(async (_i: Any, h: Any) => {
+        h.onFetchStart()
+        return { status: 'ok', ...COMPONENT }
+      }),
+      ensureValveClient: jest.fn(async (_i: Any, h: Any) => {
+        h.onFetchStart()
+        return { status: 'ok', ...VALVE }
+      })
+    } as Any)
+    await prefetchDrmDownloads(prefetchInput(id), deps)
+    expect(deps.sendStatus.mock.calls.map((c: Any) => c[0])).toEqual([
+      {
+        appName: id,
+        runner: 'steam',
+        status: 'drm-setup',
+        context: DRM_PROGRESS_CONTEXT.runner
+      },
+      {
+        appName: id,
+        runner: 'steam',
+        status: 'drm-setup',
+        context: DRM_PROGRESS_CONTEXT.valveClient
+      }
+    ])
+  })
+
+  it('does nothing for a title that is not steamclient-layer', async () => {
+    const order: string[] = []
+    const deps = makeDeps(order)
+    const res = await prefetchDrmDownloads(
+      { ...prefetchInput(freshId()), drmWrapper: 'none' },
+      deps
+    )
+    expect(res).toEqual({ status: 'not-applicable' })
+    expect(order).toEqual([])
+    expect(deps.clearRunner).not.toHaveBeenCalled()
+  })
+
+  it('stops at the first failing step, leaves the runner alone, never rejects', async () => {
+    const order: string[] = []
+    const deps = makeDeps(order, {
+      ensureRunner: jest.fn(async () => {
+        order.push('runner')
+        throw new Error('clone failed')
+      })
+    } as Any)
+    const res = await prefetchDrmDownloads(prefetchInput(freshId()), deps)
+    expect(res).toEqual(
+      expect.objectContaining({ status: 'error', step: 'runner-clone' })
+    )
+    expect(res).not.toHaveProperty('stage')
+    expect(order).toEqual(['crossover', 'component', 'runner'])
+    expect(deps.clearRunner).not.toHaveBeenCalled()
   })
 })

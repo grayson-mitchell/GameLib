@@ -33,6 +33,7 @@ import {
   drmStepError,
   resolveBridgeMode,
   type DrmStep,
+  type DrmStepError,
   type DrmStepResult
 } from './steamclientLayerMode'
 import {
@@ -205,6 +206,87 @@ export async function isMacSteamRunning(
   }
 }
 
+type DrmDownloads = {
+  status: 'ok'
+  crossover: CrossoverAllowed
+  component: SteamclientLayerReady
+  runner: RunnerReady
+  valveClient: ValveClientReady
+}
+
+/** The step's own error object, unchanged, with the stage it stopped at. */
+type DrmDownloadsError = {
+  status: 'error'
+  stage: (typeof DRM_SETUP_STEPS)[number]
+  error: DrmStepError
+}
+
+/**
+ * Steps 2-5 (CrossOver allowlist, component, runner, Valve client), shared by
+ * the launch setup and the install-time prefetch. Each `ensure*` is cached, so
+ * a second run is a no-op that sends no progress.
+ */
+async function ensureDrmDownloads(
+  appFolder: string,
+  deps: DrmLaunchSetupDeps,
+  progress: (context: string) => void
+): Promise<DrmDownloads | DrmDownloadsError> {
+  const run = async <T extends { status: string }>(
+    step: DrmStep,
+    fn: () => Promise<T>
+  ): Promise<T | ReturnType<typeof drmStepError>> => {
+    try {
+      return await fn()
+    } catch (err) {
+      return drmStepError(step, err)
+    }
+  }
+
+  // 2. CrossOver allowlist
+  const detect = deps.detectCrossover ?? detectAllowedCrossover
+  const crossover = await run('unsupported-crossover', () =>
+    detect({ appFolder })
+  )
+  if (crossover.status === 'error')
+    return { status: 'error', stage: 'crossover-allowlist', error: crossover }
+
+  // 3. Component
+  const ensureComponent =
+    deps.ensureComponent ?? ensureSteamclientLayerComponent
+  const component = await run('component-missing', () =>
+    ensureComponent(
+      { appFolder, crossoverBuild: crossover.crossoverBuild },
+      { onFetchStart: () => progress(DRM_PROGRESS_CONTEXT.runner) }
+    )
+  )
+  if (component.status === 'error')
+    return { status: 'error', stage: 'component', error: component }
+
+  // 4. Runner
+  const ensureRunner = deps.ensureRunner ?? ensureRunnerClone
+  const runner = await run('runner-clone', () =>
+    ensureRunner(
+      { appFolder, crossover, component },
+      { onCloneStart: () => progress(DRM_PROGRESS_CONTEXT.runner) }
+    )
+  )
+  if (runner.status === 'error')
+    return { status: 'error', stage: 'runner', error: runner }
+
+  // 5. Valve client
+  const ensureValve = deps.ensureValveClient ?? ensureValveClient
+  const valveClient = await run('valve-fetch', () =>
+    ensureValve(
+      { appFolder },
+      { onFetchStart: () => progress(DRM_PROGRESS_CONTEXT.valveClient) }
+    )
+  )
+  if (valveClient.status === 'error')
+    return { status: 'error', stage: 'valve-client', error: valveClient }
+
+  return { status: 'ok', crossover, component, runner, valveClient }
+}
+
 async function runSetup(
   input: DrmLaunchSetupInput,
   deps: DrmLaunchSetupDeps
@@ -295,44 +377,12 @@ async function runSetup(
     )
   }
 
-  // 2. CrossOver allowlist
-  const detect = deps.detectCrossover ?? detectAllowedCrossover
-  const crossover = await run('unsupported-crossover', () =>
-    detect({ appFolder })
-  )
-  if (crossover.status === 'error')
-    return fail('crossover-allowlist', crossover)
-
-  // 3. Component
-  const ensureComponent =
-    deps.ensureComponent ?? ensureSteamclientLayerComponent
-  const component = await run('component-missing', () =>
-    ensureComponent(
-      { appFolder, crossoverBuild: crossover.crossoverBuild },
-      { onFetchStart: () => progress(DRM_PROGRESS_CONTEXT.runner) }
-    )
-  )
-  if (component.status === 'error') return fail('component', component)
-
-  // 4. Runner
-  const ensureRunner = deps.ensureRunner ?? ensureRunnerClone
-  const runner = await run('runner-clone', () =>
-    ensureRunner(
-      { appFolder, crossover, component },
-      { onCloneStart: () => progress(DRM_PROGRESS_CONTEXT.runner) }
-    )
-  )
-  if (runner.status === 'error') return fail('runner', runner)
-
-  // 5. Valve client
-  const ensureValve = deps.ensureValveClient ?? ensureValveClient
-  const valveClient = await run('valve-fetch', () =>
-    ensureValve(
-      { appFolder },
-      { onFetchStart: () => progress(DRM_PROGRESS_CONTEXT.valveClient) }
-    )
-  )
-  if (valveClient.status === 'error') return fail('valve-client', valveClient)
+  // 2-5. CrossOver allowlist, component, runner, Valve client
+  const downloads = await ensureDrmDownloads(appFolder, deps, progress)
+  if (downloads.status === 'error') {
+    return fail(downloads.stage, downloads.error)
+  }
+  const { crossover, component, runner, valveClient } = downloads
 
   // 6. Bottle staging
   let bottleSettings: GameSettings
@@ -450,5 +500,84 @@ export async function drmLaunchSetup(
     return await promise
   } catch (err) {
     return drmStepError('bottle-stage', err)
+  }
+}
+
+// ts-prune-ignore-next
+export type DrmPrefetchInput = {
+  appId: string
+  appFolder: string
+  drmWrapper: 'steamstub' | 'none' | undefined
+  cegMarkers?: readonly string[]
+}
+
+// ts-prune-ignore-next
+export type DrmPrefetchResult =
+  | { status: 'ok' }
+  | { status: 'not-applicable' }
+  | DrmStepError
+
+/**
+ * Quick 261029-e2t: steps 2-5 at the end of a bridge install, so the first
+ * Play only stages the bottle. It skips the Mac Steam check (a download needs
+ * no Steam), registers no runner and touches no bottle; the launch setup
+ * still runs every step, and the cached ones are no-ops. Progress goes out as
+ * the same 'drm-setup' status. Never rejects.
+ */
+// ts-prune-ignore-next
+export async function prefetchDrmDownloads(
+  input: DrmPrefetchInput,
+  deps: DrmLaunchSetupDeps = {}
+): Promise<DrmPrefetchResult> {
+  try {
+    if (
+      resolveBridgeMode(input.drmWrapper, input.cegMarkers) !==
+      'steamclient-layer'
+    ) {
+      return { status: 'not-applicable' }
+    }
+    const { appId, appFolder } = input
+    if (!NUMERIC_APP_ID.test(String(appId)) || !isAbsolute(String(appFolder))) {
+      return drmStepError('component-missing', 'invalid prefetch input')
+    }
+    const sendStatus =
+      deps.sendStatus ??
+      ((await import('backend/utils')).sendGameStatusUpdate as (
+        payload: GameStatus
+      ) => void)
+    let lastContext: string | undefined
+    const progress = (context: string) => {
+      if (context === lastContext) return
+      lastContext = context
+      try {
+        sendStatus({
+          appName: appId,
+          runner: 'steam',
+          status: 'drm-setup',
+          context
+        })
+      } catch (err) {
+        logWarning(
+          `drm prefetch: appId ${appId} progress send failed: ${messageOf(err)}`,
+          LogPrefix.Steam
+        )
+      }
+    }
+    const downloads = await ensureDrmDownloads(appFolder, deps, progress)
+    if (downloads.status === 'error') {
+      const { stage, error } = downloads
+      logWarning(
+        `drm prefetch: appId ${appId} stopped at ${stage} (${error.step}): ${error.cause}; Play will retry`,
+        LogPrefix.Steam
+      )
+      return error
+    }
+    logInfo(
+      `drm prefetch: appId ${appId} ready crossover=${downloads.crossover.crossoverBuild} client=${downloads.valveClient.manifestVersion} component=${downloads.component.source} runner=${downloads.runner.source} valve=${downloads.valveClient.source}`,
+      LogPrefix.Steam
+    )
+    return { status: 'ok' }
+  } catch (err) {
+    return drmStepError('component-missing', err)
   }
 }

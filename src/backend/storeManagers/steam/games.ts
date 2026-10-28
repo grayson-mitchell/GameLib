@@ -128,6 +128,7 @@ import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
 import { detectSteamDrmInPe } from './bridge/peSteamDrm'
 import {
   drmLaunchSetup,
+  prefetchDrmDownloads,
   type DrmLaunchReady
 } from './bridge/drm/drmLaunchSetup'
 import {
@@ -2416,6 +2417,16 @@ export default class SteamGame implements Game {
           LogPrefix.Steam
         )
       })
+      // Quick 261029-e2t: fetch DRM mode's runner and Valve client now, so
+      // the first Play only stages the bottle. Never fails the install.
+      await this.prefetchBridgeDrmDownloads(exePath, bridgeBottleName).catch(
+        (error: unknown) => {
+          logWarning(
+            `SteamGame: install-time DRM prefetch failed for appId ${this.appId}: ${String(error)}`,
+            LogPrefix.Steam
+          )
+        }
+      )
     } finally {
       sendGameStatusUpdate({
         appName: this.appId,
@@ -3525,6 +3536,28 @@ export default class SteamGame implements Game {
    * so the existing CEG refusal keeps handling it; the markers are therefore
    * read BEFORE drmLaunchSetup. Never throws.
    */
+  /**
+   * Quick 261029-e2t: the install-time half of DRM mode. Resolves the mode the
+   * same way launchBridgeGame does (UE-aware `.bind` detection, CEG markers
+   * from the `.bind` exe) and prefetches only when it is steamclient-layer.
+   */
+  private async prefetchBridgeDrmDownloads(
+    exePath: string,
+    bridgeBottleName: string
+  ): Promise<void> {
+    const { drmWrapper, drmExe } = await detectLaunchDrmWrapper(
+      getBottleDir(bridgeBottleName),
+      exePath
+    )
+    if (drmWrapper !== 'steamstub') return
+    await prefetchDrmDownloads({
+      appId: this.appId,
+      appFolder,
+      drmWrapper,
+      cegMarkers: this.readLaunchExeCegMarkers(drmExe)
+    })
+  }
+
   private readLaunchExeCegMarkers(exePath: string): string[] {
     let fd: number | null = null
     try {
