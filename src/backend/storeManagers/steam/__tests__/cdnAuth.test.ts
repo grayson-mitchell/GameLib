@@ -413,7 +413,6 @@ describe('CdnAuthTokenCache', () => {
         // depot+host during the cooldown window — none of them should
         // trigger a second network attempt.
         for (let i = 0; i < 20; i++) {
-          // eslint-disable-next-line no-await-in-loop
           expect(await cache.getToken('12345', 'host-a')).toBe('')
         }
         expect(calls).toHaveLength(1)

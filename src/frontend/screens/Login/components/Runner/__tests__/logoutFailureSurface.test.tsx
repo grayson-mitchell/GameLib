@@ -73,7 +73,7 @@ jest.mock('react', () => {
           typeof updater === 'function'
             ? (updater as (prev: unknown) => unknown)(slots[idx])
             : updater
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         isLoggingOutHistory.push(slots[idx])
       }
       return [slots[idx], setState]
@@ -226,9 +226,8 @@ describe('Runner: logout failure surface (Phase 35 gap closure, plan 35-22, CR-0
   })
 
   it('source gate: no console.error remains in the logout failure path', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fs = jest.requireActual<typeof import('fs')>('fs')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+
     const path = jest.requireActual<typeof import('path')>('path')
     const source = fs.readFileSync(
       path.join(__dirname, '../index.tsx'),

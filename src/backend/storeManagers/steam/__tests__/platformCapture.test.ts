@@ -634,7 +634,7 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
       })
     ).rejects.toThrow('x')
 
-    const result = await withPlatformCaptureLock(async () => 'ok')
+    const result = await withPlatformCaptureLock(() => Promise.resolve('ok'))
     expect(result).toBe('ok')
   })
 

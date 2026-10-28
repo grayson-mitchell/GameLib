@@ -918,13 +918,14 @@ describe('verify, rebuild, prune, abort', () => {
 
     it('missing dyld entitlement', async () => {
       const { s, runnerDir } = await ready()
-      const run: RunTool = async () => ({
-        code: 0,
-        stdout: entXml([...STOCK_LOADER_ENTITLEMENTS]),
-        stderr: '',
-        timedOut: false,
-        aborted: false
-      })
+      const run: RunTool = () =>
+        Promise.resolve({
+          code: 0,
+          stdout: entXml([...STOCK_LOADER_ENTITLEMENTS]),
+          stderr: '',
+          timedOut: false,
+          aborted: false
+        })
       const v = await verifyRunnerClone(
         runnerDir,
         { crossover: s.crossover, component: s.component },

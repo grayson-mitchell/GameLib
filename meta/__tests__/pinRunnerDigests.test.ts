@@ -35,7 +35,7 @@ const mockedReadFile = readFile as jest.Mock
 const mockedWriteFile = writeFile as jest.Mock
 
 const mockedFetch = jest.fn()
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 ;(global as any).fetch = mockedFetch
 
 // ---------------------------------------------------------------------------

@@ -1443,7 +1443,6 @@ describe('SteamGame.launch() — GAME-01', () => {
 // ── D-11: SteamGame.isNative() — per-OS confirmed-not-native ─────────────────
 
 describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let envMock: any
 
   beforeEach(() => {
@@ -1588,7 +1587,7 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
 
 describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
   let shellOpenExternal: jest.Mock
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
 
   beforeEach(() => {
@@ -1764,7 +1763,6 @@ beforeEach(() => {
 // exe resolution + direct runWineCommand (never tellBottledSteamToLaunch).
 
 describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/finding-3), reordered by Phase 51 Plan 01 (D-51-01)', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let envMock: any
   const BRIDGE_STEAMAPPS_DIR = '/mock/bridge/bottle/steamapps'
   const RESOLVED_EXE_PATH = `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/Avernum4.exe`
@@ -3343,7 +3341,6 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 // ── getBridgeRouteVerdict() — D-51-09 Task 2's installedIn (LOCATION) wiring ──
 
 describe('getBridgeRouteVerdict() — D-51-09 installedIn (LOCATION, not eligibility)', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let envMock: any
 
   beforeEach(() => {
@@ -4550,7 +4547,7 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
 describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
   let shellOpenExternal: jest.Mock
   let startInstallPollingSpy: jest.SpyInstance
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
 
   beforeEach(() => {
@@ -4726,7 +4723,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
 describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', () => {
   let shellOpenExternal: jest.Mock
   let startInstallPollingSpy: jest.SpyInstance
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
 
   const BOTTLE_STEAMAPPS_DIR = '/mock/bottle/steamapps'
@@ -4877,7 +4874,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
   let startInstallPollingSpy: jest.SpyInstance
   let stopInstallPollingSpy: jest.SpyInstance
   let setBridgeUserRouteSpy: jest.SpyInstance
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
 
   const BRIDGE_STEAMAPPS_DIR = '/mock/bridge/bottle/steamapps'
@@ -6182,7 +6179,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
   })
 
   describe('quick 261024-cjq: missing CrossOver is a precondition, not a bridge failure', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const crossoverInstalled = (): jest.Mock =>
       jest.requireMock('../bottle').__crossoverInstalled
 
@@ -6389,7 +6385,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', () => {
   let shellOpenExternal: jest.Mock
   let startInstallPollingSpy: jest.SpyInstance
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
 
   // Transcribed field-for-field from installSteamGame()'s window.api.install
@@ -6419,19 +6415,18 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     installBottleNative: jest.SpyInstance
     installNative: jest.SpyInstance
   } {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const gameAny = game as any
     const installBridgeGame = jest
       .spyOn(gameAny, 'installBridgeGame')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       .mockResolvedValue({ status: 'done' } as any)
     const installBottleNative = jest
       .spyOn(gameAny, 'installBottleNative')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       .mockResolvedValue({ status: 'done' } as any)
     const installNative = jest
       .spyOn(gameAny, 'installNative')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       .mockResolvedValue({ status: 'done' } as any)
     return { installBridgeGame, installBottleNative, installNative }
   }
@@ -6845,7 +6840,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
 describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
   let shellOpenExternal: jest.Mock
   let startUninstallPollingSpy: jest.SpyInstance
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
 
   /** A game whose persisted entry WAS forced into the bottle by a prior
@@ -7024,10 +7019,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     // engaged). Task 2 re-proves this non-vacuously by reverting the bridge
     // pin and observing this spec fail.
     const launchGame = new SteamGame(APP_ID)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const launchBridgeSpy = jest
       .spyOn(launchGame as any, 'launchBridgeGame')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       .mockResolvedValue(true as any)
     await launchGame.launch({} as any)
     expect(launchBridgeSpy).not.toHaveBeenCalled()
@@ -7053,10 +7048,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     // Same rationale as D5a, mirrored for the uninstall() bridge sub-check
     // — the bridge composition is consulted independently by each caller.
     const uninstallGame = new SteamGame(APP_ID)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const uninstallBridgeSpy = jest
       .spyOn(uninstallGame as any, 'uninstallBridgeGame')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       .mockResolvedValue({ stdout: '', stderr: '' } as any)
     await uninstallGame.uninstall({} as any)
     expect(uninstallBridgeSpy).not.toHaveBeenCalled()
@@ -7322,10 +7317,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
       const game = new SteamGame(APP_ID)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       jest
         .spyOn(game as any, 'installBottleNative')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         .mockResolvedValue({ status: 'done' } as any)
 
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
@@ -7349,10 +7344,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
       const game = new SteamGame(APP_ID)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       jest
         .spyOn(game as any, 'installBottleNative')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         .mockResolvedValue({ status: 'error', error: 'boom' } as any)
 
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
@@ -7503,10 +7498,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
       const game = new SteamGame(APP_ID)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       jest
         .spyOn(game as any, 'installBottleNative')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         .mockResolvedValue({ status: 'done' } as any)
 
       await game.install(PRODUCTION_ARGS)
@@ -7562,7 +7557,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
 describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MACSTEAM-04)', () => {
   let shellOpenExternal: jest.Mock
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
 
   /** Windows-only appdetails fixture (mac:false) — the confirmed-not-native case. */
@@ -7706,7 +7701,6 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
 // ── D-09: SteamGame.checkBottleEligibility() — backend-authoritative verdict ─
 
 describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verdict', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let envMock: any
 
   /** Windows-only appdetails fixture (mac:false) — the confirmed-not-native case. */
@@ -7916,7 +7910,7 @@ describe('SteamGame.uninstall() — GAME-03', () => {
 describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => {
   let shellOpenExternal: jest.Mock
   let startUninstallPollingSpy: jest.SpyInstance
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
 
   beforeEach(() => {
@@ -8051,7 +8045,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
   let startUninstallPollingSpy: jest.SpyInstance
   let readAcfStateSpy: jest.SpyInstance
   let pollUninstallOnceSpy: jest.SpyInstance
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
 
   // Steam-authored installdir (Hoard, appId 63000) — deliberately NOT an
@@ -8493,7 +8487,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
 describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bottle-uninstall-reverts, OPERATOR DECISION LOCKED)', () => {
   let shellOpenExternal: jest.Mock
   let startUninstallPollingSpy: jest.SpyInstance
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
   const BOTTLE_INSTALL_PATH = '/mock/bottle/steamapps/common/SomeGame'
 
@@ -8766,7 +8760,6 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
 // GameLibSteam bottle.
 
 describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let envMock: any
   const RESOLVED_EXE_PATH =
     '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
@@ -9136,7 +9129,6 @@ describe('parseSteamStorageRequirement', () => {
   })
 
   it('LIB-06: returns undefined for non-string input (array cast — typeof guard)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(parseSteamStorageRequirement([] as any)).toBeUndefined()
   })
 })
@@ -9220,7 +9212,6 @@ describe('parseSteamMacMinOSVersion', () => {
   })
 
   it('returns null for non-string input (typeof guard)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(parseSteamMacMinOSVersion([] as any)).toBeNull()
   })
 })
@@ -9455,7 +9446,7 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
   let shellOpenExternal: jest.Mock
   let dialogShowMessageBox: jest.Mock
   let startInstallPollingSpy: jest.SpyInstance
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
 
   beforeEach(() => {
@@ -9617,7 +9608,6 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
   // per-appId GameConfig.get(<numeric appId>) (Pitfall-6 phantom-config guard).
 
   describe('bottle-eligible resolution (D-11)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let envMock: any
 
     beforeEach(() => {
@@ -10055,7 +10045,7 @@ describe('SteamGame.fetchMetadataIfNeeded — is_delisted detection (CONSOLE-01 
 describe('maybeNotifyBridgeLimited() — the one-time limited-features notice plus the every-launch [bridge-notice] log line', () => {
   const RESOLVED_EXE_PATH =
     '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
   let setBridgeIdentityFallbackSpy: jest.SpyInstance
   let markBridgeLimitedNoticeShownSpy: jest.SpyInstance

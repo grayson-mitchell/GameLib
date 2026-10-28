@@ -227,7 +227,9 @@ function swapCtx(restoreOriginals?: jest.Mock) {
       findUnreal: async () => null,
       restoreOriginals:
         restoreOriginals ??
-        (jest.fn(async () => ({ status: 'ok', outcomes: [] })) as never)
+        (jest.fn(() =>
+          Promise.resolve({ status: 'ok', outcomes: [] })
+        ) as never)
     }
   } as unknown as Parameters<typeof restoreDrmOriginals>[0]
 }
@@ -269,10 +271,12 @@ describe('restoreDrmOriginals', () => {
     write(a, SHIM)
     write(a + '.gamelib-orig', ORIG)
     write(b, SHIM)
-    const restoreOriginals = jest.fn(async () => ({
-      status: 'partial',
-      outcomes: []
-    }))
+    const restoreOriginals = jest.fn(() =>
+      Promise.resolve({
+        status: 'partial',
+        outcomes: []
+      })
+    )
     const r = await restoreDrmOriginals(swapCtx(restoreOriginals))
     expect(restoreOriginals).toHaveBeenCalledTimes(1)
     expect(restoreOriginals).toHaveBeenCalledWith({
@@ -311,9 +315,10 @@ describe('restoreDrmOriginals', () => {
     symlinkSync(target, live())
     write(live() + '.gamelib-orig', ORIG)
     const ctx = swapCtx()
-    ;(ctx.deps as { findDlls?: unknown }).findDlls = async () => [
-      { name: 'steam_api64.dll', path: live(), isGameLibShim: true }
-    ]
+    ;(ctx.deps as { findDlls?: unknown }).findDlls = () =>
+      Promise.resolve([
+        { name: 'steam_api64.dll', path: live(), isGameLibShim: true }
+      ])
     const r = await restoreDrmOriginals(ctx)
     expect(r.ok).toBe(false)
     expect(readFileSync(target)).toEqual(SHIM)
@@ -412,7 +417,9 @@ describe('stageDrmBottle', () => {
   const deps = (over: Record<string, unknown> = {}) => ({
     getBottleDir: () => bottle,
     findUnreal: async () => null,
-    restoreOriginals: jest.fn(async () => ({ status: 'ok', outcomes: [] })),
+    restoreOriginals: jest.fn(() =>
+      Promise.resolve({ status: 'ok', outcomes: [] })
+    ),
     runReg,
     ...over
   })
@@ -430,7 +437,7 @@ describe('stageDrmBottle', () => {
     for (const n of ['lsteamclient.dll', 'steam.exe']) {
       write(join(compDir, n), 'MZ-comp-' + n)
     }
-    runReg = jest.fn(async () => ({ code: 0 }))
+    runReg = jest.fn(() => Promise.resolve({ code: 0 }))
     ;(runWineCommand as jest.Mock).mockReset()
   })
 

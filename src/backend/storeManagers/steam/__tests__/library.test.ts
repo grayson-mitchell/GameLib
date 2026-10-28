@@ -389,13 +389,12 @@ describe('SteamLibraryManager', () => {
     // Default lease: the client the test installed via SteamUser.getClient().
     leaseRelease = jest.fn()
     jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
-    jest.mocked(SteamUser.acquireAuthenticated).mockImplementation(
-      async () =>
-        ({
-          ok: true,
-          client: SteamUser.getClient(),
-          release: leaseRelease
-        }) as never
+    jest.mocked(SteamUser.acquireAuthenticated).mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        client: SteamUser.getClient(),
+        release: leaseRelease
+      } as never)
     )
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
     // Default: getSteamLibraries returns empty so buildInstalledMap is fast
@@ -3567,7 +3566,6 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
 // consults for bottle-vs-native-vs-refuse routing. ──────────────────────────
 
 describe('resolveInstallRoot() (debug/steam-bottle-uninstall-reverts, OPERATOR DECISION LOCKED)', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let envMock: any
 
   beforeEach(() => {
@@ -6575,7 +6573,6 @@ describe('scanDownloadingAppIds()', () => {
 // ── GAME-05: readRunningAppId() — per-platform dispatch ───────────────────────
 
 describe('readRunningAppId() — per-platform dispatch', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let envMock: any
 
   beforeEach(() => {
@@ -6719,7 +6716,6 @@ describe('readRunningAppId() — per-platform dispatch', () => {
 // ── GAME-05: pollRunningOnce() ────────────────────────────────────────────────
 
 describe('pollRunningOnce()', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let envMock: any
 
   // Helper: configure vdf.parse to return a specific RunningAppID value
@@ -6854,7 +6850,6 @@ describe('startRunningPoll() and stopRunningPoll()', () => {
 // Pattern: same envMock flipping used by readRunningAppId() describe (L1122-1261).
 
 describe('hostInstallPlatform() via refreshInstallState() — install.platform reflects host OS (DETAIL-01 GAP2)', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let envMock: any
   let manager: SteamLibraryManager
 
@@ -7100,7 +7095,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
   const APP_ID = '226840'
   const INSTALL_PATH = join('/steam', 'steamapps', 'common', 'oldgame')
   const MACOS_DIR = join(INSTALL_PATH, 'OldGame.app', 'Contents', 'MacOS')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
 
   beforeEach(() => {
@@ -7458,7 +7453,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
   const STEAMAPPS = join('/steam', 'steamapps')
   const INSTALL_PATH = join(STEAMAPPS, 'common', 'oldgame')
   const MACOS_DIR = join(INSTALL_PATH, 'OldGame.app', 'Contents', 'MacOS')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let envMock: any
   let manifestPresent = false
 
@@ -7480,7 +7475,6 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
       extra: { reqs: [] },
       canRunOffline: true,
       installable: true
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
   beforeEach(() => {

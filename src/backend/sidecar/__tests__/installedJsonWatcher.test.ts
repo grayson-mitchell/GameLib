@@ -356,7 +356,6 @@ describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', 
         return result
       }
       return realSetTimeout(wrapped as never, ms, ...schedArgs)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }) as any)
 
     try {

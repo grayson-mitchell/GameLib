@@ -255,7 +255,7 @@ const mockGetCredentials = jest.fn(() => 'cookie-value')
 const mockGetCsrfToken = jest.fn(() => 'csrf-token-value')
 // WR-03: revealKey now sources the csrf token from the LIVE partition cookie
 // (getLiveCsrfToken) rather than the stored login-time snapshot.
-const mockGetLiveCsrfToken = jest.fn(async () => 'csrf-token-value')
+const mockGetLiveCsrfToken = jest.fn(() => Promise.resolve('csrf-token-value'))
 jest.mock('../user', () => ({
   HumbleUser: {
     getCredentials: () => mockGetCredentials(),

@@ -214,9 +214,8 @@ export function assert_fileFilterAndOpenDialogOptions(): void {
   void fileOptions
 
   // common/types/ipc.ts:438 -- the IPC signature.
-  const openDialog: (
-    args: OpenDialogOptions
-  ) => Promise<string | false> = async () => false
+  const openDialog: (args: OpenDialogOptions) => Promise<string | false> = () =>
+    Promise.resolve(false)
   void openDialog(options)
 }
 
@@ -226,13 +225,14 @@ export function assert_fileFilterAndOpenDialogOptions(): void {
 // `parentWindow as BrowserWindow` re-cast of a possibly-undefined value.
 // ---------------------------------------------------------------------------
 export function assert_browserWindowHandle(): void {
-  const showOpenDialog = async (
+  const showOpenDialog = (
     _window: BrowserWindow,
     _options: OpenDialogOptions
-  ): Promise<{ filePaths: string[]; canceled: boolean }> => ({
-    filePaths: [],
-    canceled: true
-  })
+  ): Promise<{ filePaths: string[]; canceled: boolean }> =>
+    Promise.resolve({
+      filePaths: [],
+      canceled: true
+    })
 
   const openDialogCallback = async (
     parentWindow: BrowserWindow | undefined,
@@ -262,12 +262,13 @@ export function assert_messageBoxOptions(): void {
     checkboxLabel: 'Do not show this message again',
     checkboxChecked: false
   }
-  const showMessageBox = async (
+  const showMessageBox = (
     _o: MessageBoxOptions
-  ): Promise<{ checkboxChecked: boolean; response: number }> => ({
-    checkboxChecked: false,
-    response: 0
-  })
+  ): Promise<{ checkboxChecked: boolean; response: number }> =>
+    Promise.resolve({
+      checkboxChecked: false,
+      response: 0
+    })
   void showMessageBox({ ...snapWarning })
 
   // The `type` field is a literal union at the real site too.
@@ -460,7 +461,7 @@ export function assert_inputEvents(): void {
 // :188, :228 -- the qualified namespace cast and the `.menu[0]` read.
 // ---------------------------------------------------------------------------
 export function assert_crossProcessExportsTray(): void {
-  const initTrayIcon = async (): Promise<unknown> => ({ menu: [] })
+  const initTrayIcon = (): Promise<unknown> => Promise.resolve({ menu: [] })
   const useTray = async () => {
     const appIcon = (await initTrayIcon()) as CrossProcessExports.Tray
     const first: MenuItemConstructorOptions | undefined = appIcon.menu[0]

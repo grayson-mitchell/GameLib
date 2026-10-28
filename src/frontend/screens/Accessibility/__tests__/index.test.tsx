@@ -80,12 +80,12 @@ describe('queryLocalFontsSafe', () => {
   })
 
   it('returns the two defaults plus deduplicated system families when queryLocalFonts resolves normally (adjacent-already-present verification)', async () => {
-    g.queryLocalFonts = async () =>
-      [
+    g.queryLocalFonts = () =>
+      Promise.resolve([
         { family: 'Arial' },
         { family: 'Arial' },
         { family: 'Times New Roman' }
-      ] as FontData[]
+      ] as FontData[])
 
     const result = await queryLocalFontsSafe(DEFAULT_FONTS)
     await flushRejectionTracking()

@@ -384,10 +384,12 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     const seam = makeMockSeam({
       cookiesForDomain: jest
         .fn()
-        .mockImplementation(async () =>
-          ++readCall <= 2 * EPIC_HOSTS_UNDER_TEST.length
-            ? cookieRead(4, 2)
-            : cookieRead(0, 0)
+        .mockImplementation(() =>
+          Promise.resolve(
+            ++readCall <= 2 * EPIC_HOSTS_UNDER_TEST.length
+              ? cookieRead(4, 2)
+              : cookieRead(0, 0)
+          )
         ),
       clearCookies: jest.fn().mockResolvedValue(2)
     })
@@ -452,10 +454,12 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     const seam = makeMockSeam({
       cookiesForDomain: jest
         .fn()
-        .mockImplementation(async () =>
-          ++readCall <= 2 * EPIC_HOSTS_UNDER_TEST.length
-            ? cookieRead(9, 0)
-            : cookieRead(9, 1)
+        .mockImplementation(() =>
+          Promise.resolve(
+            ++readCall <= 2 * EPIC_HOSTS_UNDER_TEST.length
+              ? cookieRead(9, 0)
+              : cookieRead(9, 1)
+          )
         ),
       clearCookies: jest.fn().mockResolvedValue(3)
     })

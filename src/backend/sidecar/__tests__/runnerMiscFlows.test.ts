@@ -97,7 +97,7 @@ const mockGetGame = jest.fn()
 jest.mock('backend/utils', () => ({
   getCometBin: jest.fn(),
   axiosClient: { get: jest.fn() },
-  isEpicServiceOffline: jest.fn(async () => false),
+  isEpicServiceOffline: jest.fn(() => Promise.resolve(false)),
   sendGameStatusUpdate: jest.fn(),
   getGame: (...args: unknown[]) => mockGetGame(...args)
 }))

@@ -41,7 +41,7 @@ jest.mock('../index.css', () => ({}))
 // in this file exercises handleIconClick's picker branch, and modelling a context provider
 // here would add a second, unrelated fiction to a harness that already documents exactly
 // which hooks it fakes and why.
-const openDialogMock = jest.fn(async () => false as const)
+const openDialogMock = jest.fn(() => Promise.resolve(false as const))
 jest.mock('frontend/hooks/useOpenDialog', () => ({
   __esModule: true,
   default: () => openDialogMock

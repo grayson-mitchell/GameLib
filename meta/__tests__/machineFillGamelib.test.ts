@@ -172,16 +172,18 @@ describe('interpolation and plurals', () => {
 
   it('fillLocale skips a filled _one whose _other sibling is not also going to be present', () => {
     const target = {}
-    const translate: TranslateFn = async (batch) =>
-      batch.map((b) => ({
-        keyPath: b.keyPath,
-        // deliberately break the placeholder on the _other half so it gets
-        // rejected by validateTranslation, leaving the sibling truly absent
-        target:
-          b.keyPath === 'humble.itemCount_other'
-            ? 'Artikel' // drops {{count}}
-            : '{{count}} Artikel'
-      }))
+    const translate: TranslateFn = (batch) =>
+      Promise.resolve(
+        batch.map((b) => ({
+          keyPath: b.keyPath,
+          // deliberately break the placeholder on the _other half so it gets
+          // rejected by validateTranslation, leaving the sibling truly absent
+          target:
+            b.keyPath === 'humble.itemCount_other'
+              ? 'Artikel' // drops {{count}}
+              : '{{count}} Artikel'
+        }))
+      )
 
     return fillLocale({
       en: EN,
@@ -208,16 +210,18 @@ describe('interpolation and plurals', () => {
 
   it('fillLocale fills a complete _one/_other pair together', async () => {
     const target = {}
-    const translate: TranslateFn = async (batch) =>
-      batch.map((b) => ({
-        keyPath: b.keyPath,
-        target:
-          b.keyPath === 'humble.itemCount_one'
-            ? '{{count}} Artikel'
-            : b.keyPath === 'humble.itemCount_other'
+    const translate: TranslateFn = (batch) =>
+      Promise.resolve(
+        batch.map((b) => ({
+          keyPath: b.keyPath,
+          target:
+            b.keyPath === 'humble.itemCount_one'
               ? '{{count}} Artikel'
-              : `[${b.keyPath}]`
-      }))
+              : b.keyPath === 'humble.itemCount_other'
+                ? '{{count}} Artikel'
+                : `[${b.keyPath}]`
+        }))
+      )
 
     const result = await fillLocale({
       en: EN,
@@ -390,14 +394,16 @@ describe('glossary preservation', () => {
 
   it('a run whose TranslateFn fails validateTranslation leaves that key UNFILLED and records the problem', async () => {
     const target = {}
-    const translate: TranslateFn = async (batch) =>
-      batch.map((b) => ({
-        keyPath: b.keyPath,
-        target:
-          b.keyPath === 'app.title'
-            ? 'SpielBibliothek' // glossary violation: drops the glossed "GameLib" term
-            : `[${b.keyPath}]`
-      }))
+    const translate: TranslateFn = (batch) =>
+      Promise.resolve(
+        batch.map((b) => ({
+          keyPath: b.keyPath,
+          target:
+            b.keyPath === 'app.title'
+              ? 'SpielBibliothek' // glossary violation: drops the glossed "GameLib" term
+              : `[${b.keyPath}]`
+        }))
+      )
 
     const result = await fillLocale({
       en: EN,
@@ -420,10 +426,12 @@ describe('glossary preservation', () => {
 
   it('a run whose TranslateFn returns nothing for a key leaves it unfilled and records the problem', async () => {
     const target = {}
-    const translate: TranslateFn = async (batch) =>
-      batch
-        .filter((b) => b.keyPath !== 'app.title')
-        .map((b) => ({ keyPath: b.keyPath, target: `[${b.keyPath}]` }))
+    const translate: TranslateFn = (batch) =>
+      Promise.resolve(
+        batch
+          .filter((b) => b.keyPath !== 'app.title')
+          .map((b) => ({ keyPath: b.keyPath, target: `[${b.keyPath}]` }))
+      )
 
     const result = await fillLocale({
       en: EN,
@@ -509,8 +517,10 @@ describe('provenance manifest', () => {
 
   it('fillLocale stamps the manifest with the given locale, model and now', async () => {
     const target = {}
-    const translate: TranslateFn = async (batch) =>
-      batch.map((b) => ({ keyPath: b.keyPath, target: `[${b.keyPath}]` }))
+    const translate: TranslateFn = (batch) =>
+      Promise.resolve(
+        batch.map((b) => ({ keyPath: b.keyPath, target: `[${b.keyPath}]` }))
+      )
 
     const result = await fillLocale({
       en: { app: { title: 'GameLib' } },
@@ -532,8 +542,10 @@ describe('provenance manifest', () => {
 })
 
 describe('filledAt provenance -- a no-op run must not re-stamp', () => {
-  const translate: TranslateFn = async (batch) =>
-    batch.map((b) => ({ keyPath: b.keyPath, target: `[${b.keyPath}]` }))
+  const translate: TranslateFn = (batch) =>
+    Promise.resolve(
+      batch.map((b) => ({ keyPath: b.keyPath, target: `[${b.keyPath}]` }))
+    )
 
   const PRIOR: MtManifest = {
     locale: 'de',

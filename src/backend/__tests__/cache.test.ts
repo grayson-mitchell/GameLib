@@ -111,11 +111,10 @@ describe('backend/cache.ts', () => {
 // and the whole point here is to exercise the REAL derivation.
 // ─────────────────────────────────────────────────────────────────────────────
 describe('store path parity (Phase 35 D-04)', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { translateStoreOptions } = jest.requireActual('../store_backend')
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+
   const { getPath } = jest.requireActual('../sidecar/pathShim')
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+
   const RawConf =
     jest.requireActual('conf').default ?? jest.requireActual('conf')
 

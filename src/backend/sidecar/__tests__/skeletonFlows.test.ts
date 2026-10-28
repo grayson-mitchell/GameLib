@@ -190,7 +190,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
         ]
       })
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
 
     const { input, frames } = startSidecar()

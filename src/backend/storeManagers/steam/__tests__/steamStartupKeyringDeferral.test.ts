@@ -592,7 +592,6 @@ describe('SteamGame keyring deferral unlock (quick-260817-d61)', () => {
     const game = new SteamGame(APP_ID)
     expect(isSteamAuthUnlocked()).toBe(false)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     void game.launch({} as any).catch(() => {})
 
     expect(isSteamAuthUnlocked()).toBe(true)

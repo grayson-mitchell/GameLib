@@ -64,7 +64,7 @@ jest.mock('axios', () => {
 jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
   getFileSize: jest.fn(),
-  isEpicServiceOffline: jest.fn(async () => false),
+  isEpicServiceOffline: jest.fn(() => Promise.resolve(false)),
   clearCache: jest.fn()
 }))
 

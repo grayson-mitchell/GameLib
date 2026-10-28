@@ -242,7 +242,7 @@ describe('ensureValveClient', () => {
     const fetchText = jest.fn<
       ReturnType<ValveFetchText>,
       Parameters<ValveFetchText>
-    >(async () => manifestFor(zipName))
+    >(() => Promise.resolve(manifestFor(zipName)))
     const fetchToFile = jest.fn<
       ReturnType<ValveFetchToFile>,
       Parameters<ValveFetchToFile>

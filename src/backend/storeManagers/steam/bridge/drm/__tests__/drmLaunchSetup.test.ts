@@ -24,7 +24,7 @@ jest.mock('../../../bottle', () => ({
   getDrmBridgeRunner: jest.fn(),
   setDrmBridgeRunner: jest.fn(() => true),
   getDrmBridgeBottleSettings: jest.fn(() => ({})),
-  endPerGameBridgeBottleSession: jest.fn(async () => true)
+  endPerGameBridgeBottleSession: jest.fn(() => Promise.resolve(true))
 }))
 jest.mock('child_process', () => {
   const actual = jest.requireActual('child_process')
@@ -289,7 +289,9 @@ describe('drmLaunchSetup', () => {
     async (dep, step, _s, later) => {
       const order: string[] = []
       const err = drmStepError(step as Any, 'nope')
-      const deps = makeDeps(order, { [dep]: jest.fn(async () => err) } as Any)
+      const deps = makeDeps(order, {
+        [dep]: jest.fn(() => Promise.resolve(err))
+      } as Any)
       const res = await drmLaunchSetup(makeInput(freshId()), deps)
       expect(res).toBe(err)
       for (const l of later) expect(order).not.toContain(l)

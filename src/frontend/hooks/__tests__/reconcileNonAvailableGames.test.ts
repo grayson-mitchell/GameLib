@@ -77,7 +77,6 @@ function makeDeps(overrides: Partial<FilterEngineDeps> = {}): FilterEngineDeps {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ConstantsModule = typeof import('../constants')
 
 describe('reconcileNonAvailableGames', () => {

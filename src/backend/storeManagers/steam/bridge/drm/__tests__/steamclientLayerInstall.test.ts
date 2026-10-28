@@ -121,7 +121,9 @@ afterEach(() => {
 const root = () => buildDrmPaths(appFolder)!.componentRoot
 const dir = () => buildDrmPaths(appFolder)!.componentDir(ID)!
 const okCodesign = () =>
-  jest.fn(async () => ({ code: 0, stdout: '', stderr: '', timedOut: false }))
+  jest.fn(() =>
+    Promise.resolve({ code: 0, stdout: '', stderr: '', timedOut: false })
+  )
 const run = (
   entry: SteamclientLayerCatalogueEntry | undefined,
   deps: Parameters<typeof ensureSteamclientLayerComponent>[1] = {},
@@ -135,15 +137,17 @@ const run = (
 describe('ensureSteamclientLayerComponent', () => {
   it('downloads, signs off, installs and reports ok', async () => {
     const { entry, archive, data } = synthetic()
-    const fetchArchive = jest.fn(
-      async (_url: string, _o: { maxBytes: number }) => archive
+    const fetchArchive = jest.fn((_url: string, _o: { maxBytes: number }) =>
+      Promise.resolve(archive)
     )
-    const runCodesign = jest.fn(async (_a: readonly string[], _o: unknown) => ({
-      code: 0,
-      stdout: '',
-      stderr: '',
-      timedOut: false
-    }))
+    const runCodesign = jest.fn((_a: readonly string[], _o: unknown) =>
+      Promise.resolve({
+        code: 0,
+        stdout: '',
+        stderr: '',
+        timedOut: false
+      })
+    )
     const onFetchStart = jest.fn()
     const r = await run(entry, { fetchArchive, runCodesign, onFetchStart })
     expect(r.status).toBe('ok')
@@ -196,7 +200,7 @@ describe('ensureSteamclientLayerComponent', () => {
   it('replaces a tampered cache and one with an extra file', async () => {
     const { entry, archive, data } = synthetic()
     const deps = () => ({
-      fetchArchive: jest.fn(async () => archive),
+      fetchArchive: jest.fn(() => Promise.resolve(archive)),
       runCodesign: okCodesign()
     })
     await run(entry, deps())
@@ -312,7 +316,7 @@ describe('ensureSteamclientLayerComponent', () => {
 
   it('fails closed on codesign problems', async () => {
     const { entry, archive } = synthetic()
-    const fetchArchive = async () => archive
+    const fetchArchive = () => Promise.resolve(archive)
     const nonZero = await run(entry, {
       fetchArchive,
       runCodesign: async () => ({

@@ -4241,8 +4241,8 @@ describe('downloadDepotFiles', () => {
 
     jest
       .mocked(fetchChunk)
-      .mockImplementation(async (_hosts, _depotId, chunk) =>
-        chunk.sha === 'sha-a' ? chunkA : chunkB
+      .mockImplementation((_hosts, _depotId, chunk) =>
+        Promise.resolve(chunk.sha === 'sha-a' ? chunkA : chunkB)
       )
 
     const plan = makePlan(
@@ -6152,10 +6152,12 @@ describe('downloadDepotFiles', () => {
       const contentExec = Buffer.from('exec-payload')
       jest
         .mocked(fetchChunk)
-        .mockImplementation(async (_hosts, _depotId, chunk) =>
-          String(chunk.sha).startsWith('sha-noflags')
-            ? contentNoFlags
-            : contentExec
+        .mockImplementation((_hosts, _depotId, chunk) =>
+          Promise.resolve(
+            String(chunk.sha).startsWith('sha-noflags')
+              ? contentNoFlags
+              : contentExec
+          )
         )
 
       const noFlagsPlan = buildNoFlagsPlan('census-no-flags', contentNoFlags)

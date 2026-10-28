@@ -124,7 +124,7 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     jest.resetModules()
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const reloaded = require('../api/tauriChildWindows')
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+
     reloaded.tauriCreateNewWindow('https://www.protondb.com/app/2')
     const [labelAfter] = webviewWindowCtor.mock.calls[1] as [string, unknown]
 

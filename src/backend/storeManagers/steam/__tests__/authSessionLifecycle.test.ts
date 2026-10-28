@@ -10,8 +10,6 @@
  * ./anonymousClient, ../tokenStore, backend/signInProbe/*, backend/ipc.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 jest.mock('backend/platform', () => ({
   safeStorage: {},
   app: { getPath: jest.fn(() => '/tmp/test') }
@@ -179,7 +177,9 @@ beforeEach(() => {
   FakeLib.instances = []
   FakeLib.ctorOpts = []
   FakeLib.behaviour = 'loggedOn'
-  mockRestoreMacSteamOnlineIfOwed.mockImplementation(async () => 'not-owed')
+  mockRestoreMacSteamOnlineIfOwed.mockImplementation(() =>
+    Promise.resolve('not-owed')
+  )
   macMock.withMacSteamOffline.mockImplementation(
     async (connect: (wrap: string) => Promise<unknown>) => ({
       value: await connect('toggled'),
@@ -600,7 +600,9 @@ describe('authenticated session lease', () => {
   })
 
   it('releaseForShutdown resolves to the restore outcome', async () => {
-    mockRestoreMacSteamOnlineIfOwed.mockImplementation(async () => 'restored')
+    mockRestoreMacSteamOnlineIfOwed.mockImplementation(() =>
+      Promise.resolve('restored')
+    )
     await expect(SteamUser.releaseForShutdown()).resolves.toBe('restored')
   })
 

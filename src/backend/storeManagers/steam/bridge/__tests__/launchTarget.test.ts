@@ -83,7 +83,6 @@ describe('resolveBridgeLaunchExe', () => {
     jest.mocked(setBridgeLaunchTarget).mockReset()
     jest.mocked(getBridgeBottleSettings).mockReturnValue({
       wineCrossoverBottle: 'GameLibSteamBridge'
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
     jest.mocked(getBottleSteamappsDir).mockReturnValue(BRIDGE_STEAMAPPS_DIR)
   })
@@ -106,7 +105,6 @@ describe('resolveBridgeLaunchExe', () => {
             }
           }
         })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any
     )
 
@@ -133,7 +131,6 @@ describe('resolveBridgeLaunchExe', () => {
             }
           }
         })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any
     )
 
@@ -190,7 +187,6 @@ describe('resolveBridgeLaunchExe', () => {
             }
           }
         })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any
     )
 
@@ -212,7 +208,6 @@ describe('resolveBridgeLaunchExe', () => {
             }
           }
         })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any
     )
 
@@ -225,7 +220,6 @@ describe('resolveBridgeLaunchExe', () => {
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: mockProductInfo(63000, { config: {} })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any
     )
 
@@ -238,7 +232,7 @@ describe('resolveBridgeLaunchExe', () => {
     const client = makeFakeClient()
     jest
       .mocked(getAnonymousPicsClient)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       .mockResolvedValue(client as any)
 
     const result = await resolveBridgeLaunchExe('not-a-number')
@@ -252,7 +246,6 @@ describe('resolveBridgeLaunchExe', () => {
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({
         getProductInfo: jest.fn().mockRejectedValue(new Error('PICS down'))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any
     )
 

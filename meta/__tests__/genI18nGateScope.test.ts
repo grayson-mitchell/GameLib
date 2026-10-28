@@ -627,7 +627,6 @@ describe('genI18nGateScope', () => {
     const describeIfGitAvailable = canRunGitDiff ? describe : describe.skip
 
     if (!canRunGitDiff) {
-      // eslint-disable-next-line no-console
       console.warn(
         'genI18nGateScope staleness guard SKIPPED: the upstream merge-base ' +
           `commit (${packageJson.upstream.baseCommit}) is not reachable in ` +

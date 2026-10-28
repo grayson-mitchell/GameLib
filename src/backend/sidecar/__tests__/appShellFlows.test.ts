@@ -348,7 +348,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     mockRequestRustInvoke.mockReset().mockResolvedValue(undefined)
     mockRestoreMacSteamOnlineIfOwed
       .mockReset()
-      .mockImplementation(async () => 'not-owed')
+      .mockImplementation(() => Promise.resolve('not-owed'))
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
   })
 

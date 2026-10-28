@@ -337,9 +337,7 @@ describe('credential redaction: PowerShell -ArgumentList branch (34.5-61, F-34.5
       ...jest.requireActual('backend/utils/os/path'),
       searchForExecutableOnPath: jest.fn()
     }))
-    /* eslint-disable @typescript-eslint/no-require-imports,
-       @typescript-eslint/no-unsafe-member-access,
-       @typescript-eslint/no-unsafe-assignment */
+    /* eslint-disable @typescript-eslint/no-require-imports */
     winCallRunner = require('backend/launcher').callRunner
     const freshLogger = require('backend/logger')
     winLogInfo = freshLogger.logInfo
@@ -348,9 +346,7 @@ describe('credential redaction: PowerShell -ArgumentList branch (34.5-61, F-34.5
     winSpawn = require('child_process').spawn
     winSearchForExecutableOnPath =
       require('backend/utils/os/path').searchForExecutableOnPath
-    /* eslint-enable @typescript-eslint/no-require-imports,
-       @typescript-eslint/no-unsafe-member-access,
-       @typescript-eslint/no-unsafe-assignment */
+    /* eslint-enable @typescript-eslint/no-require-imports */
   })
 
   // resetMocks:true (src/backend/jest.config.js) strips every mock's implementation

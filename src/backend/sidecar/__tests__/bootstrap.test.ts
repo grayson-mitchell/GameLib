@@ -149,7 +149,9 @@ describe('sidecar bootstrap (headless boot)', () => {
   describe('boot-time owed Mac Steam goonline (54-13)', () => {
     beforeEach(() => {
       mockRestoreMacSteamOnlineIfOwed.mockReset()
-      mockRestoreMacSteamOnlineIfOwed.mockImplementation(async () => 'not-owed')
+      mockRestoreMacSteamOnlineIfOwed.mockImplementation(() =>
+        Promise.resolve('not-owed')
+      )
     })
 
     it("init() pays a stale owed goonline once with the 'boot' trigger, after bindTransport", () => {

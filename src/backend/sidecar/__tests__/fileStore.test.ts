@@ -123,15 +123,15 @@ describe('sidecar fileStore', () => {
     store.set('token', 'ciphertext')
 
     const dir = join(getPath('userData'), cwd)
-    // eslint-disable-next-line no-bitwise
+
     expect(statSync(join(dir, 'config.json')).mode & 0o777).toBe(0o600)
-    // eslint-disable-next-line no-bitwise
+
     expect(statSync(dir).mode & 0o777).toBe(0o700)
 
     // A REWRITE must not widen the mode back out — temp+rename replaces the inode,
     // so the mode has to be set on the temp file each time.
     store.set('token', 'ciphertext-2')
-    // eslint-disable-next-line no-bitwise
+
     expect(statSync(join(dir, 'config.json')).mode & 0o777).toBe(0o600)
   })
 

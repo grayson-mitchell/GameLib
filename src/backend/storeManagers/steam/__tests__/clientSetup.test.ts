@@ -73,7 +73,6 @@ const mockedIsSteamClientInstalled =
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
 
 describe('clientSetup.ts', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let envMock: any
 
   beforeEach(() => {
