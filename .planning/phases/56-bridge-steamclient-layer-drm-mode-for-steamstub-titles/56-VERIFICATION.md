@@ -2,7 +2,7 @@
 phase: 56-bridge-steamclient-layer-drm-mode-for-steamstub-titles
 verified: 2026-10-28T23:10:00Z
 status: gaps_found
-score: 1/2 roadmap done-when conditions verified (menu reached: FAILED; strict-verified: VERIFIED)
+score: "1/2 roadmap done-when conditions verified (menu reached: FAILED; strict-verified: VERIFIED)"
 overrides_applied: 0
 gaps:
   - truth: "Grim Dawn 219990 reaches its interactive main menu through DRM mode with only Mac Steam running"
