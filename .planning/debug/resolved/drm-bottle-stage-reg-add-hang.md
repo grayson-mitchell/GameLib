@@ -1,5 +1,5 @@
 ---
-status: fix_applied_awaiting_live_verification
+status: resolved
 trigger: "Steam bridge DRM-mode launch fails at bottle-stage for appId 219990: stageDrmBottle's reg add SteamClientDll64 under the DRM runner timed out after 15000 ms"
 created: 2026-10-29
 updated: 2026-10-29
@@ -68,4 +68,12 @@ updated: 2026-10-29
 - NOT verified live. Needs: restart tauri dev (sidecar is not rebuilt), then Play on 219990.
 - The debugger's hand runs already wrote SteamClientDll64/Universe/SteamPath into the bottle's user.reg, so the next launch may skip the reg add entirely (alreadyStaged). A clean live test needs those values removed, or a different SteamStub game.
 - Open risk (unexplained): one hand run left wineserver + `wineboot --init` + `winedevice.exe` (~100% CPU) alive >40 s after `wineserver -k` and an immediate restart. If the live retest still stalls, investigate that next.
+
+### Live verification (2026-10-29 10:06, operator, after tauri dev restart)
+
+- Bottle user.reg had the four DRM values removed first (backup `user.reg.pre-drm-retest-20261029-095720`), so staging ran for real: `registry not staged` listed all four.
+- All four `reg add` calls settled 10:06:47-10:06:48; `registered ... steamclient64.dll under HKCU ActiveProcess` at 10:06:49 (was: first call timed out after 15000 ms).
+- `drm setup: appId 219990 ready`; Grim Dawn started (pid 3169), window raised.
+- DRM trace `219990-1793221609270.log`: 36 lines, `role=game`, SteamStub ownership check (GetAppOwnershipTicketData, GetSteamID) then real init (CreateSteamPipe, ConnectToGlobalUser, BIsSubscribedApp, RemoteStorage). Meets the DRM-mode verified criterion (D-56-15/16).
+- The wineboot/winedevice race seen once in a hand run did not occur; it stays unexplained.
 
