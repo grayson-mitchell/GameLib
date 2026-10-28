@@ -13,18 +13,10 @@ import {
   buildHelperCompileArgv,
   buildShim64CompileArgv,
   buildShimCompileArgv,
-  buildSteamClient64CompileArgv,
   helperOutputPath,
   machoArchFlag,
-  missingSteamClient64Inputs,
   pruneShim64BuildByproducts,
   pruneShimBuildByproducts,
-  pruneSteamClient64BuildByproducts,
-  STEAMCLIENT64_BUILD_BYPRODUCTS,
-  STEAMCLIENT_FWD_RC_PATH,
-  STEAMCLIENT_FWD_SOURCE_PATH,
-  steamClient64ByproductPaths,
-  steamClient64OutputPath,
   resolveBridgeArch,
   SHIM64_BUILD_BYPRODUCTS,
   SHIM_FEATURES_SOURCE_PATH,
@@ -474,8 +466,8 @@ describe('buildSteamBridgeShims', () => {
       const stripped = sourceText
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/^\s*\/\/.*$/gm, '')
-      // 6 total: 2 each for compileShim (x86), compileShim64, compileSteamClient64.
-      expect(stripped.match(/COMPILE GATE FAILED/g) ?? []).toHaveLength(6)
+      // 4 total: 2 each for compileShim (x86) and compileShim64.
+      expect(stripped.match(/COMPILE GATE FAILED/g) ?? []).toHaveLength(4)
 
       const fnStart = stripped.indexOf('async function compileShim(')
       expect(fnStart).toBeGreaterThan(-1)
@@ -587,95 +579,40 @@ describe('buildSteamBridgeShims', () => {
       }
     })
   })
-  describe('steamclient64 forwarder (52-03)', () => {
-    it('output path sits beside the shims', () => {
-      expect(steamClient64OutputPath('arm64')).toBe(
-        join('public', 'bin', 'arm64', 'darwin', 'steamclient64.dll')
+  describe('forwarder removed (D-14)', () => {
+    const stripped = sourceText
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+
+    it('has no forwarder source tree, build code or exports', () => {
+      expect(existsSync(join('native', 'steam-bridge', 'steamclient'))).toBe(
+        false
+      )
+      expect(stripped).not.toMatch(/steamclient64/i)
+      expect(stripped).not.toMatch(/STEAMCLIENT_FWD/)
+      expect(stripped).not.toMatch(/compileSteamClient64/)
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const shims = require('../buildSteamBridgeShims') as Record<
+        string,
+        unknown
+      >
+      expect(Object.keys(shims).filter((k) => /steamclient/i.test(k))).toEqual(
+        []
       )
     })
 
-    it('argv: x64 windows shared build of the forwarder, no .def, no ws2_32', () => {
-      const { command, args } = buildSteamClient64CompileArgv('/zig', 'arm64')
-      expect(command).toBe('/zig')
-      expect(args[0]).toBe('cc')
-      expect(args[args.indexOf('-target') + 1]).toBe('x86_64-windows-gnu')
-      expect(args).toContain('-shared')
-      for (const flag of SHIM_RELEASE_CFLAGS) expect(args).toContain(flag)
-      expect(args[args.indexOf('-o') + 1]).toBe(
-        steamClient64OutputPath('arm64')
-      )
-      expect(args).toContain(STEAMCLIENT_FWD_SOURCE_PATH)
-      // 52-26 (item 22): the version resource, compiled with the forwarder.
-      expect(args).toContain(STEAMCLIENT_FWD_RC_PATH)
-      // 52-REVIEW WR-02: the .rc is its own input and follows the .c (the
-      // import-lib name derives from the first source).
-      expect(args.slice(-2)).toEqual([
-        STEAMCLIENT_FWD_SOURCE_PATH,
-        STEAMCLIENT_FWD_RC_PATH
-      ])
-      expect(args.indexOf(STEAMCLIENT_FWD_SOURCE_PATH)).toBeLessThan(
-        args.indexOf(STEAMCLIENT_FWD_RC_PATH)
-      )
-      expect(existsSync(STEAMCLIENT_FWD_RC_PATH)).toBe(true)
-      expect(args).not.toContain('-lws2_32')
-      expect(args.some((a) => a.endsWith('.def'))).toBe(false)
-    })
-
-    describe('missingSteamClient64Inputs (52-REVIEW WR-01)', () => {
-      it('returns [] when every input exists', () => {
-        expect(missingSteamClient64Inputs(() => true)).toEqual([])
-      })
-      it('names a missing .rc', () => {
-        expect(
-          missingSteamClient64Inputs((p) => p !== STEAMCLIENT_FWD_RC_PATH)
-        ).toEqual([STEAMCLIENT_FWD_RC_PATH])
-      })
-      it('names every missing input in order', () => {
-        expect(missingSteamClient64Inputs(() => false)).toEqual([
-          STEAMCLIENT_FWD_SOURCE_PATH,
-          STEAMCLIENT_FWD_RC_PATH
-        ])
-      })
-    })
-
-    it('byproducts never name a keeper and prune removes them fail-loud', () => {
-      for (const name of STEAMCLIENT64_BUILD_BYPRODUCTS) {
-        expect(name.endsWith('.dll')).toBe(false)
-      }
-      expect(STEAMCLIENT64_BUILD_BYPRODUCTS).not.toContain('steam_api64.pdb')
-      expect(steamClient64ByproductPaths('arm64')).not.toContain(
-        steamClient64OutputPath('arm64')
-      )
-      const tmp = mkdtempSync(join(tmpdir(), 'gamelib-sc64-prune-'))
-      const previousCwd = process.cwd()
-      try {
-        const darwinDir = join(tmp, 'public', 'bin', 'arm64', 'darwin')
-        mkdirSync(darwinDir, { recursive: true })
-        writeFileSync(join(darwinDir, 'steamclient64.dll'), 'keep')
-        for (const name of STEAMCLIENT64_BUILD_BYPRODUCTS) {
-          writeFileSync(join(darwinDir, name), 'x')
-        }
-        process.chdir(tmp)
-        pruneSteamClient64BuildByproducts('arm64')
-        for (const name of STEAMCLIENT64_BUILD_BYPRODUCTS) {
-          expect(() => readFileSync(join(darwinDir, name))).toThrow()
-        }
-        expect(
-          readFileSync(join(darwinDir, 'steamclient64.dll'), 'utf-8')
-        ).toBe('keep')
-      } finally {
-        process.chdir(previousCwd)
-        rmSync(tmp, { recursive: true, force: true })
-      }
-    })
-
-    it('main() calls compileSteamClient64 after compileShim64', () => {
-      const mainBody = sourceText.slice(
+    it('main runs exactly compileHelper, stageSteamAppId, compileShim, compileShim64 in order', () => {
+      const from = sourceText.slice(
         sourceText.indexOf('export async function main')
       )
-      expect(mainBody.indexOf('compileSteamClient64()')).toBeGreaterThan(
-        mainBody.indexOf('compileShim64()')
-      )
+      const mainBody = from.slice(0, from.indexOf('\n}'))
+      const calls = [...mainBody.matchAll(/await (\w+)\(\)/g)].map((m) => m[1])
+      expect(calls).toEqual([
+        'compileHelper',
+        'stageSteamAppId',
+        'compileShim',
+        'compileShim64'
+      ])
     })
   })
 })
