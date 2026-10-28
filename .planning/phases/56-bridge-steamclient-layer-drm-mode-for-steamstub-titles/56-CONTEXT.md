@@ -143,6 +143,18 @@ running, and meets the strict bridge-verified criterion as defined for this mode
   `bins_win64` node, which holds all three D-06 DLLs. `bins_misc_ubuntu12` has no tier0 or vstdlib.
   The rest of D-04 is unchanged: follow the current manifest and verify against its `sha2`, with
   no pinned sha.
+- **D-08 narrowing (user, 2026-10-28, after plan check):** `resolve.py` is vendored as a dev-time
+  tool only. At runtime, GameLib applies a pinned, sha-verified per-build row from
+  `ntdllPatchTable.ts` (56-06), not a runtime pattern finder (research F5; consistent with D-09's
+  fail-closed allowlist). To add a CrossOver build, run `resolve.py` at dev time and commit a new
+  row.
+- **Follow-ups (user, 2026-10-28):**
+  - 56-15 is split into 56-15 (contract plus publish) and 56-16 (live run), per the live-gate
+    author ≠ runner rule.
+  - The now-unreachable SteamClient017/014 `wire` policy moves to the follow-up todo
+    `2026-10-28-steamclient-wire-policy-unreachable-after-phase-56.md`, not Phase 56.
+  - D-20's "one forced rescan" doesn't happen (`isScanVerdictNowCovered` ignores the stamp); 56-14
+    pins that behaviour.
 - **D-15/D-16 refinement (research F1):** the strict classifier is `meta/bridgeCensus.ts`
   (`classifyBridgeEvidence`), not `bridgeVerdict.ts`. Trace lines carry `role=game|helper`.
 
