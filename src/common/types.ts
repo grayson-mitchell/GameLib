@@ -369,6 +369,7 @@ export type Status =
   | 'notInstalled'
   | 'installed'
   | 'redist'
+  | 'drm-setup'
   | 'extracting'
   | 'winetricks'
 

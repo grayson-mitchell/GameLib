@@ -231,7 +231,12 @@ async function runSetup(
     lastContext = context
     progressSent = true
     try {
-      sendStatus({ appName: appId, runner: 'steam', status: 'redist', context })
+      sendStatus({
+        appName: appId,
+        runner: 'steam',
+        status: 'drm-setup',
+        context
+      })
     } catch (err) {
       logWarning(
         `drm setup: appId ${appId} progress send failed: ${messageOf(err)}`,

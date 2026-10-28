@@ -3737,7 +3737,7 @@ export default class SteamGame implements Game {
     } else if (drm.status === 'error') {
       // D-13: no markBridgeFailedThisSession, no steamBridgeSetupRequired, no
       // bottled Steam. The launcher's own 'done' status after launch()
-      // returns false clears any 'redist' progress 56-11 sent (D-05).
+      // returns false clears any 'drm-setup' progress 56-11 sent (D-05).
       this.maybeNotifyDrmModeFailed(drm.step, drm.cause)
       return false
     } else {

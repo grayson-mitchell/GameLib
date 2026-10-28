@@ -195,6 +195,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const isLaunching = status === 'launching'
   const isInstallingWinetricksPackages = status === 'winetricks'
   const isInstallingRedist = status === 'redist'
+  const isPreparingDrm = status === 'drm-setup'
   const notAvailable = !gameAvailable && gameInfo.is_installed
   const notSupportedGame =
     gameInfo.runner !== 'sideload' &&
@@ -403,6 +404,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
         importing: isImporting,
         installingWinetricksPackages: isInstallingWinetricksPackages,
         installingRedist: isInstallingRedist,
+        preparingDrm: isPreparingDrm,
         launching: isLaunching || playClicked,
         linux: isLinux,
         linuxNative: isLinuxNative,

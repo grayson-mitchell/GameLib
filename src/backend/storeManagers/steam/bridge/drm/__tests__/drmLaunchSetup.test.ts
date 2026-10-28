@@ -359,13 +359,13 @@ describe('drmLaunchSetup', () => {
     expect(deps.sendStatus.mock.calls[0][0]).toEqual({
       appName: id,
       runner: 'steam',
-      status: 'redist',
+      status: 'drm-setup',
       context: 'Compatibility runner'
     })
     expect(deps.sendStatus.mock.calls[1][0]).toEqual({
       appName: id,
       runner: 'steam',
-      status: 'redist',
+      status: 'drm-setup',
       context: 'Steam client files'
     })
     expect(DRM_PROGRESS_CONTEXT.runner).toBe('Compatibility runner')

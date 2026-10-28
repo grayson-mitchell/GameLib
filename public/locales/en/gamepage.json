@@ -280,6 +280,7 @@
             "not-installable-game": "Game is NOT Installable",
             "third-party-game": "Third-Party Game NOT Supported"
         },
+        "drmSetup": "Preparing Steam DRM support",
         "launching": "Launching",
         "playing": {
             "start": "Play Now",
@@ -366,6 +367,7 @@
     "status": {
         "clickToUpdate": "Click to Update",
         "downloading": "Downloading",
+        "drmSetup": "Preparing Steam DRM support ({{step}})",
         "extracting": "Extracting",
         "gameNotAvailable": "Game not available",
         "gog-goodie": "This game doesn't appear to be installable. Check downloadable content on https://gog.com/account",

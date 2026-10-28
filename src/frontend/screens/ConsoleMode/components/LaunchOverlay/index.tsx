@@ -154,6 +154,13 @@ export default function LaunchOverlay({
         { redist: statusContext || '' }
       )
       break
+    case 'drm-setup':
+      label = t(
+        'gamepage:status.drmSetup',
+        'Preparing Steam DRM support ({{step}})',
+        { step: statusContext || '' }
+      )
+      break
     case 'winetricks':
       label = t('gamepage:status.winetricks', 'Applying Winetricks fixes')
       break

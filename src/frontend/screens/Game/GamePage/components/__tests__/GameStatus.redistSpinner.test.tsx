@@ -97,6 +97,19 @@ describe('GameStatus redist spinner (quick/261026-e1c)', () => {
     expect(collectText(tree)).toContain('Installing Redistributables (')
   })
 
+  it('labels DRM-mode launch setup as DRM support, not redists (quick/261029-d7v)', () => {
+    mockContext = {
+      runner: 'steam',
+      is: { preparingDrm: true },
+      statusContext: 'Compatibility runner'
+    }
+    const tree = render()
+    expect(hasSpinner(tree)).toBe(true)
+    const text = collectText(tree)
+    expect(text).toContain('Preparing Steam DRM support (')
+    expect(text).not.toContain('Installing Redistributables')
+  })
+
   it('shows no spinner once the redist step is over', () => {
     mockContext = { runner: 'steam', is: {} }
     expect(hasSpinner(render())).toBe(false)

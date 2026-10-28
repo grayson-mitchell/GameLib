@@ -93,6 +93,21 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       )
     }
 
+    // quick 261029-d7v: DRM-mode launch setup fetches and stages Steam DRM
+    // support, which is not a redist install, so it has its own line.
+    if (is.preparingDrm) {
+      return (
+        <span
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+        >
+          <CircularProgress size={14} color="inherit" />
+          {t('status.drmSetup', 'Preparing Steam DRM support ({{step}})', {
+            step: statusContext || ''
+          })}
+        </span>
+      )
+    }
+
     if (is.uninstalling) {
       return t('status.uninstalling', 'Uninstalling')
     }

@@ -32,6 +32,7 @@ export function getCardStatus(
   const isLaunching = status === 'launching'
   const isInstallingWinetricksPackages = status === 'winetricks'
   const isInstallingRedist = status === 'redist'
+  const isPreparingDrm = status === 'drm-setup'
 
   const haveStatus =
     isMoving ||
@@ -47,6 +48,7 @@ export function getCardStatus(
     isLaunching ||
     isInstallingWinetricksPackages ||
     isInstallingRedist ||
+    isPreparingDrm ||
     (isInstalled && layout !== 'grid')
   return {
     isInstalling,
@@ -59,6 +61,7 @@ export function getCardStatus(
     isLaunching,
     isInstallingWinetricksPackages,
     isInstallingRedist,
+    isPreparingDrm,
     haveStatus
   }
 }

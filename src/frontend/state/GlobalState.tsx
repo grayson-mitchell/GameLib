@@ -302,6 +302,7 @@ export function classifySleepAssertionKind(status: Status): SleepAssertionKind {
     case 'installing':
     case 'updating':
     case 'redist':
+    case 'drm-setup':
     case 'winetricks':
     case 'extracting':
     case 'repairing':
@@ -1542,6 +1543,7 @@ class GlobalState extends PureComponent<Props> {
         'launching',
         'winetricks',
         'redist',
+        'drm-setup',
         'queued'
       ].includes(status)
     ) {

@@ -46,7 +46,8 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     is.syncing ||
     is.launching ||
     is.installingWinetricksPackages ||
-    is.installingRedist
+    is.installingRedist ||
+    is.preparingDrm
 
   // quick 261024-h5y: a bottle-route install parked at StateFlags 1026 has no
   // user-visible Steam to restart, so the button becomes an explicit
@@ -86,6 +87,9 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     }
     if (is.installingRedist) {
       return t('label.redist', 'Installing Redistributables')
+    }
+    if (is.preparingDrm) {
+      return t('label.drmSetup', 'Preparing Steam DRM support')
     }
     if (is.installingWinetricksPackages) {
       return t('label.winetricks', 'Installing Winetricks Packages')
