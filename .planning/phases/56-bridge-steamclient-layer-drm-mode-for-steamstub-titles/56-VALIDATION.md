@@ -49,7 +49,7 @@ Filled in by the planner and executor. The requirement-to-test map lives in `56-
 
 ## Wave 0 Requirements
 
-- [ ] `src/backend/storeManagers/steam/bridge/drm/__tests__/{valveClient,ntdllPatch,runnerClone,stageDrmBottle,drmTrace,steamclientLayerMode}.test.ts`
+- [ ] `src/backend/storeManagers/steam/bridge/drm/__tests__/{valveClient,ntdllPatch,runnerClone,stageDrmBottle,drmTrace,steamclientLayerMode,steamclientLayerInstall,drmLaunchSetup}.test.ts`
 - [ ] `meta/__tests__/{buildLsteamclient,buildDrmNativeParts,steamclientLayerNotice}.test.ts`
 - [ ] Fixture: the live `steam_client_win64` manifest text, plus a tiny three-entry zip
 - [ ] Fixture: a synthetic minimal x86_64 PE for the ntdll applier (do not commit CrossOver's ntdll)
