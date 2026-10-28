@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
 Plan: 16 of 16
 Status: Ready to execute
-Last activity: 2026-10-29 -- Completed quick task 261029-8ws: record external fix-format research
+Last activity: 2026-10-29 -- Completed quick task 261029-avh: install route notice consults DRM routing
 
 Progress: [██████████] 100%
 
@@ -450,6 +450,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast-261028 | Inventory gap closed: Phase 54 WR-05 channel `steamGoOfflineCancel` (invoke, `steamAuthFlowRegistration.ts`) added to `IPC-PORT-INVENTORY.md` as its own PORTED bucket; Unique channels 228 → 229, Ported to sidecar 73 → 74. Fixes the red `preload-surface-gate.py`. | 2026-10-28 | (this commit) | planning-gates 12/12, gate self-test OK | — |
 | fast | 55-REVIEW-FIX brought up to date: WR-03 (skipped on 2026-10-26) moved to Fixed Issues, citing quick 261027-9vr (`bad35fc50`, `36f015607`, `26d37a064`, `50c3024cc`) and its live gate (`30c6b2bd5`). Frontmatter set to `fixed: 5`, `skipped: 0`, `status: all_fixed`. WR-01 human check recorded as met (55-UAT run 2, `cross_thread_unregister_waits`, SECURITY T-55-16). Phase 55 folder now reads green in gsd-phase-status. | 2026-10-28 | (this commit) | Done | — |
 | 261028-k7l | Generic GameMaker D3D11 runner default on the Steam bridge: CrossOver launch gets `CX_GRAPHICS_BACKEND=dxvk` when `data.win` sits beside the exe, the PE imports `d3d11.dll`, and the exe holds `GR_D3D_Device->CheckMultisampleQualityLevels` (replaces the unbuildable runner>=2024 check). User env > tier-1 > default. `1603180-steam.json` kept as regression pin. Closes the GameMaker MSAA-probe todo. | 2026-10-28 | `985c2a950` | Live-gated: Mining Mechs with pin moved aside, default applied, bridge verified, no dialogs. jest 118/118, codecheck clean. | [261028-k7l-generic-gamemaker-2024-d3d11-runner-dete](./quick/261028-k7l-generic-gamemaker-2024-d3d11-runner-dete/) |
+| 261029-avh | Install route notice consults DRM routing: `resolveBridgeRoute` row 7 calls the launch path's `resolveBridgeMode(scan.drmWrapper)` and skips the scan-miss notice for steamclient-layer (SteamStub) titles such as Grim Dawn; routing and the persisted scan verdict unchanged. Deferred: row 5 `win64-no-shim` notice for DRM titles; never-scanned DRM titles carry no `drmWrapper`. Closes the route-notice todo. | 2026-10-29 | `939ed1618` | Unit-tested, not live-gated. bridgeRoute 58/58, games.test scan-miss 7/7; one unrelated failure pre-existing from `985c2a950` (known-fixes applier 4th arg). | [261029-avh-route-notice-consults-drm-routing-before](./quick/261029-avh-route-notice-consults-drm-routing-before/) |
 
 ## Deferred Items
 
