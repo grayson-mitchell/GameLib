@@ -90,6 +90,8 @@ import { library } from '../state'
 import * as gamesModule from '../games'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { captureOwnedAppPlatforms } from '../platformCapture'
+import { listSteamClientPids } from '../steamClientProcess'
+import { logInfo } from 'backend/logger'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -281,6 +283,13 @@ jest.mock('../bridge/launchTarget', () => ({
 }))
 jest.mock('../platformCapture', () => ({
   captureOwnedAppPlatforms: jest.fn()
+}))
+// D-UAT-13: the install poller asks which Steam client PIDs are alive when a
+// native handoff finalizes. A bare jest.fn() resolves undefined = "inconclusive"
+// = fail open (no hold), so every pre-existing test keeps its old behaviour;
+// the D-UAT-13 describe below drives it explicitly. Never a real child spawn.
+jest.mock('../steamClientProcess', () => ({
+  listSteamClientPids: jest.fn()
 }))
 
 /** Bottle steamapps root used consistently across the bottle-path tests below. */
@@ -2167,6 +2176,57 @@ describe('SteamLibraryManager', () => {
 
       // No change → no push to avoid flooding frontend
       expect(sendFrontendMessage).not.toHaveBeenCalled()
+    })
+
+    it("D-UAT-13: a game holding for a Steam restart is NOT flipped to installed by the window-focus reconcile (it would show Play, and Play opens Steam's install dialog) — it is once the hold ends", async () => {
+      library.set('570', {
+        runner: 'steam',
+        app_name: '570',
+        title: 'Dota 2',
+        is_installed: false,
+        install: {},
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] },
+        canRunOffline: true,
+        installable: true
+      } as any)
+      jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '570',
+          StateFlags: '4',
+          installdir: 'dota2',
+          SizeOnDisk: '50000'
+        }
+      })
+      jest.mocked(listSteamClientPids).mockResolvedValue([111])
+      // GameLib's own finalize just wrote the StateFlags=4 manifest while the
+      // Steam client (pid 111) was running: the poller enters the hold.
+      startInstallPolling('570', { intervalMs: 60000, isNativeHandoff: true })
+      try {
+        await pollInstallOnce('570')
+        jest.mocked(sendFrontendMessage).mockClear()
+
+        // The user alt-tabs back from Steam: the focus reconcile re-reads the
+        // ACF (bit 4 set) but must leave the held game alone.
+        await manager.refreshInstallState()
+        expect(sendFrontendMessage).not.toHaveBeenCalled()
+        expect(library.get('570')?.is_installed).toBe(false)
+      } finally {
+        stopInstallPolling('570') // hold ends (e.g. released/cap/uninstalled)
+      }
+
+      // Control: the identical ACF DOES flip it once nothing is holding it, so
+      // the assertion above is not vacuous.
+      await manager.refreshInstallState()
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({ app_name: '570', is_installed: true })
+      )
     })
 
     it('installState() is a no-op (install state is ACF-derived, not boolean-driven)', () => {
@@ -5375,6 +5435,382 @@ describe('pollInstallOnce()', () => {
         status: 'installing'
       })
     )
+  })
+})
+
+// ── D-UAT-13: hold in steam-waiting-for-restart on the StateFlags=4 fast path ─
+//
+// debug/steam-waiting-for-restart-windows. GameLib's finalize writes the
+// manifest at StateFlags=4 (Phase 23 fast path), so the poller's first tick is
+// already 'installed' and the 1026-only 'steam-waiting-for-restart' signal is
+// unreachable: the badge flipped to Play while the running Steam client had
+// never read the manifest, and Play opened Steam's INSTALL dialog. The poller
+// now records which Steam client PIDs were alive at that moment and holds the
+// waiting state until they are gone. The probe (listSteamClientPids) is mocked
+// here; its per-OS behaviour has its own suite (steamClientProcess.test.ts).
+
+describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fast path (D-UAT-13)', () => {
+  const ACF_4 = {
+    AppState: {
+      appid: '730',
+      StateFlags: '4',
+      installdir: 'csgo',
+      SizeOnDisk: '50000'
+    }
+  }
+  const HOLD_PROBE_GAP_MS = 10_000
+  const RESTART_NOTIFY = {
+    title: 'CS:GO',
+    body: 'Restart Steam to finish installing {{game}}'
+  }
+  const FINISHED_NOTIFY = { title: 'CS:GO', body: 'Installation Finished' }
+
+  const sentCalls = (channel: string) =>
+    (sendFrontendMessage as jest.Mock).mock.calls.filter(([c]) => c === channel)
+  const statusPayloads = () => sentCalls('gameStatusUpdate').map(([, p]) => p)
+  const wasStopped = () =>
+    (logInfo as jest.Mock).mock.calls.some(
+      ([msg]) =>
+        typeof msg === 'string' &&
+        msg.includes('stopped install polling for appId 730')
+    )
+
+  beforeEach(() => {
+    jest.useFakeTimers()
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue(ACF_4)
+    jest
+      .mocked(getFileSize)
+      .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
+  })
+
+  afterEach(() => {
+    stopInstallPolling('730')
+    jest.useRealTimers()
+  })
+
+  it('holds a native handoff when a Steam client was running at finalize: waiting context, NO is_installed push, NO done, NO completion toast, poll kept alive', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+
+    await pollInstallOnce('730')
+
+    expect(statusPayloads()).toEqual([
+      {
+        appName: '730',
+        runner: 'steam',
+        status: 'installing',
+        context: 'steam-waiting-for-restart'
+      }
+    ])
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(0)
+    expect(library.get('730')?.is_installed).toBe(false)
+    // The restart hint is told once; "Installation Finished" waits for release.
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(notify).toHaveBeenCalledWith(RESTART_NOTIFY)
+    expect(wasStopped()).toBe(false)
+  })
+
+  it('keeps holding while the SAME Steam process is alive, re-emitting the waiting context each tick without re-notifying', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+    await pollInstallOnce('730')
+    jest.advanceTimersByTime(HOLD_PROBE_GAP_MS)
+    await pollInstallOnce('730')
+    await pollInstallOnce('730')
+
+    const waiting = statusPayloads().filter(
+      (p) => p.context === 'steam-waiting-for-restart'
+    )
+    expect(waiting).toHaveLength(3)
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(0)
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(wasStopped()).toBe(false)
+  })
+
+  it('re-probes Steam at most once per probe gap while holding (no child spawn per 3 s tick)', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+    await pollInstallOnce('730') // first probe, records [111]
+    expect(listSteamClientPids).toHaveBeenCalledTimes(1)
+
+    jest.advanceTimersByTime(HOLD_PROBE_GAP_MS - 1)
+    await pollInstallOnce('730')
+    expect(listSteamClientPids).toHaveBeenCalledTimes(1)
+
+    jest.advanceTimersByTime(1)
+    await pollInstallOnce('730')
+    expect(listSteamClientPids).toHaveBeenCalledTimes(2)
+  })
+
+  it('releases into the UNCHANGED installed flow once the recorded Steam process is gone, without repeating the restart toast', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+    await pollInstallOnce('730')
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(0)
+
+    // The user fully quit Steam.
+    jest.mocked(listSteamClientPids).mockResolvedValue([])
+    jest.advanceTimersByTime(HOLD_PROBE_GAP_MS)
+    await pollInstallOnce('730')
+
+    expect(sentCalls('pushGameToLibrary')).toEqual([
+      [
+        'pushGameToLibrary',
+        expect.objectContaining({ app_name: '730', is_installed: true })
+      ]
+    ])
+    expect(statusPayloads()).toContainEqual({
+      appName: '730',
+      runner: 'steam',
+      status: 'done'
+    })
+    expect(notify).toHaveBeenCalledTimes(2)
+    expect(notify).toHaveBeenNthCalledWith(1, RESTART_NOTIFY)
+    expect(notify).toHaveBeenNthCalledWith(2, FINISHED_NOTIFY)
+    expect(wasStopped()).toBe(true)
+  })
+
+  it('releases when Steam was RESTARTED (a different PID replaced the recorded one)', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+    await pollInstallOnce('730')
+
+    jest.mocked(listSteamClientPids).mockResolvedValue([222])
+    jest.advanceTimersByTime(HOLD_PROBE_GAP_MS)
+    await pollInstallOnce('730')
+
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(1)
+    expect(wasStopped()).toBe(true)
+  })
+
+  it('an inconclusive re-probe (undefined) keeps holding — only positive evidence of exit releases', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+    await pollInstallOnce('730')
+
+    jest.mocked(listSteamClientPids).mockResolvedValue(undefined)
+    jest.advanceTimersByTime(HOLD_PROBE_GAP_MS)
+    await pollInstallOnce('730')
+
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(0)
+    expect(wasStopped()).toBe(false)
+  })
+
+  it('fail-open: Steam NOT running at finalize (probe []) takes the unchanged installed flow immediately', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([])
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+
+    await pollInstallOnce('730')
+
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(1)
+    expect(statusPayloads()).toContainEqual(
+      expect.objectContaining({ status: 'done' })
+    )
+    expect(statusPayloads()).not.toContainEqual(
+      expect.objectContaining({ context: 'steam-waiting-for-restart' })
+    )
+    expect(wasStopped()).toBe(true)
+  })
+
+  it('fail-open: an inconclusive FIRST probe (undefined) takes the unchanged installed flow immediately', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue(undefined)
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+
+    await pollInstallOnce('730')
+
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(1)
+    expect(wasStopped()).toBe(true)
+  })
+
+  it('an OFF-path poll (Steam owns the download, no isNativeHandoff) never probes and never holds', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    startInstallPolling('730', 60000)
+
+    await pollInstallOnce('730')
+
+    expect(listSteamClientPids).not.toHaveBeenCalled()
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(1)
+    expect(wasStopped()).toBe(true)
+  })
+
+  it('a bottle-source handoff (no user-visible Steam to restart) never probes and never holds', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+    startInstallPolling('730', {
+      intervalMs: 60000,
+      source: 'bottle',
+      isNativeHandoff: true
+    })
+
+    await pollInstallOnce('730', 'bottle')
+
+    expect(listSteamClientPids).not.toHaveBeenCalled()
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(1)
+  })
+
+  it('a hold released because Steam itself rewrote the manifest (active download state) never re-enters, even if the probe still reports the old PID', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+    await pollInstallOnce('730')
+    expect(listSteamClientPids).toHaveBeenCalledTimes(1)
+
+    // Steam picked the app up and queued a post-restart update (1042 = active
+    // download, never === 1026).
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { ...ACF_4.AppState, StateFlags: '1042' }
+    })
+    await pollInstallOnce('730')
+    // ...and finished it.
+    ;(vdf.parse as jest.Mock).mockReturnValue(ACF_4)
+    await pollInstallOnce('730')
+
+    expect(listSteamClientPids).toHaveBeenCalledTimes(1)
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(1)
+    expect(wasStopped()).toBe(true)
+  })
+
+  it('the 1026 handoff wait is not re-armed as a hold when Steam adopts it (1026 -> 4): the restarted Steam that just adopted the manifest must not be recorded as the client that has not seen it', async () => {
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+
+    // GameLib could not earn the fast path and wrote the 1026 handoff manifest.
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { ...ACF_4.AppState, StateFlags: '1026' }
+    })
+    await pollInstallOnce('730')
+    expect(statusPayloads()).toContainEqual({
+      appName: '730',
+      runner: 'steam',
+      status: 'installing',
+      context: 'steam-waiting-for-restart'
+    })
+
+    // The user restarts Steam; the NEW client is running and has adopted the
+    // manifest, rewriting it to 4. A probe now would see that new client.
+    jest.mocked(listSteamClientPids).mockResolvedValue([222])
+    ;(vdf.parse as jest.Mock).mockReturnValue(ACF_4)
+    await pollInstallOnce('730')
+
+    expect(listSteamClientPids).not.toHaveBeenCalled()
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(1)
+    expect(statusPayloads()).toContainEqual({
+      appName: '730',
+      runner: 'steam',
+      status: 'done'
+    })
+    expect(wasStopped()).toBe(true)
+  })
+
+  it('a resumed install (poll first seeing a PRE-EXISTING 1026 manifest with isNativeHandoff still false) still holds once GameLib finalizes at StateFlags=4 — the Darkest Dungeon repro', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    // resumeInterruptedSteamInstall's bare native poll: ACF left at 1026 by the
+    // earlier cancel (Steam-style active state, NOT a GameLib handoff yet).
+    startInstallPolling('730', 60000)
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { ...ACF_4.AppState, StateFlags: '1026' }
+    })
+    await pollInstallOnce('730')
+    expect(statusPayloads()).not.toContainEqual(
+      expect.objectContaining({ context: 'steam-waiting-for-restart' })
+    )
+
+    // Finalize: games.ts upgrades the live poll to isNativeHandoff and the
+    // manifest is rewritten at StateFlags=4 while Steam (pid 111) is running.
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+    ;(vdf.parse as jest.Mock).mockReturnValue(ACF_4)
+    await pollInstallOnce('730')
+
+    expect(statusPayloads()).toContainEqual({
+      appName: '730',
+      runner: 'steam',
+      status: 'installing',
+      context: 'steam-waiting-for-restart'
+    })
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(0)
+    expect(wasStopped()).toBe(false)
+  })
+
+  it('a held poll survives the "no manifest -> user cancelled" grace window (GRACE_TICKS) instead of being torn down with a terminal done', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    const interval = 10
+    startInstallPolling('730', { intervalMs: interval, isNativeHandoff: true })
+
+    // GRACE_TICKS (20) + plenty of margin; the 10 s probe gap is never reached.
+    await jest.advanceTimersByTimeAsync(interval * 40)
+
+    expect(statusPayloads()).not.toContainEqual(
+      expect.objectContaining({ status: 'done' })
+    )
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(0)
+    expect(wasStopped()).toBe(false)
+    expect(
+      statusPayloads().filter((p) => p.context === 'steam-waiting-for-restart')
+        .length
+    ).toBeGreaterThan(20)
+  })
+
+  it('ends the hold with a terminal done when the finalized manifest vanishes (MANIFEST_GONE_TICKS) so the UI is not stranded on "Restart Steam"', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+    await pollInstallOnce('730')
+    ;(existsSync as jest.Mock).mockReturnValue(false) // manifest removed
+    for (let i = 0; i < 9; i++) await pollInstallOnce('730')
+    expect(wasStopped()).toBe(false) // 9 < MANIFEST_GONE_TICKS: tolerate a rewrite blip
+    await pollInstallOnce('730')
+
+    expect(statusPayloads()).toContainEqual({
+      appName: '730',
+      runner: 'steam',
+      status: 'done'
+    })
+    expect(wasStopped()).toBe(true)
+  })
+
+  it('a hold that reaches the MAX_TICKS safety cap reports the game installed instead of stranding the waiting UI', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    // 1 ms interval: the cap (7200 ticks) is 7.2 s of fake time, under the
+    // 10 s probe gap, so the probe cannot release it first.
+    startInstallPolling('730', { intervalMs: 1, isNativeHandoff: true })
+
+    await jest.advanceTimersByTimeAsync(7300)
+
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(1)
+    expect(statusPayloads()).toContainEqual(
+      expect.objectContaining({ status: 'done' })
+    )
+    expect(wasStopped()).toBe(true)
+  })
+
+  it('an ordinary poll with no hold still stops at the MAX_TICKS safety cap (the hold special-case must not weaken it)', async () => {
+    // A manifest that is never installed: Steam-owned download parked at an
+    // active state forever. isNativeHandoff false, so no probe/hold applies.
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { ...ACF_4.AppState, StateFlags: '1042' }
+    })
+    startInstallPolling('730', { intervalMs: 1 })
+
+    await jest.advanceTimersByTimeAsync(7300)
+
+    expect(wasStopped()).toBe(true)
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(0)
   })
 })
 
