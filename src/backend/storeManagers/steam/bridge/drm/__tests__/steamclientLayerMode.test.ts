@@ -15,6 +15,11 @@ import {
   isDrmStep,
   resolveBridgeMode
 } from '../steamclientLayerMode'
+import {
+  buildDrmPaths,
+  newDrmLaunchId,
+  steamclientLayerComponentId
+} from '../drmPaths'
 
 describe('resolveBridgeMode', () => {
   test('steamstub routes to steamclient-layer', () => {
@@ -162,5 +167,76 @@ describe('zero-import discipline', () => {
       'utf8'
     )
     expect(source.split('\n').filter((l) => /^import/.test(l)).length).toBe(0)
+  })
+})
+
+describe('buildDrmPaths', () => {
+  const base = '/tmp/gl app'
+  const root = '/tmp/gl app/steam-bridge/drm'
+  const p = buildDrmPaths(base)!
+
+  test('roots', () => {
+    expect(p.root).toBe(root)
+    expect(p.valveClientRoot).toBe(`${root}/valve-client`)
+    expect(p.runnersRoot).toBe(`${root}/runners`)
+    expect(p.componentRoot).toBe(`${root}/component`)
+    expect(p.traceRoot).toBe(`${root}/trace`)
+  })
+
+  test('rejects bad appFolder', () => {
+    expect(buildDrmPaths('relative/dir')).toBeNull()
+    expect(buildDrmPaths('')).toBeNull()
+    expect(buildDrmPaths('/a\0b')).toBeNull()
+  })
+
+  test('valveClientDir', () => {
+    expect(p.valveClientDir('1761084000')).toBe(
+      `${root}/valve-client/1761084000`
+    )
+    for (const bad of ['../1', '', '1/2', '1.0', '\0']) {
+      expect(p.valveClientDir(bad)).toBeNull()
+    }
+  })
+
+  test('runnerDir and runnerAppPath', () => {
+    expect(p.runnerDir('26.3.0.39832')).toBe(
+      `${root}/runners/crossover-26.3.0.39832`
+    )
+    expect(p.runnerAppPath('26.3.0.39832')).toBe(
+      `${root}/runners/crossover-26.3.0.39832/CrossOver`
+    )
+    for (const bad of ['26.3', '../26.3.0.1', '26.3.0.39832/x']) {
+      expect(p.runnerDir(bad)).toBeNull()
+      expect(p.runnerAppPath(bad)).toBeNull()
+    }
+  })
+
+  test('component id and dir', () => {
+    expect(steamclientLayerComponentId('26.3.0.39832')).toBe(
+      'steamclient-layer-cx26.3.0.39832'
+    )
+    expect(steamclientLayerComponentId('bad')).toBeNull()
+    expect(p.componentDir('steamclient-layer-cx26.3.0.39832')).toBe(
+      `${root}/component/steamclient-layer-cx26.3.0.39832`
+    )
+    expect(p.componentDir('steamclient-layer-cx../x')).toBeNull()
+    expect(p.componentDir('other')).toBeNull()
+  })
+
+  test('traceFile', () => {
+    expect(p.traceFile('219990', '1761084000123')).toBe(
+      `${root}/trace/219990-1761084000123.log`
+    )
+    expect(p.traceFile('21999a', '1')).toBeNull()
+    expect(p.traceFile('219990', '1/../2')).toBeNull()
+    expect(p.traceFile('219990', '')).toBeNull()
+  })
+})
+
+describe('newDrmLaunchId', () => {
+  test('truncates and falls back', () => {
+    expect(newDrmLaunchId(1761084000123.9)).toBe('1761084000123')
+    expect(newDrmLaunchId(NaN)).toBe('0')
+    expect(newDrmLaunchId(-1)).toBe('0')
   })
 })
