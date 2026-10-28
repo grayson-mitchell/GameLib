@@ -2109,17 +2109,19 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(stopBridgeHelper).toHaveBeenCalledWith(APP_ID)
   })
 
-  it('quick 261024-tny: the known-fixes applier runs with (appId, bridge settings, install root) before the monitor and the wine launch', async () => {
+  it('quick 261024-tny: the known-fixes applier runs with (appId, bridge settings, install root, exe path) before the monitor and the wine launch', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
 
     const game = new SteamGame(APP_ID)
     await game.launch({} as any)
 
+    // quick 261028-k7l added exePath as the 4th arg.
     expect(applySteamBridgeKnownFixes).toHaveBeenCalledWith(
       APP_ID,
       { wineCrossoverBottle: 'GameLibSteamBridge' },
-      `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`
+      `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`,
+      RESOLVED_EXE_PATH
     )
     const applierOrder = (applySteamBridgeKnownFixes as jest.Mock).mock
       .invocationCallOrder[0]
