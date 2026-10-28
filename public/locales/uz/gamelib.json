@@ -452,12 +452,6 @@
             "setup": {
                 "missingSymbols": "Ko'prik qamrab olmaydi: {{symbols}}",
                 "redownloadNote": "Zaxira o'yinni yana bottle'dagi Windows Steam klientiga yuklab oladi."
-            },
-            "steamstub": {
-                "body": "Bu o‘yin Steam’ning DRM o‘ramidan foydalanadi. GameLib uni Mac’dagi Steam mijozingizga ulay olmadi, shuning uchun o‘yin ishga tushgandan bir necha soniya o‘tib yopilishi mumkin.",
-                "forwardedBody": "Bu o‘yin Steam’ning DRM o‘ramidan foydalanadi. GameLib uni Mac’dagi Steam mijozingizga ulagan, ammo o‘ramning ishga tushirish tekshiruvini mahalliy Steam ko‘prigi orqali bajarib bo‘lmaydi, shuning uchun o‘yin ehtimol Steam xatosini ko‘rsatadi va ishga tushmaydi.",
-                "forwardedTitle": "Steam DRM tekshiruvi qo‘llab-quvvatlanmaydi",
-                "title": "Steam DRM tekshiruvi muvaffaqiyatsiz bo‘lishi mumkin"
             }
         },
         "download": {

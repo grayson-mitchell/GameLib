@@ -459,12 +459,6 @@
             "setup": {
                 "missingSymbols": "El puente no cubre: {{symbols}}",
                 "redownloadNote": "Al volver atrás se descarga el juego de nuevo en el cliente de Steam de Windows en bottle."
-            },
-            "steamstub": {
-                "body": "Este juego usa el envoltorio DRM de Steam. GameLib no pudo conectarlo con tu cliente de Steam en el Mac, así que el juego probablemente se cerrará unos segundos después de iniciarse.",
-                "forwardedBody": "Este juego usa el envoltorio DRM de Steam. GameLib lo conectó con tu cliente de Steam en el Mac, pero la comprobación de inicio del envoltorio no se puede satisfacer a través del puente nativo de Steam, así que el juego probablemente mostrará un error de Steam y no se iniciará.",
-                "forwardedTitle": "La comprobación DRM de Steam no es compatible",
-                "title": "La comprobación DRM de Steam puede fallar"
             }
         },
         "download": {

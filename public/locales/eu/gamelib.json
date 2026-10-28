@@ -452,12 +452,6 @@
             "setup": {
                 "missingSymbols": "Zubiak ez du estaltzen: {{symbols}}",
                 "redownloadNote": "Atzera egiteak jokoa berriro deskargatzen du Windows-eko Steam bezero bottle-an."
-            },
-            "steamstub": {
-                "body": "Joko honek Steamen DRM bilgarria erabiltzen du. GameLib-ek ezin izan du zure Mac-eko Steam bezeroarekin lotu, beraz, jokoa seguruenik abiarazi eta segundo batzuetara itxiko da.",
-                "forwardedBody": "Joko honek Steamen DRM bilgarria erabiltzen du. GameLib-ek zure Mac-eko Steam bezeroarekin lotu du, baina bilgarriaren abiarazte-egiaztapena ezin da bete Steam zubi natiboaren bidez, beraz, jokoak seguruenik Steam errore bat erakutsiko du eta ez da abiaraziko.",
-                "forwardedTitle": "Steam DRM egiaztapena ez da bateragarria",
-                "title": "Steam DRM egiaztapenak huts egin dezake"
             }
         },
         "download": {

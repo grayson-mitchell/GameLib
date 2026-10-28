@@ -452,12 +452,6 @@
             "setup": {
                 "missingSymbols": "Körpü əhatə etmir: {{symbols}}",
                 "redownloadNote": "Geri qayıtmaq oyunu yenidən bağlanmış Windows Steam klientinə yükləyir."
-            },
-            "steamstub": {
-                "body": "Bu oyun Steam-in DRM qabığından istifadə edir. GameLib onu Mac-dakı Steam müştərinizə qoşa bilmədi, ona görə də oyun başladıqdan bir neçə saniyə sonra çox güman ki, bağlanacaq.",
-                "forwardedBody": "Bu oyun Steam-in DRM qabığından istifadə edir. GameLib onu Mac-dakı Steam müştərinizə qoşdu, lakin qabığın işə salma yoxlaması doğma Steam körpüsü vasitəsilə ödənilə bilməz, ona görə də oyun çox güman ki, Steam xətası göstərəcək və başlamayacaq.",
-                "forwardedTitle": "Steam DRM yoxlaması dəstəklənmir",
-                "title": "Steam DRM yoxlaması uğursuz ola bilər"
             }
         },
         "download": {

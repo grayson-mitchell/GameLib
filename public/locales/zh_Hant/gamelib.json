@@ -452,12 +452,6 @@
             "setup": {
                 "missingSymbols": "橋接未涵蓋：{{symbols}}",
                 "redownloadNote": "回退將把遊戲重新下載到 Bottle 中的 Windows 版 Steam 用戶端。"
-            },
-            "steamstub": {
-                "body": "此遊戲使用 Steam 的 DRM 包裝器。GameLib 無法將其連接到你 Mac 上的 Steam 用戶端，因此遊戲很可能在啟動幾秒後關閉。",
-                "forwardedBody": "此遊戲使用 Steam 的 DRM 包裝器。GameLib 已將其連接到你 Mac 上的 Steam 用戶端，但包裝器的啟動檢查無法透過原生 Steam 橋接滿足，因此遊戲很可能會顯示 Steam 錯誤且無法啟動。",
-                "forwardedTitle": "不支援 Steam DRM 檢查",
-                "title": "Steam DRM 檢查可能失敗"
             }
         },
         "download": {

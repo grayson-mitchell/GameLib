@@ -452,12 +452,6 @@
             "setup": {
                 "missingSymbols": "Jembatan tidak mencakup: {{symbols}}",
                 "redownloadNote": "Fallback mengunduh ulang game ke klien Steam Windows dalam bottle."
-            },
-            "steamstub": {
-                "body": "Game ini menggunakan pembungkus DRM Steam. GameLib tidak dapat menghubungkannya ke klien Steam di Mac Anda, sehingga game kemungkinan akan tertutup beberapa detik setelah dimulai.",
-                "forwardedBody": "Game ini menggunakan pembungkus DRM Steam. GameLib telah menghubungkannya ke klien Steam di Mac Anda, tetapi pemeriksaan peluncuran pembungkus tidak dapat dipenuhi melalui jembatan Steam native, sehingga game kemungkinan akan menampilkan kesalahan Steam dan tidak dapat dimulai.",
-                "forwardedTitle": "Pemeriksaan DRM Steam tidak didukung",
-                "title": "Pemeriksaan DRM Steam mungkin gagal"
             }
         },
         "download": {

@@ -359,12 +359,6 @@
             "setup": {
                 "missingSymbols": "Die Brücke deckt nicht ab: {{symbols}}",
                 "redownloadNote": "Der Rückfall lädt das Spiel erneut in den Windows-Steam-Client in der Bottle herunter."
-            },
-            "steamstub": {
-                "body": "Dieses Spiel verwendet den DRM-Wrapper von Steam. GameLib konnte es nicht mit Ihrem Steam-Client auf dem Mac verbinden, daher wird sich das Spiel wahrscheinlich wenige Sekunden nach dem Start schließen.",
-                "forwardedBody": "Dieses Spiel verwendet den DRM-Wrapper von Steam. GameLib hat es mit Ihrem Steam-Client auf dem Mac verbunden, aber die Startprüfung des Wrappers lässt sich über die native Steam-Bridge nicht erfüllen, daher zeigt das Spiel wahrscheinlich einen Steam-Fehler an und startet nicht.",
-                "forwardedTitle": "Steam-DRM-Prüfung wird nicht unterstützt",
-                "title": "Steam-DRM-Prüfung könnte fehlschlagen"
             }
         },
         "goOffline": {

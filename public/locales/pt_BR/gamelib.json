@@ -459,12 +459,6 @@
             "setup": {
                 "missingSymbols": "A ponte não cobre: {{symbols}}",
                 "redownloadNote": "O fallback baixa o jogo novamente para o cliente da Steam do Windows em bottle."
-            },
-            "steamstub": {
-                "body": "Este jogo usa o wrapper de DRM do Steam. O GameLib não conseguiu conectá-lo ao seu cliente Steam no Mac, então o jogo provavelmente vai fechar alguns segundos depois de iniciar.",
-                "forwardedBody": "Este jogo usa o wrapper de DRM do Steam. O GameLib o conectou ao seu cliente Steam no Mac, mas a verificação de inicialização do wrapper não pode ser satisfeita pela ponte nativa do Steam, então o jogo provavelmente vai mostrar um erro do Steam e não vai iniciar.",
-                "forwardedTitle": "A verificação de DRM do Steam não é compatível",
-                "title": "A verificação de DRM do Steam pode falhar"
             }
         },
         "download": {

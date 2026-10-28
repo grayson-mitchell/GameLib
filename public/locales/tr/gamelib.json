@@ -452,12 +452,6 @@
             "setup": {
                 "missingSymbols": "Köprü kapsamıyor: {{symbols}}",
                 "redownloadNote": "Geri dönüş, oyunu tekrar bottle içindeki Windows Steam istemcisine indirir."
-            },
-            "steamstub": {
-                "body": "Bu oyun Steam'in DRM sarmalayıcısını kullanıyor. GameLib bunu Mac'inizdeki Steam istemcisine bağlayamadı, bu yüzden oyun muhtemelen başladıktan birkaç saniye sonra kapanacak.",
-                "forwardedBody": "Bu oyun Steam'in DRM sarmalayıcısını kullanıyor. GameLib onu Mac'inizdeki Steam istemcisine bağladı, ancak sarmalayıcının başlatma denetimi yerel Steam köprüsü üzerinden karşılanamıyor, bu yüzden oyun muhtemelen bir Steam hatası gösterecek ve başlamayacak.",
-                "forwardedTitle": "Steam DRM denetimi desteklenmiyor",
-                "title": "Steam DRM denetimi başarısız olabilir"
             }
         },
         "download": {

@@ -466,12 +466,6 @@
             "setup": {
                 "missingSymbols": "Tiltas nepadengia: {{symbols}}",
                 "redownloadNote": "Grįžimas iš naujo atsisiunčia žaidimą į Windows Steam klientą bottle."
-            },
-            "steamstub": {
-                "body": "Šis žaidimas naudoja Steam DRM apvalkalą. GameLib nepavyko jo prijungti prie jūsų Mac kompiuterio Steam kliento, todėl žaidimas greičiausiai užsidarys praėjus kelioms sekundėms po paleidimo.",
-                "forwardedBody": "Šis žaidimas naudoja Steam DRM apvalkalą. GameLib prijungė jį prie jūsų Mac kompiuterio Steam kliento, bet apvalkalo paleidimo patikros neįmanoma patenkinti per vietinį Steam tiltą, todėl žaidimas greičiausiai parodys Steam klaidą ir nepasileis.",
-                "forwardedTitle": "Steam DRM patikra nepalaikoma",
-                "title": "Steam DRM patikra gali nepavykti"
             }
         },
         "download": {

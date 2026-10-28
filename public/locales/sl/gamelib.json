@@ -466,12 +466,6 @@
             "setup": {
                 "missingSymbols": "Most ne pokriva: {{symbols}}",
                 "redownloadNote": "Vrnitev ponovno prenese igro v Windows odjemalec Steam v bottle."
-            },
-            "steamstub": {
-                "body": "Ta igra uporablja Steamov ovoj DRM. GameLib ga ni mogel povezati z odjemalcem Steam na vašem Macu, zato se bo igra verjetno nekaj sekund po zagonu zaprla.",
-                "forwardedBody": "Ta igra uporablja Steamov ovoj DRM. GameLib ga je povezal z odjemalcem Steam na vašem Macu, vendar preverjanja zagona ovoja ni mogoče izpolniti prek izvornega mostu Steam, zato bo igra verjetno prikazala napako Steam in se ne bo zagnala.",
-                "forwardedTitle": "Preverjanje Steam DRM ni podprto",
-                "title": "Preverjanje Steam DRM lahko spodleti"
             }
         },
         "download": {

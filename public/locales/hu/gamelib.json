@@ -452,12 +452,6 @@
             "setup": {
                 "missingSymbols": "A híd nem fedi le: {{symbols}}",
                 "redownloadNote": "A visszaesés újra letölti a játékot a bottle-os Windows Steam kliensbe."
-            },
-            "steamstub": {
-                "body": "Ez a játék a Steam DRM-burkolóját használja. A GameLib nem tudta összekapcsolni a Mac gépen futó Steam-klienssel, ezért a játék valószínűleg néhány másodperccel az indítás után bezárul.",
-                "forwardedBody": "Ez a játék a Steam DRM-burkolóját használja. A GameLib összekapcsolta a Mac gépen futó Steam-klienssel, de a burkoló indítási ellenőrzése nem teljesíthető a natív Steam-hídon keresztül, ezért a játék valószínűleg Steam-hibát jelez, és nem indul el.",
-                "forwardedTitle": "A Steam DRM-ellenőrzés nem támogatott",
-                "title": "A Steam DRM-ellenőrzés meghiúsulhat"
             }
         },
         "download": {

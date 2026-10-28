@@ -459,12 +459,6 @@
             "setup": {
                 "missingSymbols": "Podul nu acoperă: {{symbols}}",
                 "redownloadNote": "Revenirea redescarcă jocul în clientul Steam pentru Windows în bottle."
-            },
-            "steamstub": {
-                "body": "Acest joc folosește învelișul DRM al Steam. GameLib nu l-a putut conecta la clientul Steam de pe Mac, așa că jocul se va închide probabil la câteva secunde după pornire.",
-                "forwardedBody": "Acest joc folosește învelișul DRM al Steam. GameLib l-a conectat la clientul Steam de pe Mac, dar verificarea de lansare a învelișului nu poate fi satisfăcută prin puntea nativă Steam, așa că jocul va afișa probabil o eroare Steam și nu va porni.",
-                "forwardedTitle": "Verificarea DRM Steam nu este acceptată",
-                "title": "Verificarea DRM Steam poate eșua"
             }
         },
         "download": {
