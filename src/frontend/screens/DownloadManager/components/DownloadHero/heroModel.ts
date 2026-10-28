@@ -84,3 +84,34 @@ export function heroPercent(
   }
   return Math.min(100, Math.max(0, percent))
 }
+
+/** A post-download step the hero names instead of showing transfer stats. */
+export type HeroPhase =
+  | { kind: 'redist'; context: string }
+  | { kind: 'drm-setup'; context: string }
+  | { kind: 'finishing' }
+
+/**
+ * Quick 261029-exu: a bridge install keeps its queue slot after the depot
+ * download while it installs redists and prefetches DRM support. Maps the
+ * game's status to that phase, or `null` while it is genuinely downloading.
+ */
+export function heroPhase(entry?: {
+  status?: string
+  context?: string
+}): HeroPhase | null {
+  if (!entry) return null
+  if (entry.status === 'redist') {
+    return { kind: 'redist', context: entry.context ?? '' }
+  }
+  if (entry.status === 'drm-setup') {
+    return { kind: 'drm-setup', context: entry.context ?? '' }
+  }
+  if (
+    entry.status === 'installing' &&
+    entry.context === 'steam-bridge-finishing'
+  ) {
+    return { kind: 'finishing' }
+  }
+  return null
+}

@@ -4703,6 +4703,52 @@ describe('pollInstallOnce()', () => {
     })
   })
 
+  // ── quick 261029-exu: a bridge install owns its own completion ──────────
+
+  describe('bridge source leaves completion to installBridgeGame (quick 261029-exu)', () => {
+    beforeEach(() => {
+      jest
+        .mocked(getBridgeBottleSettings)
+        .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
+      jest
+        .mocked(getBottleSteamappsDir)
+        .mockReturnValue(BRIDGE_BOTTLE_STEAMAPPS_ROOT)
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '730',
+          StateFlags: '4',
+          installdir: 'csgo',
+          SizeOnDisk: '50000'
+        }
+      })
+      startInstallPolling('730', {
+        intervalMs: 60000,
+        source: 'bridge',
+        isNativeHandoff: true
+      })
+    })
+
+    it('flips is_installed but reports finishing, not done', async () => {
+      await pollInstallOnce('730', 'bridge')
+      expect(library.get('730')?.is_installed).toBe(true)
+      expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
+        appName: '730',
+        runner: 'steam',
+        status: 'installing',
+        context: 'steam-bridge-finishing'
+      })
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'gameStatusUpdate',
+        expect.objectContaining({ status: 'done' })
+      )
+    })
+
+    it('fires neither the finished toast nor the restart-Steam toast', async () => {
+      await pollInstallOnce('730', 'bridge')
+      expect(notify).not.toHaveBeenCalled()
+    })
+  })
+
   it('GAME-02: does NOT fire notify on the "downloading" branch (interim tick, no toast)', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {

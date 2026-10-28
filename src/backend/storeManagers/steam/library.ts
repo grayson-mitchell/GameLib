@@ -2003,6 +2003,13 @@ export async function promptI386Recovery(appId: string): Promise<void> {
  */
 const GAMELIB_HANDOFF_STATE_FLAGS = 1026
 
+/**
+ * Status context while a bridge install runs its post-download tail (quick
+ * 261029-exu). The frontend matches the same literal, like the other Steam
+ * install contexts.
+ */
+export const STEAM_BRIDGE_FINISHING_CONTEXT = 'steam-bridge-finishing'
+
 /** Module-level registry of active install polls, keyed by appId string. */
 const activePolls = new Map<
   string,
@@ -2833,18 +2840,32 @@ export async function pollInstallOnce(
       steamLibraryStore.set('games', Array.from(library.values()))
       sendFrontendMessage('pushGameToLibrary', updated)
     }
-    sendFrontendMessage('gameStatusUpdate', {
-      appName: appId,
-      runner: 'steam',
-      status: 'done'
-    })
+    // Quick 261029-exu: a bridge install keeps working after its manifest
+    // lands (shared redists, DRM prefetch), so installBridgeGame owns the
+    // final 'done' and the one "Installation Finished" toast. Until then the
+    // game reads as finishing, not playable.
+    const installerOwnsCompletion = source === 'bridge'
+    sendFrontendMessage(
+      'gameStatusUpdate',
+      installerOwnsCompletion
+        ? {
+            appName: appId,
+            runner: 'steam',
+            status: 'installing',
+            context: STEAM_BRIDGE_FINISHING_CONTEXT
+          }
+        : { appName: appId, runner: 'steam', status: 'done' }
+    )
     // GAME-02: fire the confirmed completion toast here (ACF state verified) so
     // the user gets exactly one "Installation Finished" notification per install.
-    // The DM pipeline toast is suppressed for steam — this is the sole source.
-    notify({
-      title: existing?.title ?? '',
-      body: i18next.t('notify.install.finished', 'Installation Finished')
-    })
+    // The DM pipeline toast is suppressed for steam — this is the sole source,
+    // except on the bridge, where installBridgeGame fires it.
+    if (!installerOwnsCompletion) {
+      notify({
+        title: existing?.title ?? '',
+        body: i18next.t('notify.install.finished', 'Installation Finished')
+      })
+    }
 
     // 23.2-04 (D-06/D-07): a completion notice naming any depot GameLib's
     // own downloadSteamDepots run dropped because Steam refused its key
@@ -2890,7 +2911,12 @@ export async function pollInstallOnce(
     // notifiedWaiting, mirroring the 'downloading' branch's own guard
     // (T-21-16-03), even though this branch itself only ever runs once
     // before stopInstallPolling() below tears the poll down.
-    if (poll?.isNativeHandoff === true && !poll.notifiedWaiting) {
+    // A bridge bottle runs the game itself; no Steam restart adopts anything.
+    if (
+      poll?.isNativeHandoff === true &&
+      !installerOwnsCompletion &&
+      !poll.notifiedWaiting
+    ) {
       poll.notifiedWaiting = true
       notify({
         title: existing?.title ?? '',

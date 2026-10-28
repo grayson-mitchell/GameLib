@@ -13,7 +13,13 @@ import { getGameInfo, getStoreName } from 'frontend/helpers'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import ContextProvider from 'frontend/state/ContextProvider'
 import ProgressHeader from '../ProgressHeader'
-import { heroArtSources, heroCoverSources, heroPercent } from './heroModel'
+import {
+  heroArtSources,
+  heroCoverSources,
+  heroPercent,
+  heroPhase,
+  type HeroPhase
+} from './heroModel'
 
 type Props = {
   element?: DMQueueElement
@@ -36,7 +42,7 @@ type Props = {
  * interpolated into a style string (T-261012-dhs-01).
  */
 export default function DownloadHero({ element, state }: Props) {
-  const { amazon, epic, gog, steam, showDialogModal } =
+  const { amazon, epic, gog, steam, showDialogModal, libraryStatus } =
     useContext(ContextProvider)
   const { t } = useTranslation('gamepage')
   const { t: t2 } = useTranslation('translation')
@@ -59,14 +65,29 @@ export default function DownloadHero({ element, state }: Props) {
   }, [appName, runner])
 
   const percent = heroPercent(!!element, progress.percent)
+  const phase = heroPhase(
+    appName ? libraryStatus.find((s) => s.appName === appName) : undefined
+  )
+  const phaseLabel = (p: HeroPhase): string =>
+    p.kind === 'redist'
+      ? t('status.redist', 'Installing Redistributables ({{redist}})', {
+          redist: p.context
+        })
+      : p.kind === 'drm-setup'
+        ? t('status.drmSetup', 'Preparing Steam DRM support ({{step}})', {
+            step: p.context
+          })
+        : t('status.steamFinishing', 'Finishing install…')
 
+  // quick 261029-exu: during a post-download phase the bar is indeterminate
+  // and carries no aria-valuenow; the transfer stats would read as a stall.
   const bar = (
     <div
-      className="downloadHero__bar"
+      className={`downloadHero__bar${phase ? ' downloadHero__bar--indeterminate' : ''}`}
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={Math.floor(percent)}
+      aria-valuenow={phase ? undefined : Math.floor(percent)}
       aria-label={t2('download-manager.title', 'Downloads')}
     >
       <div className="downloadHero__barFill" style={{ width: `${percent}%` }} />
@@ -172,13 +193,21 @@ export default function DownloadHero({ element, state }: Props) {
               {' · '}
               {getStoreName(runner, t2('Other'))}
             </span>
-            <span className="downloadHero__progress">{progressText}</span>
-            <span
-              className="downloadHero__eta"
-              title={t2('download-manager.ETA', 'Estimated Time')}
-            >
-              {etaText}
-            </span>
+            {phase ? (
+              <span className="downloadHero__progress">
+                {phaseLabel(phase)}
+              </span>
+            ) : (
+              <>
+                <span className="downloadHero__progress">{progressText}</span>
+                <span
+                  className="downloadHero__eta"
+                  title={t2('download-manager.ETA', 'Estimated Time')}
+                >
+                  {etaText}
+                </span>
+              </>
+            )}
           </div>
           <div className="downloadHero__actions">
             {(isPaused || state === 'running') && (
@@ -205,9 +234,11 @@ export default function DownloadHero({ element, state }: Props) {
             </SvgButton>
           </div>
         </div>
-        <div className="downloadHero__speed">
-          <ProgressHeader state={state} appName={appName} runner={runner} />
-        </div>
+        {!phase && (
+          <div className="downloadHero__speed">
+            <ProgressHeader state={state} appName={appName} runner={runner} />
+          </div>
+        )}
       </div>
     </section>
   )

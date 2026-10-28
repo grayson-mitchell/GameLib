@@ -1,4 +1,9 @@
-import { heroArtSources, heroCoverSources, heroPercent } from '../heroModel'
+import {
+  heroArtSources,
+  heroCoverSources,
+  heroPercent,
+  heroPhase
+} from '../heroModel'
 
 describe('heroArtSources', () => {
   it('prefers art_background, then art_cover, then art_square as fallbacks', () => {
@@ -114,5 +119,31 @@ describe('heroPercent', () => {
 
   it('is 0 for NaN', () => {
     expect(heroPercent(true, NaN)).toBe(0)
+  })
+})
+
+describe('heroPhase (quick 261029-exu)', () => {
+  it('names the redist and DRM steps with their context', () => {
+    expect(heroPhase({ status: 'redist', context: 'vcredist 2015' })).toEqual({
+      kind: 'redist',
+      context: 'vcredist 2015'
+    })
+    expect(
+      heroPhase({ status: 'drm-setup', context: 'Steam client files' })
+    ).toEqual({ kind: 'drm-setup', context: 'Steam client files' })
+  })
+
+  it('names the bridge finishing state', () => {
+    expect(
+      heroPhase({ status: 'installing', context: 'steam-bridge-finishing' })
+    ).toEqual({ kind: 'finishing' })
+  })
+
+  it('is null while genuinely downloading or with no status', () => {
+    expect(heroPhase({ status: 'installing' })).toBeNull()
+    expect(
+      heroPhase({ status: 'installing', context: 'steam-paused' })
+    ).toBeNull()
+    expect(heroPhase(undefined)).toBeNull()
   })
 })

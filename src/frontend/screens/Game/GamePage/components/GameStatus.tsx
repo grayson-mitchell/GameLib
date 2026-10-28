@@ -155,6 +155,17 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
           'Downloaded. Start Steam to finish installing.'
         )
       }
+      // quick 261029-exu: a bridge install's post-download tail.
+      if (statusContext === 'steam-bridge-finishing') {
+        return (
+          <span
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            <CircularProgress size={14} color="inherit" />
+            {t('status.steamFinishing', 'Finishing install…')}
+          </span>
+        )
+      }
       if (statusContext === 'steam-finishing-in-bottled-steam') {
         return tGamelib(
           'gamelib:steam.bottle.finishInstall.finishing',

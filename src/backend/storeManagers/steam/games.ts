@@ -84,7 +84,8 @@ import {
   pollUninstallOnce,
   resolveInstallRoot,
   findOtherManifestsWithInstalldir,
-  removeSteamInstallCopy
+  removeSteamInstallCopy,
+  STEAM_BRIDGE_FINISHING_CONTEXT
 } from './library'
 import {
   isBottleReady,
@@ -2185,8 +2186,22 @@ export default class SteamGame implements Game {
     if (!lease.ok) {
       return this.installResultForRefusal(lease.reason)
     }
+    // Quick 261029-exu: the bridge poller no longer sends 'done' when the
+    // manifest lands, so a path that stops after the download (CEG, shim
+    // failure, a throw) must clear the "finishing" status itself.
+    const clearFinishing = () =>
+      sendGameStatusUpdate({
+        appName: this.appId,
+        runner: 'steam',
+        status: 'done'
+      })
     try {
-      return await this.installBridgeGameLeased(args, bridgeBottleName)
+      const result = await this.installBridgeGameLeased(args, bridgeBottleName)
+      if (result.status === 'error') clearFinishing()
+      return result
+    } catch (error) {
+      clearFinishing()
+      throw error
     } finally {
       lease.release()
     }
@@ -2402,9 +2417,18 @@ export default class SteamGame implements Game {
     // install's logon, so Play never needs one. Never fails the install.
     const { installSteamBridgeSharedRedists } =
       await import('./bridge/sharedRedistInstall')
-    // The download queue suppresses Steam's own 'done' and the ACF poller's
-    // 'done' fires before the redists, so the final update below is the only
-    // status that clears a lingering 'redist' (56-16 Gap 3).
+    // The download queue suppresses Steam's own 'done', and on the bridge the
+    // ACF poller leaves completion to this method (quick 261029-exu), so the
+    // final update below is the only status that clears a lingering 'redist'
+    // or 'drm-setup' (56-16 Gap 3) and ends the "finishing" state.
+    const sendFinishing = () =>
+      sendGameStatusUpdate({
+        appName: this.appId,
+        runner: 'steam',
+        status: 'installing',
+        context: STEAM_BRIDGE_FINISHING_CONTEXT
+      })
+    sendFinishing()
     try {
       await installSteamBridgeSharedRedists(
         this.appId,
@@ -2419,6 +2443,7 @@ export default class SteamGame implements Game {
       })
       // Quick 261029-e2t: fetch DRM mode's runner and Valve client now, so
       // the first Play only stages the bottle. Never fails the install.
+      sendFinishing()
       await this.prefetchBridgeDrmDownloads(exePath, bridgeBottleName).catch(
         (error: unknown) => {
           logWarning(
@@ -2432,6 +2457,11 @@ export default class SteamGame implements Game {
         appName: this.appId,
         runner: 'steam',
         status: 'done'
+      })
+      // GAME-02's one completion toast; the bridge poller skips it.
+      notify({
+        title: this.getGameInfo().title,
+        body: i18next.t('notify.install.finished', 'Installation Finished')
       })
     }
 

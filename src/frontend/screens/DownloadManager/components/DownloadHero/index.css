@@ -20,6 +20,30 @@
   transition: width 0.3s ease;
 }
 
+/* quick 261029-exu: post-download phase (redists, DRM support) */
+.downloadHero__bar--indeterminate .downloadHero__barFill {
+  width: 30% !important;
+  transition: none;
+  animation: downloadHero-indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes downloadHero-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .downloadHero__bar--indeterminate .downloadHero__barFill {
+    width: 100% !important;
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
 .downloadHero__panel {
   position: relative;
   overflow: hidden;

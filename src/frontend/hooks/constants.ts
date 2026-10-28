@@ -44,14 +44,16 @@ export function getStatusLabel({
                 'gamelib:steam.bottle.finishInstall.finishingShort',
                 'Finishing in Steam…'
               )
-            : statusContext === 'steam-waiting-for-restart'
-              ? t(
-                  'gamepage:status.steamWaitingRestart',
-                  'Restart Steam to finish'
-                )
-              : statusContext === 'steam-paused'
-                ? t('gamepage:status.steamPaused', 'Paused')
-                : t('gamepage:status.steamInstalling', 'Installing…')
+            : statusContext === 'steam-bridge-finishing'
+              ? t('gamepage:status.steamFinishing', 'Finishing install…')
+              : statusContext === 'steam-waiting-for-restart'
+                ? t(
+                    'gamepage:status.steamWaitingRestart',
+                    'Restart Steam to finish'
+                  )
+                : statusContext === 'steam-paused'
+                  ? t('gamepage:status.steamPaused', 'Paused')
+                  : t('gamepage:status.steamInstalling', 'Installing…')
         : `${t('gamepage:status.downloading', 'Downloading')} ${Math.ceil(
             percent || 0
           )}%`,
@@ -80,6 +82,11 @@ export function getStatusLabel({
       'gamepage:status.redist',
       'Installing Redistributables ({{redist}})',
       { redist: statusContext || '' }
+    ),
+    'drm-setup': t(
+      'gamepage:status.drmSetup',
+      'Preparing Steam DRM support ({{step}})',
+      { step: statusContext || '' }
     )
   }
 
