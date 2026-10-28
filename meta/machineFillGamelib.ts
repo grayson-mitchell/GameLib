@@ -134,7 +134,11 @@ export function pluralCategoriesFor(locale: string): string[] | null {
   if (!locale) return null
   try {
     const tag = locale.replace(/_/g, '-')
-    return new Intl.PluralRules(tag).resolvedOptions().pluralCategories
+    const have = new Set<string>(
+      new Intl.PluralRules(tag).resolvedOptions().pluralCategories
+    )
+    // Some ICU builds list categories in a non-CLDR order; normalise.
+    return PLURAL_SUFFIXES.filter((c) => have.has(c))
   } catch {
     return null
   }
