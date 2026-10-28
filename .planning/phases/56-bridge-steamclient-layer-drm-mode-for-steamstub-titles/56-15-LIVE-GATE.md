@@ -189,37 +189,37 @@ Reinstall gesture: on the library card for a not-installed Steam title (`!isInst
 ### 1. Component published and fetched (D-18)
 
 expected: COMPDIR holds exactly the six names, lsteamclient.so sha256 equals dd48289787223d9e0f75a97da3cc15aa616faa382741e39a5a433fa5cfa5167d, codesign -dv reports `not signed at all` (sink: filesystem, launch 1)
-result: pending
+result: pass — launch 1: COMPDIR holds exactly LICENSE.lsteamclient, NOTICE, detour-cx26.3.0.39832.bin, lsteamclient.dll, lsteamclient.so, steam.exe; lsteamclient.so sha256 dd48289787223d9e0f75a97da3cc15aa616faa382741e39a5a433fa5cfa5167d; codesign -dv: `code object is not signed at all`; PC8 showed COMPDIR absent before launch 1, and launch-1 log shows `component=download` (installed 22:35 by this run)
 
 ### 2. Reinstall through the bridge
 
 expected: BOTTLE(219990) exists and appmanifest_219990.acf has `"StateFlags" "4"` (sink: filesystem, launch 1)
-result: pending
+result: pass — launch 1: BOTTLE(219990) exists, appmanifest_219990.acf `"StateFlags"		"4"`. Install routed to the bridge (native install ON) after an operator click-through of a route-notice dialog (Gaps 1, 2); the post-install 'redist' status stuck and needed a dev restart (Gap 3)
 
 ### 3. DRM-mode setup completed (D-12/D-13)
 
 expected: gamelib-launch-1.log has one `[bridge-drm] appId=219990 mode=steamclient-layer crossover=26.3.0.39832 client=` line and zero `[bridge-notice] appId=219990 reason=drm-` lines (sink: SIDECAR copy, launch 1)
-result: pending
+result: pass — launch 1 (second delimiter, 09:35:33Z; the 09:28:26Z delimiter is VOID, Gap 3): `grep -c` of the anchor line = 1 (`[bridge-drm] appId=219990 mode=steamclient-layer crossover=26.3.0.39832 client=1792618285 trace=.../219990-1793180177200.log`), `[bridge-notice] appId=219990 reason=drm-` count 0; setup line `drm setup: appId 219990 ready crossover=26.3.0.39832 client=1792618285 component=download runner=clone valve=download`; no `FWD CreateInterface` line
 
 ### 4. Menu with only Mac Steam (D-17)
 
 expected: operator confirms the main menu is interactive; procs-launch-1.txt has a steam_osx pid and no steamwebhelper.exe or steamservice.exe line (sink: operator plus procs-launch-1.txt, launch 1)
-result: pending
+result: issue — launch 1: menu NOT reached. Operator: Grim Dawn crashed after Steam init; the black window was the game's crash reporter. Crash files in <session>/launch-1-crash/: exception c0000005 at grim dawn.exe+0x1d10a, read of 0x18 (null deref), thread 244, right after the last traced call ISteamController_SteamController008_GetActionSetHandle. The game ran 182s per bottleProcessMonitor (matched pid 3802, stopped 22:39:30). No procs-launch-1.txt exists (no menu, so the snapshot was never taken); the only process evidence is the logs: bottleProcessMonitor matched only `grim dawn.exe`, no steamwebhelper/steamservice line in the launch-1 log or transcript, and the PC2 ps grep printed nothing when re-run after the crash (it is not a menu-time snapshot). Claude found a stale GameLibSteam-bottle Steam running during pre-Task-1 prep and told the operator to close it; the launch-1 transcript and log show no steamwebhelper/steamservice line. The absence of procs-launch-1.txt is recorded, not scored as pass
 
 ### 5. D-15 game-process attach
 
 expected: gamelib-launch-1.log has at least one `bridge drm [219990]: [drm-trace] appId=219990 pid=<g> role=game event=create-interface` line and <g> equals no role=helper pid (sink: SIDECAR copy, launch 1)
-result: pending
+result: pass — launch 1: 1 re-logged `role=game event=create-interface iface=SteamClient017` line for 219990, pid=240; role=helper line count is 0 in both gamelib-launch-1.log and trace-launch-1.log, so pid 240 equals no helper pid (vacuous: the helper never traced). Ifaces seen: SteamClient017 only. Re-log reported `relogged events=24 rejected=0`
 
 ### 6. D-16 game-originated call (census)
 
 expected: `pnpm -s bridge-census --json` for appid 219990 gives evidence verified with evidenceDetail starting `game call ` or equal to `game log init`, and no counting name starts with ISteamClient_ or matches SetMinidumpSteamID; every distinct name= per role from trace-launch-1.log recorded verbatim (sinks: live SIDECAR and trace-launch-1.log, launch 1)
-result: pending
+result: pass — launch 1: `pnpm -s bridge-census --json` row 219990: evidence `verified`, evidenceDetail `game call ISteamUser_SteamUser017_GetSteamID` (class unknown-version; detail includes `SteamStub .bind: routed to DRM mode (steamclient-layer)`). Pinned names from trace-launch-1.log (24 lines: 1 create-interface + 23 calls, all pid=240). role=game iface= values: SteamClient017. role=game name= values (sorted): ISteamAppTicket_STEAMAPPTICKET_INTERFACE_VERSION001_GetAppOwnershipTicketData; ISteamApps_STEAMAPPS_INTERFACE_VERSION009_BIsSubscribedApp; ISteamClient_SteamClient014_BReleaseSteamPipe; ISteamClient_SteamClient014_ConnectToGlobalUser; ISteamClient_SteamClient014_CreateSteamPipe; ISteamClient_SteamClient014_GetISteamGenericInterface; ISteamClient_SteamClient014_GetISteamUser; ISteamClient_SteamClient014_GetISteamUtils; ISteamClient_SteamClient014_ReleaseUser; ISteamClient_SteamClient023_ConnectToGlobalUser; ISteamClient_SteamClient023_CreateSteamPipe; ISteamClient_SteamClient023_GetISteamGenericInterface; ISteamClient_SteamClient023_GetISteamUser; ISteamClient_SteamClient023_Set_SteamAPI_CCheckCallbackRegisteredInProcess; ISteamClient_SteamClient023_SetWarningMessageHook; ISteamController_SteamController008_GetActionSetHandle; ISteamController_SteamController008_Init; ISteamMatchmakingServers_SteamMatchMakingServers003_RequestLANServerList; ISteamUser_SteamUser017_GetSteamID; ISteamUser_SteamUser023_GetSteamID; ISteamUtils_SteamUtils007_GetAppID; ISteamUtils_SteamUtils007_GetConnectedUniverse; ISteamUtils_SteamUtils011_GetAppID. role=helper iface= and name= values: none (no role=helper lines). Counting names (not ISteamClient_*, no SetMinidumpSteamID): the ISteamAppTicket, ISteamApps, ISteamController, ISteamMatchmakingServers, ISteamUser and ISteamUtils names above; none matches SetMinidumpSteamID
 
 ### 7. D-21 no local-machine Steam keys
 
 expected: zero `^\[Software\\\\(Wow6432Node\\\\)?Valve\\\\Steam` lines in system-reg-launch-1.reg, zero `gamelib-steam-helper: refusing steam relaunch request` lines in any wine sink found (CONDITIONAL sink), any `steamclient_init_registry unavailable` line recorded (sinks: system-reg copy and wine sink, launch 1)
-result: pending
+result: issue — launch 1: `grep -ciE '^\[Software\\\\(Wow6432Node\\\\)?Valve\\\\Steam'` over system-reg-launch-1.reg = 5, so the literal check fails. All 5 are shared-redist HasRun marks, not D-21 InstallPath keys: Software\\Wow6432Node\\Valve\\Steam\\Apps\\CommonRedist\\DirectX\\Jun2010 and ...\\vcredist\\2010, 2012, 2013, 2015 (Gap 5, contract defect); `grep -c InstallPath` over the same file = 0, so no bare Valve\\Steam key and no InstallPath existed at launch 1. Wine sink: none named by 56-12; <session>/terminal.log carries only sidecar log lines. Refusal lines: `refusing steam relaunch request` 0 across gamelib-launch-1.log, terminal.log, trace-launch-1.log, system-reg-launch-1.reg, crash files (the sink cannot carry helper stderr, so this proves nothing). `steamclient_init_registry unavailable`: 0 in the same files (same caveat)
 
 ### 8. Raft 648800 (recorded, non-blocking)
 
@@ -234,12 +234,12 @@ result: pending
 ### 10. Networking lead (56-02)
 
 expected: `grep -c SteamNetworkingSocketsSerialized005` over every session launch capture recorded per file (sink: all gamelib-launch-N.log and trace files, launches 1 to 3)
-result: pending
+result: pass — launch 1 captures, `grep -c SteamNetworkingSocketsSerialized005`: gamelib-launch-1.log 0, trace-launch-1.log 0, system-reg-launch-1.reg 0, terminal.log 0, launch-1-crash/crash.xml 0, launch-1-crash/log.html 0 (launches 2-3 pending Task 4)
 
 ### 11. HKLM diagnostic (D-21, conditional)
 
 expected: only if item 4, 5 or 6 failed on launch 1: the two F7 keys added with reg add, launch 4 scored as items 3-6, keys deleted and system.reg re-checked; otherwise skipped (sinks: SIDECAR copy and system-reg copy, launch 4)
-result: pending
+result: pending — ARMED (item 4 failed on launch 1). Both keys were added by Claude via the clone runner `bin/wine` + CX_BOTTLE=GameLibSteamBridge-219990 (`reg add` exit 0 for each), then `wineserver -w`; live system.reg now holds `[Software\\Valve\\Steam]` and `[Software\\Wow6432Node\\Valve\\Steam]`, each `"InstallPath"="C:\\Program Files (x86)\\Steam"`. Launch 4 not yet run; keys not yet removed
 
 ## Run record
 
@@ -273,9 +273,29 @@ result: pending
 
 Note for 56-16: PC4 rebuilt build/main/sidecar.js; PC6 requires the operator to restart `pnpm tauri:dev` AFTER this point under `tee -a <session>/terminal.log`.
 
+### Gate run record (plan 56-16, Task 2)
+
+- Task 1 signal: "failed: Grim Dawn crashed after Steam init - black window was the game's crash reporter; closed it".
+- PC6: dev was restarted once BEFORE any launch (allowed). The pre-restart install-session log is `<session>/install-session-gamelib.log`; the current gamelib.log is the launch-1 session. `pc6-pid.txt` was empty (operator ran pgrep before the window was up); the orchestrator rewrote it to 3189 (the single gamelib-shell) at about 22:37 local, AFTER launch 1 started. Claude confirmed `pgrep -f target/debug/gamelib-shell` still returns 3189 at Task 2. Pre-restart sidecar.js checks at prep time: mtime 1793175292 > games.ts commit 1793169519; drmLaunchSetup 7; setupSteamClientForwarder 0.
+- Launch delimiters: two `=== GATE LAUNCH 1` lines in terminal.log. 09:28:26Z (line 126) is VOID: the Play click never reached the backend (Gap 3). 09:35:33Z (line 187) is the real launch 1. Only the second is scored.
+- Launch 1 timeline (local): 22:35:51 valve client fetched and verified; 22:35 component installed; 22:36:17 drm setup ready; 22:36:25 anchor; 22:36:28 game pid 3802 started; 22:39:30 game gone after 182s, trace re-logged (24 events, 0 rejected).
+- Crash: exception c0000005 at grim dawn.exe+0x1d10a, read of 0x18 (null deref), after the last traced call ISteamController_SteamController008_GetActionSetHandle. Files in `<session>/launch-1-crash/` (crash.xml, minidump.dmp, log.html, zip). No analysis beyond this was done in Task 2; the on-disk exe is SteamStub-encrypted so only the minidump memory is usable.
+- Wine sink: none. 56-12 names none; `<session>/terminal.log` carries only sidecar log lines (no wine stderr). Recorded as "no wine sink".
+- Machine state: Grim Dawn was installed in Mac Steam (appmanifest 5.1 GB) and in an old GameLibGate52GD bottle at gate start; the operator uninstalled the Mac Steam copy before the reinstall. GameLibGate52GD left in place.
+- Census rows (live gamelib.log = launch 1): 219990 evidence verified / `game call ISteamUser_SteamUser017_GetSteamID`; 648800 unverified / `no DRM-mode anchor`; 1119730 unverified / `no HELLO`.
+- D-21 arming: item 4 failed, so the HKLM diagnostic is armed. Claude added both F7 keys with the clone runner (see item 11); launch 4 not yet run.
+- Session inventory after Task 2: install-session-gamelib.log, launch-1-crash/, pc6-pid.txt, pre-restart-gamelib.log(.old), pre-session-gamelib.log(.old), terminal.log, gamelib-launch-1.log, trace-launch-1.log, system-reg-launch-1.reg. No procs-launch-1.txt (no menu).
+
 ## Gaps
 
-(empty until 56-16 runs the gate)
+1. (non-blocking, contract defect) Preflight never checked that Grim Dawn was uninstalled elsewhere. A Mac Steam copy made the library card show Play, blocking the reinstall gesture. Next: add a PC for "not installed in Mac Steam or any other bottle".
+2. (non-blocking, product) The install route notice showed the scan-miss "may not work with the native Steam bridge ... probably not run" dialog for a DRM-mode title: a stale scan-miss verdict; the route notice is unaware of DRM mode. The operator clicked through and the install went to GameLibSteamBridge-219990 correctly. Next: make the route notice consult the DRM routing.
+3. (blocking for install UX, product bug) After a bridge install, the shared-redist step (games.ts ~2327-2341, sharedRedistInstall.ts sends status 'redist') leaves the game stuck in 'redist' ("Installing DirectX Jun2010"): the Steam download-queue 'done' is suppressed (downloadqueue.ts ~312) and nothing sends a final status after the redists. Play was disabled and a dev restart was needed. The first launch-1 delimiter (09:28:26Z) is VOID because the Play click never reached the backend. Next: send a final status after the redist step.
+4. (non-blocking, product) Cmd+R window reload is a no-op under Tauri (terminal.log: `fakeWindow.reload(): logged no-op`).
+5. (non-blocking, contract defect) Item 7's regex counts the shared-redist HasRun marks under Software\\Wow6432Node\\Valve\\Steam\\Apps\\CommonRedist\\... (DirectX Jun2010, vcredist 2010/2012/2013/2015) written at install time. They are not the D-21 InstallPath keys. Item 7 was scored literally (issue, count 5). Those keys were NOT deleted. Next: anchor the item 7 regex on the bare key line with an InstallPath value, or exclude \\Apps\\CommonRedist.
+6. (non-blocking) Install-time warning "could not restore the Wine display driver" (22:19:52); restored at launch 1 (22:36:17, "a previous run left the Wine display driver switched, restoring it first").
+7. (BLOCKING, gate item 4) Grim Dawn does not reach its menu: it crashes with c0000005 (null read 0x18) at grim dawn.exe+0x1d10a immediately after the last traced call ISteamController_SteamController008_GetActionSetHandle, following ISteamController_SteamController008_Init. Observed in the trace: no role=helper lines at all, and the game opened two client generations (SteamClient014 then SteamClient023). Next diagnostics: the HKLM launch 4 (armed), a minidump-memory look at what +0x1d10a dereferences, and whether the layer returns a null ISteamController interface.
+8. (non-blocking, process) PC6's pid capture ran before the window was up, so pc6-pid.txt was empty and was rewritten after launch 1 started.
 
 ## Verdict
 
