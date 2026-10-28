@@ -3799,12 +3799,30 @@ export default class SteamGame implements Game {
       }
     } else if (drm.status === 'error') {
       // D-13: no markBridgeFailedThisSession, no steamBridgeSetupRequired, no
-      // bottled Steam. The launcher's own 'done' status after launch()
-      // returns false clears any 'drm-setup' progress 56-11 sent (D-05).
+      // bottled Steam. drmLaunchSetup's fail() sends the terminal 'done' when
+      // it sent 'drm-setup' progress: the Steam launch is dispatched by
+      // dispatchSteamLaunch (steamFlowRegistration.ts) and never reaches
+      // launcher.ts's 'done' (IN-01, D-05).
       this.maybeNotifyDrmModeFailed(drm.step, drm.cause)
       return false
     } else {
-      return this.launchDrmModeGame(exePath, drmInstallRoot as string, drm)
+      const launched = await this.launchDrmModeGame(
+        exePath,
+        drmInstallRoot as string,
+        drm
+      )
+      if (!launched && drm.progressSent) {
+        sendGameStatusUpdate({
+          appName: this.appId,
+          runner: 'steam',
+          status: 'done'
+        })
+        logInfo(
+          `SteamGame: drm launch appId ${this.appId} sent terminal status done after launch failure`,
+          LogPrefix.Steam
+        )
+      }
+      return launched
     }
 
     // D-51-01: byte-identity no-op on every normal launch — only does real

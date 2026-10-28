@@ -11468,6 +11468,45 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         expect(runWineCommand).not.toHaveBeenCalled()
       })
 
+      it("a DRM-ready launch failure after progress sends a terminal 'done' (56-27, IN-01)", async () => {
+        const id = freshId()
+        const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+        ;(sendGameStatusUpdate as jest.Mock).mockClear()
+        useDrmOk(id)
+        __drmLaunchSetupMock.mockResolvedValue({
+          ...readyFor(id),
+          progressSent: true
+        })
+        ;(existsSync as jest.Mock).mockImplementation(
+          (p: string) => p !== dylib()
+        )
+        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(sendGameStatusUpdate).toHaveBeenCalledWith({
+          appName: id,
+          runner: 'steam',
+          status: 'done'
+        })
+        expect(
+          infoLines().some((l) =>
+            l.includes('sent terminal status done after launch failure')
+          )
+        ).toBe(true)
+      })
+
+      it("a DRM-ready launch failure without progress sends no 'done'", async () => {
+        const id = freshId()
+        const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+        ;(sendGameStatusUpdate as jest.Mock).mockClear()
+        useDrmOk(id)
+        ;(existsSync as jest.Mock).mockImplementation(
+          (p: string) => p !== dylib()
+        )
+        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(sendGameStatusUpdate).not.toHaveBeenCalledWith(
+          expect.objectContaining({ status: 'done' })
+        )
+      })
+
       it('an invalid anchor field gives a bottle-stage notice and no launch', async () => {
         const id = freshId()
         useDrmOk(id)
