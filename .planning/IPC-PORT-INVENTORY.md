@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 229 |
-| Ported to sidecar | 74 |
+| Unique channels | 230 |
+| Ported to sidecar | 75 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -178,6 +178,15 @@ registered on the Tauri sidecar in `appShellFlowRegistration.ts` (no Electron le
 in the Phase 34.1 app-shell bucket; that bucket's header goes 34 → 37 and `Ported to sidecar`
 goes 68 → 71. `Unported` is unchanged: the channels are born ported.
 
+**Unique channels raised 229 → 230 (fast task, 2026-10-29, closing a gap left by `509bcb01b`):**
+`dialogDisplayed` (send) is a BRAND NEW channel: the renderer's ack that a `showDialog` frame is on
+screen, consumed by `src/backend/dialog/displayAck.ts`. It is `makeListenerCaller`-exposed in
+`src/preload/api/helpers.ts` and registered on the Tauri sidecar in `appShellFlowRegistration.ts`
+(no Electron leg), so it lands in the Phase 34.1 app-shell bucket; that bucket's header goes
+37 → 38 and `Ported to sidecar` goes 74 → 75. `Unported` is unchanged: the channel is born ported.
+The bridge-notice fix landed outside a phase, so `preload-surface-gate.py` was again the only
+check that caught the omission.
+
 ## Already ported (34)
 
 `cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
@@ -215,7 +224,7 @@ preload-surface audit — 28 → 31:**
   `34.5/preload-surface-gate.py`, which had never been wired into CI and so had never run
   outside the session that wrote it.
 
-## Phase 34.1 — Slice 4 — app shell and window chrome (37 channels)
+## Phase 34.1 — Slice 4 — app shell and window chrome (38 channels)
 
 **Retired 2026-08-27 (Phase 34.18):** `isIntelMac` was dropped from this slice's channel list —
 an arm64-only macOS build cannot run on an Intel Mac, so the channel exposed a capability the app
@@ -229,7 +238,7 @@ was reassigned to Phase 34.5 by Phase 34.1 CONTEXT decision D-14 on 2026-07-25, 
 Wine tooling and was in this slice only because the inventory grouped channels by file; see
 the Phase 34.5 list below for its new home.
 
-`abort`, `changeLanguage`, `changeTrayColor`, `getAppManagementStatus`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getLoginBackground`, `getSignInProbeOutcomes`, `getThemeCSS`, `getWebviewPreloadPath`, `lock`, `notify`, `openAppManagementSettings`, `openCustomThemesWiki`, `openWebviewPage`, `quit`, `relaunchApp`, `set-connectivity-online`, `setTitleBarOverlay`, `unlock`
+`abort`, `changeLanguage`, `changeTrayColor`, `dialogDisplayed`, `getAppManagementStatus`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getLoginBackground`, `getSignInProbeOutcomes`, `getThemeCSS`, `getWebviewPreloadPath`, `lock`, `notify`, `openAppManagementSettings`, `openCustomThemesWiki`, `openWebviewPage`, `quit`, `relaunchApp`, `set-connectivity-online`, `setTitleBarOverlay`, `unlock`
 
 ## Phase 34.2 — Slice 5 — game details, settings and overrides (26 channels)
 
