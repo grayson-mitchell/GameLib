@@ -3477,7 +3477,9 @@ export default class SteamGame implements Game {
       const fixedSettings = await applySteamBridgeKnownFixes(
         this.appId,
         bridgeBottleSettings,
-        installRoot
+        installRoot,
+        // quick 261028-k7l: exePath feeds the generic GameMaker D3D11 runner default.
+        exePath
       ).catch((error: unknown) => {
         logWarning(
           `SteamGame: known-fixes application failed for appId ${this.appId}: ${String(error)}`,

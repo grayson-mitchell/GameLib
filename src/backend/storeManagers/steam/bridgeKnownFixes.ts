@@ -30,12 +30,19 @@
  * `GST_PLUGIN_PATH` after the tier-1 entries, on darwin + CrossOver only; see
  * `knownFixOverlays.ts`. Every known-fix env var applied is logged.
  *
+ * GameMaker D3D11 default (quick 261028-k7l): when `CX_GRAPHICS_BACKEND` is
+ * set by neither the user env nor tier-1, a launch exe that passes the
+ * three-signal GameMaker D3D11 runner check (see `bridge/gameMakerRunner.ts`)
+ * gets `CX_GRAPHICS_BACKEND=dxvk`, even with no fixes file and no profile.
+ * Precedence: user env > tier-1 > default. `public/fixes/1603180-steam.json`
+ * is kept as a regression pin.
+ *
  * This function never rejects: a fix failure logs a warning and the launch
  * continues, so it can never mark the bridge failed for the session.
  */
 
 import { isAbsolute, relative, resolve } from 'node:path'
-import type { GameSettings } from 'common/types'
+import type { EnviromentVariable, GameSettings } from 'common/types'
 import { readKnownFixes, readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning, LogPrefix } from 'backend/logger'
@@ -51,6 +58,7 @@ import {
   type ValidRegistryFix
 } from 'backend/knownFixesRegistry'
 import { getBottleDir } from './bottle'
+import { detectGameMakerD3d11Runner } from './bridge/gameMakerRunner'
 
 export type { ValidRegistryFix }
 export { buildRegistryFixCommandParts }
@@ -119,14 +127,66 @@ export function steamShimFeatureCfgLines(appId: string): string[] {
   return lines
 }
 
+type DefaultEnvEntry = { key: string; value: string; source: string }
+
+/**
+ * quick 261028-k7l: the generic GameMaker D3D11 runner default. Null unless
+ * the bridge is the CrossOver path, CX_GRAPHICS_BACKEND is unset in `envSoFar`
+ * (checked BEFORE scanning so a pinned title is never scanned) and the
+ * detector matches. Never throws.
+ */
+async function gameMakerGraphicsDefault(
+  appId: string,
+  settings: GameSettings,
+  envSoFar: EnviromentVariable[],
+  exePath: string | undefined
+): Promise<DefaultEnvEntry | null> {
+  if (exePath === undefined) return null
+  if (settings.wineVersion?.type !== 'crossover') return null
+  if (lastEnvOption(envSoFar, 'CX_GRAPHICS_BACKEND') !== undefined) return null
+  try {
+    const result = await detectGameMakerD3d11Runner(exePath)
+    if (!result.match) return null
+    return {
+      key: 'CX_GRAPHICS_BACKEND',
+      value: 'dxvk',
+      source:
+        'GameMaker D3D11 runner default: data.win + d3d11.dll import + CheckMultisampleQualityLevels probe'
+    }
+  } catch (error) {
+    logWarning(
+      `Steam ${appId}: GameMaker runner detection threw: ${String(error)}`,
+      LogPrefix.Steam
+    )
+    return null
+  }
+}
+
 export async function applySteamBridgeKnownFixes(
   appId: string,
   bridgeBottleSettings: GameSettings,
-  installRoot: string | undefined
+  installRoot: string | undefined,
+  exePath?: string
 ): Promise<GameSettings> {
   const fixes = readKnownFixes(appId, 'steam')
   const profile = readKnownFixProfile(appId, 'steam')
-  if (!fixes && !profile) return bridgeBottleSettings
+  if (!fixes && !profile) {
+    const entry = await gameMakerGraphicsDefault(
+      appId,
+      bridgeBottleSettings,
+      bridgeBottleSettings.enviromentOptions ?? [],
+      exePath
+    )
+    if (!entry) return bridgeBottleSettings
+    logKnownFixEnv(`Steam ${appId}`, [entry], LogPrefix.Steam)
+    return {
+      ...bridgeBottleSettings,
+      enviromentOptions: [
+        ...(bridgeBottleSettings.enviromentOptions ?? []),
+        { key: entry.key, value: entry.value }
+      ]
+    }
+  }
 
   try {
     // Lazy, mirroring games.ts's lazy launcher import: avoids the cycle.
@@ -272,20 +332,37 @@ export async function applySteamBridgeKnownFixes(
       key,
       value
     }))
-    if (tier1Entries.length === 0 && overlayEntries.length === 0) {
+    const defaultEntry = await gameMakerGraphicsDefault(
+      appId,
+      bridgeBottleSettings,
+      merged,
+      exePath
+    )
+    if (
+      tier1Entries.length === 0 &&
+      overlayEntries.length === 0 &&
+      !defaultEntry
+    ) {
       return bridgeBottleSettings
     }
     logKnownFixEnv(
       `Steam ${appId}`,
       [
         ...tier1Entries.map((e) => ({ ...e, source: 'tier-1' })),
-        ...overlayEntries.map((e) => ({ ...e, source: 'overlay' }))
+        ...overlayEntries.map((e) => ({ ...e, source: 'overlay' })),
+        ...(defaultEntry ? [defaultEntry] : [])
       ],
       LogPrefix.Steam
     )
     return {
       ...bridgeBottleSettings,
-      enviromentOptions: [...merged, ...overlayEntries]
+      enviromentOptions: [
+        ...merged,
+        ...overlayEntries,
+        ...(defaultEntry
+          ? [{ key: defaultEntry.key, value: defaultEntry.value }]
+          : [])
+      ]
     }
   } catch (error) {
     logWarning(

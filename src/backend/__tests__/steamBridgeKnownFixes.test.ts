@@ -62,6 +62,10 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 const mockResolveOverlayEnv = jest.fn()
+const mockDetectGameMaker = jest.fn()
+jest.mock('../storeManagers/steam/bridge/gameMakerRunner', () => ({
+  detectGameMakerD3d11Runner: (...a: unknown[]) => mockDetectGameMaker(...a)
+}))
 jest.mock('backend/knownFixOverlays', () => ({
   ...jest.requireActual('backend/knownFixOverlays'),
   resolveKnownFixOverlayEnv: (...args: unknown[]) =>
@@ -91,6 +95,14 @@ const BRIDGE = {
   wineVersion: { type: 'crossover' }
 } as unknown as GameSettings
 
+const NO_MATCH = {
+  match: false,
+  dataWin: false,
+  d3d11Import: false,
+  msaaProbe: false
+}
+const MATCH = { match: true, dataWin: true, d3d11Import: true, msaaProbe: true }
+
 function writeFixes(content: object) {
   writeFileSync(
     join(fixesPath, `${APP_ID}-steam.json`),
@@ -117,6 +129,7 @@ beforeEach(() => {
   mockWinetricksInstall.mockResolvedValue('installed')
   mockRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
   mockResolveOverlayEnv.mockResolvedValue({})
+  mockDetectGameMaker.mockResolvedValue(NO_MATCH)
 })
 
 afterAll(() => {
@@ -689,6 +702,103 @@ describe('steamShimFeatureCfgLines', () => {
     ])
     expect(mockLogWarning).toHaveBeenCalledWith(
       expect.stringContaining("unknown shim feature 'gl.nope'"),
+      'Steam'
+    )
+  })
+})
+
+describe('GameMaker D3D11 runner default (quick 261028-k7l)', () => {
+  const EXE = `${ROOT}/Game.exe`
+  const DXVK = { key: 'CX_GRAPHICS_BACKEND', value: 'dxvk' }
+
+  it('applies dxvk with no fixes file and no profile, logging one info line', async () => {
+    mockDetectGameMaker.mockResolvedValue(MATCH)
+    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT, EXE)
+    expect(mockDetectGameMaker).toHaveBeenCalledWith(EXE)
+    expect(result).not.toBe(BRIDGE)
+    expect(result.enviromentOptions).toEqual([
+      ...BRIDGE.enviromentOptions,
+      DXVK
+    ])
+    expect(mockLogInfo).toHaveBeenCalledTimes(1)
+    const line = String(mockLogInfo.mock.calls[0][0])
+    for (const part of [
+      'Steam 480',
+      'CX_GRAPHICS_BACKEND=dxvk',
+      'data.win',
+      'd3d11.dll',
+      'CheckMultisampleQualityLevels'
+    ]) {
+      expect(line).toContain(part)
+    }
+  })
+
+  it('lets a user CX_GRAPHICS_BACKEND win and does not scan', async () => {
+    mockDetectGameMaker.mockResolvedValue(MATCH)
+    const user = {
+      ...BRIDGE,
+      enviromentOptions: [{ key: 'CX_GRAPHICS_BACKEND', value: 'd3dmetal' }]
+    } as unknown as GameSettings
+    const result = await applySteamBridgeKnownFixes(APP_ID, user, ROOT, EXE)
+    expect(result).toBe(user)
+    expect(mockDetectGameMaker).not.toHaveBeenCalled()
+  })
+
+  it('lets a tier-1 CX_GRAPHICS_BACKEND win and does not scan', async () => {
+    mockDetectGameMaker.mockResolvedValue(MATCH)
+    writeFixes({ envVariables: { CX_GRAPHICS_BACKEND: 'dxmt' } })
+    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT, EXE)
+    const backend = (result.enviromentOptions ?? []).filter(
+      (e) => e.key === 'CX_GRAPHICS_BACKEND'
+    )
+    expect(backend).toEqual([{ key: 'CX_GRAPHICS_BACKEND', value: 'dxmt' }])
+    expect(mockDetectGameMaker).not.toHaveBeenCalled()
+    expect(String(mockLogInfo.mock.calls[0][0])).toContain('tier-1')
+  })
+
+  it('appends dxvk after an unrelated tier-1 var in one info line', async () => {
+    mockDetectGameMaker.mockResolvedValue(MATCH)
+    writeFixes({ envVariables: { OTHER: 'o' } })
+    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT, EXE)
+    expect(result.enviromentOptions).toEqual([
+      ...BRIDGE.enviromentOptions,
+      { key: 'OTHER', value: 'o' },
+      DXVK
+    ])
+    expect(mockLogInfo).toHaveBeenCalledTimes(1)
+    const line = String(mockLogInfo.mock.calls[0][0])
+    expect(line).toContain('OTHER=o')
+    expect(line).toContain('CX_GRAPHICS_BACKEND=dxvk')
+  })
+
+  it('leaves settings unchanged when the detector does not match', async () => {
+    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT, EXE)
+    expect(result).toBe(BRIDGE)
+    expect(mockLogInfo).not.toHaveBeenCalled()
+  })
+
+  it('never calls the detector without an exePath', async () => {
+    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    expect(result).toBe(BRIDGE)
+    expect(mockDetectGameMaker).not.toHaveBeenCalled()
+  })
+
+  it('never calls the detector when the wine type is not crossover', async () => {
+    const other = {
+      ...BRIDGE,
+      wineVersion: { type: 'wine' }
+    } as unknown as GameSettings
+    const result = await applySteamBridgeKnownFixes(APP_ID, other, ROOT, EXE)
+    expect(result).toBe(other)
+    expect(mockDetectGameMaker).not.toHaveBeenCalled()
+  })
+
+  it('warns and continues when the detector rejects', async () => {
+    mockDetectGameMaker.mockRejectedValue(new Error('boom'))
+    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT, EXE)
+    expect(result).toBe(BRIDGE)
+    expect(mockLogWarning).toHaveBeenCalledWith(
+      expect.stringContaining('boom'),
       'Steam'
     )
   })
