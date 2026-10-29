@@ -1,7 +1,8 @@
 import type { GameInfo } from 'common/types'
-import * as librarySortModule from '../librarySort'
 import {
   DEFAULT_LIBRARY_SORT_PREFS,
+  LIBRARY_GROUP_BY_KEY,
+  LEGACY_SORT_INSTALLED_KEY,
   LIBRARY_SORT_DIRECTION_KEY,
   LIBRARY_SORT_FIELD_KEY,
   LEGACY_SORT_DESCENDING_KEY,
@@ -12,7 +13,9 @@ import {
   metacriticScoreOf,
   parseInstallSize,
   readLibrarySortPrefs,
+  sortAndGroupLibrary,
   sortLibrary,
+  writeLibraryGroupBy,
   writeLibrarySortDirection,
   writeLibrarySortField
 } from '../librarySort'
@@ -275,7 +278,8 @@ describe('readLibrarySortPrefs', () => {
     expect(readLibrarySortPrefs(fake({}))).toEqual(DEFAULT_LIBRARY_SORT_PREFS)
     expect(DEFAULT_LIBRARY_SORT_PREFS).toEqual({
       field: 'name',
-      direction: 'asc'
+      direction: 'asc',
+      groupBy: 'installStatus'
     })
   })
   it('migrates legacy keys', () => {
@@ -301,7 +305,8 @@ describe('readLibrarySortPrefs', () => {
     )
     expect(p).toEqual({
       field: 'installSize',
-      direction: 'asc'
+      direction: 'asc',
+      groupBy: 'installStatus'
     })
   })
   it('invalid new values default per axis, not legacy', () => {
@@ -332,28 +337,114 @@ describe('readLibrarySortPrefs', () => {
   })
 })
 
-describe('group-by removal (quick 261029-quw)', () => {
+describe('group-by prefs (quick 261029-uas)', () => {
   const fake = (entries: Record<string, string>) => {
     const m = new Map(Object.entries(entries))
     return { getItem: (k: string) => m.get(k) ?? null }
   }
-  it('persisted libraryGroupBy and legacy sortInstalled have no effect', () => {
-    const prefs = readLibrarySortPrefs(
-      fake({ libraryGroupBy: 'store', sortInstalled: 'true' })
-    )
-    expect(prefs).toEqual(DEFAULT_LIBRARY_SORT_PREFS)
-    expect(Object.keys(prefs).sort()).toEqual(['direction', 'field'])
-    expect(Object.keys(DEFAULT_LIBRARY_SORT_PREFS).sort()).toEqual([
-      'direction',
-      'field'
-    ])
+  it('reads libraryGroupBy, falls back on invalid', () => {
+    expect(
+      readLibrarySortPrefs(fake({ [LIBRARY_GROUP_BY_KEY]: 'store' })).groupBy
+    ).toBe('store')
+    expect(
+      readLibrarySortPrefs(fake({ [LIBRARY_GROUP_BY_KEY]: 'none' })).groupBy
+    ).toBe('none')
+    expect(
+      readLibrarySortPrefs(fake({ [LIBRARY_GROUP_BY_KEY]: 'x' })).groupBy
+    ).toBe('installStatus')
   })
-  it('no longer exports the group-by model', () => {
-    const m = librarySortModule as unknown as Record<string, unknown>
-    expect(m.writeLibraryGroupBy).toBeUndefined()
-    expect(m.LIBRARY_GROUP_BYS).toBeUndefined()
-    expect(m.LIBRARY_GROUP_BY_KEY).toBeUndefined()
-    expect(m.sortAndGroupLibrary).toBeUndefined()
+  it('migrates legacy sortInstalled; libraryGroupBy wins', () => {
+    expect(
+      readLibrarySortPrefs(fake({ [LEGACY_SORT_INSTALLED_KEY]: 'false' }))
+        .groupBy
+    ).toBe('none')
+    expect(
+      readLibrarySortPrefs(fake({ [LEGACY_SORT_INSTALLED_KEY]: 'true' }))
+        .groupBy
+    ).toBe('installStatus')
+    expect(
+      readLibrarySortPrefs(
+        fake({
+          [LIBRARY_GROUP_BY_KEY]: 'store',
+          [LEGACY_SORT_INSTALLED_KEY]: 'false'
+        })
+      ).groupBy
+    ).toBe('store')
+  })
+  it('writeLibraryGroupBy writes the key and swallows errors', () => {
+    const setItem = jest.fn()
+    writeLibraryGroupBy({ setItem }, 'store')
+    expect(setItem.mock.calls).toEqual([[LIBRARY_GROUP_BY_KEY, 'store']])
+    const bad = () => {
+      throw new Error('quota')
+    }
+    expect(() => writeLibraryGroupBy({ setItem: bad }, 'none')).not.toThrow()
+  })
+})
+
+describe('sortAndGroupLibrary (quick 261029-uas)', () => {
+  const o = {
+    ...baseOpts,
+    groupBy: 'none' as const,
+    installing: [] as string[]
+  }
+  it('none equals sortLibrary', () => {
+    const gs = [
+      game({ title: 'B', is_installed: true }),
+      game({ title: 'A' }),
+      game({ title: 'C', runner: 'steam' })
+    ]
+    expect(sortAndGroupLibrary(gs, o)).toEqual(sortLibrary(gs, baseOpts))
+  })
+  it('installStatus: installed, installing, rest, sort kept (metacritic desc)', () => {
+    const scored = (
+      title: string,
+      score: number,
+      extra: Partial<FixtureOpts> = {}
+    ) =>
+      ({
+        ...game({ title, ...extra }),
+        metacritic_score: score
+      }) as unknown as GameInfo
+    const gs = [
+      scored('A', 50),
+      scored('B', 90, { is_installed: true }),
+      scored('C', 80, { app_name: 'c' }),
+      scored('D', 95, { is_installed: true }),
+      scored('E', 99)
+    ]
+    const out = sortAndGroupLibrary(gs, {
+      ...o,
+      field: 'metacritic',
+      direction: 'desc',
+      groupBy: 'installStatus',
+      installing: ['c']
+    })
+    expect(titles(out)).toEqual(['D', 'B', 'C', 'E', 'A'])
+  })
+  it('store: named by display name, unnamed by runner id', () => {
+    const gs = [
+      game({ title: 'S1', runner: 'steam' }),
+      game({ title: 'E1', runner: 'legendary' }),
+      game({ title: 'X1', runner: 'sideload' }),
+      game({ title: 'G1', runner: 'gog' }),
+      game({ title: 'G2', runner: 'gog' }),
+      game({ title: 'A1', runner: 'nile' }),
+      game({ title: 'Q1', runner: 'aaa-unknown' })
+    ]
+    const s = { ...o, groupBy: 'store' as const }
+    expect(titles(sortAndGroupLibrary(gs, s))).toEqual([
+      'A1',
+      'E1',
+      'G1',
+      'G2',
+      'S1',
+      'Q1',
+      'X1'
+    ])
+    expect(
+      titles(sortAndGroupLibrary(gs, { ...s, direction: 'desc' }))
+    ).toEqual(['A1', 'E1', 'G2', 'G1', 'S1', 'Q1', 'X1'])
   })
 })
 

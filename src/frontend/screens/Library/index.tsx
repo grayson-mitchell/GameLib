@@ -54,11 +54,16 @@ import { configStore, steamConfigStore } from 'frontend/helpers/electronStores'
 import {
   defaultDirectionFor,
   readLibrarySortPrefs,
-  sortLibrary,
+  sortAndGroupLibrary,
+  writeLibraryGroupBy,
   writeLibrarySortDirection,
   writeLibrarySortField
 } from './librarySort'
-import type { LibrarySortDirection, LibrarySortField } from './librarySort'
+import type {
+  LibraryGroupBy,
+  LibrarySortDirection,
+  LibrarySortField
+} from './librarySort'
 import SteamSyncNotice from './components/SteamSyncNotice'
 import LibrarySignInNotice from './components/LibrarySignInNotice'
 import { resolveSteamSyncIndicator } from './librarySyncIndicator'
@@ -109,7 +114,8 @@ export default React.memo(function Library(): JSX.Element {
     hiddenGames,
     gameUpdates,
     steamSyncStatus,
-    focusRow
+    focusRow,
+    libraryStatus
   } = useContext(ContextProvider)
 
   hasHelp(
@@ -536,7 +542,24 @@ export default React.memo(function Library(): JSX.Element {
   const [sortPrefs, setSortPrefs] = useState(() =>
     readLibrarySortPrefs(storage)
   )
-  const { field: sortField, direction: sortDirection } = sortPrefs
+  const { field: sortField, direction: sortDirection, groupBy } = sortPrefs
+  // Install-status grouping needs the app_names currently installing. Keyed on
+  // a joined string so download progress ticks (which replace `libraryStatus`
+  // constantly) do not recompute the sort; the array identity only changes
+  // when the installing set itself changes (T-uas-02).
+  const installingKey = useMemo(
+    () =>
+      libraryStatus
+        .filter((st) => st.status === 'installing')
+        .map((st) => st.appName)
+        .sort()
+        .join('\n'),
+    [libraryStatus]
+  )
+  const installing = useMemo(
+    () => (installingKey ? installingKey.split('\n') : []),
+    [installingKey]
+  )
   // Switching field also resets direction to that field's natural default
   // (Name asc, Last played / Install size desc); the direction button then
   // flips it, and the last choice is what persists.
@@ -549,6 +572,10 @@ export default React.memo(function Library(): JSX.Element {
   function handleSortDirection(value: LibrarySortDirection) {
     writeLibrarySortDirection(storage, value)
     setSortPrefs((prev) => ({ ...prev, direction: value }))
+  }
+  function handleGroupBy(value: LibraryGroupBy) {
+    writeLibraryGroupBy(storage, value)
+    setSortPrefs((prev) => ({ ...prev, groupBy: value }))
   }
 
   const backToTopElement = useRef(null)
@@ -930,9 +957,11 @@ export default React.memo(function Library(): JSX.Element {
     const metacriticPending =
       sortField === 'metacritic' && wikiMetacriticByTitle === null
     const pending = lastPlayedPending || metacriticPending
-    return sortLibrary(library, {
+    return sortAndGroupLibrary(library, {
       field: pending ? 'name' : sortField,
       direction: pending ? 'asc' : sortDirection,
+      groupBy,
+      installing,
       nonSteamLastPlayedIso: nonSteamLastPlayedIso ?? {},
       wikiMetacriticByTitle: wikiMetacriticByTitle ?? {}
     })
@@ -941,6 +970,8 @@ export default React.memo(function Library(): JSX.Element {
     alphabetFilterLetter,
     sortField,
     sortDirection,
+    groupBy,
+    installing,
     nonSteamLastPlayedIso,
     wikiMetacriticByTitle
   ])
@@ -1160,6 +1191,7 @@ export default React.memo(function Library(): JSX.Element {
         setNoStorePage: handleNoStorePage,
         setSortField: handleSortField,
         setSortDirection: handleSortDirection,
+        setGroupBy: handleGroupBy,
         showSupportOfflineOnly,
         setShowSupportOfflineOnly: handleShowSupportOfflineOnly,
         showThirdPartyManagedOnly,
@@ -1168,6 +1200,7 @@ export default React.memo(function Library(): JSX.Element {
         setShowUpdatesOnly: handleShowUpdatesOnly,
         sortField,
         sortDirection,
+        groupBy,
         handleAddGameButtonClick: () => handleModal('', 'sideload', null),
         setShowCategories,
         categoriesManagerIntent,
