@@ -184,6 +184,12 @@
 .focusRowStrip .libraryHeader {
   /* Quick 261029-quw item 3: 4px below the h3 default of --text-2xl. */
   font-size: calc(var(--text-2xl) - 4px);
+  /* Quick 261029-riq item 2: `.libraryHeader` (Library/index.css) pads all four
+     sides by --space-md-fixed and sits inside `.focusRowStrip`, which already
+     pads inline by the same token, so the text sat 16px right of the first
+     card. Zeroing the inline padding puts the text start on the strip padding
+     edge, where the first strip card and the first grid tile start. */
+  padding-inline: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

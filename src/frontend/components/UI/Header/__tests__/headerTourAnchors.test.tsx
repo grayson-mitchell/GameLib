@@ -618,6 +618,23 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     expect(filtersBlock).toMatch(/gap:\s*var\(--space-md\)/)
   })
 
+  it('Header__filtersHeading is a rule-Filters-rule flex row (quick 261029-riq item 1)', () => {
+    const source = read(HEADER_CSS_PATH)
+    const block = cssBlock(source, '.Header__filtersHeading')
+    expect(block).toMatch(/display:\s*flex/)
+    expect(block).toMatch(/align-items:\s*center/)
+    const arms = cssBlock(
+      source,
+      '.Header__filtersHeading::before,\n.Header__filtersHeading::after'
+    )
+    expect(arms).toMatch(/content:\s*''/)
+    expect(arms).toMatch(/flex:\s*1/)
+    expect(arms).toMatch(
+      /border-block-start:\s*1px solid var\(--border-color\)/
+    )
+    expect(arms).not.toContain('--divider')
+  })
+
   it('Header__utilities declares a gap, so the merged four-control row does not collapse', () => {
     const source = read(HEADER_CSS_PATH)
     const block = cssBlock(source, '.Header__utilities')

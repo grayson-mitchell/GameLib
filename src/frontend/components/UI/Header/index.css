@@ -83,13 +83,27 @@
   font-size: calc(var(--text-xs) + 2px);
 }
 
-/* Panel sub-heading between the sort group and Views/Collections (quick 261029-quw). */
+/* Panel sub-heading between the sort group and Views/Collections (quick 261029-quw).
+   Quick 261029-riq item 1: reads "rule, Filters, rule" -- a flex row whose
+   ::before/::after arms are 1px rules. --border-color, not --divider (which is
+   invisible in most themes). */
 .Header__filtersHeading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  text-align: center;
   margin: 0;
   font-family: inherit;
   font-size: var(--text-md);
   font-weight: var(--bold);
   color: var(--text-default);
+}
+
+.Header__filtersHeading::before,
+.Header__filtersHeading::after {
+  content: '';
+  flex: 1;
+  border-block-start: 1px solid var(--border-color);
 }
 
 /* Specificity: `.Header .Header__sortSelect` out-ranks the global select rules. */

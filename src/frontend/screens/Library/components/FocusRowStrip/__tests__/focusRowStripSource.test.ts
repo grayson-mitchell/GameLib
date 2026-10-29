@@ -949,3 +949,20 @@ describe('FocusRowStrip/index.css -- strip heading size (quick 261029-quw item 3
     expect(header).toMatch(/font-size:\s*calc\(var\(--text-2xl\) - 4px\);/)
   })
 })
+
+describe('FocusRowStrip/index.css -- heading aligned to first tile (quick 261029-riq item 2)', () => {
+  it('.focusRowStrip .libraryHeader zeroes its inline padding', () => {
+    const header = cssBlock(
+      read(FOCUS_ROW_CSS_PATH),
+      '.focusRowStrip .libraryHeader'
+    )
+    expect(header).toMatch(/padding-inline:\s*0;/)
+  })
+
+  it('non-vacuity: the two inputs that cause the offset are both present', () => {
+    const base = cssBlock(read(LIBRARY_CSS_PATH), '.libraryHeader')
+    expect(base).toMatch(/padding:\s*var\(--space-md-fixed\);/)
+    const strip = cssBlock(read(FOCUS_ROW_CSS_PATH), '.focusRowStrip')
+    expect(strip).toMatch(/padding:\s*0 var\(--space-md-fixed\)/)
+  })
+})
