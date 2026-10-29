@@ -4,18 +4,18 @@ plan: 12
 artifact: uat
 status: parked
 parked_todos: [2026-10-16-phase-21-native-install-uat-deferred-to-windows.md, 2026-10-16-phase-21-d-uat-10-bottled-steam-launch-uninstall.md]
-disposition: "native-install UAT (1c/1d/2b/2c/4a/4b/4c) DEFERRED to Windows post-production (2026-07-20 user decision); D-UAT-10 bottled-Steam launch/uninstall RESOLVED, real-HW verified 2026-10-16. macOS hardware pass: 1a/1b/2a PASS, D-UAT-05/06/08 resolved."
+disposition: "WINDOWS PASS 2026-10-29: 1c/1d/2b/2c PASS (findings D-UAT-11..14); D-UAT-13 fixed (128148bf3) and D-UAT-07 re-verified PASS on Windows 2026-10-29; 4a/4b/4c still DEFERRED (need Steam absent / never launched). PRIOR: native-install UAT (1c/1d/2b/2c/4a/4b/4c) DEFERRED to Windows post-production (2026-07-20 user decision); D-UAT-10 bottled-Steam launch/uninstall RESOLVED, real-HW verified 2026-10-16. macOS hardware pass: 1a/1b/2a PASS, D-UAT-05/06/08 resolved."
 total_items: 11
 pending_items: 0
-passed_items: 3
-deferred_items: 7
+passed_items: 7
+deferred_items: 3
 open_macos_bug_items: 0
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (CODE-FIXED 2026-07-20 — gap plan 21-17 + WR-01/WR-02 (commits 718b4bfe, e635a4b3); verifier 4/4 must-haves; HW re-verify via item 1d DEFERRED → Windows post-prod), D-UAT-10 (DEFERRED tracked-debt 2026-07-20 — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven; macOS-only, revisit via /gsd-debug or later phase; NOT blocking Phase 21)]
+open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (RESOLVED — code fix ab0500c6 real-HW verified on Windows 2026-10-29 once D-UAT-13 made the waiting state reachable; tile hint not separately observed), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (RESOLVED — real-HW verified on Windows 2026-10-29 via item 1d: incomplete install shows Resume Install, never Play), D-UAT-10 (DEFERRED tracked-debt 2026-07-20 — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven; macOS-only, revisit via /gsd-debug or later phase; NOT blocking Phase 21), D-UAT-11 (MINOR open — stale progress % after Delete Files cancel), D-UAT-12 (MINOR open — library card shows plain Install for an incomplete install), D-UAT-13 (RESOLVED — fix 128148bf3 real-HW verified on Windows 2026-10-29: hold at finalize, released when the old Steam exited, Play launched with no install dialog; open edge: hold is in-memory, lost on a GameLib restart while the old Steam runs), D-UAT-14 (MAJOR open — cross-app depotfromapp content depot skipped)]
 run_via: "/gsd:verify-work 21"
-last_updated: 2026-07-20
+last_updated: 2026-10-29
 audit_acknowledged:
   milestone: v0.8
   at: 2026-10-16
@@ -118,7 +118,7 @@ game shows Installed in the real Steam client's own library UI.
 **Expected result:** Adoption succeeds identically to 1a, and the title launches without the DRM
 layer rejecting the GameLib-downloaded-then-Steam-adopted file set.
 
-**Result:** N/A on macOS-native (deferred to Task 3 / bottle)
+**Result:** PASS on Windows 2026-10-29 (Total War: PHARAOH DYNASTIES, Denuvo) — see "Windows hardware pass" below. Earlier: N/A on macOS-native (deferred to Task 3 / bottle)
 **Reason:** No Mac-native Denuvo/hard-DRM title available in the user's library (installed set: Trine 2, HOARD, Dead Island, 7 Days to Die, WazHack, Pillars of Eternity, Wasteland 2/3, Naheulbeuk, Civ VII, Len's Island — none are known Denuvo). Hard-DRM titles are almost all Windows-only, which route to the bottle path on macOS, so native 1c is not testable here. Hard-DRM verification routed to Task 3 (bottle) if a Windows Denuvo title is available; otherwise Open Question 3 remains open. (Civ VII store page could be checked for Denuvo — if present, a Civ VII native install would also exercise this.)
 
 ### 1d. Cancel mid-download → 1026 → Steam repair (D-04)
@@ -249,8 +249,10 @@ post-verify pass reporting no corrections needed).
 
 **Expected result:** Byte-identical (SHA1 matches, or Steam's verify pass reports zero corrections).
 
-**Result:** PENDING
-**Files checked:** _(record filenames + SHA1 comparison result)_
+**Result:** PASS (2026-10-29, real Windows) — see "Windows hardware pass" below.
+**Files checked:** Steam's own "Verify integrity of game files" over the whole 81 GB Total War: PHARAOH
+DYNASTIES (2951630) GameLib install: passed, zero files re-acquired (the expected-result alternative to
+a hand SHA1 compare).
 
 ### 2c. Real multi-depot game (A2)
 
@@ -538,6 +540,11 @@ launched Steam.
 > Button stays disabled (nothing for GamerLib to do — user restarts Steam) but no longer looks like an
 > active download. +2 regression tests (MainButton.steamWaitingRestart.test.tsx); frontend suite 119/119,
 > tsc clean. **Needs real-HW re-verification** on the Civ VII detail page after a fresh build.
+>
+> **✅ REAL-HW VERIFIED — Windows 2026-10-29.** The button fix `ab0500c6` was first exercised live once
+> D-UAT-13 (fix `128148bf3`) made the waiting state reachable: with Steam left running, the detail page
+> showed "Restart Steam to finish" (operator: "ok, have the restart steam to finish.") instead of Play.
+> Not separately observed: the same hint on the Library tile.
 
 ## D-UAT-09 (2026-07-19) — cancelled/incomplete native install is registered as "Installed"; Play triggers a Steam install instead of launching
 
@@ -671,21 +678,160 @@ launched Steam.
 >   `raiseFrontmostBottledProcess ... no matching process` warning in the log); the uninstall
 >   notification shows a terminal icon instead of the GameLib icon (filed as a todo).
 
+## Windows hardware pass (2026-10-29)
+
+Run via `/gsd-verify-work 21` on the operator's Windows 11 box, GameLib at `main` @ `ffc425321`
+(`pnpm tauri:dev`), Steam installed + launched (libraries `C:\Program Files (x86)\Steam`,
+`D:\SteamLibrary`). Scope: 1c, 1d, 2b, 2c and the D-UAT-07 re-verify. 4a/4b/4c re-parked — they need
+a machine with Steam absent / never launched.
+
+**1d — Darkest Dungeon (262060), installed to the C: library:**
+
+- Run 1 (09:46): cancel → user chose **Delete Files** (the cancel-delete option added by
+  `quick-261027-cux`, 2026-10-27). Log: `SteamCancelDelete: removed partial install for appId 262060
+  (C:\Program Files (x86)\Steam\steamapps\common\DarkestDungeon)`; no `.acf` left. Correct for that
+  option, but it is not the 1d path.
+- Run 2 (09:48): cancel → user chose **keep files**. `appmanifest_262060.acf` written 09:48:44 with
+  `StateFlags 1026`, `SizeOnDisk 290017739`; 0.27 GB partial on disk. Honest-1026 half ✅.
+
+> **🟡 D-UAT-11 (MINOR, 2026-10-29, real Windows) — after a "Delete Files" cancel, the next install's
+> progress starts at the old percentage.**
+>
+> **Reported:** "last time i did not keep the files, but when I started the download started at 6%
+> (where it got to last time), if select option to delete files then download progress should be 0ed"
+>
+> Run 1 was at 6% (`chunk-stream stats @9s: percent=6%`) when cancelled with Delete Files; the files
+> and manifest were removed, yet run 2's progress opened at 6%. Stale per-app progress state survives
+> the delete — it should reset to 0 when the partial install is deleted. Not yet diagnosed.
+
+**1d expectation updated:** `quick-260819-ch5` (2026-08-19) retired "Finish in Steam" — GameLib now
+resumes an incomplete install natively (`resumeInterruptedSteamInstall`), so the incomplete state reads
+"Resume Install" with the hint "Install incomplete — resume the download in GameLib". Observed: detail
+page button **Resume Install** ✅ and that hint ✅; never Play ✅.
+
+> **🟡 D-UAT-12 (MINOR, 2026-10-29, real Windows) — the library card does not show the incomplete
+> state; it looks like a plain not-installed game.**
+>
+> **Reported:** "card only shows download icon, hovering tooltip says 'install (darkest dungeon)"
+>
+> Code-localized, not yet fixed: `GameCard/index.tsx:301` hardcodes the tooltip to
+> `t('button.install')`, and the status text (`label` from `hasStatus` → `getStatusLabel`, which
+> does produce "Resume Install" for `statusContext === 'steam-incomplete'`) renders at line 539 only
+> under `haveStatus`, which the `notInstalled` state does not appear to set. So the D-UAT-09
+> resumable-install label reaches the detail page but not the card.
+
+- Resume Install (09:54) → resumed at **12%** (kept files reused, not a restart from 0) → finished
+  09:57:15. Log: `Writing StateFlags=4 full-ownership manifest for appId 262060 (sizeOnDisk=2264929176,
+  buildid=25810065)` → `Steam: install polling complete for appId 262060 — badge flipped to installed`.
+  GameLib showed **Play**.
+
+> **🟠 D-UAT-13 (MAJOR, 2026-10-29, real Windows) — after a native install completes while Steam is
+> running, GameLib shows Play instead of "Restart Steam to finish"; Play opens Steam's install dialog.**
+>
+> **Reported:** "oh, got steam install dialog" (on clicking Play, 09:58:38
+> `launching appId 262060 via steam://rungameid/262060`).
+>
+> Steam (PID 37364, running since 2026-10-28 15:35, never restarted) had not re-read the freshly
+> written `StateFlags 4` manifest, so it still saw the app as not installed. The install poll flipped
+> the badge to installed the moment GameLib's own manifest appeared, so the
+> `steam-waiting-for-restart` state (21-16 / D-UAT-07) was never entered on this resume path — the
+> D-UAT-07 button could not be exercised. Same class as D-UAT-09: the primary action lies about
+> state. Not yet diagnosed — check whether the resume path (`resumeInterruptedSteamInstall`, poll
+> `source native, isNativeHandoff false` → upgraded to `isNativeHandoff` at finalize, 260822-dkf
+> D-02) skips the waiting-for-restart marking that a first install sets.
+
+- Steam-dialog cancelled → Steam fully quit and restarted → Steam showed Darkest Dungeon installed, no
+  download queued → GameLib Play launched the game. **D-04 adoption end-to-end ✅.** On launch, Steam's
+  normal 32-/64-bit launch-option picker appeared (expected for a multi-config title), plus an
+  unexplained second Steam-styled dialog with a single "Open Steam" button although Steam was open —
+  no such string exists in GameLib outside the Humble claim wizard, so likely not GameLib's; screenshot
+  requested to identify it.
+
+**1d result: pass on the cancel → keep → incomplete label → native resume → adoption path, with three
+findings: D-UAT-11 (minor), D-UAT-12 (minor), D-UAT-13 (major).**
+
+**1c + 2c + D-UAT-07 — Total War: PHARAOH DYNASTIES (2951630; Denuvo Anti-tamper per the Steam store
+`drm_notice`), C: library, Steam left running during install:**
+
+- Depot plan (10:05:04): `selectAllDepots union across base + DLC apps -> 3 depot(s)` — 2951631
+  (133,797,137 B), 2951632 (80,948,012,865 B), 2951633 (2 B); six non-English language depots
+  correctly skipped. Installed; manifest `SizeOnDisk 81286160463`.
+- **D-UAT-07: not verifiable at this point — blocked by D-UAT-13 (since fixed and re-verified, see
+  "D-UAT-13 RESOLVED" below).** On completion, with Steam still running, the
+  detail page showed **Play**, not "Restart Steam to finish". D-UAT-13 reproduced on a first install
+  (not only on the resume path), so the `steam-waiting-for-restart` state is not entered on Windows.
+- Steam restarted (new PID 13712, 11:15:23) → game shown installed with an **update queued**; the
+  update fetched 57,465,616 B / staged 204,350,459 B. Post-update manifest: `StateFlags 4`, buildid
+  25370504 = TargetBuildID; GameLib's three depots kept their manifest gids (no 81 GB re-download);
+  a **fourth** InstalledDepots entry `372531` (manifest 1128077100884847891, 204,350,459 B) was added
+  by Steam; `SharedDepots` 228988/228990 → 228980 as expected.
+- **2c: pass on summed multi-depot download + clean adoption (no collision, no full re-download),
+  with D-UAT-14.**
+- **2b: pass** — Steam "Verify integrity of game files" over the full install passed, nothing
+  re-acquired.
+- **1c: pass** — Play from GameLib launched the Denuvo title (operator: "clicked play opened").
+  Open Question 3 closed: Denuvo accepts a GameLib-downloaded, Steam-adopted file set.
+
+> **🟠 D-UAT-14 (MAJOR, 2026-10-29, real Windows) — depot selection drops cross-app content depots,
+> so Steam has to download them as an "update" after adoption.**
+>
+> **Reported:** "reset, shows installed (update queued)".
+>
+> Steam's post-restart update added depot `372531` to `InstalledDepots` (a game-content depot, not a
+> shared redist — it is not in `SharedDepots`). GameLib's plan never listed it. Code-localized
+> hypothesis, not yet confirmed against the PICS appinfo: `depot/select.ts:188`
+> `if (d?.depotfromapp || d?.sharedinstall) continue` treats every `depotfromapp` depot as a shared
+> redistributable, but Steam only routes `sharedinstall` depots to `SharedDepots`; a `depotfromapp`
+> depot without `sharedinstall` is installed into the game and must be downloaded (keyed against its
+> owner app). Blast radius bounded here (204 MB, Steam self-heals before first launch), larger for a
+> title whose cross-app depot is big.
+
+> **✅ D-UAT-13 RESOLVED — fix `128148bf3`, real-HW verified on Windows 2026-10-29** (debug session
+> `.planning/debug/resolved/steam-waiting-for-restart-windows.md`). The diagnosis in the finding above
+> (resume-path skip, Windows-specific) was wrong: the Phase 23 `StateFlags=4` fast path made the
+> 1026-gated `steam-waiting-for-restart` state unreachable on every platform. `pollInstallOnce` now holds
+> a finished native install in that state while the Steam client that was alive at finalize still runs,
+> and releases it when that process exits.
+>
+> Live run, small game appId 264160, Steam pid 13712 running throughout (`gamelib.log`):
+>
+> - 12:06:19 `Writing StateFlags=4 full-ownership manifest for appId 264160`
+> - 12:06:22 `native install of appId 264160 finalized while the Steam client (pid 13712) is running —
+>   holding in steam-waiting-for-restart until it restarts (D-UAT-13)`
+> - 12:07:58 `the Steam client that was running when appId 264160 finalized (pid 13712) has exited —
+>   releasing steam-waiting-for-restart (D-UAT-13)`, then `install polling complete … badge flipped to
+>   installed`
+>
+> Operator: "ok, have the restart steam to finish." → "restarted steam, play button showing now" →
+> "game launched, no install dialog". New Steam pid after relaunch: 5608. **Not separately observed:** the
+> Library tile hint and alt-tab-to-Steam-and-back persistence (unit-tested only). **Open edge, not fixed:**
+> the hold is in-memory, so restarting GameLib while the old Steam still runs brings Play back (pending
+> todo `2026-10-29-steam-restart-hold-not-persisted-across-gamelib-restart.md`).
+
+## Deferred Follow-Ups
+
+- test: D-UAT-07 / D-UAT-13
+  idea: "is a way to push an update to steam, so no reset required?" — Steam reads appmanifests only
+    at startup and has no supported rescan trigger; candidate: a consented "Restart Steam" action
+    (`steam://exit` + relaunch) in place of the disabled "Restart Steam to finish" button.
+  deferred_at: 2026-10-29
+
 ## Summary Table (fill in after all items are run)
 
 | # | Item | Requirement(s) | Result | Notes |
 |---|------|-----------------|--------|-------|
 | 1a | Native adoption (1026→4) | SNI-04 | PASS | WazHack; adoption 1026→4, zero re-download. UX gap: no "restart Steam" hint (follow-up). |
 | 1b | Launch after GameLib install | SNI-04/SNI-01 | PASS | WazHack launches on current fixed build. Earlier fail = stale pre-897eb515 build hitting CR-01 directory bug (D-UAT-01, now resolved — real-HW validation of the CR-01 fix). |
-| 1c | Hard-DRM title launch | SNI-04 (Open Question 3) | DEFERRED → Windows post-prod | Deferred to post-production/implementation validation on Windows (2026-07-20 user decision). Cross-platform native-install path. |
-| 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | CODE-FIXED 2026-07-20, HW re-run DEFERRED → Windows post-prod | D-UAT-09 code-fixed via gap 21-17 + WR-01/WR-02 (verifier 4/4 must-haves): incomplete `1026` install no longer mislabeled Installed, shows "Finish in Steam" not Play, durable across refresh. Steam still repairs the 1026 manifest (D-04 OK). HW re-run (confirm label + end-to-end repair-launch) deferred to Windows post-prod (2026-07-20). |
+| 1c | Hard-DRM title launch | SNI-04 (Open Question 3) | PASS (Windows 2026-10-29) | Total War: PHARAOH DYNASTIES (2951630, Denuvo Anti-tamper): GameLib-downloaded, Steam-adopted install launched. Open Question 3 closed. |
+| 1d | Cancel → 1026 → resume / Steam adopt | SNI-04 (D-04) | PASS with findings (Windows 2026-10-29) | Darkest Dungeon (262060): keep-files cancel → `StateFlags 1026` → detail "Resume Install" (260819-ch5 replaced "Finish in Steam") → native resume at 12% → `StateFlags 4` → adopted after Steam restart, launched. Findings D-UAT-11 (minor), D-UAT-12 (minor), D-UAT-13 (major). |
 | 2a | 10GB+ streaming memory bound | SNI-01 (A1) | PASS | Cyberpunk 2077 (~90GB); main-proc RSS bounded, healthy speed (re-verifies D-UAT-03 worker-pool). |
-| 2b | Byte-correctness spot-check | SNI-01 | DEFERRED → Windows post-prod | Needs a completed download to SHA1-check. Deferred to Windows post-prod validation (2026-07-20). |
-| 2c | Real multi-depot game | SNI-01 (A2) | PARTIAL → remainder DEFERRED → Windows post-prod | Cyberpunk 2077, 3 macOS depots ~90GB. Past plan-build + streaming ✅ (D-UAT-08 fix 64d5afcc real-HW verified). Multi-depot Steam adoption / no-collision deferred to Windows post-prod (2026-07-20). Note: real multi-depot StateFlags=4 adoption was independently HW-confirmed under Phase 23 Gate 1 (2026-07-19). |
+| 2b | Byte-correctness spot-check | SNI-01 | PASS (Windows 2026-10-29) | Steam "Verify integrity of game files" on the 81 GB PHARAOH DYNASTIES install: passed, nothing re-acquired. |
+| 2c | Real multi-depot game | SNI-01 (A2) | PASS with finding (Windows 2026-10-29) | PHARAOH DYNASTIES, 3 Windows depots ~81 GB summed; Steam adopted with GameLib's depot gids intact, no collision, no full re-download. Steam fetched a missed cross-app depot 372531 (204 MB) as an update → D-UAT-14 (major). |
 | 3 | Bottled Steam adoption | SNI-08 (A3) | PARTIAL | Portal 2 (620) into GameLibSteam bottle. Install + adoption ✅ (Windows depot streamed to bottle, portal2.exe, StateFlags→4, 12GB, install record correct). Launch/uninstall/detail ✅ D-UAT-10 fixed and real-HW verified 2026-10-16 (Fallout 2 Play via bottle, Child of Light uninstall stays uninstalled; detail shows CrossOver). Step 4 launch-through-bottle verified. |
 | 4a | D-10 guided client install | SNI-06 (partial) | DEFERRED → Windows post-prod | Steam-client-detection / guided-install flow; deferred to Windows post-prod (2026-07-20). Guided-install UX differs per OS. |
 | 4b | D-11 prompt-to-launch | SNI-06 (partial) | DEFERRED → Windows post-prod | Deferred to Windows post-prod (2026-07-20). |
 | 4c | Continue-to-download | SNI-06 (partial) | DEFERRED → Windows post-prod | Deferred to Windows post-prod (2026-07-20). |
+| D-UAT-07 | GamePage "Restart Steam to finish" | SNI-04 | PASS (Windows 2026-10-29) | Was blocked by D-UAT-13. With the D-UAT-13 fix `128148bf3` the waiting state is entered on finalize while Steam runs and the detail page shows the disabled "Restart Steam to finish" (button fix `ab0500c6` exercised live); Play appeared only after Steam was exited and relaunched, and launched with no install dialog. Library tile hint not separately observed. |
 
 **Gate status (updated 2026-07-20 — remaining native-install UAT DEFERRED to Windows post-production):**
 Per user decision 2026-07-20, the remaining cross-platform native-install UAT items — **1c, 1d, 2b, 2c, 4a,

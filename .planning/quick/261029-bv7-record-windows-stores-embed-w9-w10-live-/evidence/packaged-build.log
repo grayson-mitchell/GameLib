@@ -1,0 +1,314 @@
+
+> gamelib@0.8.0 tauri:dev:packaged C:\Users\grays\Projects\GameLib
+> pnpm exec vite build && pnpm build:sidecar-sea && pnpm build:decompress-worker-dev && tauri build --debug
+
+[36mvite v6.3.5 [32mbuilding for production...[36m[39m
+[prune-stale-helper-binaries] nothing to prune
+transforming...
+[32m✓[39m 13215 modules transformed.
+[33mExport "install" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Library/components/GameCard/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.[39m
+[33mExport "launch" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Library/components/GameCard/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.[39m
+[33mExport "repair" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Game/GameSubMenu/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.[39m
+[33mExport "install" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/components/UI/DLCList/DLC/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.[39m
+[33mExport "launch" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Game/GamePage/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.[39m
+[33mExport "updateGame" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Game/GamePage/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.[39m
+[33mExport "launch" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/ConsoleMode/components/LaunchOverlay/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.[39m
+[33mExport "install" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/ConsoleMode/InstallOverlay/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.[39m
+[33mExport "updateGame" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/ConsoleMode/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.[39m
+rendering chunks...
+[33m[esbuild css minify]
+▲ [WARNING] Comments in CSS use "/* ... */" instead of "//" [js-comment-in-css]
+
+    <stdin>:732:8:
+      732 │         // dracula's --navbar-active resolves to --accent (#bd93f...
+          ╵         ~~
+
+
+▲ [WARNING] Unterminated string token [css-syntax-error]
+
+    <stdin>:732:74:
+      732 │ ... dracula's --navbar-active resolves to --accent (#bd93f9), which
+          ╵                                                                    ^
+
+
+▲ [WARNING] Comments in CSS use "/* ... */" instead of "//" [js-comment-in-css]
+
+    <stdin>:733:8:
+      733 │         // measures 3.79:1 on this menu's --navbar-background (#4...
+          ╵         ~~
+
+
+▲ [WARNING] Unterminated string token [css-syntax-error]
+
+    <stdin>:733:74:
+      733 │ ... measures 3.79:1 on this menu's --navbar-background (#44475a) --
+          ╵                                                                    ^
+
+
+▲ [WARNING] Comments in CSS use "/* ... */" instead of "//" [js-comment-in-css]
+
+    <stdin>:734:8:
+      734 │         // under the 4.5:1 floor (261015-7tt census). Every other...
+          ╵         ~~
+
+
+▲ [WARNING] Unterminated string token [css-syntax-error]
+
+    <stdin>:734:73:
+      734 │ .../ under the 4.5:1 floor (261015-7tt census). Every other theme's
+          ╵                                                                    ^
+
+
+▲ [WARNING] Comments in CSS use "/* ... */" instead of "//" [js-comment-in-css]
+
+    <stdin>:735:8:
+      735 │         // hover state already clears 4.5:1 through the bare chai...
+          ╵         ~~
+
+
+▲ [WARNING] Comments in CSS use "/* ... */" instead of "//" [js-comment-in-css]
+
+    <stdin>:736:8:
+      736 │         // this is a theme-scoped override, not a token retarget:...
+          ╵         ~~
+
+
+▲ [WARNING] Comments in CSS use "/* ... */" instead of "//" [js-comment-in-css]
+
+    <stdin>:737:8:
+      737 │         // the fix would touch 9 themes that already pass. --text...
+          ╵         ~~
+
+
+▲ [WARNING] Comments in CSS use "/* ... */" instead of "//" [js-comment-in-css]
+
+    <stdin>:738:8:
+      738 │         // (white) is dracula's own base-state colour for this sa...
+          ╵         ~~
+
+
+▲ [WARNING] Unterminated string token [css-syntax-error]
+
+    <stdin>:738:73:
+      738 │ .../ (white) is dracula's own base-state colour for this same link,
+          ╵                                                                    ^
+
+
+▲ [WARNING] Comments in CSS use "/* ... */" instead of "//" [js-comment-in-css]
+
+    <stdin>:739:8:
+      739 │         // so the override does not introduce an unrelated hue.
+          ╵         ~~
+
+[39m
+[33m[plugin vite:reporter] 
+(!) C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/index.tsx is dynamically imported by C:/Users/grays/Projects/GameLib/src/frontend/App.tsx but also statically imported by C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/components/AutoDXVK.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/components/AutoDXVKNVAPI.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/components/AutoVKD3D.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/components/CrossoverBottle.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/components/DisableUMU.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/components/EnableDXVKFpsLimit.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/components/EnableMsync.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/components/PreferSystemLibs.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/components/WinePrefix.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/components/WineVersionSelector.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/sections/GamesSettings/index.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Settings/sections/SyncSaves/index.tsx, dynamic import will not move module into another chunk.
+[39m
+[33m[plugin vite:reporter] 
+(!) C:/Users/grays/Projects/GameLib/src/frontend/screens/Login/index.tsx is dynamically imported by C:/Users/grays/Projects/GameLib/src/frontend/App.tsx but also statically imported by C:/Users/grays/Projects/GameLib/src/frontend/components/UI/HumbleExpiryToast/index.tsx, C:/Users/grays/Projects/GameLib/src/frontend/screens/Humble/Keys/index.tsx, dynamic import will not move module into another chunk.
+[39m
+[2mbuild/[22m[32mindex.html                                           [39m[1m[2m    0.70 kB[22m[1m[22m
+[2mbuild/[22m[32massets/SteamDeck_X-DwNz7cO3.png                      [39m[1m[2m    4.22 kB[22m[1m[22m
+[2mbuild/[22m[32massets/Switch_Left_Stick-CWpl1pz1.png                [39m[1m[2m    4.30 kB[22m[1m[22m
+[2mbuild/[22m[32massets/PS5_Square-MF_dhaoW.png                       [39m[1m[2m    4.32 kB[22m[1m[22m
+[2mbuild/[22m[32massets/SteamDeck_R1-BpoU8NKQ.png                     [39m[1m[2m    4.32 kB[22m[1m[22m
+[2mbuild/[22m[32massets/rubik-hebrew-400-normal-DNObuXye.woff2        [39m[1m[2m    4.40 kB[22m[1m[22m
+[2mbuild/[22m[32massets/PS4_Left_Stick-Cl1iGT5u.png                   [39m[1m[2m    4.43 kB[22m[1m[22m
+[2mbuild/[22m[32massets/PS5_Cross-nKvb2zFH.png                        [39m[1m[2m    4.54 kB[22m[1m[22m
+[2mbuild/[22m[32massets/PS4_Circle-D75wZQZ5.png                       [39m[1m[2m    4.56 kB[22m[1m[22m
+[2mbuild/[22m[32massets/PS4_Right_Stick-Ajpmj18o.png                  [39m[1m[2m    4.68 kB[22m[1m[22m
+[2mbuild/[22m[32massets/PS5_Triangle-D12MO93J.png                     [39m[1m[2m    4.72 kB[22m[1m[22m
+[2mbuild/[22m[32massets/PS5_Left_Stick-Boc4jN1F.png                   [39m[1m[2m    5.13 kB[22m[1m[22m
+[2mbuild/[22m[32massets/SteamDeck_Left_Stick-DJTqmJ0Q.png             [39m[1m[2m    5.18 kB[22m[1m[22m
+[2mbuild/[22m[32massets/XboxSeriesX_Left_Stick-Cji4AZEG.png           [39m[1m[2m    5.20 kB[22m[1m[22m
+[2mbuild/[22m[32massets/PS5_Circle-DCilCbz_.png                       [39m[1m[2m    5.36 kB[22m[1m[22m
+[2mbuild/[22m[32massets/PS5_Right_Stick-H1EufGXy.png                  [39m[1m[2m    5.43 kB[22m[1m[22m
+[2mbuild/[22m[32massets/XboxSeriesX_Right_Stick-Bs9FE3IW.png          [39m[1m[2m    5.51 kB[22m[1m[22m
+[2mbuild/[22m[32massets/SteamDeck_Right_Stick-CHgGJqZU.png            [39m[1m[2m    5.62 kB[22m[1m[22m
+[2mbuild/[22m[32massets/rubik-cyrillic-ext-400-normal-B_ISZE4R.woff2  [39m[1m[2m    5.83 kB[22m[1m[22m
+[2mbuild/[22m[32massets/PS5_Dpad-CUUVZ112.png                         [39m[1m[2m    6.14 kB[22m[1m[22m
+[2mbuild/[22m[32massets/rubik-cyrillic-400-normal-CFCITy_P.woff2      [39m[1m[2m    7.30 kB[22m[1m[22m
+[2mbuild/[22m[32massets/cabin-latin-ext-400-normal-CrIKaydt.woff2     [39m[1m[2m    8.32 kB[22m[1m[22m
+[2mbuild/[22m[32massets/rubik-latin-ext-400-normal-BvADScal.woff2     [39m[1m[2m    8.93 kB[22m[1m[22m
+[2mbuild/[22m[32massets/cabin-latin-400-normal-Csq5M_Nd.woff2         [39m[1m[2m   15.48 kB[22m[1m[22m
+[2mbuild/[22m[32massets/rubik-latin-400-normal-CRbIWQXK.woff2         [39m[1m[2m   17.42 kB[22m[1m[22m
+[2mbuild/[22m[32massets/cabin-all-400-normal-DslYAS_m.woff            [39m[1m[2m   35.50 kB[22m[1m[22m
+[2mbuild/[22m[32massets/rubik-all-400-normal-LeYnpOeC.woff            [39m[1m[2m   51.78 kB[22m[1m[22m
+[2mbuild/[22m[32massets/gamelib_card-Bv2CpHlk.svg                     [39m[1m[2m   78.99 kB[22m[1m[22m
+[2mbuild/[22m[32massets/gamelib_card_missing-Bv06edlW.svg             [39m[1m[2m   79.11 kB[22m[1m[22m
+[2mbuild/[22m[32massets/login-background-1536x864-CfEy_sdA.jpg        [39m[1m[2m  254.88 kB[22m[1m[22m
+[2mbuild/[22m[32massets/gamelib-icon-B0ktIo4B.png                     [39m[1m[2m  667.34 kB[22m[1m[22m
+[2mbuild/[22m[32massets/NotoColorEmoji.subset-C9pS9TGB.ttf            [39m[1m[2m  847.88 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-BSLnMj59.css                            [39m[1m[2m    1.04 kB[22m[1m[22m
+[2mbuild/[22m[35massets/steamInstallOptionsEntry-1NcMDr-d.css         [39m[1m[2m    1.60 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-DWmpvFUh.css                            [39m[1m[2m    2.01 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-giKOVNZI.css                            [39m[1m[2m    3.43 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-BAd6POjN.css                            [39m[1m[2m    3.55 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-C2REhoER.css                            [39m[1m[2m    3.91 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-BnnTxa0M.css                            [39m[1m[2m    6.90 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-Bol6f2ir.css                            [39m[1m[2m    9.93 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-B1DOP_Eq.css                            [39m[1m[2m   11.57 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-CnEafSLZ.css                            [39m[1m[2m   18.00 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-DMWS-qll.css                            [39m[1m[2m   20.73 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-jmZIz8Pk.css                            [39m[1m[2m   26.68 kB[22m[1m[22m
+[2mbuild/[22m[35massets/App-Bg9v9TVD.css                              [39m[1m[2m   61.74 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-DryrtX3n.css                            [39m[1m[2m  105.24 kB[22m[1m[22m
+[2mbuild/[22m[35massets/index-CnJDiapm.css                            [39m[1m[2m  123.41 kB[22m[1m[22m
+[2mbuild/[22m[36massets/tiny-invariant-BaFNuDhB.js                    [39m[1m[2m    0.08 kB[22m[1m[22m
+[2mbuild/[22m[36massets/ExpandMore-Bxh2aQ7x.js                        [39m[1m[2m    0.18 kB[22m[1m[22m
+[2mbuild/[22m[36massets/play-icon-DygPjN9p.js                         [39m[1m[2m    0.32 kB[22m[1m[22m
+[2mbuild/[22m[36massets/stop-icon-CEV8MYzt.js                         [39m[1m[2m    0.43 kB[22m[1m[22m
+[2mbuild/[22m[36massets/down-icon-BbmcUomi.js                         [39m[1m[2m    0.53 kB[22m[1m[22m
+[2mbuild/[22m[36massets/hasProgress-DkOaEqvO.js                       [39m[1m[2m    0.68 kB[22m[1m[22m
+[2mbuild/[22m[36massets/gamelib_card_missing-BSLu-k9W.js              [39m[1m[2m    0.79 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-U4QH9wyq.js                             [39m[1m[2m    0.92 kB[22m[1m[22m
+[2mbuild/[22m[36massets/badges-DIIOgZHM.js                            [39m[1m[2m    1.16 kB[22m[1m[22m
+[2mbuild/[22m[36massets/viewFilters-D_4XT5VS.js                       [39m[1m[2m    1.79 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-mvObIpu3.js                             [39m[1m[2m    2.28 kB[22m[1m[22m
+[2mbuild/[22m[36massets/hasStatus-n0qdhegE.js                         [39m[1m[2m    4.02 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-B3lDbG1V.js                             [39m[1m[2m    4.27 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-DkHNnQXD.js                             [39m[1m[2m    5.81 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-CXyAEmER.js                             [39m[1m[2m    7.41 kB[22m[1m[22m
+[2mbuild/[22m[36massets/steamInstallOptionsEntry-oS2BkpaW.js          [39m[1m[2m   11.05 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-DuWPWGiY.js                             [39m[1m[2m   16.55 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-DedJmCRe.js                             [39m[1m[2m   24.22 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-DG3DLzzq.js                             [39m[1m[2m   26.20 kB[22m[1m[22m
+[2mbuild/[22m[36massets/Tooltip-hAWtiONH.js                           [39m[1m[2m   33.15 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-iVefcqkv.js                             [39m[1m[2m   59.77 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-D4IlaHBY.js                             [39m[1m[2m   74.24 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-CUF-K3K7.js                             [39m[1m[2m   85.00 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-DCsCyOO5.js                             [39m[1m[2m  346.27 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-WL4iBhQI.js                             [39m[1m[2m  395.14 kB[22m[1m[22m
+[2mbuild/[22m[36massets/index-BnhwKeLf.js                             [39m[1m[33m  614.51 kB[39m[22m
+[2mbuild/[22m[36massets/App-YQqEjwMt.js                               [39m[1m[33m1,284.78 kB[39m[22m
+[33m
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 43.43s[39m
+[prune-unoffered-locales] pruned 6 directories, 638431 bytes freed
+[preserve-runner-symlinks] restored 12 symlink(s), skipped 0, rejected 0
+[assemble-renderer-dist] assembled 74 bundle key(s) + static files into C:\Users\grays\Projects\GameLib\build\renderer
+
+> gamelib@0.8.0 build:sidecar-sea C:\Users\grays\Projects\GameLib
+> pnpm build:sidecar && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSidecarSea.ts
+
+
+> gamelib@0.8.0 build:sidecar C:\Users\grays\Projects\GameLib
+> esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --outfile=build/main/sidecar.js src/sidecar/index.ts
+
+
+  build\main\sidecar.js  2.0mb
+
+Done in 259ms
+
+  ..\..\AppData\Local\Temp\gamelib-runts-1PZP5R\buildSidecarSea.cjs  27.7kb
+
+Done in 44ms
+[build:sidecar-sea] decompress worker bundled and embedded as SEA asset "decompressWorker.js" -- consumed at runtime by DecompressPool via node:sea.getAsset().
+[build:sidecar-sea] Resolved target triple: x86_64-pc-windows-msvc (native build)
+[build:sidecar-sea] native LZMA addon embedded as SEA asset "lzma_native.node" from node_modules\lzma-native\prebuilds\win32-x64\node.napi.node
+[build:sidecar-sea] liblzma.dll companion embedded as SEA asset "liblzma.dll" from node_modules\lzma-native\prebuilds\win32-x64\liblzma.dll
+[build:sidecar-sea] lzma-native resolved paths baked for the worker bundle (root=C:\Users\grays\Projects\GameLib\node_modules\lzma-native)
+[build:sidecar-sea] Arch gate skipped for x86_64-pc-windows-msvc: lipo -archs is a macOS-only check (either the target or the host is non-darwin).
+SEA sidecar compiled -> src-tauri\binaries\gamelib-sidecar-x86_64-pc-windows-msvc.exe
+
+> gamelib@0.8.0 build:decompress-worker-dev C:\Users\grays\Projects\GameLib
+> node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildDecompressWorkerDev.ts
+
+
+  ...pData\Local\Temp\gamelib-runts-Wj8veO\buildDecompressWorkerDev.cjs  8.0kb
+
+Done in 23ms
+[build:decompress-worker-dev] esbuild-aliased worker bundle -> build\main\decompressWorker.js
+        Info Looking up installed tauri packages to check mismatched versions...
+   Compiling tauri v2.11.5
+   Compiling tauri-plugin-fs v2.5.1
+   Compiling tauri-plugin-updater v2.10.1
+   Compiling tauri-plugin-notification v2.3.3
+   Compiling tauri-plugin-deep-link v2.4.9
+   Compiling tauri-plugin-shell v2.3.5
+   Compiling tauri-plugin-clipboard-manager v2.3.2
+   Compiling tauri-plugin-opener v2.5.4
+   Compiling tauri-plugin-dialog v2.7.2
+   Compiling gamelib-shell v0.8.0 (C:\Users\grays\Projects\GameLib\src-tauri)
+warning: unused variable: `nav_sentinel_label`
+    --> src\main.rs:8246:17
+     |
+8246 |             let nav_sentinel_label = label.clone();
+     |                 ^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_nav_sentinel_label`
+     |
+     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `single_instance_socket_path_var`
+     --> src\main.rs:12550:9
+      |
+12550 |     let single_instance_socket_path_var: Option<std::path::PathBuf> = None;
+      |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_single_instance_socket_path_var`
+
+warning: function `website_data_record_matches_domain` is never used
+    --> src\main.rs:2913:4
+     |
+2913 | fn website_data_record_matches_domain(display_name: &str, target: &str) -> bool {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `login_cancel_strip_script` is never used
+    --> src\main.rs:3438:4
+     |
+3438 | fn login_cancel_strip_script(exfil_host: &str) -> String {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `login_origin_banner_script` is never used
+    --> src\main.rs:3589:4
+     |
+3589 | fn login_origin_banner_script(origin: &str) -> String {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `login_origin_banner_update_script` is never used
+    --> src\main.rs:3660:4
+     |
+3660 | fn login_origin_banner_update_script(origin: &str) -> String {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `wake_lock_reason` is never used
+    --> src\main.rs:5999:4
+     |
+5999 | fn wake_lock_reason(kind: WakeLockKind) -> &'static str {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `single_instance_socket_path` is never used
+     --> src\main.rs:10489:4
+      |
+10489 | fn single_instance_socket_path(app_support_dir: &std::path::Path) -> std::path::PathBuf {
+      |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `single_instance_dir` is never used
+     --> src\main.rs:10499:4
+      |
+10499 | fn single_instance_dir(home: Option<&str>) -> Option<std::path::PathBuf> {
+      |    ^^^^^^^^^^^^^^^^^^^
+
+warning: `gamelib-shell` (bin "gamelib-shell") generated 9 warnings (run `cargo fix --bin "gamelib-shell" -p gamelib-shell` to apply 2 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 45.40s
+       Built application at: C:\Users\grays\Projects\GameLib\src-tauri\target\debug\gamelib-shell.exe
+        Info Patching C:\Users\grays\Projects\GameLib\src-tauri\target\debug\gamelib-shell.exe with bundle type information: nsis
+        Info Target: x64
+     Running makensis to produce C:\Users\grays\Projects\GameLib\src-tauri\target\debug\bundle\nsis\GameLib_0.8.0_x64-setup.exe
+    Finished 1 bundle at:
+        C:\Users\grays\Projects\GameLib\src-tauri\target\debug\bundle\nsis\GameLib_0.8.0_x64-setup.exe
+
+A public key has been found, but no private key. Make sure to set `TAURI_SIGNING_PRIVATE_KEY` environment variable.
+       Error A public key has been found, but no private key. Make sure to set `TAURI_SIGNING_PRIVATE_KEY` environment variable.
+ ELIFECYCLE  Command failed with exit code 1.

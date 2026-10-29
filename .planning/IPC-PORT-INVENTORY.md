@@ -215,7 +215,7 @@ preload-surface audit — 28 → 31:**
   `34.5/preload-surface-gate.py`, which had never been wired into CI and so had never run
   outside the session that wrote it.
 
-## Phase 34.1 — Slice 4 — app shell and window chrome (37 channels)
+## Phase 34.1 — Slice 4 — app shell and window chrome (38 channels)
 
 **Retired 2026-08-27 (Phase 34.18):** `isIntelMac` was dropped from this slice's channel list —
 an arm64-only macOS build cannot run on an Intel Mac, so the channel exposed a capability the app
@@ -229,7 +229,7 @@ was reassigned to Phase 34.5 by Phase 34.1 CONTEXT decision D-14 on 2026-07-25, 
 Wine tooling and was in this slice only because the inventory grouped channels by file; see
 the Phase 34.5 list below for its new home.
 
-`abort`, `changeLanguage`, `changeTrayColor`, `getAppManagementStatus`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getLoginBackground`, `getSignInProbeOutcomes`, `getThemeCSS`, `getWebviewPreloadPath`, `lock`, `notify`, `openAppManagementSettings`, `openCustomThemesWiki`, `openWebviewPage`, `quit`, `relaunchApp`, `set-connectivity-online`, `setTitleBarOverlay`, `unlock`
+`abort`, `changeLanguage`, `changeTrayColor`, `dialogDisplayed`, `getAppManagementStatus`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getLoginBackground`, `getSignInProbeOutcomes`, `getThemeCSS`, `getWebviewPreloadPath`, `lock`, `notify`, `openAppManagementSettings`, `openCustomThemesWiki`, `openWebviewPage`, `quit`, `relaunchApp`, `set-connectivity-online`, `setTitleBarOverlay`, `unlock`
 
 ## Phase 34.2 — Slice 5 — game details, settings and overrides (26 channels)
 

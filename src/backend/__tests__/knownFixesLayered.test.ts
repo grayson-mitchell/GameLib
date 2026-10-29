@@ -8,7 +8,8 @@
  */
 
 import { mkdirSync, rmSync, writeFileSync } from 'fs'
-import { join } from 'path'
+import { tmpdir } from 'os'
+import { join, relative } from 'path'
 
 jest.mock('os', () => {
   const actual = jest.requireActual('os')
@@ -25,7 +26,12 @@ jest.mock('os', () => {
 
 // Under jest app.getAppPath() resolves to the repo root, so the real
 // bundledFixesPath is the repo's own public/fixes. Point it at a tmp dir so the
-// tests can never write to or delete the shipped profiles.
+// tests can never write to or delete the shipped profiles. The dir is nested as
+// `<tmp root>/public/fixes`, the same depth as the shipped `<app>/public/fixes`:
+// the traversal test below plants (and recursively deletes) a fixture at
+// `<layer dir>/../../etc`, and with the layer directly under `os.tmpdir()` that
+// resolved to the REAL `/etc` on Linux (EACCES as the CI user; as root it would
+// have created and then `rm -rf`'d `/etc`).
 jest.mock('../constants/paths', () => {
   const actual = jest.requireActual('../constants/paths')
   const path = jest.requireActual('path')
@@ -34,7 +40,9 @@ jest.mock('../constants/paths', () => {
     ...actual,
     bundledFixesPath: path.join(
       os.tmpdir(),
-      `gamelib-bundled-fixes-test-${process.pid}-layered`
+      `gamelib-bundled-fixes-test-${process.pid}-layered`,
+      'public',
+      'fixes'
     )
   }
 })
@@ -80,6 +88,10 @@ function clean() {
   rmSync(localFixesPath, { recursive: true, force: true })
   rmSync(bundledFixesPath, { recursive: true, force: true })
 }
+
+// `<tmp root>/public/fixes` -> `<tmp root>`: this file's own disposable directory.
+const bundledRoot = join(bundledFixesPath, '..', '..')
+afterAll(() => rmSync(bundledRoot, { recursive: true, force: true }))
 
 const LAYERS = [
   ['local', () => localFixesPath],
@@ -204,6 +216,10 @@ describe('readKnownFixes (tier 1)', () => {
   it.each(LAYERS)('rejects a traversing appName in the %s layer', (_n, dir) => {
     // Plant a file at the traversal target so reading it would be visible.
     const target = join(dir(), '..', '..', 'etc')
+    // The fixture is written, and recursively removed, at `target`: refuse to
+    // touch anything outside the tmp tree (a shallow layer dir once put this on
+    // the real /etc). `relative` starts with '..' when `target` is outside.
+    expect(relative(tmpdir(), target).startsWith('..')).toBe(false)
     mkdirSync(target, { recursive: true })
     writeFileSync(
       join(target, 'x-steam.json'),

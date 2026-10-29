@@ -65,6 +65,7 @@ import {
   UnsafeInstalldirError
 } from './installLocation'
 import { readAcfInstalldir } from './acfInstalldir'
+import { listSteamClientPids } from './steamClientProcess'
 import { bridgeAllowlist } from './bridge/allowlist'
 import { backfillBridgeLaunchTargets } from './bridge/launchTarget'
 import { depotSignalCaptured } from './metadataCapture'
@@ -1163,7 +1164,10 @@ export default class SteamLibraryManager implements LibraryManager {
       // must reconcile bottle-installed games the same way refreshInstallState()
       // does — otherwise a bottle-only-installed game's is_installed gets
       // clobbered back to false by this native-only scan every time it runs.
-      const installedMap = await buildInstalledMap()
+      // D-UAT-13: apps whose poll is holding for a Steam restart are NOT
+      // installed yet as far as the user-facing state goes (the running
+      // Steam client has never read their GameLib-written manifest).
+      const installedMap = withoutSteamRestartHolds(await buildInstalledMap())
       const bottleInstalledMap =
         isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
       // D-UAT-24-07: consult every ready bridge bottle too (quick/261016-u1w
@@ -1496,7 +1500,10 @@ export default class SteamLibraryManager implements LibraryManager {
    * and is set to {} when not installed.
    */
   async refreshInstallState(): Promise<void> {
-    const installedMap = await buildInstalledMap()
+    // D-UAT-13: a window-focus reconcile (the user alt-tabbing to Steam to
+    // restart it) must not flip a game that is holding for a Steam restart to
+    // installed — see withoutSteamRestartHolds().
+    const installedMap = withoutSteamRestartHolds(await buildInstalledMap())
     const bottleInstalledMap =
       isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
     // D-UAT-24-07 (quick/261016-u1w D-C): same bridge-map consult as
@@ -2094,8 +2101,35 @@ const activePolls = new Map<
      *  context to 'steam-finishing-in-bottled-steam'. Reset when the poll
      *  leaves the bottle-1026 state. */
     bottledSteamDispatched: boolean
+    /** debug/steam-waiting-for-restart-windows (D-UAT-13): where this
+     *  native-handoff poll is in the "wait for the running Steam client to
+     *  restart" lifecycle, for the StateFlags=4 fast path where GameLib's own
+     *  finalize wrote a fully-installed manifest that the running client has
+     *  never read (the 1026 path expresses the same wait through the ACF
+     *  itself, so it never needs this).
+     *   - 'unprobed': no finalized manifest has been seen yet.
+     *   - 'holding':  the manifest is finalized AND a Steam client process was
+     *                 alive at that moment. The poll stays registered, keeps
+     *                 `status:'installing'` + `steam-waiting-for-restart`, and
+     *                 does NOT report the game installed (Play would open
+     *                 Steam's install dialog).
+     *   - 'released': the wait is over (the recorded Steam process exited or
+     *                 was replaced, Steam rewrote the manifest, or no Steam
+     *                 was running / the probe was inconclusive) — the normal
+     *                 installed flow runs. Terminal. */
+    steamHold: 'unprobed' | 'holding' | 'released'
+    /** PIDs of the Steam client captured when `steamHold` became 'holding'. */
+    steamPidsAtHandoff: number[]
+    /** Wall-clock ms of the last Steam-process probe, to throttle re-probes
+     *  while holding (a probe spawns one short-lived child). */
+    lastSteamProbeMs: number
   }
 >()
+
+/** Minimum gap between Steam-process re-probes while a poll is holding for a
+ *  Steam restart. The poll ticks every 3 s but a restart takes Steam far
+ *  longer, so probing every tick would only spawn children for nothing. */
+const STEAM_HOLD_PROBE_MIN_INTERVAL_MS = 10_000
 
 const GRACE_TICKS = 20 // ≈60 s at 3 000 ms default interval — stop if no manifest appeared
 const MAX_TICKS = 7200 // ≈6 h at 3 000 ms default interval — absolute safety cap
@@ -2620,6 +2654,128 @@ export async function buildBridgeInstalledMap(): Promise<
 }
 
 /**
+ * The one-shot "Restart Steam to finish installing {{game}}" toast for a
+ * native handoff on the native Steam root (the bottle variant is built inline
+ * in pollInstallOnce's 'downloading' branch). Shared by the fast-path hold and
+ * the fast-path no-hold completion so the user-facing text cannot drift.
+ */
+function notifyRestartSteamToFinish(title: string): void {
+  notify({
+    title,
+    body: i18next.t(
+      'steam.waitingForSteam.notify',
+      'Restart Steam to finish installing {{game}}',
+      { game: title }
+    )
+  })
+}
+
+/**
+ * debug/steam-waiting-for-restart-windows (D-UAT-13): true while appId has a
+ * native-handoff poll holding in "wait for the running Steam client to
+ * restart" (see activePolls' `steamHold`). The one authority install-state
+ * readers consult so a focus/Refresh reconcile cannot report the game
+ * installed (-> Play -> Steam's install dialog) behind the poller's back.
+ */
+function isHoldingForSteamRestart(appId: string): boolean {
+  return activePolls.get(appId)?.steamHold === 'holding'
+}
+
+/**
+ * Drops every app that is holding for a Steam restart from an ACF-derived
+ * installed map, mutating and returning it. buildInstalledMap() reads
+ * StateFlags only, and a fast-path manifest already reads 4 while the running
+ * Steam client is still unaware of it, so without this the window-focus
+ * reconcile (refreshInstallState) and a full refresh() would flip the badge
+ * to installed the moment the user alt-tabs to Steam to restart it.
+ */
+function withoutSteamRestartHolds<T>(
+  installed: Map<number, T>
+): Map<number, T> {
+  for (const appId of [...installed.keys()]) {
+    if (isHoldingForSteamRestart(String(appId))) installed.delete(appId)
+  }
+  return installed
+}
+
+/**
+ * Decides, for a poll that just read a fully-installed (StateFlags bit 4)
+ * manifest, whether the install must keep waiting for a Steam restart instead
+ * of being reported installed. Returns true to keep holding.
+ *
+ * Why. Steam scans for new manifests only at startup; the client that was
+ * running when GameLib's finalize wrote the manifest never reads it, so Play
+ * (steam://rungameid) opens Steam's *install* dialog (D-UAT-13). Since the
+ * Phase 23 fast path writes StateFlags=4 directly, the old 1026-only
+ * "steam-waiting-for-restart" signal is unreachable and the manifest alone
+ * cannot say whether Steam has seen it. So the first time the finalized
+ * manifest is observed, record which Steam client PIDs are alive; the client
+ * exiting (or being replaced by a new process) is the only event after which
+ * Steam will adopt the manifest, so that releases the hold.
+ *
+ * Scope: GameLib's own native handoff on the native Steam root only
+ * (`isNativeHandoff` + `source === 'native'`). An OFF-path poll (Steam owns
+ * the download, so Steam already knows the app) and the bottle/bridge roots
+ * (no user-visible Steam to restart) never hold — byte-for-byte the old flow.
+ *
+ * Fail-open everywhere: no Steam running, or a probe that cannot answer,
+ * releases immediately, exactly as before this existed. A hold can therefore
+ * only ever be entered on positive evidence of a live Steam client.
+ */
+async function shouldHoldForSteamRestart(
+  appId: string,
+  poll: NonNullable<ReturnType<typeof activePolls.get>>,
+  source: AcfSource
+): Promise<boolean> {
+  if (!poll.isNativeHandoff || source !== 'native') return false
+  if (poll.steamHold === 'released') return false
+
+  if (poll.steamHold === 'unprobed') {
+    const pids = await listSteamClientPids()
+    // The poll may have been stopped while the probe child ran; keep the
+    // pre-existing behaviour for that tick rather than resurrecting state.
+    if (activePolls.get(appId) !== poll) return false
+    poll.lastSteamProbeMs = Date.now()
+    if (!pids || pids.length === 0) {
+      poll.steamHold = 'released'
+      return false
+    }
+    poll.steamPidsAtHandoff = pids
+    poll.steamHold = 'holding'
+    // The manifest HAS been seen, just not yet reported: this also keeps the
+    // "no manifest ever appeared -> user cancelled" grace window in
+    // startInstallPolling from tearing the hold down after GRACE_TICKS, and
+    // lets absentTicksSinceSeen count a manifest that vanishes mid-hold.
+    poll.seenDownloading = true
+    logInfo(
+      `Steam: native install of appId ${appId} finalized while the Steam client (pid ${pids.join(', ')}) is running — holding in steam-waiting-for-restart until it restarts (D-UAT-13)`,
+      LogPrefix.Steam
+    )
+    return true
+  }
+
+  // steamHold === 'holding'
+  poll.absentTicksSinceSeen = 0
+  const now = Date.now()
+  if (now - poll.lastSteamProbeMs >= STEAM_HOLD_PROBE_MIN_INTERVAL_MS) {
+    poll.lastSteamProbeMs = now
+    const pids = await listSteamClientPids()
+    if (activePolls.get(appId) !== poll) return false
+    // `undefined` (probe inconclusive) keeps holding: only positive evidence
+    // that every recorded process is gone may release.
+    if (pids && !pids.some((pid) => poll.steamPidsAtHandoff.includes(pid))) {
+      poll.steamHold = 'released'
+      logInfo(
+        `Steam: the Steam client that was running when appId ${appId} finalized (pid ${poll.steamPidsAtHandoff.join(', ')}) has exited — releasing steam-waiting-for-restart (D-UAT-13)`,
+        LogPrefix.Steam
+      )
+      return false
+    }
+  }
+  return true
+}
+
+/**
  * Executes one polling tick for appId:
  *   'downloading' → updates seenDownloading flag, sends gameStatusUpdate { status: 'installing' }
  *   'installed'   → updates library entry, sends pushGameToLibrary +
@@ -2642,6 +2798,17 @@ export async function pollInstallOnce(
     if (poll) {
       poll.seenDownloading = true
       poll.absentTicksSinceSeen = 0
+      // D-UAT-13: a manifest that was finalized at StateFlags=4 and is now
+      // an active download again means Steam itself has picked it up and is
+      // rewriting it (e.g. a post-restart update) — the wait is over, and
+      // this poll continues as an ordinary one to the final 'installed'.
+      if (poll.steamHold === 'holding') {
+        poll.steamHold = 'released'
+        logInfo(
+          `Steam: Steam is now rewriting the manifest for appId ${appId} (StateFlags ${result.stateFlags}) — releasing steam-waiting-for-restart (D-UAT-13)`,
+          LogPrefix.Steam
+        )
+      }
     }
 
     // GAP-17-BOTTLE-PROGRESS: the bottle install has no DownloadManager
@@ -2684,6 +2851,18 @@ export async function pollInstallOnce(
     const isWaitingForSteamRestart =
       result.stateFlags === GAMELIB_HANDOFF_STATE_FLAGS &&
       poll?.isNativeHandoff === true
+
+    // D-UAT-13: the 1026 handoff expresses "waiting for Steam to adopt" in the
+    // ACF itself, and Steam adopting it (a restart, then StateFlags 1026 -> 4)
+    // is exactly the event the fast-path hold below the 'installed' branch
+    // waits for. So once a poll has shown the 1026 wait, that wait is the
+    // whole story: the hold must never arm on the later 1026 -> 4 flip, or the
+    // freshly RESTARTED Steam (the one that just adopted it) would be recorded
+    // as "the client that has not seen the manifest" and the user would be
+    // told to restart Steam a second time. Terminal, like every release.
+    if (isWaitingForSteamRestart && poll) {
+      poll.steamHold = 'released'
+    }
 
     // quick 261024-h5y: the bottle route has no user-visible Steam to
     // restart, so the passive "Restart Steam" hint is a dead end there.
@@ -2830,6 +3009,32 @@ export async function pollInstallOnce(
     }
   } else if (result.state === 'installed') {
     const existing = library.get(appId)
+
+    // D-UAT-13 (debug/steam-waiting-for-restart-windows): GameLib's own
+    // finalize wrote this manifest at StateFlags=4 (Phase 23 fast path) while
+    // a Steam client was already running — that client has never read it, so
+    // reporting the game installed here shows Play, and Play opens Steam's
+    // INSTALL dialog. Stay in the same 'waiting for restart' state the 1026
+    // path uses (status 'installing' + context, no is_installed push, no
+    // completion toast, poll kept alive) until the recorded Steam process is
+    // gone; the code below is then the unchanged installed flow.
+    if (poll && (await shouldHoldForSteamRestart(appId, poll, source))) {
+      sendFrontendMessage('gameStatusUpdate', {
+        appName: appId,
+        runner: 'steam',
+        status: 'installing',
+        context: 'steam-waiting-for-restart'
+      })
+      // Fire-once, shared with the 1026 branch's own guard (T-21-16-03): the
+      // user is told to restart Steam exactly once per install, and the
+      // release below must not repeat it.
+      if (!poll.notifiedWaiting) {
+        poll.notifiedWaiting = true
+        notifyRestartSteamToFinish(existing?.title ?? '')
+      }
+      return
+    }
+
     if (existing) {
       const updated: GameInfo = {
         ...existing,
@@ -2926,14 +3131,7 @@ export async function pollInstallOnce(
       !poll.notifiedWaiting
     ) {
       poll.notifiedWaiting = true
-      notify({
-        title: existing?.title ?? '',
-        body: i18next.t(
-          'steam.waitingForSteam.notify',
-          'Restart Steam to finish installing {{game}}',
-          { game: existing?.title ?? '' }
-        )
-      })
+      notifyRestartSteamToFinish(existing?.title ?? '')
     }
 
     stopInstallPolling(appId)
@@ -2953,6 +3151,26 @@ export async function pollInstallOnce(
   // 'absent': no message — grace/cap logic is in startInstallPolling's setInterval callback
   if (result.state === 'absent' && poll?.seenDownloading) {
     poll.absentTicksSinceSeen++
+    // D-UAT-13: the finalized manifest vanished while holding for a Steam
+    // restart (files removed by hand, or removed through Steam). Nothing is
+    // left to wait for; end the hold rather than leaving the UI on a
+    // permanent "Restart Steam to finish". Same tolerance as the delegated
+    // manifest-gone rule, so Steam briefly rewriting the file isn't a stop.
+    if (
+      poll.steamHold === 'holding' &&
+      poll.absentTicksSinceSeen >= MANIFEST_GONE_TICKS
+    ) {
+      logWarning(
+        `Steam: install polling for appId ${appId} stopped — manifest disappeared while waiting for a Steam restart`,
+        LogPrefix.Steam
+      )
+      sendFrontendMessage('gameStatusUpdate', {
+        appName: appId,
+        runner: 'steam',
+        status: 'done'
+      })
+      stopInstallPolling(appId)
+    }
   }
 }
 
@@ -3118,14 +3336,33 @@ export function startInstallPolling(
     delegatedToSteamClient,
     absentTicksSinceSeen: 0,
     awaitingBottledSteam: false,
-    bottledSteamDispatched: false
+    bottledSteamDispatched: false,
+    steamHold: 'unprobed' as 'unprobed' | 'holding' | 'released',
+    steamPidsAtHandoff: [] as number[],
+    lastSteamProbeMs: 0
   }
 
   const timer = setInterval(async () => {
     entry.ticks++
 
+    // D-UAT-13: a poll holding for a Steam restart must not strand the
+    // "Restart Steam to finish" UI when the safety cap arrives (the cap stop
+    // below sends no status). Release the hold and let THIS tick fall through
+    // to pollInstallOnce, whose installed flow reports the game installed and
+    // stops the poll; if the manifest is gone by then the cap stop below
+    // takes it on the next tick, exactly as for any other poll.
+    let capReleasedHold = false
+    if (entry.ticks >= MAX_TICKS && entry.steamHold === 'holding') {
+      logWarning(
+        `Steam: install polling for appId ${appId} hit safety cap (${MAX_TICKS} ticks) while waiting for a Steam restart; reporting it installed`,
+        LogPrefix.Steam
+      )
+      entry.steamHold = 'released'
+      capReleasedHold = true
+    }
+
     // Absolute safety cap — stop after MAX_TICKS and rely on the D-01 focus backstop
-    if (entry.ticks >= MAX_TICKS) {
+    if (entry.ticks >= MAX_TICKS && !capReleasedHold) {
       logWarning(
         `Steam: install polling for appId ${appId} hit safety cap (${MAX_TICKS} ticks); relying on D-01 focus backstop`,
         LogPrefix.Steam
