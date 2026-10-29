@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
-status: executing
-stopped_at: Completed 56-34-PLAN.md (third live gate, Verdict PASS)
-last_updated: "2026-10-29T02:10:00.000Z"
+status: ready_to_plan
+stopped_at: Phase 56 complete (34/34) — ready to discuss Phase 57
+last_updated: 2026-10-29T02:12:15.177Z
 last_activity: 2026-10-29
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 142
   completed_plans: 142
-  percent: 72
+  percent: 71
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 56 — bridge-steamclient-layer-drm-mode-for-steamstub-titles
+**Current focus:** Phase 57 — opt in known fix sharing via relay
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -71,10 +71,10 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
-Plan: 8 of 34
-Status: Ready to execute
-Last activity: 2026-10-29 - Completed quick task 261029-mbi: no early done from markBridgeGameInstalled
+Phase: 57
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-29
 
 Progress: [██████████] 99%
 
