@@ -483,8 +483,7 @@
         "gog": "GOG tizimiga kirish",
         "message": "Platformangiz bilan tizimga kiring. Siz bir vaqtning o'zida bir nechta platformaga kirishingiz mumkin.",
         "amazon": "Amazonga kirish",
-        "old-mac": "",
-        "zoom": ""
+        "old-mac": ""
     },
     "message": {
         "sync": "Sinxronizatsiya tugallandi",
@@ -724,7 +723,6 @@
                 "legendary": "",
                 "nile": "",
                 "gog": "",
-                "zoom": "",
                 "game-log": "",
                 "heroic": ""
             },
@@ -779,8 +777,7 @@
         "experimental_features": {
             "cometSupport": "",
             "enableNewDesign": "",
-            "enableHelp": "",
-            "zoomPlatform": ""
+            "enableHelp": ""
         },
         "hdr": "",
         "autodxvknvapi": "",
@@ -1078,7 +1075,6 @@
         "noGames": "",
         "noResults": ""
     },
-    "zoom-store": "",
     "wineExplanation": {
         "proton-ge": "",
         "gpt": "",

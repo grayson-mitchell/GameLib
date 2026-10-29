@@ -142,7 +142,6 @@ src/frontend/helpers/library.ts - epicCategories
 src/frontend/helpers/library.ts - gogCategories
 src/frontend/helpers/library.ts - sideloadedCategories
 src/frontend/helpers/library.ts - steamCategories
-src/frontend/helpers/library.ts - zoomCategories
 src/frontend/screens/Game/GamePage/components/__tests__/faithfulTranslate.ts - faithfulReactI18next
 src/frontend/screens/Login/components/LoginWarning/index.tsx - default
 #

@@ -433,8 +433,7 @@
         "gog": "Σύνδεση στο GOG",
         "message": "Συνδεθείτε με την πλατφόρμα σας. Μπορείτε να συνδεθείτε σε περισσότερες από μία πλατφόρμες ταυτόχρονα.",
         "amazon": "Είσοδος Amazon",
-        "old-mac": "Η έκδοση του macOS σας είναι η {{version}}. Απαιτείται macOS 12 ή νεότερο για να συνδεθείτε.",
-        "zoom": "Σύνδεση στο Zoom"
+        "old-mac": "Η έκδοση του macOS σας είναι η {{version}}. Απαιτείται macOS 12 ή νεότερο για να συνδεθείτε."
     },
     "message": {
         "sync": "Ο συγχρονισμός ολοκληρώθηκε",
@@ -678,8 +677,7 @@
                 "gog": "Αρχείο καταγραφής του GOG",
                 "heroic": "Γενικό αρχείο καταγραφής του GameLib",
                 "legendary": "Αρχείο καταγραφής του Epic Games / Legendary",
-                "nile": "Αρχείο καταγραφής του Amazon / Nile",
-                "zoom": "Αρχείο καταγραφής του Zoom"
+                "nile": "Αρχείο καταγραφής του Amazon / Nile"
             },
             "join-heroic-discord": "Γίνετε μέλος του Discord μας",
             "show-uploads": "Εμφάνιση μεταφορτωμένων αρχείων καταγραφής"
@@ -743,8 +741,7 @@
         "experimental_features": {
             "cometSupport": "Υποστήριξη Comet",
             "enableNewDesign": "Νέα σχεδίαση",
-            "enableHelp": "Στοιχείο βοήθειας",
-            "zoomPlatform": "Υποστήριξη πλατφόρμας Zoom (μόνο για Linux)"
+            "enableHelp": "Στοιχείο βοήθειας"
         },
         "allow_non_ge_proton": {
             "confirmation": {
@@ -1102,7 +1099,6 @@
         "wine-crossover": "",
         "wine-staging-macos": ""
     },
-    "zoom-store": "Κατάστημα Zoom",
     "launch": {
         "options": "Ρυθμίσεις εκκίνησης..."
     },

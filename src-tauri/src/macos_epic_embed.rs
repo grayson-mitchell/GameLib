@@ -1201,7 +1201,7 @@ mod surface_for_store_key_tests {
 
     #[test]
     fn every_other_configured_store_key_routes_to_the_tauri_embed() {
-        for key in ["gog", "amazon", "zoom", "steam", "humble"] {
+        for key in ["gog", "amazon", "steam", "humble"] {
             assert_eq!(
                 surface_for_store_key(key),
                 EpicEmbedSurfaceSelection::TauriEmbed,

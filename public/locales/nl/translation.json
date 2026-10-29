@@ -434,8 +434,7 @@
         "gog": "GOG Login",
         "message": "Login with your platform. You can login to more than one platform at the same time.",
         "amazon": "Amazon-login",
-        "old-mac": "Uw macOS versie is {{version}}. macOS 12 of nieuwer is nodig om in te loggen.",
-        "zoom": ""
+        "old-mac": "Uw macOS versie is {{version}}. macOS 12 of nieuwer is nodig om in te loggen."
     },
     "message": {
         "sync": "Synchronisatie compleet",
@@ -680,8 +679,7 @@
                 "gog": "GOG logboek",
                 "heroic": "Algemene GameLib logboek",
                 "legendary": "Epic Games / Legendarisch logboek",
-                "nile": "Amazon / Nile logboek",
-                "zoom": "Zoom logboek"
+                "nile": "Amazon / Nile logboek"
             },
             "show-uploads": "Laat geüploade logboek-bestanden zien"
         },
@@ -752,8 +750,7 @@
         "experimental_features": {
             "enableNewDesign": "Nieuw uiterlijk",
             "cometSupport": "Ondersteunt door Comet",
-            "enableHelp": "Hulpcomponent",
-            "zoomPlatform": "Zoom Platform ondersteuning (alleen Linux)"
+            "enableHelp": "Hulpcomponent"
         },
         "allow_non_ge_proton": {
             "confirmation": {
@@ -1102,7 +1099,6 @@
         "wine-crossover": "",
         "wine-staging-macos": ""
     },
-    "zoom-store": "Zoom Winkel",
     "amazon-luna": "Amazon Luna",
     "launch": {
         "options": "Opstartopties..."

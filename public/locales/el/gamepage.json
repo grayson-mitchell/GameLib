@@ -213,8 +213,7 @@
         "gog": "Δεν έχετε συνδεθεί με λογαριασμό GOG στο GameLib. Μην χρησιμοποιείτε τη σελίδα του καταστήματος για να συνδεθείτε, κάντε κλικ στο ακόλουθο κουμπί:",
         "login": "Log in",
         "title": "ΔΕΝ είστε συνδεδεμένοι",
-        "amazon": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:",
-        "zoom": "You are not logged in with a GOG account in GameLib. Don't use the store page to login, click the following button instead:"
+        "amazon": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:"
     },
     "report_problem": "Αναφορά προβλήματος κατά την εκτέλεση του παιχνιδιού",
     "sdl": {

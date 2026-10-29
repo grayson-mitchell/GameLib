@@ -444,8 +444,7 @@
         "gog": "Вписване в GOG",
         "message": "Впишете се в избраната система. Може да сте вписан(а) едновременно в няколко системи.",
         "amazon": "Вписване в Amazon",
-        "old-mac": "Вие използвате macOS версия {{version}}. За вписване се изисква macOS версия 12 или по-нова.",
-        "zoom": "Вписване в Zoom"
+        "old-mac": "Вие използвате macOS версия {{version}}. За вписване се изисква macOS версия 12 или по-нова."
     },
     "message": {
         "sync": "Синхронизацията е завършена",
@@ -661,8 +660,7 @@
                 "gog": "Журнал на GOG",
                 "heroic": "Общ журнал на GameLib",
                 "legendary": "Журнал на Epic Games / Legendary",
-                "nile": "Журнал на Amazon / Nile",
-                "zoom": "Журнал на Zoom"
+                "nile": "Журнал на Amazon / Nile"
             },
             "upload": {
                 "title": "Заглавие на журнала",
@@ -739,8 +737,7 @@
             "enableHelp": "Помощен компонент",
             "automaticWinetricksFixes": "Автоматично прилагане на известните поправки",
             "umuSupport": "Използване на umu като среда за изпълнение на Proton",
-            "cometSupport": "Поддръжка на Comet",
-            "zoomPlatform": "Поддръжка на Zoom (само за Линукс)"
+            "cometSupport": "Поддръжка на Comet"
         },
         "disablePlaytimeSync": "Изключване на синхронизирането на игралното време",
         "frameless-window": {
@@ -1133,7 +1130,6 @@
         "title": "Изпращане на анонимни аналитични данни"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Магазин на Zoom",
     "launch": {
         "options": "Параметри за стартиране…"
     },

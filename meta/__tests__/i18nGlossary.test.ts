@@ -26,8 +26,6 @@ const REQUIRED_TERMS = [
   'Windows',
   'MB/s',
   'Amazon',
-  'ZOOM',
-  'Zoom',
   'Epic/Legendary',
   'Amazon/Nile',
   'Amazon Games'

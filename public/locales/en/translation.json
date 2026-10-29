@@ -409,7 +409,7 @@
         "title": "Downloads"
     },
     "emptyLibrary": {
-        "noGames": "Your library is empty.<br /><br />Click <4>here</4> to log in with your Epic, GOG.com, Amazon, Steam, or Zoom accounts. Then, your games will show up here in the Library.<br /><br />To use games or apps from other sources, click <br /> to add them manually.",
+        "noGames": "Your library is empty.<br /><br />Click <4>here</4> to log in with your Epic, GOG.com, Amazon, or Steam accounts. Then, your games will show up here in the Library.<br /><br />To use games or apps from other sources, click <br /> to add them manually.",
         "noResults": "The current filters produced no results."
     },
     "epic": {
@@ -638,8 +638,7 @@
         "humble_reconnect": "Session expired — Reconnect",
         "message": "Login with your platform. You can login to more than one platform at the same time.",
         "old-mac": "Your macOS version is {{version}}. macOS 12 or newer is required to log in.",
-        "steam": "Steam Login",
-        "zoom": "Zoom Login"
+        "steam": "Steam Login"
     },
     "message": {
         "sync": "Sync Complete",
@@ -870,8 +869,7 @@
         "experimental_features": {
             "cometSupport": "Comet support",
             "enableHelp": "Help component",
-            "enableNewDesign": "New design",
-            "zoomPlatform": "Zoom Platform support (only Linux)"
+            "enableNewDesign": "New design"
         },
         "frameless-window": {
             "confirmation": {
@@ -901,8 +899,7 @@
                 "gog": "GOG log",
                 "heroic": "General GameLib log",
                 "legendary": "Epic Games / Legendary log",
-                "nile": "Amazon / Nile log",
-                "zoom": "Zoom log"
+                "nile": "Amazon / Nile log"
             },
             "instructions": "Join our Discord and look for the \"#-support\" section. Read the pinned \"Read Me First | Frequently Asked Questions\" thread and follow the instructions to share these logs and any relevant information about your problem.",
             "instructions_title": "How to report a problem?",
@@ -1320,6 +1317,5 @@
     },
     "winetricks": {
         "loading-available": "Loading available components ..."
-    },
-    "zoom-store": "Zoom Store"
+    }
 }

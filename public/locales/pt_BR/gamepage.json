@@ -235,8 +235,7 @@
         "gog": "Você não está logado em uma conta GOG no GameLib. Não use a página da loja para fazer login, clique no seguinte botão:",
         "login": "Entrar",
         "title": "Você NÃO está logado",
-        "amazon": "Você não está logado em uma conta Amazon no GameLib. Não use a página da loja para fazer login, clique no seguinte botão:",
-        "zoom": "Você não está conectado com uma conta Zoom no GameLib. Não use a página da loja para fazer login, clique no botão a seguir:"
+        "amazon": "Você não está logado em uma conta Amazon no GameLib. Não use a página da loja para fazer login, clique no seguinte botão:"
     },
     "report_problem": "Relatar um problema na execução deste jogo",
     "sdl": {

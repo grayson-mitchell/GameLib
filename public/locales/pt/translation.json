@@ -444,8 +444,7 @@
         "gog": "Iniciar Sessão na GOG",
         "message": "Faça o inicio de sessão na sua plataforma. Pode fazê-lo em mais do que uma plataforma ao mesmo tempo.",
         "amazon": "Iniciar Sessão na Amazon",
-        "old-mac": "A sua versão do macOS é {{version}}. É necessária a versão macOS 12 ou mais recente para iniciar sessão.",
-        "zoom": "Iniciar sessão no Zoom"
+        "old-mac": "A sua versão do macOS é {{version}}. É necessária a versão macOS 12 ou mais recente para iniciar sessão."
     },
     "message": {
         "sync": "Sincronização Concluída",
@@ -690,8 +689,7 @@
                 "gog": "Registo de eventos da GOG",
                 "heroic": "Registo de eventos gerais do GameLib",
                 "game-log": "Registo de eventos do jogo {{gameTitle}}",
-                "legendary": "Registo de eventos da Epic Games / Legendary",
-                "zoom": "Registos do Zoom"
+                "legendary": "Registo de eventos da Epic Games / Legendary"
             },
             "show-uploads": "Mostrar ficheiros de registo de eventos enviados"
         },
@@ -739,8 +737,7 @@
             "enableHelp": "Componente de ajuda",
             "automaticWinetricksFixes": "Aplicar correções conhecidas automaticamente",
             "umuSupport": "Utilize umu como runtime do Proton",
-            "cometSupport": "Suporte para o Comet",
-            "zoomPlatform": "Suporte da plataforma Zoom (apenas Linux)"
+            "cometSupport": "Suporte para o Comet"
         },
         "frameless-window": {
             "confirmation": {
@@ -1129,7 +1126,6 @@
         "title": "Enviar Dados Analíticos de forma Anónima"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Loja do Zoom",
     "launch": {
         "options": "Opções de Arranque..."
     },

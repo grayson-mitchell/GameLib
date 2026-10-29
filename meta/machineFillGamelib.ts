@@ -454,8 +454,7 @@ function escapeRegExp(value: string): string {
 // everyday English noun, so this silently rejected 185 of 242 outstanding
 // machine-fill translations across 46 languages while the run still
 // exited 0; German passed only because "Browser" happens to also be the
-// capitalised German noun. The same trap is latent for `Mac`, `GE` and
-// `Zoom`.
+// capitalised German noun. The same trap is latent for `Mac` and `GE`.
 //
 // The fix, applied here: this check is now symmetric with
 // `containsTermVerbatim` -- if the source contains the glossary term

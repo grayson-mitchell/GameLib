@@ -463,8 +463,7 @@
             "enableHelp": "Pagalbos komponentas",
             "automaticWinetricksFixes": "Automatiškai pritaikyti žinomus sutaisymus",
             "cometSupport": "„Comet“ palaikymas",
-            "umuSupport": "Naudoti „umu“ kaip „Pronton“ vykdantįjį",
-            "zoomPlatform": "„Zoom“ platformos palaikymas (tik „Linux“)"
+            "umuSupport": "Naudoti „umu“ kaip „Pronton“ vykdantįjį"
         },
         "crossover-version": "„Crossover“/„Wine“ versija",
         "default-install-path": "Numatytas įdiegimo kelias",
@@ -513,8 +512,7 @@
                 "gog": "„GOG“ žurnalas",
                 "heroic": "Bendras „GameLib“ žurnalas",
                 "legendary": "„Epic Games“ / „Legendary“ žurnalas",
-                "nile": "„Amazon“ / „Nile“ žurnalas",
-                "zoom": "„Zoom“ žurnalas"
+                "nile": "„Amazon“ / „Nile“ žurnalas"
             },
             "join-heroic-discord": "Prisijunkite prie mūsų „Discord“",
             "show-in-folder": "Rodyti žurnalo failą aplanke/-ale",
@@ -832,8 +830,7 @@
         "alternative_method": "Alternatyvus prisijungimo būdas",
         "epic": "„Epic Games“ prisijungimas",
         "message": "Prisijunkite su savo platforma. Jūs galite prisijungti prie daugiau nei vieną platformą vienu metu.",
-        "old-mac": "Jūsų „macOS“ versija yra – {{version}}. „macOS 12“ ar naujesnė yra reikalinga, norint prisijungti.",
-        "zoom": "„Zoom“ prisijungimas"
+        "old-mac": "Jūsų „macOS“ versija yra – {{version}}. „macOS 12“ ar naujesnė yra reikalinga, norint prisijungti."
     },
     "offline-message": {
         "ignore": "Ignoruoti",
@@ -1076,7 +1073,6 @@
         "options": "Paleidimo parinktys..."
     },
     "amazon-luna": "„Amazon Luna“",
-    "zoom-store": "„Zoom“ parduotuvė",
     "discounts": {
         "filters": {
             "os": "Operacinė sistema",

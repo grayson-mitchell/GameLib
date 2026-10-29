@@ -435,8 +435,7 @@
         "gog": "GOG-inloggning",
         "message": "Logga in på önskad plattform. Du kan vara inloggad på fler än en plattform samtidigt.",
         "amazon": "Amazon-inloggning",
-        "old-mac": "Din macOS version är {{version}}. macOS 12 eller senare krävs för att logga in.",
-        "zoom": "Zoom inloggning"
+        "old-mac": "Din macOS version är {{version}}. macOS 12 eller senare krävs för att logga in."
     },
     "message": {
         "sync": "Synkronisering slutförd",
@@ -681,8 +680,7 @@
                 "gog": "GOG-logg",
                 "heroic": "Allmän GameLib logg",
                 "legendary": "Epic Games / Legendary logg",
-                "nile": "Amazon / Nile logg",
-                "zoom": "Zoom logg"
+                "nile": "Amazon / Nile logg"
             },
             "show-uploads": "Visa uppladdade loggfiler"
         },
@@ -730,8 +728,7 @@
             "enableHelp": "Hjälp komponent",
             "automaticWinetricksFixes": "Tillämpa kända fixar automatiskt",
             "umuSupport": "Använd umu som Proton körtid",
-            "cometSupport": "Comet stöd",
-            "zoomPlatform": "Stöd för Zoom-plattformen (endast Linux)"
+            "cometSupport": "Comet stöd"
         },
         "frameless-window": {
             "confirmation": {
@@ -1106,7 +1103,6 @@
         "title": "Skicka anonym analysdata"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Zoom butik",
     "launch": {
         "options": "Startalternativ..."
     },

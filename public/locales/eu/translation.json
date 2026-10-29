@@ -434,8 +434,7 @@
         "gog": "Hasi GOG saioa",
         "message": "Hasi saioa zure plataformetan. Saioa behin baino gehiagotan batera has dezakezu.",
         "amazon": "Amazon-en saioa",
-        "old-mac": "",
-        "zoom": ""
+        "old-mac": ""
     },
     "message": {
         "sync": "Sinkronizazioa amaituta",
@@ -679,7 +678,6 @@
                 "legendary": "",
                 "nile": "",
                 "gog": "",
-                "zoom": "",
                 "game-log": "{{gameTitle}}-(r)en aldaketak",
                 "heroic": ""
             },
@@ -737,8 +735,7 @@
         "experimental_features": {
             "cometSupport": "",
             "enableNewDesign": "",
-            "enableHelp": "",
-            "zoomPlatform": ""
+            "enableHelp": ""
         },
         "hdr": "",
         "autodxvknvapi": "",
@@ -1095,7 +1092,6 @@
         "noGames": "",
         "noResults": ""
     },
-    "zoom-store": "",
     "wineExplanation": {
         "proton-ge": "",
         "gpt": "",

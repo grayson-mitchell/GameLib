@@ -450,8 +450,7 @@
         "gog": "Přihlášení s účtem GOG",
         "message": "Přihlaste se pomocí své platformy. Můžete se přihlásit k více platformám najednou.",
         "amazon": "Přihlášení s účtem Amazon",
-        "old-mac": "Verze vašeho systému macOS je {{version}}. Pro přihlášení je vyžadován macOS 12 nebo novější.",
-        "zoom": "Přihlášení přes Zoom"
+        "old-mac": "Verze vašeho systému macOS je {{version}}. Pro přihlášení je vyžadován macOS 12 nebo novější."
     },
     "message": {
         "sync": "Synchronizace dokončena",
@@ -696,8 +695,7 @@
                 "heroic": "Obecný protokol GameLib",
                 "game-log": "Protokol hry {{gameTitle}}",
                 "legendary": "Protokol Epic Games / Legendary",
-                "nile": "Protokol Amazon / Nile",
-                "zoom": "Zoom log"
+                "nile": "Protokol Amazon / Nile"
             },
             "show-uploads": "Zobrazit nahrané soubory protokolů"
         },
@@ -745,8 +743,7 @@
             "enableHelp": "Komponenta nápovědy",
             "automaticWinetricksFixes": "Automaticky použít známé opravy",
             "umuSupport": "Použít umu jako runtime Protonu",
-            "cometSupport": "Podpora Comet",
-            "zoomPlatform": "Podpora platformy Zoom (pouze Linux)"
+            "cometSupport": "Podpora Comet"
         },
         "disablePlaytimeSync": "Zakázat synchronizaci času hraní",
         "gamescope": {
@@ -1140,7 +1137,6 @@
         "title": "Odeslat anonymní statistiky"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Obchod Zoom",
     "launch": {
         "options": "Možnosti spuštění..."
     },

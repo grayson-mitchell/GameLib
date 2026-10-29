@@ -235,8 +235,7 @@
         "gog": "你在 GameLib 中未登录 GOG 账号。不要使用商店页面进行登录，请单击下面的按钮：",
         "login": "登录",
         "title": "你未登录",
-        "amazon": "你在 GameLib 中未登录 Amazon 账号。不要使用商店页面进行登录，请点击下面的按钮：",
-        "zoom": "您在 GameLib 中没有用 Zoom 账户登录。别用商店页面登录，请单击下面的按钮："
+        "amazon": "你在 GameLib 中未登录 Amazon 账号。不要使用商店页面进行登录，请点击下面的按钮："
     },
     "report_problem": "报告运行此游戏时出现的问题",
     "sdl": {

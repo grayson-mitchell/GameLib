@@ -413,7 +413,6 @@
                 "legendary": "",
                 "nile": "",
                 "gog": "",
-                "zoom": "",
                 "game-log": "",
                 "heroic": ""
             },
@@ -469,8 +468,7 @@
             "enableNewShinyFeature": "תכונה מבריקה חדשה",
             "cometSupport": "",
             "enableNewDesign": "",
-            "enableHelp": "",
-            "zoomPlatform": ""
+            "enableHelp": ""
         },
         "msync": "הפעל Esync",
         "frameless-window": {
@@ -938,8 +936,7 @@
         "amazon": "כניסת אמזון",
         "epic": "כניסה עם Epic Games",
         "message": "הכנס עם הפלטפורמה שלך. אתה יכול להתחבר ליותר מפלטפורמה אחת בו זמנית.",
-        "old-mac": "גרסת ה-macOS שלך היא {{version}}. macOS 12 או יותר נדרשת כדי להיכנס.",
-        "zoom": ""
+        "old-mac": "גרסת ה-macOS שלך היא {{version}}. macOS 12 או יותר נדרשת כדי להיכנס."
     },
     "library": {
         "refresh": "רענן",
@@ -1073,7 +1070,6 @@
         "noGames": "",
         "noResults": ""
     },
-    "zoom-store": "",
     "wineExplanation": {
         "proton-ge": "",
         "gpt": "",

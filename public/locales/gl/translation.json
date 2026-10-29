@@ -444,8 +444,7 @@
         "gog": "Iniciar sesión en GOG",
         "message": "Inicia sesión. Podes ter a sesión iniciada en máis de unha plataforma ao mesmo tempo.",
         "amazon": "Inicio de sesión en Amazon",
-        "old-mac": "A túa versión de macOS é {{version}}. Requírese macOS 12 ou máis novo para iniciar sesión.",
-        "zoom": "Inicio de sesión en Zoom"
+        "old-mac": "A túa versión de macOS é {{version}}. Requírese macOS 12 ou máis novo para iniciar sesión."
     },
     "message": {
         "sync": "Sincronización completa",
@@ -689,8 +688,7 @@
                 "gog": "Rexistros de GOG",
                 "heroic": "Rexistros xerais de GameLib",
                 "legendary": "Rexistros de Epic Games / Legendary",
-                "nile": "Rexistros de Amazon / Nile",
-                "zoom": "Rexistro de Zoom"
+                "nile": "Rexistros de Amazon / Nile"
             },
             "join-heroic-discord": "Únete ao noso Discord",
             "show-uploads": "Amosar os rexistros subidos"
@@ -765,8 +763,7 @@
         "experimental_features": {
             "cometSupport": "Soporte para Comet",
             "enableHelp": "Compoñente de axuda",
-            "enableNewDesign": "Novo deseño",
-            "zoomPlatform": "Compatibilidade con Zoom Platform (só Linux)"
+            "enableNewDesign": "Novo deseño"
         },
         "frameless-window": {
             "confirmation": {
@@ -1127,7 +1124,6 @@
         "proton-cachyos": "Proton-CachyOS é unha variante de Proton mantida polo equipo de CachyOS. Inclúe ferramentas adicionais como DXVK-Sarek e D7VK."
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Tenda de Zoom",
     "launch": {
         "options": "Opcións de arranque..."
     },

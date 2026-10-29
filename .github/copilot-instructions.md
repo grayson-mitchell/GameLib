@@ -26,9 +26,7 @@ All frontend↔backend communication goes through a **fully type-safe IPC system
 
 Game store backends are abstracted via two interfaces in `src/common/types/`: `GameManager` (per-game ops: install, launch, update, repair, etc.) and `LibraryManager` (library-level: getGameInfo, listUpdateableGames, etc.).
 
-Each runner (`legendary`, `gog`, `nile`, `sideload`, `zoom`) implements these as **module-level exported functions** (not classes). They are aggregated into `gameManagerMap` and `libraryManagerMap` in `src/backend/storeManagers/index.ts` for polymorphic dispatch by `Runner` key.
-
-> **Zoom runner** (`src/backend/storeManagers/zoom/`) is **experimental and Linux-only**, gated behind a feature flag. Unlike the other runners which wrap CLI tools, Zoom directly calls the ZOOM Platform REST API via HTTP. Several operations (update, repair, import) are stubs. Always check the feature flag before enabling Zoom-related code paths.
+Each runner (`legendary`, `gog`, `nile`, `sideload`) implements these as **module-level exported functions** (not classes). They are aggregated into `gameManagerMap` and `libraryManagerMap` in `src/backend/storeManagers/index.ts` for polymorphic dispatch by `Runner` key.
 
 ## Wine/Proton Management (Linux & macOS)
 
@@ -84,7 +82,7 @@ pnpm start                             # dev mode with HMR
 
 ## Key Conventions
 
-- **Runner type**: `'legendary' | 'gog' | 'nile' | 'sideload' | 'zoom'` — always use this union, never hardcode store-specific logic without the manager maps.
+- **Runner type**: `'legendary' | 'gog' | 'nile' | 'sideload'` — always use this union, never hardcode store-specific logic without the manager maps.
 - **Persistence**: `electron-store` with typed wrappers (`TypeCheckedStoreBackend`/`TypeCheckedStoreFrontend`). Store schema is the `StoreStructure` interface in `src/common/types/electron_store.ts`; `src/backend/schemas.ts` only contains the Zod schema for validating file paths.
 - **i18n**: `i18next` — backend uses `i18next-fs-backend`, frontend uses `i18next-http-backend`. 50+ locales in `public/locales/`.
 - **No direct Electron imports in frontend** — everything goes through `window.api` (enforced by ESLint `no-restricted-imports`).

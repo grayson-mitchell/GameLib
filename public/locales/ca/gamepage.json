@@ -235,8 +235,7 @@
         "gog": "No has iniciat sessió amb un compte de GOG al GameLib. No facis servir la pàgina de la botiga per a iniciar-la. Fes-ho després de prémer el botó següent:",
         "login": "Inicia la sessió",
         "title": "No has iniciat sessió",
-        "amazon": "No has iniciat sessió amb un compte d'Amazon al GameLib. No facis servir la pàgina de la botiga per a iniciar-la, fes-ho millor amb aquest botó:",
-        "zoom": "No has iniciat sessió amb un compte Zoom a GameLib. No utilitzes la pàgina de la botiga per iniciar la sessió, en compte d'això fes clic al botó següent:"
+        "amazon": "No has iniciat sessió amb un compte d'Amazon al GameLib. No facis servir la pàgina de la botiga per a iniciar-la, fes-ho millor amb aquest botó:"
     },
     "report_problem": "Informa d'un problema quan s'executa el joc",
     "sdl": {

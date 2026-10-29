@@ -433,8 +433,7 @@
         "gog": "GOG 登入",
         "message": "登入您的平台。您可以同時登入多個平台。",
         "amazon": "Amazon 登入",
-        "old-mac": "您的 macOS 版本是 {{version}}。需要 macOS 12 或以上版本才能登入。",
-        "zoom": ""
+        "old-mac": "您的 macOS 版本是 {{version}}。需要 macOS 12 或以上版本才能登入。"
     },
     "message": {
         "sync": "同步完成",
@@ -678,7 +677,6 @@
                 "legendary": "",
                 "nile": "",
                 "gog": "",
-                "zoom": "",
                 "game-log": "{{gameTitle}} 更新日誌",
                 "heroic": ""
             },
@@ -735,8 +733,7 @@
         "experimental_features": {
             "enableHelp": "幫助元件",
             "enableNewDesign": "新設計",
-            "cometSupport": "",
-            "zoomPlatform": ""
+            "cometSupport": ""
         },
         "allow_installation_broken_anticheat": {
             "confirmation": {
@@ -1094,7 +1091,6 @@
         "noGames": "",
         "noResults": ""
     },
-    "zoom-store": "",
     "wineExplanation": {
         "proton-ge": "",
         "gpt": "",

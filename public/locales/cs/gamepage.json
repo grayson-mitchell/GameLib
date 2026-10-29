@@ -235,8 +235,7 @@
         "gog": "V GameLib nejste přihlášeni pomocí účtu GOG. K přihlášení nepoužívejte stránku obchodu, ale klikněte na následující tlačítko:",
         "login": "Log in",
         "title": "Nejste přihlášeni",
-        "amazon": "V GameLib nejste přihlášeni pomocí účtu Amazon. K přihlášení nepoužívejte stránku obchodu, ale klikněte na následující tlačítko:",
-        "zoom": "Nejste přihlášeni k účtu Zoom v GameLib. Nepoužívejte stránku obchodu k přihlášení, místo toho klikněte na následující tlačítko:"
+        "amazon": "V GameLib nejste přihlášeni pomocí účtu Amazon. K přihlášení nepoužívejte stránku obchodu, ale klikněte na následující tlačítko:"
     },
     "report_problem": "Nahlásit problém se spouštěním této hry",
     "sdl": {

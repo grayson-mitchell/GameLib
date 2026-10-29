@@ -443,8 +443,7 @@
         "gog": "Уваход у GOG",
         "message": "Увайдзіце са сваёй платформы. Вы можаце ўвайсці на больш чым адну платформу адначасова.",
         "amazon": "Уваход у Amazon",
-        "old-mac": "Ваша версія macOS: {{version}}. Для ўваходу патрабуецца macOS 12 або навей.",
-        "zoom": ""
+        "old-mac": "Ваша версія macOS: {{version}}. Для ўваходу патрабуецца macOS 12 або навей."
     },
     "message": {
         "sync": "Сінхранізацыя завершана",
@@ -690,8 +689,7 @@
                 "nile": "Журнал Amazon / Nile",
                 "game-log": "Журнал гульні {{gameTitle}}",
                 "gog": "Журнал GOG",
-                "legendary": "Журнал Epic Games / Legendary",
-                "zoom": ""
+                "legendary": "Журнал Epic Games / Legendary"
             }
         },
         "mangohud": "Уключыць Mangohud (трэба ўсталяваць Mangohud)",
@@ -738,8 +736,7 @@
             "enableHelp": "Кампанент даведкі",
             "umuSupport": "Выкарыстоўваць umu у якасці асяроддзя выканання Proton",
             "enableNewDesign": "Новы дызайн",
-            "cometSupport": "Падтрымка Comet",
-            "zoomPlatform": ""
+            "cometSupport": "Падтрымка Comet"
         },
         "disablePlaytimeSync": "Адключыць сінхранізацыю часу гульні",
         "frameless-window": {
@@ -1125,7 +1122,6 @@
         "options": "Параметры запуску..."
     },
     "amazon-luna": "",
-    "zoom-store": "",
     "discounts": {
         "region": {
             "countries": {

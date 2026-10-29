@@ -442,8 +442,7 @@
         "gog": "GOG Giriş",
         "message": "Platformunuz ile giriş yapın. Aynı anda birden fazla platforma giriş yapabilirsiniz.",
         "amazon": "Amazon Girişi",
-        "old-mac": "MacOS sürümünüz {{version}}. Oturum açmak için macOS 12 veya daha yeni bir sürüm gereklidir.",
-        "zoom": "Zoom Girişi"
+        "old-mac": "MacOS sürümünüz {{version}}. Oturum açmak için macOS 12 veya daha yeni bir sürüm gereklidir."
     },
     "message": {
         "sync": "Eşzamanlama Tamamlandı",
@@ -688,8 +687,7 @@
                 "heroic": "Genel GameLib kaydı",
                 "game-log": "{{gameTitle}} oyun kaydı",
                 "legendary": "Epic Games / Legendary kaydı",
-                "nile": "Amazon / Nile kaydı",
-                "zoom": "Zoom kaydı"
+                "nile": "Amazon / Nile kaydı"
             },
             "show-uploads": "Yüklenmiş günlük dosyalarını göster"
         },
@@ -737,8 +735,7 @@
             "enableHelp": "Yardım bileşeni",
             "automaticWinetricksFixes": "Bilinen düzeltmeleri kendiliğinden uygula",
             "cometSupport": "Comet desteği",
-            "umuSupport": "Proton çalışma zamanı olarak umu kullan",
-            "zoomPlatform": "Zoom Platform desteği (yalnızca Linux)"
+            "umuSupport": "Proton çalışma zamanı olarak umu kullan"
         },
         "frameless-window": {
             "confirmation": {
@@ -1130,7 +1127,6 @@
         "title": "Anonim Kullanım Verilerini Gönder"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Zoom Dükkanı",
     "launch": {
         "options": "Başlatma Seçenekleri..."
     },

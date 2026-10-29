@@ -437,8 +437,7 @@
         "gog": "Masuk ke GOG",
         "message": "Masuk dengan platform akun anda. Anda dapat masuk ke lebih dari satu platform akun secara bersamaan.",
         "amazon": "Masuk ke Amazon",
-        "old-mac": "Versi macOS anda adalah {{version}}. macOS 12 atau lebih diperlukan untuk masuk.",
-        "zoom": "Login Zoom"
+        "old-mac": "Versi macOS anda adalah {{version}}. macOS 12 atau lebih diperlukan untuk masuk."
     },
     "message": {
         "sync": "Sinkronisasi Selesai",
@@ -682,8 +681,7 @@
                 "gog": "Log GOG",
                 "heroic": "Log umum GameLib",
                 "legendary": "Log Epic Games / Legendary",
-                "nile": "Log Amazon / Nile",
-                "zoom": "Log Zoom"
+                "nile": "Log Amazon / Nile"
             },
             "join-heroic-discord": "Bergabunglah dengan Discord kami",
             "show-uploads": "Tampilkan file log yang diunggah"
@@ -736,8 +734,7 @@
         "experimental_features": {
             "enableNewDesign": "Desain baru",
             "cometSupport": "Dukungan Comet",
-            "enableHelp": "Komponen Bantuan",
-            "zoomPlatform": "Dukungan platform Zoom (hanya Linux)"
+            "enableHelp": "Komponen Bantuan"
         },
         "frameless-window": {
             "description": "Gunakan frameless window (perlu restart)",
@@ -1105,7 +1102,6 @@
         "wine-crossover": "Wine-Crossover didasarkan pada proyek Wine OpenSource Crossover dan direkomendasikan untuk Mac Intel serta untuk game DX11 atau yang lebih lama.",
         "wine-staging-macos": "Wine-Staging-macOS didasarkan pada proyek Wine utama dan direkomendasikan untuk Mac Intel serta untuk game DX11 atau yang lebih lama, terutama bila dipasangkan dengan alat DXMT."
     },
-    "zoom-store": "Toko Zoom",
     "launch": {
         "options": "Opsi Peluncuran…"
     },

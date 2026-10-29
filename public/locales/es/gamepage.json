@@ -235,8 +235,7 @@
         "gog": "No has iniciado sesión con una cuenta de GOG en GameLib. No uses la página de la tienda, haz clic en el siguiente botón:",
         "login": "Iniciar sesión",
         "title": "No has iniciado sesión",
-        "amazon": "No has iniciado sesión con una cuenta de Amazon en GameLib. No uses la página de la tienda, haz clic en el siguiente botón:",
-        "zoom": "No se ha conectado con una cuenta de Zoom en GameLib. No utilice la página de la tienda para iniciar sesión, en su lugar haga clic en el botón siguiente:"
+        "amazon": "No has iniciado sesión con una cuenta de Amazon en GameLib. No uses la página de la tienda, haz clic en el siguiente botón:"
     },
     "report_problem": "Reportar un problema al ejecutar este juego",
     "sdl": {

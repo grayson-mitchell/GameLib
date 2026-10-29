@@ -406,8 +406,7 @@
         "epic": "Епиц Гамес Логин",
         "gog": "ГОГ Логин",
         "amazon": "Амазон Логин",
-        "old-mac": "",
-        "zoom": ""
+        "old-mac": ""
     },
     "message": {
         "sync": "Синхронизација је завршена",
@@ -589,7 +588,6 @@
                 "legendary": "",
                 "nile": "",
                 "gog": "",
-                "zoom": "",
                 "game-log": "",
                 "heroic": ""
             },
@@ -669,8 +667,7 @@
         "experimental_features": {
             "cometSupport": "",
             "enableNewDesign": "",
-            "enableHelp": "",
-            "zoomPlatform": ""
+            "enableHelp": ""
         },
         "hdr": "",
         "autodxvknvapi": "",
@@ -1094,7 +1091,6 @@
         "close": "",
         "restore": ""
     },
-    "zoom-store": "",
     "wineExplanation": {
         "proton-ge": "",
         "gpt": "",

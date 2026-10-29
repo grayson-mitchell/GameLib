@@ -478,7 +478,6 @@
                 "legendary": "",
                 "nile": "",
                 "gog": "",
-                "zoom": "",
                 "game-log": "",
                 "heroic": ""
             },
@@ -509,8 +508,7 @@
         "experimental_features": {
             "cometSupport": "",
             "enableNewDesign": "",
-            "enableHelp": "",
-            "zoomPlatform": ""
+            "enableHelp": ""
         },
         "egs-sync": "",
         "hdr": "",
@@ -1005,8 +1003,7 @@
         "message": "",
         "gog": "",
         "epic": "",
-        "old-mac": "",
-        "zoom": ""
+        "old-mac": ""
     },
     "stores": "",
     "GOG": "",
@@ -1035,7 +1032,6 @@
     },
     "search": "",
     "error": "",
-    "zoom-store": "",
     "wineExplanation": {
         "proton-ge": "",
         "gpt": "",

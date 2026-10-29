@@ -216,8 +216,7 @@
         "gog": "Bạn chưa đăng nhập bằng tài khoản GOG trong GameLib. Không sử dụng trang cửa hàng để đăng nhập, thay vào đó hãy nhấp vào nút sau:",
         "login": "Log in",
         "title": "Bạn CHƯA đăng nhập",
-        "amazon": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:",
-        "zoom": "Bạn chưa đăng nhập bằng tài khoản Zoom trong GameLib. Không sử dụng trang cửa hàng để đăng nhập, thay vào đó hãy nhấp vào nút sau:"
+        "amazon": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:"
     },
     "report_problem": "Báo cáo sự cố khi chạy game này",
     "sdl": {

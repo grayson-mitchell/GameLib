@@ -444,8 +444,7 @@
         "gog": "GOG-innlogging",
         "message": "Logg inn med plattformen din. Du kan være innlogget i flere plattformer samtidig.",
         "amazon": "Amazon-pålogging",
-        "old-mac": "MacOS-versjonen din er {{version}}. macOS 12 eller nyere kreves for å logge på.",
-        "zoom": "Logg inn på Zoom"
+        "old-mac": "MacOS-versjonen din er {{version}}. macOS 12 eller nyere kreves for å logge på."
     },
     "message": {
         "sync": "Synkronisering fullført",
@@ -689,8 +688,7 @@
                 "heroic": "Generell GameLib-logg",
                 "legendary": "Epic Games- / Legendary-logg",
                 "nile": "Amazon- / Nile-logg",
-                "gog": "GOG-logg",
-                "zoom": "Zoom-logg"
+                "gog": "GOG-logg"
             },
             "show-uploads": "Vis opplastede loggfiler",
             "join-heroic-discord": "Bli med i vår discord"
@@ -755,8 +753,7 @@
         "experimental_features": {
             "enableHelp": "Hjelpskomponent",
             "cometSupport": "Comet støtte",
-            "enableNewDesign": "Nytt design",
-            "zoomPlatform": "Støtte for Zoom-plattformen (bare for Linux)"
+            "enableNewDesign": "Nytt design"
         },
         "frameless-window": {
             "confirmation": {
@@ -1124,7 +1121,6 @@
         "title": "Send anynom statistikk"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Zoom-butikk",
     "launch": {
         "options": "Startalternativer..."
     },

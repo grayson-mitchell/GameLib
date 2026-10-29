@@ -433,8 +433,7 @@
         "gog": "GOG Login",
         "message": "Login with your platform. You can login to more than one platform at the same time.",
         "amazon": "Amazon Giriş",
-        "old-mac": "",
-        "zoom": ""
+        "old-mac": ""
     },
     "message": {
         "sync": "Sinxronizasiya tamamlandı",
@@ -678,7 +677,6 @@
                 "legendary": "",
                 "nile": "",
                 "gog": "",
-                "zoom": "",
                 "game-log": "{{gameTitle}} üçün dəyişiklik jurnalı",
                 "heroic": ""
             },
@@ -736,8 +734,7 @@
         "experimental_features": {
             "cometSupport": "",
             "enableNewDesign": "",
-            "enableHelp": "",
-            "zoomPlatform": ""
+            "enableHelp": ""
         },
         "hdr": "",
         "autodxvknvapi": "",
@@ -1094,7 +1091,6 @@
         "noGames": "",
         "noResults": ""
     },
-    "zoom-store": "",
     "wineExplanation": {
         "proton-ge": "",
         "gpt": "",

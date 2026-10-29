@@ -434,8 +434,7 @@
         "gog": "ورود GOG",
         "message": "با پلتفرم خود وارد شوید. شما می توانید همزمان از چندین پلتفرم وارد شوید.",
         "amazon": "ورود به آمازون",
-        "old-mac": "",
-        "zoom": ""
+        "old-mac": ""
     },
     "message": {
         "sync": "همگامسازی کامل شد",
@@ -679,7 +678,6 @@
                 "legendary": "",
                 "nile": "",
                 "gog": "",
-                "zoom": "",
                 "game-log": "",
                 "heroic": ""
             },
@@ -739,8 +737,7 @@
         "experimental_features": {
             "cometSupport": "",
             "enableNewDesign": "",
-            "enableHelp": "",
-            "zoomPlatform": ""
+            "enableHelp": ""
         },
         "hdr": "",
         "show_valve_proton": {
@@ -1095,7 +1092,6 @@
         "noGames": "",
         "noResults": ""
     },
-    "zoom-store": "",
     "wineExplanation": {
         "proton-ge": "",
         "gpt": "",

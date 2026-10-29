@@ -234,8 +234,7 @@
         "gog": "Te pole GOG kontoga GameLibisse sisse logitud. Ärge kasutage sisse logimiseks poelehte, vaid klikkige sellele nupule:",
         "login": "Log in",
         "title": "Te EI OLE sisse logitud",
-        "amazon": "Te ei ole GameLibis Amazoni kontoga sisse logitud. Ärge kasutage sisselogimiseks poelehekülge. Klikkige selle asemel seda nuppu:",
-        "zoom": "Te ei ole GameLibis Zoomi kontoga sisse logitud. Ärge kasutage sisselogimiseks poelehekülge. Klikkige selle asemel seda nuppu:"
+        "amazon": "Te ei ole GameLibis Amazoni kontoga sisse logitud. Ärge kasutage sisselogimiseks poelehekülge. Klikkige selle asemel seda nuppu:"
     },
     "report_problem": "Teatage selle mängu käivitamise probleemist",
     "sdl": {

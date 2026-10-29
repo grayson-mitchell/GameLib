@@ -445,8 +445,7 @@
         "gog": "Iniciar Sesión en GOG",
         "message": "Inicie sesión en sus plataformas. Puede iniciar sesión en más de una a la vez.",
         "amazon": "Inicio de sesión en Amazon",
-        "old-mac": "Tu versión de macOS es {{version}}. Se requiere macOS 12 o posterior para ingresar a su cuenta.",
-        "zoom": "Inicio de sesión en Zoom"
+        "old-mac": "Tu versión de macOS es {{version}}. Se requiere macOS 12 o posterior para ingresar a su cuenta."
     },
     "message": {
         "sync": "Sincronización completa",
@@ -691,8 +690,7 @@
                 "game-log": "Registro de juego de {{gameTitle}}",
                 "gog": "Registro de GOG",
                 "heroic": "Registro general de GameLib",
-                "legendary": "Registro de Epic Games / Legendary",
-                "zoom": "Registro de Zoom"
+                "legendary": "Registro de Epic Games / Legendary"
             },
             "show-uploads": "Mostrar los registros subidos"
         },
@@ -740,8 +738,7 @@
             "enableHelp": "Componente de ayuda",
             "automaticWinetricksFixes": "Aplicar correcciones conocidas automáticamente",
             "cometSupport": "Soporte para Comet",
-            "umuSupport": "Usar umu como entorno de ejecución de Proton",
-            "zoomPlatform": "Compatibilidad con Zoom Platform (solo Linux)"
+            "umuSupport": "Usar umu como entorno de ejecución de Proton"
         },
         "disablePlaytimeSync": "Desactivar la sincronización del tiempo de juego",
         "frameless-window": {
@@ -1134,7 +1131,6 @@
         "title": "Enviar analíticas anónimas"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Tienda de Zoom",
     "launch": {
         "options": "Opciones de arranque..."
     },

@@ -444,8 +444,7 @@
         "gog": "GOG-Anmeldung",
         "message": "Melde dich bei deiner Plattform an. Du kannst auch bei mehreren gleichzeitig angemeldet sein.",
         "amazon": "Amazon-Anmeldung",
-        "old-mac": "Deine macOS Version ist {{version}}. Um sich anzumelden wird mindestens macOS 12 benötigt.",
-        "zoom": "Login mit Zoom"
+        "old-mac": "Deine macOS Version ist {{version}}. Um sich anzumelden wird mindestens macOS 12 benötigt."
     },
     "message": {
         "sync": "Synchronisation abgeschlossen",
@@ -690,8 +689,7 @@
                 "game-log": "Logdatei von {{gameTitle}}",
                 "gog": "GOG-Log",
                 "legendary": "Epic Games / Legendary Log",
-                "nile": "Amazon / Nile Log",
-                "zoom": "Zoom-Log"
+                "nile": "Amazon / Nile Log"
             },
             "show-uploads": "Hochgeladene Log-Dateien anzeigen"
         },
@@ -739,8 +737,7 @@
             "automaticWinetricksFixes": "Bekannte Winetricks Hilfsskripte automatisch anwenden",
             "enableHelp": "Hilfe aktivieren",
             "umuSupport": "umu als Proton Laufzeit verwenden",
-            "cometSupport": "Comet Support",
-            "zoomPlatform": "Zoom-Plattform-Support (nur Linux)"
+            "cometSupport": "Comet Support"
         },
         "frameless-window": {
             "confirmation": {
@@ -1126,7 +1123,6 @@
         "title": "Anonyme Analysedaten senden"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Zoom Store",
     "launch": {
         "options": "Startoptionen …"
     },

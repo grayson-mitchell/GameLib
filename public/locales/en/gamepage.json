@@ -311,8 +311,7 @@
         "epic": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:",
         "gog": "You are not logged in with a GOG account in GameLib. Don't use the store page to login, click the following button instead:",
         "login": "Log in",
-        "title": "You are NOT logged in",
-        "zoom": "You are not logged in with a Zoom account in GameLib. Don't use the store page to login, click the following button instead:"
+        "title": "You are NOT logged in"
     },
     "Open": "Open",
     "open-saves-folder": "Open Saves Folder",

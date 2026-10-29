@@ -260,8 +260,8 @@ const PLACEHOLDER_QUESTION_MARKS_RE = /^\?\?(\s|$)/
 // value), not rendered prose — this codebase's own convention is that real
 // UI text is sentence-cased ("Unrated", "Repair failed..."). This is what
 // lets `{ key: 'legendary', label: 'Epic' }` (ConsoleMode's store-label map,
-// D-21) need no code change: `legendary`/`gog`/`nile`/`steam`/`sideload`/
-// `zoom` are all internal keys, exempt by shape; `label`'s glossary-listed
+// D-21) need no code change: `legendary`/`gog`/`nile`/`steam`/`sideload`
+// are all internal keys, exempt by shape; `label`'s glossary-listed
 // brand strings are exempt by the glossary. A capitalized or multi-word
 // literal (`Unrated`, `Repair failed. See the log.`) is NOT a single
 // lowercase-leading token and is unaffected.
@@ -842,7 +842,7 @@ function isPartOfSplitGlossaryTerm(
  * (`electronStores.ts`, `GlobalState.tsx`, `RecentlyPlayed/index.tsx`).
  * Method-name-gated (not tied to a specific store variable name, since this
  * codebase has `configStore`/`gogConfigStore`/`nileConfigStore`/
- * `zoomConfigStore`/`wineDownloaderInfoStore`, all sharing the same
+ * `wineDownloaderInfoStore`, all sharing the same
  * `TypeCheckedStoreFrontend` method names from `electronStores.ts`).
  */
 const STORE_KEY_METHOD_NAMES = new Set([

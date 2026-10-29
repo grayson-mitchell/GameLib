@@ -235,8 +235,7 @@
         "gog": "Nie jesteś zalogowany kontem GOG w GameLib. Nie używaj strony sklepu do logowania, zamiast tego kliknij ten przycisk:",
         "login": "Zaloguj się",
         "title": "NIE jesteś zalogowany",
-        "amazon": "Nie jesteś zalogowany za pomocą konta Amazon w GameLib. Nie używaj strony sklepu do zalogowania się, zamiast tego użyj przycisku poniżej:",
-        "zoom": "Nie jesteś zalogowany za pomocą konta Zoom w GameLib. Nie używaj strony sklepu do zalogowania się, zamiast tego użyj przycisku poniżej:"
+        "amazon": "Nie jesteś zalogowany za pomocą konta Amazon w GameLib. Nie używaj strony sklepu do zalogowania się, zamiast tego użyj przycisku poniżej:"
     },
     "report_problem": "Zgłoś problem z uruchamianiem tej gry",
     "sdl": {

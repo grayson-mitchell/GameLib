@@ -444,8 +444,7 @@
         "gog": "GOG bejelentkezés",
         "message": "Jelentkezz be a platformjaidra. Egyszerre több helyre is bejelentkezhetsz.",
         "amazon": "Amazon bejelentkezés",
-        "old-mac": "A macOS verziója: {{version}}. macOS 12 vagy újabb szükséges a belépéshez.",
-        "zoom": "Zoom bejelentkezés"
+        "old-mac": "A macOS verziója: {{version}}. macOS 12 vagy újabb szükséges a belépéshez."
     },
     "message": {
         "sync": "Szinkronizálás befejezve",
@@ -690,8 +689,7 @@
                 "game-log": "A(z) {{gameTitle}} játéknaplója",
                 "gog": "GOG napló",
                 "heroic": "Általános GameLib napló",
-                "nile": "Amazon / Nile napló",
-                "zoom": "Zoom napló"
+                "nile": "Amazon / Nile napló"
             },
             "show-uploads": "Feltöltött naplófájlok megjelenítése"
         },
@@ -753,8 +751,7 @@
             "automaticWinetricksFixes": "Ismert javítások automatikus alkalmazása",
             "enableHelp": "Súgó összetevő",
             "cometSupport": "Comet támogatás",
-            "umuSupport": "Az umu használata Proton futtatókörnyezetként",
-            "zoomPlatform": "Zoom Platform támogatása (csak Linux)"
+            "umuSupport": "Az umu használata Proton futtatókörnyezetként"
         },
         "msync": "Az Msync engedélyezése",
         "allow_installation_broken_anticheat": {
@@ -1132,7 +1129,6 @@
         "title": "Anonim analitika küldése"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Zoom Store",
     "launch": {
         "options": "Indítási kapcsolók…"
     },

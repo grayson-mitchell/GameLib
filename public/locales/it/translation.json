@@ -444,8 +444,7 @@
         "gog": "Accedi a GOG",
         "message": "Accedi con la tua piattaforma. Puoi effettuare l'accesso a più di una piattaforma contemporaneamente.",
         "amazon": "Accedi ad Amazon",
-        "old-mac": "La tua versione di macOS è {{version}}. Per accedere è necessario macOS 12 o superiore.",
-        "zoom": "Accesso con Zoom"
+        "old-mac": "La tua versione di macOS è {{version}}. Per accedere è necessario macOS 12 o superiore."
     },
     "message": {
         "sync": "Sincronizzazione completata",
@@ -690,8 +689,7 @@
                 "gog": "Log GOG",
                 "heroic": "Log Generico GameLib",
                 "legendary": "Registro Epic Games / Legendary",
-                "nile": "Amazon / Nile log",
-                "zoom": "Registro di Zoom"
+                "nile": "Amazon / Nile log"
             },
             "show-uploads": "Mostra file di log caricati"
         },
@@ -739,8 +737,7 @@
             "automaticWinetricksFixes": "Applica correzioni note automaticamente",
             "enableHelp": "Componente aiuto",
             "cometSupport": "Supporto Comet",
-            "umuSupport": "Utilizza umu come runtime Proton",
-            "zoomPlatform": "Supporto Zoom Platform (solo Linux)"
+            "umuSupport": "Utilizza umu come runtime Proton"
         },
         "allow_installation_broken_anticheat": {
             "label": "Permetti l'installazione dei giochi con l'anticheat bloccato o non funzionante",
@@ -1131,7 +1128,6 @@
         "title": "Invia Dati Analitici Anonimi"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Negozio Zoom",
     "launch": {
         "options": "Opzioni di avvio..."
     },

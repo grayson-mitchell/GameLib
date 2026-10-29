@@ -219,8 +219,7 @@
         "gog": "Du är ej inloggad med GOG-konto i GameLib. Använd inte Butiksidan för att logga in, klicka denna knapp istället:",
         "login": "Logga in",
         "title": "Du är ej inloggad!",
-        "amazon": "Du är ej inloggad med Epic-konto i GameLib. Använd inte Butiksidan för att logga in, klicka denna knapp istället:",
-        "zoom": "Du är inte inloggad med ett Zoom-konto i GameLib. Använd inte butiksidan för att logga in, klicka istället på följande knapp:"
+        "amazon": "Du är ej inloggad med Epic-konto i GameLib. Använd inte Butiksidan för att logga in, klicka denna knapp istället:"
     },
     "report_problem": "Rapportera problem med spelet",
     "sdl": {

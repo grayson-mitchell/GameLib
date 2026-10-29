@@ -447,8 +447,7 @@
         "gog": "Вход в GOG",
         "message": "Войдите с помощью своей платформы. Вы можете войти одновременно в несколько платформ.",
         "amazon": "Войти через Амазон",
-        "old-mac": "Ваша версия macOS: {{version}}. Для входа требуется macOS 12 или новее.",
-        "zoom": "Вход в Zoom"
+        "old-mac": "Ваша версия macOS: {{version}}. Для входа требуется macOS 12 или новее."
     },
     "message": {
         "sync": "Синхронизация завершена",
@@ -693,8 +692,7 @@
                 "gog": "Журнал GOG",
                 "heroic": "Общий журнал GameLib",
                 "legendary": "Журнал Epic Games и Legendary",
-                "nile": "Журнал Amazon и Nile",
-                "zoom": "Логи Zoom"
+                "nile": "Журнал Amazon и Nile"
             },
             "show-uploads": "Показать отправленные журналы"
         },
@@ -742,8 +740,7 @@
             "enableHelp": "Компонент Справки",
             "automaticWinetricksFixes": "Автоматическое применение известных исправлений",
             "cometSupport": "Поддержка Comet",
-            "umuSupport": "Использовать umu как среду Proton",
-            "zoomPlatform": "Поддержка платформы Zoom (только Linux)"
+            "umuSupport": "Использовать umu как среду Proton"
         },
         "disablePlaytimeSync": "Отключить синхронизацию времени воспроизведения",
         "frameless-window": {
@@ -1130,7 +1127,6 @@
         }
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Магазин Zoom",
     "launch": {
         "options": "Параметры запуска..."
     },

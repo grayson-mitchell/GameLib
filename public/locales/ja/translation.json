@@ -438,8 +438,7 @@
         "gog": "GOGログイン",
         "message": "お使いのプラットフォームにログインします。同時に複数のプラットフォームにログインすることができます。",
         "amazon": "Amazonログイン",
-        "old-mac": "このmacOSのバージョンは {{version}} です。 ログインするにはmacOS 12以降が必要です。",
-        "zoom": "Zoomへのログイン"
+        "old-mac": "このmacOSのバージョンは {{version}} です。 ログインするにはmacOS 12以降が必要です。"
     },
     "message": {
         "sync": "同期を完了しました",
@@ -684,8 +683,7 @@
                 "heroic": "一般のGameLibログ",
                 "gog": "GOGログ",
                 "legendary": "Epic Games / Legendaryログ",
-                "nile": "Amazon / Nileログ",
-                "zoom": "Zoom ログ"
+                "nile": "Amazon / Nileログ"
             },
             "show-uploads": "アップロードされたログファイルを表示する"
         },
@@ -747,8 +745,7 @@
             "enableHelp": "ヘルプコンポーネント",
             "automaticWinetricksFixes": "既存の修正を自動的に適用",
             "cometSupport": "Cometサポート",
-            "umuSupport": "umuをProtonのランタイムとして使用",
-            "zoomPlatform": "Zoomプラットフォームのサポート（Linuxのみ）"
+            "umuSupport": "umuをProtonのランタイムとして使用"
         },
         "msync": "Esyncを有効にする",
         "allow_installation_broken_anticheat": {
@@ -1119,7 +1116,6 @@
     "launch": {
         "options": "Launch Options..."
     },
-    "zoom-store": "Zoom ストア",
     "console": {
         "cancel": {
             "hintSuffix": "3秒間長押しでキャンセル",

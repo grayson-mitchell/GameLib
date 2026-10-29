@@ -444,8 +444,7 @@
         "gog": "Zaloguj do GOG",
         "message": "Zaloguj się swoim kontem. Możesz być zalogowany do więcej niż jednej platformy w tym samym czasie.",
         "amazon": "Zaloguj do Amazon",
-        "old-mac": "Twoja wersja macOS to {{version}}. macOS 12 lub nowszy jest wymagany, aby móc się zalogować.",
-        "zoom": "Zaloguj do Zoom"
+        "old-mac": "Twoja wersja macOS to {{version}}. macOS 12 lub nowszy jest wymagany, aby móc się zalogować."
     },
     "message": {
         "sync": "Synchronizacja zakończona",
@@ -690,8 +689,7 @@
                 "gog": "Log GOG",
                 "heroic": "Ogólny log GameLib",
                 "legendary": "Log Epic Games / Legendary",
-                "nile": "Log Amazon / Nile",
-                "zoom": "Log Zoom"
+                "nile": "Log Amazon / Nile"
             },
             "show-uploads": "Pokaż przesłane pliki logu"
         },
@@ -739,8 +737,7 @@
             "automaticWinetricksFixes": "Zastosuj znane poprawki automatycznie",
             "enableHelp": "Element pomocy",
             "cometSupport": "Wsparcie Comet",
-            "umuSupport": "Używanie umu jako środowiska uruchomieniowego Proton",
-            "zoomPlatform": "Wsparcie platformy Zoom (tylko Linux)"
+            "umuSupport": "Używanie umu jako środowiska uruchomieniowego Proton"
         },
         "frameless-window": {
             "confirmation": {
@@ -1131,7 +1128,6 @@
         "title": "Wysyłaj anonimowe dane analityczne"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Sklep Zoom",
     "launch": {
         "options": "Opcje uruchamiania..."
     },

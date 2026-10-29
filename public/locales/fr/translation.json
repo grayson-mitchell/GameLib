@@ -443,8 +443,7 @@
         "gog": "Connexion à GOG",
         "message": "Connectez-vous à votre plateforme. Vous pouvez vous identifier avec plus d'une plateforme à la fois.",
         "amazon": "Connexion à Amazon",
-        "old-mac": "Votre version de macOS est la {{version}}. macOS 12 ou plus récent est requis pour se connecter.",
-        "zoom": "Connexion à Zoom"
+        "old-mac": "Votre version de macOS est la {{version}}. macOS 12 ou plus récent est requis pour se connecter."
     },
     "message": {
         "sync": "Synchronisation effectuée",
@@ -689,8 +688,7 @@
                 "heroic": "Rapport général sur GameLib",
                 "gog": "Rapport sur GOG",
                 "legendary": "Rapport sur Epic Games / Legendary",
-                "nile": "Rapport sur Amazon / Nile",
-                "zoom": "Rapport d'événements de Zoom"
+                "nile": "Rapport sur Amazon / Nile"
             },
             "show-uploads": "Afficher les rapports envoyés"
         },
@@ -745,8 +743,7 @@
             "enableHelp": "Composant d'Aide",
             "automaticWinetricksFixes": "Appliquer les corrections connues automatiquement",
             "cometSupport": "Intégration de Comet",
-            "umuSupport": "Utiliser umu comme moteur de Proton",
-            "zoomPlatform": "Prise en charge de la plateforme Zoom (disponible seulement sur Linux)"
+            "umuSupport": "Utiliser umu comme moteur de Proton"
         },
         "frameless-window": {
             "confirmation": {
@@ -1132,7 +1129,6 @@
         },
         "title": "Envoyer des statistiques anonymes"
     },
-    "zoom-store": "Boutique Zoom",
     "amazon-luna": "Amazon Luna",
     "launch": {
         "options": "Paramètres de lancement..."

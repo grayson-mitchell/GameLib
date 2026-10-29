@@ -902,8 +902,6 @@ describe('hardcodedStringGate', () => {
       'Windows',
       'MB/s',
       'Amazon',
-      'ZOOM',
-      'Zoom',
       'Epic/Legendary',
       'Amazon/Nile',
       'Amazon Games'
@@ -921,7 +919,7 @@ describe('hardcodedStringGate', () => {
       const source = `
         const storeFilters = [
           { key: 'legendary', label: 'Epic' },
-          { key: 'zoom', label: 'ZOOM' }
+          { key: 'nile', label: 'Amazon' }
         ]
       `
       const result = scanSource('fixture.ts', source, {
@@ -2034,7 +2032,8 @@ describe('hardcodedStringGate', () => {
 
         expect(facetResult.violations).toHaveLength(0)
         // quick 261029-nmt: 14 -> 16. a30cda4a0 (quick 261029-mkz) added the runsForMe RUNNABILITY_LABELS tuple -- +1 key literal +1 defaultText literal, both exempted, 0 violations; re-measured, not assumed.
-        expect(facetResult.exempted).toBe(16)
+        // quick 261029-toq: 16 -> 15. One glossary-exempted RunnerToStore display-name literal was removed with a retired store; re-measured, 0 violations.
+        expect(facetResult.exempted).toBe(15)
 
         expect(chipResult.violations).toHaveLength(0)
         // quick 261029-riq: 36 -> 34. The retired 'view' chip case (three key + default literal pairs) gave way to installedOnly / nativeOnly (two pairs); re-measured, 0 violations.

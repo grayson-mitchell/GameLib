@@ -24,7 +24,7 @@ access, GameLib reports a failure and does not fall back to a file. A separate p
 these secrets exists only for developer builds, is switched on by an environment variable, and is
 refused in a packaged build.
 
-**Store sessions kept in files.** Epic, GOG, Amazon and Zoom do not use the credential store. Their
+**Store sessions kept in files.** Epic, GOG and Amazon do not use the credential store. Their
 sessions are kept by the bundled command-line tools or by GameLib's own config store, in plain
 files under the GameLib config folder:
 
@@ -32,12 +32,12 @@ files under the GameLib config folder:
 - GOG: the `auth.json` file that gogdl writes, in a `gog_store` folder, plus your GOG user id,
   username and Galaxy user id in GameLib's own GOG config store.
 - Amazon Games: the `current_user.json` file that nile writes, in a `nile_config` folder.
-- Zoom: a `.zoom.token` file in a `zoom_store` folder.
 
 **Config folder.** GameLib keeps its settings, library caches and the files above in a folder named
 `GameLib` inside the operating system's application-data folder: `~/Library/Application Support` on
 macOS, `%APPDATA%` (normally `C:\Users\<you>\AppData\Roaming`) on Windows, and `$XDG_CONFIG_HOME`
-(normally `~/.config`) on Linux.
+(normally `~/.config`) on Linux. Older versions kept a Zoom session in a `zoom_store` folder there; GameLib
+now deletes that folder, and its Zoom library caches, at startup.
 
 **Logs.** GameLib writes logs to `~/Library/Logs/GameLib` on macOS, `%LOCALAPPDATA%\GameLib\logs` on
 Windows and `$XDG_STATE_HOME/GameLib/logs` (normally `~/.local/state/GameLib/logs`) on Linux. Logs
@@ -61,7 +61,6 @@ repository. The rows below list the destinations found in GameLib's own source.
 | Amazon Games                                                                                                                                                                                | Signing in, refreshing your library, installing, through the nile tool                                         | Your Amazon session (through nile)                                                          |
 | Steam network and `store.steampowered.com`, `cdn.cloudflare.steamstatic.com`                                                                                                                | While signed in to Steam: library sync and game metadata. Artwork and installer downloads are separate         | Your Steam refresh token (to the Steam network), Steam app ids (to the store and CDN)       |
 | Humble Bundle (`www.humblebundle.com`)                                                                                                                                                      | Signing in, refreshing your Humble keys                                                                        | Your Humble session cookie and CSRF token                                                   |
-| Zoom Platform (`www.zoom-platform.com`)                                                                                                                                                     | Signing in, refreshing your library                                                                            | Your Zoom token                                                                             |
 
 **Game metadata, artwork and compatibility data.** Sent when you open a game's page, and cached for
 later. The game title or store id is sent.

@@ -445,8 +445,7 @@
         "gog": "Inici de sessió al GOG",
         "message": "Inicia la sessió. Pots iniciar sessió a més d'una plataforma alhora.",
         "amazon": "Inici de sessió d'Amazon",
-        "old-mac": "La vostra versió del macOS és {{version}}. Cal el macOS 12 o posterior per a iniciar la sessió.",
-        "zoom": "Inici de sessió al Zoom"
+        "old-mac": "La vostra versió del macOS és {{version}}. Cal el macOS 12 o posterior per a iniciar la sessió."
     },
     "message": {
         "sync": "S'ha completat la sincronització",
@@ -691,8 +690,7 @@
                 "gog": "Registre del GOG",
                 "heroic": "Registre general del GameLib",
                 "legendary": "Registre de l'Epic Games/Legendary",
-                "nile": "Registre d'Amazon/Nile",
-                "zoom": "Registre del Zoom"
+                "nile": "Registre d'Amazon/Nile"
             },
             "show-uploads": "Mostra els fitxers de registre pujats"
         },
@@ -740,8 +738,7 @@
             "automaticWinetricksFixes": "Aplica les correccions conegudes de manera automàtica",
             "enableHelp": "Component d'ajuda",
             "cometSupport": "Suport Comet",
-            "umuSupport": "Fes servir umu com a execució Proton",
-            "zoomPlatform": "Compatibilitat amb Zoom Platform (només Linux)"
+            "umuSupport": "Fes servir umu com a execució Proton"
         },
         "frameless-window": {
             "confirmation": {
@@ -1127,7 +1124,6 @@
         "title": "Envia analítiques anònimes"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Botiga del Zoom",
     "launch": {
         "options": "Opcions d'execució..."
     },

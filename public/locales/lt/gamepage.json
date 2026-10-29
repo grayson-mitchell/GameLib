@@ -283,8 +283,7 @@
         "title": "Jūs nesate prisijungę",
         "amazon": "Jūs nesate prisijungę su „Amazon“ paskyrą prie „GameLib“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:",
         "epic": "Jūs nesate prisijungę su „Epic“ paskyrą prie „GameLib“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:",
-        "gog": "Jūs nesate prisijungę su „GOG“ paskyrą prie „GameLib“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:",
-        "zoom": "Jūs nesate prisijungę su „Zoom“ paskyrą prie „GameLib“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:"
+        "gog": "Jūs nesate prisijungę su „GOG“ paskyrą prie „GameLib“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:"
     },
     "setting": {
         "show-wine-settings": "Rodyti „Wine“ nustatymus",

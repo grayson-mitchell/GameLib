@@ -235,8 +235,7 @@
         "gog": "Du bist mit keinem GOG-Konto in GameLib angemeldet. Verwende zum Anmelden nicht die Store-Seite, sondern klicke stattdessen auf die folgende Schaltfläche:",
         "login": "Anmelden",
         "title": "Du bist NICHT angemeldet",
-        "amazon": "Du bist nicht mit einem Amazon-Konto in GameLib angemeldet. Verwende zum Anmelden nicht die Store-Seite, sondern klicke stattdessen auf die folgende Schaltfläche:",
-        "zoom": "Du bist nicht mit einem Zoom Konto in GameLib angemeldet. Benutze nicht die Store Seite, benutze stattessen den folgenden Knopf:"
+        "amazon": "Du bist nicht mit einem Amazon-Konto in GameLib angemeldet. Verwende zum Anmelden nicht die Store-Seite, sondern klicke stattdessen auf die folgende Schaltfläche:"
     },
     "report_problem": "Ein Problem bei der Ausführung dieses Spiels melden",
     "sdl": {

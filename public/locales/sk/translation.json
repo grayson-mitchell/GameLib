@@ -434,8 +434,7 @@
         "gog": "GOG Login",
         "message": "Login with your platform. You can login to more than one platform at the same time.",
         "amazon": "Prihlásenie na Amazon",
-        "old-mac": "Vaša verzia systému macOS je {{version}}. Na prihlásenie je potrebný macOS 12 alebo novší.",
-        "zoom": ""
+        "old-mac": "Vaša verzia systému macOS je {{version}}. Na prihlásenie je potrebný macOS 12 alebo novší."
     },
     "message": {
         "sync": "Synchronizácia dokončená",
@@ -680,8 +679,7 @@
                 "gog": "GOG protokol",
                 "heroic": "Všeobecný hrdina denník",
                 "legendary": "Epic hry / Legendárny denník",
-                "nile": "Amazon / Nile log",
-                "zoom": ""
+                "nile": "Amazon / Nile log"
             },
             "show-uploads": "Zobraziť nahrané protokolové súbory"
         },
@@ -736,8 +734,7 @@
             "enableNewDesign": "Nový Dizajn",
             "automaticWinetricksFixes": "Automaticky použiť známe opravy",
             "cometSupport": "Podpora",
-            "umuSupport": "Použite umu ako Proton runtime",
-            "zoomPlatform": ""
+            "umuSupport": "Použite umu ako Proton runtime"
         },
         "frameless-window": {
             "confirmation": {
@@ -1108,7 +1105,6 @@
         "options": "Možnosti spustenia..."
     },
     "amazon-luna": "",
-    "zoom-store": "",
     "discounts": {
         "region": {
             "countries": {

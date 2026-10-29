@@ -397,8 +397,7 @@
                 "gog": "GOG-log",
                 "heroic": "General GameLib log",
                 "legendary": "Epic Games / Legendary log",
-                "nile": "Amazon / Nile log",
-                "zoom": "Zoom log"
+                "nile": "Amazon / Nile log"
             },
             "join-heroic-discord": "Deltag på vores Discord",
             "show-uploads": "Vis uploadede logfiler",
@@ -542,8 +541,7 @@
         "experimental_features": {
             "cometSupport": "Comet support",
             "enableHelp": "Hjælpekomponent",
-            "enableNewDesign": "Nyt design",
-            "zoomPlatform": ""
+            "enableNewDesign": "Nyt design"
         },
         "frameless-window": {
             "confirmation": {
@@ -925,8 +923,7 @@
         "gog": "GOG login",
         "message": "Log ind med din platform. Du kan logge ind på mere end én platform på samme tid.",
         "amazon": "Amazon login",
-        "old-mac": "Din macOS-version er {{version}}. macOS 12 eller nyere er påkrævet for at logge ind.",
-        "zoom": "Zoom-login"
+        "old-mac": "Din macOS-version er {{version}}. macOS 12 eller nyere er påkrævet for at logge ind."
     },
     "placeholder": {
         "prefered_language": "2-tegn kode (dvs.: \"en\" eller \"fr\")",
@@ -1143,7 +1140,6 @@
         "wine-crossover": "",
         "wine-staging-macos": ""
     },
-    "zoom-store": "Zoom-butik",
     "launch": {
         "options": "Opstartsinstillinger..."
     },

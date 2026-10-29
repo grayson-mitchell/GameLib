@@ -434,8 +434,7 @@
         "gog": "GOG Login",
         "message": "Login with your platform. You can login to more than one platform at the same time.",
         "amazon": "ആമസോൺ ലോഗിൻ",
-        "old-mac": "നിങ്ങളുടെ macOS വർഷൻ {{version}} ആണ്. macOS 12 അല്ലെങ്കിൽ പുതിയത് ലോഗിൻ ചെയ്യുവാൻ ആവശ്യമാണ്.",
-        "zoom": ""
+        "old-mac": "നിങ്ങളുടെ macOS വർഷൻ {{version}} ആണ്. macOS 12 അല്ലെങ്കിൽ പുതിയത് ലോഗിൻ ചെയ്യുവാൻ ആവശ്യമാണ്."
     },
     "message": {
         "sync": "ഒന്നിപ്പിച്ചു",
@@ -679,7 +678,6 @@
                 "legendary": "",
                 "nile": "",
                 "gog": "",
-                "zoom": "",
                 "game-log": "",
                 "heroic": ""
             },
@@ -741,8 +739,7 @@
         "experimental_features": {
             "enableNewDesign": "പുതിയ ഡിസൈൻ",
             "cometSupport": "",
-            "enableHelp": "",
-            "zoomPlatform": ""
+            "enableHelp": ""
         },
         "msync": "Esync വയ്ക്കൂ",
         "WoW64": "",
@@ -1095,7 +1092,6 @@
         "noGames": "",
         "noResults": ""
     },
-    "zoom-store": "",
     "wineExplanation": {
         "proton-ge": "",
         "gpt": "",

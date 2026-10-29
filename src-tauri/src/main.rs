@@ -480,10 +480,11 @@ const RECENT_GAMES_CHANGED_CHANNEL: &str = "recentGamesChanged";
 
 /// The `Runner` union from `src/common/types.ts:23`, mirrored here as an allow-list.
 ///
-/// Kept in lockstep with that union deliberately. `zoom` is a DROPPED platform in this project
-/// and gets no new handling anywhere — but it is still a member of the TypeScript union, so
-/// omitting it here would make this list a silently-diverging copy rather than a mirror.
-const TRAY_RUNNERS: &[&str] = &["legendary", "gog", "sideload", "nile", "zoom", "steam"];
+/// Kept in lockstep with that union deliberately: omitting a member would make this list a
+/// silently-diverging copy rather than a mirror. A persisted entry naming a runner that is no
+/// longer in the union (for example the removed `zoom`) degrades to `None` and takes the
+/// `trayResolveRunner` probe fallback.
+const TRAY_RUNNERS: &[&str] = &["legendary", "gog", "sideload", "nile", "steam"];
 
 /// A single recent-game tray entry: the appName that will be launched, the label shown, and --
 /// when the entry was written by a build that persists it -- the runner that owns the game.
@@ -2402,7 +2403,7 @@ fn should_auto_open_devtools(target_os: &str) -> bool {
 /// zero dependency on IPC, the file logger, or Safari's Network request-body viewer (the
 /// three routes this investigation has already exhausted).
 ///
-/// Reusable as-is for GOG/Amazon/Nile/Zoom's login windows: this call lives in the SAME
+/// Reusable as-is for GOG/Amazon/Nile's login windows: this call lives in the SAME
 /// `humble_login_open` arm that (per this file's own prior-cycle comment above
 /// `open_devtools()`) is not Humble-specific and is shared by all five runners.
 ///
@@ -3532,7 +3533,7 @@ const NATIVE_LOGIN_BAR_HEIGHT: f64 = 32.0;
 // never a new consumer contract.
 //
 // SCOPE: Epic-only (`is_epic_login`, computed by the caller), macOS-only (`#[cfg(target_os =
-// "macos")]`) -- GOG/Amazon/Zoom/Humble and Epic-on-non-macOS keep the existing
+// "macos")]`) -- GOG/Amazon/Humble and Epic-on-non-macOS keep the existing
 // `WebviewWindowBuilder` path in this same arm, completely untouched.
 //
 // KNOWN, DELIBERATE SIMPLIFICATIONS for this bounded attempt (documented, not hidden):
@@ -4911,7 +4912,7 @@ fn forget_native_login_bar(app: &AppHandle, label: &str) {
 }
 
 /// Installs the native login-sheet bar (quick-261029-osq) and insets `webview` below it. One
-/// builder serves the injected Humble/Amazon/Zoom sheets and the GOG pristine sheet.
+/// builder serves the injected Humble/Amazon sheets and the GOG pristine sheet.
 ///
 /// `container` is the webview's superview. The webview frame becomes the container bounds minus
 /// a `NATIVE_LOGIN_BAR_HEIGHT` band at the top, keeping `ViewWidthSizable|ViewHeightSizable` (both
@@ -8341,7 +8342,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 // presented as a sheet, which renders no title bar at all -- F-34.5-G6-16).
                 //
                 // Shared by EVERY runner this arm opens a visible window for (GOG, Amazon,
-                // Humble, Zoom) -- `humble_login_open` takes no `runner` argument by design,
+                // Humble) -- `humble_login_open` takes no `runner` argument by design,
                 // so there is no per-runner size and this value moves all of them together.
                 // `open_pristine_epic_login_window`'s own `.inner_size(900.0, 700.0)` is a
                 // DIFFERENT form layout and stays 900 (D-3) -- see that function's own call
@@ -8713,7 +8714,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // THE BUG THIS FIXES: closing this window (any way -- clicking its close button,
             // Cmd+W, the OS window-close gesture) produced NO signal at all on the JS side.
             // `oauthLoginCapture.ts`'s `captureOAuthLogin` kept polling forever until its
-            // five-minute deadline, so cancelling a GOG/Epic/Amazon/Zoom sign-in never resolved
+            // five-minute deadline, so cancelling a GOG/Epic/Amazon sign-in never resolved
             // `{ status: 'cancelled' }` -- the frontend hook stayed on `awaiting` and the
             // cancel-path navigation fix (Task 4, `onCancelled`/`handleTauriOAuthCancelled`)
             // could never fire, because the outcome it depends on never arrived.
@@ -14248,9 +14249,9 @@ mod tests {
 
     #[test]
     fn every_member_of_the_typescript_runner_union_survives_the_parse() {
-        // Pins TRAY_RUNNERS against `common/types.ts:23`. `zoom` is a DROPPED platform and gets
-        // no new handling anywhere — but it IS in that union, so it must survive the parse or
-        // this allow-list is a silently-diverging copy rather than a mirror.
+        // Pins TRAY_RUNNERS against `common/types.ts:23`: every member of that union must
+        // survive the parse or this allow-list is a silently-diverging copy rather than a
+        // mirror.
         for runner in TRAY_RUNNERS {
             let payload = json!([{ "appName": "x1", "title": "T", "runner": runner }]);
             let games = tray_recent_games_from_value(&payload, 5);
@@ -14260,6 +14261,18 @@ mod tests {
                 "runner {runner:?} should survive the parse"
             );
         }
+    }
+
+    #[test]
+    fn legacy_zoom_runner_falls_back_to_probe() {
+        // A recent-games entry persisted by a build that still shipped the Zoom Platform store
+        // names `"zoom"`, which is no longer a `Runner`. The entry must be KEPT with
+        // `runner: None` so the `trayResolveRunner` probe resolves it, not dropped.
+        let payload = json!([{ "appName": "x1", "title": "T", "runner": "zoom" }]);
+        let games = tray_recent_games_from_value(&payload, 5);
+        assert_eq!(games.len(), 1);
+        assert_eq!(games[0].app_name, "x1");
+        assert_eq!(games[0].runner, None);
     }
 
     #[test]

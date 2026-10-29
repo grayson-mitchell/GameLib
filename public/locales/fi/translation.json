@@ -435,8 +435,7 @@
         "gog": "GOG:n kirjautuminen",
         "message": "Sisäänkirjaudu valitsemallasi alustalla. Voit kirjautua enempäänkin kuin yhteen alustaan samaan aikaan.",
         "amazon": "Amazon:iin kirjautuminen",
-        "old-mac": "macOS versiosi on {{version}}. macOS 12 tai sitä uudempi vaaditaan sisäänkirjautumiseen.",
-        "zoom": "Zoom:iin kirjautuminen"
+        "old-mac": "macOS versiosi on {{version}}. macOS 12 tai sitä uudempi vaaditaan sisäänkirjautumiseen."
     },
     "message": {
         "sync": "Synkronointi valmis",
@@ -680,7 +679,6 @@
                 "legendary": "Epic Games / Legendary lokitiedot",
                 "nile": "Amazon / Nile lokitiedot",
                 "gog": "GOG lokitiedot",
-                "zoom": "Zoom lokitiedot",
                 "game-log": "Pelin {{gameTitle}} lokitiedot",
                 "heroic": "Yleiset GameLib lokitiedot"
             },
@@ -728,8 +726,7 @@
             "enableNewShinyFeature": "Tuore uutuuttakiiltävä ominaisuus",
             "enableNewDesign": "Uusi malli",
             "cometSupport": "Comet-tuki",
-            "enableHelp": "Apukomponentti",
-            "zoomPlatform": "Zoom-alustan tuki (ainoastaan Linux)"
+            "enableHelp": "Apukomponentti"
         },
         "disablePlaytimeSync": "Kytke peliaikojen synkronointi pois päältä",
         "msync": "Ota Msync käyttöön",
@@ -1105,7 +1102,6 @@
     "launch": {
         "options": "Käynnistysasetukset..."
     },
-    "zoom-store": "",
     "wineExplanation": {
         "proton-ge": "",
         "gpt": "",

@@ -368,8 +368,7 @@
         "experimental_features": {
             "cometSupport": "Tacaíocht Cóiméad",
             "enableHelp": "Comhpháirt chabhrach",
-            "enableNewDesign": "Dearadh nua",
-            "zoomPlatform": "Tacaíocht Ardán Zoom (Linux amháin)"
+            "enableNewDesign": "Dearadh nua"
         },
         "frameless-window": {
             "confirmation": {
@@ -398,8 +397,7 @@
                 "gog": "Log GOG",
                 "heroic": "Log GameLib Ginearálta",
                 "legendary": "Cluichí Epic / Logáil Finscéalta",
-                "nile": "Log Amazon / Níle",
-                "zoom": "Log súmáil"
+                "nile": "Log Amazon / Níle"
             },
             "instructions": "Bí linn inár Discord agus féach ar an rannóg \"#-support\". Léigh an snáithe bioráilte \"Léigh Mé Ar dtús | Ceisteanna Coitianta\" agus lean na treoracha chun na logaí seo agus aon fhaisnéis ábhartha faoi do fhadhb a roinnt.",
             "instructions_title": "Conas fadhb a thuairisciú?",
@@ -685,8 +683,7 @@
         "epic": "Logáil Isteach Cluichí Epic",
         "gog": "Logáil Isteach GOG",
         "message": "Logáil isteach le do ardán. Is féidir leat logáil isteach i níos mó ná ardán amháin ag an am céanna.",
-        "old-mac": "Is é {{version}} do leagan macOS. Tá macOS 12 nó níos nuaí ag teastáil le logáil isteach.",
-        "zoom": "Logáil Isteach ar Zoom"
+        "old-mac": "Is é {{version}} do leagan macOS. Tá macOS 12 nó níos nuaí ag teastáil le logáil isteach."
     },
     "message": {
         "sync": "Sioncrónú Críochnaithe",
@@ -1070,7 +1067,6 @@
         "loading-available": "Ag lódáil comhpháirteanna atá ar fáil ..."
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Siopa Zoom",
     "launch": {
         "options": "Roghanna Seolta..."
     },

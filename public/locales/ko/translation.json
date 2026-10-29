@@ -434,8 +434,7 @@
         "gog": "GOG 로그인",
         "message": "플랫폼으로 로그인하세요. 동시에 여러 플랫폼에 로그인할 수 있습니다.",
         "amazon": "아마존 로그인",
-        "old-mac": "macOS 버전은 {{version}}입니다. 로그인하려면 macOS 12 이상이 필요합니다.",
-        "zoom": ""
+        "old-mac": "macOS 버전은 {{version}}입니다. 로그인하려면 macOS 12 이상이 필요합니다."
     },
     "message": {
         "sync": "동기화 완료",
@@ -679,8 +678,7 @@
                 "gog": "GOG 로그",
                 "heroic": "일반 GameLib 기록",
                 "legendary": "에픽 게임즈 / 레전더리 로그",
-                "nile": "아마존 / 나일 로그",
-                "zoom": ""
+                "nile": "아마존 / 나일 로그"
             },
             "show-uploads": "업로드된 로그 파일 표시",
             "join-heroic-discord": "우리 디스코드 참가"
@@ -746,8 +744,7 @@
             "enableHelp": "도움말 구성 요소",
             "automaticWinetricksFixes": "알려진 수정 사항을 자동으로 적용",
             "cometSupport": "코멧 지원",
-            "umuSupport": "umu를 프로톤 런타임으로 사용",
-            "zoomPlatform": ""
+            "umuSupport": "umu를 프로톤 런타임으로 사용"
         },
         "gamescope": {
             "enableUpscaling": "업스케일링 가능",
@@ -1108,7 +1105,6 @@
         "options": "실행 옵션..."
     },
     "amazon-luna": "",
-    "zoom-store": "",
     "discounts": {
         "region": {
             "countries": {

@@ -445,8 +445,7 @@
         "gog": "Login da GOG",
         "message": "Faça login com sua plataforma. Você pode acessar mais de uma plataforma ao mesmo tempo.",
         "amazon": "Login da Amazon",
-        "old-mac": "Sua versão do macOS é {{version}}. O macOS 12 ou mais recente é necessário para fazer login.",
-        "zoom": "Login no Zoom"
+        "old-mac": "Sua versão do macOS é {{version}}. O macOS 12 ou mais recente é necessário para fazer login."
     },
     "message": {
         "sync": "Sincronização completa",
@@ -691,8 +690,7 @@
                 "heroic": "Registro geral GameLib",
                 "legendary": "Registro Epic Games / Legendary",
                 "nile": "Registro Amazon / Nile",
-                "game-log": "Registro do jogo {{gameTitle}}",
-                "zoom": "Registro do Zoom"
+                "game-log": "Registro do jogo {{gameTitle}}"
             },
             "show-uploads": "Exibir arquivos de registro enviados"
         },
@@ -740,8 +738,7 @@
             "automaticWinetricksFixes": "Aplicar correções conhecidas automaticamente",
             "enableHelp": "Componente de ajuda",
             "umuSupport": "Usar umu como Proton runtime",
-            "cometSupport": "Suporte ao Comet",
-            "zoomPlatform": "Suporte para a Plataforma Zoom (Apenas no Linux)"
+            "cometSupport": "Suporte ao Comet"
         },
         "disablePlaytimeSync": "Desativar a sincronização do tempo de jogo",
         "frameless-window": {
@@ -1134,7 +1131,6 @@
         "title": "Enviar dados anônimos"
     },
     "amazon-luna": "Amazon Luna",
-    "zoom-store": "Loja Zoom",
     "launch": {
         "options": "Opções de inicialização..."
     },
