@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 57
 Plan: 0 of 0
 Status: Ready to plan
-Last activity: 2026-10-29
+Last activity: 2026-10-29 - Completed quick task 261029-nag: no nonAvailableGames entry from uninstall; guard waits for reconcile
 
 Progress: [██████████] 99%
 
@@ -487,6 +487,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261029-exu | Bridge install tail: poller leaves completion to installBridgeGame (no early `done`/Play, one finished toast, no bogus restart-Steam toast); "Finishing install…" phase; Downloads hero names redist/DRM phases over an indeterminate bar; `getStatusLabel` gains `drm-setup`. | 2026-10-29 | 64168d694 | Tests + codecheck green; passed live 2026-10-29 with 261029-mbi | [261029-exu-bridge-install-tail-ux](./quick/261029-exu-bridge-install-tail-ux/) |
 | 261029-gow | `dllOverrides` tier-2 known-fix key: `[{exe, dlls:{<dll>:<mode>}}]` compiles to `HKCU\Software\Wine\AppDefaults\<exe>\DllOverrides` REG_SZ via `applyRegistryFixes` on both the Wine and Steam-bridge launch paths; never tier-1. | 2026-10-29 | 67063aea7 | Tests + codecheck green; not seen live | [261029-gow-add-the-dlloverrides-known-fix-key-tier-](./quick/261029-gow-add-the-dlloverrides-known-fix-key-tier-/) |
 | 261029-mbi | Bridge install: `markBridgeGameInstalled` no longer sends an early `done` (the second sender 261029-exu missed); Play no longer flashes between "Finishing install…" and the redist step. | 2026-10-29 | 925e9b2c7 | Tests green; passed live 2026-10-29 (Grim Dawn reinstall, no Play mid-tail) | [261029-mbi-bridge-mark-installed-early-done](./quick/261029-mbi-bridge-mark-installed-early-done/) |
+| 261029-nag | Uninstall no longer adds the game to `nonAvailableGames` (`handleNonAvailableGames` checks `getGameInfo` first); the Library silent-exclusion guard waits for the reconcile pass, ending the one-off false alarm. | 2026-10-29 | 674fef9db | Tests green; not seen live | [261029-nag-nonavailable-uninstall-and-guard](./quick/261029-nag-nonavailable-uninstall-and-guard/) |
 | fast | `dialogDisplayed` (send-kind, added by `509bcb01b`) bucketed in `IPC-PORT-INVENTORY.md`; Unique channels 229 → 230, Ported 74 → 75. `pnpm planning-gates` 12/12. | 2026-10-29 | `28c85c608` | Done | — |
 | fast | Library tile shows Stop for a playing Steam game (context menu too), and the recently-played first tile swaps PLAY for a STOP label; D-08 card hide dropped to match MainButton. Not live-tested. | 2026-10-29 | `78f657b58` | Done | — |
 
