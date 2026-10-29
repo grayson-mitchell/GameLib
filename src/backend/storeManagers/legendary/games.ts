@@ -49,6 +49,7 @@ import { gameInfoStore } from './electronStores'
 import { removeNonSteamGame } from '../../shortcuts/nonesteamgame/nonesteamgame'
 import shlex from 'shlex'
 import { legendaryLaunchArgumentFields } from '../runnerLaunchArgv'
+import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import { t } from 'i18next'
 import { isOnline } from '../../online_monitor'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
@@ -1006,13 +1007,20 @@ export default class LegendaryGame implements Game {
         ? launchArguments.parameters
         : undefined
 
+    // Known-fix launchArgs / exeOverride (quick 261029-mbl).
+    const knownFix = readKnownFixLaunchOverrides(
+      this.appName,
+      'legendary',
+      gameInfo.install.install_path
+    )
     const command: LegendaryCommand = {
       subcommand: 'launch',
       appName: LegendaryAppName.parse(appNameToLaunch),
       ...legendaryLaunchArgumentFields({
         args,
         launchArgumentArgs,
-        launcherArgs: gameSettings.launcherArgs
+        launcherArgs: gameSettings.launcherArgs,
+        knownFixLaunchArgs: knownFix.launchArgs
       }),
       ...wineFlags
     }
@@ -1022,6 +1030,8 @@ export default class LegendaryGame implements Game {
       command['--override-exe'] = launchArguments.executable
     else if (gameSettings.targetExe)
       command['--override-exe'] = Path.parse(gameSettings.targetExe)
+    else if (knownFix.exeOverride)
+      command['--override-exe'] = Path.parse(knownFix.exeOverride)
     if (offlineMode) command['--offline'] = true
     if (isCLINoGui) command['--skip-version-check'] = true
     if (gameInfo.isEAManaged) command['--origin'] = true

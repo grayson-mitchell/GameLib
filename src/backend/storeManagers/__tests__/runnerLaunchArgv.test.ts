@@ -78,7 +78,11 @@ import {
 
 const URL_ARGS = ['--wrapper "cmd /c calc"', '--override-exe', '/evil.exe']
 
-function legendaryArgv(args: string[], launcherArgs?: string): string[] {
+function legendaryArgv(
+  args: string[],
+  launcherArgs?: string,
+  knownFixLaunchArgs?: string[]
+): string[] {
   const manager = new LegendaryLibraryManager()
   return manager.commandToArgsArray({
     subcommand: 'launch',
@@ -86,7 +90,8 @@ function legendaryArgv(args: string[], launcherArgs?: string): string[] {
     ...legendaryLaunchArgumentFields({
       args,
       launchArgumentArgs: undefined,
-      launcherArgs
+      launcherArgs,
+      knownFixLaunchArgs
     }),
     '--skip-version-check': true,
     '--override-exe': Path.parse('/games/Fortnite/real.exe')
@@ -138,6 +143,38 @@ describe('legendary launch argv: passthrough args sit after `--`', () => {
   })
 })
 
+describe('legendary launch argv: known-fix launchArgs (quick 261029-mbl)', () => {
+  test('known-fix args sit after `--`, before passthrough args; never in extraArguments', () => {
+    const fields = legendaryLaunchArgumentFields({
+      args: ['-foo'],
+      launcherArgs: '-user',
+      knownFixLaunchArgs: ['--wrapper', 'calc', '-dx11']
+    })
+    expect(fields.extraArguments).toBe('-user')
+    const argv = legendaryArgv(['-foo'], '-user', [
+      '--wrapper',
+      'calc',
+      '-dx11'
+    ])
+    expect(argv.slice(argv.indexOf('--'))).toEqual([
+      '--',
+      '--wrapper',
+      'calc',
+      '-dx11',
+      '-foo'
+    ])
+  })
+
+  test('`--` is still emitted with only known-fix args', () => {
+    const argv = legendaryArgv([], undefined, ['-dx11'])
+    expect(argv.slice(argv.indexOf('--'))).toEqual(['--', '-dx11'])
+  })
+
+  test('both empty: no `--`', () => {
+    expect(legendaryArgv([], undefined, [])).not.toContain('--')
+  })
+})
+
 describe('nile launch argv: passthrough args sit after `--`', () => {
   const base = {
     exeOverrideFlag: [],
@@ -172,5 +209,39 @@ describe('nile launch argv: passthrough args sit after `--`', () => {
       '-userarg',
       'amzn1.game'
     ])
+  })
+})
+
+describe('nile launch argv: known-fix launchArgs (quick 261029-mbl)', () => {
+  const base = {
+    exeOverrideFlag: [],
+    wineFlag: [],
+    launchArgumentArgs: '',
+    launcherArgs: '-userarg',
+    id: 'amzn1.game'
+  }
+
+  test('known-fix args sit after `--`, before passthrough args', () => {
+    expect(
+      nileLaunchCommandParts({
+        ...base,
+        args: ['-foo'],
+        knownFixLaunchArgs: ['--wrapper', 'calc']
+      })
+    ).toEqual([
+      'launch',
+      '-userarg',
+      'amzn1.game',
+      '--',
+      '--wrapper',
+      'calc',
+      '-foo'
+    ])
+  })
+
+  test('both empty: no `--`', () => {
+    expect(
+      nileLaunchCommandParts({ ...base, args: [], knownFixLaunchArgs: [] })
+    ).toEqual(['launch', '-userarg', 'amzn1.game'])
   })
 })

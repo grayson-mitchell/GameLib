@@ -55,6 +55,7 @@ import setup from './setup'
 import { getUmuId } from 'backend/wiki_game_info/umu/utils'
 import { isLinux, isWindows } from 'backend/constants/environment'
 
+import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import type LogWriter from 'backend/logger/log_writer'
 
 export default class NileGameManager implements Game {
@@ -342,6 +343,24 @@ export default class NileGameManager implements Game {
       exeOverrideFlag = ['--override-exe', gameSettings.targetExe]
     }
 
+    // Known-fix launchArgs / exeOverride (quick 261029-mbl). Precedence:
+    // altExe > user targetExe > known-fix exeOverride > default.
+    const knownFix = readKnownFixLaunchOverrides(
+      this.id,
+      'nile',
+      gameInfo.install.install_path
+    )
+    if (knownFix.exeOverride) {
+      if (exeOverrideFlag.length) {
+        logInfo(
+          `Known-fix exeOverride for ${this.id} not used, the user's executable setting wins`,
+          LogPrefix.Nile
+        )
+      } else {
+        exeOverrideFlag = ['--override-exe', knownFix.exeOverride]
+      }
+    }
+
     let commandEnv = {
       ...process.env,
       ...setupWrapperEnvVars({ appName: this.id, appRunner: 'nile' }),
@@ -411,6 +430,7 @@ export default class NileGameManager implements Game {
       wineFlag,
       launchArgumentArgs: launchArgumentsArgs,
       launcherArgs: gameSettings.launcherArgs,
+      knownFixLaunchArgs: knownFix.launchArgs,
       id: this.id,
       args
     })

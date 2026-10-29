@@ -17,6 +17,9 @@ import shlex from 'shlex'
  * the game's argv, so its builder is unchanged and `protocol.ts` strips `-`-prefixed
  * URL-supplied args for it instead.
  *
+ * Known-fix `launchArgs` (remote-reachable data) take the same channel, before the
+ * passthrough args, and the marker is emitted when either is non-empty.
+ *
  * The user's game-settings launcher args and a launch option's parameters stay where they
  * were (before the runner options / app id), so nothing a user configured changes meaning.
  */
@@ -28,12 +31,19 @@ interface LaunchArgvInputs {
   launchArgumentArgs?: string
   /** The user's game-settings launcher args. */
   launcherArgs?: string
+  /**
+   * Tier-1 known-fix `launchArgs` (quick 261029-mbl). Remote-reachable data, so
+   * they go behind the `--` marker too, ahead of the passthrough `args`; the
+   * runner can never parse one as its own option.
+   */
+  knownFixLaunchArgs?: string[]
 }
 
 export function legendaryLaunchArgumentFields({
   args,
   launchArgumentArgs,
-  launcherArgs
+  launcherArgs,
+  knownFixLaunchArgs
 }: LaunchArgvInputs): { extraArguments: string; gameArguments?: string[] } {
   return {
     extraArguments: [launchArgumentArgs, launcherArgs]
@@ -41,7 +51,9 @@ export function legendaryLaunchArgumentFields({
       .join(' '),
     // `commandToArgsArray` emits this after every option, behind a `--`, one entry per
     // argument exactly as nile does -- never joined and re-split.
-    ...(args.length ? { gameArguments: [...args] } : {})
+    ...(args.length || knownFixLaunchArgs?.length
+      ? { gameArguments: [...(knownFixLaunchArgs ?? []), ...args] }
+      : {})
   }
 }
 
@@ -50,6 +62,7 @@ export function nileLaunchCommandParts({
   wineFlag,
   launchArgumentArgs,
   launcherArgs,
+  knownFixLaunchArgs,
   id,
   args
 }: LaunchArgvInputs & {
@@ -57,6 +70,7 @@ export function nileLaunchCommandParts({
   wineFlag: string[]
   id: string
 }): string[] {
+  const tail = [...(knownFixLaunchArgs ?? []), ...args]
   return [
     'launch',
     ...exeOverrideFlag, // Check if this works
@@ -64,6 +78,6 @@ export function nileLaunchCommandParts({
     ...shlex.split(launchArgumentArgs ?? ''),
     ...shlex.split(launcherArgs ?? ''),
     id,
-    ...(args.length ? ['--', ...args] : [])
+    ...(tail.length ? ['--', ...tail] : [])
   ]
 }

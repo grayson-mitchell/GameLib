@@ -88,6 +88,7 @@ import { gogdlConfigPath, gogSupportPath } from './constants'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { registerLongLivedChild } from 'backend/longLivedChildren'
 
+import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import type LogWriter from 'backend/logger/log_writer'
 
 export default class GOGGame implements Game {
@@ -595,6 +596,37 @@ export default class GOGGame implements Game {
       exeOverrideFlag = ['--override-exe', gameSettings.targetExe]
     }
 
+    // Known-fix launchArgs / exeOverride (quick 261029-mbl). Precedence:
+    // altExe > user targetExe > known-fix exeOverride > default.
+    const knownFix = readKnownFixLaunchOverrides(
+      this.id,
+      'gog',
+      gameInfo.install.install_path
+    )
+    if (knownFix.exeOverride) {
+      if (exeOverrideFlag.length) {
+        logInfo(
+          `Known-fix exeOverride for ${this.id} not used, the user's executable setting wins`,
+          LogPrefix.Gog
+        )
+      } else {
+        exeOverrideFlag = ['--override-exe', knownFix.exeOverride]
+      }
+    }
+    // gogdl forwards a literal `--` to the game, so the end-of-options marker
+    // is unavailable; its launch options are all `--` long options (with
+    // abbreviations allowed), so drop `--`-prefixed known-fix entries.
+    const knownFixArgs = knownFix.launchArgs.filter((arg) => {
+      if (arg.startsWith('--')) {
+        logWarning(
+          `Known-fix launchArgs entry '${arg}' for ${this.id} dropped, gogdl could read it as its own option`,
+          LogPrefix.Gog
+        )
+        return false
+      }
+      return true
+    })
+
     let commandEnv = {
       ...process.env,
       ...setupWrapperEnvVars({ appName: this.id, appRunner: 'gog' }),
@@ -666,6 +698,7 @@ export default class GOGGame implements Game {
       '--platform',
       gameInfo.install.platform.toLowerCase(),
       ...shlex.split(launchArgumentsArgs),
+      ...knownFixArgs,
       ...shlex.split(gameSettings.launcherArgs ?? ''),
       ...args
     ]

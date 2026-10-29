@@ -58,6 +58,7 @@ import { libraryManagerMap } from '..'
 import { isUmuSupported } from 'backend/utils/compatibility_layers'
 import { getUmuId } from 'backend/wiki_game_info/umu/utils'
 
+import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import type LogWriter from 'backend/logger/log_writer'
 import { rm, writeFile } from 'node:fs/promises'
 
@@ -637,8 +638,16 @@ export default class ZoomGame implements Game {
         ? launchArguments.parameters
         : ''
 
+    // Known-fix launchArgs / exeOverride (quick 261029-mbl).
+    const knownFix = readKnownFixLaunchOverrides(
+      this.id,
+      'zoom',
+      gameInfo.install.install_path
+    )
+
     const commandParts = [
       ...shlex.split(launchArgumentsArgs),
+      ...knownFix.launchArgs,
       ...shlex.split(gameSettings.launcherArgs ?? ''),
       ...args
     ]
@@ -701,7 +710,16 @@ export default class ZoomGame implements Game {
         return false
       }
 
-      const executable = gameSettings.targetExe || gameInfo.install.executable
+      if (knownFix.exeOverride && gameSettings.targetExe) {
+        logInfo(
+          `Known-fix exeOverride for ${this.id} not used, the user's executable setting wins`,
+          LogPrefix.Zoom
+        )
+      }
+      const executable =
+        gameSettings.targetExe ||
+        knownFix.exeOverride ||
+        gameInfo.install.executable
       const startFolder = isAbsolute(executable)
         ? dirname(executable)
         : dirname(join(gameInfo.install.install_path, executable))
