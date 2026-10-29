@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 57
 Plan: 0 of 0
 Status: Ready to plan
-Last activity: 2026-10-29 - Completed quick task 261029-oog: Widen hardcoded-string gate for key-table shapes and promote six files
+Last activity: 2026-10-29 - Completed quick task 261029-pbv: Refresh i18nForkTouchedFiles.json for steamIncompleteCard.ts and scope it
 
 Progress: [██████████] 99%
 
@@ -505,6 +505,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261029-o1w | GOG's macOS login (pristine WKWebView, needed for Cloudflare) now presents as a sheet like the other logins: native overlaid × (Esc too), 464x592, single-flight latch; Epic stays free-floating. Follows debug gog-login-cloudflare-check (0f38bc416, b940046a5). | 2026-10-29 | e339e95ac, eaf461137, 78a108850 | cargo 410/410, tauriShellSource pins green, 0 rustc warnings; live PASS (operator, tauri dev: sheet, ×, Esc, login, Epic unchanged, styling) | [261029-o1w-gog-login-window-as-macos-sheet-with-nat](./quick/261029-o1w-gog-login-window-as-macos-sheet-with-nat/) |
 | 261029-osq | One native dark 32pt AppKit title bar (`install_native_login_bar`: origin label + native ×) for every macOS login sheet (Humble/Amazon/Zoom/GOG), insetting the webview below it. Fixes the macOS 26 scrollbar-gutter wedge (todo closed) and deletes the injected cancel-strip/banner/scrollbar-inset scripts and `/login-cancel` sentinel. Epic unchanged. | 2026-10-29 | e625650c4 | cargo 370/370 (41 tests deleted with their scripts, 1 added), 0 rustc warnings; jest 1052/1052 across main.rs pin suites; live PASS (operator, AppleShowScrollBars=Always) | [261029-osq-native-dark-title-bar-for-all-macos-logi](./quick/261029-osq-native-dark-title-bar-for-all-macos-logi/) |
 | 261029-oog | Widened the hardcoded-string gate with three narrow shape-based exemptions (bare ≥3-segment i18n key paths, class-list returns from `*ClassName` functions, messages to loggers typed `typeof window.api.log*`/`console.*`), each with negative fixtures; `TGamelibLike`→`TFunc` and `logFallback` retyped; six 56-30 A-17 files promoted into `i18nGateScope.json` (241), debt entries removed. Todo closed. | 2026-10-29 | 055761961, 60f7e1935 | hardcodedStringGate 176/176, tsc + meta tsc clean, planning-gates 12/12, prettier clean. **Red, pre-existing:** genI18nGateScope A-17 ANTI-ROT — `i18nForkTouchedFiles.json` lacks `steamIncompleteCard.ts` from 261029-ocq | [261029-oog-widen-hardcoded-string-gate-for-key-tabl](./quick/261029-oog-widen-hardcoded-string-gate-for-key-tabl/) |
+| 261029-pbv | Refreshed `i18nForkTouchedFiles.json` (287→288) for 261029-ocq's `steamIncompleteCard.ts` and promoted it into `i18nGateScope.json` (241→242, 0 violations); A0/A2/A3/A4 re-pinned. Fixes the red A-17 ANTI-ROT test left by 261029-oog. | 2026-10-29 | 4e5d9d862 | genI18nGateScope + hardcodedStringGate 204 passed/1 skipped, meta tsc clean, planning-gates 12/12, prettier clean | [261029-pbv-refresh-i18nforktouchedfiles-json-for-st](./quick/261029-pbv-refresh-i18nforktouchedfiles-json-for-st/) |
 
 ## Session Continuity
 
