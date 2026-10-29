@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 57
 Plan: 0 of 0
 Status: Ready to plan
-Last activity: 2026-10-29 - Completed quick task 261029-utr: Epic login window as macOS sheet like GOG
+Last activity: 2026-10-30 - Completed quick task 261030-ah1: store-embed deep-link panel origin reason
 
 Progress: [██████████] 99%
 
@@ -523,6 +523,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261029-v5a | Focus-row strips snap to grid columns on free horizontal scroll: `scroll-snap-type: inline mandatory` on `.focusRowTrack`, `scroll-snap-align: start` on cards (existing 15px `scroll-padding-inline` puts each stop on grid column 1), plus a `.gameList::before` 1-pitch anchor so hero strips keep a stop at one pitch. | 2026-10-29 | 1a85408c5 | focusRowStripSource suite 83/83; prettier clean. **Unverified live:** drag-scroll settle, hero strip, chevrons, focus scroll. | [261029-v5a-focus-row-strips-snap-to-grid-columns-on](./quick/261029-v5a-focus-row-strips-snap-to-grid-columns-on/) |
 | 261029-v5a-b | Follow-up: chevron paging landed half a card off a column and only re-snapped on hover (WKWebView does not snap a scripted smooth scroll). `page()` now scrolls to `pagedScrollLeft` (pitch-rounded, clamped, RTL-aware) via `scrollWithSnapSuspended`. | 2026-10-30 | d64e87c53 | FocusRowStrip suites 176/176; prettier clean. **Unverified live:** chevron lands on a column with no hover correction. | [261029-v5a-focus-row-strips-snap-to-grid-columns-on](./quick/261029-v5a-focus-row-strips-snap-to-grid-columns-on/) |
 | 261029-i1n | **Windows native Steam launch now opens `steam://launch/<appId>/Dialog` instead of `steam://rungameid/<appId>`, so Steam no longer shows its "Starting game / LAUNCHING — Open Steam" window.** Live-isolated on WazHack 264160: Playnite's `steam://launch/<id>/Dialog` shows no window, `steam.exe -silent steam://rungameid/<id>` still does, so the verb is the cause. `buildSteamProtocolUrl` gains a `launch` verb behind the same numeric guard; macOS/Linux stay on `rungameid`. Corrected the activate:false todo. | 2026-10-29 | 00fc389ac | games.test.ts 12 failed / 441 passed (same 12 pre-existing Windows failures as before); steamFlows+skeletonFlows 23/23; codecheck clean; prettier clean on both source files. Live gate pending: Play WazHack on Windows with Steam running and with Steam exited. | [261029-i1n-windows-steam-launch-via-steam-launch-ap](./quick/261029-i1n-windows-steam-launch-via-steam-launch-ap/) |
+| 261030-ah1 | Store-embed D-34 deep-link panel now uses a dedicated `'origin'` reason ("GameLib can't open this link in-app") instead of the platform heading; `webview.unavailable.origin.{heading,body}` filled in all 49 `gamelib.json` + 48 `gamelib.mt.json` (model-authored, low-confidence: br ga ml ta ka uz eu fa). Todo item 5 closed, re-triaged minor/windows/blocked. Also `bfa340bcd`: titlebar event renamed kebab so `hardcodedStringGate` passes. | 2026-10-30 | e66fb6780 | WebView jest 455, codecheck, lint-translations 0 hard, hardcodedStringGate + WebView/preload jest 631 pass. Shared `next-step` line still renders under origin (open question). | [261030-ah1-store-embed-origin-reason-panel-heading](./quick/261030-ah1-store-embed-origin-reason-panel-heading/) |
 
 ## Session Continuity
 
