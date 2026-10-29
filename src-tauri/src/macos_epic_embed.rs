@@ -330,6 +330,59 @@ pub(crate) fn is_selected() -> bool {
     }
 }
 
+/// Height (logical px) of the band at the top of the window's content view that the renderer's
+/// viewport does NOT cover: the visible native titlebar. Tauri's `TitleBarStyle::Visible` keeps
+/// `NSWindowStyleMaskFullSizeContentView` set, so the content view -- the parent wry positions a
+/// child webview in -- spans the whole window, while the main webview's page starts BELOW an
+/// opaque titlebar. A rect measured in the renderer (`getBoundingClientRect`) therefore sits
+/// `inset` px lower in content-view coordinates. Under `Overlay` (transparent titlebar) the page
+/// runs under the titlebar, so the two origins agree and the inset is 0; without
+/// full-size-content-view `contentLayoutRect` equals the view's bounds, also 0. Read fresh on
+/// every call so a runtime `setTitleBarStyle` toggle is picked up by the next geometry write.
+/// Main thread only.
+fn content_top_inset(ns_view: &NSView) -> f64 {
+    let Some(window) = ns_view.window() else {
+        return 0.0;
+    };
+    if window.titlebarAppearsTransparent() {
+        return 0.0;
+    }
+    let inset = ns_view.bounds().size.height - window.contentLayoutRect().size.height;
+    if inset.is_finite() && inset > 0.0 {
+        inset
+    } else {
+        0.0
+    }
+}
+
+/// Resolves [`content_top_inset`] for the main window from any thread (marshalled to the main
+/// thread, same shape as `set_bounds`). The Tauri-managed store embed (main.rs) adds the result
+/// to its renderer-space `y` before `Webview::set_position`.
+pub(crate) fn main_window_content_top_inset(app: &AppHandle) -> Result<f64, String> {
+    let window = app
+        .get_window(crate::MAIN_WINDOW_LABEL)
+        .ok_or_else(|| format!("store_embed_inset:no-window:{}", crate::MAIN_WINDOW_LABEL))?;
+    let (tx, rx) = mpsc_channel::<Result<f64, String>>();
+    if let Err(e) = app.run_on_main_thread(move || {
+        let result: Result<f64, String> = (|| {
+            let ns_view_ptr = window
+                .ns_view()
+                .map_err(|e| format!("store_embed_inset:ns_view-failed:{e}"))?;
+            // SAFETY: resolved and retained on the main thread -- see `open()`'s doc comment.
+            let ns_view: Retained<NSView> = unsafe { Retained::retain(ns_view_ptr as *mut NSView) }
+                .ok_or_else(|| "store_embed_inset:ns_view-null".to_string())?;
+            Ok(content_top_inset(&ns_view))
+        })();
+        let _ = tx.send(result);
+    }) {
+        return Err(format!("store_embed_inset:dispatch-failed:{e}"));
+    }
+    match rx.recv_timeout(Duration::from_secs(10)) {
+        Ok(r) => r,
+        Err(_) => Err("store_embed_inset:main-thread-timeout".to_string()),
+    }
+}
+
 /// Converts a renderer-space rect (`useStoreEmbedHost`'s `flush()` is the ONLY rect source --
 /// D-18, "single geometry oracle": no size-tracking autoresizing mask, no Rust-side resize
 /// heuristic; see `top_pinned_autoresizing_mask` for the one edge-pinning mask) into an

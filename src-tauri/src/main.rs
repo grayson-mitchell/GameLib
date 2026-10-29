@@ -6531,17 +6531,23 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
         // again, while the previous unmount left the embed HIDDEN and, via the slot's
         // ResizeObserver, moved to a zero rect on Linux. The SHOW step below is now shared across
         // platforms: navigating alone would leave the embed hidden on macOS too, exactly as the
-        // 2026-10-01 measurement found. The rect re-apply stays Linux-only: macOS bounds were
-        // measured already correct on this path (`storeEmbedShow()` alone repainted the embed
-        // with no bounds flush), so re-applying a rect here would import the zero-rect hazard
-        // `store_embed_linux_rect_is_zero_area` exists to contain, onto a platform with no
-        // measured need for it. Windows (quick 261012-f25) takes the macOS path: show + navigate,
-        // no rect re-apply. That is unmeasured live on Windows.
+        // 2026-10-01 measurement found. The rect is now re-applied on every platform (macOS/Windows
+        // since the 2026-10-30 R7 fix: a return after a window resize otherwise painted the stale
+        // size until the renderer's follow-up flush landed ~1 s later), behind the same zero-area
+        // guard as `store_embed_set_bounds`.
         #[cfg(target_os = "linux")]
         {
             let rect = store_embed_linux_gtk_rect(x, y, w, h)
                 .map_err(|e| e.replacen("store_embed_set_bounds:", "store_embed_open:", 1))?;
             linux_store_embed_layout::apply_bounds(&existing, rect)?;
+        }
+        // Defect B (R7): macOS/Windows also apply the given rect BEFORE showing, so a return
+        // after a window resize paints at the new slot size at once instead of the stale one
+        // until the renderer's follow-up flush lands. Same zero-area guard as set_bounds.
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        if !store_embed_rect_is_zero_area(w, h) {
+            store_embed_apply_rect(app, &existing, x, y, w, h)
+                .map_err(|e| e.replacen("store_embed_set_bounds:", "store_embed_open:", 1))?;
         }
         existing
             .show()
@@ -6707,6 +6713,9 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     #[cfg(target_os = "linux")]
     linux_store_embed_layout::ensure_overlay(app)?;
 
+    // macOS: same titlebar-band correction as `store_embed_apply_rect`.
+    #[cfg(target_os = "macos")]
+    let y = y + macos_epic_embed::main_window_content_top_inset(app)?;
     match window.add_child(
         builder,
         tauri::LogicalPosition::new(x, y),
@@ -6934,14 +6943,37 @@ fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, Stri
             );
             return Ok(Value::Null);
         }
-        webview
-            .set_position(tauri::LogicalPosition::new(x, y))
-            .map_err(|e| format!("store_embed_set_bounds:set_position-failed:{e}"))?;
-        webview
-            .set_size(tauri::LogicalSize::new(w, h))
-            .map_err(|e| format!("store_embed_set_bounds:set_size-failed:{e}"))?;
+        store_embed_apply_rect(app, &webview, x, y, w, h)?;
         Ok(Value::Null)
     }
+}
+
+/// macOS/Windows: the single `set_position`/`set_size` writer for the Tauri-managed embed (see
+/// `store_embed_set_bounds`' doc comment). On macOS `y` gains the visible titlebar's height first
+/// (`macos_epic_embed::main_window_content_top_inset`): wry positions a child in the content
+/// view, which under `TitleBarStyle::Visible` spans the titlebar the renderer's viewport starts
+/// below. The renderer's rect stays the only rect source (D-18); this is a coordinate-space
+/// correction, not a fallback rect. Callers have already applied the zero-area guard.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn store_embed_apply_rect(
+    app: &AppHandle,
+    webview: &tauri::Webview,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    let y = y + macos_epic_embed::main_window_content_top_inset(app)?;
+    #[cfg(not(target_os = "macos"))]
+    let _ = app;
+    webview
+        .set_position(tauri::LogicalPosition::new(x, y))
+        .map_err(|e| format!("store_embed_set_bounds:set_position-failed:{e}"))?;
+    webview
+        .set_size(tauri::LogicalSize::new(w, h))
+        .map_err(|e| format!("store_embed_set_bounds:set_size-failed:{e}"))?;
+    Ok(())
 }
 
 /// Linux layout for the store/wiki embed (quick 260930-blh; strategy (a) of

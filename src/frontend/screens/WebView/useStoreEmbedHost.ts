@@ -4,6 +4,10 @@ import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEm
 import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
 import { readWebviewZoomFactor, scaleRectForZoom } from './storeEmbedZoom'
 
+// Dispatched on `window` by `applyFramelessDecorations` (`src/preload/api/tauriWindowChrome.ts`,
+// which cannot import from frontend/ -- keep the two string literals identical).
+const TITLEBAR_STYLE_APPLIED_EVENT = 'gamelib:titlebar-style-applied'
+
 /**
  * Store embed host hook (Phase 40 Plan 08, D-18/D-19/D-20/D-21, REQ-40-02/REQ-40-03).
  *
@@ -570,6 +574,10 @@ export function useStoreEmbedHost({
     // later) without this hook needing to know which ancestor it is.
     window.addEventListener('resize', scheduleFlush)
     window.addEventListener('scroll', scheduleFlush, true)
+    // macOS: toggling `framelessWindow` at runtime changes the native titlebar under a live embed,
+    // which shifts the offset Rust adds to the rect (`content_top_inset`) without moving the slot
+    // in the page. `applyFramelessDecorations` fires this once `setTitleBarStyle` has resolved.
+    window.addEventListener(TITLEBAR_STYLE_APPLIED_EVENT, scheduleFlush)
 
     // Re-send when the webview zoom is PUBLISHED (W8, quick 261012-gn8). The trigger is the
     // property write, not `resize`/the ResizeObserver: `publishWebviewZoom` writes
@@ -601,6 +609,7 @@ export function useStoreEmbedHost({
       zoomObserver?.disconnect()
       window.removeEventListener('resize', scheduleFlush)
       window.removeEventListener('scroll', scheduleFlush, true)
+      window.removeEventListener(TITLEBAR_STYLE_APPLIED_EVENT, scheduleFlush)
       if (trailingHandle !== null) clearTimeout(trailingHandle)
     }
     // Re-arms exactly when the slot ELEMENT changes identity, NOT on every render and NOT on

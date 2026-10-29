@@ -308,6 +308,9 @@ export const applyFramelessDecorations = (frameless?: boolean): void => {
     if (isMacWebview()) {
       void getCurrentWindow()
         .setTitleBarStyle(resolved ? 'overlay' : 'visible')
+        // Tells a live store embed (`useStoreEmbedHost.ts`, same literal) to re-send its rect: the
+        // native titlebar band Rust adds to it just changed.
+        .then(() => window.dispatchEvent(new Event('gamelib:titlebar-style-applied')))
         .catch((error) => warn('setTitleBarStyle', error))
       return
     }
