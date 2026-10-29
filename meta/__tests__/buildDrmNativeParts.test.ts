@@ -180,6 +180,28 @@ describe('source gates', () => {
     expect(src).not.toMatch(/HKEY_LOCAL_MACHINE|HKLM/)
     expect(src).not.toMatch(/steam_drm_thread|STEAMSTART|DIPC|OpenEventW/)
   })
+  it('sets up the shim game-process env, registry writes in HKCU', () => {
+    const src = read(HELPER_SRC)
+    for (const piece of [
+      'Steam3Master_SharedMemLock',
+      'Global\\\\Valve_SteamIPC_Class',
+      'Software\\\\Valve\\\\Steam\\\\ActiveProcess',
+      'L"pid"',
+      'L"SteamClientDll64"',
+      'L"SteamPath"',
+      'RegisterClassExW',
+      'CreateWindowW'
+    ]) {
+      expect(src).toContain(piece)
+    }
+    // port renamed setup_steam_registry to write_registry, then inits the layer
+    expect(src).toMatch(/\bwrite_registry\(steam_dir/)
+    expect(src).toContain('steamclient_init_registry')
+    // every registry write goes through an HKCU root
+    const writes = src.match(/set_(?:sz|dword)\(\s*HKEY_\w+/g) ?? []
+    expect(writes.length).toBeGreaterThanOrEqual(5)
+    for (const w of writes) expect(w).toContain('HKEY_CURRENT_USER')
+  })
   it('carries no 32-bit detour', () => {
     const dir = join(__dirname, '..', '..', PATCH_DIR)
     expect(readdirSync(dir).filter((f) => /detour32/.test(f))).toEqual([])
