@@ -497,6 +497,20 @@ Run by 56-34 after the operator said "window up" (dev started under `tee -a <ses
 - PC7: `test ! -d BOTTLE(219990)` exit 0. PC11: `test ! -e` Mac Steam manifest exit 0; `find ... appmanifest_219990.acf` outside the 219990 bottle printed nothing. Both PASS.
 - PROCESS DEVIATION (instance count): after the uninstall the running `gamelib-shell` was pid 78673 (parent shell `ttys004`, started about 00:52Z), not PC6's pid 76294. `terminal.log` shows `[shell] quit (Dock Quit)` at line 80, after the launch-0 delimiter at line 57, so the tee'd instance was quit and a second dev app was started from another terminal, outside `tee -a <session>/terminal.log`. The uninstall is therefore not captured by terminal.log and PC6's pid no longer holds. The pre-restart sidecar log is saved as `gamelib-segmentA-pre-restart.log`. Remediation: quit the app, restart under tee, re-run PC6 (new segment-A pid) before the reinstall. No reinstall or launch has run yet, so nothing scored is affected.
 
+### 56-34 segment A restart (PC6 re-run)
+
+After the instance-count deviation, the operator restarted dev from one terminal under `tee -a <session>/terminal.log`. The first PC6 pid (76294) is kept in `pc6-pid-first.txt`; the segment-A pid is now 86847.
+
+| ID | Observed | Result |
+| --- | --- | --- |
+| PC6 (re-run) | `gamelib-shell` count 1, pid 86847 (`pc6-pid.txt`); sidecar.js mtime 1793236743 > newest `src/backend` commit time 1793236527; literals: `stage retry passed on attempt` 1, `stage wine log` 2, `GAMELIB_DRM_STAGE_FIRST_TIMEOUT_MS` 2, `sent terminal status done` 2, `drmLaunchSetup` 11, `setupSteamClientForwarder` 0 | PASS |
+| PC12 | `present` | PASS |
+| PC13 (before launch 0) | 1 (connected) | recorded |
+| PC7 | `test ! -d BOTTLE(219990)` exit 0 | PASS |
+| launch 0 (second delimiter) | `terminal.log` now holds 2 `=== GATE LAUNCH 0` delimiters (00:46:49Z for the abandoned first attempt, 01:19:42Z for the reinstall); `lines-before-launch-0.txt` = 59, `anchors-before-launch-0.txt` = 0 (fresh `gamelib.log` after the restart) | reinstall window starts here |
+
+Note: DELTA(0) is the reinstall window of the current segment-A `gamelib.log` after line 59.
+
 ## Gaps
 
 - PC2 failed at authoring time: a Windows Steam was running in the `GameLibSteam` bottle (see Preflight). RESOLVED before 56-34 launch 0: re-checked by 56-34 on 2026-10-29, the PC2 ps grep printed nothing (0 lines) and `pgrep -fl wineserver` printed nothing (see `### 56-34 pre-run re-check`).
