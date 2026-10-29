@@ -190,6 +190,22 @@ jest.mock('../../FormControl', () => ({
   })
 }))
 
+jest.mock('frontend/components/UI/Dropdown', () => ({
+  __esModule: true,
+  default: (props: Record<string, unknown>) => ({
+    type: 'mock-dropdown',
+    props
+  })
+}))
+
+jest.mock('../../NavShell/components/NavItem', () => ({
+  __esModule: true,
+  default: (props: Record<string, unknown>) => ({
+    type: 'mock-navitem',
+    props
+  })
+}))
+
 jest.mock('../../NavShell/components/FilterViewList', () => ({
   __esModule: true,
   default: (props: Record<string, unknown>) => ({
@@ -281,6 +297,8 @@ jest.mock('frontend/screens/Library/gameCount', () => ({
 // element).
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import Dropdown from 'frontend/components/UI/Dropdown'
+import NavItem from '../../NavShell/components/NavItem'
 import FilterViewList from '../../NavShell/components/FilterViewList'
 import FilterCollectionList from '../../NavShell/components/FilterCollectionList'
 import FilterFocusRow from '../../NavShell/components/FilterFocusRow'
@@ -438,24 +456,22 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
       expect(group).toBeDefined()
       return group as AnyElement
     }
-    const selectIn = (row: AnyElement): AnyElement => {
+    const fire = (el: AnyElement, prop: 'onClick', arg?: unknown) =>
+      (el.props[prop] as (a?: unknown) => void)(arg)
+    const dropdownIn = (row: AnyElement): AnyElement => {
       const found = collectElements(row.props.children).filter(
-        (el) => el.type === 'select'
+        (el) => el.type === Dropdown
       )
       expect(found).toHaveLength(1)
       return found[0]
     }
-    const fire = (
-      el: AnyElement,
-      prop: 'onChange' | 'onClick',
-      arg?: unknown
-    ) => (el.props[prop] as (a?: unknown) => void)(arg)
-    const optionValues = (select: AnyElement): unknown[] =>
-      collectElements(select.props.children)
-        .filter((el) => el.type === 'option')
-        .map((el) => el.props.value)
+    const rowsOf = (dropdown: AnyElement): AnyElement[] =>
+      (Array.isArray(dropdown.props.children)
+        ? dropdown.props.children
+        : [dropdown.props.children]
+      ).filter((c: unknown) => (c as AnyElement)?.type === NavItem)
 
-    it('one sort row inside Header__sortGroup and no group-by row anywhere', () => {
+    it('one sort row inside Header__sortGroup, no group-by row, and no native select anywhere', () => {
       const tree = renderHeader()
       const group = sortGroupOf(tree)
       expect(findByDataTour(group, 'library-sort')).toHaveLength(1)
@@ -465,28 +481,63 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
       expect(all.filter((el) => el.props?.id === 'library-group-by')).toEqual(
         []
       )
-      expect(all.filter((el) => el.type === 'select')).toHaveLength(1)
+      expect(all.filter((el) => el.type === 'select')).toHaveLength(0)
     })
 
-    it('the select offers exactly the closed sort field list', () => {
-      const tree = renderHeader()
-      const sortSelect = selectIn(
-        findByDataTour(sortGroupOf(tree), 'library-sort')[0]
+    it('the sort row holds one closeOnSelect Dropdown with the Header__sortDropdown class', () => {
+      const dropdown = dropdownIn(
+        findByDataTour(sortGroupOf(renderHeader()), 'library-sort')[0]
       )
-      expect(optionValues(sortSelect)).toEqual([...LIBRARY_SORT_FIELDS])
-      expect(optionValues(sortSelect)).toHaveLength(3)
+      expect(String(dropdown.props.className)).toContain('Header__sortDropdown')
+      expect(dropdown.props.closeOnSelect).toBe(true)
     })
 
-    it('sort select onChange validates the value before setSortField', () => {
-      const tree = renderHeader()
-      const group = sortGroupOf(tree)
-      const select = selectIn(findByDataTour(group, 'library-sort')[0])
-      fire(select, 'onChange', { currentTarget: { value: 'bogus' } })
-      expect(libraryContextValue.setSortField).not.toHaveBeenCalled()
-      fire(select, 'onChange', { currentTarget: { value: 'lastPlayed' } })
+    it('its children are three NavItem button rows in LIBRARY_SORT_FIELDS order, the current field active', () => {
+      libraryContextValue = makeLibraryContextValue({ sortField: 'lastPlayed' })
+      const dropdown = dropdownIn(
+        findByDataTour(sortGroupOf(renderHeader()), 'library-sort')[0]
+      )
+      const rows = rowsOf(dropdown)
+      expect(rows).toHaveLength(3)
+      expect(rows.map((r) => r.props.elementType)).toEqual([
+        'button',
+        'button',
+        'button'
+      ])
+      expect(rows.map((r) => r.key)).toEqual([...LIBRARY_SORT_FIELDS])
+      expect(rows.map((r) => r.props.label)).toEqual([
+        'Name',
+        'Last played',
+        'Install size'
+      ])
+      expect(rows.map((r) => r.props.active)).toEqual([false, true, false])
+    })
+
+    it('clicking a row calls setSortField once with that row literal field', () => {
+      const dropdown = dropdownIn(
+        findByDataTour(sortGroupOf(renderHeader()), 'library-sort')[0]
+      )
+      const rows = rowsOf(dropdown)
+      fire(rows[1], 'onClick')
+      expect(libraryContextValue.setSortField).toHaveBeenCalledTimes(1)
       expect(libraryContextValue.setSortField).toHaveBeenCalledWith(
         'lastPlayed'
       )
+    })
+
+    it('the Dropdown title carries the Sort by label and the current field label', () => {
+      const titleText = (field: string): string => {
+        libraryContextValue = makeLibraryContextValue({ sortField: field })
+        const dropdown = dropdownIn(
+          findByDataTour(sortGroupOf(renderHeader()), 'library-sort')[0]
+        )
+        return collectElements(dropdown.props.title as ReactNode)
+          .flatMap((el) => [el.props.children])
+          .filter((c): c is string => typeof c === 'string')
+          .join('|')
+      }
+      expect(titleText('name')).toBe('Sort by|Name')
+      expect(titleText('lastPlayed')).toBe('Sort by|Last played')
     })
 
     it('the direction button flips asc to desc and desc to asc', () => {

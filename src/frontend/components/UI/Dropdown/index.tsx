@@ -7,13 +7,21 @@ type Props = {
   children: ReactNode
   className?: string
   buttonClass?: string
+  /**
+   * Quick 261029-riq: opt-in. When true, a click on any <button> inside the
+   * panel (choosing an option) collapses the panel and returns focus to the
+   * trigger, and Escape while expanded does the same. Default false, so
+   * existing consumers (FilterFacetGroup, MainButton) are unaffected.
+   */
+  closeOnSelect?: boolean
 }
 
 export default function Dropdown({
   title,
   children,
   className,
-  buttonClass
+  buttonClass,
+  closeOnSelect = false
 }: Props) {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -46,6 +54,16 @@ export default function Dropdown({
     setIsExpanded(next)
   }
 
+  // Moving focus to the trigger keeps focus inside the container, so the root
+  // onBlur collapse does not fight it, and no collapsed child keeps focus
+  // (a focused collapsed child would re-expand through the panel onFocus).
+  const collapseAndRefocus = (container: Element | null | undefined) => {
+    setIsExpanded(false)
+    container
+      ?.querySelector<HTMLButtonElement>(':scope > .dropdownButton')
+      ?.focus()
+  }
+
   return (
     <div
       className={`dropdownContainer ${className || ''}`}
@@ -54,6 +72,16 @@ export default function Dropdown({
           setIsExpanded(false)
         }
       }}
+      onKeyDown={
+        closeOnSelect
+          ? (e) => {
+              if (isExpanded && e.key === 'Escape') {
+                e.stopPropagation()
+                collapseAndRefocus(e.currentTarget)
+              }
+            }
+          : undefined
+      }
     >
       <button
         className={`dropdownButton ${buttonClass ? buttonClass : ''}`}
@@ -64,6 +92,15 @@ export default function Dropdown({
       </button>
       <div
         onFocus={() => setIsExpanded(true)}
+        onClick={
+          closeOnSelect
+            ? (e) => {
+                if ((e.target as Element).closest('button')) {
+                  collapseAndRefocus(e.currentTarget.parentElement)
+                }
+              }
+            : undefined
+        }
         className={`dropdown ${isExpanded ? 'expanded' : 'collapsed'}`}
       >
         {children}

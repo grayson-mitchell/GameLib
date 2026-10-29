@@ -17,7 +17,8 @@ import {
   faArrowDownShortWide,
   faArrowDownWideShort,
   faFilter,
-  faFilterCircleXmark
+  faFilterCircleXmark,
+  faChevronDown
 } from '@fortawesome/free-solid-svg-icons'
 import classNames from 'classnames'
 import { GameInfo } from 'common/types'
@@ -28,6 +29,8 @@ import { LIBRARY_TOUR_ID } from 'frontend/screens/Library/components/LibraryTour
 import TourButton from 'frontend/components/Tour/TourButton'
 import AddGameButton from 'frontend/screens/Library/components/AddGameButton'
 import LibrarySearchBar from '../LibrarySearchBar'
+import Dropdown from 'frontend/components/UI/Dropdown'
+import NavItem from '../NavShell/components/NavItem'
 import FilterViewList from '../NavShell/components/FilterViewList'
 import FilterCollectionList from '../NavShell/components/FilterCollectionList'
 import FilterFocusRow from '../NavShell/components/FilterFocusRow'
@@ -35,7 +38,7 @@ import FilterStoreFacet from '../NavShell/components/FilterStoreFacet'
 import FilterRunnabilityFacet from '../NavShell/components/FilterRunnabilityFacet'
 import FilterMoreGroup from '../NavShell/components/FilterMoreGroup'
 import LibraryTileSizeSlider from '../NavShell/components/LibraryTileSizeSlider'
-import { LIBRARY_SORT_FIELDS } from 'frontend/screens/Library/librarySort'
+import type { LibrarySortField } from 'frontend/screens/Library/librarySort'
 import './index.css'
 
 type Props = {
@@ -94,6 +97,25 @@ export default function Header({ list, totalGames }: Props) {
     sortDirection === 'asc'
       ? tGamelib('gamelib:library.sort.direction.ascending', 'Ascending')
       : tGamelib('gamelib:library.sort.direction.descending', 'Descending')
+  // Quick 261029-riq item 4: the sort field picker is a themed Dropdown, not a
+  // native <select> (whose popup is OS-drawn). Rows are literal t() call sites
+  // in LIBRARY_SORT_FIELDS order (name, lastPlayed, installSize).
+  const sortRows: Array<{ value: LibrarySortField; label: string }> = [
+    {
+      value: 'name',
+      label: tGamelib('gamelib:library.sort.field.name', 'Name')
+    },
+    {
+      value: 'lastPlayed',
+      label: tGamelib('gamelib:library.sort.field.lastPlayed', 'Last played')
+    },
+    {
+      value: 'installSize',
+      label: tGamelib('gamelib:library.sort.field.installSize', 'Install size')
+    }
+  ]
+  const currentSortRow =
+    sortRows.find((row) => row.value === sortField) ?? sortRows[0]
   const {
     refreshLibrary,
     refreshing,
@@ -254,33 +276,35 @@ export default function Header({ list, totalGames }: Props) {
       </div>
       <div className="Header__sortGroup">
         <div className="Header__sortRow" data-tour="library-sort">
-          <label className="Header__sortLabel" htmlFor="library-sort-field">
-            {tGamelib('gamelib:library.sort.label', 'Sort by')}
-          </label>
-          <select
-            id="library-sort-field"
-            className="Header__sortSelect"
-            value={sortField}
-            onChange={(event) => {
-              const next = LIBRARY_SORT_FIELDS.find(
-                (field) => field === event.currentTarget.value
-              )
-              if (next) setSortField(next)
-            }}
+          <Dropdown
+            closeOnSelect
+            className="Header__sortDropdown"
+            title={
+              <>
+                <span className="Header__sortLabel">
+                  {tGamelib('gamelib:library.sort.label', 'Sort by')}
+                </span>
+                <span className="Header__sortValue">
+                  {currentSortRow.label}
+                </span>
+                <FontAwesomeIcon
+                  icon={faChevronDown}
+                  className="Header__sortCaret"
+                />
+              </>
+            }
           >
-            <option value="name">
-              {tGamelib('gamelib:library.sort.field.name', 'Name')}
-            </option>
-            <option value="lastPlayed">
-              {tGamelib('gamelib:library.sort.field.lastPlayed', 'Last played')}
-            </option>
-            <option value="installSize">
-              {tGamelib(
-                'gamelib:library.sort.field.installSize',
-                'Install size'
-              )}
-            </option>
-          </select>
+            {sortRows.map((row) => (
+              <NavItem
+                key={row.value}
+                elementType="button"
+                className="Header__sortOption"
+                label={row.label}
+                active={sortField === row.value}
+                onClick={() => setSortField(row.value)}
+              />
+            ))}
+          </Dropdown>
           <button
             type="button"
             className="Header__utilityButton Header__sortDirection"

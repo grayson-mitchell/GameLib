@@ -130,15 +130,25 @@ function harness(): HookHarness {
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
 
+let extraProps: Record<string, unknown> = {}
+
 function mount(): AnyElement {
   harness().__resetMount()
   harness().__beginRender()
-  return Dropdown({ title: 'Filters', children: null }) as unknown as AnyElement
+  return Dropdown({
+    title: 'Filters',
+    children: null,
+    ...extraProps
+  }) as unknown as AnyElement
 }
 
 function reinvoke(): AnyElement {
   harness().__beginRender()
-  return Dropdown({ title: 'Filters', children: null }) as unknown as AnyElement
+  return Dropdown({
+    title: 'Filters',
+    children: null,
+    ...extraProps
+  }) as unknown as AnyElement
 }
 
 function button(tree: AnyElement): AnyElement {
@@ -422,5 +432,94 @@ describe('Dropdown panel surface (F-34.10-05 source gate)', () => {
     const css = readScssStripped()
     expect(css).not.toMatch(/right:\s*0/)
     expect(css).not.toMatch(/min-width:\s*250px/)
+  })
+})
+
+describe('Dropdown closeOnSelect (quick 261029-riq)', () => {
+  const trigger = () => ({ focus: jest.fn() })
+  const expand = (): AnyElement => {
+    mount()
+    let tree = reinvoke()
+    ;(button(tree).props.onClick as () => void)()
+    tree = reinvoke()
+    expect(panel(tree).props.className).toBe('dropdown expanded')
+    return tree
+  }
+  const panelClick = (stub: { focus: jest.Mock }, inButton: boolean) => ({
+    target: { closest: () => (inButton ? {} : null) },
+    currentTarget: { parentElement: { querySelector: () => stub } }
+  })
+
+  beforeEach(() => {
+    gamepadAction.mockReset()
+    extraProps = {}
+  })
+  afterAll(() => {
+    extraProps = {}
+  })
+
+  it('without closeOnSelect there are no panel click or root keydown handlers', () => {
+    const tree = expand()
+    expect(panel(tree).props.onClick).toBeUndefined()
+    expect(tree.props.onKeyDown).toBeUndefined()
+  })
+
+  it('with closeOnSelect, a click on a panel button collapses and refocuses the trigger', () => {
+    extraProps = { closeOnSelect: true }
+    let tree = expand()
+    const stub = trigger()
+    ;(panel(tree).props.onClick as (e: unknown) => void)(panelClick(stub, true))
+    tree = reinvoke()
+    expect(panel(tree).props.className).toBe('dropdown collapsed')
+    expect(stub.focus).toHaveBeenCalledTimes(1)
+  })
+
+  it('with closeOnSelect, a click on non-button panel space does not collapse', () => {
+    extraProps = { closeOnSelect: true }
+    let tree = expand()
+    const stub = trigger()
+    ;(panel(tree).props.onClick as (e: unknown) => void)(
+      panelClick(stub, false)
+    )
+    tree = reinvoke()
+    expect(panel(tree).props.className).toBe('dropdown expanded')
+    expect(stub.focus).not.toHaveBeenCalled()
+  })
+
+  it('with closeOnSelect, Escape while expanded collapses, refocuses and stops propagation', () => {
+    extraProps = { closeOnSelect: true }
+    let tree = expand()
+    const stub = trigger()
+    const stopPropagation = jest.fn()
+    ;(tree.props.onKeyDown as (e: unknown) => void)({
+      key: 'Escape',
+      stopPropagation,
+      currentTarget: { querySelector: () => stub }
+    })
+    tree = reinvoke()
+    expect(panel(tree).props.className).toBe('dropdown collapsed')
+    expect(stub.focus).toHaveBeenCalledTimes(1)
+    expect(stopPropagation).toHaveBeenCalledTimes(1)
+  })
+
+  it('a non-Escape key does nothing, and Escape while collapsed does nothing', () => {
+    extraProps = { closeOnSelect: true }
+    const stub = trigger()
+    const stopPropagation = jest.fn()
+    const evt = (key: string) => ({
+      key,
+      stopPropagation,
+      currentTarget: { querySelector: () => stub }
+    })
+    let tree = expand()
+    ;(tree.props.onKeyDown as (e: unknown) => void)(evt('ArrowDown'))
+    tree = reinvoke()
+    expect(panel(tree).props.className).toBe('dropdown expanded')
+
+    mount()
+    tree = reinvoke()
+    ;(tree.props.onKeyDown as (e: unknown) => void)(evt('Escape'))
+    expect(stub.focus).not.toHaveBeenCalled()
+    expect(stopPropagation).not.toHaveBeenCalled()
   })
 })

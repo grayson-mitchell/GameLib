@@ -73,14 +73,23 @@
 
 .Header__sortRow {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
+  grid-template-columns: 1fr auto;
+  align-items: start;
   gap: var(--space-xs);
 }
 
 .Header__sortLabel {
   color: var(--text-secondary);
   font-size: calc(var(--text-xs) + 2px);
+}
+
+.Header__sortValue {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-default);
 }
 
 /* Panel sub-heading between the sort group and Views/Collections (quick 261029-quw).
@@ -106,8 +115,13 @@
   border-block-start: 1px solid var(--border-color);
 }
 
-/* Specificity: `.Header .Header__sortSelect` out-ranks the global select rules. */
-.Header .Header__sortSelect {
+/* Quick 261029-riq item 4: themed Sort by trigger (replaces the native select).
+   Specificity: `.Header .Header__sortDropdown .dropdownButton` out-ranks the
+   global button rules. */
+.Header .Header__sortDropdown .dropdownButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   inline-size: 100%;
   min-inline-size: 0;
   padding-block: var(--space-3xs);
@@ -118,12 +132,43 @@
   color: var(--text-default);
   font-family: inherit;
   font-size: calc(var(--text-xs) + 2px);
+  cursor: pointer;
+  text-align: start;
 }
 
-.Header .Header__sortSelect:focus-visible {
+.Header .Header__sortDropdown .dropdownButton:hover {
+  background: var(--navbar-active-background);
+}
+
+.Header
+  .Header__sortDropdown
+  .dropdownButton[aria-expanded='true']
+  .Header__sortCaret {
+  transform: rotate(180deg);
+}
+
+.Header .Header__sortDropdown .dropdownButton:focus-visible,
+.Header
+  .Header__sortDropdown
+  .dropdownButton:focus:is(body.controllerLayout *) {
   outline: var(--focus-ring-width, 3px) solid
     var(--focus-ring-color, var(--accent, #0080ff));
   outline-offset: calc(-1 * var(--focus-ring-width, 3px));
+  box-shadow: inset 0 0 0 calc(var(--focus-ring-width, 3px) + 2px)
+    var(--focus-ring-halo, #000);
+  background: var(--focus-ring-fill);
+}
+
+/* Dropdown/index.scss nests `.dropdownContainer .dropdown button` margins and
+   padding that would hit these NavItem rows; override at higher specificity. */
+.Header .Header__sortDropdown .dropdown {
+  padding: var(--space-3xs) 0;
+}
+
+.Header .Header__sortDropdown .dropdown .Header__sortOption {
+  margin-inline-start: 0;
+  align-self: stretch;
+  font-size: calc(var(--text-xs) + 2px);
 }
 
 .Header__search {
