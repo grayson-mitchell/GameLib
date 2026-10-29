@@ -160,6 +160,7 @@
     "src/frontend/screens/Library/components/GameCard/cardVisibility.ts",
     "src/frontend/screens/Library/components/GameCard/constants.ts",
     "src/frontend/screens/Library/components/GameCard/index.tsx",
+    "src/frontend/screens/Library/components/GameCard/steamIncompleteCard.ts",
     "src/frontend/screens/Library/components/GamesList/index.tsx",
     "src/frontend/screens/Library/components/InstallModal/DownloadDialog/index.tsx",
     "src/frontend/screens/Library/components/InstallModal/ImportDialog/index.tsx",
