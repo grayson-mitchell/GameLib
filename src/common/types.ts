@@ -1200,7 +1200,7 @@ interface KnownFixOverlayEntry {
   target: 'gstreamer-plugin-path'
 }
 
-export type KnownFixDllOverrideMode =
+type KnownFixDllOverrideMode =
   | 'native'
   | 'builtin'
   | 'native,builtin'

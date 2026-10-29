@@ -31,7 +31,7 @@ import {
 
 /** Graceful quit is bounded; Steam is never killed. */
 export const RESTART_QUIT_TIMEOUT_MS = 30_000
-export const RESTART_POLL_MS = 500
+const RESTART_POLL_MS = 500
 
 export interface AcfSnapshot {
   mtimeMs: number
@@ -164,7 +164,7 @@ export function isSteamAdoptedAcf(
   return differs && fullyInstalled && buildid !== '' && buildid !== '0'
 }
 
-export type PlayAdoptionDecision = 'launch' | 'clear-and-launch' | 'restart'
+type PlayAdoptionDecision = 'launch' | 'clear-and-launch' | 'restart'
 
 /**
  * Pure Play-time decision. A different PID means Steam restarted since the
@@ -232,7 +232,7 @@ export async function probeMacSteamPid(
   }
 }
 
-export type RestartResult =
+type RestartResult =
   | { kind: 'relaunched' }
   | { kind: 'game-running'; runningAppId: number }
   | { kind: 'steam-busy' }

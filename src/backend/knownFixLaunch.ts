@@ -59,7 +59,7 @@ export function resolveKnownFixExeOverride(
   }
 }
 
-export interface KnownFixLaunchOverrides {
+interface KnownFixLaunchOverrides {
   launchArgs: string[]
   exeOverride?: string
 }

@@ -51,7 +51,7 @@ export interface ValidRegistryFix {
   views: KnownFixRegistryView[]
 }
 
-export interface RegistryFixLogContext {
+interface RegistryFixLogContext {
   label: string
   logPrefix: LogPrefix
 }
@@ -161,7 +161,7 @@ export function validateRegistryFixes(
   return out
 }
 
-export const DLL_OVERRIDE_MODES = [
+const DLL_OVERRIDE_MODES = [
   'native',
   'builtin',
   'native,builtin',

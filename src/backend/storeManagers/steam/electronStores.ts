@@ -36,7 +36,11 @@ const steamSyncStore = new CacheStore<number, 'syncedAt'>('steam_sync', null)
 // A DEDICATED store (not a field on steamMetadataStore, whose whole-entry
 // replace would drop it). Indefinite lifespan: it must survive a GameLib
 // restart, and it is cleared on uninstall / adoption.
-const steamPendingAdoptionStore = new CacheStore<unknown>(
+// Consumed only through the lazy `require('./electronStores')` in macSteamAdoption.ts
+// `defaultStore()` -- kept lazy so electron-store stays out of module load -- which ts-prune
+// cannot trace; macSteamAdoption.test.ts also mocks it by name. The export is deliberate.
+// ts-prune-ignore-next
+export const steamPendingAdoptionStore = new CacheStore<unknown>(
   'steam_pending_adoption',
   null
 )
@@ -321,6 +325,5 @@ export {
   steamLibraryStore,
   steamMetadataStore,
   steamSyncStore,
-  steamPendingAdoptionStore,
   steamBottleConfigStore
 }
