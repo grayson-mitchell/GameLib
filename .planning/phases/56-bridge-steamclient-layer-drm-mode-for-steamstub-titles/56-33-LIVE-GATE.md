@@ -449,7 +449,27 @@ result: pending
 
 - Operator reply: "approved: connected" on 2026-10-29. Approves the contract as authored; launch-1 PowerA pad state = CONNECTED; the pad is unplugged for launch 5 (R1) regardless; G9 blocks only on launch 2; item 11 runs at launch 6 in segment B.
 
+### Preflight
+
+Author-side run, 2026-10-29. Session dir (for 56-34): `/tmp/gamelib-gate-20261029T002925Z/`. Publish: not needed (the steamclient-layer component did not change in 56-27..56-32; PC9 shows the existing asset is live).
+
+| ID | Observed | Result |
+| --- | --- | --- |
+| PC1 | `pgrep -x steam_osx` printed pid 50647 | PASS |
+| PC2 | NOT EMPTY. A Windows Steam is running in the legacy `GameLibSteam` bottle (wineserver pid 49653, `CX_BOTTLE=GameLibSteam`, up about 1h05m): `steam.exe -silent -applaunch 113200` (pid 49667), `steamservice.exe /RunAsService` (49740) and five `steamwebhelper.exe` processes (7 lines in all). Not killed by the author (operator machine state). | FAIL: the operator must quit it (or approve a kill) before 56-34 launch 0 |
+| PC3 | `CFBundleVersion` = `26.3.0.39832` | PASS |
+| PC4 | `pnpm build-steam-bridge` exit 0, `pnpm exec vite build` exit 0, `pnpm build:sidecar-sea` exit 0. `build/main/sidecar.js` mtime 1793233790 vs newest `src/backend` commit 1793232633 (newer); `grep -c 'stage retry passed on attempt'` = 1 (was 0 at authoring). Logs in the session dir (`pc4-*.log`). | PASS |
+| PC5 | Session dir created; `pre-session-gamelib.log` (127078 bytes) and `pre-session-gamelib.log.old` (224064 bytes) copied | PASS |
+| PC6 | run by 56-34 | n/a |
+| PC7 | run by 56-34 | n/a |
+| PC8 | COMPDIR existed (mtime 1793223536, 2026-10-29 10:38 local; six names). Moved to `<session>/compdir-prior/`; mtime in `compdir-prior/MTIME.txt`. `test ! -e COMPDIR` then exit 0. | PASS (after the move) |
+| PC9 | `curl -fsSIL` ended at HTTP 200 (after one 302) | PASS |
+| PC10 | `appmanifest_648800.acf` and `appmanifest_1119730.acf` both exist in their bottles | PASS |
+| PC11-PC14 | run by 56-34 | n/a |
+
 ## Gaps
+
+- PC2 failed at authoring time: a Windows Steam is running in the `GameLibSteam` bottle (see Preflight). 56-34 must not start launch 0 until the operator has quit it and PC2 re-reads empty.
 
 ## Verdict
 
