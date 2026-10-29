@@ -19,7 +19,7 @@
  * shutdown and boot cover for a wrap that never reached its goonline, and the
  * boot call is the only cover for a `kill -9` of the sidecar.
  */
-import { execFile, spawn } from 'child_process'
+import { execFile } from 'child_process'
 import {
   closeSync,
   existsSync,
@@ -36,6 +36,7 @@ import { uptime } from 'os'
 import { dirname, join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { shell } from 'backend/platform'
+import { spawnOpenDetached as spawnDetachedOpen } from 'backend/platform/openDetached'
 import type { SteamGoOfflineRetryResult } from 'common/types/steam'
 
 const MAC_STEAM_LOGOFF_WAIT_MS = 5000
@@ -127,21 +128,12 @@ export function isOwnUserPidAlive(pid: number): boolean {
  * which is gone at stdin EOF, so a shutdown restore cannot use it.
  */
 export function spawnOpenDetached(url: string): void {
-  // The child inherits the real user session on purpose: LaunchServices
-  // resolves steam:// per user, so a fake or stripped env breaks dispatch.
-  // Tests never reach this call; the missing env option is what
-  // fakeHomeIsolation.test.ts requires.
-  const child = spawn('/usr/bin/open', ['-g', url], {
-    detached: true,
-    stdio: 'ignore'
-  })
-  child.on('error', (err) => {
+  spawnDetachedOpen(url, (code) => {
     logWarning(
-      `[Steam] go-offline restore: could not spawn open (${(err as NodeJS.ErrnoException).code ?? 'error'})`,
+      `[Steam] go-offline restore: could not spawn open (${code})`,
       LogPrefix.Steam
     )
   })
-  child.unref()
 }
 
 function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
@@ -176,7 +168,8 @@ function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
           }
         )
       }),
-    openUrl: (url) => shell.openExternal(url),
+    // Refresh's go-offline must not raise Mac Steam (quick 261029-thl); Steam may still self-raise on gooffline.
+    openUrl: (url) => void shell.openExternal(url, { activate: false }),
     sleep: (ms) =>
       new Promise<void>((resolve) => {
         const t = setTimeout(resolve, ms)

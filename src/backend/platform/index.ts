@@ -79,6 +79,7 @@ import pkgJson from '../../../package.json'
 import { getPath } from '../sidecar/pathShim'
 import { isPackagedSidecar } from '../sidecar/isPackagedSidecar'
 import { requestRustInvoke } from '../sidecar/sidecarRpc'
+import { shouldOpenInBackground, spawnOpenDetached } from './openDetached'
 import {
   RUST_APP_EXIT,
   RUST_APP_HIDE,
@@ -709,8 +710,22 @@ export const shell = {
     _operation?: unknown,
     _options?: unknown
   ): boolean => false,
-  openExternal: async (url: string, _options?: unknown): Promise<void> => {
-    transport?.openExternal(url)
+  // Options used to be dropped: the Rust opener is a plain /usr/bin/open, which activates the
+  // target app. Callers passing { activate: false } are steam/games.ts rungameid launches,
+  // bridge/helperProcess.ts steam://open/main, and macSteamOffline go-offline. On darwin those
+  // (steam: scheme only) now spawn a detached `open -g`. The transport-bound guard keeps jest on
+  // a Mac from spawning a real `open`; non-steam URLs still go through the Rust scheme check.
+  openExternal: async (url: string, options?: unknown): Promise<void> => {
+    if (!transport) return
+    if (shouldOpenInBackground(process.platform, url, options)) {
+      spawnOpenDetached(url, (code) =>
+        console.warn(
+          `[electronStub] shell.openExternal(): background open failed (${code})`
+        )
+      )
+      return
+    }
+    transport.openExternal(url)
   },
   // Phase 33 Plan 04 (D-05): upgraded from the D-04 logged no-op to a real forward, backed by
   // tauri-plugin-opener's reveal_item_in_dir (RUST_SHELL_SHOW_ITEM_IN_FOLDER). Fire-and-forget
