@@ -55,16 +55,11 @@ import { configStore, steamConfigStore } from 'frontend/helpers/electronStores'
 import {
   defaultDirectionFor,
   readLibrarySortPrefs,
-  sortAndGroupLibrary,
-  writeLibraryGroupBy,
+  sortLibrary,
   writeLibrarySortDirection,
   writeLibrarySortField
 } from './librarySort'
-import type {
-  LibraryGroupBy,
-  LibrarySortDirection,
-  LibrarySortField
-} from './librarySort'
+import type { LibrarySortDirection, LibrarySortField } from './librarySort'
 import SteamSyncNotice from './components/SteamSyncNotice'
 import LibrarySignInNotice from './components/LibrarySignInNotice'
 import { resolveSteamSyncIndicator } from './librarySyncIndicator'
@@ -108,7 +103,6 @@ export default React.memo(function Library(): JSX.Element {
     useContext(Tier2PortalContext)
 
   const {
-    libraryStatus,
     refreshing,
     refreshingInTheBackground,
     epic,
@@ -523,7 +517,7 @@ export default React.memo(function Library(): JSX.Element {
   const [sortPrefs, setSortPrefs] = useState(() =>
     readLibrarySortPrefs(storage)
   )
-  const { field: sortField, direction: sortDirection, groupBy } = sortPrefs
+  const { field: sortField, direction: sortDirection } = sortPrefs
   // Switching field also resets direction to that field's natural default
   // (Name asc, Last played / Install size desc); the direction button then
   // flips it, and the last choice is what persists.
@@ -536,10 +530,6 @@ export default React.memo(function Library(): JSX.Element {
   function handleSortDirection(value: LibrarySortDirection) {
     writeLibrarySortDirection(storage, value)
     setSortPrefs((prev) => ({ ...prev, direction: value }))
-  }
-  function handleGroupBy(value: LibraryGroupBy) {
-    writeLibraryGroupBy(storage, value)
-    setSortPrefs((prev) => ({ ...prev, groupBy: value }))
   }
 
   const backToTopElement = useRef(null)
@@ -614,15 +604,6 @@ export default React.memo(function Library(): JSX.Element {
   ) {
     openInstallGameModal({ appName, runner, gameInfo })
   }
-
-  // cache list of games being installed
-  const installing = useMemo(
-    () =>
-      libraryStatus
-        .filter((st) => st.status === 'installing')
-        .map((st) => st.appName),
-    [libraryStatus]
-  )
 
   // NOTE (CR-02, extended Phase 48 Plan 02 Task 3): there is deliberately no
   // `favouritesIds` memo here any more. `engineDeps.favouriteKeys` used to be
@@ -918,11 +899,9 @@ export default React.memo(function Library(): JSX.Element {
     // until the real last-played order can be computed (WR-02).
     const lastPlayedPending =
       sortField === 'lastPlayed' && nonSteamLastPlayedIso === null
-    return sortAndGroupLibrary(library, {
+    return sortLibrary(library, {
       field: lastPlayedPending ? 'name' : sortField,
       direction: lastPlayedPending ? 'asc' : sortDirection,
-      groupBy,
-      installing,
       nonSteamLastPlayedIso: nonSteamLastPlayedIso ?? {}
     })
   }, [
@@ -930,8 +909,6 @@ export default React.memo(function Library(): JSX.Element {
     alphabetFilterLetter,
     sortField,
     sortDirection,
-    groupBy,
-    installing,
     nonSteamLastPlayedIso
   ])
 
@@ -1149,7 +1126,6 @@ export default React.memo(function Library(): JSX.Element {
         setNoStorePage: handleNoStorePage,
         setSortField: handleSortField,
         setSortDirection: handleSortDirection,
-        setGroupBy: handleGroupBy,
         showSupportOfflineOnly,
         setShowSupportOfflineOnly: handleShowSupportOfflineOnly,
         showThirdPartyManagedOnly,
@@ -1158,7 +1134,6 @@ export default React.memo(function Library(): JSX.Element {
         setShowUpdatesOnly: handleShowUpdatesOnly,
         sortField,
         sortDirection,
-        groupBy,
         handleAddGameButtonClick: () => handleModal('', 'sideload', null),
         setShowCategories,
         categoriesManagerIntent,

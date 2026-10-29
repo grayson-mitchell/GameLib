@@ -35,10 +35,7 @@ import FilterStoreFacet from '../NavShell/components/FilterStoreFacet'
 import FilterRunnabilityFacet from '../NavShell/components/FilterRunnabilityFacet'
 import FilterMoreGroup from '../NavShell/components/FilterMoreGroup'
 import LibraryTileSizeSlider from '../NavShell/components/LibraryTileSizeSlider'
-import {
-  LIBRARY_GROUP_BYS,
-  LIBRARY_SORT_FIELDS
-} from 'frontend/screens/Library/librarySort'
+import { LIBRARY_SORT_FIELDS } from 'frontend/screens/Library/librarySort'
 import './index.css'
 
 type Props = {
@@ -90,8 +87,6 @@ export default function Header({ list, totalGames }: Props) {
     setSortField,
     sortDirection,
     setSortDirection,
-    groupBy,
-    setGroupBy,
     showAlphabetFilter,
     onToggleAlphabetFilter
   } = useContext(LibraryContext)
@@ -251,6 +246,12 @@ export default function Header({ list, totalGames }: Props) {
         </button>
         <TourButton tourId={LIBRARY_TOUR_ID} className="library-tour-button" />
       </div>
+      <div className="Header__search">
+        <LibrarySearchBar />
+      </div>
+      <div className="Header__focusRowGroup" data-tour="library-focus-row">
+        <FilterFocusRow />
+      </div>
       <div className="Header__sortGroup">
         <div className="Header__sortRow" data-tour="library-sort">
           <label className="Header__sortLabel" htmlFor="library-sort-field">
@@ -306,48 +307,16 @@ export default function Header({ list, totalGames }: Props) {
             />
           </button>
         </div>
-        <div className="Header__sortRow" data-tour="library-group-by">
-          <label className="Header__sortLabel" htmlFor="library-group-by">
-            {tGamelib('gamelib:library.groupBy.label', 'Group by')}
-          </label>
-          <select
-            id="library-group-by"
-            className="Header__sortSelect Header__sortSelect--wide"
-            value={groupBy}
-            onChange={(event) => {
-              const next = LIBRARY_GROUP_BYS.find(
-                (group) => group === event.currentTarget.value
-              )
-              if (next) setGroupBy(next)
-            }}
-          >
-            <option value="none">
-              {tGamelib('gamelib:library.groupBy.none', 'None')}
-            </option>
-            <option value="installStatus">
-              {tGamelib(
-                'gamelib:library.groupBy.installStatus',
-                'Install status'
-              )}
-            </option>
-            <option value="store">
-              {tGamelib('gamelib:library.groupBy.store', 'Store')}
-            </option>
-          </select>
-        </div>
       </div>
-      <div className="Header__search">
-        <LibrarySearchBar />
-      </div>
+      <h2 className="Header__filtersHeading">
+        {t('header.filters', 'Filters')}
+      </h2>
       <div
         className="Header__categoriesGroup"
         data-tour="library-views-collections"
       >
         <FilterViewList />
         <FilterCollectionList />
-      </div>
-      <div className="Header__focusRowGroup" data-tour="library-focus-row">
-        <FilterFocusRow />
       </div>
       <div className="Header__filtersGroup" data-tour="library-facets">
         <FilterStoreFacet />

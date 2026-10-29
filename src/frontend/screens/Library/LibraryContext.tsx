@@ -23,8 +23,6 @@ const initialContext: LibraryContextType = {
   setSortField: () => null,
   sortDirection: DEFAULT_LIBRARY_SORT_PREFS.direction,
   setSortDirection: () => null,
-  groupBy: DEFAULT_LIBRARY_SORT_PREFS.groupBy,
-  setGroupBy: () => null,
   showSupportOfflineOnly: false,
   setShowSupportOfflineOnly: () => null,
   showThirdPartyManagedOnly: false,

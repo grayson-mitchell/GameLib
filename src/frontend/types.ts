@@ -22,7 +22,6 @@ import type { OAuthLoginCompletionPayload } from 'frontend/screens/WebView/useTa
 import type { SteamSyncStatus } from 'common/types/ipc'
 import type { RunsForMeState } from 'common/runsForMe'
 import type {
-  LibraryGroupBy,
   LibrarySortDirection,
   LibrarySortField
 } from 'frontend/screens/Library/librarySort'
@@ -333,8 +332,6 @@ export interface LibraryContextType {
   setSortField: (value: LibrarySortField) => void
   sortDirection: LibrarySortDirection
   setSortDirection: (value: LibrarySortDirection) => void
-  groupBy: LibraryGroupBy
-  setGroupBy: (value: LibraryGroupBy) => void
   showSupportOfflineOnly: boolean
   setShowSupportOfflineOnly: (value: boolean) => void
   showThirdPartyManagedOnly: boolean

@@ -1,17 +1,15 @@
 import type { GameInfo } from 'common/types'
+import * as librarySortModule from '../librarySort'
 import {
   DEFAULT_LIBRARY_SORT_PREFS,
-  LIBRARY_GROUP_BY_KEY,
   LIBRARY_SORT_DIRECTION_KEY,
   LIBRARY_SORT_FIELD_KEY,
   LEGACY_SORT_DESCENDING_KEY,
-  LEGACY_SORT_INSTALLED_KEY,
   defaultDirectionFor,
   lastPlayedMs,
   parseInstallSize,
   readLibrarySortPrefs,
-  sortAndGroupLibrary,
-  writeLibraryGroupBy,
+  sortLibrary,
   writeLibrarySortDirection,
   writeLibrarySortField
 } from '../librarySort'
@@ -40,8 +38,6 @@ const titles = (gs: GameInfo[]) => gs.map((g) => g.title)
 const baseOpts = {
   field: 'name' as const,
   direction: 'asc' as const,
-  groupBy: 'none' as const,
-  installing: [] as string[],
   nonSteamLastPlayedIso: {}
 }
 
@@ -119,7 +115,7 @@ describe('lastPlayedMs', () => {
   })
 })
 
-describe('sortAndGroupLibrary', () => {
+describe('sortLibrary', () => {
   it('name asc/desc, THE stripped, does not mutate', () => {
     const input = [
       game({ title: 'Zed' }),
@@ -127,13 +123,13 @@ describe('sortAndGroupLibrary', () => {
       game({ title: 'Alpha' })
     ]
     const copy = [...input]
-    expect(titles(sortAndGroupLibrary(input, baseOpts))).toEqual([
+    expect(titles(sortLibrary(input, baseOpts))).toEqual([
       'Alpha',
       'The Witcher',
       'Zed'
     ])
     expect(
-      titles(sortAndGroupLibrary(input, { ...baseOpts, direction: 'desc' }))
+      titles(sortLibrary(input, { ...baseOpts, direction: 'desc' }))
     ).toEqual(['Zed', 'The Witcher', 'Alpha'])
     expect(input).toEqual(copy)
   })
@@ -148,10 +144,10 @@ describe('sortAndGroupLibrary', () => {
       nonSteamLastPlayedIso: { Gogy: new Date((S + 60) * 1000).toISOString() }
     }
     expect(
-      titles(sortAndGroupLibrary([steam, gog], { ...o, direction: 'desc' }))
+      titles(sortLibrary([steam, gog], { ...o, direction: 'desc' }))
     ).toEqual(['Gogy', 'Steamy'])
     expect(
-      titles(sortAndGroupLibrary([steam, gog], { ...o, direction: 'asc' }))
+      titles(sortLibrary([steam, gog], { ...o, direction: 'asc' }))
     ).toEqual(['Steamy', 'Gogy'])
   })
 
@@ -164,12 +160,20 @@ describe('sortAndGroupLibrary', () => {
       game({ title: 'Recent', runner: 'steam', steamLastPlayed: 900 })
     ]
     const o = { ...baseOpts, field: 'lastPlayed' as const }
-    expect(
-      titles(sortAndGroupLibrary(gs, { ...o, direction: 'desc' }))
-    ).toEqual(['Recent', 'Played A', 'Played Z', 'Never A', 'Never B'])
-    expect(titles(sortAndGroupLibrary(gs, { ...o, direction: 'asc' }))).toEqual(
-      ['Played A', 'Played Z', 'Recent', 'Never A', 'Never B']
-    )
+    expect(titles(sortLibrary(gs, { ...o, direction: 'desc' }))).toEqual([
+      'Recent',
+      'Played A',
+      'Played Z',
+      'Never A',
+      'Never B'
+    ])
+    expect(titles(sortLibrary(gs, { ...o, direction: 'asc' }))).toEqual([
+      'Played A',
+      'Played Z',
+      'Recent',
+      'Never A',
+      'Never B'
+    ])
   })
 
   it('install size: unknowns last both directions, uninstalled stale size unknown', () => {
@@ -183,12 +187,24 @@ describe('sortAndGroupLibrary', () => {
       game({ title: 'Mid1', is_installed: true, size: '5 GiB' })
     ]
     const o = { ...baseOpts, field: 'installSize' as const }
-    expect(
-      titles(sortAndGroupLibrary(gs, { ...o, direction: 'desc' }))
-    ).toEqual(['Big', 'Mid1', 'Mid2', 'Small', 'Bad', 'Stale', 'Zero'])
-    expect(titles(sortAndGroupLibrary(gs, { ...o, direction: 'asc' }))).toEqual(
-      ['Small', 'Mid1', 'Mid2', 'Big', 'Bad', 'Stale', 'Zero']
-    )
+    expect(titles(sortLibrary(gs, { ...o, direction: 'desc' }))).toEqual([
+      'Big',
+      'Mid1',
+      'Mid2',
+      'Small',
+      'Bad',
+      'Stale',
+      'Zero'
+    ])
+    expect(titles(sortLibrary(gs, { ...o, direction: 'asc' }))).toEqual([
+      'Small',
+      'Mid1',
+      'Mid2',
+      'Big',
+      'Bad',
+      'Stale',
+      'Zero'
+    ])
   })
 
   it('identical titles break ties by runner then app_name, independent of input order and direction (IN-03)', () => {
@@ -202,12 +218,12 @@ describe('sortAndGroupLibrary', () => {
       [gogB, steam, gog]
     ]) {
       for (const direction of ['asc', 'desc'] as const) {
-        expect(
-          ids(sortAndGroupLibrary(input, { ...baseOpts, direction }))
-        ).toEqual(expected)
+        expect(ids(sortLibrary(input, { ...baseOpts, direction }))).toEqual(
+          expected
+        )
         expect(
           ids(
-            sortAndGroupLibrary(input, {
+            sortLibrary(input, {
               ...baseOpts,
               field: 'lastPlayed',
               direction
@@ -218,49 +234,17 @@ describe('sortAndGroupLibrary', () => {
     }
   })
 
-  it('groups by install status with sort inside each group', () => {
+  it('is the pure sort order: no install-status or store clustering', () => {
     const gs = [
-      game({ title: 'A', is_installed: false }),
-      game({ title: 'B', is_installed: true }),
-      game({ title: 'C', is_installed: false, app_name: 'c' }),
-      game({ title: 'D', is_installed: true })
+      game({ title: 'Beta (installed)', is_installed: true, runner: 'steam' }),
+      game({ title: 'Alpha (not installed)', is_installed: false }),
+      game({ title: 'Gamma', is_installed: true, runner: 'legendary' })
     ]
-    const o = {
-      ...baseOpts,
-      groupBy: 'installStatus' as const,
-      installing: ['c']
-    }
-    expect(titles(sortAndGroupLibrary(gs, o))).toEqual(['B', 'D', 'C', 'A'])
-    expect(
-      titles(sortAndGroupLibrary(gs, { ...o, direction: 'desc' }))
-    ).toEqual(['D', 'B', 'C', 'A'])
-  })
-
-  it('groups by store, unknown runners last by runner id, direction does not reorder groups', () => {
-    const gs = [
-      game({ title: 'S1', runner: 'steam' }),
-      game({ title: 'E1', runner: 'legendary' }),
-      game({ title: 'X1', runner: 'sideload' }),
-      game({ title: 'G1', runner: 'gog' }),
-      game({ title: 'G2', runner: 'gog' }),
-      game({ title: 'A1', runner: 'nile' }),
-      game({ title: 'Z1', runner: 'zoom' }),
-      game({ title: 'Q1', runner: 'aaa-unknown' })
-    ]
-    const o = { ...baseOpts, groupBy: 'store' as const }
-    expect(titles(sortAndGroupLibrary(gs, o))).toEqual([
-      'A1',
-      'E1',
-      'G1',
-      'G2',
-      'S1',
-      'Z1',
-      'Q1',
-      'X1'
+    expect(titles(sortLibrary(gs, baseOpts))).toEqual([
+      'Alpha (not installed)',
+      'Beta (installed)',
+      'Gamma'
     ])
-    expect(
-      titles(sortAndGroupLibrary(gs, { ...o, direction: 'desc' }))
-    ).toEqual(['A1', 'E1', 'G2', 'G1', 'S1', 'Z1', 'Q1', 'X1'])
   })
 })
 
@@ -281,8 +265,7 @@ describe('readLibrarySortPrefs', () => {
     expect(readLibrarySortPrefs(fake({}))).toEqual(DEFAULT_LIBRARY_SORT_PREFS)
     expect(DEFAULT_LIBRARY_SORT_PREFS).toEqual({
       field: 'name',
-      direction: 'asc',
-      groupBy: 'installStatus'
+      direction: 'asc'
     })
   })
   it('migrates legacy keys', () => {
@@ -295,14 +278,6 @@ describe('readLibrarySortPrefs', () => {
         .direction
     ).toBe('asc')
     expect(
-      readLibrarySortPrefs(fake({ [LEGACY_SORT_INSTALLED_KEY]: 'false' }))
-        .groupBy
-    ).toBe('none')
-    expect(
-      readLibrarySortPrefs(fake({ [LEGACY_SORT_INSTALLED_KEY]: 'true' }))
-        .groupBy
-    ).toBe('installStatus')
-    expect(
       readLibrarySortPrefs(fake({ [LEGACY_SORT_DESCENDING_KEY]: 'true' })).field
     ).toBe('name')
   })
@@ -311,15 +286,12 @@ describe('readLibrarySortPrefs', () => {
       fake({
         [LIBRARY_SORT_FIELD_KEY]: 'installSize',
         [LIBRARY_SORT_DIRECTION_KEY]: 'asc',
-        [LIBRARY_GROUP_BY_KEY]: 'store',
-        [LEGACY_SORT_DESCENDING_KEY]: 'true',
-        [LEGACY_SORT_INSTALLED_KEY]: 'false'
+        [LEGACY_SORT_DESCENDING_KEY]: 'true'
       })
     )
     expect(p).toEqual({
       field: 'installSize',
-      direction: 'asc',
-      groupBy: 'store'
+      direction: 'asc'
     })
   })
   it('invalid new values default per axis, not legacy', () => {
@@ -327,9 +299,7 @@ describe('readLibrarySortPrefs', () => {
       fake({
         [LIBRARY_SORT_FIELD_KEY]: 'popularity',
         [LIBRARY_SORT_DIRECTION_KEY]: '',
-        [LIBRARY_GROUP_BY_KEY]: 'x',
-        [LEGACY_SORT_DESCENDING_KEY]: 'true',
-        [LEGACY_SORT_INSTALLED_KEY]: 'false'
+        [LEGACY_SORT_DESCENDING_KEY]: 'true'
       })
     )
     expect(p).toEqual(DEFAULT_LIBRARY_SORT_PREFS)
@@ -338,8 +308,7 @@ describe('readLibrarySortPrefs', () => {
     expect(
       readLibrarySortPrefs(
         fake({
-          [LEGACY_SORT_DESCENDING_KEY]: 'yes',
-          [LEGACY_SORT_INSTALLED_KEY]: '{'
+          [LEGACY_SORT_DESCENDING_KEY]: 'yes'
         })
       )
     ).toEqual(DEFAULT_LIBRARY_SORT_PREFS)
@@ -353,16 +322,39 @@ describe('readLibrarySortPrefs', () => {
   })
 })
 
+describe('group-by removal (quick 261029-quw)', () => {
+  const fake = (entries: Record<string, string>) => {
+    const m = new Map(Object.entries(entries))
+    return { getItem: (k: string) => m.get(k) ?? null }
+  }
+  it('persisted libraryGroupBy and legacy sortInstalled have no effect', () => {
+    const prefs = readLibrarySortPrefs(
+      fake({ libraryGroupBy: 'store', sortInstalled: 'true' })
+    )
+    expect(prefs).toEqual(DEFAULT_LIBRARY_SORT_PREFS)
+    expect(Object.keys(prefs).sort()).toEqual(['direction', 'field'])
+    expect(Object.keys(DEFAULT_LIBRARY_SORT_PREFS).sort()).toEqual([
+      'direction',
+      'field'
+    ])
+  })
+  it('no longer exports the group-by model', () => {
+    const m = librarySortModule as unknown as Record<string, unknown>
+    expect(m.writeLibraryGroupBy).toBeUndefined()
+    expect(m.LIBRARY_GROUP_BYS).toBeUndefined()
+    expect(m.LIBRARY_GROUP_BY_KEY).toBeUndefined()
+    expect(m.sortAndGroupLibrary).toBeUndefined()
+  })
+})
+
 describe('write helpers', () => {
   it('write plain strings under new keys only', () => {
     const setItem = jest.fn()
     writeLibrarySortField({ setItem }, 'lastPlayed')
     writeLibrarySortDirection({ setItem }, 'desc')
-    writeLibraryGroupBy({ setItem }, 'store')
     expect(setItem.mock.calls).toEqual([
       [LIBRARY_SORT_FIELD_KEY, 'lastPlayed'],
-      [LIBRARY_SORT_DIRECTION_KEY, 'desc'],
-      [LIBRARY_GROUP_BY_KEY, 'store']
+      [LIBRARY_SORT_DIRECTION_KEY, 'desc']
     ])
   })
   it('swallow a throwing setItem', () => {
@@ -371,6 +363,5 @@ describe('write helpers', () => {
     }
     expect(() => writeLibrarySortField({ setItem }, 'name')).not.toThrow()
     expect(() => writeLibrarySortDirection({ setItem }, 'asc')).not.toThrow()
-    expect(() => writeLibraryGroupBy({ setItem }, 'none')).not.toThrow()
   })
 })

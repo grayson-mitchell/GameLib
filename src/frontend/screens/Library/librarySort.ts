@@ -1,11 +1,14 @@
 /**
- * Library sort / group model (quick 261027-jjz).
+ * Library sort model (quick 261027-jjz; group-by removed by operator request
+ * in quick 261029-quw).
  *
  * Implements slice 1 of
  * `.planning/todos/pending/2026-10-03-library-sorting-is-title-only-add-a-sort-field-menu-playnite.md`.
  * Its `## Decisions (operator, 2026-10-27)` section is locked: three sort
- * fields (Name / Last played / Install size), direction, and a SEPARATE
- * group-by (None / Install status / Store).
+ * fields (Name / Last played / Install size) and direction. The SEPARATE
+ * group-by it also locked has since been removed: persisted `libraryGroupBy`
+ * and legacy `sortInstalled` keys are now ignored, so nobody is stranded in a
+ * grouping the UI can no longer change.
  *
  * Last played has a different meaning per runner and the operator accepted
  * that knowingly: Steam reads Steam's own `extra.steamLastPlayed` ("played
@@ -17,40 +20,29 @@
  */
 
 import type { GameInfo } from 'common/types'
-import { RunnerToStore } from './facetLabels'
 
 export type LibrarySortField = 'name' | 'lastPlayed' | 'installSize'
 export type LibrarySortDirection = 'asc' | 'desc'
-export type LibraryGroupBy = 'none' | 'installStatus' | 'store'
 
 export const LIBRARY_SORT_FIELDS: readonly LibrarySortField[] = [
   'name',
   'lastPlayed',
   'installSize'
 ]
-export const LIBRARY_GROUP_BYS: readonly LibraryGroupBy[] = [
-  'none',
-  'installStatus',
-  'store'
-]
 const LIBRARY_SORT_DIRECTIONS: readonly LibrarySortDirection[] = ['asc', 'desc']
 
 export const LIBRARY_SORT_FIELD_KEY = 'librarySortField'
 export const LIBRARY_SORT_DIRECTION_KEY = 'librarySortDirection'
-export const LIBRARY_GROUP_BY_KEY = 'libraryGroupBy'
 export const LEGACY_SORT_DESCENDING_KEY = 'sortDescending'
-export const LEGACY_SORT_INSTALLED_KEY = 'sortInstalled'
 
 interface LibrarySortPrefs {
   field: LibrarySortField
   direction: LibrarySortDirection
-  groupBy: LibraryGroupBy
 }
 
 export const DEFAULT_LIBRARY_SORT_PREFS: LibrarySortPrefs = {
   field: 'name',
-  direction: 'asc',
-  groupBy: 'installStatus'
+  direction: 'asc'
 }
 
 /**
@@ -77,7 +69,6 @@ export function readLibrarySortPrefs(
   try {
     const rawField = storage.getItem(LIBRARY_SORT_FIELD_KEY)
     const rawDirection = storage.getItem(LIBRARY_SORT_DIRECTION_KEY)
-    const rawGroupBy = storage.getItem(LIBRARY_GROUP_BY_KEY)
     const D = DEFAULT_LIBRARY_SORT_PREFS
 
     const field =
@@ -94,19 +85,7 @@ export function readLibrarySortPrefs(
         legacy === 'true' ? 'desc' : legacy === 'false' ? 'asc' : D.direction
     }
 
-    let groupBy: LibraryGroupBy
-    if (rawGroupBy !== null) {
-      groupBy = oneOf(LIBRARY_GROUP_BYS, rawGroupBy) ?? D.groupBy
-    } else {
-      const legacy = storage.getItem(LEGACY_SORT_INSTALLED_KEY)
-      groupBy =
-        legacy === 'false'
-          ? 'none'
-          : legacy === 'true'
-            ? 'installStatus'
-            : D.groupBy
-    }
-    return { field, direction, groupBy }
+    return { field, direction }
   } catch {
     return { ...DEFAULT_LIBRARY_SORT_PREFS }
   }
@@ -135,12 +114,6 @@ export function writeLibrarySortDirection(
   v: LibrarySortDirection
 ): void {
   safeWrite(storage, LIBRARY_SORT_DIRECTION_KEY, v)
-}
-export function writeLibraryGroupBy(
-  storage: Pick<Storage, 'setItem'>,
-  v: LibraryGroupBy
-): void {
-  safeWrite(storage, LIBRARY_GROUP_BY_KEY, v)
 }
 
 const SIZE_UNITS: Record<string, number> = {
@@ -207,19 +180,17 @@ function installSizeBytes(game: GameInfo): number | undefined {
   return parseInstallSize(game.install?.install_size)
 }
 
-interface SortAndGroupOptions {
+interface SortOptions {
   field: LibrarySortField
   direction: LibrarySortDirection
-  groupBy: LibraryGroupBy
-  installing: readonly string[]
   nonSteamLastPlayedIso: Readonly<Record<string, string | undefined>>
 }
 
-export function sortAndGroupLibrary(
+export function sortLibrary(
   games: readonly GameInfo[],
-  opts: SortAndGroupOptions
+  opts: SortOptions
 ): GameInfo[] {
-  const { field, direction, groupBy, installing, nonSteamLastPlayedIso } = opts
+  const { field, direction, nonSteamLastPlayedIso } = opts
   const sign = direction === 'desc' ? -1 : 1
 
   const titleKey = new Map<GameInfo, string>()
@@ -249,34 +220,5 @@ export function sortAndGroupLibrary(
     return byTitle(a, b) || byIdentity(a, b)
   })
 
-  if (groupBy === 'none') return sorted
-
-  if (groupBy === 'installStatus') {
-    const installed: GameInfo[] = []
-    const installingGames: GameInfo[] = []
-    const notInstalled: GameInfo[] = []
-    for (const g of sorted) {
-      if (g.is_installed) installed.push(g)
-      else if (installing.includes(g.app_name)) installingGames.push(g)
-      else notInstalled.push(g)
-    }
-    return [...installed, ...installingGames, ...notInstalled]
-  }
-
-  // store: named stores by display name, then unnamed runners by runner id.
-  const groups = new Map<string, GameInfo[]>()
-  for (const g of sorted) {
-    const list = groups.get(g.runner)
-    if (list) list.push(g)
-    else groups.set(g.runner, [g])
-  }
-  const runners = [...groups.keys()].sort((a, b) => {
-    const an = RunnerToStore[a]
-    const bn = RunnerToStore[b]
-    if (an && bn) return an.localeCompare(bn)
-    if (an) return -1
-    if (bn) return 1
-    return a.localeCompare(b)
-  })
-  return runners.flatMap((r) => groups.get(r) as GameInfo[])
+  return sorted
 }
