@@ -386,12 +386,12 @@ verified (census `game call ISteamUser_SteamUser017_GetSteamID`), reached menu p
 ### 9. Ranch Simulator 1119730 (recorded, non-blocking)
 
 expected: items 3-6 applied to launch 4 recorded as verified, reached menu (census detail) or failed at a step, with the logged exit code if any, and whether the stage ran and how it ended (sink: SIDECAR copy, launch 4)
-result: pending
+result: verified (census `game call ISteamUser_SteamUser017_GetSteamID`), reached menu per the operator ("launch 4 done: menu, no notices"). DELTA(4): anchor `[bridge-drm] appId=1119730 mode=steamclient-layer` x1 (baseline 0), `reason=drm-` x0, `[bridge-notice]` x0, `timed out after` x0, `registry not staged:` x0 and no `stage wine log` line: the stage did NOT run (the Ranch bottle's registry was already staged, so the item-9 "how it ended" clause is: no stage). No exit code logged (no exit-code line in DELTA(4), so the spike 040 exit-53 variant did not occur). One `role=game create-interface` (pid=248, SteamClient017), no role=helper line. `procs-launch-4.txt` (taken during the run): steam_osx pid present, no steamwebhelper.exe or steamservice.exe line, one helper `steam.exe` line. The game ran 60 s (`game stopped` 14:52:17). The operator did not report a force-quit; recorded as not reported.
 
 ### 10. Networking lead (56-02)
 
 expected: `grep -c SteamNetworkingSocketsSerialized005` over every session launch capture recorded per file (sink: all gamelib-launch-N.log, trace, wine-launch and stage-wine-launch files, launches 0 to 6)
-result: pending
+result: recorded. `grep -c SteamNetworkingSocketsSerialized005` over every `<session>/*-launch-*` file (gamelib-launch-0/1/2/3/4, delta files, trace-launch-1a/1b/2/3/4, wine-launch-1a/1b/2/3/4, stage-wine-launch-1, system-reg-launch-N) is 0 for every file; segment-B files (launches 5 and 6) are scored later in this item's record if they differ. No hit, so 56-02's omitted serialized005.patch is not implicated by segment A.
 
 ### 11. HKLM diagnostic (D-21, conditional)
 
@@ -416,12 +416,12 @@ pass. Scored on the reconstructed launch-2 window (`gamelib-launch-2.log` lines 
 ### 15. G10 notice display confirmed (non-blocking)
 
 expected: every `[bridge-notice] appId=<id> dispatched=` line has a `[bridge-notice] appId=<id> display=confirmed elapsedMs=` line within 10 s and no `display=unconfirmed`; N/A when no notice fires (sink: SIDECAR copy, any launch)
-result: pending
+result: N/A so far. No `[bridge-notice]` line appeared in any segment-A launch (DELTA(0) to DELTA(4)), so no `dispatched=` line exists to pair; the segment-B launch 5 is read in Task 4 and the final G10 result is written there.
 
 ### 16. G11 Ranch routed to DRM mode (non-blocking)
 
 expected: DELTA(4) holds `SteamGame: appId 1119730 SteamStub .bind found on` and `bottle: appId 1119730 uses DRM runner`, and the outcome is recorded (anchor `[bridge-drm] appId=1119730 mode=steamclient-layer` recorded when reached, not required) (sink: SIDECAR copy, launch 4)
-result: pending
+result: pass (outcome: verified, menu reached). DELTA(4) holds `SteamGame: appId 1119730 SteamStub .bind found on Ranch_Simulator-Win64-Shipping.exe (UE runtime exe)` (14:51:15) and `bottle: appId 1119730 uses DRM runner crossover-26.3.0.39832` (14:51:16), in that order, before the anchor `[bridge-drm] appId=1119730 mode=steamclient-layer` (present, 14:51:16) and game started (14:51:17). No `reason=stubbed:` notice, so Gap 11 does not stand. Outcome: census verified, menu reached.
 
 ### 17. S1 stage wine log written (BLOCKING)
 
@@ -540,6 +540,14 @@ Note: DELTA(0) is the reinstall window of the current segment-A `gamelib.log` af
 - FORCE-QUIT: the operator force-quit Raft.exe with Activity Monitor. The `bottleProcessMonitor [648800]: matched process(es) gone after 254s of play — game stopped` line (14:49:21) therefore reflects the operator's force-quit, not a natural exit; the archive ran after it.
 - No contract item covers exit behaviour; recorded here and as a non-blocking Gaps candidate. Whether it is a DRM-layer defect (a pipe/shutdown call left unanswered) or Raft's own exit path is unknown and not diagnosed in this run.
 - Census row 648800 (run in segment A): evidence `verified`, evidenceDetail `game call ISteamUser_SteamUser017_GetSteamID`.
+
+### 56-34 launch 4 (Ranch) and segment A close
+
+- Operator: "launch 4 done: menu, no notices". Not reported by the operator: any force-quit, and the Ranch card state afterwards (C1 observation).
+- The helper script ran once and archived: `gamelib-launch-4.log`, `delta4.txt`, `trace-launch-4.log`, `wine-launch-4.log` (75 bytes, no stage), `system-reg-launch-4.reg`, `procs-launch-4.txt` (taken at 14:51 during the run), plus `census-launch-4.json`.
+- Ranch's stage did not run (registry already staged from earlier use): the Ranch user.reg is expected to still carry the four DRM values, so PC14's COUNT should print 4 before the reset.
+- C1: no `drm setup: ... stopped at` line in any segment-A DELTA, so C1 is N/A for segment A (final C1 is decided after segment B).
+- Segment A closed: `gamelib-segmentA-final.log` copied (all launches 0-4 archived; 5 launches' delimiters in `terminal.log`, with the duplicated launch-0 and launch-2 delimiters recorded above). Segment-A dev app pid 86847 is still running and is to be quit by the operator next.
 
 ## Gaps
 
