@@ -36,7 +36,7 @@ metrics:
 | runnerSliceRegistration containment pin and "exactly 67 handle" count | The plan blamed `dialogDisplayed` (509bcb01b). That channel is a listen-kind in `appShellFlowRegistration`, which this suite does not cover. The real cause is `getGamelibFixStatus` (a2385f6bf, quick 261027-ch9), a new invoke in `enrichmentFlowRegistration`. | Added the channel to `ENRICHMENT_CHANNELS`. Handle count 67 to 68, per-module counts 14 to 15, total 66 to 67, with history clauses in the titles. |
 | installFlows Test 1b | `jest.requireActual('backend/utils')` inside the mock factory re-enters the factory through `utils/helperBinaries` and `gog/presence`. `steam/installLocation` therefore got a different `getSteamLibraries` `jest.fn()` than the test arranged, which returned undefined and made `.map` throw. I confirmed this by logging the factory stack and the mock state. | Both stubs are pinned to one shared instance on `globalThis` in the factory. The test's assertions are unchanged. I did not identify which commit created the cycle and did not bisect. `gog/presence.ts` importing `backend/utils` is old, so the trigger may be elsewhere in the graph. |
 
-## OPEN: genI18nGateScope A-17 (stop and report)
+## RESOLVED (see "A-17 closure (follow-up)" below): genI18nGateScope A-17 (was: stop and report)
 - **Differing paths:** the live git derivation yields 283 fork-touched files and the committed `meta/i18nForkTouchedFiles.json` has 258, generated 2026-10-12. The 25 missing paths are all legitimate fork files added since then. They include `DialogHandler/ackWhenVisible.ts` and `MessageBoxModal/*`, `WelcomeModal/*`, `resolveBootLanguage.ts`, `SetupDownloadItem/*`, `SteamBridgeRouteNotice`, `SteamGoOfflineNotice`, `bridgeRouteDisplay`, `gamelibFixDisplay`, `playClickedLatch`, `crossoverInstallRisk`, `steamBridgeRouteLine`, `librarySort`, `useNonSteamLastPlayed`, `Shortcuts.tsx`, `WrappersTable.tsx`, `BottleLaunchWaiting`, `dialogQueue`, `savedZoomBoot` and `SteamSetupDownloads`.
 - **Why I did not regenerate:** I ran `pnpm gen-i18n-gate-scope` and measured it. The plan names `gen-i18n-scope:rewrite`, but that targets the hand-curated blocking scope file and the generator refuses it, so I used the routine command. Regenerating fixes A-17 but breaks 4 other tests in the same file:
   - the A-03 declared-debt ratchet gains 25 unscanned files;
@@ -55,3 +55,12 @@ metrics:
 - Plan 56-27/28/29 files were not touched.
 
 ## Self-Check: PASSED (commits 5fbd769a4, ca4cd8f2d, 022de9cd2 exist)
+
+## A-17 closure (follow-up)
+Decision: audit into scope, not declared debt.
+- Regenerated `meta/i18nForkTouchedFiles.json` with `pnpm gen-i18n-gate-scope` (258 -> 283).
+- Audited the 25 new files with `scanScope({ extraFiles })`. 19 had zero violations and were hand-inserted into `meta/i18nGateScope.json` in sorted position (212 -> 231).
+- Six files had 48 violations, all false positives (no untranslated user text): `buttonClassName.ts` (CSS class strings), `welcomeState.ts`, `bridgeRouteDisplay.ts`, `steamBridgeRouteLine.ts` (bare dotted i18n key literals), `crossoverInstallRisk.ts` (key plus default pairs in an unrecognised shape), `resolveBootLanguage.ts` (diagnostic message passed to an injected logger). Classification call: dev-only log text and key literals are not user-facing strings, but the gate does not yet exempt those shapes.
+- The six are declared as TEMPORARY entries in `DECLARED_UNSCANNED_DEBT`. Todo `.planning/todos/pending/2026-10-29-widen-hardcoded-string-gate-for-key-table-shapes.md` widens the gate (with paired negative fixtures), promotes them, and removes the entries. `meta/hardcodedStringGate.ts` was not changed.
+- `genI18nGateScope.test.ts` A0/A2/A3/A4 literals updated 212/258 -> 231/283.
+- Verified: the 7-suite command plus `hardcodedStringGate.test.ts` all pass (543 passed, 1 skipped), `tsc --noEmit` clean, `pnpm planning-gates` 12/12, scoped prettier clean.
