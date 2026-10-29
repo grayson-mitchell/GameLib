@@ -728,6 +728,126 @@ describe('stageDrmBottle', () => {
     expect(runReg).toHaveBeenCalledTimes(5)
   })
 
+  describe('stage wine log (plan 56-32)', () => {
+    const makeSink = () => ({
+      path: '/trace/1-9.stage.wine.log',
+      write: jest.fn(),
+      close: jest.fn()
+    })
+    const written = (sink: ReturnType<typeof makeSink>) =>
+      sink.write.mock.calls.map((c) => String(c[0])).join('')
+
+    it('A: opens the sink, marks attempt 0, logs its path, closes it', async () => {
+      const sink = makeSink()
+      const openStageLog = jest.fn(() => sink)
+      const r = await run({ stageLogDir: '/trace' }, { openStageLog })
+      expect(r.status).toBe('ok')
+      expect(openStageLog).toHaveBeenCalledTimes(1)
+      expect(written(sink)).toContain('[gamelib] stage attempt 0')
+      expect(logInfo).toHaveBeenCalledWith(
+        expect.stringContaining('stage wine log /trace/1-9.stage.wine.log'),
+        expect.anything()
+      )
+      expect(sink.close).toHaveBeenCalledTimes(1)
+    })
+
+    it('B: lists processes before ending the session and logs the retry pass', async () => {
+      const sink = makeSink()
+      const order: string[] = []
+      runReg
+        .mockImplementationOnce(() => new Promise(() => undefined))
+        .mockImplementation(() => Promise.resolve({ code: 0 }))
+      const listBottleProcesses = jest.fn(() => {
+        order.push('list')
+        return Promise.resolve(['11:97.5:wineserver'])
+      })
+      const endStageSession = jest.fn(() => {
+        order.push('end')
+        return Promise.resolve()
+      })
+      const r = await run(
+        { stageLogDir: '/trace' },
+        {
+          regTimeoutMs: 20,
+          openStageLog: () => sink,
+          listBottleProcesses,
+          endStageSession
+        }
+      )
+      expect(r.status).toBe('ok')
+      expect(order).toEqual(['list', 'end'])
+      expect(logWarning).toHaveBeenCalledWith(
+        expect.stringContaining('bottle processes at timeout:'),
+        expect.anything()
+      )
+      expect(written(sink)).toContain('11:97.5:wineserver')
+      expect(written(sink)).toContain('[gamelib] stage attempt 1')
+      expect(logInfo).toHaveBeenCalledWith(
+        'stageDrmBottle: appId 1 stage retry passed on attempt 1',
+        expect.anything()
+      )
+    })
+
+    it('C: an already staged bottle never opens a log', async () => {
+      const openStageLog = jest.fn(() => makeSink())
+      await run()
+      write(join(bottle, 'user.reg'), STAGED_REG)
+      const again = await run({ stageLogDir: '/trace' }, { openStageLog })
+      expect(again.status).toBe('ok')
+      expect(openStageLog).not.toHaveBeenCalled()
+    })
+
+    const forced = async (env: Record<string, string>, isPackaged: boolean) => {
+      runReg
+        .mockImplementationOnce(() => new Promise(() => undefined))
+        .mockImplementation(() => Promise.resolve({ code: 0 }))
+      const spy = jest.spyOn(global, 'setTimeout')
+      await run(
+        {},
+        {
+          regTimeoutMs: 40,
+          env,
+          isPackaged: () => isPackaged,
+          endStageSession: () => Promise.resolve(),
+          listBottleProcesses: () => Promise.resolve([])
+        }
+      )
+      const ms = spy.mock.calls.map((c) => Number(c[1]))
+      spy.mockRestore()
+      return ms
+    }
+
+    it('D: forced first timeout applies to attempt 0 only, in a dev sidecar', async () => {
+      const ms = await forced(
+        { GAMELIB_DRM_STAGE_FIRST_TIMEOUT_MS: '300' },
+        false
+      )
+      expect(ms).toContain(300)
+      expect(ms).toContain(40)
+      expect(logInfo).toHaveBeenCalledWith(
+        expect.stringContaining('first stage attempt timeout forced to 300 ms'),
+        expect.anything()
+      )
+    })
+
+    it.each([
+      ['packaged', '300', true],
+      ['too short', '5', false],
+      ['not digits', 'abc', false],
+      ['too long', '999999', false]
+    ])('E: %s value is ignored', async (_label, value, packaged) => {
+      const ms = await forced(
+        { GAMELIB_DRM_STAGE_FIRST_TIMEOUT_MS: value },
+        packaged
+      )
+      expect(ms).not.toContain(Number(value))
+      expect(logInfo).not.toHaveBeenCalledWith(
+        expect.stringContaining('timeout forced'),
+        expect.anything()
+      )
+    })
+  })
+
   it('does not end the session or retry on a non-timeout failure', async () => {
     runReg.mockResolvedValue({ code: 1, stderr: 'boom' })
     const endStageSession = jest.fn(() => Promise.resolve())

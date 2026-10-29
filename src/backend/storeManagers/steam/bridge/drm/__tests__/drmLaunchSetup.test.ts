@@ -8,6 +8,7 @@ import * as childProcess from 'child_process'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { GameSettings } from 'common/types'
+import { buildDrmPaths } from '../drmPaths'
 import { drmStepError } from '../steamclientLayerMode'
 import {
   drmLaunchSetup,
@@ -228,6 +229,7 @@ describe('drmLaunchSetup', () => {
       installdir: input.installdir,
       valveClientDir: '/v/dir',
       componentDir: '/c/dir',
+      stageLogDir: buildDrmPaths(APP_FOLDER)?.traceRoot,
       signal: input.signal
     })
   })

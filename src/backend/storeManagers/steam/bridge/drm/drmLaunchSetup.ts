@@ -53,6 +53,7 @@ import {
   type StageDrmBottleInput
 } from './stageDrmBottle'
 import { DRM_LAUNCH_FORM, type DrmLaunchForm } from '../../bottle'
+import { buildDrmPaths } from './drmPaths'
 
 /** Orchestrator stage names, used in logs; distinct from 56-04's DrmStep. */
 // ts-prune-ignore-next
@@ -430,6 +431,7 @@ async function runSetup(
       return fail('bottle-stage', drmStepError('bottle-stage', err))
     }
     const stage = deps.stageBottle ?? stageDrmBottle
+    const stageLogDir = buildDrmPaths(appFolder)?.traceRoot
     const stageInput: StageDrmBottleInput = {
       appId,
       bottleName: input.bottleName,
@@ -442,6 +444,7 @@ async function runSetup(
       ...(input.drmExe && resolve(input.drmExe) !== resolve(input.exePath)
         ? { extraExeDirs: [dirname(input.drmExe)] }
         : {}),
+      ...(stageLogDir ? { stageLogDir } : {}),
       signal: input.signal
     }
     const staged = await run('bottle-stage', () => stage(stageInput))

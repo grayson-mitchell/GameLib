@@ -44,6 +44,7 @@ import { createHash } from 'node:crypto'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { runWineCommand } from 'backend/launcher'
+import { isPackagedSidecar } from 'backend/sidecar/isPackagedSidecar'
 import type { GameSettings } from 'common/types'
 import {
   endPerGameBridgeBottleSession,
@@ -58,6 +59,7 @@ import {
 } from '../bridgeScan'
 import { isGameLibShimBytes, probeOriginalBackup } from '../shimGenerate'
 import { restoreBridgeSteamApiOriginals } from '../originalRestore'
+import { openStageWineLog } from './stageWineLog'
 import { BRIDGE_CONFIG_FILENAME } from '../bridgeConfig'
 import { drmStepError, type DrmStepResult } from './steamclientLayerMode'
 
@@ -214,6 +216,8 @@ export type StageDrmBottleInput = {
   componentDir: string
   /** Gap 11: extra exe dirs (UE Shipping exe) whose TCP artifacts are cleaned. */
   extraExeDirs?: string[]
+  /** Plan 56-32: trace root for the stage session's wine log. */
+  stageLogDir?: string
   signal?: AbortSignal
 }
 
@@ -238,6 +242,11 @@ export type StageDrmBottleDeps = {
     bottleName: string
     bottleDir: string
   }) => Promise<void>
+  /** Plan 56-32: opens the stage wine log sink (injectable for tests). */
+  openStageLog?: typeof openStageWineLog
+  /** Plan 56-32: dev-only fault injection is ignored when this is true. */
+  isPackaged?: () => boolean
+  env?: NodeJS.ProcessEnv
 }
 
 // ts-prune-ignore-next
@@ -516,12 +525,14 @@ async function defaultListBottleProcesses(
   bottleDir: string
 ): Promise<string[]> {
   const stdout = await new Promise<string>((resolveOut) => {
-    execFile(
+    const child = execFile(
       '/bin/ps',
       ['-axww', '-o', 'pid=,pcpu=,command='],
       { timeout: 3000, maxBuffer: 4 * 1024 * 1024 },
       (error, out) => resolveOut(error ? '' : String(out))
     )
+    // Sidecar exit contract (WR-03): never hold the event loop open.
+    child.unref?.()
   })
   const entries: string[] = []
   for (const line of stdout.split('\n')) {
@@ -617,12 +628,14 @@ export function pidsWithCwdInBottle(
 /** stdout of a bounded listing command; lsof exits 1 on any unreadable pid. */
 function listingOutput(file: string, argv: string[]): Promise<string> {
   return new Promise<string>((resolveOut) => {
-    execFile(
+    const child = execFile(
       file,
       argv,
       { timeout: 3000, maxBuffer: 16 * 1024 * 1024 },
       (_error, stdout) => resolveOut(String(stdout ?? ''))
     )
+    // Sidecar exit contract (WR-03): never hold the event loop open.
+    child.unref?.()
   })
 }
 
@@ -675,6 +688,19 @@ async function defaultEndStageSession(args: {
   } catch {
     // best effort
   }
+}
+
+/**
+ * Dev-only fault injection (T-56-32-01): GAMELIB_DRM_STAGE_FIRST_TIMEOUT_MS
+ * shortens attempt 0 so the live gate can force the retry path. Ignored by a
+ * packaged sidecar (isPackagedSidecar fails closed) and by anything but 3-5
+ * digits.
+ */
+function forcedFirstTimeoutMs(deps: StageDrmBottleDeps): number | null {
+  const raw = (deps.env ?? process.env).GAMELIB_DRM_STAGE_FIRST_TIMEOUT_MS
+  if (raw === undefined || !/^[0-9]{3,5}$/.test(raw)) return null
+  if ((deps.isPackaged ?? isPackagedSidecar)()) return null
+  return Number(raw)
 }
 
 async function runRegArgv(
@@ -876,62 +902,104 @@ export async function stageDrmBottle(
       } catch (err) {
         return fail(err)
       }
-      const run =
-        deps.runReg ??
-        ((commandParts: string[]) =>
-          runWineCommand({
-            gameSettings: input.bottleSettings,
-            commandParts,
-            // reg.exe's own exit code proves the write; `wineserver --wait`
-            // blocks until the bottle's wineserver exits, which can be never.
-            wait: false,
-            protonVerb: 'run',
-            // The first call after endPerGameBridgeBottleSession starts a fresh
-            // wineserver that inherits the pipes and outlives reg.exe, so
-            // settling on 'close' timed the server, not the write (219990,
-            // debug drm-bottle-stage-reg-add-hang).
-            resolveOnExit: true
-          }))
-      const regTimeoutMs = deps.regTimeoutMs ?? DRM_REG_ADD_TIMEOUT_MS
-      let err = await runRegArgv(commands, run, regTimeoutMs)
-      // A fresh bottle's first wine session can wedge (winedevice HID spin);
-      // end it and retry once on a fresh session. reg add /f is idempotent.
-      for (
-        let attempt = 0;
-        err?.includes('timed out after') && attempt < DRM_REG_ADD_RETRIES;
-        attempt++
-      ) {
-        if (input.signal?.aborted) return fail('aborted')
-        logWarning(
-          `stageDrmBottle: appId ${input.appId} ${err}; ending the stage session and retrying`,
+      const sink = input.stageLogDir
+        ? (deps.openStageLog ?? openStageWineLog)(
+            input.stageLogDir,
+            input.appId,
+            Date.now(),
+            name
+          )
+        : null
+      if (sink) {
+        logInfo(
+          `stageDrmBottle: appId ${input.appId} stage wine log ${sink.path}`,
           LogPrefix.Steam
         )
-        await (deps.endStageSession ?? defaultEndStageSession)({
-          appId: input.appId,
-          bottleName: name,
-          bottleDir
-        })
-        err = await runRegArgv(commands, run, regTimeoutMs)
       }
-      if (err) {
-        logWarning(
-          `stageDrmBottle: appId ${input.appId} ${err}`,
-          LogPrefix.Steam
-        )
-        if (err.includes('timed out after')) {
+      try {
+        const run =
+          deps.runReg ??
+          ((commandParts: string[]) =>
+            runWineCommand({
+              gameSettings: input.bottleSettings,
+              commandParts,
+              // reg.exe's own exit code proves the write; `wineserver --wait`
+              // blocks until the bottle's wineserver exits, which can be never.
+              wait: false,
+              protonVerb: 'run',
+              // The first call after endPerGameBridgeBottleSession starts a fresh
+              // wineserver that inherits the pipes and outlives reg.exe, so
+              // settling on 'close' timed the server, not the write (219990,
+              // debug drm-bottle-stage-reg-add-hang).
+              resolveOnExit: true,
+              // Plan 56-32: the stage session's output (verification gap 1).
+              options: {
+                onOutput: (chunk: unknown) => sink?.write(String(chunk))
+              }
+            }))
+        const regTimeoutMs = deps.regTimeoutMs ?? DRM_REG_ADD_TIMEOUT_MS
+        const forcedMs = forcedFirstTimeoutMs(deps)
+        if (forcedMs !== null) {
+          logInfo(
+            `stageDrmBottle: appId ${input.appId} first stage attempt timeout forced to ${forcedMs} ms (GAMELIB_DRM_STAGE_FIRST_TIMEOUT_MS, dev only)`,
+            LogPrefix.Steam
+          )
+        }
+        // Lists the bottle's processes for the log and the stage log. Runs on
+        // every timed-out attempt, BEFORE the session is ended.
+        const logTimeoutListing = async () => {
           try {
             const procs = await (
               deps.listBottleProcesses ?? defaultListBottleProcesses
             )(bottleDir)
-            logWarning(
-              `stageDrmBottle: appId ${input.appId} bottle processes at timeout: ${procs.slice(0, 20).join(',')}`,
-              LogPrefix.Steam
-            )
+            const line = `stageDrmBottle: appId ${input.appId} bottle processes at timeout: ${procs.slice(0, 20).join(',')}`
+            logWarning(line, LogPrefix.Steam)
+            sink?.write(`[gamelib] ${line}\n`)
           } catch {
             // diagnostic only
           }
         }
-        return fail(err)
+        sink?.write(`[gamelib] stage attempt 0 ${new Date().toISOString()}\n`)
+        let err = await runRegArgv(commands, run, forcedMs ?? regTimeoutMs)
+        // A fresh bottle's first wine session can wedge (winedevice HID spin);
+        // end it and retry once on a fresh session. reg add /f is idempotent.
+        for (
+          let attempt = 0;
+          err?.includes('timed out after') && attempt < DRM_REG_ADD_RETRIES;
+          attempt++
+        ) {
+          if (input.signal?.aborted) return fail('aborted')
+          logWarning(
+            `stageDrmBottle: appId ${input.appId} ${err}; ending the stage session and retrying`,
+            LogPrefix.Steam
+          )
+          await logTimeoutListing()
+          await (deps.endStageSession ?? defaultEndStageSession)({
+            appId: input.appId,
+            bottleName: name,
+            bottleDir
+          })
+          sink?.write(
+            `[gamelib] stage attempt ${attempt + 1} ${new Date().toISOString()}\n`
+          )
+          err = await runRegArgv(commands, run, regTimeoutMs)
+          if (!err) {
+            logInfo(
+              `stageDrmBottle: appId ${input.appId} stage retry passed on attempt ${attempt + 1}`,
+              LogPrefix.Steam
+            )
+          }
+        }
+        if (err) {
+          logWarning(
+            `stageDrmBottle: appId ${input.appId} ${err}`,
+            LogPrefix.Steam
+          )
+          if (err.includes('timed out after')) await logTimeoutListing()
+          return fail(err)
+        }
+      } finally {
+        sink?.close()
       }
       registryWritten = true
       logInfo(
