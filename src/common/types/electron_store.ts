@@ -19,7 +19,6 @@ import {
 } from 'common/types'
 import { UserData } from 'common/types/gog'
 import { NileUserData } from './nile'
-import { ZoomCredentials } from './zoom'
 import { SteamUserData, SteamBottleConfig } from './steam'
 import { HumbleUserData } from './humble'
 
@@ -60,9 +59,6 @@ export interface StoreStructure {
   gogInstalledGamesStore: {
     installed: InstalledInfo[]
   }
-  zoomInstalledGamesStore: {
-    installed: InstalledInfo[]
-  }
   timestampStore: {
     [K: string]: {
       firstPlayed: string
@@ -83,11 +79,6 @@ export interface StoreStructure {
     // a network error or timeout — that is "unknown", not "signed out" (the
     // 260822-vov rule). Mirrors steamConfigStore.credentialsMissing.
     expired?: boolean
-  }
-  zoomConfigStore: {
-    credentials?: ZoomCredentials
-    isLoggedIn: boolean
-    username?: string
   }
   steamConfigStore: {
     isLoggedIn: boolean
@@ -153,11 +144,6 @@ export interface StoreStructure {
     finished: DMQueueElement[]
   }
   gogSyncStore: {
-    [appName: string]: {
-      [saveName: string]: string
-    }
-  }
-  zoomSyncStore: {
     [appName: string]: {
       [saveName: string]: string
     }

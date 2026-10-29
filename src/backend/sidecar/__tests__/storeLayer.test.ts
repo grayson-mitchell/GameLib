@@ -158,7 +158,6 @@ describe('round-trip', () => {
     'configStore',
     'wineDownloaderInfoStore',
     'gogInstalledGamesStore',
-    'zoomInstalledGamesStore',
     'timestampStore',
     // 'fontsStore' — permitted exclusion #1 (29-RESEARCH Pitfall 2): zero
     // construction sites anywhere in the backend, a dead `StoreStructure`
@@ -166,7 +165,6 @@ describe('round-trip', () => {
     // a missing store here means the registration (storeRegistration.ts) or
     // the D-15 extraction is wrong, not that the store should be skipped.
     'gogConfigStore',
-    'zoomConfigStore',
     'steamConfigStore',
     'steamBottleConfigStore',
     'nileConfigStore',
@@ -175,13 +173,6 @@ describe('round-trip', () => {
     'sideloadedStore',
     'downloadManager',
     'gogSyncStore',
-    // 'zoomSyncStore' — permitted exclusion #2, discovered by THIS suite
-    // (not by 29-RESEARCH): a repo-wide search finds zero construction
-    // sites anywhere for it, unlike its real, constructed sibling
-    // `gogSyncStore`. Declared in `StoreStructure` but the Zoom store
-    // manager never implemented an equivalent sync-timestamps feature —
-    // same disposition as `fontsStore`, documented identically in
-    // storeRegistration.ts.
     'gogPrivateBranches',
     // 'wikigameinfo' is NOT excluded — see the cache-backed round-trip
     // block below. It IS a `ValidStoreName`, but `wiki_game_info/
@@ -225,7 +216,6 @@ describe('round-trip', () => {
     'legendary_library',
     'gog_library',
     'nile_library',
-    'zoom_library',
     'steam_library',
     'wikigameinfo'
   ] as const

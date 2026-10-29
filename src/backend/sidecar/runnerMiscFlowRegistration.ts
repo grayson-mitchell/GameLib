@@ -18,12 +18,9 @@
  * only when `game.isNative()`, inside the GOG branch) is already covered by `pathShim.ts`'s
  * `documents` case (plan 34.5-01, REQ-34.5-01), so no new shim work is required here.
  *
- * D-04 correction, recorded here because this is where a future reader will actually find it:
- * `getCometVersion` is GOG's channel, not Zoom's. `comet` is the GOG Galaxy Communication
- * replacement, gated on `gameInfo.runner === 'gog'` at `launcher.ts:973`. An option label during
- * the 34.5 phase discussion wrongly bundled it with Zoom; Zoom is exactly three channels
- * (`authZoom`, `getZoomUserInfo`, `logoutZoom`), all DROPPED permanently by D-02 — `getCometVersion`
- * was never part of that drop.
+ * D-04 note, recorded here because this is where a future reader will actually find it:
+ * `getCometVersion` is GOG's channel. `comet` is the GOG Galaxy Communication replacement,
+ * gated on `gameInfo.runner === 'gog'` at `launcher.ts:973`.
  *
  * Declared channel list (14 total, all invoke — verified against `main.ts`,
  * `utils/ipc_handler.ts`, `tools/ipc_handler.ts`, and `wine/runtimes/ipc_handler.ts` by
@@ -116,10 +113,7 @@ export function registerRunnerMiscFlows(): void {
   ipcMain.handle('getLegendaryVersion', getLegendaryVersion)
   ipcMain.handle('getGogdlVersion', getGogdlVersion)
   // D-04: `comet` is GOG's Galaxy Communication replacement, gated on
-  // `gameInfo.runner === 'gog'` at `launcher.ts:973`. An option label during the 34.5 phase
-  // discussion wrongly bundled it with Zoom; Zoom is exactly three channels (`authZoom`,
-  // `getZoomUserInfo`, `logoutZoom`), all DROPPED permanently by D-02 — `getCometVersion` was
-  // never part of that drop and is ported here unchanged.
+  // `gameInfo.runner === 'gog'` at `launcher.ts:973`.
   ipcMain.handle('getCometVersion', getCometVersion)
   ipcMain.handle('getNileVersion', getNileVersion)
 

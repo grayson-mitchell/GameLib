@@ -207,7 +207,7 @@ registerHumbleFlows()
 // registration time), placed alongside them, before `ensureStoresRegistered()`.
 registerHumbleLoginFlows()
 // Phase 34.4.1 Plan 09 (REQ-34.4.1-08): the `oauthCaptureLogin` handle channel, which
-// drives the four OAuth runners' (legendary/gog/nile/zoom) redirect capture through the SAME
+// drives the four OAuth runners' (legendary/gog/nile) redirect capture through the SAME
 // login-window seam Humble already installed above -- a completely separate concern from
 // Humble's own browser-auth channels (this captures a redirect code, it does not
 // authenticate). No ordering constraint relative to the other calls above (own channel name,
@@ -266,7 +266,6 @@ const CACHE_BACKED_STORE_NAMES: readonly string[] = [
   'legendary_library',
   'gog_library',
   'nile_library',
-  'zoom_library',
   'steam_library',
   'wikigameinfo'
 ]

@@ -89,9 +89,7 @@ const mockApi = {
   login: jest.fn(),
   authGOG: jest.fn(),
   authAmazon: jest.fn(),
-  authZoom: jest.fn(),
   getAmazonLoginData: jest.fn(),
-  getZoomUserInfo: jest.fn(),
   logInfo: jest.fn()
 }
 ;(globalThis as unknown as { window: { api: typeof mockApi } }).window = {
@@ -182,9 +180,7 @@ beforeEach(() => {
   mockApi.login.mockReset()
   mockApi.authGOG.mockReset()
   mockApi.authAmazon.mockReset()
-  mockApi.authZoom.mockReset()
   mockApi.getAmazonLoginData.mockReset()
-  mockApi.getZoomUserInfo.mockReset()
   mockApi.logInfo.mockReset()
   mockApi.getAmazonLoginData.mockResolvedValue(AMAZON_LOGIN_DATA)
 })
@@ -209,10 +205,6 @@ describe('useTauriOAuthLogin — opens the capture and reports awaiting', () => 
     [
       'gog',
       'https://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=galaxy'
-    ],
-    [
-      'zoom',
-      'https://www.zoom-platform.com/login?li=heroic&return_li_token=true'
     ]
   ])(
     'runner=%s calls oauthCaptureLogin once with that runner and its login url',
@@ -256,8 +248,7 @@ describe('useTauriOAuthLogin — captured -> auth channel -> blocked (D-04)', ()
   it.each<[OAuthRunner, keyof typeof mockApi, string]>([
     ['legendary', 'login', 'login'],
     ['gog', 'authGOG', 'authGOG'],
-    ['nile', 'authAmazon', 'authAmazon'],
-    ['zoom', 'authZoom', 'authZoom']
+    ['nile', 'authAmazon', 'authAmazon']
   ])(
     'runner=%s: a captured code handed to %s rejecting with UNPORTED_CHANNEL_MARKER resolves { phase: "blocked", channel: %s }',
     async (runner, apiMethod, expectedChannel) => {
@@ -346,23 +337,6 @@ describe('useTauriOAuthLogin — captured -> auth channel -> blocked (D-04)', ()
       code_verifier: AMAZON_LOGIN_DATA.code_verifier,
       serial: AMAZON_LOGIN_DATA.serial
     })
-  })
-
-  it('zoom: passes the FULL redirectUrl (not the token) to window.api.authZoom', async () => {
-    mockApi.oauthCaptureLogin.mockResolvedValue({
-      status: 'captured',
-      runner: 'zoom',
-      code: 'ZTOK',
-      redirectUrl: 'https://www.zoom-platform.com/?li_token=ZTOK'
-    })
-    mockApi.authZoom.mockRejectedValue(new Error(UNPORTED_CHANNEL_MARKER))
-
-    mount('zoom')
-    await settle('zoom')
-
-    expect(mockApi.authZoom).toHaveBeenCalledWith(
-      'https://www.zoom-platform.com/?li_token=ZTOK'
-    )
   })
 
   it('a non-marker rejection from the auth channel becomes { phase: "error" }, never "blocked"', async () => {
@@ -475,49 +449,6 @@ describe('useTauriOAuthLogin — captured -> auth channel -> completion (Phase 3
       runner: 'nile',
       username: 'Nile Grayson',
       user_id: 'nile-user-1'
-    })
-  })
-
-  it('zoom: fetches getZoomUserInfo() only after status is "done" and forwards its username', async () => {
-    mockApi.oauthCaptureLogin.mockResolvedValue({
-      status: 'captured',
-      runner: 'zoom',
-      code: 'ZTOK',
-      redirectUrl: 'https://www.zoom-platform.com/?li_token=ZTOK'
-    })
-    mockApi.authZoom.mockResolvedValue({ status: 'done' })
-    mockApi.getZoomUserInfo.mockResolvedValue({ username: 'Zoom Grayson' })
-    const onLoginSuccess = jest.fn()
-
-    mount('zoom', onLoginSuccess)
-    await settle('zoom', onLoginSuccess)
-
-    expect(mockApi.getZoomUserInfo).toHaveBeenCalledTimes(1)
-    expect(onLoginSuccess).toHaveBeenCalledWith({
-      runner: 'zoom',
-      username: 'Zoom Grayson',
-      user_id: undefined
-    })
-  })
-
-  it('zoom: does NOT call getZoomUserInfo() when authZoom resolves a non-"done" status', async () => {
-    mockApi.oauthCaptureLogin.mockResolvedValue({
-      status: 'captured',
-      runner: 'zoom',
-      code: 'ZTOK',
-      redirectUrl: 'https://www.zoom-platform.com/?li_token=ZTOK'
-    })
-    mockApi.authZoom.mockResolvedValue({ status: 'error' })
-    const onLoginSuccess = jest.fn()
-
-    mount('zoom', onLoginSuccess)
-    const hook = await settle('zoom', onLoginSuccess)
-
-    expect(mockApi.getZoomUserInfo).not.toHaveBeenCalled()
-    expect(onLoginSuccess).not.toHaveBeenCalled()
-    expect(hook).toEqual({
-      phase: 'error',
-      message: 'Login failed for zoom: status=error'
     })
   })
 
@@ -634,9 +565,6 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
     expect(setState).not.toHaveBeenCalledWith(
       expect.objectContaining({ amazon: expect.anything() })
     )
-    expect(setState).not.toHaveBeenCalledWith(
-      expect.objectContaining({ zoom: expect.anything() })
-    )
   })
 
   it('a successful nile capture sets both user_id and username, leaving other runners untouched', async () => {
@@ -721,22 +649,22 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
 describe('useTauriOAuthLogin — non-captured outcomes map to their own phases', () => {
   it('{ status: "cancelled" } -> { phase: "cancelled" }', async () => {
     mockApi.oauthCaptureLogin.mockResolvedValue({ status: 'cancelled' })
-    mount('zoom')
-    const hook = await settle('zoom')
+    mount('gog')
+    const hook = await settle('gog')
     expect(hook).toEqual({ phase: 'cancelled' })
   })
 
   it('{ status: "timeout" } -> { phase: "timeout" }', async () => {
     mockApi.oauthCaptureLogin.mockResolvedValue({ status: 'timeout' })
-    mount('zoom')
-    const hook = await settle('zoom')
+    mount('gog')
+    const hook = await settle('gog')
     expect(hook).toEqual({ phase: 'timeout' })
   })
 
   it('{ status: "unsupported" } -> { phase: "error" }', async () => {
     mockApi.oauthCaptureLogin.mockResolvedValue({ status: 'unsupported' })
-    mount('zoom')
-    const hook = await settle('zoom')
+    mount('gog')
+    const hook = await settle('gog')
     expect(hook.phase).toBe('error')
   })
 
@@ -745,8 +673,8 @@ describe('useTauriOAuthLogin — non-captured outcomes map to their own phases',
       status: 'error',
       message: 'seam threw'
     })
-    mount('zoom')
-    const hook = await settle('zoom')
+    mount('gog')
+    const hook = await settle('gog')
     expect(hook).toEqual({ phase: 'error', message: 'seam threw' })
   })
 })
@@ -878,8 +806,8 @@ describe('useTauriOAuthLogin — capture-transport-failed (F-34.5-G6-02, plan 34
   it('a non-Error rejection value still produces a { phase: "error" } state via String(error)', async () => {
     mockApi.oauthCaptureLogin.mockRejectedValue('raw-string-rejection')
 
-    mount('zoom')
-    const hook = await settle('zoom')
+    mount('gog')
+    const hook = await settle('gog')
 
     expect(hook).toEqual({ phase: 'error', message: 'raw-string-rejection' })
   })
@@ -1101,8 +1029,7 @@ describe('useTauriOAuthLogin — finalizing (capture complete, exchange in fligh
   it.each<[OAuthRunner, keyof typeof mockApi]>([
     ['legendary', 'login'],
     ['gog', 'authGOG'],
-    ['nile', 'authAmazon'],
-    ['zoom', 'authZoom']
+    ['nile', 'authAmazon']
   ])(
     'runner=%s: a captured outcome with the auth channel still pending leaves the hook at { phase: "finalizing", runner }',
     async (runner, apiMethod) => {
@@ -1158,8 +1085,8 @@ describe('useTauriOAuthLogin — finalizing (capture complete, exchange in fligh
     async (_label, outcome) => {
       mockApi.oauthCaptureLogin.mockResolvedValue(outcome)
 
-      mount('zoom')
-      const hook = await settle('zoom')
+      mount('gog')
+      const hook = await settle('gog')
 
       expect(hook.phase).not.toBe('finalizing')
       const finalizingLines = mockApi.logInfo.mock.calls.filter(
@@ -1260,7 +1187,7 @@ describe('useTauriOAuthLogin — preparing (quick task 260806-teb)', () => {
     })
   })
 
-  it.each<OAuthRunner>(['legendary', 'gog', 'zoom'])(
+  it.each<OAuthRunner>(['legendary', 'gog'])(
     "runner=%s never observes { phase: 'preparing' } -- its url resolves from a constant with no spawn",
     async (runner) => {
       mockApi.oauthCaptureLogin.mockImplementation(() => new Promise(() => {}))
@@ -1559,6 +1486,5 @@ describe('useTauriOAuthLogin — cancellation suppresses state updates only (Pla
     expect(mockApi.authGOG).not.toHaveBeenCalled()
     expect(mockApi.login).not.toHaveBeenCalled()
     expect(mockApi.authAmazon).not.toHaveBeenCalled()
-    expect(mockApi.authZoom).not.toHaveBeenCalled()
   })
 })

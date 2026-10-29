@@ -8,18 +8,15 @@
  * SAME guard to Humble. This file now pins BOTH mechanisms as they
  * currently coexist:
  *
- *   - Zoom (no `primaryLoginAction`) is now the ONLY tile that still
- *     navigates away via `Runner.handleLogin()` -> `navigate(props.loginUrl)`,
- *     still unmounting the whole `runnerGroup` (assertions 1, 3, 4). Amazon
- *     and GOG used to share this camp; quick task 261003-s04 moved GOG, Epic
- *     (legendary) and Amazon (nile) onto its own `OAuthLogin` overlay, so all
- *     three now reach the overlay the same `primaryLoginAction` way
- *     Steam/Humble already did.
+ *   - No tile navigates away via `Runner.handleLogin()` -> `navigate(props.loginUrl)`
+ *     any more (the last one to do so was removed). Quick task 261003-s04 moved
+ *     GOG, Epic (legendary) and Amazon (nile) onto the `OAuthLogin` overlay, so
+ *     all three reach it the same `primaryLoginAction` way Steam/Humble do.
  *   - Steam, Humble, GOG, Epic (legendary) and Amazon (nile) (and
  *     Epic-under-Tauri via SIDLogin, out of scope here per F-36-01) use
  *     `primaryLoginAction`, which returns BEFORE the navigate call -- no
  *     navigation, no unmount. Their tiles' disable comes from the shared
- *     `oldMac || loginInFlight` expression now fed to ALL SIX tiles
+ *     `oldMac || loginInFlight` expression now fed to ALL FIVE tiles
  *     uniformly (assertion 2), not from unmounting.
  *
  * Quick task 261008-fjj (2026-10-08): the tiles stopped being bare
@@ -39,7 +36,7 @@
  * no browser DOM environment and no component-mounting harness available
  * here. Every assertion below reads a source file with `readFileSync`,
  * strips comments with `stripSourceComments`, and matches text. These prove
- * the SOURCE SHAPE the six-tile Login screen implements, not anything about
+ * the SOURCE SHAPE the five-tile Login screen implements, not anything about
  * a rendered document tree or a real live click (T-34.4.2-26 -- a green test
  * suite has never once caught one of this phase's blocking live defects).
  * Human visual verification of the actual overlay/crossfade is 36-03's job,
@@ -111,14 +108,14 @@ describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable 
     )
   })
 
-  it('SOURCE GATE (PRESENCE, inverted by 36-01) -- disabled={oldMac || loginInFlight} is the exact and ONLY expression fed to every one of the six Runner tiles on the Login screen; this is the explicit ROADMAP-required guard replacing the old incidental unmount-only mitigation. It fails the moment any tile stops carrying the shared guard, or carries a differently-derived one.', () => {
+  it('SOURCE GATE (PRESENCE, inverted by 36-01) -- disabled={oldMac || loginInFlight} is the exact and ONLY expression fed to every one of the five Runner tiles on the Login screen; this is the explicit ROADMAP-required guard replacing the old incidental unmount-only mitigation. It fails the moment any tile stops carrying the shared guard, or carries a differently-derived one.', () => {
     const source = read(LOGIN_TSX)
     const disabledExpressions = source.match(/disabled=\{[^}]*\}/g) ?? []
 
     // Breaks if: a Runner tile is added/removed (count moves off 6), or any
     // tile's disabled= expression stops being the literal token
     // `oldMac || loginInFlight` (uniqueness or literal-value check fails).
-    expect(disabledExpressions.length).toBe(6)
+    expect(disabledExpressions.length).toBe(5)
     expect(new Set(disabledExpressions).size).toBe(1)
     expect(disabledExpressions[0]).toBe('disabled={oldMac || loginInFlight}')
   })
@@ -143,31 +140,24 @@ describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable 
     )
   })
 
-  it("SOURCE GATE (PRESENCE) -- exactly one runnerGroup container holds all six tiles, so a non-primaryLoginAction tile's navigation still unmounts every tile at once, not just the one clicked", () => {
+  it("SOURCE GATE (PRESENCE) -- exactly one runnerGroup container holds all five tiles, so a non-primaryLoginAction tile's navigation still unmounts every tile at once, not just the one clicked", () => {
     const source = read(LOGIN_TSX)
     const matches = source.match(/runnerGroup/g) ?? []
 
     // Breaks if: a second runnerGroup-named container is introduced (the
     // "one shared container" claim would no longer hold), the container is
-    // renamed, or any of the six tile class markers goes missing. Note this
+    // renamed, or any of the five tile class markers goes missing. Note this
     // no longer covers Steam's own unreachability -- Steam's tile stays
     // in-tree and reachable-in-principle after being clicked, protected only
     // by the explicit loginInFlight guard pinned above, not by unmount.
     expect(matches.length).toBe(1)
     expect(source).toMatch(/<div className="runnerGroup">/)
-    for (const runnerClass of [
-      'epic',
-      'gog',
-      'nile',
-      'zoom',
-      'steam',
-      'humble'
-    ]) {
+    for (const runnerClass of ['epic', 'gog', 'nile', 'steam', 'humble']) {
       expect(source).toMatch(new RegExp(`class="${runnerClass}"`))
     }
   })
 
-  it('SOURCE GATE (PRESENCE + ABSENCE, 36-01) -- loginweb/:runner remains a SIBLING route of login (still true for Amazon/GOG/Zoom/Humble), while loginweb/steam is gone from the router entirely -- Steam no longer has a route at all, only the co-mounted overlay', () => {
+  it('SOURCE GATE (PRESENCE + ABSENCE, 36-01) -- loginweb/:runner remains a SIBLING route of login (still true for Amazon/GOG/Humble), while loginweb/steam is gone from the router entirely -- Steam no longer has a route at all, only the co-mounted overlay', () => {
     const source = read(APP_TSX)
     // Phase 43 Task 2: the route array is no longer passed straight into
     // `createHashRouter([...])` at module scope -- it is exported as its
@@ -218,7 +208,7 @@ describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable 
     // re-deriving". That day came (todo 2026-10-03: keyboard-only users could
     // not reach the tiles at all). F-36-02 RE-DERIVED: a tile is a tab stop
     // only while !disabled; disabled={oldMac || loginInFlight} is true on all
-    // six tiles for the whole time the wrapper is inert; and handleLogin()'s
+    // five tiles for the whole time the wrapper is inert; and handleLogin()'s
     // props.disabled early-return (pinned above) still guards activation. So
     // the slice's residual stays near zero -- now by two explicit layers
     // instead of by accident of markup. The container tabIndex lock stays

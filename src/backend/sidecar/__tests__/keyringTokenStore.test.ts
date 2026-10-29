@@ -40,8 +40,7 @@ jest.mock('backend/logger', () => ({
     Gog: 'Gog',
     Legendary: 'Legendary',
     Nile: 'Nile',
-    Sideload: 'Sideload',
-    Zoom: 'Zoom'
+    Sideload: 'Sideload'
   }
 }))
 

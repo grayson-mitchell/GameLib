@@ -67,7 +67,7 @@ export const VALIDATION_THROTTLE_MS = 3000
 
 // WR-03: hard deadline on the login watch. The only external teardown signal
 // is the renderer's humbleStopLogin on route unmount — which never fires
-// across window.location.reload() (epic/gog/amazon/zoom/steam logout paths)
+// across window.location.reload() (epic/gog/amazon/steam logout paths)
 // or a renderer crash, orphaning the watch into an INDEFINITE cookie poll +
 // Humble validation loop (C5 never-hammer violation once an anonymous
 // _simpleauth_sess exists). The deadline settles { status: 'waiting' }

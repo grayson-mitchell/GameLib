@@ -196,24 +196,24 @@ describe('backend/storeChangeNotifier.ts', () => {
       // REQ-29-01: the ValidStoreName is not the on-disk filename. The renderer knows the
       // store by its name, and `StoreChangedPayload.store` must carry that identity.
       //
-      // Uses `zoomInstalledGamesStore` (same shape as `gogInstalledGamesStore`, and NOT
-      // the store this generic test is really about) rather than a locally-constructed
+      // Uses `fontsStore` (a StoreStructure entry with no production construction site, and
+      // NOT the store this generic test is really about) rather than a locally-constructed
       // `gogInstalledGamesStore` instance — the `gogInstalledGamesStore` describe block
       // below imports the PRODUCTION `installedGamesStore` singleton instead, and a second,
       // locally-constructed instance under the same `ValidStoreName` would trip
       // `TypeCheckedStoreBackend`'s own WR-08 duplicate-registration guard.
-      const store = new TypeCheckedStoreBackend('zoomInstalledGamesStore', {
-        cwd: 'zoom_store',
-        name: 'installed'
+      const store = new TypeCheckedStoreBackend('fontsStore', {
+        cwd: 'fonts_store',
+        name: 'fonts'
       })
       pushed = []
 
-      store.set('installed', [] as never)
-      store.delete('installed')
+      store.set('fonts', [] as never)
+      store.delete('fonts')
 
       expect(pushed).toEqual([
-        { store: 'zoomInstalledGamesStore', key: 'installed', value: [] },
-        { store: 'zoomInstalledGamesStore', key: 'installed', deleted: true }
+        { store: 'fontsStore', key: 'fonts', value: [] },
+        { store: 'fontsStore', key: 'fonts', deleted: true }
       ])
     })
 
@@ -268,7 +268,7 @@ describe('backend/storeChangeNotifier.ts', () => {
   //
   // Imports the PRODUCTION `installedGamesStore` singleton (not a locally-constructed
   // `TypeCheckedStoreBackend('gogInstalledGamesStore', …)` — see the note on the
-  // `zoomInstalledGamesStore` test above for why a second instance under the same
+  // `fontsStore` test above for why a second instance under the same
   // ValidStoreName would trip WR-08's duplicate-registration guard) so link (2) is
   // verified against the exact instance GOGGame.uninstall itself calls.
   describe('gogInstalledGamesStore — production store, three-link uninstall→renderer chain', () => {

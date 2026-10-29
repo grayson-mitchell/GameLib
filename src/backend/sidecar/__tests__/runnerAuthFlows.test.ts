@@ -380,20 +380,3 @@ describe('T-34.5-18 — logoutGOG never lets a synchronous GOGUser.logout() thro
     expect(logWarning).not.toHaveBeenCalled()
   })
 })
-
-// ── Describe 5: Dropped channels never registered by this module ──────────────────────────────
-describe('none of the dropped zoom channels are registered here — the cluster is complete at 11, no twelfth channel belongs', () => {
-  // Zoom — D-02 drops it permanently. Amazon's 4 channels (previously listed here as
-  // "belongs to plan 34.5-10, not this plan") are now registered above by this same plan — the
-  // auth cluster is complete at 11 channels (6 Epic/GOG invoke + 1 GOG send + 4 Amazon invoke).
-  // No twelfth channel belongs in this module.
-  const NEVER_REGISTERED = ['authZoom', 'getZoomUserInfo', 'logoutZoom']
-
-  it.each(NEVER_REGISTERED)(
-    'REQ-34.5-04 %s is absent from both handlerRegistry and listenerRegistry',
-    (channel) => {
-      expect(handlerRegistry.has(channel)).toBe(false)
-      expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
-    }
-  )
-})

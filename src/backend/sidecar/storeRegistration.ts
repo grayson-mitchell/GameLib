@@ -63,13 +63,6 @@ import {
 } from '../storeManagers/gog/electronStores'
 
 import {
-  configStore as _zoomConfigStore,
-  installedGamesStore as _zoomInstalledGamesStore,
-  libraryStore as _zoomLibraryStore,
-  installInfoStore as _zoomInstallInfoStore
-} from '../storeManagers/zoom/electronStores'
-
-import {
   installStore as _nileInstallStore,
   libraryStore as _nileLibraryStore,
   configStore as _nileConfigStore
@@ -122,15 +115,6 @@ import { uploadedLogFileStore as _uploadedLogFileStore } from '../logger/electro
 // entry with no `new TypeCheckedStoreBackend('fontsStore', ...)` call to
 // import. This is the ONE permitted exclusion this plan anticipated — do
 // not invent a construction for it.
-//
-// `zoomSyncStore` is a SECOND, previously-undocumented dead entry,
-// discovered by this plan's own coverage test (Task 3), not by
-// 29-RESEARCH: a repo-wide search finds zero construction sites for it
-// anywhere — no `new TypeCheckedStoreBackend('zoomSyncStore', ...)` call
-// exists, unlike its sibling `gogSyncStore` (a real, constructed GOG
-// cloud-save-timestamp store). It is declared in `StoreStructure` but the
-// Zoom store manager never implemented an equivalent sync-timestamps
-// feature. Same disposition as `fontsStore` — nothing to import here.
 
 let registered = false
 
@@ -165,10 +149,6 @@ export function ensureStoresRegistered(): void {
     _gogInstallInfoStore,
     _gogPlaytimeSyncQueue,
     _gogPrivateBranchesStore,
-    _zoomConfigStore,
-    _zoomInstalledGamesStore,
-    _zoomLibraryStore,
-    _zoomInstallInfoStore,
     _nileInstallStore,
     _nileLibraryStore,
     _nileConfigStore,

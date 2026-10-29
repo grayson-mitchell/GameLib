@@ -101,7 +101,6 @@ export default React.memo(function Library(): JSX.Element {
     epic,
     gog,
     amazon,
-    zoom,
     steam,
     sideloadedLibrary,
     favouriteGames,
@@ -328,15 +327,12 @@ export default React.memo(function Library(): JSX.Element {
     if (gog.username) stores.push('gog')
     if (epic.username) stores.push('legendary')
     if (amazon.user_id) stores.push('nile')
-    if (zoom.enabled && zoom.username) stores.push('zoom')
     if (steamVisibility.storeConnected) stores.push('steam')
     return stores
   }, [
     gog.username,
     epic.username,
     amazon.user_id,
-    zoom.enabled,
-    zoom.username,
     steamVisibility.storeConnected
   ])
 
@@ -673,7 +669,7 @@ export default React.memo(function Library(): JSX.Element {
   // its second (add all six login-gate values to `libraryUnion`'s memo
   // array below AND keep `makeLibrary` a plain closure). A plain closure
   // captures whichever `epic.username`/`gog.username`/`amazon.user_id`/
-  // `zoom.enabled`/`zoom.username`/`steam?.username` were in scope on the
+  // `steam?.username` was in scope on the
   // render that created it; `libraryUnion`'s memo only re-invoked it when
   // its OWN array changed, which listed the four `*.library` arrays plus
   // `sideloadedLibrary` but none of the six login-gate reads above -- so a
@@ -688,13 +684,11 @@ export default React.memo(function Library(): JSX.Element {
     const showEpic = !!epic.username
     const showGog = !!gog.username
     const showAmazon = !!amazon.user_id
-    const showZoom = zoom.enabled && !!zoom.username
 
     const epicLibrary = showEpic ? epic.library : []
     const gogLibrary = showGog ? gog.library : []
     const sideloadedApps = sideloadedLibrary
     const amazonLibrary = showAmazon ? amazon.library : []
-    const zoomLibrary = showZoom ? zoom.library : []
     // quick/260924-g7r: `showSteam` is retained in the same `show*` shape as
     // the five stores above, because `connectedStoresParity.test.ts` reads
     // this local to prove the Store facet panel and the grid gate every
@@ -721,7 +715,6 @@ export default React.memo(function Library(): JSX.Element {
       ...epicLibrary,
       ...gogLibrary,
       ...amazonLibrary,
-      ...zoomLibrary,
       ...steamLibrary
     ]
   }, [
@@ -731,9 +724,6 @@ export default React.memo(function Library(): JSX.Element {
     gog.library,
     amazon.user_id,
     amazon.library,
-    zoom.enabled,
-    zoom.username,
-    zoom.library,
     steamVisibility,
     sideloadedLibrary
   ])
@@ -1135,7 +1125,7 @@ export default React.memo(function Library(): JSX.Element {
     )
   })
 
-  if (!epic && !gog && !amazon && !zoom) {
+  if (!epic && !gog && !amazon) {
     return (
       <ErrorComponent
         message={t(

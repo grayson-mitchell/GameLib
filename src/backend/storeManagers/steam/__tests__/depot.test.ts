@@ -112,7 +112,7 @@ jest.mock('../user')
 // jest.fn()'s own call arguments are sufficient proof that depot.ts now
 // calls the correct function with the correct payload shape;
 // sendProgressUpdate's own emit-to-bus behaviour is pre-existing unchanged
-// code already relied on by the gog/legendary/nile/zoom runners (see
+// code already relied on by the gog/legendary/nile runners (see
 // downloadmanager/__tests__/utils.test.ts, which exercises the real bus).
 // Its implementation is re-established in the 'downloadDepotFiles' describe
 // block's beforeEach below (resetMocks:true wipes even a `jest.fn(impl)`

@@ -31,6 +31,7 @@ import { onConnectivityChange } from 'backend/online_monitor'
 // (e.g. utils/uninstaller.ts's `libraryManagerMap[runner].getGame(appName)`).
 import { libraryManagerMap } from 'backend/storeManagers'
 import { downloadManager } from './electronStores'
+import { isRunner } from 'common/utils'
 
 /*
 #### Private ####
@@ -103,6 +104,33 @@ function addToFinished(element: DMQueueElement, status: DMStatus) {
 */
 
 /**
+ * Drops persisted queue/finished elements whose runner is no longer a known store (for
+ * example `'zoom'` written by a build that still shipped the Zoom Platform store).
+ * `libraryManagerMap[runner]` would be undefined for those and crash the queue.
+ */
+function pruneUnknownRunnerElements() {
+  const dropped: string[] = []
+  for (const key of ['queue', 'finished'] as const) {
+    const list = downloadManager.get(key, [])
+    const kept = list.filter((element) => isRunner(element?.params?.runner))
+    if (kept.length !== list.length) {
+      for (const element of list) {
+        if (!kept.includes(element)) {
+          dropped.push(String(element?.params?.appName))
+        }
+      }
+      downloadManager.set(key, kept)
+    }
+  }
+  if (dropped.length) {
+    logWarning(
+      `Dropped ${dropped.length} persisted download element(s) with an unknown runner: ${dropped.join(', ')}`,
+      LogPrefix.DownloadManager
+    )
+  }
+}
+
+/**
  * @param isStartup debug/steam-install-slow-start (Thread B): true ONLY for
  *   the single call main.ts makes 5s after app launch. A persisted Steam
  *   queue head must never be auto-started by that unattended call — Steam
@@ -119,6 +147,9 @@ function addToFinished(element: DMQueueElement, status: DMStatus) {
  *   normally.
  */
 async function initQueue(isStartup = false) {
+  if (isStartup) {
+    pruneUnknownRunnerElements()
+  }
   let element = getFirstQueueElement()
 
   while (element) {

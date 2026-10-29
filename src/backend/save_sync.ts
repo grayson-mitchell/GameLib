@@ -28,8 +28,6 @@ async function getDefaultSavePath(
       return ''
     case 'sideload':
       return ''
-    case 'zoom':
-      return ''
     case 'steam':
       return ''
   }

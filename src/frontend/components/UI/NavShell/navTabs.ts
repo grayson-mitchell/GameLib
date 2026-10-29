@@ -89,35 +89,23 @@ export interface NavStoreSessions {
   gog: { username?: string }
   amazon: { user_id?: string }
   steam: { username?: string }
-  zoom: { username?: string; enabled: boolean }
 }
 
 /**
  * Ports the default-store cascade at `SidebarLinks/index.tsx:82-113`
  * unchanged, in the same branch order, including the trailing
  * `sessionStorage.getItem('last-store')` override that wins over every
- * branch (REQ-34.10-11 -- the cascade carries over unchanged; the Zoom
- * branch stays even though ZOOM Platform is absent from the Stores tier-2
- * list, because this function decides a route target, not a rendered row).
+ * branch (REQ-34.10-11 -- the cascade carries over unchanged).
  *
  * `sessionStorage` is read here, inside the function, not at module scope,
  * so tests can stub it.
  */
 export function resolveDefaultStore(sessions: NavStoreSessions): string {
-  const { epic, gog, amazon, steam, zoom } = sessions
+  const { epic, gog, amazon, steam } = sessions
 
   // By default, open Epic Store
   let defaultStore = 'epic'
-  if (
-    zoom.enabled &&
-    !epic.username &&
-    !gog.username &&
-    !amazon.user_id &&
-    zoom.username
-  ) {
-    // Prioritize Zoom if only Zoom is logged in
-    defaultStore = 'zoom'
-  } else if (!epic.username && !gog.username && amazon.user_id) {
+  if (!epic.username && !gog.username && amazon.user_id) {
     // If only logged in to Amazon Games, open Amazon Gaming
     defaultStore = 'amazon'
   } else if (!epic.username && gog.username) {

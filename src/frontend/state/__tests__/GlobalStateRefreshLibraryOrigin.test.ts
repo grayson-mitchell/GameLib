@@ -160,12 +160,12 @@ function everyOriginIsAFixedStringLiteral(source: string): boolean {
 /**
  * debug/steam-refresh-hung-on-startup: the mount-time "refresh everything"
  * call (the sole `origin: 'mount'` call site) MUST include a Steam-login
- * check in its gating condition. A Steam-only session (no Epic/GOG/Amazon/
- * Zoom account) was previously excluded from this gate entirely, so
+ * check in its gating condition. A Steam-only session (no Epic/GOG/Amazon
+ * account) was previously excluded from this gate entirely, so
  * SteamLibraryManager.refresh() never ran on startup and the "Syncing your
  * Steam library…" spinner (true by default) never cleared. Asserts both
  * that a `steamUser` variable is derived from `steamConfigStore.has(...)`
- * (mirroring the existing gogUser/amazonUser/zoomUser pattern) and that it
+ * (mirroring the existing gogUser/amazonUser pattern) and that it
  * appears in the `if (...)` condition immediately gating the `origin:
  * 'mount'` refreshLibrary call.
  */
@@ -334,9 +334,8 @@ describe('GlobalState.tsx componentDidMount — mount-time refresh gate includes
       "    const legendaryUser = configStore.has('userInfo')",
       "    const gogUser = gogConfigStore.has('userData')",
       "    const amazonUser = nileConfigStore.has('userData')",
-      "    const zoomUser = zoomConfigStore.has('isLoggedIn')",
       "    const steamUser = steamConfigStore.has('userData')",
-      '    if (legendaryUser || gogUser || amazonUser || steamUser || (zoom.enabled && zoomUser)) {',
+      '    if (legendaryUser || gogUser || amazonUser || steamUser) {',
       '      this.refreshLibrary({',
       '        checkForUpdates: true,',
       '        runInBackground: false,',
@@ -355,8 +354,7 @@ describe('GlobalState.tsx componentDidMount — mount-time refresh gate includes
       "    const legendaryUser = configStore.has('userInfo')",
       "    const gogUser = gogConfigStore.has('userData')",
       "    const amazonUser = nileConfigStore.has('userData')",
-      "    const zoomUser = zoomConfigStore.has('isLoggedIn')",
-      '    if (legendaryUser || gogUser || amazonUser || (zoom.enabled && zoomUser)) {',
+      '    if (legendaryUser || gogUser || amazonUser) {',
       '      this.refreshLibrary({',
       '        checkForUpdates: true,',
       '        runInBackground: false,',
@@ -375,9 +373,8 @@ describe('GlobalState.tsx componentDidMount — mount-time refresh gate includes
       "    const legendaryUser = configStore.has('userInfo')",
       "    const gogUser = gogConfigStore.has('userData')",
       "    const amazonUser = nileConfigStore.has('userData')",
-      "    const zoomUser = zoomConfigStore.has('isLoggedIn')",
       "    const steamUser = steamConfigStore.has('userData')",
-      '    if (legendaryUser || gogUser || amazonUser || (zoom.enabled && zoomUser)) {',
+      '    if (legendaryUser || gogUser || amazonUser) {',
       '      this.refreshLibrary({',
       '        checkForUpdates: true,',
       '        runInBackground: false,',

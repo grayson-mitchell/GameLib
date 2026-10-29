@@ -7,31 +7,29 @@
 import { LOGIN_PATHNAMES, isLoginPathname } from '../loginRoutes'
 
 describe('LOGIN_PATHNAMES', () => {
-  it('exports exactly the 7 login pathnames the urls map in index.tsx defines', () => {
-    expect(LOGIN_PATHNAMES).toHaveLength(7)
+  it('exports exactly the 6 login pathnames the urls map in index.tsx defines', () => {
+    expect(LOGIN_PATHNAMES).toHaveLength(6)
   })
 })
 
-describe('isLoginPathname — login pathnames (all 7 entries of the urls map)', () => {
+describe('isLoginPathname — login pathnames (all 6 entries of the urls map)', () => {
   it.each([
     '/loginEpic',
     '/loginGOG',
     '/loginweb/legendary',
     '/loginweb/gog',
     '/loginweb/nile',
-    '/loginweb/zoom',
     '/loginweb/humble'
   ])('classifies %s as a login pathname', (pathname) => {
     expect(isLoginPathname(pathname)).toBe(true)
   })
 })
 
-describe('isLoginPathname — store/wiki pathnames (all 6 remaining entries of the urls map)', () => {
+describe('isLoginPathname — store/wiki pathnames (all 5 remaining entries of the urls map)', () => {
   it.each([
     '/store/epic',
     '/store/gog',
     '/store/amazon',
-    '/store/zoom',
     '/store/steam',
     '/wiki'
   ])('classifies %s as NOT a login pathname', (pathname) => {

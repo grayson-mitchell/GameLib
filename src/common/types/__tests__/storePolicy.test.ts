@@ -19,18 +19,16 @@ import {
   filterStoreSnapshot
 } from '../storePolicy'
 
-// Hardcoded reference of all 22 StoreStructure keys (src/common/types/electron_store.ts).
+// Hardcoded reference of all 18 StoreStructure keys (src/common/types/electron_store.ts).
 // This list must NOT be derived from storePolicy.ts's own exports — the whole point is
 // that a StoreStructure addition without a matching storePolicy.ts entry FAILS this test.
 const ALL_VALID_STORE_NAMES = [
   'configStore',
   'wineDownloaderInfoStore',
   'gogInstalledGamesStore',
-  'zoomInstalledGamesStore',
   'timestampStore',
   'fontsStore',
   'gogConfigStore',
-  'zoomConfigStore',
   'steamConfigStore',
   'steamBottleConfigStore',
   'nileConfigStore',
@@ -39,7 +37,6 @@ const ALL_VALID_STORE_NAMES = [
   'sideloadedStore',
   'downloadManager',
   'gogSyncStore',
-  'zoomSyncStore',
   'gogPrivateBranches',
   'wikigameinfo',
   'uploadedLogs',
@@ -51,7 +48,6 @@ const BOOT_SET_CACHE_STORE_NAMES = [
   'legendary_library',
   'gog_library',
   'nile_library',
-  'zoom_library',
   'steam_library'
 ]
 
@@ -75,10 +71,6 @@ describe('allow-list', () => {
 
   it('excludes gogConfigStore.credentials by name', () => {
     expect(isAllowedStoreField('gogConfigStore', 'credentials')).toBe(false)
-  })
-
-  it('excludes zoomConfigStore.credentials by name', () => {
-    expect(isAllowedStoreField('zoomConfigStore', 'credentials')).toBe(false)
   })
 
   it('blocks dot-notation subpath reads of a secret', () => {
@@ -136,16 +128,6 @@ describe('allow-list', () => {
     it('blocks a nested path under gogConfigStore.credentials', () => {
       expect(
         isAllowedStoreField('gogConfigStore', 'credentials.accessToken')
-      ).toBe(false)
-    })
-
-    it('blocks zoomConfigStore.credentials by name', () => {
-      expect(isAllowedStoreField('zoomConfigStore', 'credentials')).toBe(false)
-    })
-
-    it('blocks a nested path under zoomConfigStore.credentials', () => {
-      expect(
-        isAllowedStoreField('zoomConfigStore', 'credentials.accessToken')
       ).toBe(false)
     })
   })
@@ -320,10 +302,6 @@ describe('WR-04: write allow-list is strictly narrower than the read allow-list'
     expect(isWritableStoreField('steamConfigStore', 'refreshToken')).toBe(false)
     expect(isWritableStoreField('gogConfigStore', 'credentials')).toBe(false)
     expect(isWritableStoreField('notARealStore', 'anything')).toBe(false)
-    // zoomConfigStore's read allow-list is ['isLoggedIn','username'] — `userData` is
-    // not readable there at all, so it is write-rejected one layer earlier. Its
-    // WRITE_DENIED_FIELDS entry is forward-looking, not load-bearing today.
-    expect(isWritableStoreField('zoomConfigStore', 'userData')).toBe(false)
   })
 
   it('CR-01/CR-02: hostile key paths and prototype-chain store names are not writable, and never throw', () => {

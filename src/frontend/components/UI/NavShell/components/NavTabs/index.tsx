@@ -56,7 +56,7 @@ import './index.scss'
 export default function NavTabs() {
   const { t } = useTranslation()
   const location = useLocation() as { pathname: string }
-  const { epic, gog, amazon, steam, zoom, refreshLibrary } =
+  const { epic, gog, amazon, steam, refreshLibrary } =
     useContext(ContextProvider)
 
   const activeTab = resolveActiveTab(location.pathname)
@@ -68,8 +68,7 @@ export default function NavTabs() {
     // (`frontend/types.ts:114`) while `NavStoreSessions.steam.username` is
     // `string | undefined` -- coerce the `null` case here rather than
     // widening plan 01's shared contract type for one caller.
-    steam: { username: steam.username ?? undefined },
-    zoom
+    steam: { username: steam.username ?? undefined }
   })
 
   const target = (
@@ -91,8 +90,7 @@ export default function NavTabs() {
     const shouldRefresh =
       (epic.username && !epic.library.length) ||
       (gog.username && !gog.library.length) ||
-      (amazon.user_id && !amazon.library.length) ||
-      (zoom.username && !zoom.library.length)
+      (amazon.user_id && !amazon.library.length)
     if (shouldRefresh) {
       return refreshLibrary({
         runInBackground: true,

@@ -25,12 +25,6 @@ const initialContext: ContextType = {
     login: async () => Promise.resolve(''),
     logout: async () => Promise.resolve()
   },
-  zoom: {
-    library: [],
-    login: async () => Promise.resolve(''),
-    logout: async () => Promise.resolve(),
-    enabled: false
-  },
   steam: {
     library: [],
     login: async () => Promise.resolve(''),
@@ -122,8 +116,7 @@ const initialContext: ContextType = {
   },
   experimentalFeatures: {
     enableHelp: false,
-    cometSupport: true,
-    zoomPlatform: false
+    cometSupport: true
   },
   handleExperimentalFeatures: () => null,
   disableDialogBackdropClose: false,

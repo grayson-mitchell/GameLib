@@ -157,7 +157,7 @@ describe('Runner: default behavior (primaryLoginAction omitted -- the other 5 ru
     expect(findAltTile(tree)).toBeDefined()
   })
 
-  it('a runner with no alternativeLoginAction and no primaryLoginAction behaves exactly as before (GOG/Amazon/Zoom/Steam/Humble shape)', () => {
+  it('a runner with no alternativeLoginAction and no primaryLoginAction behaves exactly as before (GOG/Amazon/Steam/Humble shape)', () => {
     const tree = mount(makeProps({ class: 'gog', buttonText: 'GOG Login' }))
     const primary = findByClassNamePart(tree, 'runnerLogin')!
     ;(primary.props as unknown as { onClick: () => void }).onClick()
@@ -296,7 +296,7 @@ describe('Runner: deprecatedTile marker (quick task 260805-d62)', () => {
     expect(hasDeprecatedClass(alternative)).toBe(false)
   })
 
-  it('deprecatedTile omitted (the GOG/Amazon/Zoom/Steam/Humble shape) renders zero deprecated classes', () => {
+  it('deprecatedTile omitted (the GOG/Amazon/Steam/Humble shape) renders zero deprecated classes', () => {
     const tree = mount(makeProps({ class: 'gog', buttonText: 'GOG Login' }))
 
     expect(anyDeprecated(tree)).toBe(false)
@@ -469,7 +469,7 @@ describe('Runner: busy prop (quick task 261003-u48, D-3/D-4)', () => {
     expect(findBusySpinners(tree)).toHaveLength(1)
   })
 
-  it('busy omitted entirely (the Zoom / status-quo shape) -- zero spinner elements, proving the prop is genuinely optional and additive', () => {
+  it('busy omitted entirely (the status-quo shape) -- zero spinner elements, proving the prop is genuinely optional and additive', () => {
     const tree = mount(makeProps())
 
     expect(findBusySpinners(tree)).toHaveLength(0)

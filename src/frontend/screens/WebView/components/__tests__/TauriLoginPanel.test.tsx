@@ -201,8 +201,7 @@ describe('TauriLoginPanel — OAuth declared-blocked surface (D-04)', () => {
   it.each([
     ['legendary', 'login'],
     ['gog', 'authGOG'],
-    ['nile', 'authAmazon'],
-    ['zoom', 'authZoom']
+    ['nile', 'authAmazon']
   ])(
     'runner=%s names its channel (%s) and states Phase 34.5',
     (runner, channel) => {
@@ -246,12 +245,11 @@ describe('TauriLoginPanel — finalizing surface [quick task 260803-eee]', () =>
   // WR-02 (quick task 260823-qsm): the expected label is now DECLARED per runner rather than
   // recomputed by capitalizing the id. Recomputing it made this table tautological — it asserted
   // the component did whatever the test did, which is how "Legendary"/"Gog"/"Nile" survived a
-  // full phase of review. `zoom` has no mapping entry, so it keeps the capitalize fallback.
+  // full phase of review.
   it.each([
     ['legendary', 'Epic Games'],
     ['gog', 'GOG'],
-    ['nile', 'Amazon Games'],
-    ['zoom', 'Zoom']
+    ['nile', 'Amazon Games']
   ])(
     'runner=%s renders "Finalizing" + the user-facing store name (%s), a spinner element, and never the blocked copy',
     (runner, runnerLabel) => {
@@ -448,9 +446,9 @@ describe('TauriLoginPanel — WR-03: no dynamic value baked into a t() default',
 
 describe('TauriLoginPanel — reusable by plan 34.4.1-09 without restructuring', () => {
   it('accepts an optional state prop that defaults to undefined without changing the declared-blocked render', () => {
-    const withoutState = TauriLoginPanel({ runner: 'zoom' }) as AnyReactElement
+    const withoutState = TauriLoginPanel({ runner: 'gog' }) as AnyReactElement
     const withUndefinedState = TauriLoginPanel({
-      runner: 'zoom',
+      runner: 'gog',
       state: undefined
     }) as AnyReactElement
 

@@ -5,7 +5,7 @@
  * THE BUG THIS PINS
  *
  * Every OTHER successful-login path in `WebView/index.tsx` leaves the login surface:
- * Electron's epic/gog/zoom/amazon branches call `handleSuccessfulLogin()` ->
+ * Electron's epic/gog/amazon branches call `handleSuccessfulLogin()` ->
  * `navigate('/login')`, and the humble watch calls `navigate('/login')` on its
  * `status === 'done'` arm. The Tauri OAuth path did not. It completed the login — credential
  * persisted, library refreshed — and left the user parked on the WebView login route.

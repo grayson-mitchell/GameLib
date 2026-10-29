@@ -22,14 +22,13 @@ interface Props {
 // D-04/REQ-34.4.1-08: the backend sign-in channel each OAuth runner's login route is waiting on.
 // Nothing about these names is Humble-specific -- the Rust arms this panel's sibling seam drives
 // (`humble_login_open` et al., `src-tauri/src/main.rs`) never reference Humble by name either,
-// so the SAME mechanism serves all five runners. Plan 34.4.1-09 wires the real per-runner
+// so the SAME mechanism serves all four runners. Plan 34.4.1-09 wires the real per-runner
 // capture (`useTauriOAuthLogin.ts`) in front of this panel; this map only names the gap for
 // whichever phase still needs to.
 const OAUTH_CHANNEL_BY_RUNNER: Record<string, string> = {
   legendary: 'login',
   gog: 'authGOG',
-  nile: 'authAmazon',
-  zoom: 'authZoom'
+  nile: 'authAmazon'
 }
 
 /**
@@ -70,7 +69,7 @@ const displayNameFor = (runner?: string): string | undefined => {
  *    the static "a sign-in window has opened" copy lying on screen indefinitely after the watch
  *    has already given up.
  *
- *  - any other runner (`legendary`/`gog`/`nile`/`zoom`), or no runner at all: the OAuth surface,
+ *  - any other runner (`legendary`/`gog`/`nile`), or no runner at all: the OAuth surface,
  *    now driven by `state` (plan 34.4.1-09):
  *      - `state` undefined/absent, or `{ phase: 'idle' }`: the ORIGINAL plan-05 declared-blocked
  *        copy (byte-identical wording) -- the safe default for a build where the capture hook

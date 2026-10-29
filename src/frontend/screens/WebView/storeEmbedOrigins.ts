@@ -80,12 +80,6 @@ const STORE_EMBED_ORIGINS: readonly StoreEmbedConfig[] = [
     embeddableOn: ALL_EMBED_PLATFORMS
   },
   {
-    key: 'zoom',
-    apexHosts: ['zoom-platform.com'],
-    startUrl: 'https://www.zoom-platform.com',
-    embeddableOn: ALL_EMBED_PLATFORMS
-  },
-  {
     key: 'steam',
     apexHosts: ['store.steampowered.com'],
     startUrl: 'https://store.steampowered.com/',

@@ -525,8 +525,8 @@ describe('store facet', () => {
     const state = makeState()
     const deps = makeDeps()
 
-    expect(() => countFor(library, state, deps, 'store', 'zoom')).not.toThrow()
-    expect(countFor(library, state, deps, 'store', 'zoom')).toBe(0)
+    expect(() => countFor(library, state, deps, 'store', 'steam')).not.toThrow()
+    expect(countFor(library, state, deps, 'store', 'steam')).toBe(0)
   })
 })
 
@@ -544,6 +544,11 @@ describe('migration', () => {
     const result = migrateStoreFacetSelection(null, legacy)
 
     expect(result).toHaveLength(0)
+  })
+
+  it("a persisted storeFacet carrying the removed 'zoom' store loads without it", () => {
+    expect(migrateStoreFacetSelection('["zoom","gog"]', null)).toEqual(['gog'])
+    expect(migrateStoreFacetSelection('["zoom"]', null)).toEqual([])
   })
 
   it('a legacy platformsFilters/crossoverRatingFilters object likewise yields [] from migrateRunnabilityFacetSelection (D-02)', () => {

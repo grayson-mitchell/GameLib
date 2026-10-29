@@ -329,7 +329,7 @@ export const RUST_WAKE_LOCK_STOP = 'wake_lock_stop' as const
  * Rust-side channel name: open a fail-closed child `WebviewWindow` on any https URL
  * (Phase 34.4.1 Plan 01, D-01/D-02, REQ-34.4.1-01/REQ-34.4.1-09). Runner-agnostic by
  * design -- nothing in Rust knows what Humble is; this is the mechanism Phase 34.5
- * inherits for Epic/GOG/Amazon/Zoom too. Args: `[url: string, visible: boolean,
+ * inherits for Epic/GOG/Amazon too. Args: `[url: string, visible: boolean,
  * userAgent: string]`. Resolves the generated window label (never `main`/`about`, never
  * derived from `url` -- T-34.1-27).
  */

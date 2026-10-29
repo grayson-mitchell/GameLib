@@ -49,7 +49,6 @@ const SHOW_LOCAL_TO_STORE: Record<string, string> = {
   Epic: 'legendary',
   Gog: 'gog',
   Amazon: 'nile',
-  Zoom: 'zoom',
   Steam: 'steam'
 }
 
@@ -102,7 +101,7 @@ function parityMismatches(source: string): string[] {
 describe('connectedStores and makeLibrary gate every store identically (T-34.11-12 / WR-03)', () => {
   const source = readFileSync(LIBRARY_INDEX, 'utf-8')
 
-  it('finds five gated stores in each region -- the comparison is not empty-vs-empty', () => {
+  it('finds four gated stores in each region -- the comparison is not empty-vs-empty', () => {
     const panel = readConnectedStoreGates(source)
     const library = readMakeLibraryGates(source)
 
@@ -112,13 +111,12 @@ describe('connectedStores and makeLibrary gate every store identically (T-34.11-
       Object.keys(panel)
         .filter((store) => !UNGATED_STORES.has(store))
         .sort()
-    ).toEqual(['gog', 'legendary', 'nile', 'steam', 'zoom'])
+    ).toEqual(['gog', 'legendary', 'nile', 'steam'])
     expect(Object.keys(library).sort()).toEqual([
       'gog',
       'legendary',
       'nile',
-      'steam',
-      'zoom'
+      'steam'
     ])
   })
 

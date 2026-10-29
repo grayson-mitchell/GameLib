@@ -22,7 +22,7 @@ import './index.css'
  * 20-UI-SPEC Three-State Contract.
  *
  * D-05: reads exactly steam.library, gog.library, epic.library,
- * amazon.library + humble keys — `sideloadedLibrary` and `zoom` are
+ * amazon.library + humble keys — `sideloadedLibrary` is
  * DELIBERATELY never destructured from ContextProvider here (highest
  * fuzzy-false-positive risk source).
  */

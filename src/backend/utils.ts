@@ -438,7 +438,7 @@ async function openUrlOrFile(url: string): Promise<string | void> {
 }
 
 function clearCache(
-  library?: 'gog' | 'legendary' | 'nile' | 'zoom',
+  library?: 'gog' | 'legendary' | 'nile',
   fromVersionChange = false
 ) {
   wikiGameInfoStore.clear()

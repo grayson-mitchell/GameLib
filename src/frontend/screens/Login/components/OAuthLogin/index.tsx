@@ -13,12 +13,7 @@ import {
 import type { OAuthRunner } from 'common/types/oauthLogin'
 import './index.scss'
 
-// D-7: Zoom is deliberately NOT part of this overlay family -- it keeps its
-// own `/loginweb/zoom` route. Narrowing the prop type to exactly the other
-// three (rather than accepting the full OAuthRunner union) means a future
-// call site cannot hand this component a Zoom runner by accident; the type
-// checker catches it before D-7 would need to be re-discovered live.
-export type OAuthOverlayRunner = Exclude<OAuthRunner, 'zoom'>
+export type OAuthOverlayRunner = OAuthRunner
 
 interface Props {
   runner: OAuthOverlayRunner

@@ -975,6 +975,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'isPackagedSidecar.test.ts',
   'keyringTokenStore.test.ts',
   'knownFolders.test.ts',
+  'legacyZoomDataCleanup.test.ts',
   'lifecycleStub.test.ts',
   'loggerCallSiteGuard.test.ts',
   'migrationsWiring.test.ts',

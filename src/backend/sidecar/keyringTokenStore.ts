@@ -31,7 +31,7 @@ export const KEYRING_SLOT_STEAMGRID_API_KEY = 'steamgrid-api-key'
 /**
  * Bounded negative-result memo window for `getToken()` (34.5 gap cycle 3 plan 25, closing
  * F-34.5-G6-06; extended 15s -> 120s by 34.5 gap cycle 4 plan 35, closing Routing item 3). Every
- * one of the five runner sign-out flows (Epic/GOG/Amazon/Zoom/Steam) calls
+ * one of the five runner sign-out flows (Epic/GOG/Amazon/Steam) calls
  * `window.location.reload()` for its own unrelated reason, which remounts `GlobalState` and
  * unconditionally re-runs Humble's `getCredentials()`/`getCsrfToken()` health check
  * (`GlobalState.tsx`'s mount effect) -- without this memo, a read that timed out on ONE reload is

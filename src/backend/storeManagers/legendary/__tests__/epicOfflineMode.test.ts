@@ -31,7 +31,7 @@ describe('resolveEpicOfflineMode (R8)', () => {
     expect(resolveEpicOfflineMode({ ...base, storeExpired: false })).toBe(false)
   })
 
-  it.each(['gog', 'nile', 'steam', 'zoom', 'sideload'] as Runner[])(
+  it.each(['gog', 'nile', 'steam', 'sideload'] as Runner[])(
     'Test 4: runner %p with an expired flag returns the input offlineMode unchanged',
     (runner) => {
       expect(resolveEpicOfflineMode({ ...base, runner })).toBe(false)
@@ -43,14 +43,7 @@ describe('resolveEpicOfflineMode (R8)', () => {
 
   it('Test 5: offlineMode=true is never turned off, for every combination', () => {
     const bools = [true, false]
-    const runners: Runner[] = [
-      'legendary',
-      'gog',
-      'nile',
-      'steam',
-      'zoom',
-      'sideload'
-    ]
+    const runners: Runner[] = ['legendary', 'gog', 'nile', 'steam', 'sideload']
     for (const runner of runners)
       for (const canRunOffline of bools)
         for (const storeExpired of bools)

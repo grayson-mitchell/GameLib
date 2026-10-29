@@ -46,7 +46,6 @@ const VALID_STORE_FACET_VALUES: StoreFacetValue[] = [
   'gog',
   'nile',
   'sideload',
-  'zoom',
   'steam'
 ]
 
@@ -107,9 +106,8 @@ export function hasNativeBuild(game: GameInfo, hostPlatform: string): boolean {
  * - GOG and Epic: the same post-install Mach-O check (`backend/utils/macArch`),
  *   run after a native Mac install and once per game by a bounded load sweep,
  *   persisted in macArchStore.
- * - Zoom, Amazon and sideload: no arch signal, so a mac-native game is always
- *   included. Zoom has no native Mac install path, and Amazon's native flags
- *   are hard false (it never matches).
+ * - Amazon and sideload: no arch signal, so a mac-native game is always
+ *   included. Amazon's native flags are hard false (it never matches).
  */
 export function isHostNative(game: GameInfo, hostPlatform: string): boolean {
   if (!hasNativeBuild(game, hostPlatform)) return false

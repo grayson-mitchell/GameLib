@@ -37,7 +37,6 @@ function makeSessions(
     gog: { username: undefined },
     amazon: { user_id: undefined },
     steam: { username: undefined },
-    zoom: { username: undefined, enabled: false },
     ...overrides
   }
 }
@@ -158,25 +157,6 @@ describe('navTabs', () => {
   describe('resolveDefaultStore', () => {
     it("returns 'epic' when nothing is logged in", () => {
       expect(resolveDefaultStore(makeSessions())).toBe('epic')
-    })
-
-    it("returns 'zoom' only when zoom.enabled and zoom.username and none of epic/gog/amazon are logged in", () => {
-      expect(
-        resolveDefaultStore(
-          makeSessions({ zoom: { username: 'zoomer', enabled: true } })
-        )
-      ).toBe('zoom')
-    })
-
-    it("does not return 'zoom' when zoom.enabled but epic is also logged in", () => {
-      expect(
-        resolveDefaultStore(
-          makeSessions({
-            epic: { username: 'epic-user' },
-            zoom: { username: 'zoomer', enabled: true }
-          })
-        )
-      ).toBe('epic')
     })
 
     it("returns 'amazon' when only amazon.user_id is set", () => {

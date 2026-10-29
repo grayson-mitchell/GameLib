@@ -185,7 +185,6 @@ const RUNS_FOR_ME_RUNNERS: ReadonlySet<string> = new Set([
   'gog',
   'sideload',
   'nile',
-  'zoom',
   'steam'
 ])
 

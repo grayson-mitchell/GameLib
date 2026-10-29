@@ -4,10 +4,10 @@
  *
  * What regressed: the Steam library cache (`store_cache/steam_library.json`,
  * key `games`) is written by `SteamLibraryManager.refresh()` and is
- * byte-for-byte the same `CacheStore` shape GOG/Epic/Amazon/Zoom already
+ * byte-for-byte the same `CacheStore` shape GOG/Epic/Amazon already
  * use, but the renderer had NO WAY to read it. `BOOT_SET_CACHE_STORE_NAMES`
  * (storePolicy.ts) only listed `legendary_library` / `gog_library` /
- * `nile_library` / `zoom_library`; `steam_library` was absent from that
+ * `nile_library`; `steam_library` was absent from that
  * list, from the sidecar's `CACHE_BACKED_STORE_NAMES` read path
  * (handlers.ts), and from `src/frontend/helpers/electronStores.ts`
  * entirely. `GlobalState.tsx` hardcoded `steam: { library: [] }` in its

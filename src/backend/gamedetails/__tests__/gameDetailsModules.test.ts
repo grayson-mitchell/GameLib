@@ -67,7 +67,6 @@ const managerMocks = {
   legendary: makeManagerDouble(),
   gog: makeManagerDouble(),
   nile: makeManagerDouble(),
-  zoom: makeManagerDouble(),
   sideload: makeManagerDouble()
 }
 
@@ -163,22 +162,19 @@ const OTHER_RUNNERS_FOR_LEGENDARY = [
   'steam',
   'gog',
   'nile',
-  'zoom',
   'sideload'
 ] as const
 const OTHER_RUNNERS_FOR_GOG = [
   'steam',
   'legendary',
   'nile',
-  'zoom',
   'sideload'
 ] as const
 const OTHER_RUNNERS_FOR_SIDELOAD = [
   'steam',
   'legendary',
   'gog',
-  'nile',
-  'zoom'
+  'nile'
 ] as const
 
 // IN-04(b) (gap cycle 1, closed 2026-08-23): `gamepage.json` used to be read

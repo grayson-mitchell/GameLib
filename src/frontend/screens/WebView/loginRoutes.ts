@@ -22,7 +22,6 @@ export const LOGIN_PATHNAMES: readonly string[] = [
   '/loginweb/legendary',
   '/loginweb/gog',
   '/loginweb/nile',
-  '/loginweb/zoom',
   '/loginweb/humble'
 ]
 
@@ -46,5 +45,3 @@ export const EPIC_LOGIN_URL =
   'https://www.epicgames.com/id/login?responseType=code'
 export const GOG_LOGIN_URL =
   'https://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=galaxy'
-export const ZOOM_LOGIN_URL =
-  'https://www.zoom-platform.com/login?li=heroic&return_li_token=true'

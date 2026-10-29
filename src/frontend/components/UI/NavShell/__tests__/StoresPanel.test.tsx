@@ -2,8 +2,7 @@
  * Structural tests for `StoresPanel`, the tier-2 Stores nav list
  * (34.10-05 Task 1, REQ-34.10-11/14) -- carries every store-related
  * destination the retired `SidebarLinks` held (`Sidebar/components/
- * SidebarLinks/index.tsx:139-190,247-255`), with its guards intact and no
- * ZOOM Platform row.
+ * SidebarLinks/index.tsx:139-190,247-255`), with its guards intact.
  *
  * No jsdom / react-test-renderer is installed in this project (see
  * `src/frontend/jest.config.js` docstring) -- `StoresPanel` is invoked
@@ -19,7 +18,6 @@ import type { ReactElement, ReactNode } from 'react'
 type MockContextValue = {
   humble?: { isLoggedIn: boolean }
   steam: { username?: string | null }
-  zoom: { enabled: boolean; username?: string }
   handleRedeemKeyDialog: jest.Mock
 }
 
@@ -29,7 +27,6 @@ function makeContextValue(
   return {
     humble: { isLoggedIn: false },
     steam: { username: undefined },
-    zoom: { enabled: false, username: undefined },
     handleRedeemKeyDialog: jest.fn(),
     ...overrides
   }
@@ -175,17 +172,5 @@ describe('StoresPanel', () => {
     expect(redeemItem?.props.elementType).toBe('button')
     ;(redeemItem?.props.onClick as () => void)()
     expect(handleRedeemKeyDialog).toHaveBeenCalledWith(true)
-  })
-
-  it('never renders a Zoom Store row, even with zoom.enabled true and a zoom username', () => {
-    contextValue = makeContextValue({
-      zoom: { enabled: true, username: 'ZoomUser' }
-    })
-
-    const tree = StoresPanel() as unknown as ReactElement
-    const labels = labelsOf(tree)
-
-    expect(labels).not.toContain('Zoom Store')
-    expect(labels.some((l) => /zoom/i.test(l))).toBe(false)
   })
 })

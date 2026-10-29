@@ -283,7 +283,6 @@ jest.mock('backend/storeManagers', () => {
       gog: makeManager(),
       steam: makeManager(),
       nile: makeManager(),
-      zoom: makeManager(),
       sideload: makeManager()
     }
   }

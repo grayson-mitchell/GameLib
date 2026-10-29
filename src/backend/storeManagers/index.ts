@@ -2,7 +2,6 @@ import SideloadLibraryManager from 'backend/storeManagers/sideload/library'
 import GOGLibraryManager from 'backend/storeManagers/gog/library'
 import LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
 import NileLibraryManager from 'backend/storeManagers/nile/library'
-import ZoomLibraryManager from 'backend/storeManagers/zoom/library'
 import SteamLibraryManager from 'backend/storeManagers/steam/library'
 
 import { logInfo, RunnerToLogPrefixMap } from 'backend/logger'
@@ -16,7 +15,6 @@ export const libraryManagerMap = {
   gog: new GOGLibraryManager(),
   legendary: new LegendaryLibraryManager(),
   nile: new NileLibraryManager(),
-  zoom: new ZoomLibraryManager(),
   steam: new SteamLibraryManager()
 } satisfies Record<Runner, LibraryManager>
 

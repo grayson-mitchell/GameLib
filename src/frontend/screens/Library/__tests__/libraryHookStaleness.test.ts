@@ -60,18 +60,18 @@ function normalise(expression: string): string {
 }
 
 /**
- * The twelve identifiers the grid's read surface takes from component
- * props/state -- the six login gates (`epic.username`, `gog.username`,
- * `amazon.user_id`, `zoom.enabled`, `zoom.username`, `steam?.username`) plus
- * the six library sources each gate switches on (`epic.library`,
- * `gog.library`, `amazon.library`, `zoom.library`, `steam?.library`,
+ * The nine identifiers the grid's read surface takes from component
+ * props/state -- the four login gates (`epic.username`, `gog.username`,
+ * `amazon.user_id`, `steam?.username`) plus
+ * the five library sources each gate switches on (`epic.library`,
+ * `gog.library`, `amazon.library`, `steam?.library`,
  * `sideloadedLibrary`).
  * Listed explicitly by name (not derived by parsing the body generically) so
  * that a future accidental deletion of one of these reads is caught by Test H
  * rather than silently shrinking the set the checker looks for.
  *
- * quick/260924-g7r -- that surface is no longer ONE function. Ten of the
- * twelve are still read directly inside `makeLibrary`; `steam?.username` and
+ * quick/260924-g7r -- that surface is no longer ONE function. Eight of the
+ * nine are still read directly inside `makeLibrary`; `steam?.username` and
  * `steam?.library` moved up into the `steamVisibility` memo, which
  * `makeLibrary` then consumes as a single value. The staleness invariant is
  * unchanged in substance but now spans a hop, so it is checked across BOTH
@@ -86,9 +86,6 @@ const KNOWN_READS = [
   'gog.library',
   'amazon.user_id',
   'amazon.library',
-  'zoom.enabled',
-  'zoom.username',
-  'zoom.library',
   'steam?.username',
   'steam?.library',
   'sideloadedLibrary'
@@ -133,12 +130,12 @@ describe("makeLibrary's dependency array is complete (WR-01)", () => {
       .filter((read) => !memoDeps.includes(read))
   ]
 
-  it('Test H (non-vacuity): the extracted read set has exactly 12 members and contains epic.username', () => {
+  it('Test H (non-vacuity): the extracted read set has exactly 9 members and contains epic.username', () => {
     // Without this, a body that had lost every one of these reads (e.g. a
     // future refactor that inlined the gates elsewhere) would make Test G
     // vacuously green -- `[].every(...)` is `true` -- the exact fail-open
     // shape this project has hit before.
-    expect(actualReads).toHaveLength(12)
+    expect(actualReads).toHaveLength(9)
     expect(actualReads).toContain(normalise('epic.username'))
   })
 
@@ -157,8 +154,8 @@ describe("makeLibrary's dependency array is complete (WR-01)", () => {
 
   it('Test G: every identifier the grid reads is declared by the hook that reads it', () => {
     // Failing assertion against pre-fix code: before this task there was no
-    // useCallback at all, and the libraryUnion memo listed only six of the
-    // twelve -- this test reported the six missing login-gate identifiers by
+    // useCallback at all, and the libraryUnion memo listed only some of the
+    // nine -- this test reported the missing login-gate identifiers by
     // name. It is green now because each hook declares everything it reads.
     expect(missingFor(declaredDeps, steamMemoDeps)).toEqual([])
   })

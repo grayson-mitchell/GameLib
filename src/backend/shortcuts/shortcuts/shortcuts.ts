@@ -174,8 +174,8 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
  * Settles only after every deletion has finished, so a caller that reads the disk afterwards (the
  * sidecar's `removeShortcut` channel does) sees the outcome and not a race. A file that is already
  * gone counts as removed. A deletion that fails for any other reason is logged and the next file is
- * still attempted, but it is NOT rethrown: four uninstall paths await this
- * (`storeManagers/gog/games.ts`, `legendary/games.ts`, `nile/games.ts`, `zoom/games.ts`) and
+ * still attempted, but it is NOT rethrown: three uninstall paths await this
+ * (`storeManagers/gog/games.ts`, `legendary/games.ts`, `nile/games.ts`) and
  * `sideload/games.ts` calls it un-awaited, so a new rejection would fail an uninstall over a stale
  * shortcut, or surface as an unhandled rejection. The sidecar reads the outcome from the disk
  * instead.

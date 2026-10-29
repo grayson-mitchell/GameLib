@@ -5,7 +5,6 @@ const LogPrefix = {
   Legendary: 'Legendary',
   Gog: 'Gog',
   Nile: 'Nile',
-  Zoom: 'Zoom',
   Steam: 'Steam',
   WineDownloader: 'WineDownloader',
   ToolInstaller: 'ToolInstaller',
@@ -34,7 +33,6 @@ const RunnerToLogPrefixMap: Record<Runner, LogPrefix> = {
   gog: LogPrefix.Gog,
   nile: LogPrefix.Nile,
   sideload: LogPrefix.Sideload,
-  zoom: LogPrefix.Zoom,
   steam: LogPrefix.Steam
 }
 

@@ -187,7 +187,7 @@ export const storeHas = (storeName: string, key: string) => {
 // module has exactly ONE secret policy: `isAllowedStoreField`. A deny-list silently
 // exposes any newly added secret field by default; CR-06 (Phase 29 code review) already
 // found that exact defect once, on three fields (`humbleConfigStore.csrfToken`,
-// `gogConfigStore.credentials`, `zoomConfigStore.credentials`) that were shipping
+// `gogConfigStore.credentials`, and a since-removed store's credentials) that were shipping
 // readable in the Electron build until that fix. The allow-list closes that class of
 // bug by construction — an unknown field is blocked by DEFAULT, not exposed until
 // someone remembers to deny-list it — which is why it is the survivor here and not the

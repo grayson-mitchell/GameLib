@@ -1,9 +1,9 @@
 /**
- * Redirect-shape + capture-driver + registration proof for the four OAuth runners (Phase
+ * Redirect-shape + capture-driver + registration proof for the three OAuth runners (Phase
  * 34.4.1 Plan 09, D-04, REQ-34.4.1-08).
  *
- * `matchOAuthRedirect` is proven against all four real redirect shapes (legendary/localhost,
- * gog/embed.gog.com, nile/openid.oa2.authorization_code, zoom/li_token), their near-miss
+ * `matchOAuthRedirect` is proven against all three real redirect shapes (legendary/localhost,
+ * gog/embed.gog.com, nile/openid.oa2.authorization_code), their near-miss
  * negatives, a malformed url, and the full cross-runner negative matrix — this IS the
  * REQ-34.4.1-08 evidence: a per-runner navigation-observation claim proven by an executable test,
  * not by a runner-agnosticism grep over Rust source (Task 1).
@@ -34,8 +34,7 @@ jest.mock('backend/logger', () => ({
     Gog: 'Gog',
     Legendary: 'Legendary',
     Nile: 'Nile',
-    Sideload: 'Sideload',
-    Zoom: 'Zoom'
+    Sideload: 'Sideload'
   }
 }))
 
@@ -55,7 +54,7 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { registerOAuthLoginFlows } from '../oauthLoginFlowRegistration'
 import { handlerRegistry, listenerRegistry } from '../../platform'
 
-const ALL_RUNNERS: OAuthRunner[] = ['legendary', 'gog', 'nile', 'zoom']
+const ALL_RUNNERS: OAuthRunner[] = ['legendary', 'gog', 'nile']
 
 // ── matchOAuthRedirect (pure) ──────────────────────────────────────────────────────────────────
 
@@ -167,23 +166,6 @@ describe('matchOAuthRedirect — the four REQ-34.4.1-08 redirect shapes', () => 
     })
   })
 
-  it('zoom: li_token matches and returns the FULL redirect url (authZoom takes the url, not the token)', () => {
-    const url = 'https://www.zoom-platform.com/?li_token=ZTOK'
-    expect(matchOAuthRedirect('zoom', url)).toEqual({
-      code: 'ZTOK',
-      redirectUrl: url
-    })
-  })
-
-  it('zoom: the REQUEST url (return_li_token=true) does NOT match — only the RESPONSE carries li_token', () => {
-    expect(
-      matchOAuthRedirect(
-        'zoom',
-        'https://www.zoom-platform.com/login?li=heroic&return_li_token=true'
-      )
-    ).toBeNull()
-  })
-
   it.each(ALL_RUNNERS)(
     'a malformed url never throws for runner=%s — resolves null',
     (runner) => {
@@ -192,12 +174,11 @@ describe('matchOAuthRedirect — the four REQ-34.4.1-08 redirect shapes', () => 
     }
   )
 
-  describe('cross-runner negative matrix — each matching url is null for the other three runners', () => {
+  describe('cross-runner negative matrix — each matching url is null for the other two runners', () => {
     const MATCHING_URLS: Record<OAuthRunner, string> = {
       legendary: 'http://localhost:8080/?code=ABC',
       gog: 'https://embed.gog.com/on_login_success?origin=client&code=XYZ',
-      nile: 'https://www.amazon.com/?openid.oa2.authorization_code=NILE1',
-      zoom: 'https://www.zoom-platform.com/?li_token=ZTOK'
+      nile: 'https://www.amazon.com/?openid.oa2.authorization_code=NILE1'
     }
 
     for (const ownerRunner of ALL_RUNNERS) {
@@ -333,13 +314,13 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
       mockSeamTakeEvents.mockResolvedValue([
         {
           event: 'started',
-          url: 'https://www.zoom-platform.com/login?li=heroic&return_li_token=true'
+          url: 'https://www.amazon.com/ap/signin?openid.mode=checkid_setup'
         }
       ])
 
       const promise = captureOAuthLogin(
-        'zoom',
-        'https://www.zoom-platform.com/login',
+        'nile',
+        'https://www.amazon.com/ap/signin',
         {
           deadlineMs: 2000,
           pollMs: 500
@@ -409,8 +390,8 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
       mockSeamTakeEvents.mockResolvedValue([{ event: 'closed', url: '' }])
 
       const promise = captureOAuthLogin(
-        'zoom',
-        'https://www.zoom-platform.com/login'
+        'nile',
+        'https://www.amazon.com/ap/signin'
       )
       await flushAsync()
       jest.advanceTimersByTime(500)
@@ -422,7 +403,7 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
         .filter((msg: string) => msg.includes('status=cancelled'))
       expect(statusLines).toHaveLength(1)
       expect(statusLines[0]).toBe(
-        '[oauthLoginCapture] runner=zoom status=cancelled reason=window-closed'
+        '[oauthLoginCapture] runner=nile status=cancelled reason=window-closed'
       )
     } finally {
       jest.useRealTimers()
@@ -543,8 +524,8 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
       mockSeamTakeEvents.mockRejectedValue(new Error('takeEvents failed'))
 
       const promise = captureOAuthLogin(
-        'zoom',
-        'https://www.zoom-platform.com/login'
+        'nile',
+        'https://www.amazon.com/ap/signin'
       )
       await flushAsync()
 

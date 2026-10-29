@@ -344,8 +344,8 @@ describe('FilterMoreGroup', () => {
 // coverage is the reason no Genre facet exists anywhere in the panel: GOG
 // (gog/library.ts:1107) and Amazon (nile/library.ts:72,109) populate
 // genres at library sync, Steam (steam/games.ts:536) only via the lazy
-// per-game appdetails fetch, Epic populates none at all, ZOOM hardcodes
-// [], and genres live on GameInfo.extra?.genres rather than on the array
+// per-game appdetails fetch, Epic populates none at all,
+// and genres live on GameInfo.extra?.genres rather than on the array
 // the grid filters over. The facet is dropped, not half-shipped (D-14),
 // and deferred behind an explicit metadata-backfill prerequisite (D-15).
 // This describe block is the phase's sole citation site for all three

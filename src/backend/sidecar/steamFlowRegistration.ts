@@ -38,7 +38,7 @@
  * GAP CYCLE 4 (34.5-33, Routing item 1): `refreshLibrary` used to be an
  * argument-less Phase 27 walking-skeleton stub that unconditionally called
  * `new SteamLibraryManager().refresh()` regardless of which runner the
- * renderer asked for — so a GOG/legendary/nile/zoom refresh request under
+ * renderer asked for — so a GOG/legendary/nile refresh request under
  * Tauri silently refreshed Steam instead, with no error and no log line
  * naming the mismatch. The handler below reproduces `main.ts:1051`'s
  * dispatch semantics (single-runner / all-runners / Humble ownership

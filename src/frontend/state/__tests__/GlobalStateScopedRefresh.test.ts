@@ -13,8 +13,8 @@
  * What this proves, split into the three items the fix's verification bar
  * names:
  *
- *   (a) None of the five logout wrappers (epicLogout/gogLogout/amazonLogout/
- *       zoomLogout/steamLogout) call `window.location.reload()` any more —
+ *   (a) None of the four logout wrappers (epicLogout/gogLogout/amazonLogout/
+ *       steamLogout) call `window.location.reload()` any more —
  *       the mechanism that unmounted the ENTIRE React tree (wiping every
  *       OTHER platform's already-loaded games) whenever a SINGLE platform
  *       logged out. Each wrapper's own scoped `setState` clearing only its
@@ -86,7 +86,6 @@ describe('GlobalState.tsx logout wrappers — never reload the window (debug/log
     ['epicLogout = async () => ', 'epic'],
     ['gogLogout = async () => ', 'gog'],
     ['amazonLogout = async () => ', 'amazon'],
-    ['zoomLogout = async () => ', 'zoom'],
     ['steamLogout = async () => ', 'steam']
   ])(
     '%s never calls window.location.reload() and still clears its own (%s) state',
@@ -271,9 +270,6 @@ function refreshScopesFetchAndFinalSetStatePerRunner(block: string): boolean {
     /const\s+includesGog\s*=\s*!scopedRunner\s*\|\|\s*scopedRunner\s*===\s*'gog'/.test(
       block
     ) &&
-    /const\s+includesZoom\s*=\s*!scopedRunner\s*\|\|\s*scopedRunner\s*===\s*'zoom'/.test(
-      block
-    ) &&
     /const\s+includesAmazon\s*=\s*!scopedRunner\s*\|\|\s*scopedRunner\s*===\s*'nile'/.test(
       block
     )
@@ -281,7 +277,6 @@ function refreshScopesFetchAndFinalSetStatePerRunner(block: string): boolean {
   const finalWritesGuarded =
     /if\s*\(includesEpic\)\s*{\s*next\.epic\s*=/.test(block) &&
     /if\s*\(includesGog\)\s*{\s*next\.gog\s*=/.test(block) &&
-    /if\s*\(includesZoom\)\s*{\s*next\.zoom\s*=/.test(block) &&
     /if\s*\(includesAmazon\)\s*{\s*next\.amazon\s*=/.test(block)
 
   const finalFlagIdx = block.indexOf('next.refreshing = false')
@@ -317,7 +312,6 @@ describe('GlobalState.tsx refresh() — a scoped library arg only overwrites tha
       "  const scopedRunner = library && library !== 'all' ? library : undefined",
       "  const includesEpic = !scopedRunner || scopedRunner === 'legendary'",
       "  const includesGog = !scopedRunner || scopedRunner === 'gog'",
-      "  const includesZoom = !scopedRunner || scopedRunner === 'zoom'",
       "  const includesAmazon = !scopedRunner || scopedRunner === 'nile'",
       '',
       '  this.setState((prevState: StateProps) => {',
@@ -327,9 +321,6 @@ describe('GlobalState.tsx refresh() — a scoped library arg only overwrites tha
       '    }',
       '    if (includesGog) {',
       '      next.gog = { library: gogLibrary, username: gog.username }',
-      '    }',
-      '    if (includesZoom) {',
-      '      next.zoom = { library: zoomLibrary, username: zoom.username, enabled: zoom.enabled }',
       '    }',
       '    if (includesAmazon) {',
       '      next.amazon = { library: amazonLibrary, user_id: amazon.user_id, username: amazon.username }',
@@ -351,13 +342,12 @@ describe('GlobalState.tsx refresh() — a scoped library arg only overwrites tha
     expect(refreshScopesFetchAndFinalSetStatePerRunner(correctShape)).toBe(true)
   })
 
-  it('self-test: the gate REJECTS the pre-fix shape that always overwrote all four slices and the global flags unconditionally', () => {
+  it('self-test: the gate REJECTS the pre-fix shape that always overwrote all three slices and the global flags unconditionally', () => {
     const preFixShape = [
       '{',
       '  this.setState({',
       '    epic: { library: epicLibrary, username: epic.username },',
       '    gog: { library: gogLibrary, username: gog.username },',
-      '    zoom: { library: zoomLibrary, username: zoom.username, enabled: zoom.enabled },',
       '    amazon: { library: amazonLibrary, user_id: amazon.user_id, username: amazon.username },',
       '    refreshing: false,',
       '    refreshingInTheBackground: true',
@@ -374,16 +364,13 @@ describe('GlobalState.tsx refresh() — a scoped library arg only overwrites tha
       "  const scopedRunner = library && library !== 'all' ? library : undefined",
       "  const includesEpic = !scopedRunner || scopedRunner === 'legendary'",
       "  const includesGog = !scopedRunner || scopedRunner === 'gog'",
-      "  const includesZoom = !scopedRunner || scopedRunner === 'zoom'",
       "  const includesAmazon = !scopedRunner || scopedRunner === 'nile'",
       "  if (includesEpic) { epicLibrary = libraryStore.get('library', []) }",
       '  if (includesGog) { gogLibrary = this.loadGOGLibrary(overrides) }',
-      '  if (includesZoom) { zoomLibrary = this.loadZoomLibrary(overrides) }',
       "  if (includesAmazon) { amazonLibrary = nileLibraryStore.get('library', []) }",
       '  this.setState({',
       '    epic: { library: epicLibrary, username: epic.username },',
       '    gog: { library: gogLibrary, username: gog.username },',
-      '    zoom: { library: zoomLibrary, username: zoom.username, enabled: zoom.enabled },',
       '    amazon: { library: amazonLibrary, user_id: amazon.user_id, username: amazon.username },',
       '    refreshing: false,',
       '    refreshingInTheBackground: true',

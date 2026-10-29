@@ -41,8 +41,7 @@ interface RunnerProps {
   // screen-wide `loginInFlight` flag, which would spin every tile at once.
   // Drives the spinner and, since quick task 261008-fjj, `aria-busy` on the
   // tile root. It gates no behavior, guards nothing, and must not be
-  // consulted in handleLogin(). Optional so the Zoom call site (which cannot
-  // type-check this comparison at all, D-2) stays byte-identical.
+  // consulted in handleLogin().
   busy?: boolean
 }
 
@@ -167,7 +166,7 @@ export default function Runner(props: RunnerProps) {
         <div className={`runnerIcon ${props.class}`}>{props.icon()}</div>
         {/* Quick task 260815-kt0: per-store identity was structurally inconsistent across
             runners (Humble exposed no username at all, Amazon fell back to a literal
-            "Unknown", Steam/Zoom could be undefined) and this screen never needed the
+            "Unknown", Steam could be undefined) and this screen never needed the
             identity value in the first place -- only connection state. Every logged-in
             tile now shows a single uniform indicator instead. */}
         {props.isLoggedIn && (

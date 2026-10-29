@@ -12,7 +12,7 @@
  * single source of truth, never a duplicated definition.
  */
 
-export type OAuthRunner = 'legendary' | 'gog' | 'nile' | 'zoom'
+export type OAuthRunner = 'legendary' | 'gog' | 'nile'
 
 export type OAuthCaptureOutcome =
   | {

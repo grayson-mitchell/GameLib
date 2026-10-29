@@ -1159,10 +1159,6 @@ function setupWrapperEnvVars(wrapperEnv: WrapperEnv) {
     case 'sideload':
       ret.HEROIC_APP_SOURCE = 'sideload'
       break
-    case 'zoom':
-      ret.HEROIC_APP_SOURCE = 'zoom'
-      ret.STORE = 'zoomplatform'
-      break
   }
 
   return ret

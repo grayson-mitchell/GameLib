@@ -45,14 +45,6 @@
  *      'winetricksInstall']`, and per-module counts are pinned at 11/13/7/11/8, totalling 50.
  *      (Historical figures. As of quick 261012-ca6 `addShortcut`/`removeShortcut` are invoke-kind
  *      and the live send set is `['logoutGOG', 'processShortcut']`; see Describe 6 below.)
- *   7. SEAM Invariant B (Phase 34.5 Plan 13) — the 3 DROPPED Zoom channels (`authZoom`,
- *      `getZoomUserInfo`, `logoutZoom`) and the DEFERRED SteamGridDB channels (5 total as of
- *      Phase 34.6 Plan 08, winetricks and EOS overlay both having moved OUT of this deferred set
- *      and into item 6/9's real registration) are proven absent from both registries after all
- *      five modules are registered, so they still reject with `UNPORTED_CHANNEL_MARKER`
- *      (`sidecarRpc.ts`'s `handlerRegistry.get()` miss path) rather than silently gaining an
- *      implementation. All 8 names are listed explicitly — the whole point is that no new code
- *      exists for them.
  *   8. winetricks + runWineCommandForGame presence (Phase 34.6 Plan 07) — the inverse of item 7
  *      for the 3 winetricks-cluster names ported out of the deferred set. Phase 45 Plan 02
  *      (D-11 promote, 2026-10-10) retired one of the three, `winetricksInstall`, outright — the
@@ -635,70 +627,6 @@ describe('completeness — all 66 channels are registered with the right kind, a
   afterAll(() => {
     // Leave the registries in the known-registered state Describe 7 below (and any test file
     // that runs after this one in the same worker) expects.
-    restoreCanonicalRegistrations()
-  })
-})
-
-// ── Describe 7: SEAM Invariant B — dropped/deferred channels still reject (Phase 34.5 Plan 13) ─
-// The 3 DROPPED Zoom channels (34.5-CONTEXT.md D-02) must NOT be registered by any of this
-// slice's six modules. The EOS overlay 8 (Phase 34.6 Plan 07 state) and the SteamGridDB 5 (Phase
-// 34.6 Plan 08 state) formerly listed here have BOTH moved OUT of this set — EOS overlay in Plan
-// 08 (D-09), SteamGridDB in Plan 09 (A-03) — see the new presence describes below and
-// `eosOverlayFlowRegistration.ts` / `enrichmentFlowRegistration.ts` for the two clusters that have
-// now been ported out of "deferred" into real registration. Only Zoom remains dropped outright —
-// there is no future plan that ports it back in (34.5-CONTEXT.md D-02). Absence from
-// `handlerRegistry` is what makes `sidecarRpc.ts`'s dispatch (`const handler =
-// handlerRegistry.get(request.channel); if (!handler) { ... reject with UNPORTED_CHANNEL_MARKER
-// ... }`) reject these channels honestly rather than silently — "drop" and "defer" mean let it
-// reject and say so, not build a degradation path.
-describe('SEAM Invariant B — the 3 dropped Zoom channels are NOT registered by any of the six modules (Phase 34.5 Plan 13; Phase 34.6 Plan 07 moved winetricks out of this set; Phase 34.6 Plan 08 moved EOS overlay out of this set; Phase 34.6 Plan 09 moved SteamGridDB out of this set)', () => {
-  const DROPPED_ZOOM = ['authZoom', 'getZoomUserInfo', 'logoutZoom']
-
-  // The 3 winetricks names formerly listed here (Phase 34.5 Plan 13) moved to
-  // `WINE_TOOLS_CHANNELS` above and to Describe 8 below — Phase 34.6 Plan 07 ported them out of
-  // the deferred set into real registration (A-01/D-02/D-11).
-  //
-  // The 8 EOS overlay names formerly listed here (Phase 34.6 Plan 07 state, `DEFERRED_EOS_OVERLAY`)
-  // moved to `EOS_OVERLAY_CHANNELS` above and to Describe 9 below — Phase 34.6 Plan 08 (D-09)
-  // ported them out of the deferred set into real registration.
-  //
-  // The 5 SteamGridDB names formerly listed here (Phase 34.6 Plan 08 state, `DEFERRED_STEAMGRIDDB`)
-  // moved to `ENRICHMENT_CHANNELS` above and to the new Describe 10 below — Phase 34.6 Plan 09
-  // (Amendment A-03) ported them out of the deferred set into real registration, routed
-  // exclusively through `getSteamGridDbSecretStore()`.
-
-  const DROPPED_OR_DEFERRED = [...DROPPED_ZOOM]
-
-  beforeAll(() => {
-    // Self-contained: does not rely on Describe 6's afterAll ordering. Restores from the
-    // canonical snapshot so this describe's assertions hold regardless of file execution order.
-    restoreCanonicalRegistrations()
-  })
-
-  it('lists exactly 3 dropped-or-deferred channel names (3 dropped Zoom + 0 deferred, now that winetricks/EOS overlay/SteamGridDB have all moved to their own presence describes)', () => {
-    // Re-derived (not merely retyped): 16 (3 Zoom + 3 winetricks + 8 EOS + 5 SteamGridDB, the
-    // Phase 34.5 Plan 13-era set before ANY cluster had ported out) - 3 winetricks - 8 EOS -
-    // 5 SteamGridDB = 3.
-    expect(DROPPED_OR_DEFERRED.length).toBe(3)
-  })
-
-  it('none of the 3 dropped-or-deferred names appears in the declared channel set', () => {
-    for (const channel of DROPPED_OR_DEFERRED) {
-      expect(ALL_CHANNELS).not.toContain(channel)
-    }
-  })
-
-  it.each(DROPPED_OR_DEFERRED)(
-    '%s is registered by none of the six modules — absent from handlerRegistry, and listenerRegistry has no active listener — so it still rejects with UNPORTED_CHANNEL_MARKER',
-    (channel) => {
-      expect(handlerRegistry.has(channel)).toBe(false)
-      expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
-    }
-  )
-
-  afterAll(() => {
-    // Leave the shared registries in a known state for any test file that runs after this one
-    // in the same worker.
     restoreCanonicalRegistrations()
   })
 })

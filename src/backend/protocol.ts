@@ -15,9 +15,7 @@ import { assertContainedPath } from './sidecar/rendererPathGuard'
 
 // `steam` is a deliberate addition (D-35-19-05): widening this enum also widens the accepted
 // `?runner=` input surface for `handleLaunch`'s `RUNNERS.safeParse(runnerStr)` validator below,
-// so nothing is added here without a reason. `zoom` is deliberately EXCLUDED — it is a dropped
-// platform for this project (see `zoom-platform-drop-reaffirmed.md`), so adding it would widen
-// the accepted input surface for a store that ships no user-reachable launch path.
+// so nothing is added here without a reason.
 //
 // The confused-deputy guard (T-34.5-46-03) does NOT live in this enum — it lives in
 // `steamFlowRegistration.ts`'s `handleLaunch`, in its own-property check on

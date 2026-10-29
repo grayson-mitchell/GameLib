@@ -15,8 +15,8 @@
  * Measured cost on the live GOG login: a full second library fetch, 01:40:14 -> 01:40:24,
  * ~10 seconds (debug/resolved/gog-login-ui-never-updates.md).
  *
- * All four call sites were fixed together. Only GOG had a reported symptom; epic, zoom and
- * amazon are the same defect and fixing one would have left three latent — this project's
+ * All three call sites were fixed together. Only GOG had a reported symptom; epic and
+ * amazon are the same defect and fixing one would have left two latent — this project's
  * own "count the instances before scoping the fix" lesson from Phase 34.2's gap cycles.
  *
  * WHY A SOURCE-TEXT GATE
@@ -81,7 +81,6 @@ describe('GlobalState.refresh() cache guards', () => {
   it.each([
     ['epic', 'epic.username && !epicLibrary.length'],
     ['gog', 'gog.username && !gogLibrary.length'],
-    ['zoom', 'zoom.username && !zoomLibrary.length'],
     ['amazon', 'amazon.user_id && !amazonLibrary.length']
   ])(
     'the %s guard tests exactly the cache-backed variable',
@@ -91,11 +90,10 @@ describe('GlobalState.refresh() cache guards', () => {
   )
 
   it('still refetches when the cache IS empty — the guard is not simply deleted', () => {
-    // The four fetch calls must survive. A "fix" that removed the guards entirely would
+    // The three fetch calls must survive. A "fix" that removed the guards entirely would
     // pass the assertions above while breaking first-login population outright.
     expect(refreshBody).toContain('getLegendaryConfig()')
     expect(refreshBody).toContain("window.api.refreshLibrary('gog')")
-    expect(refreshBody).toContain("window.api.refreshLibrary('zoom')")
     expect(refreshBody).toContain("window.api.refreshLibrary('nile')")
   })
 

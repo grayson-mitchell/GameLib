@@ -46,7 +46,6 @@ type MockContextValue = {
   gog: { username?: string; library: unknown[] }
   amazon: { user_id?: string; library: unknown[] }
   steam: { username?: string | null }
-  zoom: { username?: string; enabled: boolean; library: unknown[] }
   humble?: { isLoggedIn: boolean }
   platform: string
   refreshLibrary: jest.Mock
@@ -62,7 +61,6 @@ function makeContextValue(
     gog: { username: undefined, library: [] },
     amazon: { user_id: undefined, library: [] },
     steam: { username: undefined },
-    zoom: { username: undefined, enabled: false, library: [] },
     humble: { isLoggedIn: false },
     platform: 'linux',
     refreshLibrary: jest.fn(),
@@ -290,20 +288,6 @@ describe('Destination coverage -- the settled tree', () => {
     // in the Games tier-2 filter panel's Header (quick 261002-b63), a surface
     // this suite's union does not collect. See the file docstring.
     expect(union).not.toContain('Console Mode')
-  })
-
-  it('no element anywhere in the union renders the label "Zoom Store", even with an enabled, logged-in Zoom session', () => {
-    contextValue = makeContextValue({
-      zoom: { username: 'ZoomUser', enabled: true, library: [] }
-    })
-
-    const union = [
-      ...tabLabels(),
-      ...navItemLabels(StoresPanel() as unknown as ReactElement),
-      ...navItemLabels(SettingsPanel() as unknown as ReactElement)
-    ]
-
-    expect(union).not.toContain('Zoom Store')
   })
 })
 

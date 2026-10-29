@@ -169,7 +169,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
   // GAP CYCLE 4 (34.5-33): an empty args array now means "all" (the same
   // semantics `main.ts:1051` always had) rather than the old stub's
   // unconditional Steam-only call — every OTHER manager in
-  // `libraryManagerMap` (gog/legendary/nile/zoom/sideload) also has its real
+  // `libraryManagerMap` (gog/legendary/nile/sideload) also has its real
   // `refresh()` invoked here, unmocked. This is safe and fast: each of those
   // managers' `refresh()` self-gates on `isLoggedIn()`/`existsSync()` checks
   // against this suite's disposable tmp home directory (see the module

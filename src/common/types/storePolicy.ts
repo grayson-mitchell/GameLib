@@ -85,7 +85,6 @@ export function isSafeKeyPath(key: string): boolean {
  *     — never included in any sendFrontendMessage payload or HumbleAuthState." This is
  *     the exact field whose triple-duplicated deny-list omission motivated this module.
  *   - gogConfigStore.credentials      — `GOGLoginData` (access/refresh tokens).
- *   - zoomConfigStore.credentials     — `ZoomCredentials`.
  */
 export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
   configStore: [
@@ -109,7 +108,6 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
   ],
   wineDownloaderInfoStore: ['wine-releases'],
   gogInstalledGamesStore: ['installed'],
-  zoomInstalledGamesStore: ['installed'],
   // Open index signature ({ [K: string]: { firstPlayed, lastPlayed, totalPlayed } }) —
   // no secret fields exist on this shape.
   timestampStore: '*',
@@ -118,8 +116,6 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
   // `expired` is a non-secret boolean verdict (the sign-in probe proved the
   // stored credential rejected) — the same shape as steamConfigStore.credentialsMissing.
   gogConfigStore: ['userData', 'isLoggedIn', 'expired'],
-  // `credentials` (ZoomCredentials) omitted — see header comment.
-  zoomConfigStore: ['isLoggedIn', 'username'],
   // `refreshToken` omitted — safeStorage-encrypted Steam session token, see header comment.
   // `credentialsMissing` is a non-secret boolean verdict (the stored credential
   // was proven absent) — the Manage Accounts tile reads it to stop claiming a
@@ -151,7 +147,6 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
   downloadManager: ['queue', 'finished'],
   // Open index signatures — no secret fields exist on any of these shapes.
   gogSyncStore: '*',
-  zoomSyncStore: '*',
   gogPrivateBranches: '*',
   wikigameinfo: '*',
   uploadedLogs: '*',
@@ -202,7 +197,6 @@ const BOOT_SET_CACHE_STORE_NAMES: readonly string[] = [
   'legendary_library',
   'gog_library',
   'nile_library',
-  'zoom_library',
   'steam_library'
 ]
 
@@ -319,7 +313,6 @@ export function isAllowedStoreField(storeName: string, key: string): boolean {
 const WRITE_DENIED_FIELDS: Record<string, readonly string[]> = {
   configStore: ['settings', 'userHome', 'userInfo'],
   gogConfigStore: ['userData'],
-  zoomConfigStore: ['userData'],
   steamConfigStore: ['userData'],
   nileConfigStore: ['userData'],
   humbleConfigStore: ['userData']
@@ -390,8 +383,6 @@ export const BOOT_SET_STORES: readonly string[] = [
   // Phase 49: the Library sign-in notice reads `expired` SYNCHRONOUSLY at render,
   // so it must be hydrated at boot rather than returning undefined until a lazy fetch.
   'legendaryConfigStore',
-  'zoomConfigStore',
-  'zoomInstalledGamesStore',
   'steamConfigStore',
   'humbleConfigStore',
   'wineDownloaderInfoStore',
@@ -407,7 +398,6 @@ export const LAZY_STORES: readonly string[] = [
   'fontsStore',
   'downloadManager',
   'gogSyncStore',
-  'zoomSyncStore',
   'gogPrivateBranches',
   'wikigameinfo',
   'uploadedLogs',

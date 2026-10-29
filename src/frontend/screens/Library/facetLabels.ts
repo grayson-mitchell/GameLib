@@ -27,7 +27,6 @@ export const RunnerToStore: Record<string, string> = {
   legendary: 'Epic Games',
   gog: 'GOG',
   nile: 'Amazon Games',
-  zoom: 'ZOOM Platform',
   steam: 'Steam',
   // Phase 49: the Library sign-in notice keys this map by `SignInStore`, which
   // includes `humble`. Every existing consumer looks values up by key (none

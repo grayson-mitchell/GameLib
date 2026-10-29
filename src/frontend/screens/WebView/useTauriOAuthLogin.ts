@@ -3,13 +3,13 @@ import { useEffect, useState } from 'react'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { OAuthCaptureOutcome, OAuthRunner } from 'common/types/oauthLogin'
 import type { NileLoginData } from 'common/types/nile'
-import { EPIC_LOGIN_URL, GOG_LOGIN_URL, ZOOM_LOGIN_URL } from './loginRoutes'
+import { EPIC_LOGIN_URL, GOG_LOGIN_URL } from './loginRoutes'
 
 /**
  * The renderer half of REQ-34.4.1-08's "wired" claim (Phase 34.4.1 Plan 09, D-04), extended by
  * Phase 34.5 Plan 26 (F-34.5-G6-02 layer 2, F-34.5-G6-03): drives `window.api.oauthCaptureLogin`
- * for one of the four OAuth login runners, then hands the captured code/token directly to that
- * runner's now-ported auth channel (`login`/`authGOG`/`authAmazon`/`authZoom`) inside a
+ * for one of the three OAuth login runners, then hands the captured code/token directly to that
+ * runner's now-ported auth channel (`login`/`authGOG`/`authAmazon`) inside a
  * `try`/`catch` that turns an `UNPORTED_CHANNEL_MARKER` rejection into `{ phase: 'blocked' }`
  * (legacy defensive code, kept for any channel a future runner has not yet ported) and any other
  * rejection into `{ phase: 'error' }` — never swallowed, never mislabelled, and never allowed to
@@ -18,7 +18,7 @@ import { EPIC_LOGIN_URL, GOG_LOGIN_URL, ZOOM_LOGIN_URL } from './loginRoutes'
  * Once Phase 34.5 ported these channels for real, a resolved `{ status: 'done' }` response
  * stopped being merely "the hook's job is done" — it is the ONE place a Tauri OAuth login can
  * trigger the post-login completion work `GlobalState.tsx`'s `epicLogin`/`gogLogin`/
- * `amazonLogin`/`zoomLogin` wrappers perform for Electron's `<webview>` path (`setState` of the
+ * `amazonLogin` wrappers perform for Electron's `<webview>` path (`setState` of the
  * signed-in username plus `handleSuccessfulLogin(runner)` -> `refreshLibrary`). This hook still
  * calls the raw `window.api.*` channel itself (so it keeps owning the `UNPORTED_CHANNEL_MARKER`
  * catch — the wrappers have no try/catch of their own, verified read-only as T-34.4.1-46) and,
@@ -50,10 +50,10 @@ import { EPIC_LOGIN_URL, GOG_LOGIN_URL, ZOOM_LOGIN_URL } from './loginRoutes'
  * copy -- "A sign-in window has opened. Complete sign-in there." -- actively LIED for the entire
  * pre-window wait: no window had opened yet. The `preparing` phase below fills that gap for nile
  * specifically. It carries `runner` (mirroring `finalizing`/`blocked`) and is set immediately
- * before `window.api.getAmazonLoginData()` is awaited; `awaiting` now moves to fire for ALL four
+ * before `window.api.getAmazonLoginData()` is awaited; `awaiting` now moves to fire for ALL three
  * runners only once the login URL is actually resolved and immediately before
- * `oauthCaptureLogin` opens the real window -- which the three constant-URL runners
- * (legendary/gog/zoom) still reach synchronously, so they never observe `preparing` at all.
+ * `oauthCaptureLogin` opens the real window -- which the two constant-URL runners
+ * (legendary/gog) still reach synchronously, so they never observe `preparing` at all.
  */
 export type TauriOAuthLoginState =
   | { phase: 'idle' }
@@ -73,16 +73,10 @@ export type TauriOAuthLoginState =
 const OAUTH_CHANNEL_BY_RUNNER: Record<OAuthRunner, string> = {
   legendary: 'login',
   gog: 'authGOG',
-  nile: 'authAmazon',
-  zoom: 'authZoom'
+  nile: 'authAmazon'
 }
 
-const OAUTH_RUNNERS: readonly OAuthRunner[] = [
-  'legendary',
-  'gog',
-  'nile',
-  'zoom'
-]
+const OAUTH_RUNNERS: readonly OAuthRunner[] = ['legendary', 'gog', 'nile']
 
 function isOAuthRunner(value: unknown): value is OAuthRunner {
   return (
@@ -95,7 +89,7 @@ function isOAuthRunner(value: unknown): value is OAuthRunner {
 // response is reduced to before it is handed to the completion callback. Deliberately loose
 // (username/user_id, never the raw per-runner response object) so `GlobalState.tsx` never has to
 // import this hook's runner-specific response-shape knowledge -- it only needs to know what to
-// DO with a signed-in username, exactly like its own epicLogin/gogLogin/amazonLogin/zoomLogin
+// DO with a signed-in username, exactly like its own epicLogin/gogLogin/amazonLogin
 // wrappers already do.
 export type OAuthLoginCompletionPayload = {
   runner: OAuthRunner
@@ -104,7 +98,7 @@ export type OAuthLoginCompletionPayload = {
 }
 
 // Dependencies `createOAuthLoginCompletion` needs to reproduce the post-login half of
-// GlobalState.tsx's epicLogin/gogLogin/amazonLogin/zoomLogin wrappers -- setting the runner's
+// GlobalState.tsx's epicLogin/gogLogin/amazonLogin wrappers -- setting the runner's
 // username into state, then routing through the EXISTING `handleSuccessfulLogin` (which itself
 // calls `refreshLibrary`), never a second, parallel refresh path (per this plan's domain
 // context). `setState` is intentionally loosely typed: GlobalState's own `PureComponent<Props>`
@@ -139,9 +133,6 @@ export function createOAuthLoginCompletion(
         break
       case 'nile':
         deps.setState({ amazon: { library: [], user_id, username } })
-        break
-      case 'zoom':
-        deps.setState({ zoom: { library: [], username, enabled: true } })
         break
     }
     deps.handleSuccessfulLogin(runner)
@@ -209,8 +200,6 @@ export function useTauriOAuthLogin(
           url = EPIC_LOGIN_URL
         } else if (activeRunner === 'gog') {
           url = GOG_LOGIN_URL
-        } else if (activeRunner === 'zoom') {
-          url = ZOOM_LOGIN_URL
         } else {
           // nile: account-session-dependent, fetched fresh per attempt (mirrors index.tsx's
           // own /loginweb/nile effect) -- client_id/code_verifier/serial are kept for the
@@ -240,9 +229,9 @@ export function useTauriOAuthLogin(
         return
       }
 
-      // Quick task 260806-teb: moved from the top of run() -- now fires for ALL four runners
+      // Quick task 260806-teb: moved from the top of run() -- now fires for ALL three runners
       // only once the login url is actually resolved, immediately before oauthCaptureLogin
-      // opens the real window. The three constant-URL runners (legendary/gog/zoom) reach this
+      // opens the real window. The two constant-URL runners (legendary/gog) reach this
       // synchronously (no await above), so they never observe `preparing` at all.
       safeSetState({ phase: 'awaiting' })
 
@@ -357,7 +346,7 @@ export function useTauriOAuthLogin(
           const response = await window.api.authGOG(outcome.code ?? '')
           status = response.status
           username = response.data?.username
-        } else if (activeRunner === 'nile') {
+        } else {
           if (!amazonData) {
             throw new Error('missing Amazon login data for authAmazon')
           }
@@ -370,16 +359,6 @@ export function useTauriOAuthLogin(
           status = response.status
           username = response.user?.name
           user_id = response.user?.user_id
-        } else {
-          // zoom: authZoom takes the FULL redirect url, never the token value. Its response
-          // carries no user data -- mirrors GlobalState.tsx's zoomLogin, which fetches
-          // getZoomUserInfo() separately only once status is confirmed 'done'.
-          const response = await window.api.authZoom(outcome.redirectUrl)
-          status = response.status
-          if (status === 'done') {
-            const userInfo = await window.api.getZoomUserInfo()
-            username = userInfo?.username
-          }
         }
         if (cancelled) {
           // Plan 34.5-34 Task 2: reached AFTER the backend has already written the credential

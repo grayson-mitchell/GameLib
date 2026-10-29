@@ -22,7 +22,6 @@ const emptyContext = () => ({
   gog: { library: [] as unknown[] },
   amazon: { library: [] as unknown[] },
   steam: { library: [] as unknown[] },
-  zoom: { library: [] as unknown[] },
   sideloadedLibrary: [] as unknown[]
 })
 let contextValue = emptyContext()
@@ -175,7 +174,7 @@ function staleCopyIn(steps: { intro?: string; title?: string }[]): string[] {
 }
 
 describe('LibraryTour game-card step and copy', () => {
-  it.each(['epic', 'gog', 'amazon', 'steam', 'zoom'] as const)(
+  it.each(['epic', 'gog', 'amazon', 'steam'] as const)(
     'offers the library-game-card step when only the %s library has games',
     (store) => {
       contextValue[store].library = [{}]

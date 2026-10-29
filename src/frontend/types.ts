@@ -37,7 +37,6 @@ export type Category =
   | 'gog'
   | 'sideload'
   | 'nile'
-  | 'zoom'
   | 'steam'
 
 export interface ContextType {
@@ -124,13 +123,6 @@ export interface ContextType {
     getLoginData: () => Promise<NileLoginData>
     login: (data: NileRegisterData) => Promise<string>
     logout: () => Promise<void>
-  }
-  zoom: {
-    library: GameInfo[]
-    username?: string
-    login: (url: string) => Promise<string>
-    logout: () => Promise<void>
-    enabled: boolean
   }
   steam: {
     library: GameInfo[]
@@ -276,7 +268,6 @@ export interface StoresFilters {
   gog: boolean
   nile: boolean
   sideload: boolean
-  zoom: boolean
   steam: boolean
 }
 
@@ -484,7 +475,6 @@ export type StoreFacetValue =
   | 'gog'
   | 'nile'
   | 'sideload'
-  | 'zoom'
   | 'steam'
 
 // D-28: the domain of filterEngine's exclude-your-own-facet `skip` parameter.

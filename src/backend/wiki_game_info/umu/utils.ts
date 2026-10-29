@@ -11,7 +11,6 @@ const storeMapping: Record<Runner, string> = {
   legendary: 'egs',
   nile: 'amazon',
   sideload: 'sideload',
-  zoom: 'zoomplatform',
   steam: 'steam'
 }
 

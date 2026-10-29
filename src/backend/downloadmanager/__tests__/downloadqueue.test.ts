@@ -347,6 +347,34 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     expect(getQueueInformation().elements).toHaveLength(0)
   })
 
+  it('initQueue(true) drops persisted queue/finished elements with an unknown runner (legacy zoom) with one warning', async () => {
+    const zoomElement = makeQueueElement('zoom-game')
+    ;(zoomElement.params as { runner: string }).runner = 'zoom'
+    const gogElement = makeQueueElement('gog-game')
+    gogElement.params.runner = 'gog'
+    const zoomFinished = makeQueueElement('zoom-done')
+    ;(zoomFinished.params as { runner: string }).runner = 'zoom'
+    __store.queue = [zoomElement, gogElement]
+    __store.finished = [zoomFinished]
+
+    const { installQueueElement } = await import('../utils')
+    ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'done' })
+    const { logWarning } = await import('backend/logger')
+    const { libraryManagerMap } = await import('backend/storeManagers')
+    const { initQueue } = await import('../downloadqueue')
+
+    await initQueue(true)
+
+    expect(
+      (libraryManagerMap as unknown as Record<string, unknown>).zoom
+    ).toBeUndefined()
+    expect(installQueueElement).not.toHaveBeenCalledWith(
+      expect.objectContaining({ appName: 'zoom-game' })
+    )
+    expect(__store.finished).not.toContainEqual(zoomFinished)
+    expect(logWarning).toHaveBeenCalledTimes(1)
+  })
+
   it('initQueue(true) DOES auto-start a persisted GOG queue head — no regression for GOG/Epic/Amazon', async () => {
     const gogElement = makeQueueElement('gog-game')
     gogElement.params.runner = 'gog'

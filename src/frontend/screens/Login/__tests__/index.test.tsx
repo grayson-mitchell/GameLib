@@ -291,18 +291,11 @@ describe('the login.message paragraph is gone from the Manage Accounts page (qui
     expect(source).not.toContain('You can login to more than one platform')
   })
 
-  it('POSITIVE CONTROL — the disabledMessage paragraph, runnerGroup container, and all six runner tiles survived the removal', () => {
+  it('POSITIVE CONTROL — the disabledMessage paragraph, runnerGroup container, and all five runner tiles survived the removal', () => {
     const source = read(LOGIN_TSX)
     expect(source).toMatch(/\{oldMac && <p className="disabledMessage">/)
     expect(source).toMatch(/<div className="runnerGroup">/)
-    for (const runnerClass of [
-      'epic',
-      'gog',
-      'nile',
-      'zoom',
-      'steam',
-      'humble'
-    ]) {
+    for (const runnerClass of ['epic', 'gog', 'nile', 'steam', 'humble']) {
       expect(source).toMatch(new RegExp(`class="${runnerClass}"`))
     }
   })

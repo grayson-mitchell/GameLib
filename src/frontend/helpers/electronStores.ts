@@ -146,21 +146,6 @@ const gogConfigStore = new TypeCheckedStoreFrontend('gogConfigStore', {
   cwd: 'gog_store'
 })
 
-const zoomLibraryStore = new CacheStore<GameInfo[], 'games'>(
-  'zoom_library',
-  null
-)
-const zoomInstalledGamesStore = new TypeCheckedStoreFrontend(
-  'zoomInstalledGamesStore',
-  {
-    cwd: 'zoom_store',
-    name: 'installed'
-  }
-)
-const zoomConfigStore = new TypeCheckedStoreFrontend('zoomConfigStore', {
-  cwd: 'zoom_store'
-})
-
 const steamConfigStore = new TypeCheckedStoreFrontend('steamConfigStore', {
   cwd: 'steam_store'
 })
@@ -220,9 +205,6 @@ export {
   nileLibraryStore,
   nileConfigStore,
   legendaryConfigStore,
-  zoomLibraryStore,
-  zoomInstalledGamesStore,
-  zoomConfigStore,
   steamConfigStore,
   steamLibraryStore,
   humbleConfigStore,

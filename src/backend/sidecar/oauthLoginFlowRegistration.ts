@@ -27,9 +27,9 @@
  * before any IPC handler can be reached.
  *
  * D-04/REQ-34.4.1-08 boundary (do not blur this): this channel captures a redirect code — it does
- * NOT authenticate. `login`, `authGOG`, `authAmazon` and `authZoom` remain unported and still
+ * NOT authenticate. `login`, `authGOG` and `authAmazon` remain unported and still
  * reject with `UNPORTED_CHANNEL_MARKER` until Phase 34.5 (SEAM Invariant B). This module never
- * touches those four channels' registrations or signatures.
+ * touches those channels' registrations or signatures.
  */
 
 import { ipcMain } from '../platform'
@@ -39,12 +39,7 @@ import type {
   OAuthCaptureOutcome
 } from '../../common/types/oauthLogin'
 
-const KNOWN_RUNNERS: readonly OAuthRunner[] = [
-  'legendary',
-  'gog',
-  'nile',
-  'zoom'
-]
+const KNOWN_RUNNERS: readonly OAuthRunner[] = ['legendary', 'gog', 'nile']
 
 function isKnownRunner(value: unknown): value is OAuthRunner {
   return (

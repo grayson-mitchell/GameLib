@@ -10,7 +10,7 @@
  * `session`/`screen`/`net`/`Menu` x2, `protocol`/`powerSaveBlocker`/
  * `clipboard`/`Tray`/`ipcMain` x1). `backend/storeManagers/steam/library.ts`
  * pulls in `backend/utils.ts` -> `backend/storeManagers/index.ts`, which
- * eagerly constructs EVERY store manager (GOG/Legendary/Nile/Zoom/Sideload/
+ * eagerly constructs EVERY store manager (GOG/Legendary/Nile/Sideload/
  * Steam) at import time — so this stub covers the full surface, not just
  * Steam's touchpoints, to keep that whole chain import-safe.
  *

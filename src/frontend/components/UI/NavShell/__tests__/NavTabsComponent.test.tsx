@@ -40,7 +40,6 @@ type MockContextValue = {
   gog: { username?: string; library: unknown[] }
   amazon: { user_id?: string; library: unknown[] }
   steam: { username?: string; library: unknown[] }
-  zoom: { username?: string; enabled: boolean; library: unknown[] }
   refreshLibrary: jest.Mock
 }
 
@@ -52,7 +51,6 @@ function makeContextValue(
     gog: { username: undefined, library: [] },
     amazon: { user_id: undefined, library: [] },
     steam: { username: undefined, library: [] },
-    zoom: { username: undefined, enabled: false, library: [] },
     refreshLibrary: jest.fn(),
     ...overrides
   }

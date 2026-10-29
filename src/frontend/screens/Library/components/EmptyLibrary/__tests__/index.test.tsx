@@ -35,7 +35,6 @@ const providerContextValue = {
   gog: { library: [] },
   amazon: { library: [] },
   steam: { library: [] },
-  zoom: { library: [] },
   sideloadedLibrary: []
 }
 

@@ -96,7 +96,7 @@
  *                            this test drives.
  *  - `backend/storeManagers` -- THE LOAD-BEARING MOCK. The real module
  *    (`storeManagers/index.ts`) eagerly constructs EVERY store manager (GOG/Legendary/Nile/
- *    Zoom/Sideload/Steam) at import time; mocking it is what keeps this test from having to
+ *    Sideload/Steam) at import time; mocking it is what keeps this test from having to
  *    stand up five unrelated managers. The factory injects a REAL `LegendaryLibraryManager`
  *    (`jest.requireActual('backend/storeManagers/legendary/library').default`, constructed
  *    inside the factory -- safe, because the class has no explicit constructor) under key

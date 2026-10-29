@@ -5,6 +5,12 @@ export const storeMap: { [key in Runner]: string | undefined } = {
   gog: 'gog',
   nile: 'amazon',
   sideload: undefined,
-  zoom: 'zoom',
   steam: 'steam'
+}
+
+export function isRunner(value: unknown): value is Runner {
+  return (
+    typeof value === 'string' &&
+    Object.prototype.hasOwnProperty.call(storeMap, value)
+  )
 }

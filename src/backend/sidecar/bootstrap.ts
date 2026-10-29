@@ -38,6 +38,7 @@ import i18next from 'i18next'
 import * as electronStub from '../platform'
 import { restoreMacSteamOnlineIfOwed } from '../storeManagers/steam/macSteamOffline'
 import { startInstalledJsonWatcher } from './installedJsonWatcher'
+import { removeLegacyZoomData } from './legacyZoomDataCleanup'
 import { releaseOnStdinEof } from './stdinEofRelease'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
 import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
@@ -231,6 +232,8 @@ let protocolUrlHandlerRegistered = false
 // reason as the other guards: bootstrap.test.ts / *Flows.test.ts call init() many times per
 // file, production calls it once.
 let playtimeLockClearInitialized = false
+// Guards the legacy Zoom data removal below (quick-261029-toq); same once-per-process reason.
+let legacyZoomCleanupInitialized = false
 // Guards reconcileStoreUsersWhenOnline() below (Block E, todo 2026-09-06, quick-260908-fre).
 // Same reason as the other guards: bootstrap.test.ts / *Flows.test.ts call init() many times
 // per file, and without this guard each call would register another
@@ -1277,6 +1280,13 @@ export function init(
   if (!playtimeLockClearInitialized) {
     playtimeLockClearInitialized = true
     clearStrandedPlaytimeSyncLock()
+  }
+  // Legacy Zoom Platform data removal (quick-261029-toq). After `initLogger()` (it logs).
+  // Fire-and-forget: never awaited before READY, never rejects, creates no handle (see the
+  // module header for the sidecar exit-contract reasoning).
+  if (!legacyZoomCleanupInitialized) {
+    legacyZoomCleanupInitialized = true
+    void removeLegacyZoomData(electronStub.app.getPath('userData'))
   }
   // Block E — boot-time Epic/GOG user reconciliation (todo 2026-09-06, quick-260908-fre).
   // Placement (D2): must be after `initLogger()` above (the helper logs, and `heroicLogWriter`

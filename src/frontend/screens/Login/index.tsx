@@ -8,7 +8,6 @@ import EpicLogo from 'frontend/assets/epic-logo.svg?react'
 import GOGLogo from 'frontend/assets/gog-logo.svg?react'
 import GameLibIcon from 'frontend/assets/gamelib-icon.png'
 import AmazonLogo from 'frontend/assets/amazon-logo.svg?react'
-import ZoomLogo from 'frontend/assets/zoom-logo.svg?react'
 import SteamLogo from 'frontend/assets/steam-logo.svg?react'
 import HumbleLogo from 'frontend/assets/humble-logo.svg?react'
 
@@ -34,7 +33,6 @@ import { bindOverlayDismiss } from './overlayDismiss'
 export const epicLoginPath = '/loginweb/legendary'
 export const gogLoginPath = '/loginweb/gog'
 export const amazonLoginPath = '/loginweb/nile'
-export const zoomLoginPath = '/loginweb/zoom'
 export const steamLoginPath = '/loginweb/steam'
 // D-05: Humble now logs in through the embedded Stores WebView, matching the
 // other runners above, instead of the retired popup BrowserWindow. This is
@@ -70,7 +68,6 @@ export default React.memo(function NewLogin() {
     epic,
     gog,
     amazon,
-    zoom,
     steam,
     humble,
     refreshLibrary,
@@ -137,7 +134,6 @@ export default React.memo(function NewLogin() {
   // `disabled=` and the wrapper's `inert`: that, not the motion, is the
   // T-34.4.2-39/-41 guard.
   const overlayRendersChrome = openOverlay === 'steam'
-  const [isZoomLoggedIn, setIsZoomLoggedIn] = useState(Boolean(zoom.username))
   // Phase 49 D-06 (R7): the five store tiles (Epic, GOG, Amazon, Steam, Humble)
   // are all driven by the ONE selector the Library sign-in notice reads, so a
   // tile and the notice cannot disagree about a store. The persisted verdicts
@@ -199,7 +195,6 @@ export default React.memo(function NewLogin() {
   }, [epic, gog])
 
   useEffect(() => {
-    setIsZoomLoggedIn(Boolean(zoom.username))
     setSignInStates(
       resolveSignInStates(
         collectSignInInputs(
@@ -219,7 +214,6 @@ export default React.memo(function NewLogin() {
     epic.username,
     gog.username,
     amazon.user_id,
-    zoom.username,
     steam?.username,
     humble?.isLoggedIn,
     humble?.expired,
@@ -492,17 +486,6 @@ export default React.memo(function NewLogin() {
               disabled={oldMac || loginInFlight}
               busy={openOverlay === 'nile'}
             />
-            {zoom.enabled && (
-              <Runner
-                class="zoom"
-                buttonText={t('login.zoom', 'Zoom Login')}
-                icon={() => <ZoomLogo />}
-                loginUrl={zoomLoginPath}
-                isLoggedIn={isZoomLoggedIn}
-                logoutAction={zoom.logout}
-                disabled={oldMac || loginInFlight}
-              />
-            )}
             <Runner
               class="steam"
               buttonText={

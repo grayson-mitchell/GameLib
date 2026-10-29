@@ -28,7 +28,7 @@ const LibraryTour: React.FC = () => {
   const { t: tGamelib } = useTranslation('gamelib')
   const { isTourActive } = useTour()
   // Import context to check if there are any games in the library
-  const { epic, gog, amazon, steam, zoom, sideloadedLibrary } =
+  const { epic, gog, amazon, steam, sideloadedLibrary } =
     useContext(ContextProvider)
 
   // Check if there are any games in the library
@@ -37,7 +37,6 @@ const LibraryTour: React.FC = () => {
     gog.library.length ||
     amazon.library.length ||
     steam.library.length ||
-    zoom.library.length ||
     sideloadedLibrary.length
   )
 

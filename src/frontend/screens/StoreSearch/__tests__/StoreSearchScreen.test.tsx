@@ -393,7 +393,7 @@ describe('StoreSearch screen container', () => {
     )
   })
 
-  it('resolves ownership badges once via resolveStoreSearchBadges and never references sideloadedLibrary/zoom (D-05, T-20-03)', async () => {
+  it('resolves ownership badges once via resolveStoreSearchBadges and never references sideloadedLibrary (D-05, T-20-03)', async () => {
     contextValue = {
       epic: { library: [] },
       gog: { library: [] },
@@ -419,7 +419,7 @@ describe('StoreSearch screen container', () => {
 
     // D-05: assert the actual useContext destructure statement — not the
     // whole file (which legitimately documents the exclusion in prose) —
-    // never binds sideloadedLibrary or zoom.
+    // never binds sideloadedLibrary.
     const fs: typeof import('fs') = jest.requireActual('fs')
     const path: typeof import('path') = jest.requireActual('path')
     const source = fs.readFileSync(
@@ -431,6 +431,5 @@ describe('StoreSearch screen container', () => {
       .find((line) => line.includes('useContext(ContextProvider)'))
     expect(destructureLine).toBeDefined()
     expect(destructureLine).not.toMatch(/sideloadedLibrary/)
-    expect(destructureLine).not.toMatch(/\bzoom\b/)
   })
 })

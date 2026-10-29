@@ -50,7 +50,6 @@ describe('resolveCrossoverOnly', () => {
     'gog',
     'sideload',
     'nile',
-    'zoom',
     undefined
   ]
 

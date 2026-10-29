@@ -617,7 +617,7 @@ export function registerAppShellFlows(
   //
   // Resolution order mirrors `protocol.ts`'s own `RUNNERS` enum exactly
   // (legendary, gog, nile, sideload) so a cross-store appName collision resolves the SAME way
-  // the Electron tray resolved it, with `steam` and `zoom` appended -- both are absent from
+  // the Electron tray resolved it, with `steam` appended -- it is absent from
   // that enum, which is why the Electron tray could never launch a Steam recent game at all.
   // Appending rather than prepending keeps the existing order authoritative and makes this
   // strictly more capable than what it replaces.
@@ -634,8 +634,7 @@ export function registerAppShellFlows(
       'gog',
       'nile',
       'sideload',
-      'steam',
-      'zoom'
+      'steam'
     ] as const
 
     for (const runner of searchOrder) {

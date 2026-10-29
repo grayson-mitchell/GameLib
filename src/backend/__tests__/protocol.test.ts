@@ -479,16 +479,12 @@ describe('protocol.ts --no-gui behavior', () => {
   // `gamelib://launch?appName=<steam appId>` deep link used to log "Could not receive game
   // data" because `RUNNERS` excluded `steam`, so neither the explicit `?runner=steam` path nor
   // the runner-less fallback loop could ever resolve a Steam title.
-  describe('RUNNERS enum includes steam, excludes zoom (D-35-19-05)', () => {
+  describe('RUNNERS enum includes steam (D-35-19-05)', () => {
     // RED-proven: reverting RUNNERS to `z.enum(['legendary', 'gog', 'nile', 'sideload'])`
     // fails this by name — `options` has length 4 and does not contain 'steam'.
     test('RUNNERS.options has length 5 and contains steam', () => {
       expect(RUNNERS.options).toHaveLength(5)
       expect(RUNNERS.options).toContain('steam')
-    })
-
-    test('RUNNERS.options does not contain zoom', () => {
-      expect(RUNNERS.options).not.toContain('zoom')
     })
   })
 

@@ -35,9 +35,6 @@ import {
   nileLibraryStore,
   wineDownloaderInfoStore,
   sideloadLibrary,
-  zoomConfigStore,
-  zoomInstalledGamesStore,
-  zoomLibraryStore,
   steamConfigStore,
   steamLibraryStore,
   humbleConfigStore
@@ -129,11 +126,6 @@ interface StateProps {
     library: GameInfo[]
     user_id?: string
     username?: string
-  }
-  zoom: {
-    library: GameInfo[]
-    username?: string
-    enabled: boolean
   }
   steam: {
     library: GameInfo[]
@@ -463,22 +455,6 @@ class GlobalState extends PureComponent<Props> {
     const games = steamLibraryStore.get('games', [])
     return applyGameOverrides(games, overrides)
   }
-  loadZoomLibrary = (
-    overrides: Record<string, GameOverride> = currentOverrides()
-  ): Array<GameInfo> => {
-    const games = zoomLibraryStore.get('games', [])
-    const installedGames = zoomInstalledGamesStore.get('installed', [])
-    for (const game of games) {
-      const igame = installedGames.find(
-        (igame) => igame.appName === game.app_name
-      )
-      if (igame) {
-        game.install = igame
-        game.is_installed = true
-      }
-    }
-    return applyGameOverrides(games, overrides)
-  }
 
   state: StateProps = {
     epic: {
@@ -493,11 +469,6 @@ class GlobalState extends PureComponent<Props> {
       library: this.loadAmazonLibrary(),
       user_id: nileConfigStore.get_nodefault('userData.user_id'),
       username: nileConfigStore.get_nodefault('userData.name')
-    },
-    zoom: {
-      library: this.loadZoomLibrary(),
-      username: zoomConfigStore.get_nodefault('username'),
-      enabled: !!globalSettings?.experimentalFeatures?.zoomPlatform
     },
     steam: {
       library: this.loadSteamLibrary(),
@@ -590,7 +561,6 @@ class GlobalState extends PureComponent<Props> {
     experimentalFeatures: {
       enableHelp: false,
       cometSupport: true,
-      zoomPlatform: false,
       ...(globalSettings?.experimentalFeatures || {})
     },
     disableDialogBackdropClose: configStore.get(
@@ -966,13 +936,7 @@ class GlobalState extends PureComponent<Props> {
   }
 
   handleExperimentalFeatures = (value: ExperimentalFeatures) => {
-    this.setState({
-      experimentalFeatures: value,
-      // WR-10 (pre-existing): `enabled` was assigned the whole (always
-      // truthy) ExperimentalFeatures object, so toggling the Zoom feature
-      // OFF left zoom.enabled truthy until restart.
-      zoom: { ...this.state.zoom, enabled: !!value.zoomPlatform }
-    })
+    this.setState({ experimentalFeatures: value })
   }
 
   handleSuccessfulLogin = (runner: Runner) => {
@@ -986,9 +950,9 @@ class GlobalState extends PureComponent<Props> {
   }
 
   // Phase 34.5 Plan 26 (F-34.5-G6-02 layer 2, F-34.5-G6-03): `useTauriOAuthLogin.ts` deliberately
-  // calls the RAW window.api.login/authGOG/authAmazon/authZoom channels itself (so it keeps
-  // owning the UNPORTED_CHANNEL_MARKER catch), so it cannot call epicLogin/gogLogin/amazonLogin/
-  // zoomLogin below without invoking the auth channel a second time. This exposes exactly the
+  // calls the RAW window.api.login/authGOG/authAmazon channels itself (so it keeps
+  // owning the UNPORTED_CHANNEL_MARKER catch), so it cannot call epicLogin/gogLogin/amazonLogin
+  // below without invoking the auth channel a second time. This exposes exactly the
   // post-login half of those wrappers -- setState of the signed-in username, then routing
   // through the EXISTING `handleSuccessfulLogin` (never a second, parallel refresh path) -- as a
   // single method on context, built by the exported (and independently unit-tested)
@@ -1102,38 +1066,6 @@ class GlobalState extends PureComponent<Props> {
   }
 
   getAmazonLoginData = async () => window.api.getAmazonLoginData()
-
-  zoomLogin = async (url: string) => {
-    console.log('logging zoom')
-    const response = await window.api.authZoom(url)
-
-    if (response.status === 'done') {
-      const userInfo = await window.api.getZoomUserInfo()
-      this.setState({
-        zoom: {
-          library: [],
-          username: userInfo?.username,
-          enabled: true
-        }
-      })
-
-      this.handleSuccessfulLogin('zoom')
-    }
-
-    return response.status
-  }
-
-  zoomLogout = async () => {
-    window.api.logoutZoom()
-    this.setState({
-      zoom: {
-        library: [],
-        username: null,
-        enabled: true
-      }
-    })
-    console.log('Logging out from zoom')
-  }
 
   steamLogin = async (result: { status: string; username?: string }) => {
     if (result.status === 'done') {
@@ -1273,10 +1205,6 @@ class GlobalState extends PureComponent<Props> {
         ...this.state.gog,
         library: this.loadGOGLibrary(overrides)
       },
-      zoom: {
-        ...this.state.zoom,
-        library: this.loadZoomLibrary(overrides)
-      },
       amazon: {
         ...this.state.amazon,
         library: this.loadAmazonLibrary(overrides)
@@ -1295,7 +1223,7 @@ class GlobalState extends PureComponent<Props> {
   ): Promise<void> => {
     console.log('refreshing')
 
-    const { epic, gog, amazon, zoom, gameUpdates } = this.state
+    const { epic, gog, amazon, gameUpdates } = this.state
 
     const overrides = overridesArg || currentOverrides()
 
@@ -1308,7 +1236,6 @@ class GlobalState extends PureComponent<Props> {
     const scopedRunner = library && library !== 'all' ? library : undefined
     const includesEpic = !scopedRunner || scopedRunner === 'legendary'
     const includesGog = !scopedRunner || scopedRunner === 'gog'
-    const includesZoom = !scopedRunner || scopedRunner === 'zoom'
     const includesAmazon = !scopedRunner || scopedRunner === 'nile'
 
     let updates = gameUpdates
@@ -1345,9 +1272,9 @@ class GlobalState extends PureComponent<Props> {
     // cache previously held. A genuinely empty cache still refetches, which is the case
     // this guard exists for.
     //
-    // Fixed at all four call sites at once, deliberately. Three of them (epic, zoom,
+    // Fixed at all three call sites at once, deliberately. Two of them (epic,
     // amazon) had no reported symptom — only GOG was diagnosed — but they are the same
-    // defect and fixing one would have left three latent.
+    // defect and fixing one would have left two latent.
     //
     // debug/login-logout-wipes-library: each block is now ALSO gated on its
     // `includesX` flag. A runner-scoped call (e.g. `library: 'gog'`) no
@@ -1373,16 +1300,6 @@ class GlobalState extends PureComponent<Props> {
         window.api.logInfo('No cache found, getting data from gog...')
         await window.api.refreshLibrary('gog')
         gogLibrary = this.loadGOGLibrary(overrides)
-      }
-    }
-
-    let zoomLibrary: GameInfo[] = zoom.library
-    if (includesZoom && zoom.enabled) {
-      zoomLibrary = this.loadZoomLibrary(overrides)
-      if (zoom.username && !zoomLibrary.length) {
-        window.api.logInfo('No cache found, getting data from zoom...')
-        await window.api.refreshLibrary('zoom')
-        zoomLibrary = this.loadZoomLibrary(overrides)
       }
     }
 
@@ -1421,13 +1338,6 @@ class GlobalState extends PureComponent<Props> {
         next.gog = {
           library: gogLibrary,
           username: gog.username
-        }
-      }
-      if (includesZoom) {
-        next.zoom = {
-          library: zoomLibrary,
-          username: zoom.username,
-          enabled: zoom.enabled
         }
       }
       if (includesAmazon) {
@@ -1646,14 +1556,7 @@ class GlobalState extends PureComponent<Props> {
   }
 
   async componentDidMount() {
-    const {
-      epic,
-      gog,
-      amazon,
-      zoom,
-      gameUpdates = [],
-      libraryStatus
-    } = this.state
+    const { epic, gog, amazon, gameUpdates = [], libraryStatus } = this.state
 
     // 261015-p3q: re-apply the saved Accessibility zoom once at boot, through
     // the same window.api.setZoomFactor chain setZoomPercent uses, so a saved
@@ -1661,9 +1564,8 @@ class GlobalState extends PureComponent<Props> {
     // being displayed back on the slider. Earliest statement in this method:
     // every statement before it widens the window in which the user sees
     // factor 1. Reads this.state.zoomPercent directly (NOT destructured
-    // above) because state.zoom (the Zoom Platform storefront) and
-    // state.zoomPercent (this accessibility setting) are unrelated and must
-    // not be confused.
+    // above) because the accessibility setting lives in
+    // state.zoomPercent, not in a per-store slice.
     applySavedZoomAtBoot({
       savedZoomPercent: this.state.zoomPercent,
       setZoomFactor: (zoomFactor) => window.api.setZoomFactor(zoomFactor),
@@ -1938,24 +1840,6 @@ class GlobalState extends PureComponent<Props> {
             username: this.state.gog.username
           }
         })
-      } else if (args.runner === 'zoom') {
-        // Handle Zoom game push
-        const library = [...this.state.zoom.library]
-        const index = library.findIndex(
-          (game) => game.app_name === args.app_name
-        )
-        if (index !== -1) {
-          library[index] = args
-        } else {
-          library.push(args)
-        }
-        this.setState({
-          zoom: {
-            library: [...library],
-            username: this.state.zoom.username,
-            enabled: true
-          }
-        })
       } else if (args.runner === 'legendary') {
         this.setState((prevState: StateProps) => {
           const library = [...prevState.epic.library]
@@ -2007,9 +1891,8 @@ class GlobalState extends PureComponent<Props> {
 
     const gogUser = gogConfigStore.has('userData')
     const amazonUser = nileConfigStore.has('userData')
-    const zoomUser = zoomConfigStore.has('isLoggedIn')
     // debug/steam-refresh-hung-on-startup: a Steam-only login (no Epic/GOG/
-    // Amazon/Zoom account) was previously excluded from the mount-time
+    // Amazon account) was previously excluded from the mount-time
     // "refresh everything" gate below entirely, so SteamLibraryManager.refresh()
     // never ran on startup and the "Syncing your Steam library…" spinner
     // (true by default: steam.username seeded synchronously above,
@@ -2039,29 +1922,18 @@ class GlobalState extends PureComponent<Props> {
       await window.api.getAmazonUserInfo()
     }
 
-    if (zoom.enabled && zoomUser) {
-      await window.api.getZoomUserInfo()
-    }
-
     if (!gameUpdates.length) {
       const storedGameUpdates = JSON.parse(storage.getItem('updates') || '[]')
       this.setState({ gameUpdates: storedGameUpdates })
     }
 
-    if (
-      legendaryUser ||
-      gogUser ||
-      amazonUser ||
-      steamUser ||
-      (zoom.enabled && zoomUser)
-    ) {
+    if (legendaryUser || gogUser || amazonUser || steamUser) {
       this.refreshLibrary({
         checkForUpdates: true,
         runInBackground:
           epic.library.length !== 0 ||
           gog.library.length !== 0 ||
           amazon.library.length !== 0 ||
-          ((this.state.zoom.enabled && zoom.library) || []).length !== 0 ||
           this.state.steam.library.length !== 0,
         origin: 'mount'
       })
@@ -2212,7 +2084,6 @@ class GlobalState extends PureComponent<Props> {
       epic,
       gog,
       amazon,
-      zoom,
       steam,
       humble,
       favouriteGames,
@@ -2252,13 +2123,6 @@ class GlobalState extends PureComponent<Props> {
             getLoginData: this.getAmazonLoginData,
             login: this.amazonLogin,
             logout: this.amazonLogout
-          },
-          zoom: {
-            library: this.state.zoom.enabled ? zoom.library : [],
-            username: this.state.zoom.enabled ? zoom.username : undefined,
-            login: this.zoomLogin,
-            logout: this.zoomLogout,
-            enabled: this.state.zoom.enabled
           },
           steam: {
             library: steam.library,

@@ -27,8 +27,7 @@ import {
   isLoginPathname,
   LOGIN_PATHNAMES,
   EPIC_LOGIN_URL,
-  GOG_LOGIN_URL,
-  ZOOM_LOGIN_URL
+  GOG_LOGIN_URL
 } from './loginRoutes'
 import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
 import { resolveSignInState } from 'common/signInState'
@@ -48,7 +47,6 @@ export default function WebView() {
     amazon,
     humble,
     steam,
-    zoom,
     completeOAuthLogin,
     platform,
     signInProbeOutcomes
@@ -83,7 +81,7 @@ export default function WebView() {
   /**
    * Post-login completion for the Tauri OAuth path: finish the login AND leave the login
    * surface, which is what every other successful-login path in this file already does
-   * (`handleSuccessfulLogin` -> `navigate('/login')` for Electron's epic/gog/zoom/amazon
+   * (`handleSuccessfulLogin` -> `navigate('/login')` for Electron's epic/gog/amazon
    * branches; the humble watch's own `navigate('/login')` at the `status === 'done'` arm).
    *
    * THE BUG THIS FIXES: the Tauri path completed the login but never navigated, so the user
@@ -163,19 +161,16 @@ export default function WebView() {
   const epicStore = `https://www.epicgames.com/store/${lang}/`
   const gogStore = `https://af.gog.com?as=1838482841`
   const amazonStore = `https://gaming.amazon.com`
-  const zoomStore = `https://www.zoom-platform.com`
   const steamStore = 'https://store.steampowered.com/'
   const wikiURL =
     'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki'
   const gogLoginUrl = GOG_LOGIN_URL
-  const zoomLoginUrl = ZOOM_LOGIN_URL
   const humbleLoginUrl = 'https://www.humblebundle.com/login'
 
   const urls: { [pathname: string]: string } = {
     '/store/epic': epicStore,
     '/store/gog': gogStore,
     '/store/amazon': amazonStore,
-    '/store/zoom': zoomStore,
     '/store/steam': steamStore,
     '/wiki': wikiURL,
     '/loginEpic': epicLoginUrl,
@@ -190,7 +185,6 @@ export default function WebView() {
     // the folded todo this deletion resolves. Do NOT re-add a fetch here: the double-spawn cost
     // is the measured ~12.8s-per-call regression named in the no-op effect below.
     '/loginweb/nile': '',
-    '/loginweb/zoom': zoomLoginUrl,
     '/loginweb/humble': humbleLoginUrl
   }
   let startUrl = urls[pathname]
@@ -418,7 +412,7 @@ export default function WebView() {
   }
 
   const [showLoginWarningFor, setShowLoginWarningFor] = useState<
-    null | 'epic' | 'gog' | 'amazon' | 'zoom'
+    null | 'epic' | 'gog' | 'amazon'
   >(null)
 
   useEffect(() => {
@@ -436,8 +430,6 @@ export default function WebView() {
       setShowLoginWarningFor('gog')
     } else if (startUrl.match(/gaming\.amazon\.com/) && !amazon.user_id) {
       setShowLoginWarningFor('amazon')
-    } else if (startUrl.match(/zoom-platform\.com\/$/) && !zoom.username) {
-      setShowLoginWarningFor('zoom')
     } else {
       setShowLoginWarningFor(null)
     }

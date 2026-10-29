@@ -54,11 +54,11 @@ export default function Discounts() {
     () => getLocaleSettings(toShippedLanguage(i18n.language), regionOverride),
     [i18n.language, regionOverride]
   )
-  const { epic, gog, amazon, steam, zoom, humble } = useContext(ContextProvider)
+  const { epic, gog, amazon, steam, humble } = useContext(ContextProvider)
   const isGogLoggedIn: boolean = !!gog?.username
 
   // Build a normalized-title set of games owned in ANY store (Epic, GOG,
-  // Amazon, Steam, Zoom). Deals catalog products and library games do not
+  // Amazon, Steam). Deals catalog products and library games do not
   // share appName across stores, so match by trimmed/lowercased title.
   const ownedTitles = useMemo(() => {
     const set = new Set<string>()
@@ -66,14 +66,13 @@ export default function Discounts() {
       ...epic.library,
       ...gog.library,
       ...amazon.library,
-      ...steam.library,
-      ...zoom.library
+      ...steam.library
     ]) {
       const key = game.title?.trim().toLowerCase()
       if (key) set.add(key)
     }
     return set
-  }, [epic.library, gog.library, amazon.library, steam.library, zoom.library])
+  }, [epic.library, gog.library, amazon.library, steam.library])
 
   // The Hide Owned toggle is available whenever the user owns games in any
   // store, independent of GOG login.

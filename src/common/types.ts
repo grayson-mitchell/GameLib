@@ -11,24 +11,13 @@ import {
 import { NileInstallInfo, NileInstallPlatform } from './types/nile'
 import type { TrayIconVariant } from './trayIconVariant'
 import type { SignInStore } from './signInState'
-import {
-  ZoomInstallPlatform,
-  ZoomInstalledInfo,
-  ZoomInstallInfo
-} from './types/zoom'
 import type { TitleBarOverlay, Rectangle } from 'backend/platform'
 import { ChildProcess } from 'child_process'
 import type { HeroicHowLongToBeatEntry } from 'backend/wiki_game_info/howlongtobeat/utils'
 import type { Path } from 'backend/schemas'
 import type LogWriter from 'backend/logger/log_writer'
 
-export type Runner =
-  | 'legendary'
-  | 'gog'
-  | 'sideload'
-  | 'nile'
-  | 'zoom'
-  | 'steam'
+export type Runner = 'legendary' | 'gog' | 'sideload' | 'nile' | 'steam'
 
 // NOTE: Do not put enum's in this module or it will break imports
 
@@ -118,7 +107,6 @@ export type ExperimentalFeatures = {
   enableHelp: boolean
   cometSupport: boolean
   umuSupport?: boolean
-  zoomPlatform?: boolean
 }
 
 export interface AppSettings extends GameSettings {
@@ -240,7 +228,7 @@ export type GOGAchievement = {
 export type GameAchievement = GOGAchievement
 
 export interface GameInfo {
-  runner: 'legendary' | 'gog' | 'sideload' | 'nile' | 'zoom' | 'steam'
+  runner: 'legendary' | 'gog' | 'sideload' | 'nile' | 'steam'
   store_url?: string
   app_name: string
   art_cover: string
@@ -769,7 +757,6 @@ export type InstallPlatform =
   | LegendaryInstallPlatform
   | GogInstallPlatform
   | NileInstallPlatform
-  | ZoomInstallPlatform
   | 'Browser'
 
 export type ConnectivityStatus = 'offline' | 'check-online' | 'online'
@@ -1137,8 +1124,6 @@ export type InstallInfo =
   | LegendaryInstallInfo
   | GogInstallInfo
   | NileInstallInfo
-  | ZoomInstalledInfo
-  | ZoomInstallInfo
 
 export type KnownFixRegistryView = 32 | 64
 

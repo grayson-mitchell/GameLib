@@ -144,10 +144,7 @@ describe('Heroic fallback', () => {
     )
   })
 
-  it.each([
-    ['steam', 'steam'],
-    ['zoom', 'zoom']
-  ] as const)(
+  it.each([['steam', 'steam']] as const)(
     '%s never asks Heroic and a 404 deletes the stale file',
     async (runner, store) => {
       writeFileSync(dest('77', store), '{"title":"old"}')

@@ -54,12 +54,6 @@ const STORE_CASES: readonly StoreCase[] = [
     embeddable: true
   },
   {
-    key: 'zoom',
-    apex: 'zoom-platform.com',
-    subdomain: 'www.zoom-platform.com',
-    embeddable: true
-  },
-  {
     key: 'steam',
     apex: 'store.steampowered.com',
     subdomain: 'cdn.store.steampowered.com',
@@ -210,7 +204,6 @@ const EXPECTED_EMBEDDABLE: Record<
   epic: { darwin: true, win32: false, linux: false },
   gog: { darwin: true, win32: true, linux: true },
   amazon: { darwin: true, win32: true, linux: true },
-  zoom: { darwin: true, win32: true, linux: true },
   steam: { darwin: true, win32: true, linux: true },
   humble: { darwin: true, win32: true, linux: true }
 }
@@ -221,8 +214,8 @@ describe('isEmbeddableOrigin — full (store x platform) matrix (Phase 50 Plan 0
   // a function of (store, platform), not a per-store boolean.
   const stores = listConfiguredStores()
 
-  it('enumerates exactly the 6 configured stores x 3 platforms (18 pairs) -- a 7th store with no platform decision changes this count', () => {
-    expect(stores.length * PLATFORMS.length).toBe(18)
+  it('enumerates exactly the 5 configured stores x 3 platforms (15 pairs) -- a 6th store with no platform decision changes this count', () => {
+    expect(stores.length * PLATFORMS.length).toBe(15)
   })
 
   it.each(

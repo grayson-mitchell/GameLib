@@ -9,8 +9,8 @@ import type { GameStatus } from 'common/types'
 /**
  * 260817-dib: converts the DownloadManager's install bound from a TOTAL
  * DURATION ceiling to a NO-PROGRESS window. This module is runner-agnostic
- * and governs all six runners in `libraryManagerMap` (sideload, gog,
- * legendary, nile, zoom, steam) equally — it must never import anything from
+ * and governs all five runners in `libraryManagerMap` (sideload, gog,
+ * legendary, nile, steam) equally — it must never import anything from
  * `storeManagers/steam`.
  *
  * `withStallTimeout` re-arms its deadline only on an observed ADVANCE in the
@@ -37,7 +37,7 @@ import type { GameStatus } from 'common/types'
  * microtask after a stall rejection reaches it, so this module no longer
  * depends on that ONE caller doing it. Registration is NOT guaranteed for
  * every runner — a sideload install registers no controller at all, and the
- * four CLI runners (gog/legendary/nile/zoom) are only registered while a
+ * three CLI runners (gog/legendary/nile) are only registered while a
  * runner command is actually spawned — so the `hasAbortController` gate
  * below is load-bearing, not defensive decoration: an ungated
  * `callAbortController` would emit a false-alarm

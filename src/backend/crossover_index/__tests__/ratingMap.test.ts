@@ -24,7 +24,6 @@ const getListOfGamesMocks = {
   gog: jest.fn<GameInfo[], []>(),
   legendary: jest.fn<GameInfo[], []>(),
   nile: jest.fn<GameInfo[], []>(),
-  zoom: jest.fn<GameInfo[], []>(),
   steam: jest.fn<GameInfo[], []>()
 }
 jest.mock('backend/storeManagers', () => ({
@@ -33,7 +32,6 @@ jest.mock('backend/storeManagers', () => ({
     gog: { getListOfGames: getListOfGamesMocks.gog },
     legendary: { getListOfGames: getListOfGamesMocks.legendary },
     nile: { getListOfGames: getListOfGamesMocks.nile },
-    zoom: { getListOfGames: getListOfGamesMocks.zoom },
     steam: { getListOfGames: getListOfGamesMocks.steam }
   }
 }))

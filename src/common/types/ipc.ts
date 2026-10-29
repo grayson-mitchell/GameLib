@@ -158,7 +158,6 @@ interface SyncIPCFunctions {
     runner: Runner,
     status: boolean
   ) => void
-  logoutZoom: () => void
   logoutSteam: () => void
   humbleDisconnect: () => void
   // D-06 silent cancel: fired when the /loginweb/humble route unmounts
@@ -259,7 +258,6 @@ interface AsyncIPCFunctions {
   ) => Promise<InstallInfo | null>
   getUserInfo: () => Promise<UserInfo | undefined>
   getAmazonUserInfo: () => Promise<NileUserData | undefined>
-  getZoomUserInfo: () => Promise<{ username: string } | undefined>
   isLoggedIn: () => boolean
   login: (sid: string) => Promise<{
     status: 'done' | 'failed'
@@ -273,11 +271,10 @@ interface AsyncIPCFunctions {
     status: 'done' | 'failed'
     user: NileUserData | undefined
   }>
-  authZoom: (url: string) => Promise<{ status: 'done' | 'error' }>
   // Phase 34.4.1 Plan 09 (D-04, REQ-34.4.1-08): captures an OAuth redirect code/token for one
-  // of the four still-unported login runners (legendary/gog/nile/zoom) via the Tauri
+  // of the still-unported login runners (legendary/gog/nile) via the Tauri
   // login-window seam. This channel captures a redirect -- it does NOT authenticate: `login`,
-  // `authGOG`, `authAmazon` and `authZoom` above remain unported and still reject with
+  // `authGOG` and `authAmazon` above remain unported and still reject with
   // UNPORTED_CHANNEL_MARKER until Phase 34.5 (SEAM Invariant B). Tauri-only by construction --
   // resolves `{ status: 'unsupported' }` under Electron (no seam installed there).
   oauthCaptureLogin: (params: {

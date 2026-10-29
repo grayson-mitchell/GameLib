@@ -64,7 +64,6 @@ export default function ConsoleMode() {
     epic,
     gog,
     amazon,
-    zoom,
     steam,
     libraryStatus,
     sideloadedLibrary,
@@ -110,7 +109,6 @@ export default function ConsoleMode() {
       epic.library.length === 0 &&
       gog.library.length === 0 &&
       amazon.library.length === 0 &&
-      zoom.library.length === 0 &&
       steam.library.length === 0
     ) {
       void refreshLibrary({
@@ -130,7 +128,6 @@ export default function ConsoleMode() {
       ...gog.library,
       ...amazon.library,
       ...steam.library,
-      ...zoom.library,
       ...sideloadedLibrary
     ]
     return selectConsoleGames(all, hiddenGames.list)
@@ -139,7 +136,6 @@ export default function ConsoleMode() {
     gog.library,
     amazon.library,
     steam.library,
-    zoom.library,
     sideloadedLibrary,
     hiddenGames
   ])
@@ -195,8 +191,7 @@ export default function ConsoleMode() {
         key: 'sideload',
         label: t('console.filter.sideload', 'Other'),
         enabled: storesWithGames.has('sideload')
-      },
-      { key: 'zoom', label: 'ZOOM', enabled: storesWithGames.has('zoom') }
+      }
     ],
     [t, storesWithGames, allGames.length]
   )

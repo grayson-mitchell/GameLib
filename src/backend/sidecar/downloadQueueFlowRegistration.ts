@@ -24,7 +24,7 @@
  *
  * The queue stays runner-generic per D-01/D-02: `downloadqueue.ts` is
  * imported unmodified, so every runner it already supports (GOG/Legendary/
- * Nile/Zoom/Steam) is reachable through these five channels identically —
+ * Nile/Steam) is reachable through these five channels identically —
  * this module adds no Steam-specific branching of its own.
  *
  * D-05 (boot-time auto-resume): this module deliberately does NOT call the

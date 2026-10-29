@@ -4,14 +4,14 @@
  *
  * This is the "wired" half of D-04's two-action decision ("the four get wired **and**
  * declared-blocked"). Plan 05 shipped the static declared-blocked surface
- * (`TauriLoginPanel.tsx`) naming the four unported backend channels; this module makes the
- * capture in front of that surface real: each of `legendary`/`gog`/`nile`/`zoom` opens a login
+ * (`TauriLoginPanel.tsx`) naming the unported backend channels; this module makes the
+ * capture in front of that surface real: each of `legendary`/`gog`/`nile` opens a login
  * window through the SAME `LoginWindowSeam` Humble already drives (`backend/humble/
  * loginWindowSeam.ts`, plan 34.4.1-02), drains its `on_page_load`-sourced navigation events via
  * `takeEvents()`, and matches its own distinct redirect shape — never `login`/`authGOG`/
- * `authAmazon`/`authZoom` themselves, which stay unported until Phase 34.5 (SEAM Invariant B).
+ * `authAmazon` themselves, which stay unported until Phase 34.5 (SEAM Invariant B).
  *
- * `matchOAuthRedirect` is PURE (no seam, no timers, no I/O) so all four redirect shapes can be
+ * `matchOAuthRedirect` is PURE (no seam, no timers, no I/O) so all three redirect shapes can be
  * proven by test independent of any capture-driving machinery — this IS the REQ-34.4.1-08
  * evidence the plan exists to produce.
  *
@@ -82,8 +82,7 @@ const USER_AGENTS: Record<OAuthRunner, string> = {
   gog: isMac
     ? GOG_MAC_SAFARI_USER_AGENT
     : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0',
-  nile: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0',
-  zoom: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
+  nile: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
 }
 
 // Half of Humble's LOGIN_WATCH_TIMEOUT_MS (ten minutes) — an OAuth redirect is a single,
@@ -168,8 +167,7 @@ export function matchOAuthRedirect(
       return { code, redirectUrl: url }
     }
     case 'nile': {
-      // T-34.4.1-44b CLOSED for nile by this host check. Zoom's half of the same obligation is
-      // VOID — D-02 drops zoom permanently, so no zoom code exists to anchor.
+      // T-34.4.1-44b CLOSED for nile by this host check.
       //
       // `www.amazon.com` derives from upstream `imLinguin/nile`'s `openid.return_to` parameter
       // (`authorization.py`) — MEDIUM confidence (research Assumption A1) until live-gate item 3
@@ -191,16 +189,6 @@ export function matchOAuthRedirect(
       const code = parsed.searchParams.get('openid.oa2.authorization_code')
       if (!code) return null
       return { code, redirectUrl: url }
-    }
-    case 'zoom': {
-      // WebView/index.tsx L339 + L343: `li_token` present in the RESPONSE (never
-      // `return_li_token=true`, which is a REQUEST param the login url itself carries) — and
-      // `authZoom` takes the full redirect url, not the token value (`ipc.ts:240`), so
-      // `redirectUrl` is what Task 3's hook actually forwards. Same host-free residual as `nile`
-      // (T-34.4.1-44b) — the Electron original has no host constraint either.
-      const token = parsed.searchParams.get('li_token')
-      if (!token) return null
-      return { code: token, redirectUrl: url }
     }
     default:
       return null

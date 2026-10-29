@@ -5,7 +5,6 @@ import * as Menu from './menu'
 import * as Settings from './settings'
 import * as Wine from './wine'
 import * as DownloadManager from './downloadmanager'
-import * as Zoom from './zoom'
 import * as Steam from './steam'
 import * as Humble from './humble'
 import * as StoreSearch from './storeSearch'
@@ -19,7 +18,6 @@ export default {
   ...Settings,
   ...Wine,
   ...DownloadManager,
-  ...Zoom,
   ...Steam,
   ...Humble,
   ...StoreSearch,
