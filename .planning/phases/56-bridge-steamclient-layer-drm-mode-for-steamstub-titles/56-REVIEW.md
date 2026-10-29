@@ -1,179 +1,179 @@
 ---
 phase: 56-bridge-steamclient-layer-drm-mode-for-steamstub-titles
-reviewed: 2026-10-28T20:24:26Z
+reviewed: 2026-10-29T00:30:00Z
 depth: standard
-files_reviewed: 5
+files_reviewed: 8
 files_reviewed_list:
+  - src/backend/storeManagers/steam/bridge/drm/drmLaunchSetup.ts
   - src/backend/storeManagers/steam/bridge/drm/drmScanExe.ts
   - src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts
-  - src/backend/storeManagers/steam/bridge/drm/drmLaunchSetup.ts
+  - src/backend/storeManagers/steam/bridge/drm/stageWineLog.ts
   - src/backend/storeManagers/steam/bridge/shimGenerate.ts
   - src/backend/storeManagers/steam/games.ts
+  - src/backend/storeManagers/steam/macArchKnownFix.ts
+  - meta/machineFillGamelib.ts
 findings:
-  critical: 3
-  warning: 7
-  info: 6
-  total: 16
+  critical: 0
+  warning: 3
+  info: 4
+  total: 7
 status: issues_found
 ---
 
-# Phase 56: Code Review Report
+# Phase 56: Code Review Report (gap-closure round 56-27..56-32)
 
-**Reviewed:** 2026-10-28T20:24:26Z
-**Depth:** standard (diff scope `cbfa63e17..HEAD`; games.ts changed hunks plus their immediate context)
-**Files Reviewed:** 5
+**Reviewed:** 2026-10-29T00:30:00Z
+**Depth:** standard
+**Files Reviewed:** 8
 **Status:** issues_found
+
+**Diff scope:** only the hunks introduced by these commits. Other commits in `73782b5db..HEAD` that touch games.ts belong to a different session and were not reviewed.
+
+- `3e7d63dfb`, `59f1dd9a2` (56-27): terminal `done` after a DRM setup or launch failure
+- `15fa338f8` (56-28): CEG signal read from the resolver's `drmExe`
+- `0ddd86e35` (56-29): symlink-safe Shipping-exe containment
+- `5fbd769a4` (56-30): plural order, isIntelMac literal
+- `21b69f0b5` (56-31): id-grouped trace and wine-log retention
+- `5028e07e7`, `6cdafa4a9` (56-32): stage wine log, listing before the kill, forced first timeout, unref of the listing children
+
+For games.ts, only the changed hunks and their immediate context were read.
 
 ## Summary
 
-The review covered the UE-aware SteamStub resolver (`detectLaunchDrmWrapper`), routing and stamping from that resolver, extraExeDirs cleanup, the registry-mismatch diagnostic and the process listing on a reg timeout, the per-launch wine log with the `GAMELIB_DRM_WINEDEBUG` passthrough, the final install-time `done` status, and the debug fixes for the install-root cwd and the bridge-notice dialog.
+Most of the targeted fixes work. CR-02, CR-03, WR-06 and IN-06 are closed. The new stage wine log (`stageWineLog.ts`) is sound:
+- the open uses `wx` (O_EXCL), so it will not follow a planted symlink
+- the directory is 0700 and is lstat-checked
+- size and file count are both capped
+- its retention regex cannot collide with the games.ts per-id regex
 
-Three problems need fixing before this ships:
+The four touched DRM test suites pass (117 tests).
 
-1. The resolver realpaths the candidate Shipping exe but compares it against a bottle root that was never realpathed. If any part of the path is a symlink, for example a Steam library on an external disk, the exe is rejected without any log line.
-2. Only half of the CEG source moved to the Shipping exe. `placeShimForGame` still reads the CEG signal from the bootstrap exe, so it can clear a correct stored `ceg` verdict.
-3. A `.wine.log` is deleted only when its paired trace exists. A failed DRM launch that writes no trace leaves a log that is never pruned.
+Three fixes are incomplete:
 
-The circular import between shimGenerate and drmScanExe works today only because each binding is read at call time.
+1. **The WR-03 "unref" fix does nothing measurable.** I measured it: an unref'd `execFile` child that has a `timeout` still holds the event loop for the child's whole lifetime. The stdio pipes and execFile's internal kill timer both stay ref'd.
+2. **The IN-01 terminal `done` in games.ts only fires when `drm.progressSent` is true.** `fireBridgeWineLaunch` sends its own `winetricks`/`redist` statuses and then has DRM-only `return false` exits. On a launch where the downloads were already cached (the normal case since the install-time prefetch), the card is left on a stale status.
+3. **CR-01 is fixed for a symlinked Bottles directory but not for a symlinked `steamapps/common` library.** That second case is now logged instead of silent, but it still drops DRM routing.
 
-## Critical Issues
+No blockers. Nothing here loses data or opens a security hole.
 
-### CR-01: Shipping-exe containment compares a realpath against a root that was not realpathed, so symlinked libraries silently drop DRM routing, and a partial fix would make bottle-stage fail
+## Prior-finding disposition (old 56-REVIEW.md)
 
-**File:** `src/backend/storeManagers/steam/bridge/drm/drmScanExe.ts:49-57` (also `stageDrmBottle.ts:583-588`, `drmLaunchSetup.ts:370-372`, `games.ts:3686-3690`, `shimGenerate.ts:482-487`)
-**Issue:** `real = await realpath(candidate)` resolves every symlink on the path. The root it is checked against is `getBottleDir(...)`, which is a plain `join`/`resolve` result and is never realpathed. Two common setups break this:
-- The CrossOver Bottles directory is a symlink, for example moved to an external volume.
-- `drive_c/.../steamapps/common` is a symlink into another library.
+| Prior | Targeted by | Disposition | Notes |
+| ----- | ----------- | ----------- | ----- |
+| CR-01 | 0ddd86e35 | **Partially resolved** | Both sides are now realpathed, `drmExe` stays lexical, so `stageDrmBottle`'s driveC check still holds, and rejections are logged. A Bottles directory that is a symlink now works. A `steamapps/common` (or game folder ancestor) symlinked into a library outside the bottle is still rejected: `real` leaves `rootReal`. The bootstrap in that same folder is still scanned with no containment check. See WR-03. |
+| CR-02 | 15fa338f8 | **Resolved** (stated case) | `drm` now comes from `launchWrapper?.drmExe`, so a Shipping exe with `.bind` plus CEG gives a `ceg` verdict and the dead-end dialog. The residual case, CEG on a Shipping exe that has no `.bind`, is IN-01 below. |
+| CR-03 | 21b69f0b5 | **Resolved** | `^<appId>-(\d{1,16})(\.wine)?\.log$` groups the trace and the wine log by id. An orphan wine log now counts as its own id and is pruned. `.stage.wine.log` cannot match. Launch ids are ms timestamps (13 digits), so `Number()` loses no precision. Each unlink failure is logged and the loop continues. |
+| IN-01 | 3e7d63dfb, 59f1dd9a2 | **Partially resolved** | `fail()` now sends `done` after `drm-setup` progress, and `body()` is wrapped so an unexpected throw also goes through `fail()`. The games.ts post-launch `done` is gated on `drm.progressSent`, which misses statuses sent by `fireBridgeWineLaunch` itself. See WR-01. |
+| IN-06 | 15fa338f8 | **Resolved** (documented) | The comment at shimGenerate.ts:560 states that `exeArch` describes the launch exe and that `drmWrapper`/`drm` describe `drmExe`. |
+| WR-03 | 6cdafa4a9 | **Still open** (fix ineffective) | `child.unref?.()` was added at stageDrmBottle.ts:535 and :638, but an execFile child still keeps the loop alive. See WR-02 for the measurement. |
+| WR-06 | 0ddd86e35 | **Resolved** | Each candidate has its own try/catch, the order is sorted, and every skip is logged. |
 
-In both cases `isContainedWithin(bottleDir, real)` is false. The candidate is skipped by `continue`, nothing is logged, and the resolver returns `own`, which is `'none'` for the bootstrap. A UE SteamStub title (Ranch Simulator, the D-17 case) is then routed to the TCP bridge, and the stamp in `placeShimForGame` records `drmWrapper: none`. This guard is stricter than the one in `findUnrealLayout` (`bridgeScan.ts:232`), which uses `resolve(full)`, even though drmScanExe's header says it reuses bridgeScan's notion of the runtime exe.
+These earlier findings were not targeted by this round and were not re-reviewed: WR-01 (launch cwd), WR-02 (circular import), WR-04 (unbounded user.reg re-read), WR-05 (unsanitized bottle on the launch path), WR-07 (install `done`), and IN-02..IN-05. Treat them as still open.
 
-Realpathing only the root does not fix this. `drmExe` (a realpath) flows to `extraExeDirs: [dirname(drmExe)]`, and `stageDrmBottle` checks that against an unresolved `driveC` (`stageDrmBottle.ts:583-588`). Every such launch would then fail with `extra exe dir outside bottle drive_c`.
-**Fix:** Realpath both sides for the check, but return the lexical path so downstream containment stays consistent. Also log rejections:
-```ts
-const rootReal = await realpath(bottleDir).catch(() => resolve(bottleDir))
-for (const candidate of layout.shippingExes) {
-  if (!candidate.toLowerCase().endsWith('.exe')) continue
-  const real = await realpath(candidate).catch(() => null)
-  if (!real || !isContainedWithin(rootReal, real)) {
-    logWarning(`detectLaunchDrmWrapper: skipped ${basename(candidate)} (escapes bottle)`, LogPrefix.Steam)
-    continue
-  }
-  if (detect(real) === 'steamstub') {
-    return { drmWrapper: 'steamstub', drmExe: resolve(candidate) } // lexical, matches driveC
-  }
-}
-```
-
-### CR-02: The CEG signal is still read from the bootstrap exe while `drmWrapper` now comes from the Shipping exe, so a correct `ceg` verdict can be cleared
-
-**File:** `src/backend/storeManagers/steam/bridge/shimGenerate.ts:476` (consumed at `games.ts:2335-2338` and `games.ts:3855-3858`)
-**Issue:** Commit c592ba1eb changes the `drmWrapper` stamp to use the resolver's `drmExe`, and changes launch routing to read CEG markers from `drmExe` (T-56-21-02). `placeShimForGame` still computes `const drm = detectExeSteamDrm(appId, resolve(gameExePath))` from the bootstrap exe. Take a UE title whose Shipping exe has `.bind` and CEG markers:
-- `resolveBridgeMode` sees the CEG markers and does not choose steamclient-layer, so the launch falls through to the TCP path.
-- `placeShimForGame` scans the bootstrap and gets `drm = null`.
-- `persistBridgeDrmSignal(null)` calls `writeBridgeDrmVerdict(appId, undefined)`, which clears any stored `ceg` verdict, and the CEG dead-end dialog is skipped.
-- The title launches into the silent ~30 s CEG exit that quick 261024-br4 exists to prevent. The install path (`games.ts:2335`) misses the dead end in the same way.
-
-The stamped record also mixes two exes: `drmWrapper` comes from the Shipping exe, while `drm` and `exeArch` come from the bootstrap.
-**Fix:** Use one exe for all DRM signals:
-```ts
-const launchWrapper = ...
-const drmSource = launchWrapper?.drmExe ?? resolve(gameExePath)
-const drm = detectExeSteamDrm(appId, drmSource)
-```
-
-### CR-03: A `.wine.log` is pruned only through its paired trace, so a launch with no trace leaves a log that grows without bound
-
-**File:** `src/backend/storeManagers/steam/games.ts:986-1003`, `games.ts:4290-4292`
-**Issue:** Retention looks only for names matching `^<appId>-<id>\.log$` (the regex rejects `.wine.log`), and it removes a wine log only as a side effect of deleting its trace. `prepareDrmTraceFile` never creates the trace; lsteamclient writes it from the game process (`setKey(DRM_TRACE_ENV, ...)`). The wine log is opened for every DRM launch (`createDrmWineLogAppender` opens with `'a'`, which creates the file). So a launch where the game dies before Steam init, or the helper fails, writes a wine log and no trace. That wine log never enters `mine` and is never deleted. Those are exactly the failure cases the log is for, and users retry them repeatedly. Each orphan can reach 8 MiB, and `+relay`-style channels from `GAMELIB_DRM_WINEDEBUG` will hit that cap. Nothing bounds the total count.
-**Fix:** Prune wine logs on their own, by the same id ordering:
-```ts
-const re = new RegExp(`^${appId}-([0-9]{1,16})(\\.wine)?\\.log$`)
-// group by id; keep the newest DRM_TRACE_KEEP_PER_APP - 1 ids; for older ids remove both <id>.log and <id>.wine.log
-```
+## Narrative Findings (AI reviewer)
 
 ## Warnings
 
-### WR-01: The new launch cwd is never checked to exist or to match exePath's install, so a bad stored target turns into a spawn ENOENT that is only console.logged
+### WR-01: The post-launch terminal `done` is gated on `drm.progressSent`, but `fireBridgeWineLaunch` sends its own non-terminal statuses before its DRM-only `return false` exits
 
-**File:** `src/backend/storeManagers/steam/games.ts:4283-4289` (with `launcher.ts:1673-1675`)
-**Issue:** `launchCwd` now prefers `resolveBridgeLaunchWorkingDir(appId)`. That path is rebuilt from the stored launch target's `installdir` and `workingdir` under `getBottleSteamappsDir(...)`, independently of `exePath`. The old `dirname(exePath)` always existed. The stored path does not:
-- the stored target can be stale after a reinstall or installdir change,
-- the game can live in a different library folder,
-- `workingdir` can name a directory the game creates on first run.
+**File:** `src/backend/storeManagers/steam/games.ts:3943-3958` (the exits are at `games.ts:4393` and `games.ts:4456`; the statuses come from `games.ts:4306` and `games.ts:4334`)
 
-If `cwd` does not exist, `spawn` fails with a misleading `spawn <wine> ENOENT`. `runWineCommand`'s `'error'` handler only does `console.log(error)`, so neither the DRM path nor the TCP path reports a useful failure. This applies to every bridge launch, not only DRM.
-**Fix:** Accept the stored directory only if `lstatSync(dir).isDirectory()` and `isContainedWithin(resolveBridgeGameInstallRoot(exePath, ...), dir)`, or if it equals that install root. Otherwise fall back to the install root, then `dirname(exePath)`, and log the fallback.
+**Issue:** `drm.progressSent` is true only when `drmLaunchSetup`'s own download steps sent `drm-setup` (drmLaunchSetup.ts:315). Quick 261029-e2t prefetches those downloads at install time, so on a normal Play `ensureDrmDownloads` hits the cache and `progressSent` is false. Inside `launchDrmModeGame` → `fireBridgeWineLaunch`, two steps run before any DRM check:
+- `applySteamBridgeKnownFixes` sends `status: 'winetricks'` and `'redist'` (bridgeKnownFixes.ts:229, :279).
+- `installSteamBridgeSharedRedists` sends `status: 'redist'` (sharedRedistInstall.ts:481, :659).
 
-### WR-02: Circular import between shimGenerate.ts and drm/drmScanExe.ts
+After those, two DRM-only failure exits return `false` without a status:
+- `buildDrmLaunchEnvironment` returns an error (4393).
+- A DLL-override registry write fails or times out (4456).
 
-**File:** `src/backend/storeManagers/steam/bridge/shimGenerate.ts:105`, `src/backend/storeManagers/steam/bridge/drm/drmScanExe.ts:19`
-**Issue:** shimGenerate imports `detectLaunchDrmWrapper` and drmScanExe imports `detectDrmWrapper` back. This works only because both bindings are read inside function bodies. In TS-to-CJS output (jest), whichever module loads second sees a partially initialised `exports`. Any future top-level use breaks it with an `undefined is not a function` that depends on load order, for example `const DEFAULT_DETECT = detectDrmWrapper`, a re-export, or moving `deps.detect ?? detectDrmWrapper` into a module-level constant. `jest.mock('../shimGenerate')` in a drmScanExe test also replaces the whole 1,483-line module.
-**Fix:** Move `detectDrmWrapper` (and `PE_SECTION_SCAN_BYTES` and the section-name helpers it needs) into a leaf module such as `bridge/drmWrapperScan.ts`, imported by both shimGenerate and drmScanExe. Re-export it from shimGenerate if existing callers need it.
+The `'launching'` status that normally supersedes these statuses is sent only by `startBottleProcessMonitor`, which runs after both exits. The `!launched && drm.progressSent` gate therefore skips the `done`, and the card stays on `redist`/`winetricks`. This is the same stale-status bug IN-01 described, reached through a different producer. The new unit test covers only the `progressSent: true` case.
 
-### WR-03: The `/bin/ps` child in `defaultListBottleProcesses` is not unref'd (sidecar exit contract)
+**Fix:** `done` is idempotent and nothing else ends a Steam launch's status (`dispatchSteamLaunch` bypasses `launchEventCallback`), so send it on every failed DRM launch:
+```ts
+const launched = await this.launchDrmModeGame(exePath, drmInstallRoot as string, drm)
+if (!launched) {
+  sendGameStatusUpdate({ appName: this.appId, runner: 'steam', status: 'done' })
+  logInfo(`SteamGame: drm launch appId ${this.appId} sent terminal status done after launch failure`, LogPrefix.Steam)
+}
+return launched
+```
+Also consider a `try/finally` so that an exception thrown out of `launchDrmModeGame` still ends the status. Add a test with `progressSent: false` where the launch returns false after a `redist` status.
 
-**File:** `src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts:498-506`
-**Issue:** gamelib-conventions rule 1 says to `unref()` every timer, watcher, socket or child handle created in the sidecar. The `ChildProcess` that `execFile` returns is dropped without `unref()`, so a stdin EOF during the diagnostic waits up to 3 s for `ps`. The impact is small because of the 3 s bound, but it breaks the stated contract, and `smoke:sidecar` does not catch slow exits.
-**Fix:** `const child = execFile(...); child.unref?.()`. The callback still fires while the loop is alive.
+### WR-02: The WR-03 `child.unref?.()` does not release the event loop, because the execFile stdio pipes and the `timeout` kill timer stay ref'd
 
-### WR-04: The registry-mismatch diagnostic re-reads user.reg with no size bound
+**File:** `src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts:528-535`, `stageDrmBottle.ts:631-638`
 
-**File:** `src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts:708-719`
-**Issue:** The staged check reads user.reg only when `regStat.size <= MAX_USER_REG_BYTES` (line 693). The new diagnostic does `readFileSync(user.reg)` whenever `regStat.isFile()`. For an oversized file it loads the whole file just to log `user.reg:unparseable`. It also reads the file a second time, so the logged mismatch list can describe different content from what `alreadyStaged` evaluated.
-**Fix:** Read once inside the bounded branch and compute `const mismatches = drmRegistryMismatches(text)`. Set `alreadyStaged = mismatches.length === 0` and log `mismatches` in the `!alreadyStaged` branch. When the size is over the cap, log `user.reg:oversize` without reading.
+**Issue:** `ChildProcess.unref()` unrefs only the process handle. `execFile` also creates ref'd `stdout`/`stderr` pipe sockets. When `timeout` is set, it also arms a ref'd `setTimeout` that kills the child. Measured with Node v22.23.4 in the scratchpad:
 
-### WR-05: Launch routing and stamping use different containment roots for the resolver
+| Setup | Process exits after |
+| --- | --- |
+| `execFile('/bin/sleep',['2'],{timeout:3000}); c.unref()` | 2008 ms |
+| same, plus `c.stdout.unref(); c.stderr.unref()` | 2012 ms (the timeout timer still holds) |
+| no `timeout`, `c.unref()` plus both stdio unrefs | 3 ms |
 
-**File:** `src/backend/storeManagers/steam/games.ts:3686-3690` vs `src/backend/storeManagers/steam/bridge/shimGenerate.ts:479-487`
-**Issue:** The stamp path passes `resolve(getBottleDir(sanitizeBottleName(...)))`. The launch path passes `getBottleDir(bridgeBottleSettings.wineCrossoverBottle)`, which is not sanitized. A bottle name of `..` or one containing a `/` makes `getBottleDir` produce a wider root, so the Shipping-exe containment check is looser on launch than on stamp, and the two can disagree. The commit message says routing and stamping come "from the same resolver", but the inputs differ. `drmScanExe` also runs `detect(exePath)` on the launch exe without any containment check, which contradicts `detectDrmWrapper`'s documented precondition (`shimGenerate.ts:503-505`).
-**Fix:** In games.ts, sanitize and resolve the same way the stamp path does. If sanitizing fails, skip the UE probe, as shimGenerate already does.
+So at stdin EOF the sidecar still waits for `ps`/`lsof` (bounded at 3 s), exactly as before the fix. The new comment "never hold the event loop open" is false. The gamelib-conventions skill (sidecar exit contract, half 1) records two prior incidents where an `unref()` that looked right did not move the number.
 
-### WR-06: The resolver gives up on all remaining candidates after one throw, and its choice depends on readdir order
+**Fix:** Drop execFile's `timeout` option. Bound the child yourself with an unref'd timer, and unref the stdio:
+```ts
+const child = execFile(file, argv, { maxBuffer: 16 * 1024 * 1024 }, (_e, out) => {
+  clearTimeout(kill)
+  resolveOut(String(out ?? ''))
+})
+const kill = setTimeout(() => child.kill('SIGKILL'), 3000)
+kill.unref?.()
+child.unref?.()
+;(child.stdout as { unref?: () => void } | null)?.unref?.()
+;(child.stderr as { unref?: () => void } | null)?.unref?.()
+```
+Factor this into one helper that both listing sites use. Add a test that asserts the loop drains: spawn a node child that calls the helper on `sleep 2` and assert it exits in well under 2 s.
 
-**File:** `src/backend/storeManagers/steam/bridge/drm/drmScanExe.ts:46-64`
-**Issue:** `detect(real)` runs inside the outer `try`, so an injected or future detector that throws on one candidate returns `own` without trying the rest. When there are several Shipping exes (for example a DX11/DX12 pair or a `-Win64-Shipping` plus `-Server-Win64-Shipping`), the first `.bind` hit in `readdir` order wins. `drmExe` drives both the CEG markers (`games.ts:3700`) and `extraExeDirs`, so routing can change between filesystems. Every rejection is silent, which makes field failures like CR-01 impossible to diagnose from logs.
-**Fix:** Wrap each `detect(real)` in its own try/catch. Sort `shippingExes` for determinism, or prefer `<ueRoot-basename>-Win64-Shipping.exe`. Log one line per candidate skipped for realpath or containment reasons.
+### WR-03: CR-01 is only half closed: a game library reached through a symlinked `steamapps/common` (or any ancestor of the game folder) still fails the Shipping-exe check, while the bootstrap in the same folder is scanned with no check
 
-### WR-07: The install-time final `done` skips the dynamic import and fires even when the install has moved on
+**File:** `src/backend/storeManagers/steam/bridge/drm/drmScanExe.ts:38-43`, `drmScanExe.ts:50-70`
 
-**File:** `src/backend/storeManagers/steam/games.ts:2402-2425`
-**Issue:** `await import('./bridge/sharedRedistInstall')` is outside the `try/finally`. If that import rejects (a missing chunk in the SEA bundle, for example), `installBridgeGame` throws and the lingering `redist` status this change was meant to clear stays. The `finally` also sends `done` unconditionally after a long redist step. If the user started an uninstall or a cancel while the redist was running, `done` overwrites that operation's status on the card.
-**Fix:** Put the dynamic import inside the `try`. Before sending `done`, check that the game is still installed and that no other operation owns its status, for example by checking the current status is still `redist`/`installing`.
+**Issue:** `rootReal = realpath(bottleDir)` and `real = realpath(candidate)`. If `drive_c/.../steamapps/common` is a symlink to another volume, which was the second scenario in CR-01, `real` resolves outside `rootReal`. The candidate is then skipped as `escapes bottle` and the resolver returns `own` (`'none'` for a UE bootstrap). The title still goes to the TCP bridge and is stamped `drmWrapper: none`. It is now logged, but the behaviour is unchanged. `findUnrealLayout` lets this layout through, because its intermediate `isRealDir` checks start below `ueRoot`.
+
+The containment policy is also inconsistent. `detect(exePath)` at line 40 opens the bootstrap exe in that same symlinked folder with no containment check at all, contradicting `detectDrmWrapper`'s documented precondition (shimGenerate.ts:503-505). Either out-of-bottle bytes may be read, or they may not. Today the code reads the bootstrap's bytes and refuses the Shipping exe's.
+
+**Fix:** Pick one policy and apply it to both exes:
+- Strict (reject out-of-bottle reads): realpath-check `exePath` against `rootReal` before `detect(exePath)` as well. When either check fails, surface a user-visible diagnostic, not only a log line.
+- Library-aware (accept a symlinked library the user set up): realpath `dirname(exePath)` once to get `ueRootReal`, and require each candidate's `real` to be inside `ueRootReal`, the game's own folder, rather than inside the bottle root. Keep returning the lexical `resolve(candidate)` so `stageDrmBottle`'s driveC check still passes.
 
 ## Info
 
-### IN-01: Pointer for the known stale 'redist' after a DRM-setup failure
+### IN-01: CEG on a UE Shipping exe without `.bind` is still read from the bootstrap
 
-**File:** `src/backend/storeManagers/steam/games.ts:3738-3742`, `src/backend/storeManagers/steam/bridge/drm/drmLaunchSetup.ts:228-259`
-**Issue:** `progress()` sends `status: 'redist'`, and `fail()` never sends a terminal status, even when `progressSent` is true. games.ts depends on "the launcher's own 'done' status after launch() returns false", which the live finding shows does not arrive. The obvious fix is for `fail()`, or the `drm.status === 'error'` branch in games.ts, to send `done` when `progressSent`, as e2592448f did for install.
+**File:** `src/backend/storeManagers/steam/bridge/shimGenerate.ts:489-490`
 
-### IN-02: Pointer for the known winebus/IOHID reg-add timeout: the timed-out child is left running
+**Issue:** `drmSource` is the Shipping exe only when the resolver found `.bind` on it. A UE title whose Shipping exe carries CEG markers but no SteamStub section resolves to `own`, so CEG is read from the bootstrap. The result is `null` and the verdict is cleared, which is the CR-02 failure on a narrower set of titles. CEG on UE4+ Shipping exes is rare, so this is Info. A complete fix would read CEG from every in-bottle Shipping candidate, not only the one with `.bind`.
 
-**File:** `src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts:541-545`
-**Issue:** On `'timeout'`, `runRegArgv` returns without killing the `reg add` wine child or its wineboot. The new process listing records the spin but nothing ends it, so each retry adds another hung session to the same bottle. Consider an `onSpawn` capture and `kill()` (or `wineserver -k` for the bottle) on timeout.
+### IN-02: Every unexpected throw in `runSetup` is reported as `bottle-stage`
 
-### IN-03: The wine-log appender follows symlinks and applies its mode only on create
+**File:** `src/backend/storeManagers/steam/bridge/drm/drmLaunchSetup.ts:474-478`
 
-**File:** `src/backend/storeManagers/steam/games.ts:925`
-**Issue:** `openSync(path, 'a', 0o600)` follows a pre-existing symlink, and if the file already exists the 0600 mode is not applied. The launch id is fresh every time, so `'wx'` (O_EXCL, which refuses symlinks) states the intent exactly and costs nothing.
+**Issue:** The new `body()` wrapper maps any throw, including one from the Mac Steam check or the downloads, to `fail('bottle-stage', ...)`. The user-facing D-13 notice and the `stopped at` log line then name the wrong stage. The known steps catch their own errors, so this only affects unforeseen throws, but the log will mislead whoever debugs one. Track the current stage in a `let` and pass it to `fail`.
 
-### IN-04: The "Dev-only" `GAMELIB_DRM_WINEDEBUG` passthrough is not gated to dev builds
+### IN-03: The resolver scans the realpath but returns the lexical path, so callers reopen a path that was never scanned
 
-**File:** `src/backend/storeManagers/steam/games.ts:4184-4198`
-**Issue:** The comment says dev-only, but packaged builds honour the variable too. The allowlist regex keeps it from being an injection risk. Either gate it behind a dev or packaged check or change the comment. The value also overrides a user's own WINEDEBUG in `enviromentOptions`, because later entries win in `setupEnvVars`. That is intended, but undocumented.
+**File:** `src/backend/storeManagers/steam/bridge/drm/drmScanExe.ts:72-73`
 
-### IN-05: The process-listing filter is broader than the bottle, and the exe-name capture can include several words
+**Issue:** `detect(real)` scans the resolved file, but `drmExe: resolve(candidate)` is what `readLaunchExeCegMarkers` (games.ts) and `detectExeSteamDrm` (shimGenerate.ts:490) open afterwards, following symlinks with no re-check. `findUnrealLayout` rejects a symlinked leaf, so only an ancestor swapped between the two opens can redirect the read. The window is small and only a local same-user attacker could use it. Note it in the module header, or have callers re-run containment on `drmExe`.
 
-**File:** `src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts:510-521`
-**Issue:** `command.includes('steam-bridge/drm/runners/')` matches DRM runner processes for every title, not just this bottle. The lazy `([^/\\]+?\.exe)` match is anchored to the first character after a separator, so `/usr/bin/wine start.exe ...` is captured as `wine start.exe`. This is diagnostic-only.
+### IN-04: The `.sort()` in the resolver is redundant
 
-### IN-06: `exeArch` is stamped from the bootstrap while `drmWrapper` comes from the Shipping exe
+**File:** `src/backend/storeManagers/steam/bridge/drm/drmScanExe.ts:51`
 
-**File:** `src/backend/storeManagers/steam/bridge/shimGenerate.ts:556-558`
-**Issue:** `readFileEffectiveArch(resolvedExe)` reads the bootstrap, so the stamp describes two different binaries. This is harmless when both are x64, but it should be documented or sourced consistently together with CR-02.
+**Issue:** `findUnrealLayout` already sorts `shippingExes` and caps them at `UE_SHIPPING_MAX` (bridgeScan.ts:236-237). The extra sort is harmless. It also gives a lexical order, so a `-Server-Win64-Shipping.exe` can still win over the client exe. The old WR-06 suggestion to prefer `<ueRoot-basename>-Win64-Shipping.exe` was not taken, so routing can still depend on which `.bind` exe sorts first.
+
+## Files with no findings
+
+- `stageWineLog.ts`: the open uses `wx` at 0600, the trace dir is 0700 and lstat-checked, the appId is validated before it goes into the regex, retention keeps 8, and size is capped at 2 MiB. After `close()` the fd is nulled, so output from a timed-out wine child that is still running is dropped safely.
+- `stageDrmBottle.ts` (56-32 wiring, apart from WR-02): the sink is closed in `finally` on every exit, including `aborted`. The listing now runs before each kill. `GAMELIB_DRM_STAGE_FIRST_TIMEOUT_MS` is limited to 3-5 digits and ignored when the sidecar is packaged (`isPackagedSidecar` fails closed).
+- `meta/machineFillGamelib.ts`: `PLURAL_SUFFIXES` lists all six CLDR categories in canonical order, so filtering through it loses nothing.
+- `macArchKnownFix.ts`: comment-only change.
 
 ---
 
-_Reviewed: 2026-10-28T20:24:26Z_
+_Reviewed: 2026-10-29T00:30:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
