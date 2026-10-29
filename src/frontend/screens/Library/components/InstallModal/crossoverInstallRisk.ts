@@ -45,7 +45,9 @@ export function resolveCrossoverInstallRisk({
   return { kind: 'none' }
 }
 
-type TGamelibLike = (
+// Named `TFunc` (as in chipLabels.ts) so the hardcoded-string gate's T_FUNC_TYPE_RE
+// recognizes `tGamelib` as a t-alias.
+type TFunc = (
   key: string,
   defaultValue: string,
   options?: Record<string, unknown>
@@ -54,7 +56,7 @@ type TGamelibLike = (
 export function crossoverRiskDialogOptions(
   risk: Extract<CrossoverInstallRisk, { kind: 'confirm' }>,
   gameTitle: string,
-  tGamelib: TGamelibLike,
+  tGamelib: TFunc,
   onConfirm: () => void
 ): Required<Pick<DialogModalOptions, 'title' | 'buttons'>> & {
   message: string

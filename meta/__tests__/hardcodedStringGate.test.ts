@@ -1689,6 +1689,39 @@ describe('hardcodedStringGate', () => {
   // afterEach — never on the real deferred files, and nothing is left in
   // the working tree.
   // ---------------------------------------------------------------------
+  describe('quick 261029-oog: the six 56-30 A-17 files in blocking scope', () => {
+    const SIX = [
+      'src/frontend/components/UI/DialogHandler/components/MessageBoxModal/buttonClassName.ts',
+      'src/frontend/components/UI/WelcomeModal/welcomeState.ts',
+      'src/frontend/helpers/resolveBootLanguage.ts',
+      'src/frontend/screens/Game/GamePage/components/bridgeRouteDisplay.ts',
+      'src/frontend/screens/Library/components/InstallModal/crossoverInstallRisk.ts',
+      'src/frontend/screens/Library/components/InstallModal/steamBridgeRouteLine.ts'
+    ]
+
+    it('W1: all six are in the committed blocking scope and OUT of the D-18 allowlist', () => {
+      const realScope = JSON.parse(
+        readFileSync('meta/i18nGateScope.json', 'utf-8')
+      ) as { files: string[] }
+      const realAllowlist = JSON.parse(
+        readFileSync('meta/i18nGateAllowlist.json', 'utf-8')
+      ) as Array<{ file: string }>
+      const allowlistFiles = realAllowlist.map((entry) => entry.file)
+
+      for (const file of SIX) {
+        expect(realScope.files).toContain(file)
+        expect(allowlistFiles).not.toContain(file)
+      }
+    })
+
+    it('W2: the BLOCKING report attributes zero violations to any of the six', () => {
+      const report = scanScope()
+      for (const file of SIX) {
+        expect(report.violations.filter((v) => v.file === file)).toHaveLength(0)
+      }
+    })
+  })
+
   describe('stale exemption', () => {
     let dir: string
 

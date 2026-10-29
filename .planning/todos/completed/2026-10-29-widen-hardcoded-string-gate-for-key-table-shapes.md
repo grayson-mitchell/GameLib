@@ -44,3 +44,25 @@ debt in `DECLARED_UNSCANNED_DEBT` in `meta/__tests__/genI18nGateScope.test.ts`.
 - Then promote the six files into `meta/i18nGateScope.json` (sorted position, hand-edited)
   and remove their temporary entries from `DECLARED_UNSCANNED_DEBT`; update the scope
   counts pinned in `genI18nGateScope.test.ts` (A0/A2).
+
+## Resolution
+
+Fix commit: see `git log --grep=quick-261029-oog` (gate widening, then refactors/scope promotion).
+
+Root cause and fix per shape:
+
+1. Bare key paths (welcomeState, bridgeRouteDisplay, steamBridgeRouteLine): camelCase segments defeat the
+   all-lowercase `DOMAIN_RE` discard. Fix: new counted exemption `isBareI18nKeyPathLiteral` (3+ lowerCamel
+   segments, optional `ns:`, no whitespace; `key:` slot excluded so the pairing-completeness fixture holds).
+2. crossoverInstallRisk.ts: correction, NOT a tuple shape. These are direct `tGamelib(key, default)` calls missed
+   because the parameter was typed with the local alias `TGamelibLike`, which `T_FUNC_TYPE_RE` does not match.
+   Fix: renamed the local type to `TFunc` (source-only; no gate widening).
+3. buttonClassName.ts: new discard `isClassNameFunctionReturn` (returned class list, `*ClassName` function,
+   hyphen/underscore token required).
+4. resolveBootLanguage.ts: `logFallback` retyped `typeof window.api.logError`; new resolution-based discard
+   `isInjectedDiagnosticLoggerArgument` (declared type must be an exempt diagnostic channel; never name-based).
+
+Each exemption has paired negative fixtures. Allowlist untouched. Six files promoted into
+`meta/i18nGateScope.json` (241 files), removed from `DECLARED_UNSCANNED_DEBT`, A0/A2 re-pinned.
+
+Status: code fix, no live gate needed.

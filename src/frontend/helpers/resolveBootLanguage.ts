@@ -13,6 +13,8 @@
  * `index.tsx`) so this silent-fallback mechanism is unit-testable without mocking
  * `configStore`/`localStorage`/`window.api`. No change to resolution precedence itself:
  * no logic defect was found in the fallback order, only this observability gap.
+ * `logFallback` is typed `typeof window.api.logError` (its only real caller) so the
+ * hardcoded-string gate recognizes it as an already-exempt diagnostic channel.
  */
 type ResolvedLanguageSource = 'configStore' | 'localStorage' | 'default'
 
@@ -24,7 +26,7 @@ interface ResolveBootLanguageResult {
 export function resolveBootLanguage(
   configLanguage: string | undefined,
   storedLanguage: string | null,
-  logFallback: (message: string) => void
+  logFallback: typeof window.api.logError
 ): ResolveBootLanguageResult {
   if (configLanguage !== undefined) {
     return { languageCode: configLanguage, resolvedFrom: 'configStore' }

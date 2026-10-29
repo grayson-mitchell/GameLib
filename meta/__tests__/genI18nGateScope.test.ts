@@ -355,15 +355,12 @@ const FIXTURE_DIFF_LINES = [
  * `scanScope({ extraFiles })` and were hand-inserted into
  * `meta/i18nGateScope.json` in sorted position. DECLARED_UNSCANNED_DEBT needs
  * no edit.
+ *
+ * 2026-10-29 (quick 261029-oog): scope 235 -> 241, fork-touched unchanged at
+ * 287; the six 56-30 A-17 temporary-debt files promoted after the gate
+ * widening; DECLARED_UNSCANNED_DEBT -6.
  */
 const DECLARED_UNSCANNED_DEBT = [
-  // TEMPORARY (56-30 A-17): removed by todo 2026-10-29-widen-hardcoded-string-gate-for-key-table-shapes
-  'src/frontend/components/UI/DialogHandler/components/MessageBoxModal/buttonClassName.ts',
-  'src/frontend/components/UI/WelcomeModal/welcomeState.ts',
-  'src/frontend/helpers/resolveBootLanguage.ts',
-  'src/frontend/screens/Game/GamePage/components/bridgeRouteDisplay.ts',
-  'src/frontend/screens/Library/components/InstallModal/crossoverInstallRisk.ts',
-  'src/frontend/screens/Library/components/InstallModal/steamBridgeRouteLine.ts',
   'src/frontend/__mocks__/svgReactStub.tsx',
   'src/frontend/blankRenderProbe.ts',
   'src/frontend/components/Tour/Tour.tsx',
@@ -1122,8 +1119,8 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 235-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 287-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(235)
+  it('A0 fixture sanity: the seeded scope is the REAL 241-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 287-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(241)
     expect(forkTouchedSnapshot.files.length).toBe(287)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
@@ -1165,7 +1162,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 235 -> 287 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 241 -> 287 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
