@@ -1,0 +1,75 @@
+// Pill chip + vertical divider, shared by ConsoleMode and the Games filter
+// panel's quick-filter row (quick 261029-riq). Moved verbatim from
+// ConsoleMode/index.scss; the compiled console CSS is unchanged.
+@mixin chip($padding: 8px 16px, $font-size: 0.9rem) {
+  appearance: none;
+  border: 1px solid
+    color-mix(in srgb, var(--text-default, #eae8e5) 20%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--background-darker, #1a1a20) 60%,
+    transparent
+  );
+  color: var(--text-default, #eae8e5);
+  padding: $padding;
+  border-radius: 999px;
+  font-size: $font-size;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+
+  &:hover {
+    border-color: var(--accent, #0080ff);
+    outline: none;
+  }
+
+  /* Focus is deliberately louder than hover (quick 260926-acw): a two-tone
+     ring plus an accent-tinted fill, driven by the shared tokens in
+     themes.scss. The `:focus:is(body.controllerLayout *)` arm covers
+     gamepad-driven script `.focus()` calls that :focus-visible alone would
+     miss (see gamepad.ts / ConsoleMode/index.tsx doTab). */
+  &:focus-visible,
+  &:focus:is(body.controllerLayout *) {
+    outline: var(--focus-ring-width, 3px) solid
+      var(--focus-ring-color, var(--accent, #0080ff));
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--focus-ring-halo, #000);
+    background: var(--focus-ring-fill);
+  }
+
+  &:hover.active {
+    border: 1px solid
+      color-mix(in srgb, var(--text-title, #eae8e5) 90%, transparent);
+    background: color-mix(in srgb, var(--accent, #1a1a20) 60%, transparent);
+    outline: none;
+  }
+
+  &.active:focus-visible,
+  &.active:focus:is(body.controllerLayout *) {
+    border: 1px solid
+      color-mix(in srgb, var(--text-title, #eae8e5) 90%, transparent);
+    background: color-mix(in srgb, var(--accent, #1a1a20) 60%, transparent);
+    outline: var(--focus-ring-width, 3px) solid
+      var(--focus-ring-color, var(--accent, #0080ff));
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--focus-ring-halo, #000);
+  }
+
+  &.active {
+    border: 1px solid
+      color-mix(in srgb, var(--text-title, #eae8e5) 70%, transparent);
+    background: color-mix(in srgb, var(--accent, #1a1a20) 30%, transparent);
+    color: var(--text-title, #fff);
+  }
+}
+
+@mixin divider-vertical {
+  height: 60%;
+  margin-left: 0.2rem;
+  margin-right: 0.2rem;
+  border: 1px solid
+    color-mix(in srgb, var(--text-title, #eae8e5) 30%, transparent);
+}
