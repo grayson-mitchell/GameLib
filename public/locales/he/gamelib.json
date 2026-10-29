@@ -390,6 +390,11 @@
         "checkingSteamInstallOptions": "בודק אפשרויות התקנה…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam עסוק בכניסה ל-GameLib. נסו ללחוץ על שחק שוב בעוד רגע.",
+            "gameRunning": "צאו מהמשחק שרץ ב-Steam ואז לחצו על שחק כדי לסיים את ההגדרה של {{game}}.",
+            "quitTimeout": "Steam לא נסגר ולכן לא ניתן היה להגדיר את {{game}}. סגרו את Steam ולחצו על שחק שוב."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

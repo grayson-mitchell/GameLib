@@ -285,6 +285,11 @@
         "checkingSteamInstallOptions": "Installationsoptionen werden geprüft…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam ist gerade mit einer GameLib-Anmeldung beschäftigt. Versuche es gleich noch einmal mit Spielen.",
+            "gameRunning": "Beende das Spiel, das in Steam läuft, und drücke dann Spielen, um die Einrichtung von {{game}} abzuschließen.",
+            "quitTimeout": "Steam wurde nicht beendet, daher konnte {{game}} nicht eingerichtet werden. Beende Steam und drücke erneut Spielen."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

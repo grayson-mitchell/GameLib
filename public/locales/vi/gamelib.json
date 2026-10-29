@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Đang kiểm tra tùy chọn cài đặt…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam đang bận xử lý đăng nhập GameLib. Hãy thử nhấn Chơi lại sau giây lát.",
+            "gameRunning": "Hãy thoát trò chơi đang chạy trong Steam, rồi nhấn Chơi để hoàn tất thiết lập {{game}}.",
+            "quitTimeout": "Steam không thoát nên không thể thiết lập {{game}}. Hãy thoát Steam rồi nhấn Chơi lại."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

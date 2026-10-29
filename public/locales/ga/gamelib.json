@@ -404,6 +404,11 @@
         "checkingSteamInstallOptions": "Rogha suiteála á seiceáil…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Tá Steam gnóthach le síniú isteach GameLib. Bain triail eile as Imir i gceann nóiméid.",
+            "gameRunning": "Scoir den chluiche atá ag rith i Steam, ansin brúigh Imir chun {{game}} a shocrú.",
+            "quitTimeout": "Níor scoir Steam, mar sin níorbh fhéidir {{game}} a shocrú. Scoir de Steam agus brúigh Imir arís."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

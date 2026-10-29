@@ -390,6 +390,11 @@
         "checkingSteamInstallOptions": "Verificando opções de instalação…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "O Steam está ocupado com um login do GameLib. Tente Jogar novamente em instantes.",
+            "gameRunning": "Feche o jogo em execução no Steam e depois pressione Jogar para concluir a configuração de {{game}}.",
+            "quitTimeout": "O Steam não fechou, então não foi possível configurar {{game}}. Feche o Steam e pressione Jogar novamente."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "ഇൻസ്റ്റാൾ ഓപ്ഷനുകൾ പരിശോധിക്കുന്നു…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam ഒരു GameLib സൈൻ-ഇൻ കൈകാര്യം ചെയ്യുകയാണ്. അല്പസമയത്തിനു ശേഷം വീണ്ടും കളിക്കുക അമർത്തുക.",
+            "gameRunning": "Steam-ൽ പ്രവർത്തിക്കുന്ന ഗെയിം അടയ്ക്കുക, തുടർന്ന് {{game}} സജ്ജീകരിക്കുന്നത് പൂർത്തിയാക്കാൻ കളിക്കുക അമർത്തുക.",
+            "quitTimeout": "Steam അടഞ്ഞില്ല, അതിനാൽ {{game}} സജ്ജീകരിക്കാൻ കഴിഞ്ഞില്ല. Steam അടച്ച് വീണ്ടും കളിക്കുക അമർത്തുക."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Instalazio-aukerak egiaztatzen…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam GameLib saio-hasiera batekin lanpetuta dago. Saiatu Jolastu berriro une bat barru.",
+            "gameRunning": "Itxi Steam-en martxan dagoen jokoa, eta sakatu Jolastu {{game}} konfiguratzen amaitzeko.",
+            "quitTimeout": "Steam ez da itxi, beraz ezin izan da {{game}} konfiguratu. Itxi Steam eta sakatu Jolastu berriro."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

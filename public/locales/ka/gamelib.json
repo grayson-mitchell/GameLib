@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "ინსტალაციის ვარიანტების შემოწმება…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam დაკავებულია GameLib-ის შესვლით. სცადეთ „თამაში“ ცოტა ხანში ხელახლა.",
+            "gameRunning": "დახურეთ Steam-ში გაშვებული თამაში, შემდეგ დააჭირეთ „თამაში“, რომ {{game}}-ის მორგება დასრულდეს.",
+            "quitTimeout": "Steam არ დაიხურა, ამიტომ {{game}} ვერ მოირგო. დახურეთ Steam და ისევ დააჭირეთ „თამაში“."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

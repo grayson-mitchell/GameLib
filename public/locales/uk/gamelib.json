@@ -397,6 +397,11 @@
         "checkingSteamInstallOptions": "Перевірка варіантів встановлення…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam зайнятий входом у GameLib. Спробуйте натиснути «Грати» ще раз за мить.",
+            "gameRunning": "Закрийте гру, запущену в Steam, а потім натисніть «Грати», щоб завершити налаштування {{game}}.",
+            "quitTimeout": "Steam не закрився, тому налаштувати {{game}} не вдалося. Закрийте Steam і знову натисніть «Грати»."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

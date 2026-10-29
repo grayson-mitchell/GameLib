@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "O'rnatish parametrlari tekshirilmoqda…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam GameLib kirishi bilan band. Birozdan keyin yana O'ynash tugmasini bosing.",
+            "gameRunning": "Steam'da ishlayotgan o'yinni yoping, so'ng {{game}} sozlamasini yakunlash uchun O'ynash tugmasini bosing.",
+            "quitTimeout": "Steam yopilmadi, shuning uchun {{game}} sozlanmadi. Steam'ni yoping va yana O'ynash tugmasini bosing."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

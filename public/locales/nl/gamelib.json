@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Installatieopties controleren…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam is bezig met een GameLib-aanmelding. Probeer Spelen zo opnieuw.",
+            "gameRunning": "Sluit de game die in Steam draait af en druk dan op Spelen om de installatie van {{game}} af te ronden.",
+            "quitTimeout": "Steam is niet afgesloten, dus {{game}} kon niet worden ingesteld. Sluit Steam af en druk opnieuw op Spelen."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

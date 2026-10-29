@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Tarkistetaan asennusvaihtoehtoja…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam on kiireinen GameLib-kirjautumisen kanssa. Yritä Pelaa uudelleen hetken kuluttua.",
+            "gameRunning": "Sulje Steamissä käynnissä oleva peli ja viimeistele sitten pelin {{game}} käyttöönotto painamalla Pelaa.",
+            "quitTimeout": "Steam ei sulkeutunut, joten peliä {{game}} ei voitu ottaa käyttöön. Sulje Steam ja paina Pelaa uudelleen."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

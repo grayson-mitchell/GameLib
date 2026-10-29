@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Έλεγχος επιλογών εγκατάστασης…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Το Steam είναι απασχολημένο με μια σύνδεση στο GameLib. Δοκιμάστε ξανά το Παίξε σε λίγο.",
+            "gameRunning": "Κλείστε το παιχνίδι που εκτελείται στο Steam και πατήστε Παίξε για να ολοκληρωθεί η ρύθμιση του {{game}}.",
+            "quitTimeout": "Το Steam δεν έκλεισε, οπότε δεν ήταν δυνατή η ρύθμιση του {{game}}. Κλείστε το Steam και πατήστε ξανά Παίξε."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

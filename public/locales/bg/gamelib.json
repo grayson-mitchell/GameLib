@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Проверка на опциите за инсталиране…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam е зает с вход в GameLib. Опитайте отново с „Пусни“ след малко.",
+            "gameRunning": "Затворете играта, която работи в Steam, и после натиснете „Пусни“, за да завършите настройката на {{game}}.",
+            "quitTimeout": "Steam не се затвори, затова {{game}} не можа да бъде настроена. Затворете Steam и натиснете „Пусни“ отново."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

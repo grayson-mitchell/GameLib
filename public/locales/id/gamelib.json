@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Memeriksa opsi instalasi…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam sedang sibuk dengan proses masuk GameLib. Coba Mainkan lagi sebentar lagi.",
+            "gameRunning": "Keluar dari gim yang berjalan di Steam, lalu tekan Mainkan untuk menyelesaikan penyiapan {{game}}.",
+            "quitTimeout": "Steam tidak keluar, sehingga {{game}} tidak dapat disiapkan. Keluar dari Steam lalu tekan Mainkan lagi."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

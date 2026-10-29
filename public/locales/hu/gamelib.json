@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Telepítési lehetőségek ellenőrzése…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "A Steam egy GameLib-bejelentkezéssel van elfoglalva. Próbálja újra a Játék gombot egy pillanat múlva.",
+            "gameRunning": "Lépjen ki a Steamben futó játékból, majd nyomja meg a Játék gombot a(z) {{game}} beállításának befejezéséhez.",
+            "quitTimeout": "A Steam nem lépett ki, ezért a(z) {{game}} beállítása nem sikerült. Lépjen ki a Steamből, és nyomja meg újra a Játék gombot."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Comprobando opcións de instalación…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam está ocupado cun inicio de sesión de GameLib. Volve premer Xogar nun momento.",
+            "gameRunning": "Pecha o xogo que se executa en Steam e despois preme Xogar para rematar de configurar {{game}}.",
+            "quitTimeout": "Steam non se pechou, así que non se puido configurar {{game}}. Pecha Steam e volve premer Xogar."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

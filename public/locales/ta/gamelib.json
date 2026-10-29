@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "நிறுவல் விருப்பங்களை சரிபார்க்கிறது…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam ஒரு GameLib உள்நுழைவில் பிஸியாக உள்ளது. சிறிது நேரத்தில் மீண்டும் விளையாடு என்பதை அழுத்தவும்.",
+            "gameRunning": "Steam-இல் இயங்கும் விளையாட்டை மூடி, பின்னர் {{game}} அமைப்பை முடிக்க விளையாடு என்பதை அழுத்தவும்.",
+            "quitTimeout": "Steam மூடப்படவில்லை, எனவே {{game}} ஐ அமைக்க முடியவில்லை. Steam ஐ மூடி மீண்டும் விளையாடு என்பதை அழுத்தவும்."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

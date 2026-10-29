@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Kontrollerer installationsindstillinger…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam er optaget af en GameLib-login. Prøv Spil igen om et øjeblik.",
+            "gameRunning": "Luk spillet, der kører i Steam, og tryk derefter på Spil for at gøre {{game}} færdig.",
+            "quitTimeout": "Steam blev ikke lukket, så {{game}} kunne ikke sættes op. Luk Steam, og tryk på Spil igen."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

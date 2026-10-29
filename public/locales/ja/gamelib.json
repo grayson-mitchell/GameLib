@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "インストールオプションを確認中…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam は GameLib のサインイン処理中です。しばらくしてからもう一度「プレイ」を押してください。",
+            "gameRunning": "Steam で実行中のゲームを終了してから、「プレイ」を押して {{game}} のセットアップを完了してください。",
+            "quitTimeout": "Steam が終了しなかったため、{{game}} をセットアップできませんでした。Steam を終了して、もう一度「プレイ」を押してください。"
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

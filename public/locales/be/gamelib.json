@@ -397,6 +397,11 @@
         "checkingSteamInstallOptions": "Праверка варыянтаў усталёўкі…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam заняты ўваходам у GameLib. Паспрабуйце націснуць «Гуляць» яшчэ раз крыху пазней.",
+            "gameRunning": "Закрыйце гульню, запушчаную ў Steam, а потым націсніце «Гуляць», каб завяршыць наладу {{game}}.",
+            "quitTimeout": "Steam не закрыўся, таму не атрымалася наладзіць {{game}}. Закрыйце Steam і націсніце «Гуляць» яшчэ раз."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

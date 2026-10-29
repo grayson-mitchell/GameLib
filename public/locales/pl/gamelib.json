@@ -397,6 +397,11 @@
         "checkingSteamInstallOptions": "Sprawdzanie opcji instalacji…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam jest zajęty logowaniem do GameLib. Spróbuj ponownie kliknąć Graj za chwilę.",
+            "gameRunning": "Zamknij grę uruchomioną w Steam, a następnie kliknij Graj, aby dokończyć konfigurację gry {{game}}.",
+            "quitTimeout": "Steam się nie zamknął, więc nie udało się skonfigurować gry {{game}}. Zamknij Steam i ponownie kliknij Graj."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

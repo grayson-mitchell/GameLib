@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "正在檢查安裝選項……"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam 正忙於處理 GameLib 登入。請稍後再按「開始遊戲」。",
+            "gameRunning": "請結束在 Steam 中執行的遊戲，然後按「開始遊戲」以完成 {{game}} 的設定。",
+            "quitTimeout": "Steam 未結束，因此無法設定 {{game}}。請結束 Steam，然後再按一次「開始遊戲」。"
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

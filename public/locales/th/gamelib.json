@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "กำลังตรวจสอบตัวเลือกการติดตั้ง…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam กำลังยุ่งกับการลงชื่อเข้าใช้ GameLib ลองกดเล่นอีกครั้งในอีกสักครู่",
+            "gameRunning": "ปิดเกมที่กำลังทำงานใน Steam แล้วกดเล่นเพื่อตั้งค่า {{game}} ให้เสร็จ",
+            "quitTimeout": "Steam ไม่ได้ปิด จึงตั้งค่า {{game}} ไม่ได้ ปิด Steam แล้วกดเล่นอีกครั้ง"
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

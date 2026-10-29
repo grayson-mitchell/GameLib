@@ -380,6 +380,11 @@
         "checkingSteamInstallOptions": "Paigaldusvalikute kontrollimine…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam on GameLibi sisselogimisega hõivatud. Proovi hetke pärast uuesti Mängi.",
+            "gameRunning": "Sulge Steamis töötav mäng ja vajuta siis Mängi, et {{game}} seadistamine lõpule viia.",
+            "quitTimeout": "Steam ei sulgunud, seega ei õnnestunud {{game}} seadistada. Sulge Steam ja vajuta uuesti Mängi."
+        },
         "bridge": {
             "forceBottle": {
                 "help": "Paigaldub jagatud Steami kliendisse pudelis. Selle hilisem muutmine tähendab mängu uuesti paigaldamist.",

@@ -397,6 +397,11 @@
         "checkingSteamInstallOptions": "Kontrolujú sa možnosti inštalácie…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam je zaneprázdnený prihlásením do GameLib. Skúste Hrať znova o chvíľu.",
+            "gameRunning": "Ukončite hru spustenú v službe Steam a potom stlačte Hrať, aby sa dokončilo nastavenie hry {{game}}.",
+            "quitTimeout": "Steam sa neukončil, preto sa hru {{game}} nepodarilo nastaviť. Ukončite Steam a znova stlačte Hrať."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

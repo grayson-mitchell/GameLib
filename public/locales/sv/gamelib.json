@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Kontrollerar installationsalternativ …"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam är upptaget med en GameLib-inloggning. Försök med Spela igen om en stund.",
+            "gameRunning": "Avsluta spelet som körs i Steam och tryck sedan på Spela för att slutföra installationen av {{game}}.",
+            "quitTimeout": "Steam avslutades inte, så {{game}} kunde inte ställas in. Avsluta Steam och tryck på Spela igen."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

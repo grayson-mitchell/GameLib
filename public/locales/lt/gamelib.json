@@ -397,6 +397,11 @@
         "checkingSteamInstallOptions": "Tikrinamos diegimo parinktys…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam užsiėmęs GameLib prisijungimu. Po akimirkos dar kartą bandykite Žaisti.",
+            "gameRunning": "Uždarykite žaidimą, veikiantį Steam, tada paspauskite Žaisti, kad baigtumėte nustatyti {{game}}.",
+            "quitTimeout": "Steam neužsidarė, todėl {{game}} nepavyko nustatyti. Uždarykite Steam ir dar kartą paspauskite Žaisti."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

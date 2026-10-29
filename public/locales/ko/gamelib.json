@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "설치 옵션 확인 중…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam이 GameLib 로그인 처리 중입니다. 잠시 후 플레이를 다시 눌러 주세요.",
+            "gameRunning": "Steam에서 실행 중인 게임을 종료한 다음 플레이를 눌러 {{game}} 설정을 완료하세요.",
+            "quitTimeout": "Steam이 종료되지 않아 {{game}}을(를) 설정할 수 없었습니다. Steam을 종료하고 플레이를 다시 눌러 주세요."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

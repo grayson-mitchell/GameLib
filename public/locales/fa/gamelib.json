@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "در حال بررسی گزینه‌های نصب…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam در حال ورود به GameLib مشغول است. کمی بعد دوباره اجرا را بزنید.",
+            "gameRunning": "بازی در حال اجرا در Steam را ببندید، سپس برای تکمیل راه‌اندازی {{game}} اجرا را بزنید.",
+            "quitTimeout": "Steam بسته نشد، بنابراین {{game}} راه‌اندازی نشد. Steam را ببندید و دوباره اجرا را بزنید."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

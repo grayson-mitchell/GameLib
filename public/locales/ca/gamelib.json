@@ -390,6 +390,11 @@
         "checkingSteamInstallOptions": "S'estan comprovant les opcions d'instal·lació…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam està ocupat amb un inici de sessió de GameLib. Torna a provar Juga d'aquí a un moment.",
+            "gameRunning": "Tanca el joc que s'executa a Steam i després prem Juga per acabar de configurar {{game}}.",
+            "quitTimeout": "Steam no s'ha tancat, així que no s'ha pogut configurar {{game}}. Tanca Steam i torna a prémer Juga."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

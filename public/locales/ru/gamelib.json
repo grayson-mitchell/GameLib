@@ -397,6 +397,11 @@
         "checkingSteamInstallOptions": "Проверка параметров установки…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam занят входом в GameLib. Повторите нажатие «Играть» через минуту.",
+            "gameRunning": "Закройте игру, запущенную в Steam, затем нажмите «Играть», чтобы завершить настройку {{game}}.",
+            "quitTimeout": "Steam не закрылся, поэтому настроить {{game}} не удалось. Закройте Steam и снова нажмите «Играть»."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

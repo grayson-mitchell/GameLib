@@ -411,6 +411,11 @@
         "checkingSteamInstallOptions": "جارٍ التحقق من خيارات التثبيت…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam مشغول بتسجيل دخول GameLib. حاول الضغط على العب بعد قليل.",
+            "gameRunning": "أغلق اللعبة التي تعمل في Steam، ثم اضغط على العب لإكمال إعداد {{game}}.",
+            "quitTimeout": "لم يُغلق Steam، لذا تعذّر إعداد {{game}}. أغلق Steam واضغط على العب مرة أخرى."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

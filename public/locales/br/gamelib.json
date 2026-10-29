@@ -404,6 +404,11 @@
         "checkingSteamInstallOptions": "Emañ ar gwiriañ dibarzhioù staliañ…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam a zo oc'h embann un ur-gevreañ GameLib. Klaskit c'hoari en-dro a-benn nebeut.",
+            "gameRunning": "Serrit ar c'hoari o ruzañ e Steam, ha pouezit war C'hoari evit echuiñ lakaat {{game}} en e blaz.",
+            "quitTimeout": "N'eo ket serret Steam, setu n'eo ket bet posupl lakaat {{game}} en e blaz. Serrit Steam ha pouezit war C'hoari en-dro."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

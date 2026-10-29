@@ -390,6 +390,11 @@
         "checkingSteamInstallOptions": "Proveravanje opcija instalacije…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam је заузет пријавом у GameLib. Покушајте поново са Играј за тренутак.",
+            "gameRunning": "Затворите игру која ради у Steam-у, па притисните Играј да завршите подешавање игре {{game}}.",
+            "quitTimeout": "Steam се није затворио, па игру {{game}} није било могуће подесити. Затворите Steam и поново притисните Играј."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

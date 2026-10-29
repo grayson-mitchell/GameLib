@@ -383,6 +383,11 @@
         "checkingSteamInstallOptions": "Quraşdırma seçimləri yoxlanılır…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam GameLib girişi ilə məşğuldur. Bir az sonra yenidən Oyna düyməsini sınayın.",
+            "gameRunning": "Steam-də işləyən oyunu bağlayın, sonra {{game}} quraşdırmasını tamamlamaq üçün Oyna düyməsini basın.",
+            "quitTimeout": "Steam bağlanmadı, ona görə {{game}} quraşdırıla bilmədi. Steam-i bağlayın və yenidən Oyna düyməsini basın."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

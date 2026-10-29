@@ -390,6 +390,11 @@
         "checkingSteamInstallOptions": "Se verifică opțiunile de instalare…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam este ocupat cu o autentificare GameLib. Încearcă din nou Joacă peste un moment.",
+            "gameRunning": "Închide jocul care rulează în Steam, apoi apasă Joacă pentru a finaliza configurarea {{game}}.",
+            "quitTimeout": "Steam nu s-a închis, așa că {{game}} nu a putut fi configurat. Închide Steam și apasă din nou Joacă."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",
