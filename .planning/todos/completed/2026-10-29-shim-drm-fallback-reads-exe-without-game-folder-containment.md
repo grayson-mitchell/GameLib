@@ -27,3 +27,9 @@ Latent: nothing live hit it. The no-bottle branch is rare, and both reads are bo
 ## Next
 
 Pull 261029-m0u's `containedReal` (`drmScanExe.ts`) out into a shared, exported helper, or add a small exported wrapper that does the realpath containment for a single exe. Use it in the no-bottle branch for both `detectDrmWrapper` and the CEG `drmSource`. A refused or unresolvable exe gives `drmWrapper: undefined` and no `drm` signal, with a `logWarning`. Add a `shimGenerate` test: no bottle, and an exe symlink that escapes its game folder, gets refused and is never read.
+
+## Resolution
+
+2026-10-29: fixed by quick 261029-my4 (code commit 1bff92963). `containedGameExeReal` was exported from drmScanExe.ts; the no-bottle branch of placeShimForGame now scans only the contained real path for both `detectDrmWrapper` and the CEG `detectExeSteamDrm`. A refused or unresolvable exe yields no drmWrapper and no drm, with a logWarning. Tests cover an escaping symlink for both scanners plus a contained control. The branch is practically unreachable, because placeShimForGameInner rejects the same null bottle first; the tests force it with a one-shot spy.
+
+Deliberately left out of scope: `readFileEffectiveArch` in withDrmWrapper and the import scan in placeShimForGameInner still read the lexical exe path (bounded header reads, execute nothing).
