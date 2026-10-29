@@ -104,7 +104,7 @@ describe("login_chrome_css_script( is called exactly once in production code, in
   test('exactly one non-definition call site exists, and it sits inside the if visible { block', () => {
     const code = productionCode(loadMainRsCode())
     // Negative lookbehind excludes the `fn login_chrome_css_script(` definition itself --
-    // mirrors this file's `login_cancel_strip_script(` sibling gate's identical idiom.
+    // the usual definition-vs-call idiom.
     const callSites = code.match(/(?<!fn )login_chrome_css_script\(/g) ?? []
     expect(callSites.length).toBe(1)
 
@@ -127,35 +127,52 @@ describe("login_chrome_css_script( is called exactly once in production code, in
 
 describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE any #[cfg( block', () => {
   /**
-   * Slices the visible block between the (macOS-gated) `login_origin_banner_script(` call
-   * and the (ungated) `login_chrome_css_script(` call. A slice that contains a `}` (the
-   * macOS block already closed) and no `#[cfg(` (no new cfg block opened) proves the CSS
-   * injection sits outside any cfg gate, exactly D-2.
+   * quick-261029-osq: the macOS-gated `login_origin_banner_script(` call this gate used to
+   * slice from is deleted (the sheet chrome is now native), so the gate is re-anchored on the
+   * `login_chrome_css_script(` call line itself. It returns the visible block's text up to
+   * that call, and the D-2 meaning is preserved as two checks over it:
+   *   (a) brace depth at the call is exactly 1 -- only the `if visible {` brace is open, so
+   *       the call is not nested inside a `#[cfg(...)] { ... }` block; and
+   *   (b) the nearest preceding non-empty line is not a `#[cfg(` attribute, so the call
+   *       statement does not carry its own gate.
    */
-  function betweenBannerAndCssCalls(armBody: string): string {
+  function prefixBeforeCssCall(armBody: string): string {
     const visibleBlock = extractBracedBlock(armBody, 'if visible {')
-    const bannerIdx = visibleBlock.indexOf('login_origin_banner_script(')
     const cssIdx = visibleBlock.indexOf('login_chrome_css_script(')
-    expect(bannerIdx).toBeGreaterThan(-1)
-    expect(cssIdx).toBeGreaterThan(bannerIdx)
-    return visibleBlock.slice(bannerIdx, cssIdx)
+    expect(cssIdx).toBeGreaterThan(-1)
+    return visibleBlock.slice(0, cssIdx)
+  }
+  function depthAtCall(prefix: string): number {
+    let depth = 0
+    for (const ch of prefix) {
+      if (ch === '{') depth++
+      else if (ch === '}') depth--
+    }
+    return depth
+  }
+  function previousLine(prefix: string): string {
+    // Drop the call's own (partial) line, then take the nearest non-empty line above it.
+    const lines = prefix.split('\n').slice(0, -1)
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i].trim() !== '') return lines[i]
+    }
+    return ''
   }
 
-  test('the real source: the slice between the two calls closes the macOS block (contains }) and opens no new cfg (does not contain #[cfg()', () => {
+  test('the real source: the CSS call sits at brace depth 1 of the visible block (no enclosing cfg block) and has no cfg attribute on the line above', () => {
     const code = productionCode(loadMainRsCode())
     const armBody = extractHumbleLoginOpenArmBody(code)
-    const between = betweenBannerAndCssCalls(armBody)
-    expect(between).toContain('}')
-    expect(between).not.toContain('#[cfg(')
+    const prefix = prefixBeforeCssCall(armBody)
+    expect(depthAtCall(prefix)).toBe(1)
+    expect(previousLine(prefix)).not.toContain('#[cfg(')
   })
 
-  test('RED proof: a synthetic source where the CSS call is nested INSIDE the still-open macOS block fails the "closes the block" half', () => {
+  test('RED proof: a synthetic source where the CSS call is nested INSIDE a macOS block fails the "depth 1" half', () => {
     const synthetic = [
       '"humble_login_open" => {',
       '    if visible {',
       '        #[cfg(target_os = "macos")]',
       '        {',
-      '            builder = builder.initialization_script(&login_origin_banner_script(&origin));',
       '            builder = builder.initialization_script(&login_chrome_css_script());',
       '        }',
       '    }',
@@ -165,25 +182,17 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
     ].join('\n')
     const code = productionCode(loadMainRsCode(synthetic))
     const armBody = extractHumbleLoginOpenArmBody(code)
-    const between = betweenBannerAndCssCalls(armBody)
-    // The macOS block never closed between the two calls -- no `}` appears in the slice --
-    // so the real gate's `expect(between).toContain('}')` would FAIL against this input,
+    // Depth 2 -- the real gate's `expect(depth).toBe(1)` would FAIL against this input,
     // proving that assertion is not vacuously true.
-    expect(between).not.toContain('}')
+    expect(depthAtCall(prefixBeforeCssCall(armBody))).toBe(2)
   })
 
-  test('RED proof: a synthetic source where the CSS call gained its OWN new cfg block fails the "opens no new cfg" half', () => {
+  test('RED proof: a synthetic source where the CSS call gained its OWN cfg attribute fails the "no cfg above" half', () => {
     const synthetic = [
       '"humble_login_open" => {',
       '    if visible {',
       '        #[cfg(target_os = "macos")]',
-      '        {',
-      '            builder = builder.initialization_script(&login_origin_banner_script(&origin));',
-      '        }',
-      '        #[cfg(target_os = "macos")]',
-      '        {',
-      '            builder = builder.initialization_script(&login_chrome_css_script());',
-      '        }',
+      '        builder = builder.initialization_script(&login_chrome_css_script());',
       '    }',
       '}',
       '"humble_login_cookies" => {}',
@@ -191,10 +200,9 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
     ].join('\n')
     const code = productionCode(loadMainRsCode(synthetic))
     const armBody = extractHumbleLoginOpenArmBody(code)
-    const between = betweenBannerAndCssCalls(armBody)
-    // A new #[cfg( block was opened between the two calls -- the real gate's
-    // `expect(between).not.toContain('#[cfg(')` would FAIL against this input.
-    expect(between).toContain('#[cfg(')
+    // The attribute line sits directly above the call -- the real gate's
+    // `not.toContain('#[cfg(')` would FAIL against this input.
+    expect(previousLine(prefixBeforeCssCall(armBody))).toContain('#[cfg(')
   })
 })
 

@@ -170,6 +170,12 @@ objc2 = "0.6.4"
 # `NSColor`/`NSFont` added (quick-261029-o1w): the GOG login sheet's native cancel button is
 # styled to match the other sheets' injected cancel box. `NSColor` is already unioned in via
 # `tao`'s own request; `NSFont` is net-new surface.
+# `NSBox`/`NSText`/`NSParagraphStyle`/`NSAccessibilityProtocols` added (quick-261029-osq): the
+# shared native login-sheet bar. `NSBox` (custom-type fill + 1pt rule) is net-new surface;
+# `NSText` provides `NSTextAlignment` (centred origin label) and `NSParagraphStyle` provides
+# `NSLineBreakMode` (tail truncation) -- both net-new unless tao/wry already union them;
+# `NSAccessibilityProtocols` provides `NSAccessibility::setAccessibilityLabel` for the x
+# button's "Cancel sign-in" name (the old injected strip's aria-label).
 objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "NSView",
     "NSWindow",
@@ -182,6 +188,10 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "NSTextField",
     "NSColor",
     "NSFont",
+    "NSBox",
+    "NSText",
+    "NSParagraphStyle",
+    "NSAccessibilityProtocols",
     "block2",
 ] }
 objc2-foundation = "0.3.2"

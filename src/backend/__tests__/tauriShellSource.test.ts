@@ -1626,36 +1626,33 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
   // in the slice to `.build()`, which a fully unguarded call satisfies identically. This test
   // is two-sided: it pins both that `set_title` sits INSIDE the `is_started` guard, and that
   // the two statements D-02 protects (the `page_load_origin` write and the macOS
-  // `login_origin_banner_update_script` eval) sit OUTSIDE it -- with anti-vacuity controls
-  // proving those two statements still exist in the closure at all, so deleting them outright
-  // could not turn the negative assertions green for the wrong reason.
+  // `update_native_login_bar_origin` call, quick-261029-osq -- formerly the banner eval) sit
+  // OUTSIDE it -- with anti-vacuity controls proving those two statements still exist in the
+  // closure at all, so deleting them outright could not turn the negative assertions green for
+  // the wrong reason.
   //
-  // Scoped narrower than the POSITIVE test above: that test slices to `.build()`, which also
-  // spans the `.on_navigation(` closure below `on_page_load` -- looser than it reads. This
-  // test needs the `on_page_load` closure ALONE, or the nesting assertions below would be
-  // measured against the wrong region, so it slices to the NEXT `.on_navigation(` instead.
+  // The `on_page_load` closure is sliced alone, to the following `.build()` (the
+  // `.on_navigation(` closure that used to follow it is deleted, quick-261029-osq).
   //
   // What turns this red once landed: (1) the guard is deleted and the call runs on both
   // events again -- the guard header is absent; (2) the guard is widened to the whole
-  // `if visible {` block -- the origin write and the macOS banner fall inside the guarded
+  // `if visible {` block -- the origin write and the macOS bar update fall inside the guarded
   // slice and the two negative assertions fire; (3) `set_title` is moved out of the guard --
-  // the positive assertion fires; (4) the origin write or the banner is deleted to satisfy
+  // the positive assertion fires; (4) the origin write or the bar update is deleted to satisfy
   // the negatives -- the two control assertions fire. What it does NOT cover: this is a
   // source-shape gate, not a behavioural one -- it cannot observe a title bar.
-  test('quick 260927-o3h REGRESSION: the on_page_load set_title refresh is guarded to PageLoadEvent::Started only, while the page_load_origin write and the macOS origin banner keep running on both events', () => {
+  test('quick 260927-o3h REGRESSION: the on_page_load set_title refresh is guarded to PageLoadEvent::Started only, while the page_load_origin write and the macOS native-bar origin update keep running on both events', () => {
     const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
     const pageLoadStart = armBody.indexOf('.on_page_load(')
     expect(pageLoadStart).toBeGreaterThan(-1)
-    const onNavigationStart = armBody.indexOf('.on_navigation(', pageLoadStart)
-    expect(onNavigationStart).toBeGreaterThan(pageLoadStart)
-    const onPageLoadClosure = armBody.slice(pageLoadStart, onNavigationStart)
+    const buildStart = armBody.indexOf('.build()', pageLoadStart)
+    expect(buildStart).toBeGreaterThan(pageLoadStart)
+    const onPageLoadClosure = armBody.slice(pageLoadStart, buildStart)
 
     // Anti-vacuity control: proves both protected statements still exist in the closure
-    // BEFORE checking that neither sits inside the guard below. Without this, deleting
-    // `page_load_origin.lock()` or `login_origin_banner_update_script` outright would make
-    // the two negative assertions pass for the wrong reason.
+    // BEFORE checking that neither sits inside the guard below.
     expect(onPageLoadClosure).toContain('page_load_origin.lock()')
-    expect(onPageLoadClosure).toContain('login_origin_banner_update_script')
+    expect(onPageLoadClosure).toContain('update_native_login_bar_origin(')
 
     const guardHeaderIdx = onPageLoadClosure.indexOf('if is_started {')
     expect(guardHeaderIdx).toBeGreaterThan(-1)
@@ -1663,43 +1660,19 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
 
     expect(guardedBlock).toContain('set_title(')
     expect(guardedBlock).not.toContain('page_load_origin.lock()')
-    expect(guardedBlock).not.toContain('login_origin_banner_update_script')
+    expect(guardedBlock).not.toContain('update_native_login_bar_origin(')
   })
 
-  // RETIGHTENED (Phase 34.4.2 Plan 08, REQ-34.4.2-03/04/08), not deleted: this used to be a
-  // blanket "no .on_navigation( at all" guard. Plan 08 adds exactly one sentinel-only,
-  // cancel-only .on_navigation( arm to intercept the login-sheet cancel strip's request --
-  // that does NOT violate the invariant this guard protects, because the invariant is "no
-  // on_navigation-driven login-watch relay" (spike 013: 5 of 8 on_navigation events on
-  // Humble's real login page were third-party iframes; letting a subframe re-arm
-  // notifyLoginNavigated()'s deadline via on_navigation would defeat WR-03's timeout), not
-  // "no on_navigation call of any kind". The assertions below enforce that narrower invariant
-  // precisely: at most one on_navigation call exists, its closure parses the cancel sentinel
-  // and nothing else, and it never touches the login-watch relay's own state
-  // (push_login_window_event/set_title/current_origin/login_event_value) -- those stay
-  // exclusively owned by the .on_page_load( hook, per the POSITIVE test above.
-  //
-  // RETIGHTENED AGAIN (Phase 34.4.2 Plan 13, operator decision D-A): this arm's closure used
-  // to carry a SECOND sentinel (the now-deleted synthesized-right-click poster's), so this
-  // test previously asserted `parse_autofill_request` was present. That sentinel is gone;
-  // this test now asserts `is_login_cancel_request` instead -- the closure parses exactly one
-  // sentinel, and it is the surviving one.
-  test('NEGATIVE/RETIGHTENED: the humble_login_open arm has at most one .on_navigation( call, and that closure ONLY parses the login-cancel sentinel -- it never drives the login-watch relay', () => {
+  // RETIGHTENED AGAIN (quick-261029-osq): the sentinel-only .on_navigation( closure is
+  // deleted with the injected cancel strip (the strip was the only sender of the sentinel). The
+  // invariant this guard protects is unchanged and now simpler: NO on_navigation-driven
+  // login-watch relay -- the arm has no .on_navigation( closure at all, and the relay is
+  // driven only by .on_page_load( (spike 013: 5 of 8 on_navigation events were third-party
+  // iframes).
+  test('NEGATIVE/RETIGHTENED: the humble_login_open arm has no .on_navigation( call -- the login-watch relay is driven only by on_page_load', () => {
     const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
-    const onNavCount = (armBody.match(/\.on_navigation\(/g) ?? []).length
-    expect(onNavCount).toBeLessThanOrEqual(1)
-
-    const onNavStart = armBody.indexOf('.on_navigation(')
-    expect(onNavStart).toBeGreaterThan(-1)
-    const onNavEnd = armBody.indexOf('.build()', onNavStart)
-    expect(onNavEnd).toBeGreaterThan(onNavStart)
-    const onNavBody = armBody.slice(onNavStart, onNavEnd)
-
-    expect(onNavBody).toContain('is_login_cancel_request')
-    expect(onNavBody).not.toContain('push_login_window_event')
-    expect(onNavBody).not.toContain('set_title')
-    expect(onNavBody).not.toContain('current_origin')
-    expect(onNavBody).not.toContain('login_event_value')
+    expect((armBody.match(/\.on_navigation\(/g) ?? []).length).toBe(0)
+    expect(armBody).toContain('.on_page_load(')
   })
 
   test('the login_window_title pure helper exists (AppHandle-free, mirrors clipboard_text_arg/login_window_url_arg)', () => {
@@ -1748,10 +1721,15 @@ const PHASE_34_4_2_NEW_SYMBOLS = [
   'dismiss_login_window_sheet',
   'PRESENTED_LOGIN_SHEETS',
   'MAIN_WINDOW_LABEL',
-  // Plan 08 (mandated close affordance -- cancel strip + Esc backstop, REQ-34.4.2-03):
-  'LOGIN_CANCEL_EXFIL_PATH',
-  'is_login_cancel_request',
-  'login_cancel_strip_script',
+  // Plan 08 (mandated close affordance -- Esc backstop, REQ-34.4.2-03). quick-261029-osq
+  // dropped LOGIN_CANCEL_EXFIL_PATH / is_login_cancel_request / login_cancel_strip_script (the
+  // injected strip and its sentinel are deleted) and added the native bar's cancel target and
+  // origin updater. install_native_login_bar is DELIBERATELY NOT listed: the GOG pristine
+  // window (open_pristine_epic_login_window, which this list is asserted absent from) calls it
+  // for its own sheet; Test 1 of the Plan 08 describe pins its presence instead.
+  'LoginSheetCancelTarget',
+  'update_native_login_bar_origin',
+  'request_login_sheet_cancel',
   'request_login_sheet_cancel',
   // Plan 11 (WR-07/WR-01 fixes -- 34.4.2-REVIEW.md):
   'register_presented_login_sheet',
@@ -1996,11 +1974,13 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
     )
   })
 
+  // quick-261029-osq: the present call site is now gated on `visible && native_bar_installed`
+  // (the bar is installed and confirmed first). The `if visible` property still holds.
   test('Test 3 (INVERTED 2026-08-04): the present call site sits inside an if-visible guard -- hidden reveal/clear windows must never be presented', () => {
     const code = loadMainRsCode()
     const visiblePresentBlock = extractBracedBlock(
       code,
-      'let sheet_presented = if visible {'
+      'let sheet_presented = if visible && native_bar_installed {'
     )
     expect(visiblePresentBlock).toContain('present_login_window_as_sheet(')
   })
@@ -2124,52 +2104,22 @@ describe('Phase 34.4.2 Plan 13 — the in-field autofill mechanism is DELETED (o
     expect(code).not.toContain('_dismissDigitalCredentialsPicker')
   })
 
-  test("Test 4 (the surviving sentinel is alone): the humble_login_open arm's .on_navigation( closure contains is_login_cancel_request and contains no parse_autofill_request", () => {
+  // quick-261029-osq: Plan 13's Test 4 ("the surviving sentinel is alone") and Test 5 ("the
+  // strip survived the deletion") are replaced -- the strip and its sentinel are deleted too.
+  // The lasting content of Test 4 (no autofill sentinel parser) is kept as a file-wide negative.
+  test('Test 4 (the sentinel channel is gone): parse_autofill_request and is_login_cancel_request appear nowhere in the comment-stripped source', () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf('"humble_login_open" => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
-    expect(armEnd).toBeGreaterThan(armStart)
-    const armBody = code.slice(armStart, armEnd)
-    const onNavStart = armBody.indexOf('.on_navigation(')
-    expect(onNavStart).toBeGreaterThan(-1)
-    const onNavEnd = armBody.indexOf('.build()', onNavStart)
-    expect(onNavEnd).toBeGreaterThan(onNavStart)
-    const onNavBody = armBody.slice(onNavStart, onNavEnd)
-    expect(onNavBody).toContain('is_login_cancel_request')
-    expect(onNavBody).not.toContain('parse_autofill_request')
+    expect(code).not.toContain('parse_autofill_request')
+    expect(code).not.toContain('is_login_cancel_request')
   })
 
-  test("Test 5 (the strip survived the deletion): login_cancel_strip_script( is still called exactly once in the comment-stripped PRODUCTION source, inside the humble_login_open arm's if-visible block", () => {
-    const testModStart_code = loadMainRsCode()
-    const testModStart = testModStart_code.indexOf('mod tests {')
-    expect(testModStart).toBeGreaterThan(-1)
-    const code = testModStart_code.slice(0, testModStart)
-    const fileCallSites =
-      code.match(/(?<!fn )login_cancel_strip_script\(/g) ?? []
-    expect(fileCallSites.length).toBe(1)
-
-    const armStart = code.indexOf('"humble_login_open" => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
-    expect(armEnd).toBeGreaterThan(armStart)
-    const armBody = code.slice(armStart, armEnd)
-    const visibleStart = armBody.indexOf('if visible {')
-    expect(visibleStart).toBeGreaterThan(-1)
-    let depth = 0
-    let i = armBody.indexOf('{', visibleStart)
-    const braceStart = i
-    expect(braceStart).toBeGreaterThan(-1)
-    for (; i < armBody.length; i++) {
-      if (armBody[i] === '{') depth++
-      else if (armBody[i] === '}') {
-        depth--
-        if (depth === 0) break
-      }
-    }
-    expect(depth).toBe(0)
-    const visibleBlock = armBody.slice(visibleStart, i + 1)
-    expect(visibleBlock).toContain('login_cancel_strip_script(')
+  test('Test 5 (the injected chrome is gone, the native bar replaces it): none of login_cancel_strip_script, login_origin_banner_script, login_scrollbar_inset_script is referenced; install_native_login_bar is', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('login_cancel_strip_script')
+    expect(code).not.toContain('login_origin_banner_script')
+    expect(code).not.toContain('login_origin_banner_update_script')
+    expect(code).not.toContain('login_scrollbar_inset_script')
+    expect(code).toContain('fn install_native_login_bar(')
   })
 })
 
@@ -2245,57 +2195,54 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
     return code.slice(0, testModStart)
   }
 
-  // The kill-switch-independence clause this test used to carry (asserting the strip's
-  // injection call was absent from both branches of the now-deleted `GAMELIB_AUTOFILL_GLYPH`
-  // statement) is RETIRED (Phase 34.4.2 Plan 13, operator decision D-A) -- not because it
-  // stopped mattering, but because its subject, the kill switch itself, no longer exists. The
-  // exactly-once and inside-`if visible` clauses below are unaffected and stay.
-  test("Test 1: login_cancel_strip_script( is called exactly once in the comment-stripped PRODUCTION source, and that call site sits inside the humble_login_open arm's if-visible block", () => {
+  // quick-261029-osq: REPLACES Plan 08's Test 1 (login_cancel_strip_script( called exactly
+  // once inside `if visible {`) and Test 2 (the .on_navigation( closure parses
+  // is_login_cancel_request). The injected strip, the /login-cancel sentinel and the
+  // .on_navigation( closure are all deleted. The new invariants: on macOS the arm installs the
+  // native bar inside its `if visible` block BEFORE the sheet is presented, and a sheet whose
+  // bar install is unconfirmed is never presented (no sheet without a visible exit,
+  // T-34.4.2-15 / T-osq-02).
+  test("Test 1: install_native_login_bar( is called inside the humble_login_open arm's visible macOS path, before present_login_window_as_sheet(, and a sheet is presented only when the install was confirmed", () => {
     const code = productionCode(loadMainRsCode())
-    // Negative lookbehind excludes the `fn login_cancel_strip_script(` definition itself.
-    const fileCallSites =
-      code.match(/(?<!fn )login_cancel_strip_script\(/g) ?? []
-    expect(fileCallSites.length).toBe(1)
-
     const armBody = extractHumbleLoginOpenArmBody(code)
-    const visibleBlock = extractBracedBlock(armBody, 'if visible {')
-    expect(visibleBlock).toContain('login_cancel_strip_script(')
+    const installIdx = armBody.indexOf('install_native_login_bar(')
+    expect(installIdx).toBeGreaterThan(-1)
+    expect(
+      (armBody.match(/(?<!fn )install_native_login_bar\(/g) ?? []).length
+    ).toBe(1)
+    const presentIdx = armBody.indexOf('present_login_window_as_sheet(')
+    expect(presentIdx).toBeGreaterThan(installIdx)
+    // The install is confirmed over mpsc and gates the sheet; unconfirmed => no sheet.
+    const gate = armBody.indexOf('let native_bar_installed = if visible {')
+    expect(gate).toBeGreaterThan(-1)
+    expect(gate).toBeLessThan(installIdx)
+    expect(armBody).toContain(
+      'let sheet_presented = if visible && native_bar_installed {'
+    )
   })
 
-  // RETIGHTENED (Phase 34.4.2 Plan 13, operator decision D-A): this was an ORDERING
-  // assertion over two sibling sentinels sharing one closure (cancel checked before the
-  // now-deleted autofill sentinel, since it's cheaper and the two paths are disjoint). An
-  // ordering assertion over a deleted sibling is meaningless once that sibling is gone; the
-  // property worth keeping is narrower and stronger: this closure parses exactly one
-  // sentinel, and it is the cancel one.
-  test("Test 2: inside the humble_login_open arm's .on_navigation( closure, is_login_cancel_request appears and parse_autofill_request does not", () => {
-    const code = loadMainRsCode()
+  test('Test 2: the humble_login_open arm has no .on_navigation( closure and no is_login_cancel_request -- the /login-cancel sentinel channel is deleted', () => {
+    const code = productionCode(loadMainRsCode())
     const armBody = extractHumbleLoginOpenArmBody(code)
-    const onNavStart = armBody.indexOf('.on_navigation(')
-    expect(onNavStart).toBeGreaterThan(-1)
-    const onNavEnd = armBody.indexOf('.build()', onNavStart)
-    expect(onNavEnd).toBeGreaterThan(onNavStart)
-    const onNavBody = armBody.slice(onNavStart, onNavEnd)
-
-    expect(onNavBody).toContain('is_login_cancel_request')
-    expect(onNavBody).not.toContain('parse_autofill_request')
+    expect(armBody).not.toContain('.on_navigation(')
+    expect(code).not.toContain('is_login_cancel_request')
+    expect(code).not.toContain('LOGIN_CANCEL_EXFIL_PATH')
   })
 
-  // quick-261029-o1w: DELIBERATELY UPDATED 2 -> 3. The third call is the native GOG cancel
-  // button (strip + Esc + native), sitting inside the PristineLoginCancelTarget define_class.
-  test('Test 3 (ORDERING, load-bearing): request_login_sheet_cancel( is CALLED exactly three times in the file (strip route + Esc route + native GOG button), and its own sliced body calls dismiss_login_window_sheet( at an index strictly less than .close() -- ending the sheet before closing the window', () => {
+  // quick-261029-osq: DELIBERATELY UPDATED 3 -> 2. The injected cancel strip (and its
+  // /login-cancel sentinel route) is gone; the two remaining callers are the Esc route and the
+  // native x on the shared bar (`LoginSheetCancelTarget`, used by BOTH the injected sheets and
+  // the GOG pristine sheet).
+  test('Test 3 (ORDERING, load-bearing): request_login_sheet_cancel( is CALLED exactly two times in the file (Esc route + native bar x), and its own sliced body calls dismiss_login_window_sheet( at an index strictly less than .close() -- ending the sheet before closing the window', () => {
     const code = loadMainRsCode()
     // Negative lookbehind excludes the `fn request_login_sheet_cancel(` definition itself.
     const fileCallSites =
       code.match(/(?<!fn )request_login_sheet_cancel\(/g) ?? []
-    expect(fileCallSites.length).toBe(3)
+    expect(fileCallSites.length).toBe(2)
 
-    const targetStart = code.indexOf('struct PristineLoginCancelTarget;')
+    const targetStart = code.indexOf('struct LoginSheetCancelTarget;')
     expect(targetStart).toBeGreaterThan(-1)
-    const targetEnd = code.indexOf(
-      'fn install_native_login_cancel_button(',
-      targetStart
-    )
+    const targetEnd = code.indexOf('fn install_native_login_bar(', targetStart)
     expect(targetEnd).toBeGreaterThan(targetStart)
     expect(code.slice(targetStart, targetEnd)).toContain(
       'request_login_sheet_cancel('
@@ -2325,29 +2272,6 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
     const body = code.slice(start, end)
     expect(body).not.toContain('characters')
     expect(body).not.toContain('charactersIgnoringModifiers')
-  })
-
-  test('Test 5 (NEGATIVE, REQ-34.4.2-06 / T-34.4.2-22): the sliced login_cancel_strip_script body registers no keyboard listener -- Cmd+V into the password field must keep working', () => {
-    const code = loadMainRsCode()
-    const start = code.indexOf('fn login_cancel_strip_script(')
-    expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('fn request_login_sheet_cancel(', start)
-    expect(end).toBeGreaterThan(start)
-    const body = code.slice(start, end)
-    expect(body).not.toContain('keydown')
-    expect(body).not.toContain('keyup')
-    expect(body).not.toContain('keypress')
-  })
-
-  test('Test 6 (NEGATIVE, REQ-34.4.2-07): the sliced login_cancel_strip_script body reads no input value and transmits no password field content', () => {
-    const code = loadMainRsCode()
-    const start = code.indexOf('fn login_cancel_strip_script(')
-    expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('fn request_login_sheet_cancel(', start)
-    expect(end).toBeGreaterThan(start)
-    const body = code.slice(start, end)
-    expect(body).not.toContain('.value')
-    expect(body).not.toContain('password')
   })
 
   test("Test 7 (REGRESSION GUARD): addLocalMonitorForEventsMatchingMask_handler appears exactly twice in the whole comment-stripped source -- the pristine Epic arm's pre-existing monitor plus this plan's new Esc monitor; a count other than 2 means the byte-frozen pristine region was edited or refactored", () => {
@@ -2429,17 +2353,6 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
     const callSites =
       code.match(/(?<!fn )register_presented_login_sheet\(/g) ?? []
     expect(callSites.length).toBe(3)
-  })
-
-  test('Test 4 (WR-03/IN-02): the sliced login_cancel_strip_script body contains window.top and does not contain tabindex', () => {
-    const code = loadMainRsCode()
-    const start = code.indexOf('fn login_cancel_strip_script(')
-    expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('fn request_login_sheet_cancel(', start)
-    expect(end).toBeGreaterThan(start)
-    const body = code.slice(start, end)
-    expect(body).toContain('window.top')
-    expect(body).not.toContain('tabindex')
   })
 
   test('Test 5 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): neither open_pristine_epic_login_window NOR EpicPristineNavDelegate references register_presented_login_sheet or any other PHASE_34_4_2_NEW_SYMBOLS member', () => {

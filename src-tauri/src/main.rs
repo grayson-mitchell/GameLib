@@ -3337,442 +3337,12 @@ fn clear_storage_script(exfil_host: &str) -> String {
     template.replace("@@EXFIL_HOST@@", &exfil_host_js)
 }
 
-// ---- Login-sheet cancel channel: the /login-cancel sentinel and its injected strip
-// (Phase 34.4.2 Plan 08, REQ-34.4.2-03/04/06/07/08/10, T-34.4.2-33) ----
-//
-// Plan 07 (`present_login_window_as_sheet`/`dismiss_login_window_sheet`, above) presents the
-// Tauri-managed login window as an AppKit sheet with NO close affordance -- `endSheet:` HIDES
-// rather than closes, and a sheet renders no titlebar close button, exactly the hard lock-out
-// spike 021 measured (T-34.4.2-33). This section closes it via a SEPARATE reserved-path
-// sentinel on the SAME `REVEAL_EXFIL_HOST` the reveal/clear-storage channels already use --
-// discriminated by path, not host (T-34.4.2-13's discipline).
-
-/// Sentinel path on `REVEAL_EXFIL_HOST` (never a second host) the injected cancel strip's
-/// cancelled-navigation request uses. Joins `/reveal`/`/clear-storage` as a third,
-/// path-discriminated channel on the same reserved host (T-34.4.2-13).
-const LOGIN_CANCEL_EXFIL_PATH: &str = "/login-cancel";
-
-/// This channel's entire input validation (mirrors this file's other sentinel-path
-/// validators' "this arm's entire input validation lives here" discipline): pure, no
-/// `AppHandle`, no logging, no I/O, never panics. Carries deliberately NO payload -- unlike
-/// a payload-bearing sentinel that must validate structured data, this channel's whole
-/// semantic is "the user pressed cancel", so there is nothing for a hostile page to smuggle
-/// through it (T-34.4.2-34, accepted and bounded -- see this plan's threat register).
-/// Returns true only when the host equals `REVEAL_EXFIL_HOST` AND the path equals
-/// `LOGIN_CANCEL_EXFIL_PATH` exactly -- false for `/reveal`/`/clear-storage` on the same
-/// host (no collision with either sibling sentinel), and false for this exact path on any
-/// other host.
-fn is_login_cancel_request(url: &tauri::Url) -> bool {
-    url.host_str() == Some(REVEAL_EXFIL_HOST) && url.path() == LOGIN_CANCEL_EXFIL_PATH
-}
-
 /// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
-/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block, macOS-gated --
-/// see the injection site's own doc comment, below). This strip is NOT kill-switchable and
-/// must never become so: an env var that removes the only visible exit from a
-/// parent-blocking sheet is a lock-out switch, not a safety switch (T-34.4.2-33/T-34.4.2-15).
-/// After Phase 34.4.2 Plan 13 deleted the in-field injected-glyph mechanism this comment
-/// used to be contrasted against (operator decision D-A), this is permanent by construction
-/// rather than by convention: no kill-switchable injected control exists anywhere in this
-/// arm at all, so there is nothing left this strip's independence could even be contrasted
-/// against.
-///
-/// Contract the generated script implements (REQ-34.4.2-03/04/06/07):
-/// - **Top-frame only (WR-03, `34.4.2-REVIEW.md`).** The FIRST statement inside the try is
-///   `if (window.top !== window) { return; }`, checked before the idempotence flag is even
-///   read, so a subframe leaves no state behind at all. `initialization_script` runs in every
-///   frame; spike 013 measured 5 of 8 navigations on Humble's real login page as third-party
-///   iframes, each of which would otherwise build its own duplicate "Cancel sign-in" control
-///   pinned to ITS OWN top-right, plus its own `MutationObserver`. A cross-origin `window.top`
-///   access that throws still bails through the existing top-level catch.
-/// - Idempotent via `window.__GAMELIB_LOGIN_CANCEL_STRIP__`, set before any further DOM work.
-/// - Renders exactly ONE control, appended to `document.body || document.documentElement`
-///   (resolved into a local first; if neither exists yet, the append is skipped rather than
-///   thrown -- WR-04, below), `position:fixed`, pinned flush to the bar's top-right corner
-///   (`top:0`, `right:0`), `z-index` >= 2147483000, `role="button"`, `aria-label="Cancel
-///   sign-in"`, and enough contrast to be legible on a light or dark page (styling is
-///   executor discretion).
-/// - **Quick task 261003-nsk (D-1/D-2): the glyph's own corner of ONE bar, not a floating
-///   pill.** The visible text is now a bare multiplication-sign glyph (`×`), written as
-///   the Rust-escaped sequence so the surrounding source line stays ASCII and greppable --
-///   never the character literally. The accessible name is UNCHANGED (`aria-label`/
-///   `aria-keyshortcuts` still carry "Cancel sign-in"/"Escape"): a differing visible-
-///   text/accessible-name pair is the accepted icon-button pattern here, not an oversight.
-///   The glyph box keeps its OWN opaque background (matching the bar's, so the two read as
-///   one surface) rather than a transparent one -- if the bar's own `build()` ever throws or
-///   the page deletes it, this is still the only exit from a parent-blocking sheet, and its
-///   legibility must not depend on the bar's survival (T-nsk-01).
-/// - **Pointer control, not a keyboard-activatable one (IN-02, `34.4.2-REVIEW.md`).** No
-///   `tabindex` is set -- REQ-34.4.2-06 forbids key listeners, so this control can only ever
-///   activate on `click`, and advertising `tabindex="0"` would promise Enter/Space activation
-///   it cannot deliver. It carries `aria-keyshortcuts="Escape"` instead: a static attribute,
-///   not a listener, truthfully advertising the page-independent bare-Esc `NSEvent` monitor as
-///   the sanctioned keyboard route.
-/// - **Retry and observer survive a throwing first build (WR-04, `34.4.2-REVIEW.md`).** The
-///   `DOMContentLoaded` listener and the `MutationObserver`'s `observe()` call are both
-///   registered BEFORE the initial `ensure()` call, which is the LAST statement inside the
-///   try -- so if that initial call throws (or simply no-ops because neither `document.body`
-///   nor `document.documentElement` exists yet), both retries are already installed and the
-///   strip still gets built on `DOMContentLoaded` or on the next mutation, instead of never
-///   appearing for that document at all. Re-appends itself if removed: a debounced
-///   `MutationObserver` on `document.documentElement` (`{childList:true, subtree:true}`)
-///   re-adds the control if the page's own script deletes it -- a login page that can delete
-///   the only exit re-creates the lock-out this plan exists to close.
-/// - On activation (`click` only) delivers via the hidden 1x1 `display:none` iframe technique
-///   to `'https://' + @@EXFIL_HOST@@ + '/login-cancel'`. No payload, no page state read --
-///   never `location.href`, which would fire `beforeunload` on the live, credential-bearing
-///   document.
-/// - Registers NO `keydown`/`keyup`/`keypress` listener anywhere, and calls `preventDefault()`
-///   on nothing but its own `click` (REQ-34.4.2-06: Cmd+V into the password field must keep
-///   working).
-/// - Never reads any input's `value`, never reads or transmits page content (REQ-34.4.2-07).
-/// - Whole body in one top-level try/catch (T-34.4.2-16) -- a throwing strip must never break
-///   a live login page. WR-04's fix is deliberately NOT an inner try/catch (the cargo test
-///   `login_cancel_strip_script_is_wrapped_in_a_single_top_level_try_catch` asserts `"try {"`
-///   appears exactly once) -- it is a reorder plus null-root-safe appends instead.
-///
-/// Uses this file's `concat!`-of-single-line-pieces discipline (matching `clear_storage_script`'s
-/// own convention -- every JS string literal below uses single quotes, so every piece keeps an
-/// EVEN raw `"`-count on its own source line -- `longRunningChannels.test.ts`'s WR-08
-/// stripper-integrity guard). Pure: the same host input always produces the same output.
-fn login_cancel_strip_script(exfil_host: &str) -> String {
-    let exfil_host_js =
-        serde_json::to_string(exfil_host).unwrap_or_else(|_| "\"gamelib.invalid\"".to_string());
-    let template = concat!(
-        "(function() { ",
-        "try { ",
-        "if (window.top !== window) { return; } ",
-        "if (window.__GAMELIB_LOGIN_CANCEL_STRIP__) { return; } ",
-        "window.__GAMELIB_LOGIN_CANCEL_STRIP__ = true; ",
-        "var ID = '__gamelib_login_cancel_strip__'; ",
-        "function deliver() { ",
-        "var frame = document.getElementById('__gamelib_login_cancel_frame__'); ",
-        "if (!frame) { ",
-        "var deliverRoot = document.body || document.documentElement; ",
-        "if (!deliverRoot) { return; } ",
-        "frame = document.createElement('iframe'); ",
-        "frame.id = '__gamelib_login_cancel_frame__'; ",
-        "frame.style.display = 'none'; ",
-        "frame.style.width = '1px'; ",
-        "frame.style.height = '1px'; ",
-        "deliverRoot.appendChild(frame); ",
-        "} ",
-        "frame.src = 'https://' + @@EXFIL_HOST@@ + '/login-cancel'; ",
-        "} ",
-        "function build() { ",
-        "var buildRoot = document.body || document.documentElement; ",
-        "if (!buildRoot) { return; } ",
-        "var strip = document.createElement('div'); ",
-        "strip.id = ID; ",
-        "strip.setAttribute('role', 'button'); ",
-        "strip.setAttribute('aria-label', 'Cancel sign-in'); ",
-        "strip.setAttribute('aria-keyshortcuts', 'Escape'); ",
-        "strip.textContent = '\\u00d7'; ",
-        "strip.style.position = 'fixed'; ",
-        "strip.style.top = '0'; ",
-        "strip.style.right = '0'; ",
-        "strip.style.width = '32px'; ",
-        "strip.style.height = '32px'; ",
-        "strip.style.boxSizing = 'border-box'; ",
-        "strip.style.lineHeight = '31px'; ",
-        "strip.style.textAlign = 'center'; ",
-        "strip.style.fontSize = '18px'; ",
-        "strip.style.zIndex = '2147483000'; ",
-        "strip.style.background = '#161c1e'; ",
-        "strip.style.color = '#caf3fd'; ",
-        "strip.style.fontFamily = 'sans-serif'; ",
-        "strip.style.borderBottom = '1px solid #272f31'; ",
-        "strip.style.cursor = 'pointer'; ",
-        "strip.style.userSelect = 'none'; ",
-        "strip.addEventListener('click', function(evt) { ",
-        "evt.preventDefault(); ",
-        "deliver(); ",
-        "}); ",
-        "buildRoot.appendChild(strip); ",
-        "} ",
-        "function ensure() { ",
-        "if (!document.getElementById(ID)) { build(); } ",
-        "} ",
-        "if (document.readyState === 'loading') { ",
-        "document.addEventListener('DOMContentLoaded', function() { ensure(); }); ",
-        "} ",
-        "var debounceTimer = null; ",
-        "function scheduleEnsure() { ",
-        "if (debounceTimer) { return; } ",
-        "debounceTimer = setTimeout(function() { debounceTimer = null; ensure(); }, 200); ",
-        "} ",
-        "var observer = new MutationObserver(function() { scheduleEnsure(); }); ",
-        "observer.observe(document.documentElement, { childList: true, subtree: true }); ",
-        "ensure(); ",
-        "} catch (e) { } ",
-        "})();"
-    );
-    template.replace("@@EXFIL_HOST@@", &exfil_host_js)
-}
-
-// ---- Login-sheet origin banner: the in-page anti-phishing indicator AppKit sheets cannot
-// render as a title bar (Phase 34.5 Plan 52, F-34.5-G6-16, D-CYCLE7-A, REQ-34.5-04/12) ----
-//
-// `on_document_title_changed` (below, `humble_login_open`'s visible arm) composes
-// `login_window_title`'s origin-prefixed string correctly and sets it on the underlying
-// `NSWindow` -- but AppKit sheets structurally render NO title bar UI at all, so that string is
-// never user-visible on macOS (F-34.5-G6-16). Per D-CYCLE7-A (child-window attachment is
-// permanently closed, F-34.4.2-01/-02, and the routing document's "stop presenting as a sheet"
-// option is factually closed), the fix is an in-page element instead, injected by the EXACT SAME
-// mechanism the mandated cancel strip already uses -- never a second injection path.
-// `login_window_title` itself is UNCHANGED; Windows/Linux still render it as a real OS title.
-
-/// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
-/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block, macOS-gated --
-/// see the injection site's own doc comment), immediately alongside `login_cancel_strip_script`.
-/// Mirrors that function's conventions exactly (T-34.5-C7-02..05, this plan's threat register):
-///
-/// - **Top-frame only.** The FIRST statement inside the try is `if (window.top !== window) {
-///   return; }`, checked before the idempotence flag -- identical discipline to the cancel
-///   strip, for the identical reason (spike 013's 5-of-8-iframe measurement).
-/// - Idempotent via `window.__GAMELIB_LOGIN_ORIGIN_BANNER__`, set before any further DOM work.
-/// - The live origin is stored on `window.__GAMELIB_LOGIN_ORIGIN_VALUE__` so
-///   `login_origin_banner_update_script` (below) can re-text an already-built banner without
-///   re-running this whole script.
-/// - Renders exactly ONE element, id `'__gamelib_login_origin_banner__'`, appended to
-///   `document.body || document.documentElement` (null-root-safe, mirrors the cancel strip's
-///   WR-04 fix), `position: fixed`.
-/// - **Quick task 261003-nsk (D-1/D-2): ONE full-width bar, not a top-left pill.** `top`,
-///   `left` and `right` are all `'0'`; `textAlign` is `'center'`. The former "opposite
-///   corners, so the two controls can never overlap" claim (T-34.5-C7-05) is now FALSE -- the
-///   bar spans the full width, including under the cancel glyph's corner -- and is retired
-///   rather than left standing as a description of geometry that no longer exists. It is
-///   replaced by three weaker-but-real invariants, each gated:
-///   1. `z-index: '2147482999'` stays strictly BELOW the cancel strip's `'2147483000'`, so the
-///      banner can never paint over the sheet's only exit affordance (unchanged from before,
-///      re-gated by `login_origin_banner_script_z_index_is_strictly_below_the_cancel_strips`).
-///   2. `pointerEvents: 'none'` (unchanged, see below) is now LOAD-BEARING rather than merely
-///      polite: a 32px-tall full-width element with pointer events enabled would intercept
-///      every click across the top of a page GameLib does not control, including the glyph's
-///      own click -- gated by the retained `login_origin_banner_script_pointer_events_are_disabled`.
-///   3. Horizontal `padding` is kept >= the glyph box's `width`, so the centred origin text
-///      truncates (`textOverflow: 'ellipsis'`) before it can run under the glyph, rather than
-///      being visually clipped into a different-looking hostname -- gated by the new
-///      `login_origin_banner_script_reserves_horizontal_room_for_the_close_glyph` (numeric
-///      comparison, not substring presence).
-///   `height` matches the cancel strip's own `height` literal exactly (gated by
-///   `login_origin_banner_and_cancel_strip_agree_on_one_bar_height`) so the two elements read
-///   as ONE bar, not two. This is a floating overlay per D-2: no body offset or page-layout
-///   rule of any kind is injected anywhere in this script -- page content stays exactly where
-///   Humble put it.
-/// - `pointerEvents: 'none'`, `userSelect: 'none'`. Registers NO event listener of any kind --
-///   no `click`, no `keydown`/`keyup`/`keypress`, and (unlike the cancel strip, which needs
-///   `DOMContentLoaded` for its own click-armed control) no `addEventListener` call anywhere in
-///   this script at all: the loading-state arm below uses `document.onreadystatechange`
-///   instead, a property assignment rather than a listener registration, so this banner is
-///   provably inert with respect to REQ-34.4.2-06 (Cmd+V into the password field must keep
-///   working) by construction, not merely by omission of the specific key names.
-/// - Sets text via `textContent` ONLY -- no HTML-fragment-write API of any kind appears in this
-///   function's body (T-34.5-C7-02).
-/// - Never reads any input's `value`, never transmits anything anywhere, creates no iframe
-///   (T-34.5-C7-04) -- unlike the cancel strip, this control has nothing to deliver; it is
-///   read-only chrome.
-/// - Self-re-appending: the same debounced `MutationObserver` on `document.documentElement`
-///   (`{childList: true, subtree: true}`) / `scheduleEnsure()` / `ensure()` / `build()` shape the
-///   cancel strip uses, plus a `document.readyState === 'loading'` arm that re-runs `ensure()`
-///   on the next ready-state change (functionally the cancel strip's own `DOMContentLoaded`
-///   safety net, without an `addEventListener` call -- see above).
-/// - Whole body in exactly ONE top-level `try { } catch (e) { }` (T-34.5-C7-03) -- a throwing
-///   banner must never break a live login page.
-/// - Pure: the same origin input always yields byte-identical output.
-///
-/// The ONLY interpolated value is `origin`, through the same `serde_json::to_string`
-/// placeholder-token discipline `login_cancel_strip_script`/`clear_storage_script` use for their
-/// own interpolated values -- never naive string interpolation (T-34.5-C7-02). Every JS string
-/// literal below is single-quoted, so every `concat!` piece keeps an EVEN raw `"`-count on its
-/// own source line (`longRunningChannels.test.ts`'s WR-08 stripper-integrity guard).
-fn login_origin_banner_script(origin: &str) -> String {
-    let origin_js = serde_json::to_string(origin).unwrap_or_else(|_| "\"\"".to_string());
-    let template = concat!(
-        "(function() { ",
-        "try { ",
-        "if (window.top !== window) { return; } ",
-        "if (window.__GAMELIB_LOGIN_ORIGIN_BANNER__) { return; } ",
-        "window.__GAMELIB_LOGIN_ORIGIN_BANNER__ = true; ",
-        "window.__GAMELIB_LOGIN_ORIGIN_VALUE__ = @@ORIGIN@@; ",
-        "var ID = '__gamelib_login_origin_banner__'; ",
-        "function build() { ",
-        "var buildRoot = document.body || document.documentElement; ",
-        "if (!buildRoot) { return; } ",
-        "var banner = document.createElement('div'); ",
-        "banner.id = ID; ",
-        "banner.textContent = window.__GAMELIB_LOGIN_ORIGIN_VALUE__; ",
-        "banner.style.position = 'fixed'; ",
-        "banner.style.top = '0'; ",
-        "banner.style.left = '0'; ",
-        "banner.style.right = '0'; ",
-        "banner.style.height = '32px'; ",
-        "banner.style.boxSizing = 'border-box'; ",
-        "banner.style.lineHeight = '31px'; ",
-        "banner.style.textAlign = 'center'; ",
-        "banner.style.zIndex = '2147482999'; ",
-        "banner.style.padding = '0 36px'; ",
-        "banner.style.whiteSpace = 'nowrap'; ",
-        "banner.style.overflow = 'hidden'; ",
-        "banner.style.textOverflow = 'ellipsis'; ",
-        "banner.style.background = '#161c1e'; ",
-        "banner.style.color = '#caf3fd'; ",
-        "banner.style.fontFamily = 'sans-serif'; ",
-        "banner.style.fontSize = '12px'; ",
-        "banner.style.borderBottom = '1px solid #272f31'; ",
-        "banner.style.pointerEvents = 'none'; ",
-        "banner.style.userSelect = 'none'; ",
-        "banner.style.boxShadow = '0 1px 4px rgba(0,0,0,0.4)'; ",
-        "buildRoot.appendChild(banner); ",
-        "} ",
-        "function ensure() { ",
-        "var existing = document.getElementById(ID); ",
-        "if (!existing) { build(); } else { existing.textContent = window.__GAMELIB_LOGIN_ORIGIN_VALUE__; } ",
-        "} ",
-        "if (document.readyState === 'loading') { ",
-        "document.onreadystatechange = function() { ensure(); }; ",
-        "} ",
-        "var debounceTimer = null; ",
-        "function scheduleEnsure() { ",
-        "if (debounceTimer) { return; } ",
-        "debounceTimer = setTimeout(function() { debounceTimer = null; ensure(); }, 200); ",
-        "} ",
-        "var observer = new MutationObserver(function() { scheduleEnsure(); }); ",
-        "observer.observe(document.documentElement, { childList: true, subtree: true }); ",
-        "ensure(); ",
-        "} catch (e) { } ",
-        "})();"
-    );
-    template.replace("@@ORIGIN@@", &origin_js)
-}
-
-/// Builds a small script for `window.eval()`, called on every main-frame origin change (the
-/// `on_page_load` visible branch, below) after `current_origin` has already been updated. JSON-
-/// escapes `origin` via the same `serde_json::to_string` placeholder-token discipline as the
-/// banner script above, assigns it to `window.__GAMELIB_LOGIN_ORIGIN_VALUE__`, and if the banner
-/// element already exists (`document.getElementById('__gamelib_login_origin_banner__')`) sets
-/// its `textContent` to the new value -- never an HTML-fragment-write API. Wrapped in its own single top-level
-/// `try { } catch (e) { }` (T-34.5-C7-03): `window.eval` firing on a page that has since
-/// navigated away, or before the banner script's own injection has run, must never throw into
-/// the caller. Registers no listener of any kind. Pure: the same origin input always yields
-/// byte-identical output, and two different origins always yield different output (both
-/// asserted below).
-fn login_origin_banner_update_script(origin: &str) -> String {
-    let origin_js = serde_json::to_string(origin).unwrap_or_else(|_| "\"\"".to_string());
-    let template = concat!(
-        "(function() { ",
-        "try { ",
-        "window.__GAMELIB_LOGIN_ORIGIN_VALUE__ = @@ORIGIN@@; ",
-        "var el = document.getElementById('__gamelib_login_origin_banner__'); ",
-        "if (el) { el.textContent = window.__GAMELIB_LOGIN_ORIGIN_VALUE__; } ",
-        "} catch (e) { } ",
-        "})();"
-    );
-    template.replace("@@ORIGIN@@", &origin_js)
-}
-
-/// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
-/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block), macOS-gated like
-/// its two neighbours above and for the same reason: it exists only to serve the in-page title
-/// bar those two render, and that bar exists only because an AppKit sheet has no title bar.
-///
-/// WHY THIS EXISTS (operator report, 2026-10-03): with `AppleShowScrollBars = Always` -- a
-/// CLASSIC, space-taking scrollbar, not an overlay one -- the document scrollbar runs the full
-/// height of the scrollport starting at y=0, so it carves a notch out of the right end of the
-/// title bar and sits beside the cancel glyph. The operator's words: the scrollbar needs to
-/// appear BELOW the title bar.
-///
-/// MEASURED, NOT REASONED (WKWebView probes, 2026-10-03, captured with `screencapture -l`
-/// against an offscreen `WKWebView`; note `takeSnapshot` does NOT paint scrollbars, so a probe
-/// built on it measures nothing and will mislead you):
-/// - Widening the bar to `width: 100vw` **DOES NOT WORK**, refuted twice (probe A, and again in
-///   probe C with the track already inset). A classic scrollbar paints ABOVE page content and a
-///   `position: fixed` element cannot paint into the scrollbar gutter at all. This is the
-///   obvious fix and it is wrong; do not reinstate it.
-/// - `::-webkit-scrollbar-track { margin-top }` DOES inset the track, so the thumb starts below
-///   the bar (probe B) -- but it leaves the gutter above the track showing the PAGE background,
-///   i.e. a white notch where the scrollbar notch used to be.
-/// - Giving `::-webkit-scrollbar` ITSELF the bar's background colour fills that inset region, so
-///   the bar reads as continuous to the window edge (probe D).
-///
-/// SCOPED TO `html` ON PURPOSE (probe E). An unscoped `::-webkit-scrollbar` rule applies to
-/// EVERY scrollable element in the document, which would give each of Humble's inner scrollers a
-/// 32px dead zone at its top. Probe E rendered an inner `overflow-y: scroll` box alongside the
-/// document scroller and confirmed the inner one keeps a normal, unstyled scrollbar while the
-/// document scroller gets the inset.
-///
-/// KNOWN LIMIT THIS SCRIPT CANNOT CLOSE (measured 2026-10-16 in a real-sheet probe, macOS
-/// 26.6.2): in a sheet the main-frame scrollbar does NOT start at y=0. WebKit reads the
-/// `WKWebView`'s `_effectiveCornerRadii` (26pt, inherited from the sheet window's rounded
-/// corners) and starts the scrollbar frame at y=19 to keep it out of the arc, so the
-/// `::-webkit-scrollbar` background above fills only 19..bottom and the gutter between the arc
-/// and y=19 shows the DOCUMENT BACKGROUND COLOUR (the `html`/`body` blend -- Humble's `#e3e3e3`).
-/// No page CSS can paint it: a fixed root `background-image` is clipped to the viewport, and the
-/// only page-side lever is the page's own canvas colour. The pending todo
-/// `2026-10-03-login-sheet-title-bar-has-a-light-wedge-at-the-rounded-corner.md` records every
-/// lever tried, the one private-API override that works, and why it is parked on route C/D.
-///
-/// The `32px` track inset MUST equal the bar height the other two scripts set. A `#[cfg(test)]`
-/// test below extracts all three literals and asserts they agree, so the three cannot drift.
-///
-/// Mirrors its neighbours' conventions exactly: top-frame-only guard as the FIRST statement
-/// inside the try; idempotence flag set before any DOM work; `textContent` only (a `<style>`
-/// element's text is set the same safe way, never an HTML-fragment-write API); NO
-/// `addEventListener` of any kind -- the loading arm uses `document.onreadystatechange`, a
-/// property assignment, so this script is provably inert w.r.t. REQ-34.4.2-06 (Cmd+V into the
-/// password field) by construction; self-re-appending via the same debounced `MutationObserver`;
-/// exactly ONE top-level `try { } catch (e) { }`. Takes no argument and interpolates nothing, so
-/// the `serde_json`/`@@TOKEN@@` discipline does not apply -- there is no caller input to escape.
-/// Every JS string literal below is single-quoted, keeping an EVEN raw `"`-count per source line
-/// (`longRunningChannels.test.ts`'s WR-08 stripper-integrity guard). Pure: no inputs, so the same
-/// output every call.
-#[cfg(target_os = "macos")]
-fn login_scrollbar_inset_script() -> String {
-    concat!(
-        "(function() { ",
-        "try { ",
-        "if (window.top !== window) { return; } ",
-        "if (window.__GAMELIB_LOGIN_SCROLLBAR_INSET__) { return; } ",
-        "window.__GAMELIB_LOGIN_SCROLLBAR_INSET__ = true; ",
-        "var ID = '__gamelib_login_scrollbar_inset__'; ",
-        "var CSS = 'html::-webkit-scrollbar { width: 14px; background: #161c1e; } ",
-        "html::-webkit-scrollbar-track { margin-top: 32px; background: #272f31; } ",
-        "html::-webkit-scrollbar-thumb { background: #4a585c; border-radius: 7px; } ",
-        "html::-webkit-scrollbar-corner { background: #161c1e; }'; ",
-        "function build() { ",
-        "var buildRoot = document.head || document.documentElement; ",
-        "if (!buildRoot) { return; } ",
-        "var style = document.createElement('style'); ",
-        "style.id = ID; ",
-        "style.textContent = CSS; ",
-        "buildRoot.appendChild(style); ",
-        "} ",
-        "function ensure() { ",
-        "if (!document.getElementById(ID)) { build(); } ",
-        "} ",
-        "if (document.readyState === 'loading') { ",
-        "document.onreadystatechange = function() { ensure(); }; ",
-        "} ",
-        "var debounceTimer = null; ",
-        "function scheduleEnsure() { ",
-        "if (debounceTimer) { return; } ",
-        "debounceTimer = setTimeout(function() { debounceTimer = null; ensure(); }, 200); ",
-        "} ",
-        "var observer = new MutationObserver(function() { scheduleEnsure(); }); ",
-        "observer.observe(document.documentElement, { childList: true, subtree: true }); ",
-        "ensure(); ",
-        "} catch (e) { } ",
-        "})();"
-    )
-    .to_string()
-}
-
-/// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
-/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block) -- but, unlike
-/// its two neighbours above, deliberately WITHOUT a `#[cfg(target_os = "macos")]` gate (D-2,
-/// quick task 260822-di1). `login_cancel_strip_script`/`login_origin_banner_script` substitute
-/// for macOS *sheet* chrome -- a sheet renders no title bar and no close button, so they exist
-/// only where that gap exists. This script substitutes for nothing platform-specific: Humble's
+/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block), deliberately
+/// WITHOUT a `#[cfg(target_os = "macos")]` gate (D-2, quick task 260822-di1). (The macOS sheet
+/// chrome -- cancel strip, origin banner, scrollbar inset -- was once injected alongside it;
+/// quick-261029-osq replaced all three with the native bar, `install_native_login_bar`.) This
+/// script substitutes for nothing platform-specific: Humble's
 /// marketing footer and navbar are visual noise on the login page on Windows and Linux too, so
 /// it is injected on every platform, unconditionally, inside the `if visible` block.
 ///
@@ -3788,17 +3358,16 @@ fn login_scrollbar_inset_script() -> String {
 /// two full-width page-chrome selectors (`footer.site-footer`, `.simple-navbar`), not one
 /// (260822-eib).
 ///
-/// Takes no arguments and interpolates nothing -- unlike its two neighbours, there is no
-/// `serde_json::to_string` placeholder-token step here, because there is no untrusted or
-/// caller-supplied value anywhere in this script's body. This is the one convention it
-/// legitimately drops relative to `login_cancel_strip_script`/`login_origin_banner_script`.
+/// Takes no arguments and interpolates nothing -- there is no `serde_json::to_string`
+/// placeholder-token step here, because there is no untrusted or caller-supplied value
+/// anywhere in this script's body.
 ///
 /// Contract this script implements (T-di1-01..06, quick task 260822-di1's threat register):
 /// - **Top-frame only.** The FIRST statement inside the try is `if (window.top !== window) {
-///   return; }`, identical discipline to its two neighbours (spike 013 measured 5 of 8
+///   return; }`, the house discipline (spike 013 measured 5 of 8
 ///   navigation events on Humble's real login page as third-party iframes).
 /// - **Host gate runs BEFORE the idempotence flag (D-3).** This is a deliberate divergence
-///   from `login_origin_banner_script`'s flag-then-work order: on `accounts.google.com` (or
+///   from the flag-then-work order the retired chrome scripts used: on `accounts.google.com` (or
 ///   any other host this runner-agnostic window opens -- `humble_login_open` takes no
 ///   `runner` argument) the script returns immediately after the host check and touches
 ///   NOTHING, not even a `window` property -- the same "a non-participating document leaves
@@ -3815,9 +3384,8 @@ fn login_scrollbar_inset_script() -> String {
 ///   so a bare `build()` would silently no-op and the CSS would never apply for that document.
 ///   The `document.readyState === 'loading'` -> `document.onreadystatechange` arm (a PROPERTY
 ///   ASSIGNMENT, never `addEventListener`) closes that gap the same way
-///   `login_origin_banner_script` does, and the debounced `MutationObserver` -- the same house
-///   pattern this exact page already uses for two other scripts -- closes the re-append case
-///   for free.
+///   the retired chrome scripts did, and the debounced `MutationObserver` closes the
+///   re-append case for free.
 /// - Registers NO listener of any kind, of ANY type -- `document.onreadystatechange` is a
 ///   property assignment, not a registration -- so REQ-34.4.2-06 (Cmd+V into the password
 ///   field must keep working) holds by construction here, not merely by omission of the
@@ -3828,7 +3396,7 @@ fn login_scrollbar_inset_script() -> String {
 ///   script must never break a live, credential-bearing login page.
 /// - Pure: calling this twice yields byte-identical output.
 ///
-/// Uses this file's `concat!`-of-single-line-pieces discipline (matching its two neighbours'
+/// Uses this file's `concat!`-of-single-line-pieces discipline (matching this file's other injected scripts'
 /// own convention) -- every JS string literal below is single-quoted, so every piece keeps an
 /// EVEN raw `"`-count on its own source line (`longRunningChannels.test.ts`'s WR-08
 /// stripper-integrity guard).
@@ -3911,11 +3479,14 @@ const EPIC_LOGIN_HOST: &str = "www.epicgames.com";
 /// caller-chosen. The function/delegate keep their Epic names (historical).
 const GOG_LOGIN_HOST: &str = "auth.gog.com";
 
-/// Side (points) of the native cancel button overlaid on the GOG sheet's pristine webview
-/// (quick-261029-o1w). Matches the injected `login_cancel_strip_script` box (32px square,
-/// top-right, overlaid on the page rather than reserving a band).
+/// Height (points) of the native login-sheet bar, and the side of its x box (quick-261029-osq).
+/// The webview is inset by exactly this much from the top so WebKit's `_effectiveCornerRadii`
+/// (26pt at the sheet's rounded top corners) reads 0 at the webview's own top edge: the
+/// scrollbar then starts at the webview's top and no light wedge is left to paint (wedge todo
+/// `2026-10-03-login-sheet-title-bar-has-a-light-wedge-at-the-rounded-corner`). Public AppKit
+/// only, no private `_effectiveCornerRadii` override (T-osq-05).
 #[cfg(target_os = "macos")]
-const NATIVE_LOGIN_CANCEL_BUTTON_SIZE: f64 = 32.0;
+const NATIVE_LOGIN_BAR_HEIGHT: f64 = 32.0;
 
 // ---- Pristine Epic login webview (bounded "pristine-webview attempt", checkpoint response,
 // 2026-08-03T18:00:00 superseding cycle, F-34.5-G6-01) ----
@@ -3992,8 +3563,8 @@ use objc2::{define_class, msg_send, DeclaredClass, MainThreadOnly};
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSURLRequest, NSURL};
 #[cfg(target_os = "macos")]
 use objc2_web_kit::{
-    WKFrameInfo, WKNavigationAction, WKNavigationActionPolicy, WKNavigationDelegate, WKUIDelegate,
-    WKWebView, WKWebViewConfiguration, WKWindowFeatures,
+    WKFrameInfo, WKNavigation, WKNavigationAction, WKNavigationActionPolicy, WKNavigationDelegate,
+    WKUIDelegate, WKWebView, WKWebViewConfiguration, WKWindowFeatures,
 };
 
 #[cfg(target_os = "macos")]
@@ -4071,6 +3642,26 @@ define_class!(
                 );
             }
             (*handler).call((WKNavigationActionPolicy::Allow,));
+        }
+
+        // quick-261029-osq: keeps the GOG sheet's native bar origin label current. Reads the
+        // COMMITTED main-frame URL from the webview (a shell-side value, never page content or
+        // the document title -- T-osq-01). WebKit calls this on the main thread, so the registry
+        // is updated directly. A no-op for Epic, which has no bar registered.
+        #[unsafe(method(webView:didCommitNavigation:))]
+        fn did_commit_navigation(&self, webview: &WKWebView, _navigation: Option<&WKNavigation>) {
+            let committed = unsafe {
+                webview
+                    .URL()
+                    .and_then(|u| u.absoluteString())
+                    .map(|s| s.to_string())
+            };
+            if let Some(parsed) = committed.and_then(|u| tauri::Url::parse(&u).ok()) {
+                set_native_login_bar_origin_on_main(
+                    self.ivars().event_label.as_str(),
+                    &parsed.origin().ascii_serialization(),
+                );
+            }
         }
     }
 
@@ -4324,6 +3915,7 @@ fn open_pristine_epic_login_window(
     let main_thread_label = event_label.clone();
     let monitor_slot_for_main = Arc::clone(&monitor_slot);
     let app_for_native_cancel = app.clone();
+    let origin_for_bar = origin.clone();
 
     let (tx, rx) = mpsc_channel::<Result<(), String>>();
     if let Err(e) = app.run_on_main_thread(move || {
@@ -4343,10 +3935,6 @@ fn open_pristine_epic_login_window(
             let ns_view: &objc2_app_kit::NSView =
                 unsafe { &*(ns_view_addr.0 as *const objc2_app_kit::NSView) };
             let frame = ns_view.frame();
-
-            // quick-261029-o1w: the sheet's cancel button overlays the page's top-right corner
-            // (added after the webview, so it sits above it); the webview fills the window.
-            let flipped = ns_view.isFlipped();
 
             let config = unsafe { WKWebViewConfiguration::new(mtm) };
             let webview: Retained<WKWebView> = unsafe {
@@ -4378,12 +3966,16 @@ fn open_pristine_epic_login_window(
             std::mem::forget(delegate);
 
             ns_view.addSubview(&webview);
+            // quick-261029-osq: the sheet's native bar (shared with the injected sheets) insets
+            // the webview below its 32pt band; Epic (`as_sheet == false`) gets none and its
+            // webview keeps filling the window.
             if as_sheet {
-                install_native_login_cancel_button(
+                install_native_login_bar(
                     ns_view,
+                    &webview,
+                    &origin_for_bar,
                     app_for_native_cancel.clone(),
                     main_thread_label.clone(),
-                    flipped,
                     mtm,
                 );
             }
@@ -5226,25 +4818,25 @@ fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {
 }
 
 #[cfg(target_os = "macos")]
-struct PristineLoginCancelTargetIvars {
+struct LoginSheetCancelTargetIvars {
     app: AppHandle,
     label: String,
 }
 
-// quick-261029-o1w: AppKit target for the GOG sheet's native cancel button. The pristine GOG
-// window cannot carry the injected cancel strip (Cloudflare Turnstile fails on ANY injected
-// script), so cancel is a real NSButton outside the web content. `cancelLogin:` runs the same
-// dismiss-then-close order every other cancel route uses, so the Destroyed hook pushes "closed".
+// AppKit target for the native x on every macOS login sheet's bar (quick-261029-o1w for GOG,
+// generalised by quick-261029-osq). Cancel is a real NSButton outside the web content, so a page
+// can neither remove nor spoof it. `cancelLogin:` runs the same dismiss-then-close order every
+// other cancel route uses, so the Destroyed hook pushes "closed".
 #[cfg(target_os = "macos")]
 define_class!(
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
-    #[ivars = PristineLoginCancelTargetIvars]
-    struct PristineLoginCancelTarget;
+    #[ivars = LoginSheetCancelTargetIvars]
+    struct LoginSheetCancelTarget;
 
-    unsafe impl NSObjectProtocol for PristineLoginCancelTarget {}
+    unsafe impl NSObjectProtocol for LoginSheetCancelTarget {}
 
-    impl PristineLoginCancelTarget {
+    impl LoginSheetCancelTarget {
         #[unsafe(method(cancelLogin:))]
         fn cancel_login(&self, _sender: Option<&AnyObject>) {
             let ivars = self.ivars();
@@ -5254,32 +4846,171 @@ define_class!(
 );
 
 #[cfg(target_os = "macos")]
-impl PristineLoginCancelTarget {
+impl LoginSheetCancelTarget {
     fn new(app: AppHandle, label: String, mtm: objc2::MainThreadMarker) -> Retained<Self> {
         let target = mtm
-            .alloc::<PristineLoginCancelTarget>()
-            .set_ivars(PristineLoginCancelTargetIvars { app, label });
+            .alloc::<LoginSheetCancelTarget>()
+            .set_ivars(LoginSheetCancelTargetIvars { app, label });
         unsafe { msg_send![super(target), init] }
     }
 }
 
-/// Adds the native "x" cancel button, overlaid on the top-right corner of the pristine webview
-/// when `open_pristine_epic_login_window` runs with `as_sheet` set. Styled to match the injected
-/// `login_cancel_strip_script` glyph the other login sheets show (18pt, `#caf3fd`). No fill:
-/// the injected box's `#161c1e` read darker than GOG's own form behind it (live feedback), so the
-/// borderless button stays transparent and the glyph sits on the page's own background. Pure AppKit: no JS is evaluated or injected (Turnstile fails on any injection).
-/// `flipped` is the content view's `isFlipped`, which decides which edge is the top.
+/// Geometry of the top bar band inside a container of height `bounds_h` (quick-261029-osq).
+/// Returns `(bar_y, webview_y, webview_h)`: the bar fills the TOP `NATIVE_LOGIN_BAR_HEIGHT`
+/// points (so `bar_y = h - 32` unflipped, `0` flipped) and the webview takes the rest.
 #[cfg(target_os = "macos")]
-fn install_native_login_cancel_button(
-    ns_view: &objc2_app_kit::NSView,
+fn native_login_bar_band(bounds_h: f64, flipped: bool) -> (f64, f64, f64) {
+    let bar = NATIVE_LOGIN_BAR_HEIGHT.min(bounds_h.max(0.0));
+    let webview_h = (bounds_h - bar).max(0.0);
+    if flipped {
+        (0.0, bar, webview_h)
+    } else {
+        ((bounds_h - bar).max(0.0), 0.0, webview_h)
+    }
+}
+
+#[cfg(target_os = "macos")]
+thread_local! {
+    /// Origin labels of the installed native bars, keyed by login-window label. Main-thread only
+    /// (AppKit views are not `Send`), which is why every access hops through `run_on_main_thread`.
+    static NATIVE_LOGIN_BAR_LABELS: std::cell::RefCell<
+        std::collections::HashMap<String, Retained<objc2_app_kit::NSTextField>>,
+    > = std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// Main-thread half of `update_native_login_bar_origin`; a no-op when `label` has no bar (Epic's
+/// free-floating window, hidden reveal/clear windows).
+#[cfg(target_os = "macos")]
+fn set_native_login_bar_origin_on_main(label: &str, origin: &str) {
+    NATIVE_LOGIN_BAR_LABELS.with(|reg| {
+        if let Some(field) = reg.borrow().get(label) {
+            field.setStringValue(&NSString::from_str(origin));
+        }
+    });
+}
+
+/// Re-texts the native bar's origin label (quick-261029-osq). `origin` MUST be the origin of a
+/// shell-validated main-frame URL, never page content or the document title (T-osq-01).
+/// Fire-and-forget; logs nothing about the origin (T-34.4.1-106).
+#[cfg(target_os = "macos")]
+fn update_native_login_bar_origin(app: &AppHandle, label: &str, origin: &str) {
+    let label = label.to_string();
+    let origin = origin.to_string();
+    let _ = app.run_on_main_thread(move || set_native_login_bar_origin_on_main(&label, &origin));
+}
+
+/// Drops the registry entry for a destroyed login window (call from the `Destroyed` hooks).
+#[cfg(target_os = "macos")]
+fn forget_native_login_bar(app: &AppHandle, label: &str) {
+    let label = label.to_string();
+    let _ = app.run_on_main_thread(move || {
+        NATIVE_LOGIN_BAR_LABELS.with(|reg| {
+            reg.borrow_mut().remove(&label);
+        });
+    });
+}
+
+/// Installs the native login-sheet bar (quick-261029-osq) and insets `webview` below it. One
+/// builder serves the injected Humble/Amazon/Zoom sheets and the GOG pristine sheet.
+///
+/// `container` is the webview's superview. The webview frame becomes the container bounds minus
+/// a `NATIVE_LOGIN_BAR_HEIGHT` band at the top, keeping `ViewWidthSizable|ViewHeightSizable` (both
+/// margins fixed, so the inset survives any resize). Sibling views are pinned to the top: a
+/// `#161c1e` fill, a 1pt `#272f31` bottom line, the centred origin label (`#caf3fd`, 12pt), and a
+/// borderless 18pt x button with tooltip and accessibility label "Cancel sign-in". Pure AppKit:
+/// no JS is evaluated or injected (Turnstile fails on any injection), no private API.
+/// `origin` is shown verbatim; callers pass only a shell-validated origin (T-osq-01).
+#[cfg(target_os = "macos")]
+fn install_native_login_bar(
+    container: &objc2_app_kit::NSView,
+    webview: &objc2_app_kit::NSView,
+    origin: &str,
     app: AppHandle,
     label: String,
-    flipped: bool,
     mtm: objc2::MainThreadMarker,
 ) {
-    let band = NATIVE_LOGIN_CANCEL_BUTTON_SIZE;
-    let view_frame = ns_view.frame();
-    let target = PristineLoginCancelTarget::new(app, label, mtm);
+    use objc2_app_kit::NSAutoresizingMaskOptions as Mask;
+
+    let flipped = container.isFlipped();
+    let bounds = container.bounds();
+    let (bar_y, webview_y, webview_h) = native_login_bar_band(bounds.size.height, flipped);
+    let bar_h = NATIVE_LOGIN_BAR_HEIGHT.min(bounds.size.height.max(0.0));
+    let x = bounds.origin.x;
+    let w = bounds.size.width;
+    let top_pin = if flipped {
+        Mask::ViewMaxYMargin
+    } else {
+        Mask::ViewMinYMargin
+    };
+    let srgb = |r: u8, g: u8, b: u8| {
+        objc2_app_kit::NSColor::colorWithSRGBRed_green_blue_alpha(
+            r as f64 / 255.0,
+            g as f64 / 255.0,
+            b as f64 / 255.0,
+            1.0,
+        )
+    };
+
+    webview.setFrame(NSRect::new(
+        NSPoint::new(x, bounds.origin.y + webview_y),
+        NSSize::new(w, webview_h),
+    ));
+    webview.setAutoresizingMask(Mask::ViewWidthSizable | Mask::ViewHeightSizable);
+
+    let fill_box = |frame: NSRect, color: &objc2_app_kit::NSColor| {
+        let b = objc2_app_kit::NSBox::initWithFrame(mtm.alloc(), frame);
+        b.setBoxType(objc2_app_kit::NSBoxType::Custom);
+        b.setTitlePosition(objc2_app_kit::NSTitlePosition::NoTitle);
+        b.setBorderWidth(0.0);
+        b.setContentViewMargins(NSSize::new(0.0, 0.0));
+        b.setFillColor(color);
+        b.setAutoresizingMask(Mask::ViewWidthSizable | top_pin);
+        b
+    };
+
+    // 32pt fill.
+    let fill = fill_box(
+        NSRect::new(
+            NSPoint::new(x, bounds.origin.y + bar_y),
+            NSSize::new(w, bar_h),
+        ),
+        &srgb(0x16, 0x1c, 0x1e),
+    );
+    container.addSubview(&fill);
+
+    // 1pt bottom line at the band's page-facing edge.
+    let line_y = if flipped { bar_y + bar_h - 1.0 } else { bar_y };
+    let line = fill_box(
+        NSRect::new(
+            NSPoint::new(x, bounds.origin.y + line_y),
+            NSSize::new(w, 1.0),
+        ),
+        &srgb(0x27, 0x2f, 0x31),
+    );
+    container.addSubview(&line);
+
+    // Centred origin label, inset so it never runs under the x.
+    let text = objc2_app_kit::NSTextField::labelWithString(&NSString::from_str(origin), mtm);
+    text.setAlignment(objc2_app_kit::NSTextAlignment::Center);
+    text.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(12.0)));
+    text.setTextColor(Some(&srgb(0xca, 0xf3, 0xfd)));
+    text.setSelectable(false);
+    text.setEditable(false);
+    text.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
+    let label_h = 16.0_f64.min(bar_h);
+    let label_inset = NATIVE_LOGIN_BAR_HEIGHT + 4.0;
+    text.setFrame(NSRect::new(
+        NSPoint::new(
+            x + label_inset,
+            bounds.origin.y + bar_y + (bar_h - label_h) / 2.0,
+        ),
+        NSSize::new((w - 2.0 * label_inset).max(0.0), label_h),
+    ));
+    text.setAutoresizingMask(Mask::ViewWidthSizable | top_pin);
+    container.addSubview(&text);
+
+    // Native x at the right edge.
+    let target = LoginSheetCancelTarget::new(app, label.clone(), mtm);
     let button = unsafe {
         objc2_app_kit::NSButton::buttonWithTitle_target_action(
             &NSString::from_str("\u{00D7}"),
@@ -5290,36 +5021,32 @@ fn install_native_login_cancel_button(
     };
     button.setBordered(false);
     button.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(18.0)));
-    button.setContentTintColor(Some(
-        &objc2_app_kit::NSColor::colorWithSRGBRed_green_blue_alpha(
-            0xca as f64 / 255.0,
-            0xf3 as f64 / 255.0,
-            0xfd as f64 / 255.0,
-            1.0,
-        ),
-    ));
-    let y = if flipped {
-        0.0
-    } else {
-        (view_frame.size.height - band).max(0.0)
-    };
+    button.setContentTintColor(Some(&srgb(0xca, 0xf3, 0xfd)));
     button.setFrame(NSRect::new(
-        NSPoint::new((view_frame.size.width - band).max(0.0), y),
-        NSSize::new(band, band),
+        NSPoint::new(
+            x + (w - NATIVE_LOGIN_BAR_HEIGHT).max(0.0),
+            bounds.origin.y + bar_y,
+        ),
+        NSSize::new(NATIVE_LOGIN_BAR_HEIGHT, bar_h),
     ));
-    button.setAutoresizingMask(
-        objc2_app_kit::NSAutoresizingMaskOptions::ViewMinXMargin
-            | if flipped {
-                objc2_app_kit::NSAutoresizingMaskOptions::ViewMaxYMargin
-            } else {
-                objc2_app_kit::NSAutoresizingMaskOptions::ViewMinYMargin
-            },
-    );
+    button.setAutoresizingMask(Mask::ViewMinXMargin | top_pin);
     button.setToolTip(Some(&NSString::from_str("Cancel sign-in")));
-    ns_view.addSubview(&button);
+    objc2_app_kit::NSAccessibility::setAccessibilityLabel(
+        &*button,
+        Some(&NSString::from_str("Cancel sign-in")),
+    );
+    container.addSubview(&button);
     // NSButton's target is a weak reference, so the target must outlive the button. Intentional
-    // leak (one tiny NSObject per GOG sign-in), the same precedent as the nav delegate.
+    // leak (one tiny NSObject per sign-in), the same precedent as the nav delegate.
     std::mem::forget(target);
+
+    NATIVE_LOGIN_BAR_LABELS.with(|reg| {
+        reg.borrow_mut().insert(label.clone(), text);
+    });
+    // Frame numbers only, never the origin (T-34.4.1-106).
+    eprintln!(
+        "[shell] login-bar: installed for '{label}' flipped={flipped} webview_y={webview_y} webview_h={webview_h} bar_h={bar_h}"
+    );
 }
 
 /// GOG's login as a macOS AppKit sheet (quick-261029-o1w). GOG uses the pristine
@@ -5352,6 +5079,7 @@ fn open_gog_login_sheet(
             window.on_window_event(move |event| {
                 if matches!(event, tauri::WindowEvent::Destroyed) {
                     dismiss_login_window_sheet(&hook_app, &hook_label);
+                    forget_native_login_bar(&hook_app, &hook_label);
                     clear_pending_visible_login_window(&hook_label);
                 }
             });
@@ -8445,11 +8173,6 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
             let label = next_login_window_label();
             let event_label = label.clone();
-            // Cloned separately from `event_label` (Phase 34.4.2 Plan 08,
-            // REQ-34.4.2-03/04/08): the login-cancel sentinel's `.on_navigation(` closure
-            // below needs its own owned label for its log line, and moves it independently
-            // of the `.on_page_load(` closure's own `event_label` capture.
-            let nav_sentinel_label = label.clone();
             // Bounded pristine-webview attempt (checkpoint response, 2026-08-03T18:00:00
             // superseding cycle; F-34.5-G6-01): route Epic's login window through a
             // Tauri-injection-free WKWebView on macOS instead of this arm's own
@@ -8490,7 +8213,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // Deliberately `if visible == true {`, NOT the bare `if visible {` this arm uses
             // everywhere else: Plan 08 Test 1 (`tauriShellSource.test.ts`) locates the ORIGINAL
             // `if visible {` block (the builder-setup one containing
-            // `login_cancel_strip_script(`) via `code.indexOf('if visible {')`, the FIRST
+            // `login_chrome_css_script(`) via `code.indexOf('if visible {')`, the FIRST
             // occurrence. This guard is required to sit textually BEFORE that block (see the
             // ordering requirement above -- both must be before the same
             // `tauri::WebviewWindowBuilder::new(` call), so an identical bare condition here
@@ -8623,6 +8346,9 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 // `open_pristine_epic_login_window`'s own `.inner_size(900.0, 700.0)` is a
                 // DIFFERENT form layout and stays 900 (D-3) -- see that function's own call
                 // site, untouched.
+                // quick-261029-osq: stays 592. The old injected bar overlaid the page's top
+                // 32px, so the visible page area was already 464x560; the native 32pt bar plus a
+                // 560pt webview shows the same area, so the operator-approved size is unchanged.
                 builder = builder.inner_size(464.0, 592.0);
                 // CR-01 fix (continued): `.center()`/`.focused(true)` are AppKit-owned
                 // concerns once this window becomes a sheet -- `beginSheet:` positions the
@@ -8693,56 +8419,16 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                             title.len()
                         );
                     });
-                // Login-sheet cancel strip injection (Phase 34.4.2 Plan 08,
-                // REQ-34.4.2-03/04/06/07/08, T-34.4.2-33). `#[cfg(target_os = "macos")]`:
-                // only macOS presents this window as a sheet (Plan 07), so only macOS
-                // needs an in-page exit. This strip has NO kill switch of its own and
-                // never has: an env var that removes the only visible exit from a
-                // parent-blocking sheet would be a lock-out switch, not a safety switch
-                // (T-34.4.2-15). Phase 34.4.2 Plan 13 (operator decision D-A) deleted the
-                // OTHER in-field injected-glyph mechanism entirely -- closing
-                // `34.4.2-PLATFORM-SCOPE.md` §1's previously-recorded
-                // cross-platform-injected-but-inert wart -- so this strip is now the ONLY
-                // injected control on the login form, on any platform.
-                #[cfg(target_os = "macos")]
-                {
-                    builder = builder
-                        .initialization_script(&login_cancel_strip_script(REVEAL_EXFIL_HOST));
-                    eprintln!(
-                        "[shell] humble_login_open: login cancel strip injected for '{label}'"
-                    );
-                }
-                // Login-sheet origin banner injection (Phase 34.5 Plan 52, F-34.5-G6-16,
-                // D-CYCLE7-A). Same `#[cfg(target_os = "macos")]` gate as the cancel strip
-                // immediately above -- only macOS presents this window as a titleless sheet,
-                // so only macOS needs an in-page substitute for the OS title's origin prefix.
-                // `origin` here is the SHELL-RESOLVED value `current_origin` is seeded from
-                // (this arm's own validated open URL), never page content. Placed AFTER the
-                // cancel strip's own injection so the two injected-control helpers sit
-                // together, matching Task 1's own doc-comment ordering.
-                #[cfg(target_os = "macos")]
-                {
-                    builder = builder.initialization_script(&login_origin_banner_script(&origin));
-                    eprintln!(
-                        "[shell] humble_login_open: login origin banner injected for '{label}'"
-                    );
-                    // Scrollbar inset (2026-10-03). Same macOS gate and the same block as the
-                    // two controls above, because it exists only to serve the bar they render:
-                    // with a CLASSIC scrollbar the document scrollbar starts at y=0 and carves a
-                    // notch out of the bar's right end. See the function's own doc comment for
-                    // the WKWebView probe results, including the two refutations of `100vw`.
-                    builder = builder.initialization_script(&login_scrollbar_inset_script());
-                    eprintln!(
-                        "[shell] humble_login_open: login scrollbar inset injected for '{label}'"
-                    );
-                }
+                // quick-261029-osq: the in-page cancel strip, origin banner and scrollbar inset
+                // that used to be injected here are gone. On macOS the sheet's chrome (32pt dark
+                // bar, origin label, native x) is a native AppKit bar installed after `.build()`
+                // by `install_native_login_bar`, with the webview inset below it. Esc still
+                // routes through `request_login_sheet_cancel`.
+                //
                 // Login-chrome CSS injection (quick task 260822-di1, D-2). Deliberately NOT
-                // `#[cfg(target_os = "macos")]`, unlike the two blocks immediately above: the
-                // cancel strip and origin banner substitute for macOS *sheet* chrome (a sheet
-                // renders no title bar and no close button), while this substitutes for
-                // nothing platform-specific -- Humble's marketing footer is visual noise on
-                // Windows and Linux too, so it runs unconditionally inside this `if visible`
-                // block on every platform.
+                // `#[cfg(target_os = "macos")]`: this substitutes for nothing platform-specific --
+                // Humble's marketing footer is visual noise on Windows and Linux too, so it runs
+                // unconditionally inside this `if visible` block on every platform.
                 builder = builder.initialization_script(&login_chrome_css_script());
                 eprintln!("[shell] humble_login_open: login chrome CSS injected for '{label}'");
                 // F-4 machine record (Phase 34.4.1 Plan 24): `.focused(true)` above is
@@ -8799,16 +8485,13 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 );
             }
             let page_load_origin = Arc::clone(&current_origin);
-            // Owned `AppHandle` clone for the `.on_navigation(` sentinel closure below (Phase
-            // 34.4.2 Plan 08, REQ-34.4.2-03/04/08): `request_login_sheet_cancel` needs
-            // `&AppHandle` to dismiss the sheet and close the window, and `.on_navigation(`
-            // takes a `move` closure -- mirrors this arm's own existing
-            // `app_for_detach = app.clone()` convention (a few lines below `.build()`). The
-            // sole surviving owned `AppHandle` clone this arm's head needs, after Phase
-            // 34.4.2 Plan 13 (operator decision D-A) deleted this arm's other such clone,
-            // and the mechanism it served, entirely.
-            #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
-            let app_for_cancel = app.clone();
+            // Owned clones for the macOS native-bar origin refresh inside `on_page_load`
+            // (quick-261029-osq): `update_native_login_bar_origin` needs an `AppHandle` and the
+            // window label, and `on_page_load` takes a `move` closure.
+            #[cfg(target_os = "macos")]
+            let app_for_origin = app.clone();
+            #[cfg(target_os = "macos")]
+            let label_for_origin = label.clone();
             let window = builder
                 .on_page_load(move |window, payload| {
                     let (kind, is_started) = match payload.event() {
@@ -8840,59 +8523,33 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         //
                         // The guard sits on this ONE line, not on the enclosing `if visible {`
                         // block: the `page_load_origin` write above and the macOS
-                        // `login_origin_banner_update_script` eval below both still need to
+                        // `update_native_login_bar_origin` call below both still need to
                         // run on `Finished`, to keep the trusted main-frame origin and the
-                        // origin banner current.
+                        // native bar's origin label current.
                         if is_started {
                             let _ = window.set_title(&login_window_title(&new_origin, None));
                         }
-                        // Origin banner re-text on main-frame origin change (Phase 34.5 Plan
-                        // 52, F-34.5-G6-16, D-CYCLE7-A). KEPT alongside, never replacing, the
-                        // `set_title` call above -- Windows/Linux still render the OS title;
-                        // this is macOS's in-page substitute for it. Never `.unwrap()` on a
-                        // live user-facing path (T-34.4.1-108): a stale banner is cosmetic, a
-                        // panic here would kill the login flow. Logs the LENGTH only, never
-                        // the origin string, matching this arm's existing `title change
-                        // applied len={}` discipline (T-34.4.1-106).
+                        // Native bar label re-text on main-frame origin change (quick-261029-osq;
+                        // supersedes the Phase 34.5 Plan 52 in-page banner eval). KEPT alongside,
+                        // never replacing, the `set_title` call above -- Windows/Linux still render
+                        // the OS title; the native bar is macOS's substitute for it. `new_origin`
+                        // is the shell-validated main-frame URL's origin, never page content
+                        // (T-osq-01). Never `.unwrap()` on a live user-facing path (T-34.4.1-108):
+                        // a stale label is cosmetic. Logs the LENGTH only, never the origin string
+                        // (T-34.4.1-106).
                         #[cfg(target_os = "macos")]
                         {
-                            let _ = window.eval(&login_origin_banner_update_script(&new_origin));
+                            update_native_login_bar_origin(
+                                &app_for_origin,
+                                &label_for_origin,
+                                &new_origin,
+                            );
                             eprintln!(
                                 "[shell] humble_login_open: origin banner updated len={}",
                                 new_origin.len()
                             );
                         }
                     }
-                })
-                .on_navigation(move |url| {
-                    // Login-sheet cancel sentinel interception ONLY (Phase 34.4.2 Plan 08,
-                    // REQ-34.4.2-03/04/08, T-34.4.2-33). This closure is deliberately
-                    // separate from the `.on_page_load(` hook above and preserves this
-                    // arm's own F-34.5-G6-04 invariant (spike 013: 5 of 8 `on_navigation`
-                    // events on Humble's real login page were third-party iframes --
-                    // letting a subframe drive the login-watch relay lets an ad frame
-                    // re-arm its deadline forever): it never calls
-                    // `push_login_window_event`, never touches `current_origin`, and never
-                    // calls `set_title`. It parses and cancels exactly one reserved-host,
-                    // reserved-path sentinel; every other navigation (including the real
-                    // login page's own) is untouched. macOS only: dismissing a sheet is a
-                    // macOS-only concept (Plan 07); on Windows/Linux this arm keeps
-                    // silently discarding the navigation.
-                    //
-                    // Phase 34.4.2 Plan 13 (operator decision D-A) deleted the
-                    // synthesized-right-click sentinel this closure previously also
-                    // intercepted -- this cancel arm is now the closure's ONLY sentinel,
-                    // and the only path through this closure that ever returns `false`.
-                    if is_login_cancel_request(&url) {
-                        #[cfg(target_os = "macos")]
-                        request_login_sheet_cancel(&app_for_cancel, &nav_sentinel_label, "strip");
-                        #[cfg(not(target_os = "macos"))]
-                        {
-                            let _ = &app_for_cancel;
-                        }
-                        return false;
-                    }
-                    true
                 })
                 .build()
                 .map_err(|e| format!("humble_login_open:build-failed:{e}"))?;
@@ -8907,8 +8564,57 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // else -- REQ-34.4.2-10, locked user decision, Epic ships last. On Windows/Linux
             // the login window keeps exactly today's free-floating behavior -- declared
             // UNVERIFIED here, matching the skill's Constraints section.
+            // quick-261029-osq: install the native bar (and inset the webview below it) BEFORE the
+            // sheet is presented, and confirm it over mpsc. A sheet whose bar is unconfirmed would
+            // have no visible exit (T-34.4.2-15 / T-osq-02), so it is never presented -- the
+            // free-standing visible fallback below (with the OS close button) runs instead.
+            // `Ok` from `with_webview` does not prove the closure ran (see
+            // `humble_login_clear_cookies`' macOS branch), hence the mpsc round-trip.
             #[cfg(target_os = "macos")]
-            let sheet_presented = if visible {
+            let native_bar_installed = if visible {
+                let (bar_tx, bar_rx) = mpsc_channel::<bool>();
+                let bar_app = app.clone();
+                let bar_label = label.clone();
+                let bar_origin = origin.clone();
+                match window.with_webview(move |pw| {
+                    let ok = (|| -> bool {
+                        let Some(mtm) = objc2::MainThreadMarker::new() else {
+                            return false;
+                        };
+                        // SAFETY: `pw.inner()` is a live `WKWebView*` for the duration of a
+                        // `with_webview` closure running on the main thread (mtm proves it).
+                        let wk: &objc2_app_kit::NSView = unsafe { &*pw.inner().cast() };
+                        let Some(container) = (unsafe { wk.superview() }) else {
+                            return false;
+                        };
+                        install_native_login_bar(
+                            &container,
+                            wk,
+                            &bar_origin,
+                            bar_app,
+                            bar_label,
+                            mtm,
+                        );
+                        true
+                    })();
+                    let _ = bar_tx.send(ok);
+                }) {
+                    Ok(()) => bar_rx
+                        .recv_timeout(LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT)
+                        .unwrap_or(false),
+                    Err(_) => false,
+                }
+            } else {
+                false
+            };
+            #[cfg(target_os = "macos")]
+            if visible && !native_bar_installed {
+                eprintln!(
+                    "[shell] WARN: humble_login_open: '{label}' native login bar unconfirmed -- not presenting as a sheet (no visible exit)"
+                );
+            }
+            #[cfg(target_os = "macos")]
+            let sheet_presented = if visible && native_bar_installed {
                 // F-34.4.2-04 fix (checkpoint response, 2026-08-04, post commit 751521663):
                 // the first live hardware run of the CR-01/CR-02 fix reported a symptom
                 // CHANGE -- no window at all (not even the pre-fix free-standing one) plus a
@@ -9047,6 +8753,8 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     // `dismiss_login_window_sheet`'s own doc comment.
                     #[cfg(target_os = "macos")]
                     dismiss_login_window_sheet(&app_for_dismiss, &close_event_label);
+                    #[cfg(target_os = "macos")]
+                    forget_native_login_bar(&app_for_dismiss, &close_event_label);
                     // T-34.4.2-39 resolution path 3 of 3 (Phase 34.4.2 Plan 14): a destroyed
                     // window resolves this request too, whichever way it got there (sheet
                     // dismissed via the cancel strip/Esc, closed while still an unattached
@@ -16031,399 +15739,6 @@ mod tests {
         assert!(exfil_call_index > last_await_index);
     }
 
-    // ---- is_login_cancel_request / login_cancel_strip_script (Phase 34.4.2 Plan 08,
-    // REQ-34.4.2-03/04/06/07/08/10, T-34.4.2-33/-34) ----
-    //
-    // RED direction: an implementation that validates a payload, discriminates on host only
-    // (not path), or lets the strip register a keyboard listener, would flip one of the cases
-    // below.
-
-    #[test]
-    fn login_cancel_request_accepts_the_bare_sentinel_url() {
-        let url = tauri::Url::parse(&format!(
-            "https://{REVEAL_EXFIL_HOST}{LOGIN_CANCEL_EXFIL_PATH}"
-        ))
-        .unwrap();
-        assert!(is_login_cancel_request(&url));
-    }
-
-    #[test]
-    fn login_cancel_request_accepts_the_sentinel_url_with_arbitrary_query_pairs() {
-        let mut url = tauri::Url::parse(&format!(
-            "https://{REVEAL_EXFIL_HOST}{LOGIN_CANCEL_EXFIL_PATH}"
-        ))
-        .unwrap();
-        url.query_pairs_mut().append_pair("whatever", "ignored");
-        assert!(is_login_cancel_request(&url));
-    }
-
-    #[test]
-    fn login_cancel_request_rejects_an_unrelated_path_on_the_same_host() {
-        // The right host, but an unrelated, arbitrary sentinel-shaped path -- must NOT be
-        // mistaken for a cancel request (T-34.4.2-13, no collision between sibling sentinels).
-        // Neutral literal rather than a real sentinel path, deliberately: the invariant this
-        // test protects ("an arbitrary non-cancel path on the same host is rejected") is
-        // proven just as well by a made-up path, and reusing a former sentinel path here
-        // would leave a now-forbidden name fragment in this file, defeating Phase 34.4.2
-        // Plan 13's reconciliation grep.
-        let mut url =
-            tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/some-other-sentinel")).unwrap();
-        url.query_pairs_mut().append_pair("data", "{}");
-        assert!(!is_login_cancel_request(&url));
-    }
-
-    #[test]
-    fn login_cancel_request_rejects_reveal_path() {
-        let url = tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/reveal")).unwrap();
-        assert!(!is_login_cancel_request(&url));
-    }
-
-    #[test]
-    fn login_cancel_request_rejects_clear_storage_path() {
-        let url = tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/clear-storage")).unwrap();
-        assert!(!is_login_cancel_request(&url));
-    }
-
-    #[test]
-    fn login_cancel_request_rejects_the_sentinel_path_on_a_different_host() {
-        let url =
-            tauri::Url::parse(&format!("https://example.com{LOGIN_CANCEL_EXFIL_PATH}")).unwrap();
-        assert!(!is_login_cancel_request(&url));
-    }
-
-    #[test]
-    fn login_cancel_strip_script_embeds_the_exfil_host_exactly_once_as_a_json_escaped_literal() {
-        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        let literal = serde_json::to_string(REVEAL_EXFIL_HOST).unwrap();
-        assert_eq!(script.matches(&literal).count(), 1);
-    }
-
-    #[test]
-    fn login_cancel_strip_script_escapes_a_tricky_host_and_never_naively_interpolates_it() {
-        // Mirrors `clear_storage_script`'s own escaping round-trip case.
-        let tricky_host = "gamelib.invalid\"a\"b'c\\d</script>e";
-        let script = login_cancel_strip_script(tricky_host);
-        let expected_literal = serde_json::to_string(tricky_host).unwrap();
-        assert!(script.contains(&expected_literal));
-        let naive_interpolation = ["'", tricky_host, "'"].concat();
-        assert!(!script.contains(&naive_interpolation));
-    }
-
-    #[test]
-    fn login_cancel_strip_script_contains_the_sentinel_path() {
-        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        assert!(script.contains(LOGIN_CANCEL_EXFIL_PATH));
-    }
-
-    #[test]
-    fn login_cancel_strip_script_binds_no_keyboard_listener() {
-        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        assert!(!script.contains("keydown"));
-        assert!(!script.contains("keyup"));
-        assert!(!script.contains("keypress"));
-    }
-
-    #[test]
-    fn login_cancel_strip_script_never_reads_field_value_or_password_content() {
-        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        assert!(!script.contains(".value"));
-        assert!(!script.contains("password"));
-    }
-
-    #[test]
-    fn login_cancel_strip_script_delivers_via_a_hidden_iframe_never_location_href() {
-        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        assert!(script.contains("iframe"));
-        assert!(!script.contains("location.href"));
-    }
-
-    #[test]
-    fn login_cancel_strip_script_is_wrapped_in_a_single_top_level_try_catch() {
-        assert_eq!(
-            login_cancel_strip_script(REVEAL_EXFIL_HOST)
-                .matches("try {")
-                .count(),
-            1
-        );
-    }
-
-    #[test]
-    fn login_cancel_strip_script_is_pure_same_host_yields_identical_output() {
-        let a = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        let b = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        assert_eq!(a, b);
-    }
-
-    // ---- Plan 11 additions (WR-03/WR-04/IN-02, `34.4.2-REVIEW.md`) ----
-
-    #[test]
-    fn login_cancel_strip_script_top_frame_guard_precedes_the_idempotence_flag() {
-        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        let guard_idx = script.find("window.top !== window");
-        let flag_idx = script.find("__GAMELIB_LOGIN_CANCEL_STRIP__");
-        assert!(guard_idx.is_some());
-        assert!(flag_idx.is_some());
-        assert!(guard_idx.unwrap() < flag_idx.unwrap());
-    }
-
-    #[test]
-    fn login_cancel_strip_script_last_ensure_call_follows_both_dom_content_loaded_and_observer_observe(
-    ) {
-        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        let last_ensure_call = script.rfind("ensure(); ");
-        let dom_content_loaded_idx = script.find("DOMContentLoaded");
-        let observer_observe_idx = script.find("observer.observe(");
-        assert!(last_ensure_call.is_some());
-        assert!(dom_content_loaded_idx.is_some());
-        assert!(observer_observe_idx.is_some());
-        assert!(last_ensure_call.unwrap() > dom_content_loaded_idx.unwrap());
-        assert!(last_ensure_call.unwrap() > observer_observe_idx.unwrap());
-    }
-
-    #[test]
-    fn login_cancel_strip_script_drops_tabindex_and_advertises_aria_keyshortcuts() {
-        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        assert!(!script.contains("tabindex"));
-        assert!(script.contains("aria-keyshortcuts"));
-    }
-
-    #[test]
-    fn login_cancel_strip_script_wr04_regression_still_wraps_in_a_single_top_level_try_catch() {
-        // Explicit WR-04-regression note: the review's own suggested fix shape (an inner
-        // try/catch around the initial ensure() call) would add a second `"try {"` and break
-        // the pre-existing exactly-once guard above. This plan's actual fix is a reorder plus
-        // null-root-safe appends -- re-asserted here alongside the new WR-03/IN-02 guards so a
-        // future edit that reintroduces an inner try is caught in the same neighbourhood.
-        assert_eq!(
-            login_cancel_strip_script(REVEAL_EXFIL_HOST)
-                .matches("try {")
-                .count(),
-            1
-        );
-    }
-
-    // ---- login_origin_banner_script / login_origin_banner_update_script (Phase 34.5 Plan 52,
-    // F-34.5-G6-16, D-CYCLE7-A) ----
-    //
-    // RED direction (captured verbatim in `34.5-52-SUMMARY.md`): (a) swapping `textContent` for
-    // the HTML-fragment-write API in `build()` fails `login_origin_banner_script_never_uses_innerhtml`; (b)
-    // raising the banner's z-index literal to `'2147483001'` fails
-    // `login_origin_banner_script_z_index_is_strictly_below_the_cancel_strips`; (c) adding a
-    // `keydown` `addEventListener` to `build()` fails
-    // `login_origin_banner_script_binds_no_keyboard_listener`.
-
-    const TEST_LOGIN_ORIGIN: &str = "https://login.gog.com";
-
-    #[test]
-    fn login_origin_banner_script_embeds_the_origin_exactly_once_as_a_json_escaped_literal() {
-        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        let literal = serde_json::to_string(TEST_LOGIN_ORIGIN).unwrap();
-        assert_eq!(script.matches(&literal).count(), 1);
-    }
-
-    #[test]
-    fn login_origin_banner_script_escapes_a_tricky_origin_and_never_naively_interpolates_it() {
-        // Mirrors `login_cancel_strip_script`'s own escaping round-trip case.
-        let tricky_origin = "https://ex\"a'mple.com";
-        let script = login_origin_banner_script(tricky_origin);
-        let expected_literal = serde_json::to_string(tricky_origin).unwrap();
-        assert!(script.contains(&expected_literal));
-        let naive_interpolation = ["'", tricky_origin, "'"].concat();
-        assert!(!script.contains(&naive_interpolation));
-    }
-
-    #[test]
-    fn login_origin_banner_script_binds_no_keyboard_listener() {
-        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        assert!(!script.contains("keydown"));
-        assert!(!script.contains("keyup"));
-        assert!(!script.contains("keypress"));
-        assert!(!script.contains("addEventListener"));
-    }
-
-    #[test]
-    fn login_origin_banner_script_never_reads_field_value_or_password_content() {
-        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        assert!(!script.contains(".value"));
-        assert!(!script.contains("password"));
-    }
-
-    #[test]
-    fn login_origin_banner_script_never_uses_innerhtml() {
-        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        assert!(!script.contains("innerHTML"));
-        assert!(script.contains("textContent"));
-    }
-
-    #[test]
-    fn login_origin_banner_script_top_frame_guard_precedes_the_idempotence_flag() {
-        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        let guard_idx = script.find("window.top !== window");
-        let flag_idx = script.find("__GAMELIB_LOGIN_ORIGIN_BANNER__");
-        assert!(guard_idx.is_some());
-        assert!(flag_idx.is_some());
-        assert!(guard_idx.unwrap() < flag_idx.unwrap());
-    }
-
-    #[test]
-    fn login_origin_banner_script_z_index_is_strictly_below_the_cancel_strips() {
-        // Numeric comparison, not substring presence alone (T-34.5-C7-05, WR-08-adjacent
-        // discipline): extract both z-index literals and compare them as integers.
-        let banner_script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        let strip_script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        assert!(banner_script.contains("'2147482999'"));
-        let banner_z: i64 = banner_script
-            .split("zIndex = '")
-            .nth(1)
-            .and_then(|s| s.split('\'').next())
-            .expect("banner script must set zIndex")
-            .parse()
-            .expect("banner zIndex must parse as an integer");
-        let strip_z: i64 = strip_script
-            .split("zIndex = '")
-            .nth(1)
-            .and_then(|s| s.split('\'').next())
-            .expect("strip script must set zIndex")
-            .parse()
-            .expect("strip zIndex must parse as an integer");
-        assert!(banner_z < strip_z);
-    }
-
-    #[test]
-    fn login_origin_banner_script_pointer_events_are_disabled() {
-        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        assert!(script.contains("pointerEvents = 'none'"));
-    }
-
-    #[test]
-    fn login_origin_banner_script_is_wrapped_in_a_single_top_level_try_catch() {
-        assert_eq!(
-            login_origin_banner_script(TEST_LOGIN_ORIGIN)
-                .matches("try {")
-                .count(),
-            1
-        );
-    }
-
-    #[test]
-    fn login_origin_banner_script_is_pure_same_origin_yields_identical_output() {
-        let a = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        let b = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        assert_eq!(a, b);
-    }
-
-    // ---- Quick task 261003-nsk additions: one bar across the sheet's top edge, both
-    // injected scripts restyled (D-1/D-2/D-3, T-nsk-01..06). RED direction observed against
-    // the pre-edit source (recorded verbatim in `261003-nsk-SUMMARY.md`): every one of these
-    // five failed before the production edit landed -- `login_origin_banner_script` set
-    // neither `right` nor `height` nor a padding literal at all, and `login_cancel_strip_script`
-    // still wrote the visible phrase into `textContent` with 8px insets on both axes.
-
-    #[test]
-    fn login_origin_banner_script_spans_the_full_width_and_centres_its_text() {
-        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        assert!(script.contains("banner.style.left = '0'"));
-        assert!(script.contains("banner.style.right = '0'"));
-        assert!(script.contains("banner.style.top = '0'"));
-        assert!(script.contains("banner.style.textAlign = 'center'"));
-        assert!(!script.contains("banner.style.top = '8px'"));
-        assert!(!script.contains("banner.style.left = '8px'"));
-    }
-
-    #[test]
-    fn login_origin_banner_script_reserves_horizontal_room_for_the_close_glyph() {
-        // Numeric comparison, not substring presence (mirrors
-        // `login_origin_banner_script_z_index_is_strictly_below_the_cancel_strips`'s own
-        // discipline): the bar's horizontal padding must be at least the glyph box's width,
-        // so a centred origin can never run under the glyph (T-nsk-06).
-        let banner_script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        let strip_script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        let padding_horizontal: i64 = banner_script
-            .split("banner.style.padding = '0 ")
-            .nth(1)
-            .and_then(|s| s.split("px'").next())
-            .expect("banner script must set a horizontal padding")
-            .parse()
-            .expect("banner padding must parse as an integer");
-        let glyph_width: i64 = strip_script
-            .split("strip.style.width = '")
-            .nth(1)
-            .and_then(|s| s.split("px'").next())
-            .expect("strip script must set width")
-            .parse()
-            .expect("strip width must parse as an integer");
-        assert!(padding_horizontal >= glyph_width);
-    }
-
-    #[test]
-    fn login_origin_banner_and_cancel_strip_agree_on_one_bar_height() {
-        // The "reads as ONE bar" invariant: both elements' height literals must be equal.
-        let banner_script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
-        let strip_script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        let banner_height: &str = banner_script
-            .split("banner.style.height = '")
-            .nth(1)
-            .and_then(|s| s.split('\'').next())
-            .expect("banner script must set height");
-        let strip_height: &str = strip_script
-            .split("strip.style.height = '")
-            .nth(1)
-            .and_then(|s| s.split('\'').next())
-            .expect("strip script must set height");
-        assert_eq!(banner_height, strip_height);
-    }
-
-    #[test]
-    fn login_cancel_strip_script_shows_a_bare_glyph_and_keeps_its_accessible_name() {
-        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        assert!(script.contains("strip.setAttribute('aria-label', 'Cancel sign-in')"));
-        assert!(script.contains("strip.setAttribute('aria-keyshortcuts', 'Escape')"));
-        assert!(!script.contains("strip.textContent = 'Cancel sign-in'"));
-        assert!(script.contains("strip.textContent = '\\u00d7'"));
-    }
-
-    #[test]
-    fn login_cancel_strip_script_glyph_box_is_flush_with_the_bar_corner() {
-        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        assert!(script.contains("strip.style.top = '0'"));
-        assert!(script.contains("strip.style.right = '0'"));
-        let width: &str = script
-            .split("strip.style.width = '")
-            .nth(1)
-            .and_then(|s| s.split('\'').next())
-            .expect("strip script must set width");
-        let height: &str = script
-            .split("strip.style.height = '")
-            .nth(1)
-            .and_then(|s| s.split('\'').next())
-            .expect("strip script must set height");
-        assert_eq!(width, height);
-    }
-
-    #[test]
-    fn login_origin_banner_update_script_embeds_the_new_origin_and_differs_by_origin() {
-        let a = login_origin_banner_update_script(TEST_LOGIN_ORIGIN);
-        let b = login_origin_banner_update_script("https://embed.gog.com");
-        let literal = serde_json::to_string(TEST_LOGIN_ORIGIN).unwrap();
-        assert!(a.contains(&literal));
-        assert_ne!(a, b);
-    }
-
-    #[test]
-    fn login_origin_banner_update_script_never_uses_innerhtml_and_is_wrapped_in_one_try_catch() {
-        let script = login_origin_banner_update_script(TEST_LOGIN_ORIGIN);
-        assert!(!script.contains("innerHTML"));
-        assert!(script.contains("textContent"));
-        assert_eq!(script.matches("try {").count(), 1);
-    }
-
-    #[test]
-    fn login_origin_banner_update_script_registers_no_listener() {
-        let script = login_origin_banner_update_script(TEST_LOGIN_ORIGIN);
-        assert!(!script.contains("addEventListener"));
-        assert!(!script.contains("keydown"));
-    }
-
     // ---- login_chrome_css_script (quick task 260822-di1, T-di1-01..06; extended by
     // 260822-eib, T-eib-01..05) ----
     //
@@ -16442,128 +15757,6 @@ mod tests {
     // reasoned prediction.
 
     #[test]
-    #[test]
-    #[cfg(target_os = "macos")]
-    fn login_scrollbar_inset_script_scopes_every_rule_to_html_so_inner_scrollers_keep_their_own() {
-        let script = login_scrollbar_inset_script();
-
-        // Breaks if: any rule loses its `html` prefix. Probe E (2026-10-03) rendered an inner
-        // `overflow-y: scroll` box alongside the document scroller: scoped to `html`, the inner
-        // box keeps a normal scrollbar; UNSCOPED, every inner scroller on Humble's login page
-        // would inherit the 32px top dead zone meant only for the document scroller.
-        for selector in [
-            "html::-webkit-scrollbar {",
-            "html::-webkit-scrollbar-track {",
-            "html::-webkit-scrollbar-thumb {",
-        ] {
-            assert!(script.contains(selector), "missing scoped rule: {selector}");
-        }
-        assert_eq!(
-            script.matches("::-webkit-scrollbar").count(),
-            script.matches("html::-webkit-scrollbar").count()
-        );
-    }
-
-    #[test]
-    #[cfg(target_os = "macos")]
-    fn login_scrollbar_track_inset_equals_the_bar_height_both_other_scripts_set() {
-        // The three literals must agree or the scrollbar starts above or below the bar's edge
-        // instead of flush with it. Extracted and compared against each other rather than
-        // asserted as three separate `== 32`, so a deliberate future move to a different bar
-        // height stays green as long as all three move together.
-        let inset = login_scrollbar_inset_script();
-        let banner = login_origin_banner_script("https://example.invalid");
-        let strip = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-
-        let track_margin = inset
-            .split("margin-top: ")
-            .nth(1)
-            .and_then(|rest| rest.split("px").next())
-            .expect("track margin-top literal");
-        let banner_height = banner
-            .split("banner.style.height = '")
-            .nth(1)
-            .and_then(|rest| rest.split("px").next())
-            .expect("banner height literal");
-        let strip_height = strip
-            .split("strip.style.height = '")
-            .nth(1)
-            .and_then(|rest| rest.split("px").next())
-            .expect("strip height literal");
-
-        assert_eq!(track_margin, banner_height);
-        assert_eq!(banner_height, strip_height);
-    }
-
-    #[test]
-    #[cfg(target_os = "macos")]
-    fn login_scrollbar_inset_script_paints_the_gutter_the_same_colour_as_the_bar() {
-        // Probe D (2026-10-03): the track `margin-top` alone leaves the inset region showing the
-        // PAGE background -- a white notch where the scrollbar notch used to be. The gutter only
-        // reads as part of the bar when the scrollbar element ITSELF carries the bar's colour.
-        let inset = login_scrollbar_inset_script();
-        let banner = login_origin_banner_script("https://example.invalid");
-
-        let bar_bg = banner
-            .split("banner.style.background = '")
-            .nth(1)
-            .and_then(|rest| rest.split('\'').next())
-            .expect("banner background literal");
-        assert!(
-            inset.contains(&format!(
-                "html::-webkit-scrollbar {{ width: 14px; background: {bar_bg}; }}"
-            )),
-            "scrollbar gutter must carry the bar's own background {bar_bg}"
-        );
-    }
-
-    #[test]
-    #[cfg(target_os = "macos")]
-    fn login_scrollbar_chrome_never_widens_the_bar_to_100vw() {
-        // REFUTED TWICE by measurement (probes A and C, 2026-10-03): a classic scrollbar paints
-        // ABOVE page content and a `position: fixed` element cannot paint into the scrollbar
-        // gutter, so `100vw` does not close the notch -- it is the obvious fix and it is wrong.
-        // Guards all three scripts, because `100vw` is what a future reader will reach for.
-        let inset = login_scrollbar_inset_script();
-        let banner = login_origin_banner_script("https://example.invalid");
-        let strip = login_cancel_strip_script(REVEAL_EXFIL_HOST);
-        for script in [&inset, &banner, &strip] {
-            assert!(!script.contains("100vw"));
-        }
-    }
-
-    #[test]
-    #[cfg(target_os = "macos")]
-    fn login_scrollbar_inset_script_follows_the_house_injection_contract() {
-        let script = login_scrollbar_inset_script();
-
-        let try_at = script.find("try { ").expect("try");
-        let top_frame_at = script
-            .find("if (window.top !== window) { return; }")
-            .expect("guard");
-        let flag_at = script
-            .find("__GAMELIB_LOGIN_SCROLLBAR_INSET__")
-            .expect("flag");
-        assert!(try_at < top_frame_at);
-        assert!(top_frame_at < flag_at);
-
-        assert_eq!(script.matches("try {").count(), 1);
-        assert_eq!(script.matches("catch (e) { }").count(), 1);
-        assert!(!script.contains("innerHTML"));
-        assert!(!script.contains("insertAdjacentHTML"));
-        assert!(!script.contains("addEventListener"));
-        assert!(!script.contains("keydown"));
-        assert!(!script.contains("keyup"));
-        assert!(!script.contains("keypress"));
-        assert!(script.contains("style.textContent = CSS;"));
-        assert!(script.contains("new MutationObserver"));
-        assert!(script.contains(
-            "observer.observe(document.documentElement, { childList: true, subtree: true })"
-        ));
-
-        assert_eq!(script, login_scrollbar_inset_script());
-    }
-
     fn login_chrome_css_script_hides_the_footer_and_navbar_leaving_the_four_protected_selectors_untouched(
     ) {
         let script = login_chrome_css_script();
@@ -16572,6 +15765,19 @@ mod tests {
         for forbidden in ["#flash", "page-top-messages", "grayout", "zdconsent"] {
             assert!(!script.contains(forbidden));
         }
+    }
+
+    // quick-261029-osq: the native bar's band geometry (the real helper
+    // `install_native_login_bar` uses), pinned for both coordinate systems.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn native_login_bar_band_pins_the_top_32pt_in_both_coordinate_systems() {
+        // Unflipped (origin bottom-left): the bar is the TOP band, so it sits at y = h - 32.
+        assert_eq!(native_login_bar_band(592.0, false), (560.0, 0.0, 560.0));
+        // Flipped (origin top-left): the bar is at y = 0, the webview starts below it.
+        assert_eq!(native_login_bar_band(592.0, true), (0.0, 32.0, 560.0));
+        // A container shorter than the bar never yields a negative webview height.
+        assert_eq!(native_login_bar_band(10.0, false).2, 0.0);
     }
 
     #[test]

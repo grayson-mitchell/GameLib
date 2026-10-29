@@ -28,7 +28,7 @@
  * The navbar's Humble logo was previously treated (by di1) as a partial
  * authenticity cue worth keeping. That reasoning is superseded (D-5,
  * 260822-eib): this is an OS-level child webview the user reached from
- * inside GameLib, its origin is already shown by `login_origin_banner_script`,
+ * inside GameLib, its origin is already shown by the native login bar (`install_native_login_bar`),
  * and a logo rendered by the page itself was never a signal a phisher could
  * not also render. Do not re-add the navbar on authenticity grounds.
  *
