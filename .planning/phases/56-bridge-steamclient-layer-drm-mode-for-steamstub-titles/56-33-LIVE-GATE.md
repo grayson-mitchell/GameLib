@@ -511,6 +511,14 @@ After the instance-count deviation, the operator restarted dev from one terminal
 
 Note: DELTA(0) is the reinstall window of the current segment-A `gamelib.log` after line 59.
 
+### 56-34 launch 0 reinstall observations
+
+- Operator report: "installed, play enabled, no dialogs". G2 operator side: no route-notice dialog appeared.
+- Card states seen during the install, in the operator's words: "installing" -> "processing files please wait" -> "[play now]" (for a few seconds) -> "installing redistributables" -> final state "Play" enabled. The operator did not click Play during the brief "[play now]" flash.
+- OBSERVATION (not scored, no contract item covers it): a transient premature Play state ("[play now]") appeared before the redistributables step during install. G3 asks only about the state after the install finishes (Play enabled, not stuck on redist), which was met; this flash is recorded for the Gaps list as a non-blocking finding.
+- Launch-0 sinks read: `gamelib-launch-0.log` (DELTA(0) = lines after 59). Recorded only; scoring happens in Task 2.
+- Segment-A pid still 86847 before the launch-1 click. Launch-1 delimiter written; baselines in `lines-before-launch-1.txt`, `anchors-before-launch-1.txt`, `pad-before-launch-1.txt`.
+
 ## Gaps
 
 - PC2 failed at authoring time: a Windows Steam was running in the `GameLibSteam` bottle (see Preflight). RESOLVED before 56-34 launch 0: re-checked by 56-34 on 2026-10-29, the PC2 ps grep printed nothing (0 lines) and `pgrep -fl wineserver` printed nothing (see `### 56-34 pre-run re-check`).
