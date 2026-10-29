@@ -3938,23 +3938,35 @@ export default class SteamGame implements Game {
       this.maybeNotifyDrmModeFailed(drm.step, drm.cause)
       return false
     } else {
-      const launched = await this.launchDrmModeGame(
-        exePath,
-        drmInstallRoot as string,
-        drm
-      )
-      if (!launched && drm.progressSent) {
-        sendGameStatusUpdate({
-          appName: this.appId,
-          runner: 'steam',
-          status: 'done'
-        })
-        logInfo(
-          `SteamGame: drm launch appId ${this.appId} sent terminal status done after launch failure`,
-          LogPrefix.Steam
+      // WR-01 (quick 261029-m68): 'done' is sent on every non-launch (a false
+      // return or a throw). Success is excluded so the launching/playing set
+      // by startBottleProcessMonitor is not clobbered. fireBridgeWineLaunch's
+      // known-fixes / shared-redist steps send winetricks/redist before
+      // DRM-only exits, progressSent is usually false since quick 261029-e2t
+      // prefetches at install, and dispatchSteamLaunch bypasses launcher.ts's
+      // 'done'. 'done' is idempotent in GlobalState.handleGameStatus. No catch:
+      // a throw propagates untouched.
+      let launched = false
+      try {
+        launched = await this.launchDrmModeGame(
+          exePath,
+          drmInstallRoot as string,
+          drm
         )
+        return launched
+      } finally {
+        if (!launched) {
+          sendGameStatusUpdate({
+            appName: this.appId,
+            runner: 'steam',
+            status: 'done'
+          })
+          logInfo(
+            `SteamGame: drm launch appId ${this.appId} sent terminal status done after launch failure`,
+            LogPrefix.Steam
+          )
+        }
       }
-      return launched
     }
 
     // D-51-01: byte-identity no-op on every normal launch — only does real

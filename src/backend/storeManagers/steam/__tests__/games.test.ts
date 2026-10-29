@@ -11813,7 +11813,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         ).toBe(true)
       })
 
-      it("a DRM-ready launch failure without progress sends no 'done'", async () => {
+      it("a DRM-ready launch failure without progress still sends a terminal 'done' (WR-01)", async () => {
         const id = freshId()
         const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
         ;(sendGameStatusUpdate as jest.Mock).mockClear()
@@ -11822,6 +11822,74 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           (p: string) => p !== dylib()
         )
         expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(sendGameStatusUpdate).toHaveBeenCalledWith({
+          appName: id,
+          runner: 'steam',
+          status: 'done'
+        })
+      })
+
+      it("a failure after a redist status (progressSent false) ends with 'done' after it (WR-01)", async () => {
+        const id = freshId()
+        const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+        ;(sendGameStatusUpdate as jest.Mock).mockClear()
+        useDrmOk(id)
+        const spy = jest
+          .spyOn(SteamGame.prototype as any, 'launchDrmModeGame')
+          .mockImplementation(async () => {
+            sendGameStatusUpdate({
+              appName: id,
+              runner: 'steam',
+              status: 'redist'
+            })
+            return false
+          })
+        try {
+          expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        } finally {
+          spy.mockRestore()
+        }
+        const calls = (sendGameStatusUpdate as jest.Mock).mock.calls
+        const redistIdx = calls.findIndex((c) => c[0].status === 'redist')
+        const doneIdx = calls.findIndex((c) => c[0].status === 'done')
+        expect(redistIdx).toBeGreaterThanOrEqual(0)
+        expect(doneIdx).toBeGreaterThan(redistIdx)
+      })
+
+      it("a thrown launchDrmModeGame sends 'done' and still propagates (WR-01)", async () => {
+        const id = freshId()
+        const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+        ;(sendGameStatusUpdate as jest.Mock).mockClear()
+        useDrmOk(id)
+        const err = new Error('boom')
+        const spy = jest
+          .spyOn(SteamGame.prototype as any, 'launchDrmModeGame')
+          .mockRejectedValue(err)
+        try {
+          await expect(new SteamGame(id).launch({} as never)).rejects.toBe(err)
+        } finally {
+          spy.mockRestore()
+        }
+        expect(sendGameStatusUpdate).toHaveBeenCalledWith({
+          appName: id,
+          runner: 'steam',
+          status: 'done'
+        })
+      })
+
+      it("a successful DRM-ready launch sends no 'done' from the call site (WR-01)", async () => {
+        const id = freshId()
+        const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+        ;(sendGameStatusUpdate as jest.Mock).mockClear()
+        useDrmOk(id)
+        const spy = jest
+          .spyOn(SteamGame.prototype as any, 'launchDrmModeGame')
+          .mockResolvedValue(true)
+        try {
+          expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        } finally {
+          spy.mockRestore()
+        }
         expect(sendGameStatusUpdate).not.toHaveBeenCalledWith(
           expect.objectContaining({ status: 'done' })
         )
