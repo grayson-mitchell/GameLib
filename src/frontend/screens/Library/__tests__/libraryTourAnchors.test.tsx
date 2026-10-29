@@ -100,6 +100,7 @@ const EXPECTED_ELEMENTS = [
   '[data-tour="library-facets"]',
   '[data-tour="library-view-toggle"]',
   '[data-tour="library-sort"]',
+  '[data-tour="library-group-by"]',
   '[data-tour="library-add-game"]',
   '[data-tour="library-refresh"]',
   undefined // end.intro

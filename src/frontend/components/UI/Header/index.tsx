@@ -38,7 +38,10 @@ import FilterStoreFacet from '../NavShell/components/FilterStoreFacet'
 import FilterRunnabilityFacet from '../NavShell/components/FilterRunnabilityFacet'
 import FilterMoreGroup from '../NavShell/components/FilterMoreGroup'
 import LibraryTileSizeSlider from '../NavShell/components/LibraryTileSizeSlider'
-import type { LibrarySortField } from 'frontend/screens/Library/librarySort'
+import type {
+  LibraryGroupBy,
+  LibrarySortField
+} from 'frontend/screens/Library/librarySort'
 import './index.css'
 
 type Props = {
@@ -90,6 +93,8 @@ export default function Header({ list, totalGames }: Props) {
     setSortField,
     sortDirection,
     setSortDirection,
+    groupBy,
+    setGroupBy,
     showAlphabetFilter,
     onToggleAlphabetFilter
   } = useContext(LibraryContext)
@@ -120,6 +125,24 @@ export default function Header({ list, totalGames }: Props) {
   ]
   const currentSortRow =
     sortRows.find((row) => row.value === sortField) ?? sortRows[0]
+  // Quick 261029-uas: Group by is back, as the same themed Dropdown as Sort by.
+  // Literal t() call sites in LIBRARY_GROUP_BYS order.
+  const groupByRows: Array<{ value: LibraryGroupBy; label: string }> = [
+    {
+      value: 'none',
+      label: tGamelib('gamelib:library.groupBy.none', 'None')
+    },
+    {
+      value: 'installStatus',
+      label: tGamelib('gamelib:library.groupBy.installStatus', 'Install status')
+    },
+    {
+      value: 'store',
+      label: tGamelib('gamelib:library.groupBy.store', 'Store')
+    }
+  ]
+  const currentGroupByRow =
+    groupByRows.find((row) => row.value === groupBy) ?? groupByRows[0]
   const {
     refreshLibrary,
     refreshing,
@@ -334,6 +357,40 @@ export default function Header({ list, totalGames }: Props) {
               }
             />
           </button>
+        </div>
+        <div
+          className="Header__sortRow Header__groupByRow"
+          data-tour="library-group-by"
+        >
+          <Dropdown
+            closeOnSelect
+            className="Header__sortDropdown"
+            title={
+              <>
+                <span className="Header__sortLabel">
+                  {tGamelib('gamelib:library.groupBy.label', 'Group by')}
+                </span>
+                <span className="Header__sortValue">
+                  {currentGroupByRow.label}
+                </span>
+                <FontAwesomeIcon
+                  icon={faChevronDown}
+                  className="Header__sortCaret"
+                />
+              </>
+            }
+          >
+            {groupByRows.map((row) => (
+              <NavItem
+                key={row.value}
+                elementType="button"
+                className="Header__sortOption"
+                label={row.label}
+                active={groupBy === row.value}
+                onClick={() => setGroupBy(row.value)}
+              />
+            ))}
+          </Dropdown>
         </div>
       </div>
       <h2 className="Header__filtersHeading">

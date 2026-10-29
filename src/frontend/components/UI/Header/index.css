@@ -78,6 +78,12 @@
   gap: var(--space-xs);
 }
 
+/* Group by has no direction button (quick 261029-uas): the trigger spans the
+   whole row (it is already inline-size: 100%). */
+.Header__groupByRow {
+  grid-template-columns: 1fr;
+}
+
 .Header__sortLabel {
   color: var(--text-secondary);
   font-size: calc(var(--text-xs) + 2px);

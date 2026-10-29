@@ -7,7 +7,8 @@
  * the locked panel order (`Header__utilities`, `Header__search`,
  * `Header__focusRowGroup`, `Header__sortGroup`, `Header__filtersHeading`,
  * `Header__categoriesGroup`, `Header__filtersGroup`, `Header__footer`;
- * reordered and Group by removed by quick 261029-quw) --
+ * reordered by quick 261029-quw; Group by restored as a second sort-group
+ * row by quick 261029-uas) --
  * 261003-i4t collapsed the former two-row `Header__utilities` /
  * `Header__sortRow` pair into one flat `Header__utilities` row of six
  * controls (D-01), dissolving the `FormControl` segmented group and the
@@ -49,7 +50,10 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { ReactElement, ReactNode } from 'react'
 import type { GameInfo } from 'common/types'
-import { LIBRARY_SORT_FIELDS } from 'frontend/screens/Library/librarySort'
+import {
+  LIBRARY_GROUP_BYS,
+  LIBRARY_SORT_FIELDS
+} from 'frontend/screens/Library/librarySort'
 
 type LibraryContextStub = {
   activeFilterCount: number
@@ -59,6 +63,8 @@ type LibraryContextStub = {
   setSortField: jest.Mock
   sortDirection: string
   setSortDirection: jest.Mock
+  groupBy: string
+  setGroupBy: jest.Mock
   showAlphabetFilter: boolean
   onToggleAlphabetFilter: jest.Mock
 }
@@ -83,6 +89,8 @@ function makeLibraryContextValue(
     setSortField: jest.fn(),
     sortDirection: 'asc',
     setSortDirection: jest.fn(),
+    groupBy: 'installStatus',
+    setGroupBy: jest.fn(),
     showAlphabetFilter: false,
     onToggleAlphabetFilter: jest.fn(),
     ...overrides
@@ -448,7 +456,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     expect(heading.props.children).toBe('Filters')
   })
 
-  describe('sort control (quick 261027-jjz; group-by removed 261029-quw)', () => {
+  describe('sort control (quick 261027-jjz; group-by restored 261029-uas)', () => {
     const sortGroupOf = (tree: ReactNode): AnyElement => {
       const group = topLevelChildren(tree).find(
         (c) => c.props?.className === 'Header__sortGroup'
@@ -471,17 +479,80 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
         : [dropdown.props.children]
       ).filter((c: unknown) => (c as AnyElement)?.type === NavItem)
 
-    it('one sort row inside Header__sortGroup, no group-by row, and no native select anywhere', () => {
+    it('two rows inside Header__sortGroup (sort then group-by), both before the Filters heading, and no native select anywhere', () => {
       const tree = renderHeader()
       const group = sortGroupOf(tree)
       expect(findByDataTour(group, 'library-sort')).toHaveLength(1)
+      expect(findByDataTour(group, 'library-group-by')).toHaveLength(1)
       expect(findByDataTour(tree, 'library-sort')).toHaveLength(1)
-      expect(findByDataTour(tree, 'library-group-by')).toHaveLength(0)
-      const all = collectElements(tree)
-      expect(all.filter((el) => el.props?.id === 'library-group-by')).toEqual(
-        []
+      expect(findByDataTour(tree, 'library-group-by')).toHaveLength(1)
+      const rows = (
+        Array.isArray(group.props.children)
+          ? group.props.children
+          : [group.props.children]
+      ) as AnyElement[]
+      expect(rows.map((r) => r.props['data-tour'])).toEqual([
+        'library-sort',
+        'library-group-by'
+      ])
+      const kids = topLevelChildren(tree).map((c) => c.props?.className)
+      expect(kids.indexOf('Header__sortGroup')).toBeLessThan(
+        kids.indexOf('Header__filtersHeading')
       )
-      expect(all.filter((el) => el.type === 'select')).toHaveLength(0)
+      expect(
+        collectElements(tree).filter((el) => el.type === 'select')
+      ).toHaveLength(0)
+    })
+
+    describe('group-by row', () => {
+      const groupRow = () =>
+        findByDataTour(sortGroupOf(renderHeader()), 'library-group-by')[0]
+
+      it('holds one closeOnSelect themed Dropdown with label, value and caret, and no direction button', () => {
+        libraryContextValue = makeLibraryContextValue({ groupBy: 'store' })
+        const row = groupRow()
+        const dropdown = dropdownIn(row)
+        expect(String(dropdown.props.className)).toContain(
+          'Header__sortDropdown'
+        )
+        expect(dropdown.props.closeOnSelect).toBe(true)
+        const parts = collectElements(dropdown.props.title as ReactNode)
+        const classes = parts.map((el) => String(el.props.className))
+        expect(classes).toEqual(
+          expect.arrayContaining([
+            'Header__sortLabel',
+            'Header__sortValue',
+            'Header__sortCaret'
+          ])
+        )
+        const text = parts
+          .map((el) => el.props.children)
+          .filter((c): c is string => typeof c === 'string')
+        expect(text).toEqual(['Group by', 'Store'])
+        expect(
+          collectElements(row.props.children).filter(
+            (el) => el.type === 'button'
+          )
+        ).toHaveLength(0)
+      })
+
+      it('has three NavItem rows in LIBRARY_GROUP_BYS order, only the current active; clicking Store calls setGroupBy', () => {
+        libraryContextValue = makeLibraryContextValue({ groupBy: 'none' })
+        const rows = rowsOf(dropdownIn(groupRow()))
+        expect(rows.map((r) => r.key)).toEqual([...LIBRARY_GROUP_BYS])
+        expect(rows.map((r) => r.props.label)).toEqual([
+          'None',
+          'Install status',
+          'Store'
+        ])
+        expect(rows.map((r) => r.props.active)).toEqual([true, false, false])
+        expect(
+          rows.every((r) => r.props.className === 'Header__sortOption')
+        ).toBe(true)
+        fire(rows[2], 'onClick')
+        expect(libraryContextValue.setGroupBy).toHaveBeenCalledTimes(1)
+        expect(libraryContextValue.setGroupBy).toHaveBeenCalledWith('store')
+      })
     })
 
     it('the sort row holds one closeOnSelect Dropdown with the Header__sortDropdown class', () => {

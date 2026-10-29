@@ -120,6 +120,14 @@ const LibraryTour: React.FC = () => {
         position: 'left'
       },
       {
+        element: '[data-tour="library-group-by"]',
+        intro: tGamelib(
+          'gamelib:tour.library.groupBy',
+          'Group your games by install status or by store, or turn grouping off.'
+        ),
+        position: 'left'
+      },
+      {
         element: '[data-tour="library-add-game"]',
         intro: t(
           'tour.library.addGame',
