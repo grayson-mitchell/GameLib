@@ -491,6 +491,12 @@ Run by 56-34 after the operator said "window up" (dev started under `tee -a <ses
 | PC13 (before launch 0) | count 1 (connected) | recorded |
 | launch 0 | delimiter written; `lines-before-launch-0.txt` = 58, `anchors-before-launch-0.txt` = 0 | in progress |
 
+### 56-34 launch 0 uninstall (segment A)
+
+- Uninstall gesture: the game page menu (operator report), recorded per Section 4f.
+- PC7: `test ! -d BOTTLE(219990)` exit 0. PC11: `test ! -e` Mac Steam manifest exit 0; `find ... appmanifest_219990.acf` outside the 219990 bottle printed nothing. Both PASS.
+- PROCESS DEVIATION (instance count): after the uninstall the running `gamelib-shell` was pid 78673 (parent shell `ttys004`, started about 00:52Z), not PC6's pid 76294. `terminal.log` shows `[shell] quit (Dock Quit)` at line 80, after the launch-0 delimiter at line 57, so the tee'd instance was quit and a second dev app was started from another terminal, outside `tee -a <session>/terminal.log`. The uninstall is therefore not captured by terminal.log and PC6's pid no longer holds. The pre-restart sidecar log is saved as `gamelib-segmentA-pre-restart.log`. Remediation: quit the app, restart under tee, re-run PC6 (new segment-A pid) before the reinstall. No reinstall or launch has run yet, so nothing scored is affected.
+
 ## Gaps
 
 - PC2 failed at authoring time: a Windows Steam was running in the `GameLibSteam` bottle (see Preflight). RESOLVED before 56-34 launch 0: re-checked by 56-34 on 2026-10-29, the PC2 ps grep printed nothing (0 lines) and `pgrep -fl wineserver` printed nothing (see `### 56-34 pre-run re-check`).
