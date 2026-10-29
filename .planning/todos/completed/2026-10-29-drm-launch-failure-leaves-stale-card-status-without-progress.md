@@ -25,3 +25,9 @@ Two DRM-only exits then `return false` with no status: `buildDrmLaunchEnvironmen
 ## Next
 
 `done` is idempotent, and nothing else ends a Steam launch's status (`dispatchSteamLaunch` bypasses `launchEventCallback`). So send `done` on every `!launched`, not only when `progressSent`, and consider a `try/finally` so an exception thrown out of `launchDrmModeGame` also ends the status. Add a test with `progressSent: false` where the launch returns false after a `redist` status.
+
+## Resolution
+
+2026-10-29, quick 261029-m68 (commit 9773a9276). The DRM-ready call site in games.ts now wraps launchDrmModeGame in try/finally and sends 'done' on every non-launch (false return or throw), no longer gated on drm.progressSent. A throw propagates unchanged (no catch); the success path sends no 'done'. Frontend 'done' is idempotent (GlobalState.handleGameStatus).
+
+Tests in games.test.ts: inverted "a DRM-ready launch failure without progress still sends a terminal 'done' (WR-01)"; added "a failure after a redist status (progressSent false) ends with 'done' after it (WR-01)", "a thrown launchDrmModeGame sends 'done' and still propagates (WR-01)", "a successful DRM-ready launch sends no 'done' from the call site (WR-01)"; 56-27 test kept.
