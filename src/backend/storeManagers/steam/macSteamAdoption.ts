@@ -245,6 +245,7 @@ export interface RestartDeps {
   openUrlDetached: (url: string) => void
   launchRunGameId: () => Promise<unknown>
   emitStatus: (appId: string) => void
+  emitDone: (appId: string) => void
   sleep: (ms: number) => Promise<void>
   now: () => number
 }
@@ -281,6 +282,12 @@ function defaultRestartDeps(): RestartDeps {
         appName: id,
         runner: 'steam',
         status: 'steam-starting'
+      }),
+    emitDone: (id) =>
+      sendGameStatusUpdate({
+        appName: id,
+        runner: 'steam',
+        status: 'done'
       }),
     sleep: (ms) =>
       new Promise<void>((resolve) => {
@@ -322,34 +329,39 @@ export async function restartMacSteamForAdoption(
   const startedAt = deps.now()
   const elapsed = () => deps.now() - startedAt
   deps.emitStatus(appId)
-  deps.openUrlDetached('steam://exit')
-  logInfo(
-    `[Steam] fired steam://exit to adopt ${appId} on restart`,
-    LogPrefix.Steam
-  )
-
-  let exited = false
-  while (elapsed() < RESTART_QUIT_TIMEOUT_MS) {
-    await deps.sleep(RESTART_POLL_MS)
-    // A failed probe is treated as still running.
-    const running = await deps.isSteamRunning().catch(() => true)
-    if (!running) {
-      exited = true
-      break
-    }
-  }
-  if (!exited) {
-    logWarning(
-      `[Steam] Steam did not quit within ${elapsed()} ms; not relaunching ${appId}`,
+  // Steam launches skip launchEventCallback, so nothing else ever sends 'done'.
+  try {
+    deps.openUrlDetached('steam://exit')
+    logInfo(
+      `[Steam] fired steam://exit to adopt ${appId} on restart`,
       LogPrefix.Steam
     )
-    return { kind: 'quit-timeout' }
-  }
 
-  logInfo(
-    `[Steam] Steam exited after ${elapsed()} ms; relaunching ${appId}`,
-    LogPrefix.Steam
-  )
-  await deps.launchRunGameId()
-  return { kind: 'relaunched' }
+    let exited = false
+    while (elapsed() < RESTART_QUIT_TIMEOUT_MS) {
+      await deps.sleep(RESTART_POLL_MS)
+      // A failed probe is treated as still running.
+      const running = await deps.isSteamRunning().catch(() => true)
+      if (!running) {
+        exited = true
+        break
+      }
+    }
+    if (!exited) {
+      logWarning(
+        `[Steam] Steam did not quit within ${elapsed()} ms; not relaunching ${appId}`,
+        LogPrefix.Steam
+      )
+      return { kind: 'quit-timeout' }
+    }
+
+    logInfo(
+      `[Steam] Steam exited after ${elapsed()} ms; relaunching ${appId}`,
+      LogPrefix.Steam
+    )
+    await deps.launchRunGameId()
+    return { kind: 'relaunched' }
+  } finally {
+    deps.emitDone(appId)
+  }
 }

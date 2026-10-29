@@ -133,6 +133,9 @@ describe('restartMacSteamForAdoption', () => {
       emitStatus: jest.fn(() => {
         calls.push('emit')
       }),
+      emitDone: jest.fn(() => {
+        calls.push('done')
+      }),
       sleep: jest.fn(async (ms: number) => {
         clock += ms
       }),
@@ -150,6 +153,7 @@ describe('restartMacSteamForAdoption', () => {
     })
     expect(deps.openUrlDetached).not.toHaveBeenCalled()
     expect(deps.emitStatus).not.toHaveBeenCalled()
+    expect(deps.emitDone).not.toHaveBeenCalled()
     expect(deps.launchRunGameId).not.toHaveBeenCalled()
   })
 
@@ -160,6 +164,7 @@ describe('restartMacSteamForAdoption', () => {
     })
     expect(deps.openUrlDetached).not.toHaveBeenCalled()
     expect(deps.emitStatus).not.toHaveBeenCalled()
+    expect(deps.emitDone).not.toHaveBeenCalled()
   })
 
   test('happy path: emit once, steam://exit once, poll to exit, then launch', async () => {
@@ -175,7 +180,26 @@ describe('restartMacSteamForAdoption', () => {
     expect(deps.openUrlDetached).toHaveBeenCalledWith('steam://exit')
     expect(deps.launchRunGameId).toHaveBeenCalledTimes(1)
     expect(polls).toBe(3)
-    expect(calls).toEqual(['emit', 'open:steam://exit', 'launch'])
+    expect(calls).toEqual(['emit', 'open:steam://exit', 'launch', 'done'])
+    expect(deps.emitDone).toHaveBeenCalledTimes(1)
+    expect(deps.emitDone).toHaveBeenCalledWith('264160')
+    expect(
+      (deps.emitDone as jest.Mock).mock.invocationCallOrder[0]
+    ).toBeGreaterThan(
+      (deps.launchRunGameId as jest.Mock).mock.invocationCallOrder[0]
+    )
+  })
+
+  test('launchRunGameId rejecting still emits done once and propagates', async () => {
+    const { deps } = harness({
+      launchRunGameId: jest.fn(async () => {
+        throw new Error('open failed')
+      })
+    })
+    await expect(restartMacSteamForAdoption('264160', deps)).rejects.toThrow(
+      'open failed'
+    )
+    expect(deps.emitDone).toHaveBeenCalledTimes(1)
   })
 
   test('Steam never exits: quit-timeout, no relaunch, exit fired once', async () => {
@@ -184,6 +208,7 @@ describe('restartMacSteamForAdoption', () => {
       kind: 'quit-timeout'
     })
     expect(deps.launchRunGameId).not.toHaveBeenCalled()
+    expect(deps.emitDone).toHaveBeenCalledTimes(1)
     expect(deps.openUrlDetached).toHaveBeenCalledTimes(1)
     const slept = (deps.sleep as jest.Mock).mock.calls.reduce(
       (n, [ms]) => n + (ms as number),
