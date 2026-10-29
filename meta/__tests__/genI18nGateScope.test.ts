@@ -377,15 +377,16 @@ const FIXTURE_DIFF_LINES = [
  * `pnpm gen-i18n-gate-scope`, `generatedAt` restored.
  * DECLARED_UNSCANNED_DEBT needs no edit.
  *
- * 2026-10-29 (quick 261029-sbi): fork-touched 289 -> 291, scope 243 -> 244.
+ * 2026-10-29 (quick 261029-sbi): fork-touched 289 -> 291, scope 243 -> 245.
  * `screens/Library/useWikiMetacriticScores.ts`, the read-only wiki-cache
  * Metacritic reader, audited ZERO violations with `scanScope({ extraFiles })`
  * and was hand-inserted into `meta/i18nGateScope.json` in sorted position;
  * the path was hand-added to `meta/i18nForkTouchedFiles.json` along with
  * `helpers/steamInstallSignIn.ts` (quick 261029-s5l, committed without the
- * artifact; A-17 would not pass without it, so 289 -> 291 not 290),
- * `generatedAt` unchanged. It is NOT added to scope here (outside this
- * task). DECLARED_UNSCANNED_DEBT needs no edit.
+ * artifact; A-17 would not pass without it, so 289 -> 291 not 290). That
+ * helper also audited ZERO violations and was promoted into scope, so
+ * scope is 243 -> 245. `generatedAt` unchanged. DECLARED_UNSCANNED_DEBT
+ * needs no edit.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -1146,8 +1147,8 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 244-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 291-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(244)
+  it('A0 fixture sanity: the seeded scope is the REAL 245-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 291-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(245)
     expect(forkTouchedSnapshot.files.length).toBe(291)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
@@ -1189,7 +1190,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 244 -> 291 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 245 -> 291 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
