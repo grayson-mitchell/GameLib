@@ -480,6 +480,17 @@ Run by 56-34 on 2026-10-29 before segment A. The Preflight table above is left a
 | sidecar freshness (pre-dev) | `build/main/sidecar.js` mtime 1793233790 > newest `src/backend` commit 1793232633; `git status` shows no `src/backend` change since PC4 | no rebuild needed |
 | stale dev app | one `target/debug/gamelib-shell` was already running (not under this session's tee); the operator must quit it and restart under `tee -a <session>/terminal.log` | action for the operator |
 
+### 56-34 segment A start (PC6)
+
+Run by 56-34 after the operator said "window up" (dev started under `tee -a <session>/terminal.log`, no timeout override).
+
+| ID | Observed | Result |
+| --- | --- | --- |
+| PC6 | `pgrep -f 'target/debug/gamelib-shell'` count 1, segment-A pid 76294 (in `pc6-pid.txt`); `build/main/sidecar.js` mtime 1793234781 > newest `src/backend` commit time 1793234732 (the dev start rebuilt the sidecar; an `src/backend` commit landed after PC4); literal greps on sidecar.js: `stage retry passed on attempt` 1, `stage wine log` 2, `GAMELIB_DRM_STAGE_FIRST_TIMEOUT_MS` 2, `sent terminal status done` 2, `drmLaunchSetup` 7, `setupSteamClientForwarder` 0 | PASS |
+| PC12 (re-run) | `present` | PASS |
+| PC13 (before launch 0) | count 1 (connected) | recorded |
+| launch 0 | delimiter written; `lines-before-launch-0.txt` = 58, `anchors-before-launch-0.txt` = 0 | in progress |
+
 ## Gaps
 
 - PC2 failed at authoring time: a Windows Steam was running in the `GameLibSteam` bottle (see Preflight). RESOLVED before 56-34 launch 0: re-checked by 56-34 on 2026-10-29, the PC2 ps grep printed nothing (0 lines) and `pgrep -fl wineserver` printed nothing (see `### 56-34 pre-run re-check`).
