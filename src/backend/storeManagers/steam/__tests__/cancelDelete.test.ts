@@ -7,7 +7,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { getSteamLibraries } from 'backend/utils'
+import { getSteamLibraries, sendProgressUpdate } from 'backend/utils'
 import { library } from '../state'
 import { isNativeInstallInFlight } from '../games'
 import {
@@ -25,7 +25,10 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
-jest.mock('backend/utils', () => ({ getSteamLibraries: jest.fn() }))
+jest.mock('backend/utils', () => ({
+  getSteamLibraries: jest.fn(),
+  sendProgressUpdate: jest.fn()
+}))
 jest.mock('../games', () => ({ isNativeInstallInFlight: jest.fn() }))
 jest.mock('../library', () => ({
   clearSteamResumeBreadcrumb: jest.fn(),
@@ -114,6 +117,23 @@ describe('deleteCancelledSteamInstall', () => {
     expect(clearSteamResumeBreadcrumb).toHaveBeenCalledWith('123')
   })
 
+  it('resets the frontend progress to 0 once the partial install is deleted (D-UAT-11)', async () => {
+    const r = await deleteCancelledSteamInstall('123', OPTS)
+    expect(r.status).toBe('deleted')
+    expect(sendProgressUpdate).toHaveBeenCalledTimes(1)
+    expect(sendProgressUpdate).toHaveBeenCalledWith({
+      appName: '123',
+      runner: 'steam',
+      status: 'done',
+      progress: { percent: 0, bytes: '0.00MB', eta: '' }
+    })
+    expect(
+      jest.mocked(sendProgressUpdate).mock.invocationCallOrder[0]
+    ).toBeGreaterThan(
+      jest.mocked(clearSteamResumeBreadcrumb).mock.invocationCallOrder[0]
+    )
+  })
+
   it('waits for the native run to settle before clearing', async () => {
     const inFlight = jest.mocked(isNativeInstallInFlight)
     inFlight
@@ -142,6 +162,7 @@ describe('deleteCancelledSteamInstall', () => {
     expect(r.status).toBe('refused')
     expect(allPresent()).toBe(true)
     expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
+    expect(sendProgressUpdate).not.toHaveBeenCalled()
   })
 
   describe('refusals keep everything', () => {
@@ -160,6 +181,7 @@ describe('deleteCancelledSteamInstall', () => {
       expect(r.status).toBe('refused')
       expect(allPresent()).toBe(true)
       expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
+      expect(sendProgressUpdate).not.toHaveBeenCalled()
     })
 
     it('non-numeric appId', async () => {
@@ -167,6 +189,7 @@ describe('deleteCancelledSteamInstall', () => {
       expect(r.status).toBe('refused')
       expect(allPresent()).toBe(true)
       expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
+      expect(sendProgressUpdate).not.toHaveBeenCalled()
     })
 
     it('no library entry', async () => {
@@ -175,6 +198,7 @@ describe('deleteCancelledSteamInstall', () => {
       expect(r.status).toBe('refused')
       expect(allPresent()).toBe(true)
       expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
+      expect(sendProgressUpdate).not.toHaveBeenCalled()
     })
 
     it('steamapps dir outside every allowed root', async () => {
@@ -186,6 +210,7 @@ describe('deleteCancelledSteamInstall', () => {
       expect(existsSync(join(other, 'common', 'Cool Game', 'a.bin'))).toBe(true)
       expect(existsSync(join(other, 'appmanifest_123.acf'))).toBe(true)
       expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
+      expect(sendProgressUpdate).not.toHaveBeenCalled()
     })
 
     it('ACF reports fully installed', async () => {
@@ -194,6 +219,7 @@ describe('deleteCancelledSteamInstall', () => {
       expect(r.status).toBe('refused')
       expect(allPresent()).toBe(true)
       expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
+      expect(sendProgressUpdate).not.toHaveBeenCalled()
     })
   })
 

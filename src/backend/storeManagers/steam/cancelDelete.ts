@@ -19,13 +19,15 @@
 // Targets come ONLY from the 260821-rb5 breadcrumb on the library entry
 // (steamResumeTargetSteamappsDir / steamResumeInstalldir), the values the run
 // actually resolved. Never re-derived.
+//
+// D-UAT-11 (quick-261029-o5a): a successful delete also zeroes the frontend progress.
 
 import { parse } from '@node-steam/vdf'
 import { readFileSync, existsSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve, sep } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { getSteamLibraries } from 'backend/utils'
+import { getSteamLibraries, sendProgressUpdate } from 'backend/utils'
 import { library } from './state'
 import { isNativeInstallInFlight } from './games'
 import {
@@ -196,6 +198,18 @@ export async function deleteCancelledSteamInstall(
     }
 
     clearSteamResumeBreadcrumb(appId)
+    // D-UAT-11: the stale percent lives in the frontend store
+    // useInstallProgressRaw[`${appId}_steam`], mirrored by every mounted
+    // hasProgress. Emitting here is the last word: the in-flight settle wait
+    // above guarantees no later depot emit can re-seed the old percent. A zero
+    // value, not a deleted key, is required because hasProgress's effect
+    // ignores an undefined store value.
+    sendProgressUpdate({
+      appName: appId,
+      runner: 'steam',
+      status: 'done',
+      progress: { percent: 0, bytes: '0.00MB', eta: '' }
+    })
     logInfo(
       `SteamCancelDelete: removed partial install for appId ${appId} (${installRoot})`,
       LogPrefix.Steam
