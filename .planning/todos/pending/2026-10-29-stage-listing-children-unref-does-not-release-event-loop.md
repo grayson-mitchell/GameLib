@@ -32,3 +32,7 @@ Factor one helper used by both listing sites:
 - unref the child plus its `stdout` and `stderr`.
 
 Add a test that spawns a node child calling the helper on `sleep 2` and asserts it exits in well under 2 s. Child spawns in tests follow the fake-HOME rule (`createFakeHomeProfile()`).
+
+## Resolution
+
+Fixed in `4f41cfab7` (fix(56): WR-02, via `/gsd:code-review --fix`). New helper `src/backend/storeManagers/steam/bridge/drm/boundedListing.ts` (`runBoundedListing`) drops execFile's `timeout`, bounds the child with its own unref'd SIGKILL timer cleared on exit, and unrefs the child plus `stdout`/`stderr`. Both listing sites in `stageDrmBottle.ts` use it. `__tests__/boundedListing.test.ts` compiles the helper alone with esbuild and times a node child (env from `createFakeHomeProfile()`): the helper on `sleep 2` exits in about 44 ms, while a control arm with the old shape (`execFile` with `timeout` plus `child.unref()`) is held about 2049 ms. So the test can tell the two apart.
