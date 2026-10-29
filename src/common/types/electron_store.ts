@@ -185,6 +185,9 @@ export interface StoreStructure {
   runsForMeStore: {
     games: Record<string, RunsForMeState>
   }
+  macArchStore: {
+    verdicts: Record<string, { mac_arch: '32' | '64'; checkedAt: number }>
+  }
 }
 
 // Phase 35 Plan 05 (D-04): declared first-party rather than re-exported from
