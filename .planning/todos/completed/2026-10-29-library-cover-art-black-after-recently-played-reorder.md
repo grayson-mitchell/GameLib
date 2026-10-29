@@ -15,3 +15,7 @@ Repro: play a game so it moves to the front of 'recently played'; the moved tile
 ## Next
 
 Reproduce with any game; check the tile key/ref handling when the recently-played row reorders.
+
+## Resolution
+
+Fixed in bbdd01b63 (CachedImage resets per-src state during render instead of in a passive effect). Live check confirmed 2026-10-29. Debug session: .planning/debug/resolved/cover-art-black-after-reorder.md
