@@ -381,7 +381,7 @@ result: pass. 7a: awk count of `"InstallPath"=` under [Software\\Valve\\Steam] a
 ### 8. Raft 648800 (recorded, non-blocking)
 
 expected: items 3-6 applied to launch 3 recorded as verified, reached menu (census detail) or failed at a step; `find BOTTLE(648800)/drive_c -name gamelib_bridge.cfg` prints nothing (sink: SIDECAR copy and filesystem, launch 3)
-result: pending
+verified (census `game call ISteamUser_SteamUser017_GetSteamID`), reached menu per the operator. Launch 3 (Raft) DELTA(3): anchor `[bridge-drm] appId=648800 mode=steamclient-layer` x1 (14:45:05; baseline 0), `reason=drm-` x0, `[bridge-notice]` x0, `registry not staged:` x0 (the bottle was already staged; the clause is not required for Raft), `timed out after` x0, no stage wine log line; one `role=game create-interface` (pid=240, SteamClient017), no role=helper line; 56 call events, counting names include ISteamUser_SteamUser017_GetSteamID, ISteamUser_SteamUser023_GetAuthSessionTicket, ISteamAppTicket_STEAMAPPTICKET_INTERFACE_VERSION001_GetAppOwnershipTicketData, ISteamUserStats_STEAMUSERSTATS_INTERFACE_VERSION012_RequestCurrentStats, ISteamApps_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId. `procs-launch-3.txt` (taken at the menu, before the quit): steam_osx pid present, no steamwebhelper.exe or steamservice.exe line, one helper `steam.exe` line. `find BOTTLE(648800)/drive_c -name gamelib_bridge.cfg` printed nothing. Exit behaviour: see the launch 3 note in the Run record (hang on quit, force-quit by the operator).
 
 ### 9. Ranch Simulator 1119730 (recorded, non-blocking)
 
@@ -532,6 +532,14 @@ Note: DELTA(0) is the reinstall window of the current segment-A `gamelib.log` af
 
 - The operator ran `gate-launch.sh 2 219990` four times (the first three were Ctrl-C'd): `terminal.log` has four `=== GATE LAUNCH 2` delimiters, at 01:36:25Z, 01:37:19Z, 01:39:00Z and 01:40:50Z. The Play click (about 14:38:39 local) came before the last run's baseline (14:40:50), so the script's `lines-before-launch-2.txt` (488) and `delta2.txt` start after the anchor and its "anchors in delta" output is wrong for this launch. The real launch-2 window is `gamelib-launch-2.log` lines 419-end, saved as `delta2-real.txt`; the wine log `219990-1793237919158.wine.log` was copied by hand to `wine-launch-2.log` (the script's wine-log grep had run on the misaligned delta); `trace-launch-2.log` and `system-reg-launch-2.reg` were copied by the script from the right files. Run 1b's stop is at line 418 of the same file, so lines 419-end contain run 2 only.
 - No snapshot for launch 2 (`procs-launch-2.txt` missing).
+
+### 56-34 launch 3 (Raft) observations
+
+- Operator: clicked Play once, Raft reached its menu, snapshot taken at the menu, then quit from the game menu; the operator said "might of crashed on exit".
+- EXIT HANG: after the quit the game process did not exit. Orchestrator-observed at about 14:48: Raft.exe pid 96938 still alive (state S, 1.5% CPU, 2:59 elapsed), with steam.exe 96932 (the helper) and UnityCrashHandler64.exe 96977 (`--attach`) alive; no crash dump found. Raft's `Player.log` (bottle `drive_c/users/crossover/AppData/LocalLow/Redbeet Interactive/Raft/Player.log`) ends with `Steam auth ticket validated, logging into PlayFab...`, a successful API call, then `Saving settings ...` as the last line: a hang after saving settings on exit, not a crash.
+- FORCE-QUIT: the operator force-quit Raft.exe with Activity Monitor. The `bottleProcessMonitor [648800]: matched process(es) gone after 254s of play — game stopped` line (14:49:21) therefore reflects the operator's force-quit, not a natural exit; the archive ran after it.
+- No contract item covers exit behaviour; recorded here and as a non-blocking Gaps candidate. Whether it is a DRM-layer defect (a pipe/shutdown call left unanswered) or Raft's own exit path is unknown and not diagnosed in this run.
+- Census row 648800 (run in segment A): evidence `verified`, evidenceDetail `game call ISteamUser_SteamUser017_GetSteamID`.
 
 ## Gaps
 
