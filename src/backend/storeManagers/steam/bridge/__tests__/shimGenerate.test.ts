@@ -39,6 +39,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync
@@ -2878,6 +2879,110 @@ describe('shimGenerate', () => {
         expect(result.verdict.originalFingerprints).toEqual({
           [KEY]: fp('orig-bytes')
         })
+      }
+    })
+  })
+  describe('quick 261029-my4: no-bottle DRM fallback containment', () => {
+    const makeBindPe = (): Buffer => {
+      const buf = Buffer.alloc(1024)
+      buf.writeUInt16LE(0x5a4d, 0)
+      buf.writeUInt32LE(0x80, 0x3c)
+      buf.writeUInt32LE(0x00004550, 0x80)
+      buf.writeUInt16LE(1, 0x80 + 6)
+      buf.writeUInt16LE(0xe0, 0x80 + 20)
+      buf.write('.bind', 0x80 + 24 + 0xe0, 'latin1')
+      return buf
+    }
+    const okImports = () =>
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x86',
+        symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown']
+      })
+    // Inner sees a bottle name; the outer recomputation sees null, so the
+    // no-bottle fallback in placeShimForGame runs.
+    const forceNoBottle = () =>
+      jest
+        .spyOn(jest.requireMock('../../bottle'), 'resolveBridgeBottleName')
+        .mockReturnValueOnce('GameLibSteamBridge-1234')
+        .mockReturnValueOnce(null)
+    const warnCalls = (): string[] =>
+      (
+        jest.requireMock('backend/logger').logWarning as jest.Mock
+      ).mock.calls.map((c) => String(c[0]))
+
+    async function withEscapingExe(
+      content: Buffer,
+      run: (outside: string) => Promise<void>
+    ) {
+      const outside = realpathSync(mkdtempSync(join(tmpdir(), 'shimgen-out-')))
+      const spy = forceNoBottle()
+      const launchSpy = jest.spyOn(drmScanExe, 'detectLaunchDrmWrapper')
+      try {
+        writeFileSync(join(outside, 'evil.exe'), content)
+        rmSync(gameExePath)
+        symlinkSync(join(outside, 'evil.exe'), gameExePath)
+        okImports()
+        await run(outside)
+        expect(spy.mock.calls.length).toBeGreaterThanOrEqual(2)
+        expect(launchSpy).not.toHaveBeenCalled()
+      } finally {
+        spy.mockRestore()
+        launchSpy.mockRestore()
+        rmSync(outside, { recursive: true, force: true })
+      }
+    }
+
+    it('refuses an escaping symlink: no drmWrapper, no drm (SteamStub)', async () => {
+      await withEscapingExe(makeBindPe(), async () => {
+        const result = await placeShimForGame('1234', gameExePath, {
+          shimSourcePath: realShimSourcePath
+        })
+        expect(result.status).not.toBe('error')
+        expect('drmWrapper' in result).toBe(false)
+        expect(result.drm).toBeUndefined()
+        expect('drm' in result).toBe(false)
+        expect(
+          warnCalls().some(
+            (m) =>
+              m.includes('Avernum 4.exe') && m.includes('escapes game folder')
+          )
+        ).toBe(true)
+      })
+    })
+
+    it('refuses an escaping symlink: CEG scan never reads the target', async () => {
+      await withEscapingExe(buildMinimalPe(['STEAM_GUIDD']), async () => {
+        const result = await placeShimForGame('1234', gameExePath, {
+          shimSourcePath: realShimSourcePath
+        })
+        expect(result.drm).toBeUndefined()
+        expect('drmWrapper' in result).toBe(false)
+      })
+    })
+
+    it('still scans a contained exe (no over-refusal)', async () => {
+      const spy = forceNoBottle()
+      try {
+        writeFileSync(gameExePath, makeBindPe())
+        okImports()
+        const first = await placeShimForGame('1234', gameExePath, {
+          shimSourcePath: realShimSourcePath
+        })
+        expect('drmWrapper' in first && first.drmWrapper).toBe('steamstub')
+        expect(spy.mock.calls.length).toBeGreaterThanOrEqual(2)
+      } finally {
+        spy.mockRestore()
+      }
+      const spy2 = forceNoBottle()
+      try {
+        writeFileSync(gameExePath, buildMinimalPe(['STEAM_GUIDD']))
+        const second = await placeShimForGame('1234', gameExePath, {
+          shimSourcePath: realShimSourcePath
+        })
+        expect(second.drm).toEqual({ kind: 'ceg', markers: ['STEAM_GUIDD'] })
+      } finally {
+        spy2.mockRestore()
       }
     })
   })
