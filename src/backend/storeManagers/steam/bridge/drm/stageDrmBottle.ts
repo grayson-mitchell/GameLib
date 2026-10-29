@@ -39,7 +39,6 @@ import {
   renameSync,
   unlinkSync
 } from 'node:fs'
-import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -58,6 +57,7 @@ import {
   resolveWalkRoot
 } from '../bridgeScan'
 import { isGameLibShimBytes, probeOriginalBackup } from '../shimGenerate'
+import { runBoundedListing } from './boundedListing'
 import { restoreBridgeSteamApiOriginals } from '../originalRestore'
 import { openStageWineLog } from './stageWineLog'
 import { BRIDGE_CONFIG_FILENAME } from '../bridgeConfig'
@@ -524,16 +524,14 @@ function sourceOk(path: string): boolean {
 async function defaultListBottleProcesses(
   bottleDir: string
 ): Promise<string[]> {
-  const stdout = await new Promise<string>((resolveOut) => {
-    const child = execFile(
-      '/bin/ps',
-      ['-axww', '-o', 'pid=,pcpu=,command='],
-      { timeout: 3000, maxBuffer: 4 * 1024 * 1024 },
-      (error, out) => resolveOut(error ? '' : String(out))
-    )
-    // Sidecar exit contract (WR-03): never hold the event loop open.
-    child.unref?.()
-  })
+  // Sidecar exit contract (56-REVIEW WR-02): runBoundedListing owns the 3 s
+  // bound with an unref'd timer and unrefs the child and its pipes.
+  const listing = await runBoundedListing(
+    '/bin/ps',
+    ['-axww', '-o', 'pid=,pcpu=,command='],
+    { timeoutMs: 3000, maxBuffer: 4 * 1024 * 1024 }
+  )
+  const stdout = listing.error ? '' : listing.stdout
   const entries: string[] = []
   for (const line of stdout.split('\n')) {
     const m = /^\s*(\d+)\s+([\d.]+)\s+(.*)$/.exec(line)
@@ -626,17 +624,13 @@ export function pidsWithCwdInBottle(
 }
 
 /** stdout of a bounded listing command; lsof exits 1 on any unreadable pid. */
-function listingOutput(file: string, argv: string[]): Promise<string> {
-  return new Promise<string>((resolveOut) => {
-    const child = execFile(
-      file,
-      argv,
-      { timeout: 3000, maxBuffer: 16 * 1024 * 1024 },
-      (_error, stdout) => resolveOut(String(stdout ?? ''))
-    )
-    // Sidecar exit contract (WR-03): never hold the event loop open.
-    child.unref?.()
+async function listingOutput(file: string, argv: string[]): Promise<string> {
+  // Sidecar exit contract (56-REVIEW WR-02): see runBoundedListing.
+  const listing = await runBoundedListing(file, argv, {
+    timeoutMs: 3000,
+    maxBuffer: 16 * 1024 * 1024
   })
+  return listing.stdout
 }
 
 /**
