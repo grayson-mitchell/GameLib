@@ -370,6 +370,7 @@ export type Status =
   | 'installed'
   | 'redist'
   | 'drm-setup'
+  | 'steam-syncing'
   | 'extracting'
   | 'winetricks'
 

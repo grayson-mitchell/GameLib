@@ -303,6 +303,7 @@ export function classifySleepAssertionKind(status: Status): SleepAssertionKind {
     case 'updating':
     case 'redist':
     case 'drm-setup':
+    case 'steam-syncing':
     case 'winetricks':
     case 'extracting':
     case 'repairing':
