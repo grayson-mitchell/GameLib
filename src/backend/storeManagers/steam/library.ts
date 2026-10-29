@@ -7,10 +7,15 @@ import {
   InstalledInfo,
   LaunchOption
 } from 'common/types'
+import {
+  machOArchsOf,
+  verdictFromArchs,
+  locateMachOBinary as locateMachOBinaryShared,
+  promptMac32WindowsReinstall
+} from 'backend/utils/macArch'
 import { LibraryManager } from 'common/types/game_manager'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { join, resolve, relative, isAbsolute, sep } from 'path'
-import { dialog } from 'backend/platform'
 import { spawnSync, execFileSync } from 'child_process'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
@@ -1872,96 +1877,18 @@ export async function buildIncompleteInstallSet(): Promise<Set<number>> {
 // correctness backstop that catches an i386-only mac depot Steam left
 // un-tagged.
 
-/**
- * Runs `lipo -archs` on the given binary — argv-form execFileSync (command +
- * array, never a shell-interpolated string; T-18-03-01) mirroring the
- * windowsRunningAppId/linuxFallbackRunningAppId convention above. Falls back
- * to `file` when lipo throws (not installed / binary lipo doesn't recognize).
- * Returns [] when BOTH tools fail — inconclusive, NEVER a 32-bit verdict on
- * its own (verdictFromArchs below is the sole place that turns an arch list
- * into a '32'/'64' answer). Exported for unit testing.
- */
-export function machOArchsOf(binaryPath: string): string[] {
-  try {
-    const output = execFileSync('lipo', ['-archs', binaryPath], {
-      encoding: 'utf8',
-      timeout: 5000
-    })
-    return output.trim().split(/\s+/).filter(Boolean)
-  } catch {
-    try {
-      const output = execFileSync('file', [binaryPath], {
-        encoding: 'utf8',
-        timeout: 5000
-      })
-      const archs: string[] = []
-      if (/\bx86_64\b/.test(output)) archs.push('x86_64')
-      if (/\barm64\b/.test(output)) archs.push('arm64')
-      if (/\bi386\b/.test(output)) archs.push('i386')
-      return archs
-    } catch {
-      return [] // neither tool available/succeeded — inconclusive, NOT 32-bit
-    }
-  }
-}
+export { machOArchsOf, verdictFromArchs }
 
 /**
- * Maps a Mach-O arch list to a verdict. A universal binary (any x86_64/arm64
- * slice present) is runnable — '64' wins even alongside an i386 slice. Empty
- * input is inconclusive: null, never '32' (T-18-03-03 — the false-flag-safe
- * invariant at this subprocess boundary). Exported for unit testing.
- */
-export function verdictFromArchs(archs: string[]): '32' | '64' | null {
-  if (archs.length === 0) return null // inconclusive — do not overwrite existing hint
-  if (archs.includes('x86_64') || archs.includes('arm64')) return '64'
-  if (archs.includes('i386')) return '32'
-  return null
-}
-
-/**
- * Locates the installed Mach-O binary to inspect. Prefers a supplied launch
- * executable path (resolved relative to installPath); otherwise scans
- * installPath for a top-level *.app bundle and returns its
- * Contents/MacOS/<first file>. Containment (T-18-03-04): a supplied
- * launchExecutable that escapes installPath's own subtree — via `..`
- * segments or an absolute path — is rejected (logged + skipped), not just
- * join()'d; `join()` alone does not prevent `../../` traversal. Never
- * throws, returns null (log+skip at the call site) on any miss. Exported
- * for unit testing.
+ * Steam-prefixed wrapper over the shared locator (backend/utils/macArch) so the
+ * containment-escape warning keeps its Steam log prefix. Exported for unit
+ * testing.
  */
 export function locateMachOBinary(
   installPath: string,
   launchExecutable?: string
 ): string | null {
-  if (launchExecutable) {
-    // T-18-03-04: reject any candidate that escapes installPath's subtree.
-    // resolve() honors an absolute launchExecutable and collapses '..'
-    // segments; relative() then reveals an escape as a leading '..' (or, on
-    // Windows, a different drive → absolute). Verify containment BEFORE
-    // touching the filesystem — join() alone would silently nest an absolute
-    // path and does not prevent '../../' traversal.
-    const candidate = resolve(installPath, launchExecutable)
-    const rel = relative(installPath, candidate)
-    if (rel.startsWith('..') || isAbsolute(rel)) {
-      logWarning(
-        `Steam: locateMachOBinary rejected launchExecutable '${launchExecutable}' — escapes installPath subtree; skipping`,
-        LogPrefix.Steam
-      )
-    } else if (existsSync(candidate)) {
-      return candidate
-    }
-  }
-  try {
-    const entries = readdirSync(installPath)
-    const appBundle = entries.find((e) => e.endsWith('.app'))
-    if (!appBundle) return null
-    const macOsDir = join(installPath, appBundle, 'Contents', 'MacOS')
-    if (!existsSync(macOsDir)) return null
-    const bins = readdirSync(macOsDir)
-    return bins.length ? join(macOsDir, bins[0]) : null
-  } catch {
-    return null
-  }
+  return locateMachOBinaryShared(installPath, launchExecutable, LogPrefix.Steam)
 }
 
 /**
@@ -2106,31 +2033,9 @@ export async function verifyMacArchGroundTruth(
  * Exported for unit testing.
  */
 export async function promptI386Recovery(appId: string): Promise<void> {
-  const { response } = await dialog.showMessageBox({
-    title: i18next.t(
-      'gamelib:box.steam.mac32Detected.title',
-      '32-bit macOS build detected'
-    ),
-    message: i18next.t(
-      'gamelib:box.steam.mac32Detected.message',
-      "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version."
-    ),
-    buttons: [
-      i18next.t(
-        'gamelib:box.steam.mac32Detected.confirm',
-        'Reinstall via CrossOver'
-      ),
-      i18next.t('gamelib:box.cancel', 'Cancel')
-    ],
-    // D-07 fail-safe (Phase 33 Plan 03): buttons[0] ("Reinstall via CrossOver") is the
-    // destructive branch (force-uninstall + reinstall) -- an explicit cancelId declares
-    // buttons[1] ("Cancel") as the safe decline so a degraded/timed-out dialog never
-    // auto-confirms the recovery. A positional "last index" heuristic would coincidentally
-    // match here, but this is stated explicitly per 33-RESEARCH Pitfall 4.
-    cancelId: 1
-  })
+  const confirmed = await promptMac32WindowsReinstall('steam')
 
-  if (response !== 0) {
+  if (!confirmed) {
     logInfo(
       `Steam: user declined i386 recovery for appId ${appId} — native install left in place (unrunnable)`,
       LogPrefix.Steam

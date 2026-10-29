@@ -26,6 +26,11 @@
                 "title": "Could not open the file picker"
             }
         },
+        "mac32Detected": {
+            "confirm": "Install Windows version",
+            "message": "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can remove it and install the Windows version instead, which runs through your Wine or CrossOver setup.",
+            "title": "32-bit macOS build detected"
+        },
         "protocol": {
             "launch": {
                 "accept": "Launch",
