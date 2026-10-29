@@ -467,9 +467,22 @@ Author-side run, 2026-10-29. Session dir (for 56-34): `/tmp/gamelib-gate-2026102
 | PC10 | `appmanifest_648800.acf` and `appmanifest_1119730.acf` both exist in their bottles | PASS |
 | PC11-PC14 | run by 56-34 | n/a |
 
+### 56-34 pre-run re-check
+
+Run by 56-34 on 2026-10-29 before segment A. The Preflight table above is left as authored.
+
+| ID | Observed | Result |
+| --- | --- | --- |
+| PC2 (re-check) | the PC2 `ps -axo pid,command \| grep -iE 'steamwebhelper\.exe\|steamservice\.exe\|Steam\\steam\.exe' \| grep -v grep` printed nothing (0 lines); `pgrep -fl wineserver` printed nothing | PASS on re-check (the earlier FAIL was a Windows Steam in the GameLibSteam bottle, since quit) |
+| PC1 (re-check) | `pgrep -x steam_osx` printed one pid | PASS |
+| PC12 | vault slot word: `present` | PASS (no dev app of this segment is up yet; re-confirm after the segment-A start) |
+| PC13 (first reading, before launch 0) | `ioreg ... grep -c '"idVendor" = 8406'` = 1 (pad connected, as approved for launch 1) | recorded |
+| sidecar freshness (pre-dev) | `build/main/sidecar.js` mtime 1793233790 > newest `src/backend` commit 1793232633; `git status` shows no `src/backend` change since PC4 | no rebuild needed |
+| stale dev app | one `target/debug/gamelib-shell` was already running (not under this session's tee); the operator must quit it and restart under `tee -a <session>/terminal.log` | action for the operator |
+
 ## Gaps
 
-- PC2 failed at authoring time: a Windows Steam is running in the `GameLibSteam` bottle (see Preflight). 56-34 must not start launch 0 until the operator has quit it and PC2 re-reads empty.
+- PC2 failed at authoring time: a Windows Steam was running in the `GameLibSteam` bottle (see Preflight). RESOLVED before 56-34 launch 0: re-checked by 56-34 on 2026-10-29, the PC2 ps grep printed nothing (0 lines) and `pgrep -fl wineserver` printed nothing (see `### 56-34 pre-run re-check`).
 
 ## Verdict
 
