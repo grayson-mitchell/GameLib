@@ -549,6 +549,10 @@ Note: DELTA(0) is the reinstall window of the current segment-A `gamelib.log` af
 - C1: no `drm setup: ... stopped at` line in any segment-A DELTA, so C1 is N/A for segment A (final C1 is decided after segment B).
 - Segment A closed: `gamelib-segmentA-final.log` copied (all launches 0-4 archived; 5 launches' delimiters in `terminal.log`, with the duplicated launch-0 and launch-2 delimiters recorded above). Segment-A dev app pid 86847 is still running and is to be quit by the operator next.
 
+### 56-34 PC14 (Ranch registry reset, segment B prep)
+
+Run after the operator said "dev quit". Step 1: `pgrep -f 'target/debug/gamelib-shell'` count 0; `pgrep -fl GameLibSteamBridge-1119730` printed nothing (rc 1); the `ps -axwwE` grep count for `GameLibSteamBridge-1119730` was 0. Step 2: `user.reg` backed up to `<session>/ranch-user.reg.bak`. COUNT before the reset: 4 (as expected for a staged Ranch bottle). Step 3: RESET applied via `<session>/ranch-user.reg.new` then moved over `user.reg`. Step 4: COUNT after: 0. The diff removes exactly four lines (names only: SteamClientDll64, Universe, SteamPath under ActiveProcess, SteamPath under Valve\\Steam). Step 5: `find BOTTLE(1119730)/drive_c -name gamelib_bridge.cfg` printed nothing (no Phase 52 leftover to list). PC14: PASS.
+
 ## Gaps
 
 - PC2 failed at authoring time: a Windows Steam was running in the `GameLibSteam` bottle (see Preflight). RESOLVED before 56-34 launch 0: re-checked by 56-34 on 2026-10-29, the PC2 ps grep printed nothing (0 lines) and `pgrep -fl wineserver` printed nothing (see `### 56-34 pre-run re-check`).
