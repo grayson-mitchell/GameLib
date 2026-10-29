@@ -31,6 +31,16 @@ const steamMetadataStore = new CacheStore<SteamMetadataCacheEntry>(
 // ── Stale-indicator: last successful sync epoch millis (plan 05) ─────────────
 const steamSyncStore = new CacheStore<number, 'syncedAt'>('steam_sync', null)
 
+// ── quick 261029-ji2: pending Mac Steam adoption records ────────────────────
+// One record per appId GameLib downloaded itself while Mac Steam was running.
+// A DEDICATED store (not a field on steamMetadataStore, whose whole-entry
+// replace would drop it). Indefinite lifespan: it must survive a GameLib
+// restart, and it is cleared on uninstall / adoption.
+const steamPendingAdoptionStore = new CacheStore<unknown>(
+  'steam_pending_adoption',
+  null
+)
+
 export interface SteamMetadataCacheEntry {
   art_cover: string
   art_square: string
@@ -311,5 +321,6 @@ export {
   steamLibraryStore,
   steamMetadataStore,
   steamSyncStore,
+  steamPendingAdoptionStore,
   steamBottleConfigStore
 }
