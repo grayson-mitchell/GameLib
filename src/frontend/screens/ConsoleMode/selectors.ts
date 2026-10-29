@@ -1,4 +1,5 @@
-import type { GameInfo } from 'common/types'
+import type { GameInfo, Runner } from 'common/types'
+import { isHostNative } from 'frontend/screens/Library/filterEngine'
 
 /**
  * The single console-grid eligibility filter used by ConsoleMode.
@@ -25,4 +26,29 @@ export function selectConsoleGames(
       !g.thirdPartyManagedApp &&
       !hiddenAppNames.has(g.app_name)
   )
+}
+
+/**
+ * Console top-bar chip filters (quick 261029-t4b): Installed, then Native,
+ * then the selected store. Returns a new array in input order.
+ *
+ * D-t4b-1: Native is an independent toggle combining with the others.
+ * D-t4b-4: nativeOnly is ignored on win32 (hasNativeBuild is always false
+ * there, so a stray true would empty the grid).
+ * The native rule itself is owned by filterEngine.isHostNative.
+ */
+export function applyConsoleChipFilters(
+  games: GameInfo[],
+  opts: {
+    installedOnly: boolean
+    nativeOnly: boolean
+    store: Runner | 'all'
+    hostPlatform: string
+  }
+): GameInfo[] {
+  const nativeActive = opts.nativeOnly && opts.hostPlatform !== 'win32'
+  return games
+    .filter((g) => !opts.installedOnly || g.is_installed)
+    .filter((g) => !nativeActive || isHostNative(g, opts.hostPlatform))
+    .filter((g) => opts.store === 'all' || g.runner === opts.store)
 }
