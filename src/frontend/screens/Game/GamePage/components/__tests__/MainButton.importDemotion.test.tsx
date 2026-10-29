@@ -80,6 +80,16 @@ let mockGameContext: GameContextType = {
   wikiInfo: null
 }
 
+// Quick 261029-s5l: InstallGameModal now imports the electronStores helper,
+// which opens a Tauri-backed store at import. Mocked here as in
+// signInInputs.test.ts.
+jest.mock('frontend/helpers/electronStores', () => ({
+  legendaryConfigStore: { get_nodefault: jest.fn() },
+  gogConfigStore: { get_nodefault: jest.fn() },
+  nileConfigStore: { get_nodefault: jest.fn() },
+  steamConfigStore: { get_nodefault: jest.fn() }
+}))
+
 jest.mock('react', () => ({
   ...jest.requireActual<typeof import('react')>('react'),
   useContext: () => mockGameContext

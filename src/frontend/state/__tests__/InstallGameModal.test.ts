@@ -41,6 +41,20 @@ import {
   LOW_SPACE_FLOOR_BYTES
 } from '../InstallGameModal'
 import type { SteamInstallLibraryTarget } from '../InstallGameModal'
+import { steamConfigStore } from 'frontend/helpers/electronStores'
+
+jest.mock('frontend/helpers/electronStores', () => ({
+  legendaryConfigStore: { get_nodefault: jest.fn() },
+  gogConfigStore: { get_nodefault: jest.fn() },
+  nileConfigStore: { get_nodefault: jest.fn() },
+  steamConfigStore: { get_nodefault: jest.fn() }
+}))
+
+function armSteamStore(values: Record<string, unknown>) {
+  ;(
+    steamConfigStore as unknown as { get_nodefault: jest.Mock }
+  ).get_nodefault.mockImplementation((key: string) => values[key])
+}
 
 function makeGameInfo(overrides: Partial<GameInfo> = {}): GameInfo {
   return {
@@ -282,6 +296,42 @@ describe('Group B: startSteamQuickInstall', () => {
     await expect(
       startSteamQuickInstall('570', makeGameInfo())
     ).resolves.toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Group S — sign-in gate (quick 261029-s5l).
+// ---------------------------------------------------------------------------
+describe('Group S: sign-in gate', () => {
+  const latched = { credentialsMissing: true, userData: { username: 'tester' } }
+
+  it('G1: native path + latch -> opens the dialog, never installs', async () => {
+    armSteamStore(latched)
+    listSteamLibraryTargetsMock.mockResolvedValue(makeTargets(1))
+    await startSteamQuickInstall('570', makeGameInfo())
+
+    expect(installMock).not.toHaveBeenCalled()
+    expect(checkDiskSpaceMock).not.toHaveBeenCalled()
+    const state = useInstallGameModal.getState()
+    expect(state.isOpen).toBe(true)
+    expect(state.runner).toBe('steam')
+    expect(state.steamDegrade).toBeUndefined()
+  })
+
+  it('G2: delegated path + latch -> still installs', async () => {
+    armSteamStore(latched)
+    listSteamLibraryTargetsMock.mockResolvedValue([])
+    await startSteamQuickInstall('570', makeGameInfo())
+
+    expect(installMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('G3: native path, flag unset -> installs as before', async () => {
+    armSteamStore({ userData: { username: 'tester' } })
+    listSteamLibraryTargetsMock.mockResolvedValue(makeTargets(1))
+    await startSteamQuickInstall('570', makeGameInfo())
+
+    expect(installMock).toHaveBeenCalledTimes(1)
   })
 })
 

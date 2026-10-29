@@ -1,5 +1,10 @@
 import { GameInfo, Runner } from 'common/types'
 import { create } from 'zustand'
+import { steamConfigStore } from 'frontend/helpers/electronStores'
+import {
+  resolveSteamInstallSignInState,
+  steamInstallNeedsSignIn
+} from 'frontend/helpers/steamInstallSignIn'
 
 /**
  * The frontend mirror of the `listSteamLibraryTargets()` IPC element shape,
@@ -221,6 +226,9 @@ export function evaluateQuickInstallTarget(
  * carrying the reason. Never throws, never installs anyway on a real local
  * failure, never silently picks a different library.
  *
+ * On the native path a latched expired Steam sign-in opens the options dialog
+ * (no degrade) instead of installing (quick 261029-s5l).
+ *
  * Both awaits below are individually guarded — a rejected
  * `listSteamLibraryTargets` yields an empty list (server-gated on
  * `isSteamNativeInstallEnabled()`, so an empty list ALSO means "GameLib
@@ -250,6 +258,22 @@ export const startSteamQuickInstall = async (
     installSteamGame(appName, gameInfo).catch(
       logSteamInstallDispatchFailure(appName)
     )
+    return
+  }
+
+  // Quick 261029-s5l: a latched token-absent/expired Steam sign-in would only
+  // fail AFTER the click on this native path. Open the options dialog instead;
+  // it derives the sign-in notice live and disables Install. `{}` outcomes:
+  // only the latched `expired` blocks, which the flag decides on its own.
+  if (
+    steamInstallNeedsSignIn(
+      resolveSteamInstallSignInState(
+        steamConfigStore.get_nodefault('userData')?.username,
+        {}
+      )
+    )
+  ) {
+    openSteamInstallOptions(appName, gameInfo)
     return
   }
 
