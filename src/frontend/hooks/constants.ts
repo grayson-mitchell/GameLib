@@ -87,7 +87,17 @@ export function getStatusLabel({
       'gamepage:status.drmSetup',
       'Preparing Steam DRM support ({{step}})',
       { step: statusContext || '' }
-    )
+    ),
+    // quick 261029-iwy: running Steam is adopting the install
+    'steam-syncing': statusContext
+      ? t(
+          'gamepage:status.steamSyncingProgress',
+          'Syncing Steam ({{progress}})',
+          {
+            progress: statusContext
+          }
+        )
+      : t('gamepage:status.steamSyncing', 'Syncing Steam')
   }
 
   return statusMap[status] || t('gamepage:status.notinstalled')

@@ -161,6 +161,15 @@ export default function LaunchOverlay({
         { step: statusContext || '' }
       )
       break
+    case 'steam-syncing':
+      label = statusContext
+        ? t(
+            'gamepage:status.steamSyncingProgress',
+            'Syncing Steam ({{progress}})',
+            { progress: statusContext }
+          )
+        : t('gamepage:status.steamSyncing', 'Syncing Steam')
+      break
     case 'winetricks':
       label = t('gamepage:status.winetricks', 'Applying Winetricks fixes')
       break

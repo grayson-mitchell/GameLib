@@ -133,6 +133,17 @@ describe('heroPhase (quick 261029-exu)', () => {
     ).toEqual({ kind: 'drm-setup', context: 'Steam client files' })
   })
 
+  it('names the Steam syncing phase with its optional percent', () => {
+    expect(heroPhase({ status: 'steam-syncing', context: '' })).toEqual({
+      kind: 'steam-syncing',
+      context: ''
+    })
+    expect(heroPhase({ status: 'steam-syncing', context: '42%' })).toEqual({
+      kind: 'steam-syncing',
+      context: '42%'
+    })
+  })
+
   it('names the bridge finishing state', () => {
     expect(
       heroPhase({ status: 'installing', context: 'steam-bridge-finishing' })

@@ -15,6 +15,7 @@ const initialContext: GameContextType = {
     installingWinetricksPackages: false,
     installingRedist: false,
     preparingDrm: false,
+    syncingSteam: false,
     launching: false,
     linux: false,
     linuxNative: false,

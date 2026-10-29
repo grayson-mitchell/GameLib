@@ -26,6 +26,7 @@ const ACTIVE_STATUSES = new Set<Status>([
   'extracting',
   'redist',
   'drm-setup',
+  'steam-syncing',
   'winetricks'
 ])
 

@@ -77,7 +77,13 @@ export default function DownloadHero({ element, state }: Props) {
         ? t('status.drmSetup', 'Preparing Steam DRM support ({{step}})', {
             step: p.context
           })
-        : t('status.steamFinishing', 'Finishing install…')
+        : p.kind === 'steam-syncing'
+          ? p.context
+            ? t('status.steamSyncingProgress', 'Syncing Steam ({{progress}})', {
+                progress: p.context
+              })
+            : t('status.steamSyncing', 'Syncing Steam')
+          : t('status.steamFinishing', 'Finishing install…')
 
   // quick 261029-exu: during a post-download phase the bar is indeterminate
   // and carries no aria-valuenow; the transfer stats would read as a stall.

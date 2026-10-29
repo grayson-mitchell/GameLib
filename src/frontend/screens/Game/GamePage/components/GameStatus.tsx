@@ -108,6 +108,22 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       )
     }
 
+    // quick 261029-iwy: a running Steam is adopting the finished install.
+    if (is.syncingSteam) {
+      return (
+        <span
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+        >
+          <CircularProgress size={14} color="inherit" />
+          {statusContext
+            ? t('status.steamSyncingProgress', 'Syncing Steam ({{progress}})', {
+                progress: statusContext
+              })
+            : t('status.steamSyncing', 'Syncing Steam')}
+        </span>
+      )
+    }
+
     if (is.uninstalling) {
       return t('status.uninstalling', 'Uninstalling')
     }

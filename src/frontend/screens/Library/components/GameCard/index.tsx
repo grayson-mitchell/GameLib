@@ -289,7 +289,8 @@ const GameCard = ({
           'launching',
           'winetricks',
           'redist',
-          'drm-setup'
+          'drm-setup',
+          'steam-syncing'
         ].includes(status!)
       return (
         <SvgButton

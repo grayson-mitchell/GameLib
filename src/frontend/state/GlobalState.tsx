@@ -1545,6 +1545,7 @@ class GlobalState extends PureComponent<Props> {
         'winetricks',
         'redist',
         'drm-setup',
+        'steam-syncing',
         'queued'
       ].includes(status)
     ) {
