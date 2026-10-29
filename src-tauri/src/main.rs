@@ -3890,6 +3890,9 @@ fn request_login_sheet_cancel(app: &AppHandle, label: &str, route: &str) {
     dismiss_login_window_sheet(app, label);
     if let Some(window) = app.get_webview_window(label) {
         let _ = window.close();
+    } else if let Some(window) = app.get_window(label) {
+        // quick-261029-o1w: the GOG pristine window is a plain `tauri::Window`.
+        let _ = window.close();
     }
     eprintln!("[shell] login-sheet: cancel requested for '{label}' via {route}");
 }
@@ -3907,6 +3910,11 @@ const EPIC_LOGIN_HOST: &str = "www.epicgames.com";
 /// pristine (injection-free) WKWebView route as Epic. Host-keyed like `EPIC_LOGIN_HOST`; never
 /// caller-chosen. The function/delegate keep their Epic names (historical).
 const GOG_LOGIN_HOST: &str = "auth.gog.com";
+
+/// Height (points) of the native band the GOG sheet reserves above its pristine webview for the
+/// AppKit cancel button (quick-261029-o1w).
+#[cfg(target_os = "macos")]
+const NATIVE_LOGIN_CANCEL_STRIP_HEIGHT: f64 = 32.0;
 
 // ---- Pristine Epic login webview (bounded "pristine-webview attempt", checkpoint response,
 // 2026-08-03T18:00:00 superseding cycle, F-34.5-G6-01) ----
@@ -4223,18 +4231,23 @@ fn open_pristine_epic_login_window(
     url: tauri::Url,
     visible: bool,
     user_agent: &str,
+    as_sheet: bool,
 ) -> Result<Value, String> {
     let origin = url.origin().ascii_serialization();
     let event_label = label.to_string();
 
-    let mut window_builder = tauri::WindowBuilder::new(app, label).visible(visible);
+    // quick-261029-o1w: `as_sheet` builds the window ordered-out (not visible, not focused,
+    // not centred) so `beginSheet:` is the call that reveals it. `as_sheet == false` is
+    // Epic's free-floating path and is unchanged.
+    let mut window_builder = tauri::WindowBuilder::new(app, label).visible(visible && !as_sheet);
     if visible {
         window_builder = window_builder
             .inner_size(900.0, 700.0)
-            .center()
-            .focused(true)
             .theme(Some(tauri::Theme::Light))
             .title(login_window_title(&origin, None));
+        if !as_sheet {
+            window_builder = window_builder.center().focused(true);
+        }
     }
     let window = window_builder
         .build()
@@ -4303,6 +4316,7 @@ fn open_pristine_epic_login_window(
     let user_agent_owned = user_agent.to_string();
     let main_thread_label = event_label.clone();
     let monitor_slot_for_main = Arc::clone(&monitor_slot);
+    let app_for_native_cancel = app.clone();
 
     let (tx, rx) = mpsc_channel::<Result<(), String>>();
     if let Err(e) = app.run_on_main_thread(move || {
@@ -4323,9 +4337,22 @@ fn open_pristine_epic_login_window(
                 unsafe { &*(ns_view_addr.0 as *const objc2_app_kit::NSView) };
             let frame = ns_view.frame();
 
+            // quick-261029-o1w: sheet windows reserve a native band for the cancel control.
+            let flipped = ns_view.isFlipped();
+            let webview_frame = if as_sheet {
+                let band = NATIVE_LOGIN_CANCEL_STRIP_HEIGHT;
+                NSRect::new(
+                    NSPoint::new(frame.origin.x, if flipped { band } else { 0.0 }),
+                    NSSize::new(frame.size.width, (frame.size.height - band).max(0.0)),
+                )
+            } else {
+                frame
+            };
+
             let config = unsafe { WKWebViewConfiguration::new(mtm) };
-            let webview: Retained<WKWebView> =
-                unsafe { WKWebView::initWithFrame_configuration(mtm.alloc(), frame, &config) };
+            let webview: Retained<WKWebView> = unsafe {
+                WKWebView::initWithFrame_configuration(mtm.alloc(), webview_frame, &config)
+            };
             webview.setAutoresizingMask(
                 objc2_app_kit::NSAutoresizingMaskOptions::ViewWidthSizable
                     | objc2_app_kit::NSAutoresizingMaskOptions::ViewHeightSizable,
@@ -4352,6 +4379,15 @@ fn open_pristine_epic_login_window(
             std::mem::forget(delegate);
 
             ns_view.addSubview(&webview);
+            if as_sheet {
+                install_native_login_cancel_button(
+                    ns_view,
+                    app_for_native_cancel.clone(),
+                    main_thread_label.clone(),
+                    flipped,
+                    mtm,
+                );
+            }
             // Paste (Cmd+V) -- and every other Edit-menu key equivalent -- routes via
             // `[NSApp sendAction:to:from:]` to the KEY window's first responder; `addSubview`
             // alone does not promote the new subview into the responder chain. Without this, the
@@ -4604,13 +4640,13 @@ fn store_logout_cookie_domain_matches(domain: &str) -> bool {
 /// main thread; the `SendPtr`-across-the-hop shape both login-sheet paths used to carry has been
 /// deleted for this reason.
 ///
-/// Deliberately resolves ONLY through `app.get_webview_window(label)`. A future Epic phase
-/// would extend this with an `app.get_window(label)` fallback -- the pristine shell
-/// (`open_pristine_epic_login_window`, above) is a plain `tauri::Window`, reachable only that
-/// way, and the `unstable` tauri feature that enables it is already on. **That fallback is
-/// deliberately NOT written here**: REQ-34.4.2-10 (the locked user decision, 2026-08-04) is that
-/// no code path in this phase resolves the pristine window, and an unused branch that resolves
-/// it is still a code path that does. This comment is the whole Epic-readiness deliverable.
+/// Resolves through `app.get_webview_window(label)` first, then falls back to
+/// `app.get_window(label)` (quick-261029-o1w). The pristine shell
+/// (`open_pristine_epic_login_window`, above) is a plain `tauri::Window`, reachable only through
+/// the fallback, and the `unstable` tauri feature that enables it is already on. The fallback
+/// exists for GOG's sheet. Epic stays free-floating (REQ-34.4.2-10) NOT because the resolver
+/// cannot see it but because the resolver is only asked about labels that are presented or about
+/// to be presented, and Epic's label is never registered or presented.
 ///
 /// Side-effect free: never logs a label's URL or any page content.
 ///
@@ -4621,6 +4657,7 @@ fn store_logout_cookie_domain_matches(domain: &str) -> bool {
 fn login_window_ns_window(app: &AppHandle, label: &str) -> Option<usize> {
     app.get_webview_window(label)
         .and_then(|w| w.ns_window().ok())
+        .or_else(|| app.get_window(label).and_then(|w| w.ns_window().ok()))
         .map(|ptr| ptr as usize)
 }
 
@@ -5187,6 +5224,155 @@ fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {
             "[shell] WARN: login-window dismiss: '{label}' main-thread hop unconfirmed within 10s -- re-registered as still presented so the cancel routes stay reachable"
         );
     }
+}
+
+#[cfg(target_os = "macos")]
+struct PristineLoginCancelTargetIvars {
+    app: AppHandle,
+    label: String,
+}
+
+// quick-261029-o1w: AppKit target for the GOG sheet's native cancel button. The pristine GOG
+// window cannot carry the injected cancel strip (Cloudflare Turnstile fails on ANY injected
+// script), so cancel is a real NSButton outside the web content. `cancelLogin:` runs the same
+// dismiss-then-close order every other cancel route uses, so the Destroyed hook pushes "closed".
+#[cfg(target_os = "macos")]
+define_class!(
+    #[unsafe(super(NSObject))]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = PristineLoginCancelTargetIvars]
+    struct PristineLoginCancelTarget;
+
+    unsafe impl NSObjectProtocol for PristineLoginCancelTarget {}
+
+    impl PristineLoginCancelTarget {
+        #[unsafe(method(cancelLogin:))]
+        fn cancel_login(&self, _sender: Option<&AnyObject>) {
+            let ivars = self.ivars();
+            request_login_sheet_cancel(&ivars.app, &ivars.label, "native");
+        }
+    }
+);
+
+#[cfg(target_os = "macos")]
+impl PristineLoginCancelTarget {
+    fn new(app: AppHandle, label: String, mtm: objc2::MainThreadMarker) -> Retained<Self> {
+        let target = mtm
+            .alloc::<PristineLoginCancelTarget>()
+            .set_ivars(PristineLoginCancelTargetIvars { app, label });
+        unsafe { msg_send![super(target), init] }
+    }
+}
+
+/// Adds the native "x" cancel button in the top-right of the `NATIVE_LOGIN_CANCEL_STRIP_HEIGHT`
+/// band `open_pristine_epic_login_window` reserves when `as_sheet` is set. Pure AppKit: no JS is
+/// evaluated or injected (Turnstile fails on any injection). `flipped` is the content view's
+/// `isFlipped`, which decides which edge the band is on.
+#[cfg(target_os = "macos")]
+fn install_native_login_cancel_button(
+    ns_view: &objc2_app_kit::NSView,
+    app: AppHandle,
+    label: String,
+    flipped: bool,
+    mtm: objc2::MainThreadMarker,
+) {
+    let band = NATIVE_LOGIN_CANCEL_STRIP_HEIGHT;
+    let view_frame = ns_view.frame();
+    let target = PristineLoginCancelTarget::new(app, label, mtm);
+    let button = unsafe {
+        objc2_app_kit::NSButton::buttonWithTitle_target_action(
+            &NSString::from_str("\u{00D7}"),
+            Some(&*target),
+            Some(objc2::sel!(cancelLogin:)),
+            mtm,
+        )
+    };
+    button.setBordered(false);
+    let y = if flipped {
+        0.0
+    } else {
+        (view_frame.size.height - band).max(0.0)
+    };
+    button.setFrame(NSRect::new(
+        NSPoint::new((view_frame.size.width - band).max(0.0), y),
+        NSSize::new(band, band),
+    ));
+    button.setAutoresizingMask(
+        objc2_app_kit::NSAutoresizingMaskOptions::ViewMinXMargin
+            | if flipped {
+                objc2_app_kit::NSAutoresizingMaskOptions::ViewMaxYMargin
+            } else {
+                objc2_app_kit::NSAutoresizingMaskOptions::ViewMinYMargin
+            },
+    );
+    button.setToolTip(Some(&NSString::from_str("Cancel sign-in")));
+    ns_view.addSubview(&button);
+    // NSButton's target is a weak reference, so the target must outlive the button. Intentional
+    // leak (one tiny NSObject per GOG sign-in), the same precedent as the nav delegate.
+    std::mem::forget(target);
+}
+
+/// GOG's login as a macOS AppKit sheet (quick-261029-o1w). GOG uses the pristine
+/// (injection-free) WKWebView path for Cloudflare Turnstile, which is a plain `tauri::Window`
+/// with no sheet attachment. For visible requests this builds it ordered-out with a native cancel
+/// button, then presents it via `present_login_window_as_sheet` raced against the same watchdog
+/// the other store logins use, falling back to a visible free-standing window if the attach is
+/// unconfirmed. Always resolves the single-flight latch armed by `humble_login_open`.
+#[cfg(target_os = "macos")]
+fn open_gog_login_sheet(
+    app: &AppHandle,
+    label: &str,
+    url: tauri::Url,
+    visible: bool,
+    user_agent: &str,
+) -> Result<Value, String> {
+    let result =
+        match open_pristine_epic_login_window(app, label, url, visible, user_agent, visible) {
+            Ok(value) => value,
+            Err(e) => {
+                clear_pending_visible_login_window(label);
+                return Err(e);
+            }
+        };
+    if visible {
+        let window = app.get_window(label);
+        if let Some(window) = window.as_ref() {
+            let hook_app = app.clone();
+            let hook_label = label.to_string();
+            window.on_window_event(move |event| {
+                if matches!(event, tauri::WindowEvent::Destroyed) {
+                    dismiss_login_window_sheet(&hook_app, &hook_label);
+                    clear_pending_visible_login_window(&hook_label);
+                }
+            });
+            let (done_tx, done_rx) = mpsc_channel::<bool>();
+            let app_for_sheet = app.clone();
+            let label_for_sheet = label.to_string();
+            thread::spawn(move || {
+                let attached = present_login_window_as_sheet(&app_for_sheet, &label_for_sheet);
+                let _ = done_tx.send(attached);
+            });
+            let attached = match done_rx.recv_timeout(LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT) {
+                Ok(attached) => attached,
+                Err(_) => {
+                    eprintln!(
+                        "[shell] WARN: humble_login_open:gog-sheet: '{label}' sheet-attach watchdog exceeded {LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT:?} -- treating as unconfirmed"
+                    );
+                    false
+                }
+            };
+            if !attached {
+                eprintln!(
+                    "[shell] WARN: humble_login_open:gog-sheet: '{label}' sheet attachment unconfirmed -- falling back to a free-standing visible window"
+                );
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+            eprintln!("[shell] humble_login_open:gog-sheet: sheet_presented={attached}");
+        }
+    }
+    clear_pending_visible_login_window(label);
+    Ok(result)
 }
 
 /// Fixes the live-observed Epic logout defect (`humble_login_clear_cookies` rejecting with
@@ -8237,8 +8423,11 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // moves into the builder below, since this is the only signal this runner-agnostic
             // arm has (see `EPIC_LOGIN_HOST`'s own doc comment).
             #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
-            let is_epic_login =
-                matches!(url.host_str(), Some(EPIC_LOGIN_HOST) | Some(GOG_LOGIN_HOST));
+            let is_epic_login = matches!(url.host_str(), Some(EPIC_LOGIN_HOST));
+            // quick-261029-o1w: GOG is also pristine, but is presented as a sheet and takes part
+            // in the single-flight latch below, so it routes AFTER the latch (host-keyed only).
+            #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
+            let is_gog_login = matches!(url.host_str(), Some(GOG_LOGIN_HOST));
             let visible = args.get(1).and_then(|v| v.as_bool()).unwrap_or(false);
             let user_agent = args
                 .get(2)
@@ -8263,7 +8452,9 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // arm remain valid on every path that reaches them.
             #[cfg(target_os = "macos")]
             if is_epic_login {
-                return open_pristine_epic_login_window(app, &label, url, visible, user_agent);
+                return open_pristine_epic_login_window(
+                    app, &label, url, visible, user_agent, false,
+                );
             }
             // T-34.4.2-39 single-flight guard (Phase 34.4.2 Plan 14): refuse a second VISIBLE
             // login window while one is already pending (armed here, not yet resolved) or
@@ -8335,6 +8526,12 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 eprintln!(
                     "[shell] humble_login_open: visible login window '{label}' armed as the single pending login flow (T-34.4.2-39)"
                 );
+            }
+            // quick-261029-o1w: GOG's pristine window, presented as a sheet. Placed AFTER the
+            // latch so a refused second login never builds a window and GOG arms the latch.
+            #[cfg(target_os = "macos")]
+            if is_gog_login {
+                return open_gog_login_sheet(app, &label, url, visible, user_agent);
             }
             // Shared last-known main-frame origin (Phase 34.5 Plan 27): seeded from the
             // validated open URL so it is never empty, updated only from `on_page_load`

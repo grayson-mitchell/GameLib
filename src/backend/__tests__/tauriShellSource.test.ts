@@ -1830,7 +1830,12 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
   // on `const PRESENTED_LOGIN_SHEETS_CAP` -- the next surviving top-level item after
   // `login_window_ns_window` -- rather than deleting this test, per this plan's own
   // instruction that Test 1 must not be dropped.
-  test('Test 1: login_window_ns_window resolves via get_webview_window and never references get_window( -- the pristine surface is unreachable from it by construction', () => {
+  // quick-261029-o1w: DELIBERATELY UPDATED. The resolver now falls back to `get_window(` so the
+  // GOG pristine sheet (a plain `tauri::Window`) is reachable. Epic stays free-floating because
+  // the resolver is only asked about presented/about-to-be-presented labels and Epic's label is
+  // never registered -- the pristine body not containing `register_presented_login_sheet` is
+  // already covered by PHASE_34_4_2_NEW_SYMBOLS (Test 3 below).
+  test('Test 1: login_window_ns_window resolves via get_webview_window first, then falls back to get_window( (quick-261029-o1w, GOG sheet)', () => {
     const code = loadMainRsCode()
     const start = code.indexOf('fn login_window_ns_window(')
     expect(start).toBeGreaterThan(-1)
@@ -1838,7 +1843,10 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
     expect(end).toBeGreaterThan(start)
     const fnBody = code.slice(start, end)
     expect(fnBody).toContain('get_webview_window(')
-    expect(fnBody).not.toContain('get_window(')
+    expect(fnBody).toContain('get_window(')
+    expect(fnBody.indexOf('get_webview_window(')).toBeLessThan(
+      fnBody.indexOf('get_window(')
+    )
   })
 
   // Test 2 (formerly "login_window_wk_webview references with_webview") DELETED (Phase 34.4.2
@@ -1932,25 +1940,45 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
     return code.slice(armStart, armEnd)
   }
 
-  test('Test 1 (INVERTED 2026-08-04): present_login_window_as_sheet( is CALLED exactly once in the file, and that call site is inside the humble_login_open arm -- catches a future caller landing in (or being dropped from) the wrong arm', () => {
+  // quick-261029-o1w: DELIBERATELY UPDATED 1 -> 2 call sites. The second is GOG's sheet
+  // (`open_gog_login_sheet`); the arm's own count stays 1.
+  test('Test 1 (INVERTED 2026-08-04, updated quick-261029-o1w): present_login_window_as_sheet( is CALLED exactly twice in the file -- once inside the humble_login_open arm, once inside open_gog_login_sheet -- catches a future caller landing in (or being dropped from) the wrong place', () => {
     const code = loadMainRsCode()
     // Negative lookbehind excludes the `fn present_login_window_as_sheet(` definition
     // itself, which also ends in a trailing `(` -- this counts CALL sites only.
     const fileCallSites =
       code.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
-    expect(fileCallSites.length).toBe(1)
+    expect(fileCallSites.length).toBe(2)
 
     const armBody = extractHumbleLoginOpenArmBody(code)
     const armCallSites =
       armBody.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
     expect(armCallSites.length).toBe(1)
+
+    const gogStart = code.indexOf('fn open_gog_login_sheet(')
+    expect(gogStart).toBeGreaterThan(-1)
+    const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
+    expect(gogEnd).toBeGreaterThan(gogStart)
+    expect(code.slice(gogStart, gogEnd)).toContain(
+      'present_login_window_as_sheet('
+    )
   })
 
-  test("Test 2 (INVERTED 2026-08-04, updated 2026-08-04 by Plan 08): dismiss_login_window_sheet( is CALLED exactly TWICE in the file -- once directly inside the humble_login_open arm's WindowEvent::Destroyed branch (this test's original assertion), and once inside Plan 08's request_login_sheet_cancel, the shared dismissal entry point both close-affordance routes call -- catches either call site being dropped", () => {
+  // quick-261029-o1w: DELIBERATELY UPDATED 2 -> 3. The third call is GOG's Destroyed hook in
+  // `open_gog_login_sheet`.
+  test("Test 2 (INVERTED 2026-08-04, updated 2026-08-04 by Plan 08, updated quick-261029-o1w): dismiss_login_window_sheet( is CALLED exactly THREE times in the file (third inside open_gog_login_sheet) -- the original two: once directly inside the humble_login_open arm's WindowEvent::Destroyed branch (this test's original assertion), and once inside Plan 08's request_login_sheet_cancel, the shared dismissal entry point both close-affordance routes call -- catches either call site being dropped -- once directly inside the humble_login_open arm's WindowEvent::Destroyed branch (this test's original assertion), and once inside Plan 08's request_login_sheet_cancel, the shared dismissal entry point both close-affordance routes call -- catches either call site being dropped", () => {
     const code = loadMainRsCode()
     const fileCallSites =
       code.match(/(?<!fn )dismiss_login_window_sheet\(/g) ?? []
-    expect(fileCallSites.length).toBe(2)
+    expect(fileCallSites.length).toBe(3)
+
+    const gogStart = code.indexOf('fn open_gog_login_sheet(')
+    expect(gogStart).toBeGreaterThan(-1)
+    const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
+    expect(gogEnd).toBeGreaterThan(gogStart)
+    expect(code.slice(gogStart, gogEnd)).toContain(
+      'dismiss_login_window_sheet('
+    )
 
     const armBody = extractHumbleLoginOpenArmBody(code)
     const destroyedBlock = extractBracedBlock(
@@ -2253,12 +2281,25 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
     expect(onNavBody).not.toContain('parse_autofill_request')
   })
 
-  test('Test 3 (ORDERING, load-bearing): request_login_sheet_cancel( is CALLED exactly twice in the file (strip route + Esc route), and its own sliced body calls dismiss_login_window_sheet( at an index strictly less than .close() -- ending the sheet before closing the window', () => {
+  // quick-261029-o1w: DELIBERATELY UPDATED 2 -> 3. The third call is the native GOG cancel
+  // button (strip + Esc + native), sitting inside the PristineLoginCancelTarget define_class.
+  test('Test 3 (ORDERING, load-bearing): request_login_sheet_cancel( is CALLED exactly three times in the file (strip route + Esc route + native GOG button), and its own sliced body calls dismiss_login_window_sheet( at an index strictly less than .close() -- ending the sheet before closing the window', () => {
     const code = loadMainRsCode()
     // Negative lookbehind excludes the `fn request_login_sheet_cancel(` definition itself.
     const fileCallSites =
       code.match(/(?<!fn )request_login_sheet_cancel\(/g) ?? []
-    expect(fileCallSites.length).toBe(2)
+    expect(fileCallSites.length).toBe(3)
+
+    const targetStart = code.indexOf('struct PristineLoginCancelTarget;')
+    expect(targetStart).toBeGreaterThan(-1)
+    const targetEnd = code.indexOf(
+      'fn install_native_login_cancel_button(',
+      targetStart
+    )
+    expect(targetEnd).toBeGreaterThan(targetStart)
+    expect(code.slice(targetStart, targetEnd)).toContain(
+      'request_login_sheet_cancel('
+    )
 
     const start = code.indexOf('fn request_login_sheet_cancel(')
     expect(start).toBeGreaterThan(-1)
@@ -2502,13 +2543,39 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
 
   // CLEAR-ON-EVERY-PATH. Negative-lookbehind excludes the `fn clear_pending_visible_login_window(`
   // definition itself -- counts CALL sites only, mirroring Plan 08 Test 1's identical idiom.
-  // Three call sites: sheet presentation confirmed, the visible-fallback
-  // (`window.show()`/`window.set_focus()`), and `WindowEvent::Destroyed`.
-  test('Test 3 (CLEAR-ON-EVERY-PATH): clear_pending_visible_login_window( is CALLED exactly three times in comment-stripped production source', () => {
+  // Six call sites (quick-261029-o1w: 3 -> 6, DELIBERATELY UPDATED). The humble_login_open arm
+  // has three: sheet presentation confirmed, the visible-fallback
+  // (`window.show()`/`window.set_focus()`), and `WindowEvent::Destroyed`. `open_gog_login_sheet`
+  // has three more: the pristine-build Err path, its own Destroyed hook, and the single
+  // resolution call after presentation/fallback.
+  test('Test 3 (CLEAR-ON-EVERY-PATH): clear_pending_visible_login_window( is CALLED exactly six times in comment-stripped production source, three of them inside open_gog_login_sheet', () => {
     const code = loadMainRsCode()
     const callSites =
       code.match(/(?<!fn )clear_pending_visible_login_window\(/g) ?? []
-    expect(callSites.length).toBe(3)
+    expect(callSites.length).toBe(6)
+
+    const gogStart = code.indexOf('fn open_gog_login_sheet(')
+    expect(gogStart).toBeGreaterThan(-1)
+    const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
+    expect(gogEnd).toBeGreaterThan(gogStart)
+    const gogCallSites =
+      code
+        .slice(gogStart, gogEnd)
+        .match(/(?<!fn )clear_pending_visible_login_window\(/g) ?? []
+    expect(gogCallSites.length).toBe(3)
+  })
+
+  // quick-261029-o1w: GOG routes AFTER the latch (so a refused second login never builds a
+  // window and GOG arms the latch); Epic's early return stays BEFORE it (structural exemption).
+  test('Test 3b (quick-261029-o1w ORDERING): in the humble_login_open arm, `if is_epic_login {` precedes `if visible == true {`, which precedes `if is_gog_login {`', () => {
+    const code = loadMainRsCode()
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const epicIdx = armBody.indexOf('if is_epic_login {')
+    const latchIdx = armBody.indexOf('if visible == true {')
+    const gogIdx = armBody.indexOf('if is_gog_login {')
+    expect(epicIdx).toBeGreaterThan(-1)
+    expect(latchIdx).toBeGreaterThan(epicIdx)
+    expect(gogIdx).toBeGreaterThan(latchIdx)
   })
 
   // BOUNDED, NOT UNBOUNDED (T-34.4.2-41). A latch with no expiry would convert this plan's own
