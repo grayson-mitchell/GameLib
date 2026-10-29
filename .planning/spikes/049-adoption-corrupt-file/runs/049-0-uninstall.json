@@ -1,0 +1,48 @@
+{
+  "label": "049-0-uninstall",
+  "cmd": "fire",
+  "url": "steam://uninstall/264160",
+  "secs": 180,
+  "before": {
+    "at": "2026-10-29T00:33:06.185Z",
+    "steamPid": "50647\n50663",
+    "acf": {
+      "present": true,
+      "mtime": "2026-10-29T00:24:49.784Z",
+      "StateFlags": "4",
+      "buildid": "9044149",
+      "installdir": "WazHack",
+      "SizeOnDisk": "117426878",
+      "BytesToDownload": "575840",
+      "BytesDownloaded": "575840",
+      "BytesToStage": "582480",
+      "BytesStaged": "582480",
+      "sha": "548244f021bbbe2913669fc95cc0c0d411a06179f900332f205be8b7da809524"
+    },
+    "install": {
+      "bytes": 117426878,
+      "files": 171
+    },
+    "contentLogSize": 132369
+  },
+  "after": {
+    "at": "2026-10-29T00:33:15.323Z",
+    "steamPid": "50647\n50663",
+    "acf": {
+      "present": false
+    },
+    "install": null,
+    "contentLogSize": 132612
+  },
+  "contentLogApp": [
+    "[2026-10-29 13:33:11] AppID 264160 state changed : Update Required,Fully Installed,Files Missing,Uninstalling,\r",
+    "[2026-10-29 13:33:11] AppID 264160 state changed : Uninstalled,\r",
+    "[2026-10-29 13:33:11] AppID 264160 finished uninstall (No Error)\r"
+  ],
+  "contentLogAll": [
+    "[2026-10-29 13:33:11] AppID 264160 state changed : Update Required,Fully Installed,Files Missing,Uninstalling,\r",
+    "[2026-10-29 13:33:11] AppID 264160 state changed : Uninstalled,\r",
+    "[2026-10-29 13:33:11] AppID 264160 finished uninstall (No Error)\r"
+  ],
+  "steamRestarted": false
+}
