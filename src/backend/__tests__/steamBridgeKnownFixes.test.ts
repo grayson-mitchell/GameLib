@@ -6,7 +6,7 @@
  * mocked; no child process is spawned.
  */
 
-import { mkdirSync, rmSync, writeFileSync } from 'fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
@@ -80,6 +80,7 @@ import { bundledFixesPath, fixesPath, localFixesPath } from '../constants/paths'
 import {
   applySteamBridgeKnownFixes,
   buildRegistryFixCommandParts,
+  steamBridgeLaunchCommandParts,
   steamShimFeatureCfgLines,
   validateRegistryFixes
 } from '../storeManagers/steam/bridgeKnownFixes'
@@ -854,5 +855,63 @@ describe('GameMaker D3D11 runner default (quick 261028-k7l)', () => {
       expect.stringContaining('boom'),
       'Steam'
     )
+  })
+})
+
+describe('steamBridgeLaunchCommandParts (quick 261029-mbl)', () => {
+  let root: string
+  let exe: string
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'gamelib-bridge-launch-'))
+    mkdirSync(join(root, 'bin'))
+    exe = join(root, 'game.exe')
+    writeFileSync(exe, 'x')
+    writeFileSync(join(root, 'bin', 'alt.exe'), 'x')
+  })
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+    rmSync(join(fixesPath, '70-steam.json'), { force: true })
+  })
+
+  it('returns just the exe with no fixes file', () => {
+    expect(steamBridgeLaunchCommandParts('70', exe, root)).toEqual([exe])
+  })
+
+  it('appends launchArgs after the exe', () => {
+    writeFileSync(
+      join(fixesPath, '70-steam.json'),
+      JSON.stringify({ launchArgs: ['-dx11'] })
+    )
+    expect(steamBridgeLaunchCommandParts('70', exe, root)).toEqual([
+      exe,
+      '-dx11'
+    ])
+  })
+
+  it('swaps in a contained exeOverride', () => {
+    writeFileSync(
+      join(fixesPath, '70-steam.json'),
+      JSON.stringify({ exeOverride: 'bin/alt.exe', launchArgs: ['-x'] })
+    )
+    expect(steamBridgeLaunchCommandParts('70', exe, root)).toEqual([
+      join(root, 'bin', 'alt.exe'),
+      '-x'
+    ])
+  })
+
+  it('keeps the default exe when the override is missing or root unknown', () => {
+    writeFileSync(
+      join(fixesPath, '70-steam.json'),
+      JSON.stringify({ exeOverride: 'bin/missing.exe', launchArgs: ['-x'] })
+    )
+    expect(steamBridgeLaunchCommandParts('70', exe, root)).toEqual([exe, '-x'])
+    writeFileSync(
+      join(fixesPath, '70-steam.json'),
+      JSON.stringify({ exeOverride: 'bin/alt.exe', launchArgs: ['-x'] })
+    )
+    expect(steamBridgeLaunchCommandParts('70', exe, undefined)).toEqual([
+      exe,
+      '-x'
+    ])
   })
 })

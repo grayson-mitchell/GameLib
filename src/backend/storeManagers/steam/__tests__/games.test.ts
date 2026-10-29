@@ -102,7 +102,10 @@ import {
   stopBottleProcessMonitor
 } from '../bottleProcessMonitor'
 import { runWineCommand } from 'backend/launcher'
-import { applySteamBridgeKnownFixes } from '../bridgeKnownFixes'
+import {
+  applySteamBridgeKnownFixes,
+  steamBridgeLaunchCommandParts
+} from '../bridgeKnownFixes'
 import { installSteamBridgeSharedRedists } from '../bridge/sharedRedistInstall'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries } from 'backend/utils'
@@ -487,6 +490,8 @@ jest.mock('../bottleProcessMonitor', () => ({
 // before EACH test, so a file-scope beforeEach below re-applies a passthrough.
 jest.mock('../bridgeKnownFixes', () => ({
   applySteamBridgeKnownFixes: jest.fn(),
+  // quick 261029-mbl: re-applied as a passthrough in the file-scope beforeEach.
+  steamBridgeLaunchCommandParts: jest.fn(),
   // Spike 034: undefined under resetMocks, so no fix lines reach the cfg.
   steamShimFeatureCfgLines: jest.fn()
 }))
@@ -1795,6 +1800,9 @@ beforeEach(() => {
   })
   ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
     (_id: string, settings: unknown) => Promise.resolve(settings)
+  )
+  ;(steamBridgeLaunchCommandParts as jest.Mock).mockImplementation(
+    (_id: string, exePath: string) => [exePath]
   )
   ;(installSteamBridgeSharedRedists as jest.Mock).mockResolvedValue(undefined)
 })

@@ -37,6 +37,12 @@
  * Precedence: user env > tier-1 > default. `public/fixes/1603180-steam.json`
  * is kept as a regression pin.
  *
+ * `launchArgs` / `exeOverride` (quick 261029-mbl): `steamBridgeLaunchCommandParts`
+ * builds the non-DRM wine command (`[exe, ...launchArgs]`, with the contained
+ * exeOverride replacing the exe). DRM mode and `steam://rungameid` launches do
+ * not apply them. The bridge shim is placed beside the PICS launch exe at
+ * install, so an override in another directory may run without it.
+ *
  * This function never rejects: a fix failure logs a warning and the launch
  * continues, so it can never mark the bridge failed for the session.
  */
@@ -44,6 +50,7 @@
 import { isAbsolute, relative, resolve } from 'node:path'
 import type { EnviromentVariable, GameSettings } from 'common/types'
 import { readKnownFixes, readKnownFixProfile } from 'backend/knownFixes'
+import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning, LogPrefix } from 'backend/logger'
 import {
@@ -375,5 +382,27 @@ export async function applySteamBridgeKnownFixes(
       LogPrefix.Steam
     )
     return bridgeBottleSettings
+  }
+}
+
+/**
+ * quick 261029-mbl: the non-DRM bridge wine command parts. The known-fix
+ * exeOverride (contained to `installRoot`) replaces `exePath`; launchArgs
+ * follow. Never throws: any failure keeps the default exe.
+ */
+export function steamBridgeLaunchCommandParts(
+  appId: string,
+  exePath: string,
+  installRoot: string | undefined
+): string[] {
+  try {
+    const fix = readKnownFixLaunchOverrides(appId, 'steam', installRoot)
+    return [fix.exeOverride ?? exePath, ...fix.launchArgs]
+  } catch (error) {
+    logWarning(
+      `Steam ${appId}: could not read launch overrides, using the default executable. ${String(error)}`,
+      LogPrefix.Steam
+    )
+    return [exePath]
   }
 }

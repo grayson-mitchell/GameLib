@@ -4282,7 +4282,8 @@ export default class SteamGame implements Game {
       const { runWineCommand } = await import('backend/launcher')
       const { startBottleProcessMonitor } =
         await import('./bottleProcessMonitor')
-      const { applySteamBridgeKnownFixes } = await import('./bridgeKnownFixes')
+      const { applySteamBridgeKnownFixes, steamBridgeLaunchCommandParts } =
+        await import('./bridgeKnownFixes')
       const { applyBridgeBottleDllOverrides } =
         await import('./bridge/bottleDllOverrides')
       const { installSteamBridgeSharedRedists } =
@@ -4528,7 +4529,7 @@ export default class SteamGame implements Game {
               drm.ready.bottle.helperWinPath,
               drm.gameWinPath
             ]
-          : [exePath],
+          : steamBridgeLaunchCommandParts(this.appId, exePath, installRoot),
         gameSettings: launchSettings,
         wait: false,
         protonVerb: 'run',

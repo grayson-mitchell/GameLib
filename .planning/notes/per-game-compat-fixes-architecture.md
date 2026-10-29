@@ -21,7 +21,8 @@ UI. Building each one into the app per game would turn GameLib into a pile of be
    Heroic's format, do not start a separate format").
    - **Tier 1, simple fixes:** Heroic's known-fixes format, **unchanged**:
      `fixes/<appName>-<store>.json` with `envVariables`, `winetricks`, `runInPrefix`, `notes`,
-     `wikiLink`, plus `launchNotice` (UI text only). Same launch hook as Heroic:
+     `wikiLink`, plus `launchNotice` (UI text only), and `launchArgs`/`exeOverride` (quick
+     261029-mbl; GameLib additions that Heroic ignores). Same launch hook as Heroic:
      `prepareWineLaunch()` → `installFixes()` plus `getKnownFixesEnvVariables()`. A file written
      for Heroic's feed stays valid here, and the reverse.
    - **Tier 2, complex profiles:** a **separate** file, `<appName>-<store>.profile.json`, carrying
@@ -45,7 +46,9 @@ UI. Building each one into the app per game would turn GameLib into a pile of be
    | `dllOverrides` | shorthand for `AppDefaults\<exe>\DllOverrides`. **CrossOver's `wine` wrapper drops `WINEDLLOVERRIDES`**, so env-var overrides silently do nothing | 031 |
    | `overlays` | sha-pinned components placed beside the exe (e.g. Mesa 26.2.4 x86 `opengl32.dll` + `libgallium_wgl.dll`); add-only, recorded, removable | 031 |
    | `shimFeatures` | generic, data-parameterised capabilities in the steam_api shim, e.g. `"wgl.hideExtensions": ["WGL_ARB_create_context*"]`. **Implemented** (spike 034, quick 261026-ng9). Transport: `fix.<feature>=<value>` lines in the per-app `gamelib_bridge.cfg` written by `writeBridgeConfig`, read by `native/steam-bridge/shim/shim_features.c` at `DLL_PROCESS_ATTACH`. Tier 2 only (bundled/local), never remote | 033, 034 |
-   | `launchNotice` | UI text, e.g. "first screen freezes ~25s while loading (x87 code under Rosetta)". **Tier 1** (decision 1); the rest of this table is tier 2 | 033 |
+   | `launchNotice` | UI text, e.g. "first screen freezes ~25s while loading (x87 code under Rosetta)". **Tier 1** (decision 1); the tier-1 rows are `launchNotice`, `launchArgs` and `exeOverride`, the rest of this table is tier 2 | 033 |
+   | `launchArgs` | `string[]` appended to the game's argv (protonfixes `append_argument`). Never parseable as a runner option (legendary/nile after `--`; gogdl drops `--` entries). **Tier 1**, implemented by quick 261029-mbl | — |
+   | `exeOverride` | install-dir-relative exe launched instead of the default (protonfixes `replace_command`); realpath-contained to the install folder and must exist. **Tier 1**, implemented by quick 261029-mbl | — |
    | `platforms` | scoping per OS, runtime version range (`crossover>=26.3`), and an exe sha guard | 030 |
    | `evidence` | link to the spike or debug artifact that justifies the profile | — |
 
@@ -75,6 +78,8 @@ UI. Building each one into the app per game would turn GameLib into a pile of be
      from the install directory and winetricks verbs download and run installers. That is the same
      trust Heroic users already extend to Heroic's feed, and it is acceptable for a repo GameLib
      controls. What tier 1 cannot do is set registry values, drop DLLs or change the shim.
+     `exeOverride` can only pick an existing file inside the install folder, so it stays within
+     `runInPrefix`'s trust.
 7. **Diagnostic launch mode** is the debugging companion to local overrides. It turns on what
    spikes 030–033 built by hand:
    - `CX_DEBUGMSG`/`CX_LOG` channels (CrossOver ignores `WINEDEBUG`)
@@ -159,8 +164,8 @@ gamefixes-* dirs. Helper call tally across all 490 files, method `grep -ho 'util
 | winedll_override | 91 | `dllOverrides` (built, quick 261029-gow) |
 | set_environment | 80 | `envVariables` |
 | regedit_add | 54 | `registry` |
-| replace_command | 49 | proposed `exeOverride` |
-| append_argument | 39 | proposed `launchArgs` |
+| replace_command | 49 | `exeOverride` (built, quick 261029-mbl) |
+| append_argument | 39 | `launchArgs` (built, quick 261029-mbl) |
 | protonprefix | 23 | — |
 | set_cpu_topology_limit | 20 | expressible today as `envVariables` WINE_CPU_TOPOLOGY |
 | disable_esync | 19 | does not apply on macOS |
@@ -183,8 +188,8 @@ support for downloaded files.
 1. `dllOverrides`: built by quick 261029-gow (tier 2, registry-backed); second by protonfixes usage (91). Must be
    registry-backed (`AppDefaults\<exe>\DllOverrides`) because CrossOver's wine wrapper drops
    WINEDLLOVERRIDES (spike 031, decision 3).
-2. `launchArgs` + `exeOverride` (append_argument 39 + replace_command 49 = 88). Neither runs new
-   code, so both are tier-1 candidates; tier placement is an operator decision.
+2. `launchArgs` + `exeOverride` (append_argument 39 + replace_command 49 = 88): built by quick
+   261029-mbl as **tier 1** (operator decision 2026-10-29).
 3. `registryDelete`: Lutris has delete_registry_key; GameLib's `registry` only adds.
 4. `configEdits` (INI/XML/JSON option edits). Conflicts with decision 4 ("never modify game
    files") unless scoped to config files and recorded in the decision-5 ledger. Operator decision.
@@ -206,7 +211,7 @@ those decisions. The two halves:
 ### Follow-ups
 
 - `.planning/todos/pending/2026-10-29-known-fix-dlloverrides-key.md`
-- `.planning/todos/pending/2026-10-29-known-fix-launchargs-exeoverride-keys.md`
+- `.planning/todos/completed/2026-10-29-known-fix-launchargs-exeoverride-keys.md`
 - `.planning/todos/pending/2026-10-29-protonfixes-import-dev-tool.md`
 
 ### Sources
