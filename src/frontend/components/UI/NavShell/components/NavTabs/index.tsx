@@ -17,6 +17,7 @@ import {
   resolveActiveTab,
   resolveDefaultStore
 } from '../../navTabs'
+import { resolveTabTarget } from '../../tabLocationMemory'
 import './index.scss'
 
 /**
@@ -44,6 +45,9 @@ import './index.scss'
  * `resolveActiveTab` returns `null`, is coerced to MUI's `false`
  * no-selection sentinel.
  *
+ * Selection stays route-driven, but each tab's target now comes from the
+ * session tab memory (`tabLocationMemory.ts`); the lit tab targets its root.
+ *
  * No redundant `aria-label` is set on `<Tabs>` -- each `<Tab>` already
  * carries its own accessible name via `label`, so inventing a sixth
  * translatable string here would be redundant with the five that already
@@ -67,6 +71,16 @@ export default function NavTabs() {
     steam: { username: steam.username ?? undefined },
     zoom
   })
+
+  const target = (
+    tab: 'accounts' | 'games' | 'stores' | 'downloads' | 'settings',
+    rootTo: string
+  ) => resolveTabTarget(tab, rootTo, activeTab)
+  const accountsTarget = target('accounts', '/login')
+  const gamesTarget = target('games', '/')
+  const storesTarget = target('stores', `/store/${defaultStore}`)
+  const downloadsTarget = target('downloads', '/download-manager')
+  const settingsTarget = target('settings', '/settings/general')
 
   // Ported verbatim from the retired GameLib sidebar item's onClick
   // (`Sidebar/components/SidebarLinks/index.tsx:52-64`). Dropping this would
@@ -92,7 +106,8 @@ export default function NavTabs() {
     <Tabs className="NavTabs" value={activeTab ?? false} data-tour="nav-menu">
       <Tab
         component={NavLink}
-        to="/login"
+        to={accountsTarget.to}
+        state={accountsTarget.state}
         value="accounts"
         id={`tab-${NAV_TAB_INDEX.accounts}`}
         label={t('nav.tabs.accounts', 'Accounts')}
@@ -103,7 +118,8 @@ export default function NavTabs() {
       />
       <Tab
         component={NavLink}
-        to="/"
+        to={gamesTarget.to}
+        state={gamesTarget.state}
         value="games"
         id={`tab-${NAV_TAB_INDEX.games}`}
         label={t('nav.tabs.library', 'Library')}
@@ -115,7 +131,8 @@ export default function NavTabs() {
       />
       <Tab
         component={NavLink}
-        to={`/store/${defaultStore}`}
+        to={storesTarget.to}
+        state={storesTarget.state}
         value="stores"
         id={`tab-${NAV_TAB_INDEX.stores}`}
         label={t('stores', 'Stores')}
@@ -126,7 +143,8 @@ export default function NavTabs() {
       />
       <Tab
         component={NavLink}
-        to="/download-manager"
+        to={downloadsTarget.to}
+        state={downloadsTarget.state}
         value="downloads"
         id={`tab-${NAV_TAB_INDEX.downloads}`}
         label={t('download-manager.link', 'Downloads')}
@@ -137,7 +155,8 @@ export default function NavTabs() {
       />
       <Tab
         component={NavLink}
-        to="/settings/general"
+        to={settingsTarget.to}
+        state={settingsTarget.state}
         value="settings"
         id={`tab-${NAV_TAB_INDEX.settings}`}
         label={t('Settings', 'Settings')}

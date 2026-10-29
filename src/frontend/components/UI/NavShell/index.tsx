@@ -4,6 +4,7 @@ import classNames from 'classnames'
 
 import { Tier2PortalContext } from './Tier2PortalContext'
 import { resolveActiveTab } from './navTabs'
+import { rememberTabLocation } from './tabLocationMemory'
 import NavTabs from './components/NavTabs'
 import GamesPanel from './components/GamesPanel'
 import StoresPanel from './components/StoresPanel'
@@ -32,11 +33,25 @@ import './index.scss'
  * `StoreEmbedSuppressionContext.tsx`'s doc comment.
  */
 export default function NavShell() {
-  const location = useLocation() as { pathname: string }
+  const location = useLocation() as {
+    pathname: string
+    search?: string
+    state?: unknown
+  }
   const navigate = useNavigate()
   const { filled } = useContext(Tier2PortalContext)
 
   const activeTab = resolveActiveTab(location.pathname)
+
+  // Session tab memory: remember where the user is so coming back to this
+  // tab lands them there (tabLocationMemory.ts).
+  useEffect(() => {
+    rememberTabLocation({
+      pathname: location.pathname,
+      search: location.search,
+      state: location.state
+    })
+  }, [location.pathname, location.search, location.state])
 
   // Ported from the retired left navigation (`Sidebar/index.tsx:58-63`).
   // Losing this subscription would silently break tray and deeplink
