@@ -4929,6 +4929,55 @@ describe('pollInstallOnce()', () => {
     })
   })
 
+  // ── quick 261029-iwy: a poll Steam adopted (runningSteamSync) ──────────────
+  it('261029-iwy: a steamAdopted native poll fires Installation Finished and NOT the "Restart Steam" notify', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', {
+      intervalMs: 60000,
+      isNativeHandoff: true,
+      steamAdopted: true
+    })
+    await pollInstallOnce('730')
+    expect(notify).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('Restart Steam to finish installing')
+      })
+    )
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({ body: 'Installation Finished' })
+    )
+  })
+
+  it('261029-iwy: a second startInstallPolling call carrying steamAdopted upgrades the registered poll', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', 60000)
+    startInstallPolling('730', {
+      intervalMs: 60000,
+      isNativeHandoff: true,
+      steamAdopted: true
+    })
+    await pollInstallOnce('730')
+    expect(notify).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('Restart Steam to finish installing')
+      })
+    )
+  })
+
   it('does NOT fire the "Restart Steam" notify on the "installed" branch for an OFF-path poll (Steam owns the download, isNativeHandoff false/absent) — no regression on the ordinary install-finished flow', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {

@@ -53,7 +53,11 @@ export function classifySteamSyncTick(input: ClassifyInput): SteamSyncTick {
     const state = parseAppState(current.content)
     if (state) {
       const flags = Number(state.StateFlags)
-      const buildid = String(state.buildid ?? '')
+      // @node-steam/vdf parses numeric strings to numbers.
+      const buildid =
+        typeof state.buildid === 'string' || typeof state.buildid === 'number'
+          ? String(state.buildid)
+          : ''
       const differs =
         !baseline ||
         current.content !== baseline.content ||

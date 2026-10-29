@@ -87,6 +87,7 @@ import {
   removeSteamInstallCopy,
   STEAM_BRIDGE_FINISHING_CONTEXT
 } from './library'
+import { syncRunningMacSteam } from './runningSteamSync'
 import {
   isBottleReady,
   tellBottledSteamToInstall,
@@ -2786,6 +2787,10 @@ export default class SteamGame implements Game {
         }
       }
 
+      // Filled by runNativeDepotDownloadLeased on the native Mac route only.
+      const deferredPoll: {
+        handoff?: { manifestPath: string; skippedDepots: string[] }
+      } = {}
       // Phase 54: one authenticated lease for the whole install run, taken
       // BEFORE resolveSteamInstallTarget (so the installdir fallback sees an
       // open session for gated apps) and BEFORE the crash breadcrumb (so a
@@ -2801,16 +2806,48 @@ export default class SteamGame implements Game {
       if (!lease.ok) {
         return this.installResultForRefusal(lease.reason)
       }
+      let leasedResult: InstallResult
       try {
-        return await this.runNativeDepotDownloadLeased(
+        leasedResult = await this.runNativeDepotDownloadLeased(
           args,
           opts,
           controller,
-          runStart
+          runStart,
+          deferredPoll
         )
       } finally {
         lease.release()
       }
+
+      // Quick 261029-iwy (spikes 047-049): the lease is released first so
+      // Mac Steam's go-offline wrap is restored before Steam is asked to
+      // fetch manifests. If Mac Steam is running, `steam://install/<appId>`
+      // makes it adopt the finished install with no restart; Play stays
+      // disabled ('steam-syncing') until Steam rewrites the ACF itself. Not
+      // running, timeout or abort all fall back to the restart hint. This
+      // stays inside the outer try so the in-flight registry and abort
+      // controller still cover the whole sync.
+      if (deferredPoll.handoff && leasedResult.status === 'done') {
+        const handoff = deferredPoll.handoff
+        let steamAdopted = false
+        const { isMacSteamRunning } =
+          await import('./bridge/drm/drmLaunchSetup')
+        const running = await isMacSteamRunning().catch(() => false)
+        if (running) {
+          const syncOutcome = await syncRunningMacSteam(
+            this.appId,
+            handoff.manifestPath,
+            { signal: controller.signal }
+          )
+          steamAdopted = syncOutcome === 'adopted'
+        }
+        startInstallPolling(this.appId, {
+          isNativeHandoff: true,
+          skippedDepots: handoff.skippedDepots,
+          ...(steamAdopted ? { steamAdopted: true } : {})
+        })
+      }
+      return leasedResult
     } finally {
       // T-23-13: fail-safe cleanup on success, error, or cancel (including an
       // unhandled throw/rejection) — never leaves this appId permanently
@@ -2861,7 +2898,10 @@ export default class SteamGame implements Game {
       pollerSource?: 'bottle' | 'bridge'
     },
     controller: ReturnType<typeof createAbortController>,
-    runStart: number
+    runStart: number,
+    deferredPoll: {
+      handoff?: { manifestPath: string; skippedDepots: string[] }
+    }
   ): Promise<InstallResult> {
     const resolveTargetStart = Date.now()
     let resolved: Awaited<ReturnType<typeof resolveSteamInstallTarget>>
@@ -3029,6 +3069,13 @@ export default class SteamGame implements Game {
         isNativeHandoff: true,
         skippedDepots: outcome.skippedDepots ?? []
       })
+    } else if (isMac) {
+      // Quick 261029-iwy: native Mac route. The poll starts in the caller
+      // after the running-Steam sync (runNativeDepotDownload).
+      deferredPoll.handoff = {
+        manifestPath: join(targetSteamappsDir, `appmanifest_${this.appId}.acf`),
+        skippedDepots: outcome.skippedDepots ?? []
+      }
     } else {
       startInstallPolling(this.appId, {
         isNativeHandoff: true,
