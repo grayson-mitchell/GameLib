@@ -44,4 +44,4 @@ If you are on a game page and switch to another app tab, coming back to that tab
 - Game pages with no `gameInfo` (tray or deeplink) and `/loginweb` are never remembered.
 - Scroll restore is left out, as before.
 
-Not yet checked live in `tauri dev`. The "Done when" steps above are the manual check.
+Live check 2026-10-29, operator, `tauri dev`: PASS 3/3. (1) The search survives a game-page round trip. (2) Games returns to the game page after a switch to Downloads. (3) The search is empty after an app restart.
