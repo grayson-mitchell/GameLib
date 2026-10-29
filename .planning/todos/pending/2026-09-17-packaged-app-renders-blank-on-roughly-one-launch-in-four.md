@@ -88,9 +88,26 @@ which theory fit.
   lived in is measured closed, but that is inference, not a reproduction.
 - A genuinely stalled route module now shows a spinner for 20s and then an error screen. That
   is a visible failure rather than a dead window; it does not make the stall itself go away.
-- **Close condition:** one release cycle with no blank report and no `ROOT-EMPTIED` in any
-  log. Then delete `src/frontend/blankRenderProbe.ts`, its `index.tsx` import and the
-  `probeMark` call sites, and move this todo to `completed/`.
+- **Close condition** (tightened 2026-10-29). Two halves, both on **release builds only**:
+  1. **One release cycle on a build that contains the fix.** The fix (`91bf5560c`) first
+     shipped in `v0.8.0` (tagged 2026-10-28), so the cycle runs from v0.8.0 to the next
+     release tag. The weeks between 2026-09-23 and v0.8.0 count for nothing: no shipped
+     build carried the fix.
+  2. **No blank report, and no _unrecovered_ `ROOT-EMPTIED`.** A `ROOT-EMPTIED` counts only
+     when its `after-emptied +250ms` line reads `rootKids=0`, or when no `.App` appears in
+     the geometry samples that follow it, i.e. the window stayed empty. A `ROOT-EMPTIED`
+     whose `after-emptied` shows a replacement child (`first=pre`, an error surface, or
+     `div#app.App`) is a visible failure or a normal re-mount, not this bug.
+  - **Do not count dev-build logs.** A log is from a dev build when its `[bootstrap]` lines
+    name `src-tauri/target/debug/gamelib-shell` or `source=GAMELIB_APP_ROOT`. Measured
+    2026-10-29: one `tauri dev` session logged 11 `ROOT-EMPTIED`, every one right after
+    `window-error TypeError: Importing a module script failed` with `vite-error-overlay` up
+    and `after-emptied ... first=pre` 250ms later. That is Vite dev-server module churn
+    landing on `errorElement`. The probe fires on any failed route import, so the old
+    criterion of "no `ROOT-EMPTIED` in any log" would never have been met.
+
+  When both halves hold, delete `src/frontend/blankRenderProbe.ts`, its `index.tsx` import
+  and the `probeMark` call sites, and move this todo to `completed/`.
 - **`ready: blocked`, not `live-gate`** (changed 2026-09-23). Nothing here needs a live run on
   this Mac any more — the fix is measured. It is parked on a release cycle elapsing. Left as
   `live-gate` it would keep surfacing in `grep -l 'ready: live-gate'` as pickup-able work and
@@ -270,7 +287,9 @@ the close condition in **What remains open** at the top:
 2. ~~Only then decide the remedy.~~ Done. The warning held: the recovery would have papered
    over the window while leaving the router rendering nothing.
 3. **Remove `blankRenderProbe.ts`, its `index.tsx` import and the `probeMark` call sites**
-   after one clean release cycle, then move this todo to `completed/`.
+   once the close condition in **What remains open** holds (one clean release cycle after
+   v0.8.0; release builds only; unrecovered `ROOT-EMPTIED` only), then move this todo to
+   `completed/`.
 
 ## Method notes
 
