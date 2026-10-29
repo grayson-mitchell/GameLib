@@ -74,6 +74,7 @@
     "src/frontend/helpers/inputModality.ts",
     "src/frontend/helpers/library.ts",
     "src/frontend/helpers/resolveBootLanguage.ts",
+    "src/frontend/helpers/signInIdentityResync.ts",
     "src/frontend/helpers/signInInputs.ts",
     "src/frontend/helpers/steamInstallOptionsEntry.ts",
     "src/frontend/helpers/steamKeyValidation.ts",
