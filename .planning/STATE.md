@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 57
 Plan: 0 of 0
 Status: Ready to plan
-Last activity: 2026-10-29 - Completed quick task 261029-mbl: launchArgs and exeOverride tier-1 known-fix keys
+Last activity: 2026-10-29 - Completed quick task 261029-mkz: Runs for me override
 
 Progress: [██████████] 99%
 
@@ -490,6 +490,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261029-gow | `dllOverrides` tier-2 known-fix key: `[{exe, dlls:{<dll>:<mode>}}]` compiles to `HKCU\Software\Wine\AppDefaults\<exe>\DllOverrides` REG_SZ via `applyRegistryFixes` on both the Wine and Steam-bridge launch paths; never tier-1. | 2026-10-29 | 67063aea7 | Tests + codecheck green; not seen live | [261029-gow-add-the-dlloverrides-known-fix-key-tier-](./quick/261029-gow-add-the-dlloverrides-known-fix-key-tier-/) |
 | 261029-mbi | Bridge install: `markBridgeGameInstalled` no longer sends an early `done` (the second sender 261029-exu missed); Play no longer flashes between "Finishing install…" and the redist step. | 2026-10-29 | 925e9b2c7 | Tests green; passed live 2026-10-29 (Grim Dawn reinstall, no Play mid-tail) | [261029-mbi-bridge-mark-installed-early-done](./quick/261029-mbi-bridge-mark-installed-early-done/) |
 | 261029-nag | Uninstall no longer adds the game to `nonAvailableGames` (`handleNonAvailableGames` checks `getGameInfo` first); the Library silent-exclusion guard waits for the reconcile pass, ending the one-off false alarm. | 2026-10-29 | 674fef9db | Tests green; not seen live | [261029-nag-nonavailable-uninstall-and-guard](./quick/261029-nag-nonavailable-uninstall-and-guard/) |
+| 261029-mkz | "Runs for me" per-game override: backend `runsForMeStore` (tri-state auto/user-on/user-off, user-off wins), auto-set after 60 s of play (bottleProcessMonitor + launcher), new `runsForMe` runnability tier with filter row and green-check badge, install risk warning skipped, game page toggle, strings in 49 catalogs. | 2026-10-29 | 295e00db9 | Tests + codecheck + gates green; not seen live | [261029-mkz-runs-for-me-override](./quick/261029-mkz-runs-for-me-override/) |
 | fast | `dialogDisplayed` (send-kind, added by `509bcb01b`) bucketed in `IPC-PORT-INVENTORY.md`; Unique channels 229 → 230, Ported 74 → 75. `pnpm planning-gates` 12/12. | 2026-10-29 | `28c85c608` | Done | — |
 | fast | Library tile shows Stop for a playing Steam game (context menu too), and the recently-played first tile swaps PLAY for a STOP label; D-08 card hide dropped to match MainButton. Not live-tested. | 2026-10-29 | `78f657b58` | Done | — |
 | 261029-mbl | `launchArgs` and `exeOverride` added as tier-1 known-fix keys (operator decision). Wired into GOG, Amazon, Epic, Zoom and non-DRM Steam bridge launches; exeOverride is checked to be relative, inside the install folder (realpath) and an existing file. Not live-tested; Steam DRM-mode and steam:// launches apply neither key. | 2026-10-29 | `108c408e9` `2c93c4901` `e19f24c8c` `8f7f138ae` | Done | [261029-mbl-add-launchargs-and-exeoverride-tier-1-kn](./quick/261029-mbl-add-launchargs-and-exeoverride-tier-1-kn/) |
