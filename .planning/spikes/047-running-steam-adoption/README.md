@@ -10,6 +10,8 @@ tags: [steam, macos, appmanifest, acf, adoption, steam-url, stateflags, install,
 
 # Spike 047: Running-Steam Adoption
 
+> **Correction 2026-10-29 (quick 261029-ji2):** `steam://install/<appId>` opens Steam's install DIALOG; adoption proceeds only after a human clicks Install. Evidence: Steam console_log shows `ExecuteSteamURL: "steam://install/<id>"` then `Installs.ContinueInstall` 5-8 s later in these runs (the operator clicking); in the live GameLib run and a repro the dialog was off-screen and Steam logged `Installs.CancelInstall`. So it is NOT unattended / "no click" / "toast only". What still holds: once adoption proceeds, Steam's scan hash-checks content (049: 169/2), repairs only bad files, downloads no game content (047/048), keeps the same PID. Production now uses restart-on-Play (a Steam that starts after GameLib wrote the files adopts at startup, spikes 001/003).
+
 ## What This Validates
 
 **Given** native Mac Steam is running and GameLib has just written a complete depot install
@@ -39,7 +41,7 @@ shipping code only shows a passive "Restart Steam to finish" toast for 1026 hand
 |---|---|---|---|
 | Passive (current) | nothing to build | running Steam never notices; user must restart | **047a/047c-1: confirmed dead** |
 | Quit Steam → write → relaunch | matches every proven path | disruptive; kills the bridge's signed-in Steam | not needed |
-| `steam://install/<appId>` | no restart, unattended | untested on native Steam | **chosen — VALIDATED** |
+| `steam://install/<appId>` | no restart, unattended [corrected 2026-10-29: requires clicking Install, see Correction] | untested on native Steam | **chosen — VALIDATED** |
 | `steam://validate/<appId>` | — | only a fallback if install failed | skipped (047d unneeded) |
 
 ## How to Run
@@ -90,7 +92,7 @@ state machine), the ACF (mtime/StateFlags/Bytes*), the install dir's byte total,
 ## Results
 
 **VALIDATED.** `open -g steam://install/<appId>` makes an already-running native Mac Steam adopt
-a GameLib depot install with no restart, no user click (toast only), and no game-content
+a GameLib depot install with no restart, no user click (toast only) [corrected 2026-10-29: requires clicking Install, see Correction], and no game-content
 download — for both StateFlags 4 and the 1026 handoff.
 
 Surprises / signal for the build:

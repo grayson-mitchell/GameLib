@@ -10,6 +10,8 @@ tags: [steam, macos, appmanifest, acf, adoption, steam-url, verify, integrity, r
 
 # Spike 049: Adoption Scan vs a Corrupt File
 
+> **Correction 2026-10-29 (quick 261029-ji2):** `steam://install/<appId>` opens Steam's install DIALOG; adoption proceeds only after a human clicks Install. Evidence: Steam console_log shows `ExecuteSteamURL: "steam://install/<id>"` then `Installs.ContinueInstall` 5-8 s later in these runs (the operator clicking); in the live GameLib run and a repro the dialog was off-screen and Steam logged `Installs.CancelInstall`. So it is NOT unattended / "no click" / "toast only". What still holds: once adoption proceeds, Steam's scan hash-checks content (049: 169/2), repairs only bad files, downloads no game content (047/048), keeps the same PID. Production now uses restart-on-Play (a Steam that starts after GameLib wrote the files adopts at startup, spikes 001/003).
+
 ## What This Validates
 
 048 left one question open: is the adoption scan (`Validation: full scan … found N/M matching
