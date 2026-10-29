@@ -27,6 +27,10 @@ import { normalizeTitle } from 'frontend/helpers/library'
 import FocusRowStrip from './components/FocusRowStrip'
 import LibraryContext from './LibraryContext'
 import {
+  readLibrarySessionSearch,
+  writeLibrarySessionSearch
+} from './librarySessionSearch'
+import {
   FilterEngineDeps,
   FilterEngineState,
   FilterMode,
@@ -368,7 +372,9 @@ export default React.memo(function Library(): JSX.Element {
   const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
   const { runsForMe } = useGlobalState.keys('runsForMe')
 
-  const [filterText, setFilterText] = useState('')
+  const [filterText, setFilterText] = useState(
+    () => readLibrarySessionSearch().filterText
+  )
 
   // Debug session steam-library-22-games-missing (2026-08-21): bumped by
   // the `reconcileNonAvailableGames` effect below whenever it actually
@@ -505,7 +511,14 @@ export default React.memo(function Library(): JSX.Element {
   }
   const [alphabetFilterLetter, setAlphabetFilterLetter] = useState<
     string | null
-  >(null)
+  >(() => readLibrarySessionSearch().alphabetFilterLetter)
+
+  // Keep the search and letter for the session so a game-page round trip
+  // (which remounts Library) does not lose them. Every setter path flows
+  // through here, including clearAllFilters.
+  useEffect(() => {
+    writeLibrarySessionSearch({ filterText, alphabetFilterLetter })
+  }, [filterText, alphabetFilterLetter])
 
   const [sortPrefs, setSortPrefs] = useState(() =>
     readLibrarySortPrefs(storage)
@@ -1066,7 +1079,11 @@ export default React.memo(function Library(): JSX.Element {
     handleShowThirdPartyOnly(false)
     handleShowUpdatesOnly(false)
     // filterText and alphabetFilterLetter are session-only (D-22 /
-    // WR-11 fix, 2026-08-27 quick 260827-vpl) and have no localStorage key --
+    // WR-11 fix, 2026-08-27 quick 260827-vpl) and have no localStorage key.
+    // They are kept across in-app navigation via librarySessionSearch.ts;
+    // clearing them here clears the kept copy through the write-back effect.
+    // They are the exception to "every one of those goes through its
+    // persisted wrapper" --
     // the exception to "every one of those goes through its persisted
     // wrapper". The letter is a filter (DECISION 1) and clearing it here
     // closes the reachable dead end where a user presses this exact button
