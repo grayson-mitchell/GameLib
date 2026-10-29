@@ -65,6 +65,7 @@ import {
   rearmSignInDismissals
 } from 'common/signInDismissal'
 import { collectSignInInputs } from '../helpers/signInInputs'
+import { resyncSignInIdentity } from '../helpers/signInIdentityResync'
 import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
@@ -919,6 +920,51 @@ class GlobalState extends PureComponent<Props> {
     this.handleRearmSignInDismissals(states)
   }
 
+  // Quick 261029-quw item 2: a login path can leave a sign-in identity field
+  // stale in renderer state (a response without a username, an OAuth payload
+  // without `user_id`, a login that finished in the backend). Re-read the five
+  // fields from their config stores -- the same expressions the initial state
+  // uses -- and re-arm the notice. An empty patch skips setState, so calling
+  // this after every refresh cannot loop.
+  private resyncSignInIdentityFromStores = () => {
+    try {
+      const patch = resyncSignInIdentity(
+        {
+          epic: this.state.epic,
+          gog: this.state.gog,
+          amazon: this.state.amazon,
+          humble: this.state.humble,
+          steam: this.state.steam
+        },
+        {
+          legendaryDisplayName: () =>
+            configStore.get_nodefault('userInfo.displayName'),
+          gogUsername: () => gogConfigStore.get_nodefault('userData.username'),
+          nileUserId: () => nileConfigStore.get_nodefault('userData.user_id'),
+          nileName: () => nileConfigStore.get_nodefault('userData.name'),
+          humbleIsLoggedIn: () => humbleConfigStore.get_nodefault('isLoggedIn'),
+          humbleUsername: () =>
+            humbleConfigStore.get_nodefault('userData')?.username,
+          humbleExpired: () => humbleConfigStore.get_nodefault('expired'),
+          steamUsername: () =>
+            steamConfigStore.get_nodefault('userData')?.username
+        }
+      )
+      if (Object.keys(patch).length > 0) {
+        this.setState((prev: StateProps) => ({
+          ...(patch.epic && { epic: { ...prev.epic, ...patch.epic } }),
+          ...(patch.gog && { gog: { ...prev.gog, ...patch.gog } }),
+          ...(patch.amazon && { amazon: { ...prev.amazon, ...patch.amazon } }),
+          ...(patch.humble && { humble: { ...prev.humble, ...patch.humble } }),
+          ...(patch.steam && { steam: { ...prev.steam, ...patch.steam } })
+        }))
+      }
+    } catch (error) {
+      window.api.logError(`Sign-in identity resync failed: ${String(error)}`)
+    }
+    this.rearmFromCurrentState()
+  }
+
   handleExperimentalFeatures = (value: ExperimentalFeatures) => {
     this.setState({
       experimentalFeatures: value,
@@ -931,6 +977,7 @@ class GlobalState extends PureComponent<Props> {
 
   handleSuccessfulLogin = (runner: Runner) => {
     storage.setItem('category', 'all')
+    this.resyncSignInIdentityFromStores()
     this.refreshLibrary({
       runInBackground: false,
       library: runner,
@@ -1096,6 +1143,7 @@ class GlobalState extends PureComponent<Props> {
           username: result.username
         }
       })
+      this.resyncSignInIdentityFromStores()
       this.refreshLibrary({
         runInBackground: true,
         library: 'steam',
@@ -1171,6 +1219,7 @@ class GlobalState extends PureComponent<Props> {
           expired: false
         }
       })
+      this.resyncSignInIdentityFromStores()
       // D-23: a successful login/reconnect triggers a sync.
       void window.api.humbleSync()
     }
@@ -1465,7 +1514,11 @@ class GlobalState extends PureComponent<Props> {
 
     try {
       await window.api.refreshLibrary(library, origin)
-      return await this.refresh(library, checkForUpdates)
+      await this.refresh(library, checkForUpdates)
+      // Quick 261029-quw item 2: every login triggers a refresh, so a login
+      // that finished in the backend heals here at the latest.
+      this.resyncSignInIdentityFromStores()
+      return
     } catch (error) {
       window.api.logError(`Library refresh failed: ${String(error)}`)
       // debug/steam-relogin-no-autorefresh: this method's own guard above
