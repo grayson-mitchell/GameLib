@@ -29,7 +29,7 @@ import {
   getBackButtonLabel
 } from './controller'
 import { useColumnCount, useGamepadButtonPress, useGamepadInfo } from './hooks'
-import { selectConsoleGames } from './selectors'
+import { applyConsoleChipFilters, selectConsoleGames } from './selectors'
 
 import type { TFunction } from 'i18next'
 import type { GameInfo, Runner } from 'common/types'
@@ -71,12 +71,15 @@ export default function ConsoleMode() {
     refreshLibrary,
     refreshing,
     gameUpdates,
-    hiddenGames
+    hiddenGames,
+    platform
   } = useContext(ContextProvider)
 
   const [activeStore, setActiveStore] = useState<StoreKey>('all')
   const [ascending, setAscending] = useState(true)
   const [filteringByInstalled, setFilteringByInstalled] = useState(false)
+  const [filteringByNative, setFilteringByNative] = useState(false)
+  const nativeChipAvailable = platform !== 'win32'
   const [focusedIndex, setFocusedIndex] = useState(0)
   const [launchingGame, setLaunchingGame] = useState<GameInfo | null>(null)
   const [installingGame, setInstallingGame] = useState<GameInfo | null>(null)
@@ -145,21 +148,25 @@ export default function ConsoleMode() {
     // reset card refs to rebuild them
     cardRefs.current = []
 
-    let filteredGames = allGames
-
-    if (filteringByInstalled) {
-      filteredGames = filteredGames.filter((g) => g.is_installed)
-    }
-
-    if (activeStore !== 'all') {
-      filteredGames = filteredGames.filter((g) => g.runner === activeStore)
-    }
+    const filteredGames = applyConsoleChipFilters(allGames, {
+      installedOnly: filteringByInstalled,
+      nativeOnly: filteringByNative,
+      store: activeStore,
+      hostPlatform: platform
+    })
 
     return filteredGames.sort((a, b) => {
       const cmp = a.title.localeCompare(b.title)
       return ascending ? cmp : -cmp
     })
-  }, [allGames, filteringByInstalled, activeStore, ascending])
+  }, [
+    allGames,
+    filteringByInstalled,
+    filteringByNative,
+    platform,
+    activeStore,
+    ascending
+  ])
 
   const storesWithGames = useMemo(() => {
     const set = new Set<Runner>()
@@ -424,6 +431,18 @@ export default function ConsoleMode() {
           >
             {t('status.installed', 'Installed')}
           </button>
+          {nativeChipAvailable && (
+            <button
+              key="nativeGames"
+              className={classNames('consoleChip', {
+                active: filteringByNative
+              })}
+              aria-pressed={filteringByNative}
+              onClick={() => setFilteringByNative((v) => !v)}
+            >
+              {tGamelib('gamelib:library.filterPanel.native', 'Native')}
+            </button>
+          )}
           <div className="consoleDividerVertical" />
           {storeFilters
             .filter((f) => f.enabled)
