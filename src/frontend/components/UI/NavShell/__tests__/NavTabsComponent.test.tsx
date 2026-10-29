@@ -116,6 +116,10 @@ import { NavLink } from 'react-router-dom'
 import { Tab, Tabs } from '@mui/material'
 import NavTabs from '../components/NavTabs'
 import DownloadsTabIcon from '../components/DownloadsTabIcon'
+import {
+  rememberTabLocation,
+  resetTabLocationMemoryForTests
+} from '../tabLocationMemory'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -467,5 +471,31 @@ describe('NavTabs onboarding-tour anchors', () => {
       ...tabs.map((tab) => tab.props['data-tour'])
     ]
     expect(new Set(values).size).toBe(6)
+  })
+})
+
+describe('NavTabs session tab memory', () => {
+  beforeEach(() => {
+    resetTabLocationMemoryForTests()
+  })
+
+  it('points the Games tab at the remembered game page with its state', () => {
+    const state = { gameInfo: { app_name: '620' } }
+    rememberTabLocation({ pathname: '/gamepage/steam/620', search: '', state })
+    pathname = '/store/epic'
+    const games = tabsOf(callNavTabs())[1]
+    expect(games.props.to).toBe('/gamepage/steam/620')
+    expect(games.props.state).toBe(state)
+  })
+
+  it('sends the lit Games tab to the root', () => {
+    rememberTabLocation({
+      pathname: '/gamepage/steam/620',
+      state: { gameInfo: {} }
+    })
+    pathname = '/gamepage/steam/620'
+    const games = tabsOf(callNavTabs())[1]
+    expect(games.props.to).toBe('/')
+    expect(games.props.state).toBeUndefined()
   })
 })

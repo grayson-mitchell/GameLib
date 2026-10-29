@@ -80,6 +80,10 @@ import SettingsPanel from '../components/SettingsPanel'
 import HeroicVersion from '../components/HeroicVersion'
 import NavShellTour from '../components/NavShellTour'
 import NavShell from '../index'
+import {
+  resolveTabTarget,
+  resetTabLocationMemoryForTests
+} from '../tabLocationMemory'
 
 const handleGoToScreenMock = jest.fn()
 ;(
@@ -335,5 +339,20 @@ describe('NavShell', () => {
     expect(navigateMock).toHaveBeenCalledWith('/settings/general', {
       state: { fromGameCard: false }
     })
+  })
+})
+
+describe('NavShell tab memory', () => {
+  beforeEach(() => {
+    resetTabLocationMemoryForTests()
+  })
+
+  it('records the current location so another tab can return to it', () => {
+    pathname = '/settings/advanced'
+    callNavShell()
+    expect(resolveTabTarget('settings', '/settings/general', 'games').to).toBe(
+      '/settings/advanced'
+    )
+    pathname = '/'
   })
 })
