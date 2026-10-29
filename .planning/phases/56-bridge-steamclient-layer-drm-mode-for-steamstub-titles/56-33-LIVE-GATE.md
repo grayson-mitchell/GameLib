@@ -346,37 +346,37 @@ Reduction applied: every state-mutating requirement {segment-A dev start (rebuil
 ### 1. Component published and fetched (D-18)
 
 expected: COMPDIR holds exactly the six names, lsteamclient.so sha256 equals dd48289787223d9e0f75a97da3cc15aa616faa382741e39a5a433fa5cfa5167d, codesign -dv reports `not signed at all`; the fetch is proven by a `component=download` line in the launch-0 prefetch line or the launch-1 setup line after PC8's move (sinks: filesystem and SIDECAR copies, launch 0 or launch 1)
-result: pending
+result: pass. COMPDIR holds exactly the six names (LICENSE.lsteamclient, NOTICE, detour-cx26.3.0.39832.bin, lsteamclient.dll, lsteamclient.so, steam.exe); lsteamclient.so sha256 equals dd48289787223d9e0f75a97da3cc15aa616faa382741e39a5a433fa5cfa5167d; codesign reports `not signed at all`. Fetch proven after PC8's move by DELTA(0) `drm prefetch: appId 219990 ready crossover=26.3.0.39832 ... component=download runner=cache valve=cache` (14:27:10), corroborated by `steamclient-layer: steamclient-layer-cx26.3.0.39832 downloaded and verified`. Launch 1's own setup line says component=cache, as expected after the prefetch.
 
 ### 2. Reinstall through the bridge, fresh bottle (D-17)
 
 expected: BOTTLE(219990) exists and appmanifest_219990.acf has `"StateFlags" "4"`, and DELTA(0) holds both `bridge bottle "GameLibSteamBridge-219990" not yet provisioned for appId 219990` and `provisionBridgeBottle: bridge bottle "GameLibSteamBridge-219990" created`, after PC7 and PC11 passed (sinks: filesystem and SIDECAR copy, launch 0)
-result: pending
+result: pass. BOTTLE(219990) exists after the reinstall and appmanifest_219990.acf has `"StateFlags" "4"`; DELTA(0) holds `SteamGame: bridge bottle "GameLibSteamBridge-219990" not yet provisioned for appId 219990` (14:20:09) and `provisionBridgeBottle: bridge bottle "GameLibSteamBridge-219990" created (no Windows Steam client installed` (14:20:21); PC7 and PC11 passed beforehand.
 
 ### 3. DRM-mode setup completed on the fresh bottle (D-12/D-13)
 
 expected: DELTA(1) of gamelib-launch-1.log has exactly one new `[bridge-drm] appId=219990 mode=steamclient-layer crossover=26.3.0.39832 client=` line (anchor delta 1), zero `[bridge-notice] appId=219990 reason=drm-` lines, and at least one `stageDrmBottle: appId 219990 registry not staged:` line; a `stage retry passed on attempt` line in the same delta does not fail the item (sink: SIDECAR copy, launch 1)
-result: pending
+result: pass. Scored on run 1's sub-window (DELTA(1) from the launch-1 delimiter up to run 1b's `drm setup` line, 83 lines, `delta1a.txt`): `[bridge-drm] appId=219990 mode=steamclient-layer crossover=26.3.0.39832 client=` x1 (14:28:47), `[bridge-notice] appId=219990 reason=drm-` x0, `stageDrmBottle: appId 219990 registry not staged:` x1, no `timed out after`, no `stage retry passed`. The whole-DELTA anchor count is 2 only because run 1b (the operator's re-click) added one; see the Launch 1 note in the Run record.
 
 ### 4. Menu with only Mac Steam (D-17)
 
 expected: operator confirms the main menu is interactive; procs-launch-1.txt has a steam_osx pid and no steamwebhelper.exe or steamservice.exe line (sink: operator plus procs-launch-1.txt, launch 1)
-result: pending
+result: pass, with a caveat on the procs clause. Menu clause: the operator reported run 1 (14:28:42, game pid 89531) reached the interactive main menu and quit it from the menu (verbatim, see the Run record). Procs clause: `procs-launch-1.txt` was captured during run 1b (the re-click, game pid 89772), not run 1: it holds a steam_osx pid, no `steamwebhelper.exe` line and no `steamservice.exe` line, and one `steam.exe` line that is the GameLib helper at `C:\Program Files (x86)\Steam\steam.exe`. Run 1 itself has no process snapshot; the no-Windows-Steam evidence for run 1 is PC2 (clean immediately before the install), the helper-only `steam.exe` in the launch command, and `wine-launch-1a.log` holding no steamwebhelper or steamservice text. The procs clause is therefore evidenced by a re-click run (evidence-only, `1b`), not by run 1.
 
 ### 5. D-15 game-process attach
 
 expected: DELTA(1) has at least one `bridge drm [219990]: [drm-trace] appId=219990 pid=<g> role=game event=create-interface` line and <g> equals no role=helper pid (sink: SIDECAR copy, launch 1)
-result: pending
+result: pass. DELTA(1) holds `bridge drm [219990]: [drm-trace] appId=219990 pid=356 role=game event=create-interface iface=SteamClient017` (run 1) and the same with pid=240 (run 1b); no role=helper line in either trace, so <g> equals no helper pid. Ifaces seen: SteamClient017 only.
 
 ### 6. D-16 game-originated call (census)
 
 expected: `pnpm -s bridge-census --json` for appid 219990 gives evidence verified with evidenceDetail starting `game call ` or equal to `game log init`, and no counting name starts with ISteamClient_ or matches SetMinidumpSteamID; every distinct name= per role from trace-launch-1.log recorded verbatim (sinks: live SIDECAR and trace-launch-1.log, launch 1, census run in segment A)
-result: pending
+result: pass. `pnpm -s bridge-census --json` row 219990 (run in segment A before any restart, SIDECAR holding runs 1 and 1b): evidence `verified`, evidenceDetail `game call ISteamUser_SteamUser017_GetSteamID`. Distinct names, role=game (union of both runs, 40 names, `names-launch-1.txt`; run 1 alone has the same 41-line trace shape; role=helper: none): ISteamClient_SteamClient014_{CreateSteamPipe,GetISteamUtils,ConnectToGlobalUser,GetISteamUser,GetISteamGenericInterface,ReleaseUser,BReleaseSteamPipe}; ISteamClient_SteamClient023_{CreateSteamPipe,GetISteamUser,Set_SteamAPI_CCheckCallbackRegisteredInProcess,GetISteamGenericInterface,SetWarningMessageHook,ConnectToGlobalUser,BShutdownIfAllPipesClosed,ReleaseUser,BReleaseSteamPipe}; non-ISteamClient_ names (the counting set): ISteamAppTicket_STEAMAPPTICKET_INTERFACE_VERSION001_GetAppOwnershipTicketData, ISteamApps_STEAMAPPS_INTERFACE_VERSION009_BIsSubscribedApp, ISteamController_SteamController008_{GetActionSetHandle,GetConnectedControllers,Init,RunFrame,Shutdown}, ISteamInput_SteamInput007_RunFrame, ISteamMatchmakingServers_SteamMatchMakingServers003_{ReleaseRequest,RequestLANServerList}, ISteamRemoteStorage_STEAMREMOTESTORAGE_INTERFACE_VERSION016_{FileRead,FileWrite,GetFileCount,GetFileNameAndSize,GetFileSize,GetQuota}, ISteamUserStats_STEAMUSERSTATS_INTERFACE_VERSION013_{GetAchievement,GetNumAchievements}, ISteamUser_SteamUser017_GetSteamID, ISteamUser_SteamUser023_GetSteamID, ISteamUtils_SteamUtils007_{GetAppID,GetConnectedUniverse}, ISteamUtils_SteamUtils011_{GetAppID,RunFrame}. Helper list: empty. No counting name matches SetMinidumpSteamID.
 
 ### 7. D-21 no local-machine Steam InstallPath keys
 
 expected: awk section count of `"InstallPath"=` values under `[Software\\Valve\\Steam]` and `[Software\\Wow6432Node\\Valve\\Steam]` in system-reg-launch-1.reg is 0 (CommonRedist sections excluded and their header count recorded); zero `gamelib-steam-helper: refusing steam relaunch request` lines in wine-launch-1.log (CONDITIONAL sink, unscored if the sink is unproven); any `steamclient_init_registry unavailable` line recorded (sinks: system-reg copy and wine log copy, launch 1)
-result: pending
+result: pass. 7a: awk count of `"InstallPath"=` under [Software\\Valve\\Steam] and [Software\\Wow6432Node\\Valve\\Steam] in system-reg-launch-1.reg is 0; CommonRedist header count recorded: 5. 7b: zero `gamelib-steam-helper` lines in both wine logs, so no helper stderr line was seen in the sink: no sink, unscored. 7c: zero `steamclient_init_registry unavailable` lines.
 
 ### 8. Raft 648800 (recorded, non-blocking)
 
@@ -401,12 +401,12 @@ result: pending
 ### 12. G2 route notice absent for the DRM title (non-blocking)
 
 expected: zero DELTA(0) lines containing `requires a user notice before any install` for appId 219990; operator records whether a route-notice dialog appeared (sink: SIDECAR copy, launch 0)
-result: pending
+result: pass. Zero DELTA(0) lines containing `requires a user notice before any install` for appId 219990; operator reported no dialogs during the reinstall.
 
 ### 13. G3 Play enabled after install, no restart (BLOCKING)
 
 expected: after the reinstall finishes with the segment-A dev app pid unchanged, the operator sees Play enabled (not stuck on redist) and the click is followed by `drm setup: appId 219990` lines in DELTA(1) within 30 s (sinks: operator and SIDECAR copy, launch 0 then launch 1)
-result: pending
+result: pass. Segment-A pid 86847 unchanged from PC6 through the install and the click. Operator: after the install the card showed Play enabled (final state, after the "installing redistributables" step). The click reaches the backend: the first `drm setup: appId 219990` line in run 1's window is 14:28:47, within seconds of the delimiter and the click at about 14:28:42 (well inside 30 s). The transient "[play now]" flash during install is not covered by this item and is recorded as an observation.
 
 ### 14. G9 repeat DRM launch passes bottle-stage (BLOCKING)
 
@@ -426,7 +426,7 @@ result: pending
 ### 17. S1 stage wine log written (BLOCKING)
 
 expected: DELTA(1) contains `stageDrmBottle: appId 219990 stage wine log <path>`, the file at <path> exists, its first line starts `[gamelib] stage session appId=219990`, and it contains `[gamelib] stage attempt 0` (sinks: SIDECAR copy and the stage wine log, launch 1)
-result: pending
+result: pass. DELTA(1) has `stageDrmBottle: appId 219990 stage wine log /Users/graysonmitchell/Library/Application Support/GameLib/steam-bridge/drm/trace/219990-1793237324709.stage.wine.log` (14:28:44); the file exists, its first line starts `[gamelib] stage session appId=219990 bottle=GameLibSteamBridge-219990`, it contains `[gamelib] stage attempt 0`, and it ends in four `reg: The operation completed successfully` lines (copied to stage-wine-launch-1.log).
 
 ### 18. R1 forced timeout drives end-session and a passing retry (BLOCKING)
 
@@ -518,6 +518,15 @@ Note: DELTA(0) is the reinstall window of the current segment-A `gamelib.log` af
 - OBSERVATION (not scored, no contract item covers it): a transient premature Play state ("[play now]") appeared before the redistributables step during install. G3 asks only about the state after the install finishes (Play enabled, not stuck on redist), which was met; this flash is recorded for the Gaps list as a non-blocking finding.
 - Launch-0 sinks read: `gamelib-launch-0.log` (DELTA(0) = lines after 59). Recorded only; scoring happens in Task 2.
 - Segment-A pid still 86847 before the launch-1 click. Launch-1 delimiter written; baselines in `lines-before-launch-1.txt`, `anchors-before-launch-1.txt`, `pad-before-launch-1.txt`.
+
+### 56-34 launch 1 evidence read
+
+- Archived to the session dir after the game exited: `gamelib-launch-1.log`, `delta1.txt` (whole window), `delta1a.txt` (run 1 only), `trace-launch-1a.log`/`trace-launch-1b.log`, `wine-launch-1a.log`/`wine-launch-1b.log`, `stage-wine-launch-1.log`, `system-reg-launch-1.reg`, `census-launch-1.json`, `names-launch-1.txt`, `procs-launch-1.txt`.
+- Operator report on launch 1: "game launches to main menu". No hang was reported. The operator did not state controller or other detail; nothing further is recorded.
+- Launch 1 stage: ran once on the fresh bottle, `registry not staged:` x1, stage attempt 0 only, no `timed out after` line, no `stage retry passed` line, four successful `reg add`s. W1 data: pad count 1 at launch 1, no 15000 ms timeout, no retry: no natural wedge.
+- DEVIATION (two game runs in DELTA(1)): run 1 at 14:28:42 (stage ran, anchor, game pid 89531, 14 s of play) and run 1b at 14:29:22 (a manual re-click, game pid 89772, 34 s of play, no stage). Operator, verbatim: "yes, I quit it before i added the log file command, so restarted to do that... this is a pass". Reading: run 1 reached an interactive main menu and was quit from the menu (the 14 s clean shutdown was operator-initiated, not a crash); run 1b was a manual re-click made to take the procs snapshot. Per the retry rule run 1b is evidence-only (`1b`, `evidence-only (post-FAIL)` by analogy: it is a re-click, not a retry the product did) and cannot change the verdict. Items 3 and 13 are scored on run 1's sub-window only; item 4's procs clause and part of item 5/6's trace evidence come from run 1b as well as run 1 and are labelled as such. The operator's "this is a pass" is verdict input only; each item above is scored from evidence.
+- Lesson recorded: the procs snapshot command must be pasted at the menu BEFORE quitting, in the same Play; the operator quit first. From launch 2 on, `gate-launch.sh` prints the snapshot command before the click.
+- Observation on the "[play now]" flash during install: recorded above; unscored.
 
 ## Gaps
 
