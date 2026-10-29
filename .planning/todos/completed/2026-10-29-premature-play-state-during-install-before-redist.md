@@ -15,3 +15,7 @@ While reinstalling Grim Dawn through the bridge (56-34 launch 0) the card went: 
 ## Next
 
 Reproduce with a native install of a DRM title and click Play during the flash to see what happens. If it launches, hold the installed/Play state until the redist step reports done (or disable Play while redists are pending).
+
+## Resolution
+
+2026-10-29, fixed by quick 261029-mbi (`925e9b2c7`). The flash came from `markBridgeGameInstalled()` sending `gameStatusUpdate { done }` after shim placement, ahead of the shared-redist step. It now only flips and persists `is_installed`; the bridge install's `finally` sends the single `done` after the redists and DRM prefetch. A regression test asserts the only `done` is the final one. Live check passed the same day: a Grim Dawn reinstall showed no Play until the install finished, so the click-during-flash case no longer has a window to test.
