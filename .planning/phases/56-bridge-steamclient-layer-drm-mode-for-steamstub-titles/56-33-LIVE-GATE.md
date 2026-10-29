@@ -381,7 +381,7 @@ result: pass. 7a: awk count of `"InstallPath"=` under [Software\\Valve\\Steam] a
 ### 8. Raft 648800 (recorded, non-blocking)
 
 expected: items 3-6 applied to launch 3 recorded as verified, reached menu (census detail) or failed at a step; `find BOTTLE(648800)/drive_c -name gamelib_bridge.cfg` prints nothing (sink: SIDECAR copy and filesystem, launch 3)
-verified (census `game call ISteamUser_SteamUser017_GetSteamID`), reached menu per the operator. Launch 3 (Raft) DELTA(3): anchor `[bridge-drm] appId=648800 mode=steamclient-layer` x1 (14:45:05; baseline 0), `reason=drm-` x0, `[bridge-notice]` x0, `registry not staged:` x0 (the bottle was already staged; the clause is not required for Raft), `timed out after` x0, no stage wine log line; one `role=game create-interface` (pid=240, SteamClient017), no role=helper line; 56 call events, counting names include ISteamUser_SteamUser017_GetSteamID, ISteamUser_SteamUser023_GetAuthSessionTicket, ISteamAppTicket_STEAMAPPTICKET_INTERFACE_VERSION001_GetAppOwnershipTicketData, ISteamUserStats_STEAMUSERSTATS_INTERFACE_VERSION012_RequestCurrentStats, ISteamApps_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId. `procs-launch-3.txt` (taken at the menu, before the quit): steam_osx pid present, no steamwebhelper.exe or steamservice.exe line, one helper `steam.exe` line. `find BOTTLE(648800)/drive_c -name gamelib_bridge.cfg` printed nothing. Exit behaviour: see the launch 3 note in the Run record (hang on quit, force-quit by the operator).
+result: verified (census `game call ISteamUser_SteamUser017_GetSteamID`), reached menu per the operator. Launch 3 (Raft) DELTA(3): anchor `[bridge-drm] appId=648800 mode=steamclient-layer` x1 (14:45:05; baseline 0), `reason=drm-` x0, `[bridge-notice]` x0, `registry not staged:` x0 (the bottle was already staged; the clause is not required for Raft), `timed out after` x0, no stage wine log line; one `role=game create-interface` (pid=240, SteamClient017), no role=helper line; 56 call events, counting names include ISteamUser_SteamUser017_GetSteamID, ISteamUser_SteamUser023_GetAuthSessionTicket, ISteamAppTicket_STEAMAPPTICKET_INTERFACE_VERSION001_GetAppOwnershipTicketData, ISteamUserStats_STEAMUSERSTATS_INTERFACE_VERSION012_RequestCurrentStats, ISteamApps_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId. `procs-launch-3.txt` (taken at the menu, before the quit): steam_osx pid present, no steamwebhelper.exe or steamservice.exe line, one helper `steam.exe` line. `find BOTTLE(648800)/drive_c -name gamelib_bridge.cfg` printed nothing. Exit behaviour: see the launch 3 note in the Run record (hang on quit, force-quit by the operator).
 
 ### 9. Ranch Simulator 1119730 (recorded, non-blocking)
 
@@ -391,12 +391,12 @@ result: verified (census `game call ISteamUser_SteamUser017_GetSteamID`), reache
 ### 10. Networking lead (56-02)
 
 expected: `grep -c SteamNetworkingSocketsSerialized005` over every session launch capture recorded per file (sink: all gamelib-launch-N.log, trace, wine-launch and stage-wine-launch files, launches 0 to 6)
-result: recorded. `grep -c SteamNetworkingSocketsSerialized005` over every `<session>/*-launch-*` file (gamelib-launch-0/1/2/3/4, delta files, trace-launch-1a/1b/2/3/4, wine-launch-1a/1b/2/3/4, stage-wine-launch-1, system-reg-launch-N) is 0 for every file; segment-B files (launches 5 and 6) are scored later in this item's record if they differ. No hit, so 56-02's omitted serialized005.patch is not implicated by segment A.
+result: recorded. `grep -c SteamNetworkingSocketsSerialized005` is 0 for every `<session>/*-launch-*` capture file across the whole run (segment A launches 0-4 and segment B launch 5: gamelib-launch-N, delta, trace, wine-launch, stage-wine-launch, system-reg, procs, baselines). No hit, so 56-02's omitted serialized005.patch is not implicated. Launch 6 did not run.
 
 ### 11. HKLM diagnostic (D-21, conditional)
 
 expected: only if item 4, 5 or 6 failed on launch 1: the two F7 keys added with reg add, launch 6 scored as items 3-6, each key's InstallPath value removed with `reg delete <key> /v InstallPath /f`, a key deleted only if `reg query` shows it empty, CommonRedist header counts equal before and after; otherwise skipped (sinks: SIDECAR copy and system-reg copy, launch 6)
-result: pending
+result: skipped. Launch 1 passed items 4, 5 and 6, so the conditional HKLM diagnostic (launch 6) did not run and nothing was written to the registry for it.
 
 ### 12. G2 route notice absent for the DRM title (non-blocking)
 
@@ -411,12 +411,12 @@ result: pass. Segment-A pid 86847 unchanged from PC6 through the install and the
 ### 14. G9 repeat DRM launch passes bottle-stage (BLOCKING)
 
 expected: Grim Dawn launch 2 logs exactly one new anchor and zero `reason=drm-bottle-stage` lines in DELTA(2); `registry not staged:` presence and menu reached recorded (sinks: SIDECAR copy by delta and operator, launch 2)
-pass. Scored on the reconstructed launch-2 window (`gamelib-launch-2.log` lines 419-end, `delta2-real.txt`; 14:38:38 to 14:42:09): exactly one new `[bridge-drm] appId=219990 mode=steamclient-layer` anchor (14:38:39; whole-log anchor count 3 = runs 1, 1b and 2, so 2 before the click and +1), `reason=drm-bottle-stage` x0, `[bridge-notice]` x0, `timed out after` x0, `registry not staged:` x0 (as expected on a staged bottle). Operator: "launch 2: menu, no notices"; the monitor logged game started pid 93627 and `game stopped after 209s of play`. Run on pad count 1 (connected). `procs-launch-2.txt` does not exist (the snapshot was not taken); it is not a G9 clause, and it is recorded as missing, not fabricated.
+result: pass. Scored on the reconstructed launch-2 window (`gamelib-launch-2.log` lines 419-end, `delta2-real.txt`; 14:38:38 to 14:42:09): exactly one new `[bridge-drm] appId=219990 mode=steamclient-layer` anchor (14:38:39; whole-log anchor count 3 = runs 1, 1b and 2, so 2 before the click and +1), `reason=drm-bottle-stage` x0, `[bridge-notice]` x0, `timed out after` x0, `registry not staged:` x0 (as expected on a staged bottle). Operator: "launch 2: menu, no notices"; the monitor logged game started pid 93627 and `game stopped after 209s of play`. Run on pad count 1 (connected). `procs-launch-2.txt` does not exist (the snapshot was not taken); it is not a G9 clause, and it is recorded as missing, not fabricated.
 
 ### 15. G10 notice display confirmed (non-blocking)
 
 expected: every `[bridge-notice] appId=<id> dispatched=` line has a `[bridge-notice] appId=<id> display=confirmed elapsedMs=` line within 10 s and no `display=unconfirmed`; N/A when no notice fires (sink: SIDECAR copy, any launch)
-result: N/A so far. No `[bridge-notice]` line appeared in any segment-A launch (DELTA(0) to DELTA(4)), so no `dispatched=` line exists to pair; the segment-B launch 5 is read in Task 4 and the final G10 result is written there.
+result: N/A. No `[bridge-notice]` line appeared in any launch (segment A launches 0-4 and segment B launch 5; zero `bridge-notice` lines in `gamelib-segmentA-final.log` and `gamelib-launch-5.log`), so no `dispatched=` line exists to pair with a `display=confirmed` line. Consistent with Test 4: a notice fires only on a failure, and none occurred.
 
 ### 16. G11 Ranch routed to DRM mode (non-blocking)
 
@@ -431,17 +431,17 @@ result: pass. DELTA(1) has `stageDrmBottle: appId 219990 stage wine log /Users/g
 ### 18. R1 forced timeout drives end-session and a passing retry (BLOCKING)
 
 expected: in segment-B DELTA(5), in order for appId 1119730: `first stage attempt timeout forced to 300 ms`, `timed out after 300 ms; ending the stage session and retrying`, `bottle processes at timeout:`, `ended stage session, killed ` (prefix only), `stage retry passed on attempt 1`, then the `[bridge-drm] appId=1119730 mode=steamclient-layer` anchor; zero `reason=drm-bottle-stage` lines; stage-wine-launch-5.log holds `[gamelib] stage attempt 0`, `[gamelib] stage attempt 1` and the `bottle processes at timeout:` listing; the killed-process count N is recorded and not scored; Ranch's outcome is recorded and not scored (sinks: segment-B SIDECAR copy and the stage wine log, launch 5)
-result: pending
+result: pass. Segment-B DELTA(5) (`delta5.txt`, new `gamelib.log` after the forced-timeout dev start; PC14 had left the Ranch bottle unstaged, pad count 0 at launch 5). The contract's awk order command printed `ORDER-OK 9 12 13 17 25 34`: (1) L9 `first stage attempt timeout forced to 300 ms` (14:57:52), (2) L12 `reg add SteamClientDll64 timed out after 300 ms; ending the stage session and retrying` (14:57:52), (3) L13 `bottle processes at timeout: 7819:0.3:wineserver,7817:4.5:winewrapper.exe`, (4) L17 `ended stage session, killed 0 leftover process(es)` (14:57:55), (5) L25 `stage retry passed on attempt 1` (14:57:57), (6) L34 the `[bridge-drm] appId=1119730 mode=steamclient-layer` anchor. `reason=drm-bottle-stage` x0 (and `reason=drm-` x0, `[bridge-notice]` x0). `stage-wine-launch-5.log`: first line `[gamelib] stage session appId=1119730 bottle=GameLibSteamBridge-1119730 started=...`; `[gamelib] stage attempt 0` x1, `[gamelib] stage attempt 1` x1, `bottle processes at timeout:` x1. Informational only, not scored: killed-process count N = 0 (a clean `wineserver -k`, as 4c predicted). Ranch outcome, recorded not scored: operator "launch 5 done: menu, no notices"; game started 14:57:59, `gone after 35s of play` (natural exit in the log; the operator did not report a force-quit). `procs-launch-5.txt` (taken at the menu): steam_osx pid, one helper `steam.exe`, no steamwebhelper.exe or steamservice.exe line.
 
 ### 19. C1 card settles after any DRM-setup failure (recorded, non-blocking)
 
 expected: for each `drm setup: appId <id> stopped at <stage>` line in the run, a `sent terminal status done` line for that appId follows it and the operator confirms the card shows Play with no dev restart; N/A if no failure (sinks: SIDECAR copies and operator, any launch)
-result: pending
+result: N/A. No `drm setup: appId <id> stopped at <stage>` line and no launch-failure line anywhere in the run (zero `stopped at` in `gamelib-segmentA-final.log` and `gamelib-launch-5.log`), so there was no live DRM-setup failure to observe. The stage's timeout in launch 5 was absorbed by the retry and ended in success. The operator's card-state report after any failure: not applicable (none occurred; the Ranch card state after launch 4 and launch 5 was not reported). Closed on the 56-27 unit tests instead; see the todo move.
 
 ### 20. W1 natural winebus wedge observed or not (recorded, non-blocking)
 
 expected: the PowerA pad count at launch 1, whether `timed out after 15000 ms` occurred in DELTA(1), whether `stage retry passed on attempt` occurred, and the retry outcome are recorded (sinks: pad-before-launch-1.txt and SIDECAR copy, launch 1)
-result: pending
+result: recorded. Pad count at launch 1: 1 (connected, operator-approved). `timed out after 15000 ms` did NOT occur in DELTA(1) (the stage ran once, attempt 0 only, four successful `reg add`s); `stage retry passed on attempt` did NOT occur in DELTA(1). Outcome: no wedge. The natural-wedge falsification test is therefore not exercised: one connected-pad launch with no wedge neither confirms nor refutes the winebus root cause. Launch 5 ran with the pad unplugged (count 0) and exercised the retry mechanics through the forced timeout only.
 
 ## Run record
 
@@ -566,7 +566,15 @@ Operator: "unplugged, 0", then "window up". Dev was started as `GAMELIB_DRM_STAG
 ## Gaps
 
 - PC2 failed at authoring time: a Windows Steam was running in the `GameLibSteam` bottle (see Preflight). RESOLVED before 56-34 launch 0: re-checked by 56-34 on 2026-10-29, the PC2 ps grep printed nothing (0 lines) and `pgrep -fl wineserver` printed nothing (see `### 56-34 pre-run re-check`).
+- [non-blocking, new, product] Raft does not exit after the user quits from its menu: the game process stays alive (state S, about 1.5% CPU, with its helper `steam.exe` and `UnityCrashHandler64.exe --attach`), the last Player.log line is `Saving settings ...` after the PlayFab login, and the operator had to force-quit with Activity Monitor (launch 3). Not diagnosed as a DRM-layer defect or Raft's own exit path. Todo filed: `2026-10-29-raft-hangs-on-exit-in-drm-mode`.
+- [non-blocking, new, product] During the Grim Dawn reinstall the card showed a transient `[play now]` state for a few seconds before `installing redistributables` (sequence: installing, processing files, [play now], installing redistributables, Play). The final state was correct (G3 passed). A Play click in that window is untested. Todo filed: `2026-10-29-premature-play-state-during-install-before-redist`.
+- [non-blocking, run procedure, not product] The launch-1 procs snapshot was taken during a manual re-click (run 1b), not run 1, because the operator quit run 1 before taking it; item 4's procs clause is evidenced by run 1b. Launch 2 has no procs snapshot. Launch 0 and launch 2 each carry duplicate delimiters in `terminal.log` (operator re-ran the helper script), and launch 2's script-computed delta missed the anchor; launch 2 was scored from the reconstructed window. None of this changes a product observation; it is recorded so the evidence chain is honest.
+- [non-blocking, existing] Item 7b stays "no sink, unscored": no `gamelib-steam-helper:` line was ever seen in the wine logs, so the absence of a refusal line proves nothing; the backstop is items 4-6, which passed.
+- [non-blocking, coverage] C1 and W1 were not exercised live (no DRM-setup failure; no natural wedge with the pad connected). The stale-redist todo is closed on unit-test evidence; the winebus todo stays pending.
+- No contract defect found: no item was unreachable, and Sections 1-4 are unchanged against the approved commit `62952f464` (verified by diff).
 
 ## Verdict
 
-Verdict: pending
+Verdict: PASS
+
+Basis: items 1-7, G3 (13), G9 (14), S1 (17) and R1 (18) all pass. Item 3 and item 13 (G3) are scored on run 1's sub-window of launch 1 (the first Play on the fresh bottle); the operator's re-click (run 1b) was evidence-only. Item 4's procs clause is evidenced by run 1b (caveat recorded under item 4). Non-blocking: items 8, 9, 16 verified; 10 recorded; 11 skipped; 12 pass; 15 and 19 N/A; 20 recorded.
