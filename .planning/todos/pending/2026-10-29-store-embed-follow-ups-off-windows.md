@@ -1,10 +1,10 @@
 ---
 created: 2026-10-29
-title: "Store embed: macOS/Linux live runs of 261012-f25 / 261012-gn8, the resize-while-away geometry case, and the UA and panel-copy observations"
+title: "Store embed: Windows resize-while-away measurement and the Linux live run of 261012-f25 / 261012-gn8"
 area: tauri-shell
 severity: minor
-platform: any
-ready: code
+platform: windows
+ready: blocked
 found_by: "quick 261029-bv7 closing the Windows todo .planning/todos/completed/2026-10-11-stores-tab-embed-not-implemented-on-windows.md"
 files:
   - src/frontend/screens/WebView/useStoreEmbedHost.ts
@@ -56,18 +56,17 @@ so they keep a tracked file. The closed todo is
 
 ## Triage
 
-- `minor`: nothing has been observed broken. Items 1-3 are unverified paths with no reported
-  failure, and items 4-5 are copy and UA observations.
-- `platform: macos`: the next action, item 1, needs the operator's Mac.
-- Item 2 needs the Linux machine, and items 4-5 are decisions.
-- `ready: live-gate`: items 1 and 3 are the next action.
+- `minor`: nothing has been observed broken. The remaining items are unverified paths with no
+  reported failure.
+- `platform: windows`: the next action, item 3 on Windows, needs the operator's Windows machine. It
+  is the cheapest place to measure the stale-geometry case. The file can carry only one platform
+  value; item 2 additionally needs the Linux machine.
+- `ready: blocked`: both remaining items are gated on an OS not to hand.
 
 ## Next
 
-1. Item 1 on the Mac, since it also gives item 3 a second platform for free (add the resize step).
-2. Item 3 on Windows, which is the cheapest place to measure it.
-3. Item 2 when the Linux machine is to hand.
-4. Items 4 and 5 once the operator decides, as one small change.
+1. Item 3 on Windows (open Stores, go to Library, resize, return; the embed must fill the slot).
+2. Item 2, the Linux live run, when the Linux machine is to hand.
 
 ## macOS live run (2026-10-30)
 
@@ -110,7 +109,22 @@ Item 1 (macOS) and the macOS half of item 3 are done.
 
 ## Still open
 
-- Item 5's code change.
 - Item 2: the Linux live run, which needs the Linux machine.
 - Item 3 on Windows. The Windows half of `2fd875107`'s existing-embed rect is compiled but not
   observed live. Windows has no titlebar inset, because `content_top_inset` is macOS-only.
+
+## Item 5 done (2026-10-30, quick 261030-ah1)
+
+- Added a dedicated `'origin'` reason to `WebviewUnavailablePanel`. The D-34 deep-link escape hatch
+  in `WebView/index.tsx` now passes `reason="origin"`. The `'platform'` reason survives only as the
+  unknown-platform fallback, with its copy unchanged.
+- New en copy: heading "GameLib can't open this link in-app"; body "This link leads somewhere
+  GameLib's in-app store and wiki browser doesn't open."
+- `webview.unavailable.origin.{heading,body}` filled in all 49 gamelib catalogs under the D-09
+  key-presence rule (non-en strings model-authored in-session, stamped in each `gamelib.mt.json`).
+  `lint-translations:gamelib` went from 96 hard failures to 0.
+- Commit: `e66fb6780`.
+- Observation for the operator, no decision taken: the shared `webview.unavailable.next-step` copy
+  ("This is tracked as its own future work -- for now, use the button below to open it in your
+  system browser instead.") still renders under the origin reason and was deliberately left alone.
+  It may read oddly for a link that is simply not meant to be embedded.
