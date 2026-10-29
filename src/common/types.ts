@@ -1170,6 +1170,13 @@ export interface KnowFixesInfo {
    * entry or a detected CEG verdict (quick 261027-gtd).
    */
   drm?: 'ceg'
+  /** Tier 1 (quick 261029-mbl). Appended to the game's launch arguments;
+   * mirrors protonfixes `append_argument`. */
+  launchArgs?: string[]
+  /** Tier 1 (quick 261029-mbl). Install-dir-relative exe launched instead of
+   * the default; mirrors protonfixes `replace_command`. Shape-checked in the
+   * validator, realpath-contained and existence-checked at launch. */
+  exeOverride?: string
 }
 
 /**

@@ -24,7 +24,8 @@
  * own layer resolution (decisions 1 and 6).
  * - Tier 1, `readKnownFixes`: `<id>-<store>.json`, Heroic-format keys plus
  *   `launchNotice`. local (`fixes/local/`) > bundled (`public/fixes/`) > remote
- *   (`fixes/`), first parsed object wins whole-file. Every layer is filtered
+ *   (`fixes/`), first parsed object wins whole-file. `launchArgs` and
+ *   `exeOverride` are tier-1 fix keys (quick 261029-mbl). Every layer is filtered
  *   through the TIER1_KNOWN_FIX_KEYS allow-list.
  * - Tier 2, `readKnownFixProfile`: `<id>-<store>.profile.json`. local >
  *   bundled only; the remote directory is never read.
@@ -37,7 +38,7 @@
  * including `backend/ipc` -- the Node sidecar imports this module directly.
  */
 
-import { isAbsolute, relative, resolve } from 'path'
+import { isAbsolute, posix, relative, resolve, win32 } from 'path'
 import { existsSync } from 'graceful-fs'
 import { readFileSync } from 'fs'
 
@@ -70,6 +71,11 @@ const TIER2_FILE_SUFFIX = '.profile.json'
  * Steam as a 'drm-wrapped' known-bad, before any download) and never touches
  * a running game, so it is tier 1 and may arrive from the remote layer (quick
  * 261027-gtd); only "ceg" is accepted.
+ * `launchArgs` and `exeOverride` are tier 1 by operator decision (quick
+ * 261029-mbl); neither runs new code. `exeOverride` is shape-checked here and
+ * realpath-contained to the install folder at launch (`knownFixLaunch.ts`), so
+ * it carries the same trust as `runInPrefix`. Unlike `macArch`/`drm` they are
+ * fixes, not routing keys, and count for the GameLib row.
  */
 export const TIER1_KNOWN_FIX_KEYS = [
   'title',
@@ -80,8 +86,26 @@ export const TIER1_KNOWN_FIX_KEYS = [
   'wikiLink',
   'launchNotice',
   'macArch',
-  'drm'
+  'drm',
+  'launchArgs',
+  'exeOverride'
 ] as const
+
+/**
+ * Shape check for a tier-1 `exeOverride` (quick 261029-mbl): a non-empty
+ * install-dir-relative path with no drive letter, no absolute form (posix or
+ * win32), no NUL and no `..` segment. Containment and existence are checked at
+ * launch against the real install path (`knownFixLaunch.ts`).
+ */
+export function isValidExeOverrideShape(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  if (value.trim() === '') return false
+  if (value.includes('\u0000')) return false
+  if (posix.isAbsolute(value) || win32.isAbsolute(value)) return false
+  if (/^[A-Za-z]:/.test(value)) return false
+  if (value.split(/[\\/]/).some((seg) => seg === '..')) return false
+  return true
+}
 
 /**
  * Keys that only change where a title is installed or launched from; they are
@@ -206,6 +230,24 @@ export function filterTier1KnownFixes(
       if (key === 'drm' && value !== 'ceg') {
         logWarning(
           `Known fixes for '${appName}' (${layerLabel} layer): 'drm' accepts only "ceg", ignoring ${JSON.stringify(value)}.`
+        )
+        continue
+      }
+      if (
+        key === 'launchArgs' &&
+        !(
+          Array.isArray(value) &&
+          value.every((entry) => typeof entry === 'string')
+        )
+      ) {
+        logWarning(
+          `Known fixes for '${appName}' (${layerLabel} layer): 'launchArgs' must be an array of strings, ignoring ${JSON.stringify(value)}.`
+        )
+        continue
+      }
+      if (key === 'exeOverride' && !isValidExeOverrideShape(value)) {
+        logWarning(
+          `Known fixes for '${appName}' (${layerLabel} layer): 'exeOverride' must be a relative path inside the install folder, ignoring ${JSON.stringify(value)}.`
         )
         continue
       }

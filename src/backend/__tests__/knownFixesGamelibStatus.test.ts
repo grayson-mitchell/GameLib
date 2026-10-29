@@ -188,4 +188,23 @@ describe('readGamelibFixStatus', () => {
       })
     })
   })
+
+  describe('quick 261029-mbl: launchArgs/exeOverride are fixes, not routing', () => {
+    it('launchArgs-only bundled file -> bundled', () => {
+      write(bundledFixesPath, 'app-steam.json', { launchArgs: ['-x'] })
+      expect(readGamelibFixStatus('app', 'steam')).toEqual({
+        origin: 'bundled'
+      })
+    })
+
+    it('macArch + exeOverride is not routing-only -> bundled', () => {
+      write(bundledFixesPath, 'app-steam.json', {
+        macArch: '32',
+        exeOverride: 'g.exe'
+      })
+      expect(readGamelibFixStatus('app', 'steam')).toEqual({
+        origin: 'bundled'
+      })
+    })
+  })
 })

@@ -55,7 +55,13 @@ jest.mock('../logger', () => ({
   logWarning: jest.fn()
 }))
 
-import { readKnownFixes } from '../knownFixes'
+import {
+  filterTier1KnownFixes,
+  isRoutingOnlyTier1Fix,
+  readKnownFixes,
+  TIER1_KNOWN_FIX_KEYS
+} from '../knownFixes'
+import type { KnowFixesInfo } from 'common/types'
 import { bundledFixesPath, fixesPath } from '../constants/paths'
 import { logWarning as mockedLogWarning } from '../logger'
 
@@ -176,5 +182,69 @@ describe('readKnownFixes', () => {
   it('REQ-34.2-05 resolves fixesPath under os.tmpdir(), never the real config directory', () => {
     expect(fixesPath.startsWith(tmpdir())).toBe(true)
     expect(existsSync(fixesPath)).toBe(true)
+  })
+})
+
+describe('filterTier1KnownFixes launchArgs/exeOverride (quick 261029-mbl)', () => {
+  beforeEach(() => jest.mocked(mockedLogWarning).mockClear())
+  const run = (extra: Record<string, unknown>) =>
+    filterTier1KnownFixes('app', 'remote', { title: 't', ...extra })
+
+  it('keeps a string-array launchArgs, including an empty one', () => {
+    expect(run({ launchArgs: ['-dx11', '--windowed'] })?.launchArgs).toEqual([
+      '-dx11',
+      '--windowed'
+    ])
+    expect(run({ launchArgs: [] })?.launchArgs).toEqual([])
+  })
+
+  it.each([['-dx11'], [[1]], [['-a', null]], [{}]])(
+    'drops launchArgs %j with a warning',
+    (bad) => {
+      const out = run({ launchArgs: bad })
+      expect(out).not.toHaveProperty('launchArgs')
+      expect(mockedLogWarning).toHaveBeenCalledTimes(1)
+      expect(jest.mocked(mockedLogWarning).mock.calls[0][0]).toContain(
+        'launchArgs'
+      )
+    }
+  )
+
+  it.each(['bin/game.exe', 'bin\\game.exe'])('keeps exeOverride %j', (v) => {
+    expect(run({ exeOverride: v })?.exeOverride).toBe(v)
+  })
+
+  it.each([
+    '/abs/game.exe',
+    'C:\\game.exe',
+    'C:game.exe',
+    '\\\\server\\share\\g.exe',
+    '\\game.exe',
+    '../game.exe',
+    'bin/../../game.exe',
+    'bin\\..\\..\\g.exe',
+    '',
+    'a\u0000b',
+    5,
+    ['x']
+  ])('drops exeOverride %j with a warning', (bad) => {
+    const out = run({ exeOverride: bad })
+    expect(out).not.toHaveProperty('exeOverride')
+    expect(mockedLogWarning).toHaveBeenCalledTimes(1)
+    expect(jest.mocked(mockedLogWarning).mock.calls[0][0]).toContain(
+      'exeOverride'
+    )
+  })
+
+  it('lists both keys as tier 1 and does not treat them as routing', () => {
+    expect(TIER1_KNOWN_FIX_KEYS).toEqual(
+      expect.arrayContaining(['launchArgs', 'exeOverride'])
+    )
+    expect(
+      isRoutingOnlyTier1Fix({
+        title: 't',
+        launchArgs: ['-x']
+      } as KnowFixesInfo)
+    ).toBe(false)
   })
 })
