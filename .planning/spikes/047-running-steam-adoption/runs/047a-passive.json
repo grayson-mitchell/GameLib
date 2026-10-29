@@ -1,0 +1,51 @@
+{
+  "label": "047a-passive",
+  "cmd": "watch",
+  "url": null,
+  "secs": 30,
+  "before": {
+    "at": "2026-10-29T00:18:42.706Z",
+    "steamPid": "50647\n50663",
+    "acf": {
+      "present": true,
+      "mtime": "2026-10-29T00:01:40.953Z",
+      "StateFlags": "4",
+      "buildid": "9044149",
+      "installdir": "WazHack",
+      "SizeOnDisk": "117426878",
+      "BytesToDownload": "117426878",
+      "BytesDownloaded": "117426878",
+      "LastUpdated": "1793232100",
+      "sha": "1673d741a971a088e2872925ae6577fb1aa68216663e73715a62db0e1484c5d5"
+    },
+    "install": {
+      "bytes": 117426878,
+      "files": 171
+    },
+    "contentLogSize": 102996
+  },
+  "after": {
+    "at": "2026-10-29T00:19:13.071Z",
+    "steamPid": "50647\n50663",
+    "acf": {
+      "present": true,
+      "mtime": "2026-10-29T00:01:40.953Z",
+      "StateFlags": "4",
+      "buildid": "9044149",
+      "installdir": "WazHack",
+      "SizeOnDisk": "117426878",
+      "BytesToDownload": "117426878",
+      "BytesDownloaded": "117426878",
+      "LastUpdated": "1793232100",
+      "sha": "1673d741a971a088e2872925ae6577fb1aa68216663e73715a62db0e1484c5d5"
+    },
+    "install": {
+      "bytes": 117426878,
+      "files": 171
+    },
+    "contentLogSize": 102996
+  },
+  "contentLogApp": [],
+  "contentLogAll": [],
+  "steamRestarted": false
+}

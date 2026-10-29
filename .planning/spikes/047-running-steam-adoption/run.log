@@ -1,0 +1,140 @@
+2026-10-29T00:18:42.724Z [run] watch 047a-passive {"url":null,"secs":30,"before":{"at":"2026-10-29T00:18:42.706Z","steamPid":"50647\n50663","acf":{"present":true,"mtime":"2026-10-29T00:01:40.953Z","StateFlags":"4","buildid":"9044149","installdir":"WazHack","SizeOnDisk":"117426878","BytesToDownload":"117426878","BytesDownloaded":"117426878","LastUpdated":"1793232100","sha":"1673d741a971a088e2872925ae6577fb1aa68216663e73715a62db0e1484c5d5"},"install":{"bytes":117426878,"files":171},"contentLogSize":102996}}
+2026-10-29T00:19:13.087Z [run] done 047a-passive {"appLines":0,"acfChanged":false,"installBytes":[117426878,117426878],"steamRestarted":false}
+2026-10-29T00:19:13.088Z [save] runs/047a-passive.json
+2026-10-29T00:19:20.957Z [run] fire 047b-install-sf4 {"url":"steam://install/264160","secs":120,"before":{"at":"2026-10-29T00:19:20.939Z","steamPid":"50647\n50663","acf":{"present":true,"mtime":"2026-10-29T00:01:40.953Z","StateFlags":"4","buildid":"9044149","installdir":"WazHack","SizeOnDisk":"117426878","BytesToDownload":"117426878","BytesDownloaded":"117426878","LastUpdated":"1793232100","sha":"1673d741a971a088e2872925ae6577fb1aa68216663e73715a62db0e1484c5d5"},"install":{"bytes":117426878,"files":171},"contentLogSize":102996}}
+2026-10-29T00:19:21.006Z [fire] steam://install/264160
+2026-10-29T00:19:29.096Z [content_log] [2026-10-29 13:19:28] AppID 264160 state changed : Update Required,
+2026-10-29T00:19:29.097Z [content_log] [2026-10-29 13:19:28] AppID 264160 scheduler update : Priority First, not played for 0 seconds, update disabled for 0 seconds
+2026-10-29T00:19:29.097Z [content_log] [2026-10-29 13:19:28] AppID 264160 state changed : Update Required,Update Queued,
+2026-10-29T00:19:29.097Z [content_log] [2026-10-29 13:19:28] AppID 264160 state changed : Update Required,Update Queued,Update Running,
+2026-10-29T00:19:29.097Z [content_log] [2026-10-29 13:19:28] AppID 264160 App update changed : Running Update,
+2026-10-29T00:19:29.097Z [content_log] [2026-10-29 13:19:28] AppID 264160 App update changed : Running Update,Reconfiguring,
+2026-10-29T00:19:29.108Z [acf] changed {"present":true,"mtime":"2026-10-29T00:19:28.865Z","StateFlags":"2","buildid":"0","installdir":"WazHack","SizeOnDisk":"0","BytesToDownload":"0","BytesDownloaded":"0","BytesToStage":"0","BytesStaged":"0","sha":"865f4554c23e9a0fef65df44a36cc7bd0e37b1c0123573f10a3510f2289fc6e0"}
+2026-10-29T00:19:30.109Z [content_log] [2026-10-29 13:19:29] Got 5 download sources and 0 caching proxies via ContentServerDirectoryService::BYieldingGetServersForSteamPipe (CellID 22 / Launcher 0)
+2026-10-29T00:19:30.109Z [content_log] [2026-10-29 13:19:29] Moving to source priority class '8'
+2026-10-29T00:19:30.109Z [content_log] [2026-10-29 13:19:29] Created download interface of type 'SteamCache' (7) to host cache1-akl-edgx.steamcontent.com (cache1-akl-edgx.steamcontent.com)
+2026-10-29T00:19:30.109Z [content_log] [2026-10-29 13:19:29] Created download interface of type 'SteamCache' (7) to host cache2-akl-tpwr.steamcontent.com (cache2-akl-tpwr.steamcontent.com)
+2026-10-29T00:19:30.109Z [content_log] [2026-10-29 13:19:29] HTTP/2 available
+2026-10-29T00:19:30.109Z [content_log] [2026-10-29 13:19:29] Created ipv4-only http client
+2026-10-29T00:19:30.109Z [content_log] [2026-10-29 13:19:30] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): cache1-akl-edgx.steamcontent.com/depot/264162/manifest/3306037234848478854/5/10087335813326772985 - manifest request received 200 (OK) HTTP response
+2026-10-29T00:19:31.120Z [content_log] [2026-10-29 13:19:30] AppID 264160 App update changed : Running Update,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 App update changed : Running Update,Verifying Installed,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] Validation: full scan in "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/WazHack" found 171/0 matching files (117.43 MB/117.43 MB) in 0 seconds).
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 App update changed : Running Update,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] Found 171 pre-existing matching files for depot 264162 (117426878 bytes)
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 App update changed : Running Update,Preallocating,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 preallocated 0 files (0 MB) 
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 App update changed : Running Update,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 update started : download 36221712/36221712, store 0/0, reuse 0/0, delta 0/0, stage 117426878/117426878 
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 state changed : Update Required,Update Queued,Update Running,Update Started,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 App update changed : Running Update,Staging,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 App update changed : Running Update,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 App update changed : Running Update,Committing,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 starting commit from "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/downloading/264160" to "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/WazHack" : 198 updated, 0 moved, 0 deleted files
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 state changed : Fully Installed,Update Queued,Update Running,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 finished update, 1 mounted depots (BuildID 9044149) : 264162 (3306037234848478854),
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 App update changed : Running Update,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 App update changed : None
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 state changed : Fully Installed,Update Queued,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 scheduler finished : staying in schedule (result No Error, state 0xc) 
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 state changed : Fully Installed,Update Queued,Update Running,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 Workshop update changed : Running Update,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:30] AppID 264160 Workshop update changed : Running Update,Reconfiguring,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:31] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): cache1-akl-edgx.steamcontent.com/depot/264160/manifest/6945392478912157471/5/679797998825535721 - manifest request received 200 (OK) HTTP response
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:31] AppID 264160 Workshop update changed : Running Update,
+2026-10-29T00:19:31.121Z [content_log] [2026-10-29 13:19:31] AppID 264160 Workshop update changed : Running Update,Preallocating,
+2026-10-29T00:19:31.132Z [acf] changed {"present":true,"mtime":"2026-10-29T00:19:30.433Z","StateFlags":"4","buildid":"9044149","installdir":"WazHack","SizeOnDisk":"117426878","BytesToDownload":"0","BytesDownloaded":"0","BytesToStage":"0","BytesStaged":"0","sha":"1a456b06bc9d76e6add13ca85d6a2c83551e0981aef82c0f3253b34930e51aa1"}
+2026-10-29T00:19:32.134Z [content_log] [2026-10-29 13:19:31] AppID 264160 preallocated 1 files (0 MB) 
+2026-10-29T00:19:32.134Z [content_log] [2026-10-29 13:19:31] AppID 264160 Workshop update changed : Running Update,
+2026-10-29T00:19:32.134Z [content_log] [2026-10-29 13:19:31] AppID 264160 update started : download 0/575840, store 0/0, reuse 0/0, delta 0/0, stage 0/582480 
+2026-10-29T00:19:32.135Z [content_log] [2026-10-29 13:19:31] AppID 264160 Workshop update changed : Running Update,Downloading,Staging,
+2026-10-29T00:19:32.135Z [content_log] [2026-10-29 13:19:31] Downloading 5 chunks for depot 264160 (6945392478912157471)
+2026-10-29T00:19:32.135Z [content_log] [2026-10-29 13:19:32] AppID 264160 Workshop update changed : Running Update,
+2026-10-29T00:19:32.135Z [content_log] [2026-10-29 13:19:32] AppID 264160 Workshop update changed : Running Update,Committing,
+2026-10-29T00:19:32.135Z [content_log] [2026-10-29 13:19:32] AppID 264160 starting commit from "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/workshop/downloads/264160" to "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/workshop/content/264160" : 6 updated, 0 moved, 0 deleted files
+2026-10-29T00:19:32.135Z [content_log] [2026-10-29 13:19:32] AppID 264160 Workshop update changed : Running Update,
+2026-10-29T00:19:32.135Z [content_log] [2026-10-29 13:19:32] AppID 264160 Workshop update changed : None
+2026-10-29T00:19:32.135Z [content_log] [2026-10-29 13:19:32] AppID 264160 state changed : Fully Installed,Update Queued,
+2026-10-29T00:19:32.135Z [content_log] [2026-10-29 13:19:32] AppID 264160 state changed : Fully Installed,
+2026-10-29T00:19:32.135Z [content_log] [2026-10-29 13:19:32] AppID 264160 scheduler finished : removed from schedule (result No Error, state 0xc) 
+2026-10-29T00:19:32.146Z [acf] changed {"present":true,"mtime":"2026-10-29T00:19:32.062Z","StateFlags":"4","buildid":"9044149","installdir":"WazHack","SizeOnDisk":"117426878","BytesToDownload":"575840","BytesDownloaded":"575840","BytesToStage":"582480","BytesStaged":"582480","sha":"4bb79fff6bd1c3a70e957a5d41bed94b6c5ebed50e2cc3d34ddf97e5164b3b6e"}
+2026-10-29T00:20:32.814Z [content_log] [2026-10-29 13:20:32] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): Connection has been idle for '61' seconds, closing
+2026-10-29T00:20:32.814Z [content_log] [2026-10-29 13:20:32] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): Closing connection
+2026-10-29T00:20:33.825Z [content_log] [2026-10-29 13:20:32] HTTPS (SteamCache,350) - cache2-akl-tpwr.steamcontent.com (101.53.220.135:443 / 101.53.220.135:443, host: cache2-akl-tpwr.steamcontent.com): Connection has been idle for '61' seconds, closing
+2026-10-29T00:20:33.825Z [content_log] [2026-10-29 13:20:32] HTTPS (SteamCache,350) - cache2-akl-tpwr.steamcontent.com (101.53.220.135:443 / 101.53.220.135:443, host: cache2-akl-tpwr.steamcontent.com): Closing connection
+2026-10-29T00:21:21.362Z [run] done 047b-install-sf4 {"appLines":43,"acfChanged":true,"installBytes":[117426878,117426878],"steamRestarted":false}
+2026-10-29T00:21:21.362Z [save] runs/047b-install-sf4.json
+2026-10-29T00:22:59.639Z [run] fire 047c-0-uninstall {"url":"steam://uninstall/264160","secs":90,"before":{"at":"2026-10-29T00:22:59.621Z","steamPid":"50647\n50663","acf":{"present":true,"mtime":"2026-10-29T00:19:32.062Z","StateFlags":"4","buildid":"9044149","installdir":"WazHack","SizeOnDisk":"117426878","BytesToDownload":"575840","BytesDownloaded":"575840","BytesToStage":"582480","BytesStaged":"582480","sha":"4bb79fff6bd1c3a70e957a5d41bed94b6c5ebed50e2cc3d34ddf97e5164b3b6e"},"install":{"bytes":117426878,"files":171},"contentLogSize":109348}}
+2026-10-29T00:22:59.688Z [fire] steam://uninstall/264160
+2026-10-29T00:23:09.794Z [content_log] [2026-10-29 13:23:09] AppID 264160 state changed : Update Required,Fully Installed,Files Missing,Uninstalling,
+2026-10-29T00:23:09.795Z [content_log] [2026-10-29 13:23:09] AppID 264160 state changed : Uninstalled,
+2026-10-29T00:23:09.795Z [content_log] [2026-10-29 13:23:09] AppID 264160 finished uninstall (No Error)
+2026-10-29T00:23:09.795Z [acf] changed {"present":false}
+2026-10-29T00:24:15.407Z [run] watch 047c-1-passive {"url":null,"secs":20,"before":{"at":"2026-10-29T00:24:15.388Z","steamPid":"50647\n50663","acf":{"present":true,"mtime":"2026-10-29T00:24:15.327Z","StateFlags":"1026","buildid":"9044149","installdir":"WazHack","SizeOnDisk":"117426878","BytesToDownload":"0","BytesDownloaded":"0","LastUpdated":"1793232100","sha":"cf7993cbb7417bbc897e251ba0ace3a6a1ccbb8c8a38332dd4ccfc8db1c1a207"},"install":{"bytes":117426878,"files":171},"contentLogSize":109591}}
+2026-10-29T00:24:15.879Z [acf] changed {"present":true,"mtime":"2026-10-29T00:24:15.327Z","StateFlags":"1026","buildid":"9044149","installdir":"WazHack","SizeOnDisk":"117426878","BytesToDownload":"0","BytesDownloaded":"0","LastUpdated":"1793232100","sha":"cf7993cbb7417bbc897e251ba0ace3a6a1ccbb8c8a38332dd4ccfc8db1c1a207"}
+2026-10-29T00:24:30.057Z [run] done 047c-0-uninstall {"appLines":3,"acfChanged":true,"installBytes":[117426878,117426878],"steamRestarted":false}
+2026-10-29T00:24:30.058Z [save] runs/047c-0-uninstall.json
+2026-10-29T00:24:35.661Z [run] done 047c-1-passive {"appLines":0,"acfChanged":false,"installBytes":[117426878,117426878],"steamRestarted":false}
+2026-10-29T00:24:35.661Z [save] runs/047c-1-passive.json
+2026-10-29T00:24:41.492Z [run] fire 047c-2-install-1026 {"url":"steam://install/264160","secs":60,"before":{"at":"2026-10-29T00:24:41.474Z","steamPid":"50647\n50663","acf":{"present":true,"mtime":"2026-10-29T00:24:15.327Z","StateFlags":"1026","buildid":"9044149","installdir":"WazHack","SizeOnDisk":"117426878","BytesToDownload":"0","BytesDownloaded":"0","LastUpdated":"1793232100","sha":"cf7993cbb7417bbc897e251ba0ace3a6a1ccbb8c8a38332dd4ccfc8db1c1a207"},"install":{"bytes":117426878,"files":171},"contentLogSize":109591}}
+2026-10-29T00:24:41.544Z [fire] steam://install/264160
+2026-10-29T00:24:46.601Z [content_log] [2026-10-29 13:24:46] AppID 264160 state changed : Update Required,
+2026-10-29T00:24:46.601Z [content_log] [2026-10-29 13:24:46] AppID 264160 scheduler update : Priority First, not played for 0 seconds, update disabled for 0 seconds
+2026-10-29T00:24:46.601Z [content_log] [2026-10-29 13:24:46] AppID 264160 state changed : Update Required,Update Queued,
+2026-10-29T00:24:46.601Z [content_log] [2026-10-29 13:24:46] AppID 264160 state changed : Update Required,Update Queued,Update Running,
+2026-10-29T00:24:46.601Z [content_log] [2026-10-29 13:24:46] AppID 264160 App update changed : Running Update,
+2026-10-29T00:24:46.601Z [content_log] [2026-10-29 13:24:46] AppID 264160 App update changed : Running Update,Reconfiguring,
+2026-10-29T00:24:46.611Z [acf] changed {"present":true,"mtime":"2026-10-29T00:24:46.547Z","StateFlags":"2","buildid":"0","installdir":"WazHack","SizeOnDisk":"0","BytesToDownload":"0","BytesDownloaded":"0","BytesToStage":"0","BytesStaged":"0","sha":"865f4554c23e9a0fef65df44a36cc7bd0e37b1c0123573f10a3510f2289fc6e0"}
+2026-10-29T00:24:47.613Z [content_log] [2026-10-29 13:24:46] Moving to source priority class '8'
+2026-10-29T00:24:47.613Z [content_log] [2026-10-29 13:24:46] Created download interface of type 'SteamCache' (7) to host cache1-akl-edgx.steamcontent.com (cache1-akl-edgx.steamcontent.com)
+2026-10-29T00:24:47.613Z [content_log] [2026-10-29 13:24:46] Created download interface of type 'SteamCache' (7) to host cache2-akl-tpwr.steamcontent.com (cache2-akl-tpwr.steamcontent.com)
+2026-10-29T00:24:47.613Z [content_log] [2026-10-29 13:24:46] Got 6 download sources and 0 caching proxies via ContentServerDirectoryService::BYieldingGetServersForSteamPipe (CellID 22 / Launcher 0)
+2026-10-29T00:24:47.613Z [content_log] [2026-10-29 13:24:47] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): cache1-akl-edgx.steamcontent.com/depot/264162/manifest/3306037234848478854/5/2921342776424126581 - manifest request received 200 (OK) HTTP response
+2026-10-29T00:24:47.613Z [content_log] [2026-10-29 13:24:47] AppID 264160 App update changed : Running Update,
+2026-10-29T00:24:47.613Z [content_log] [2026-10-29 13:24:47] AppID 264160 App update changed : Running Update,Verifying Installed,
+2026-10-29T00:24:48.624Z [content_log] [2026-10-29 13:24:47] Validation: full scan in "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/WazHack" found 171/0 matching files (117.43 MB/117.43 MB) in 0 seconds).
+2026-10-29T00:24:48.624Z [content_log] [2026-10-29 13:24:47] AppID 264160 App update changed : Running Update,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] Found 171 pre-existing matching files for depot 264162 (117426878 bytes)
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 App update changed : Running Update,Preallocating,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 preallocated 0 files (0 MB) 
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 App update changed : Running Update,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 update started : download 36221712/36221712, store 0/0, reuse 0/0, delta 0/0, stage 117426878/117426878 
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 state changed : Update Required,Update Queued,Update Running,Update Started,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 App update changed : Running Update,Staging,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 App update changed : Running Update,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 App update changed : Running Update,Committing,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 starting commit from "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/downloading/264160" to "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/WazHack" : 198 updated, 0 moved, 0 deleted files
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 state changed : Fully Installed,Update Queued,Update Running,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 finished update, 1 mounted depots (BuildID 9044149) : 264162 (3306037234848478854),
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 App update changed : Running Update,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 App update changed : None
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 state changed : Fully Installed,Update Queued,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:47] AppID 264160 scheduler finished : staying in schedule (result No Error, state 0xc) 
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:48] AppID 264160 state changed : Fully Installed,Update Queued,Update Running,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:48] AppID 264160 Workshop update changed : Running Update,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:48] AppID 264160 Workshop update changed : Running Update,Reconfiguring,
+2026-10-29T00:24:48.625Z [content_log] [2026-10-29 13:24:48] Created download interface of type 'SteamCache' (7) to host cache1-akl-tpwr.steamcontent.com (cache1-akl-tpwr.steamcontent.com)
+2026-10-29T00:24:48.635Z [acf] changed {"present":true,"mtime":"2026-10-29T00:24:47.770Z","StateFlags":"4","buildid":"9044149","installdir":"WazHack","SizeOnDisk":"117426878","BytesToDownload":"36221712","BytesDownloaded":"36221712","BytesToStage":"117426878","BytesStaged":"117426878","sha":"832b642696aa460d391717a5413617a8518e2a4ef2c98fbff972dc48f551b52d"}
+2026-10-29T00:24:49.637Z [content_log] [2026-10-29 13:24:48] HTTPS (SteamCache,349) - cache1-akl-tpwr.steamcontent.com (101.53.220.134:443 / 101.53.220.134:443, host: cache1-akl-tpwr.steamcontent.com): cache1-akl-tpwr.steamcontent.com/depot/264160/manifest/6945392478912157471/5/16923310707872327492 - manifest request received 200 (OK) HTTP response
+2026-10-29T00:24:49.637Z [content_log] [2026-10-29 13:24:48] AppID 264160 Workshop update changed : Running Update,
+2026-10-29T00:24:49.638Z [content_log] [2026-10-29 13:24:48] AppID 264160 Workshop update changed : Running Update,Preallocating,
+2026-10-29T00:24:49.638Z [content_log] [2026-10-29 13:24:49] AppID 264160 preallocated 1 files (0 MB) 
+2026-10-29T00:24:49.638Z [content_log] [2026-10-29 13:24:49] AppID 264160 Workshop update changed : Running Update,
+2026-10-29T00:24:49.638Z [content_log] [2026-10-29 13:24:49] AppID 264160 update started : download 0/575840, store 0/0, reuse 0/0, delta 0/0, stage 0/582480 
+2026-10-29T00:24:49.638Z [content_log] [2026-10-29 13:24:49] AppID 264160 Workshop update changed : Running Update,Downloading,Staging,
+2026-10-29T00:24:49.638Z [content_log] [2026-10-29 13:24:49] Downloading 5 chunks for depot 264160 (6945392478912157471)
+2026-10-29T00:24:50.650Z [content_log] [2026-10-29 13:24:49] AppID 264160 Workshop update changed : Running Update,
+2026-10-29T00:24:50.650Z [content_log] [2026-10-29 13:24:49] AppID 264160 Workshop update changed : Running Update,Committing,
+2026-10-29T00:24:50.650Z [content_log] [2026-10-29 13:24:49] AppID 264160 starting commit from "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/workshop/downloads/264160" to "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/workshop/content/264160" : 6 updated, 0 moved, 0 deleted files
+2026-10-29T00:24:50.650Z [content_log] [2026-10-29 13:24:49] AppID 264160 Workshop update changed : Running Update,
+2026-10-29T00:24:50.650Z [content_log] [2026-10-29 13:24:49] AppID 264160 Workshop update changed : None
+2026-10-29T00:24:50.650Z [content_log] [2026-10-29 13:24:49] AppID 264160 state changed : Fully Installed,Update Queued,
+2026-10-29T00:24:50.650Z [content_log] [2026-10-29 13:24:49] AppID 264160 state changed : Fully Installed,
+2026-10-29T00:24:50.650Z [content_log] [2026-10-29 13:24:49] AppID 264160 scheduler finished : removed from schedule (result No Error, state 0xc) 
+2026-10-29T00:24:50.660Z [acf] changed {"present":true,"mtime":"2026-10-29T00:24:49.784Z","StateFlags":"4","buildid":"9044149","installdir":"WazHack","SizeOnDisk":"117426878","BytesToDownload":"575840","BytesDownloaded":"575840","BytesToStage":"582480","BytesStaged":"582480","sha":"548244f021bbbe2913669fc95cc0c0d411a06179f900332f205be8b7da809524"}
+2026-10-29T00:24:59.749Z [content_log] [2026-10-29 13:24:59] Current download rate: 0.000 Mbps
+2026-10-29T00:25:00.759Z [content_log] [2026-10-29 13:25:00] stats: (SteamCache, 498) cache1-akl-edgx.steamcontent.com: 77221 Bytes, 2 sec (0.29 Mbps). 3 Hits / 5 Misses (38 %, 1 % bytes), score 0.6432
+2026-10-29T00:25:00.759Z [content_log] [2026-10-29 13:25:00] stats: (Invalid, 0) : 1227792 Bytes, 3 sec (3.27 Mbps). 7 Hits / 7 Misses (50 %, 94 % bytes), score 0.0000
+2026-10-29T00:25:00.760Z [content_log] [2026-10-29 13:25:00] stats: (SteamCache, 350) cache2-akl-tpwr.steamcontent.com: 1148544 Bytes, 1 sec (9.16 Mbps). 3 Hits / 0 Misses (100 %, 100 % bytes), score 0.8106
+2026-10-29T00:25:42.232Z [run] done 047c-2-install-1026 {"appLines":43,"acfChanged":true,"installBytes":[117426878,117426878],"steamRestarted":false}
+2026-10-29T00:25:42.233Z [save] runs/047c-2-install-1026.json

@@ -1,0 +1,40 @@
+"AppState"
+{
+	"appid"		"264160"
+	"Universe"		"1"
+	"name"		"WazHack"
+	"StateFlags"		"4"
+	"installdir"		"WazHack"
+	"lastupdated"		"1793233170"
+	"LastPlayed"		"0"
+	"SizeOnDisk"		"117426878"
+	"StagingSize"		"0"
+	"buildid"		"9044149"
+	"LastOwner"		"76561197995867096"
+	"DownloadType"		"2"
+	"UpdateResult"		"0"
+	"BytesToDownload"		"575840"
+	"BytesDownloaded"		"575840"
+	"BytesToStage"		"582480"
+	"BytesStaged"		"582480"
+	"TargetBuildID"		"0"
+	"AutoUpdateBehavior"		"0"
+	"AllowOtherDownloadsWhileRunning"		"0"
+	"ScheduledAutoUpdate"		"0"
+	"InstalledDepots"
+	{
+		"264162"
+		{
+			"manifest"		"3306037234848478854"
+			"size"		"117426878"
+		}
+	}
+	"UserConfig"
+	{
+		"language"		"english"
+	}
+	"MountedConfig"
+	{
+		"language"		"english"
+	}
+}
