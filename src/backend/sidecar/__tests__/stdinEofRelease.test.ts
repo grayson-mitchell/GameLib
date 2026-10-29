@@ -16,6 +16,10 @@ jest.mock('../../downloadmanager/downloadqueue', () => ({
   isRunning: () => running(),
   pauseCurrentDownload: () => pause()
 }))
+const stopMonitors = jest.fn()
+jest.mock('../../storeManagers/steam/steamDownloadMonitor', () => ({
+  stopAllSteamDownloadMonitors: () => stopMonitors()
+}))
 const release = jest.fn()
 jest.mock('../../storeManagers/steam/user', () => ({
   SteamUser: { releaseForShutdown: () => release() }
@@ -83,6 +87,20 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     input.resume()
     input.end()
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
+      expect(release).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('stops all nettop monitors once at EOF, and still releases if that throws', () => {
+    stopMonitors.mockImplementationOnce(() => {
+      throw new Error('boom')
+    })
+    const input = new PassThrough()
+    releaseOnStdinEof(input)
+    input.resume()
+    input.end()
+    return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
+      expect(stopMonitors).toHaveBeenCalledTimes(1)
       expect(release).toHaveBeenCalledTimes(1)
     })
   })

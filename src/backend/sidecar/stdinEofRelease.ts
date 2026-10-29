@@ -5,6 +5,7 @@ import {
   pauseCurrentDownload
 } from '../downloadmanager/downloadqueue'
 import { SteamUser } from '../storeManagers/steam/user'
+import { stopAllSteamDownloadMonitors } from '../storeManagers/steam/steamDownloadMonitor'
 import { LogPrefix, logInfo } from '../logger'
 
 /**
@@ -37,7 +38,7 @@ export function releaseOnStdinEof(input: Readable): void {
     if (released) return
     released = true
     logInfo(
-      '[sidecar] stdin closed: releasing Steam CM session, paying any owed Mac Steam goonline and aborting in-flight downloads',
+      '[sidecar] stdin closed: releasing Steam CM session, paying any owed Mac Steam goonline, stopping nettop monitors and aborting in-flight downloads',
       LogPrefix.Backend
     )
     try {
@@ -47,6 +48,12 @@ export function releaseOnStdinEof(input: Readable): void {
     }
     try {
       callAllAbortControllers()
+    } catch {
+      // best-effort: still release the CM socket below
+    }
+    try {
+      // quick 261029-sex: kill the nettop children (killable, not unref-able away).
+      stopAllSteamDownloadMonitors()
     } catch {
       // best-effort: still release the CM socket below
     }
