@@ -29,7 +29,7 @@ export const DRM_STAGE_LOG_KEEP_PER_APP = 8
 
 const APP_ID_RE = /^[0-9]{1,10}$/
 
-export type StageWineLog = {
+type StageWineLog = {
   path: string
   write: (chunk: string) => void
   close: () => void
