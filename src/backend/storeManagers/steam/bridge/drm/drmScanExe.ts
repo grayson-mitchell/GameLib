@@ -9,6 +9,12 @@
  * the launch exe's scan honours D-17's listing of Ranch Simulator; it adds no
  * allowlist and no per-title override.
  *
+ * Containment policy is library-aware (quick 261029-m0u): both the launch exe
+ * and every Shipping candidate must resolve inside realpath(dirname(exePath)),
+ * so symlinked Bottles dirs and symlinked library ancestors (steamapps/common)
+ * work while a symlink inside the game folder that escapes it is refused. Real
+ * paths are scanned, lexical paths returned.
+ *
  * Callers (games.ts, wired in 56-21) must read CEG markers from `drmExe`, not
  * from the launch exe. Never throws.
  */
@@ -24,6 +30,32 @@ export interface LaunchDrmWrapper {
   drmExe: string
 }
 
+/** Real path of `path` if it resolves inside `rootReal`, else null (logged). */
+async function containedReal(
+  rootReal: string,
+  path: string
+): Promise<string | null> {
+  const name = basename(path)
+  let real: string
+  try {
+    real = await realpath(path)
+  } catch {
+    logWarning(
+      `detectLaunchDrmWrapper: skipped ${name} (realpath failed)`,
+      LogPrefix.Steam
+    )
+    return null
+  }
+  if (!isContainedWithin(rootReal, real)) {
+    logWarning(
+      `detectLaunchDrmWrapper: skipped ${name} (escapes game folder)`,
+      LogPrefix.Steam
+    )
+    return null
+  }
+  return real
+}
+
 export async function detectLaunchDrmWrapper(
   bottleDir: string,
   exePath: string,
@@ -35,9 +67,21 @@ export async function detectLaunchDrmWrapper(
   const detect = deps.detect ?? detectDrmWrapper
   const findUnreal = deps.findUnreal ?? findUnrealLayout
 
+  let ueRootReal: string
+  try {
+    ueRootReal = await realpath(dirname(exePath))
+  } catch {
+    logWarning(
+      `detectLaunchDrmWrapper: skipped ${basename(exePath)} (game folder unresolvable)`,
+      LogPrefix.Steam
+    )
+    return { drmWrapper: undefined, drmExe: exePath }
+  }
+
   let launchResult: 'steamstub' | 'none' | undefined
   try {
-    launchResult = detect(exePath)
+    const real = await containedReal(ueRootReal, exePath)
+    launchResult = real ? detect(real) : undefined
   } catch {
     launchResult = undefined
   }
@@ -47,34 +91,17 @@ export async function detectLaunchDrmWrapper(
   try {
     const layout = await findUnreal(bottleDir, dirname(exePath))
     if (!layout) return own
-    const rootReal = await realpath(bottleDir).catch(() => resolve(bottleDir))
     for (const candidate of [...layout.shippingExes].sort()) {
       if (!candidate.toLowerCase().endsWith('.exe')) continue
-      const name = basename(candidate)
-      let real: string
-      try {
-        real = await realpath(candidate)
-      } catch {
-        logWarning(
-          `detectLaunchDrmWrapper: skipped ${name} (realpath failed)`,
-          LogPrefix.Steam
-        )
-        continue
-      }
-      if (!isContainedWithin(rootReal, real)) {
-        logWarning(
-          `detectLaunchDrmWrapper: skipped ${name} (escapes bottle)`,
-          LogPrefix.Steam
-        )
-        continue
-      }
+      const real = await containedReal(ueRootReal, candidate)
+      if (!real) continue
       try {
         if (detect(real) === 'steamstub') {
           return { drmWrapper: 'steamstub', drmExe: resolve(candidate) }
         }
       } catch {
         logWarning(
-          `detectLaunchDrmWrapper: skipped ${name} (scan threw)`,
+          `detectLaunchDrmWrapper: skipped ${basename(candidate)} (scan threw)`,
           LogPrefix.Steam
         )
       }

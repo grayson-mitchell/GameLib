@@ -503,8 +503,9 @@ export async function placeShimForGame(
 /**
  * Phase 52 Plan 08 (ROADMAP Scope 4): true SteamStub detection from the PE
  * section table. Reads at most PE_SECTION_SCAN_BYTES, closes the fd in
- * finally, never throws. Callers invoke it only after the exe passed the
- * bottle-containment check.
+ * finally, never throws. Callers invoke it only on a real path already
+ * confirmed to lie inside the real path of the game folder (dirname of the
+ * launch exe), as detectLaunchDrmWrapper does.
  */
 export function detectDrmWrapper(
   exePath: string

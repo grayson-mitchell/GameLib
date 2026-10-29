@@ -13,6 +13,7 @@ import { dirname, join, resolve } from 'path'
 import { logWarning } from 'backend/logger'
 
 import { detectLaunchDrmWrapper } from '../drmScanExe'
+import { detectDrmWrapper as realDetect } from '../../shimGenerate'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -108,7 +109,7 @@ describe('detectLaunchDrmWrapper', () => {
     })
   })
 
-  it('ignores a Shipping exe whose realpath escapes the bottle', async () => {
+  it('ignores a Shipping exe whose realpath escapes the game folder', async () => {
     const outside = realpathSync(mkdtempSync(join(tmpdir(), 'drmscan-out-')))
     try {
       const exe = write(join(game, 'Game.exe'), PLAIN)
@@ -119,15 +120,17 @@ describe('detectLaunchDrmWrapper', () => {
       const findUnreal = jest
         .fn()
         .mockResolvedValue({ steamworksDir: null, shippingExes: [link] })
+      const detect = jest.fn(realDetect)
       await expect(
-        detectLaunchDrmWrapper(bottle, exe, { findUnreal })
+        detectLaunchDrmWrapper(bottle, exe, { findUnreal, detect })
       ).resolves.toEqual({ drmWrapper: 'none', drmExe: exe })
+      expect(detect.mock.calls.some((c) => c[0] === target)).toBe(false)
       const msg = jest.mocked(logWarning).mock.calls.map((c) => String(c[0]))
       expect(
         msg.some(
           (m) =>
             m.includes('Game-Win64-Shipping.exe') &&
-            m.includes('escapes bottle')
+            m.includes('escapes game folder')
         )
       ).toBe(true)
     } finally {
@@ -170,14 +173,14 @@ describe('detectLaunchDrmWrapper', () => {
     }
   })
 
-  it('symlinked game dir inside the bottle still routes', async () => {
+  it('symlinked dir inside the game folder still routes', async () => {
     const exe = write(join(game, 'Game.exe'), PLAIN)
     write(
-      join(bottle, 'Real', 'Game', 'Binaries', 'Win64', 'S-Shipping.exe'),
+      join(game, 'Real', 'Game', 'Binaries', 'Win64', 'S-Shipping.exe'),
       STUB
     )
-    const linkDir = join(bottle, 'Linked')
-    symlinkSync(join(bottle, 'Real'), linkDir)
+    const linkDir = join(game, 'Linked')
+    symlinkSync(join(game, 'Real'), linkDir)
     const lexical = join(linkDir, 'Game', 'Binaries', 'Win64', 'S-Shipping.exe')
     const findUnreal = jest
       .fn()
@@ -185,6 +188,122 @@ describe('detectLaunchDrmWrapper', () => {
     await expect(
       detectLaunchDrmWrapper(bottle, exe, { findUnreal })
     ).resolves.toEqual({ drmWrapper: 'steamstub', drmExe: resolve(lexical) })
+  })
+
+  it('symlinked Bottles dir routes a UE SteamStub title with a lexical drmExe', async () => {
+    const holder = realpathSync(mkdtempSync(join(tmpdir(), 'drmscan-lnk-')))
+    try {
+      const link = join(holder, 'bottle-link')
+      symlinkSync(bottle, link)
+      write(join(game, 'Game.exe'), PLAIN)
+      write(shipping(), STUB)
+      mkdirSync(join(game, 'Engine'), { recursive: true })
+      const exe = join(link, 'Game', 'Game.exe')
+      const r = await detectLaunchDrmWrapper(link, exe)
+      expect(r).toEqual({
+        drmWrapper: 'steamstub',
+        drmExe: join(
+          link,
+          'Game',
+          'Game',
+          'Binaries',
+          'Win64',
+          'Game-Win64-Shipping.exe'
+        )
+      })
+      expect(r.drmExe.startsWith(link)).toBe(true)
+    } finally {
+      rmSync(holder, { recursive: true, force: true })
+    }
+  })
+
+  it('symlinked steamapps/common routes a UE SteamStub title with a lexical drmExe', async () => {
+    const volume = realpathSync(mkdtempSync(join(tmpdir(), 'drmscan-vol-')))
+    try {
+      const steamapps = join(
+        bottle,
+        'drive_c',
+        'Program Files (x86)',
+        'Steam',
+        'steamapps'
+      )
+      mkdirSync(steamapps, { recursive: true })
+      write(join(volume, 'Game', 'Game.exe'), PLAIN)
+      mkdirSync(join(volume, 'Game', 'Engine'), { recursive: true })
+      write(
+        join(
+          volume,
+          'Game',
+          'Game',
+          'Binaries',
+          'Win64',
+          'Game-Win64-Shipping.exe'
+        ),
+        STUB
+      )
+      const common = join(steamapps, 'common')
+      symlinkSync(volume, common)
+      const exe = join(common, 'Game', 'Game.exe')
+      const r = await detectLaunchDrmWrapper(bottle, exe)
+      expect(r).toEqual({
+        drmWrapper: 'steamstub',
+        drmExe: join(
+          common,
+          'Game',
+          'Game',
+          'Binaries',
+          'Win64',
+          'Game-Win64-Shipping.exe'
+        )
+      })
+      expect(r.drmExe).toContain('drive_c')
+    } finally {
+      rmSync(volume, { recursive: true, force: true })
+    }
+  })
+
+  it('refuses a bootstrap exe symlinked outside the game folder', async () => {
+    const outside = realpathSync(mkdtempSync(join(tmpdir(), 'drmscan-out-')))
+    try {
+      const target = write(join(outside, 'evil.exe'), STUB)
+      const exe = join(game, 'Game.exe')
+      symlinkSync(target, exe)
+      const detect = jest.fn(realDetect)
+      await expect(
+        detectLaunchDrmWrapper(bottle, exe, { detect })
+      ).resolves.toEqual({ drmWrapper: undefined, drmExe: exe })
+      expect(
+        detect.mock.calls.some((c) => String(c[0]).startsWith(outside))
+      ).toBe(false)
+      expect(
+        jest
+          .mocked(logWarning)
+          .mock.calls.some(
+            (c) =>
+              String(c[0]).includes('Game.exe') &&
+              String(c[0]).includes('escapes game folder')
+          )
+      ).toBe(true)
+    } finally {
+      rmSync(outside, { recursive: true, force: true })
+    }
+  })
+
+  it('a refused bootstrap does not stop the UE Shipping fallback', async () => {
+    const outside = realpathSync(mkdtempSync(join(tmpdir(), 'drmscan-out-')))
+    try {
+      const target = write(join(outside, 'evil.exe'), STUB)
+      const exe = join(game, 'Game.exe')
+      symlinkSync(target, exe)
+      const ship = write(shipping(), STUB)
+      mkdirSync(join(game, 'Engine'), { recursive: true })
+      await expect(detectLaunchDrmWrapper(bottle, exe)).resolves.toEqual({
+        drmWrapper: 'steamstub',
+        drmExe: ship
+      })
+    } finally {
+      rmSync(outside, { recursive: true, force: true })
+    }
   })
 
   it('a throwing detector on one candidate does not abandon the rest', async () => {
