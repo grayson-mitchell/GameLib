@@ -369,6 +369,16 @@ jest.mock('../bridge/allowlist', () => ({
 // quick 261027-gtd: resetMocks returns undefined, which
 // assembleBridgeRouteInput maps to null, so every pre-existing test is
 // unaffected.
+// quick 261029-ji2: pending-adoption record + Play-time Steam restart.
+jest.mock('../macSteamAdoption', () => ({
+  probeMacSteamPid: jest.fn(),
+  readAcfSnapshot: jest.fn(),
+  recordPendingAdoption: jest.fn(),
+  readPendingAdoption: jest.fn(),
+  clearPendingAdoption: jest.fn(),
+  decidePlayAdoption: jest.fn(),
+  restartMacSteamForAdoption: jest.fn()
+}))
 jest.mock('../drmKnownFix', () => ({ knownFixSaysCeg: jest.fn() }))
 
 // ── bridge/shimGenerate.ts mock (24-05) — installBridgeGame()'s post-download
@@ -11668,6 +11678,197 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         ).toBe(true)
         expect(startBottleProcessMonitor).not.toHaveBeenCalled()
       })
+    })
+  })
+})
+
+// ── quick 261029-ji2: restart Mac Steam on Play to adopt a native install ────
+
+describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
+  let shellOpenExternal: jest.Mock
+  let notifyMock: jest.Mock
+  let startInstallPollingSpy: jest.SpyInstance
+  let envMock: any
+  const adoption = () =>
+    jest.requireMock<Record<string, jest.Mock>>('../macSteamAdoption')
+  const RECORD = {
+    steamPid: 123,
+    manifestPath: `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`,
+    baseline: { mtimeMs: 1, content: 'x' },
+    recordedAt: 1
+  }
+  const TARGET = {
+    targetSteamappsDir: '/mock/steam/steamapps',
+    installdir: APP_ID
+  }
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('backend/platform')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    startInstallPollingSpy = jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true
+    })
+    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    adoption().probeMacSteamPid.mockResolvedValue(null)
+    adoption().readAcfSnapshot.mockReturnValue(RECORD.baseline)
+    adoption().readPendingAdoption.mockReturnValue(undefined)
+  })
+
+  afterEach(() => {
+    startInstallPollingSpy.mockRestore()
+    envMock.isMac = false
+  })
+
+  describe('install end (native Mac route)', () => {
+    beforeEach(() => {
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+      ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
+      ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
+      ;(createAbortController as jest.Mock).mockReturnValue({
+        signal: 'mock-signal'
+      })
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+    })
+
+    it('Steam running: records the pending adoption once with its PID and baseline, polls with macNativeRoute, never fires steam://install', async () => {
+      adoption().probeMacSteamPid.mockResolvedValue(123)
+
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(result).toEqual({ status: 'done' })
+      expect(adoption().recordPendingAdoption).toHaveBeenCalledTimes(1)
+      expect(adoption().recordPendingAdoption).toHaveBeenCalledWith(
+        APP_ID,
+        expect.objectContaining({
+          steamPid: 123,
+          baseline: RECORD.baseline,
+          manifestPath: `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
+        })
+      )
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+        isNativeHandoff: true,
+        skippedDepots: [],
+        macNativeRoute: true
+      })
+      expect(shellOpenExternal).not.toHaveBeenCalled()
+    })
+
+    it('Steam not running: no record is written (a stale one is cleared), still polls with macNativeRoute', async () => {
+      adoption().probeMacSteamPid.mockResolvedValue(null)
+
+      await new SteamGame(APP_ID).install({} as any)
+
+      expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
+      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(
+        APP_ID,
+        expect.objectContaining({ macNativeRoute: true })
+      )
+    })
+
+    it('U-3: a Steam-performed install (opt-in OFF, steam://install delegated) never records a pending adoption', async () => {
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+      adoption().probeMacSteamPid.mockResolvedValue(123)
+
+      await new SteamGame(APP_ID).install({} as any)
+
+      expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
+      expect(adoption().probeMacSteamPid).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('launch() on Mac', () => {
+    it('no record + Steam running: plain rungameid, steam never restarted, no probe', async () => {
+      adoption().probeMacSteamPid.mockResolvedValue(123)
+
+      const result = await new SteamGame(APP_ID).launch({} as any)
+
+      expect(result).toBe(true)
+      expect(shellOpenExternal).toHaveBeenCalledWith(
+        `steam://rungameid/${APP_ID}`,
+        { activate: false }
+      )
+      expect(adoption().restartMacSteamForAdoption).not.toHaveBeenCalled()
+      expect(adoption().probeMacSteamPid).not.toHaveBeenCalled()
+    })
+
+    it('record + same PID + unadopted: restarts Steam, clears the record and returns true on relaunch', async () => {
+      adoption().readPendingAdoption.mockReturnValue(RECORD)
+      adoption().probeMacSteamPid.mockResolvedValue(123)
+      adoption().decidePlayAdoption.mockReturnValue('restart')
+      adoption().restartMacSteamForAdoption.mockResolvedValue({
+        kind: 'relaunched'
+      })
+
+      const result = await new SteamGame(APP_ID).launch({} as any)
+
+      expect(result).toBe(true)
+      expect(adoption().restartMacSteamForAdoption).toHaveBeenCalledWith(
+        APP_ID,
+        expect.objectContaining({ launchRunGameId: expect.any(Function) })
+      )
+      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+    })
+
+    it.each([
+      [{ kind: 'game-running', runningAppId: 4000 }],
+      [{ kind: 'steam-busy' }],
+      [{ kind: 'quit-timeout' }]
+    ])(
+      'record + restart refused (%j): notifies, returns false, keeps the record, opens no rungameid',
+      async (outcome) => {
+        adoption().readPendingAdoption.mockReturnValue(RECORD)
+        adoption().probeMacSteamPid.mockResolvedValue(123)
+        adoption().decidePlayAdoption.mockReturnValue('restart')
+        adoption().restartMacSteamForAdoption.mockResolvedValue(outcome)
+
+        const result = await new SteamGame(APP_ID).launch({} as any)
+
+        expect(result).toBe(false)
+        expect(notifyMock).toHaveBeenCalledTimes(1)
+        expect(adoption().clearPendingAdoption).not.toHaveBeenCalled()
+        expect(shellOpenExternal).not.toHaveBeenCalled()
+      }
+    )
+
+    it('record + different PID: clears the record and launches normally', async () => {
+      adoption().readPendingAdoption.mockReturnValue(RECORD)
+      adoption().probeMacSteamPid.mockResolvedValue(999)
+      adoption().decidePlayAdoption.mockReturnValue('clear-and-launch')
+
+      const result = await new SteamGame(APP_ID).launch({} as any)
+
+      expect(result).toBe(true)
+      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+      expect(adoption().restartMacSteamForAdoption).not.toHaveBeenCalled()
+      expect(shellOpenExternal).toHaveBeenCalledWith(
+        `steam://rungameid/${APP_ID}`,
+        { activate: false }
+      )
+    })
+
+    it('non-mac host: never reads a record or probes Steam', async () => {
+      envMock.isMac = false
+      envMock.isLinux = true
+
+      const result = await new SteamGame(APP_ID).launch({} as any)
+
+      expect(result).toBe(true)
+      expect(adoption().readPendingAdoption).not.toHaveBeenCalled()
+      expect(adoption().probeMacSteamPid).not.toHaveBeenCalled()
     })
   })
 })

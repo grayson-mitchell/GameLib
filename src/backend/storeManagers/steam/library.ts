@@ -107,10 +107,10 @@ type PollOptions = {
   intervalMs?: number
   source?: AcfSource
   isNativeHandoff?: boolean
-  /** True only when runningSteamSync observed a running Mac Steam rewrite
-   *  the ACF itself (quick 261029-iwy): Steam owns the install, so the
-   *  "Restart Steam to finish" hint must not fire. */
-  steamAdopted?: boolean
+  /** Native Mac GameLib depot install (quick 261029-ji2): Steam adopts it at
+   *  its next start, which Play forces, so the "Restart Steam to finish" hint
+   *  never applies to a FullyInstalled install on this route. */
+  macNativeRoute?: boolean
   skippedDepots?: string[]
   /** True only when Steam (native `steam://install`, or the bottled Steam
    *  client's tellBottledSteamToInstall dispatch) owns the download, so
@@ -2055,9 +2055,9 @@ const activePolls = new Map<
      *  Root cause of the 1026-collision bug: this distinction cannot be made
      *  from the ACF alone, only from which call site started the poll. */
     isNativeHandoff: boolean
-    /** quick 261029-iwy: true only when runningSteamSync observed Steam
-     *  rewrite the ACF itself, so no restart hint is needed. */
-    steamAdopted: boolean
+    /** quick 261029-ji2: native Mac GameLib depot install; Play restarts Steam
+     *  to adopt it, so the installed branch shows no restart hint. */
+    macNativeRoute: boolean
     /** 23.2-04 (D-06/D-07): depot ids GameLib's own downloadSteamDepots run
      *  dropped because Steam refused their decryption key (skip-and-warn,
      *  phase 23.2). Threaded from the DepotDownloadOutcome through
@@ -2683,8 +2683,7 @@ export async function pollInstallOnce(
     // download is the exact bug this fixes.
     const isWaitingForSteamRestart =
       result.stateFlags === GAMELIB_HANDOFF_STATE_FLAGS &&
-      poll?.isNativeHandoff === true &&
-      poll?.steamAdopted !== true
+      poll?.isNativeHandoff === true
 
     // quick 261024-h5y: the bottle route has no user-visible Steam to
     // restart, so the passive "Restart Steam" hint is a dead end there.
@@ -2922,7 +2921,7 @@ export async function pollInstallOnce(
     // A bridge bottle runs the game itself; no Steam restart adopts anything.
     if (
       poll?.isNativeHandoff === true &&
-      !poll.steamAdopted &&
+      !poll.macNativeRoute &&
       !installerOwnsCompletion &&
       !poll.notifiedWaiting
     ) {
@@ -3015,8 +3014,8 @@ export function startInstallPolling(
       intervalMsOrOptions.isNativeHandoff === true
     ) {
       existingEntry.isNativeHandoff = true
-      if (intervalMsOrOptions.steamAdopted === true) {
-        existingEntry.steamAdopted = true
+      if (intervalMsOrOptions.macNativeRoute === true) {
+        existingEntry.macNativeRoute = true
       }
       // Never discard a non-empty skippedDepots list already on the entry.
       if (
@@ -3070,14 +3069,14 @@ export function startInstallPolling(
     intervalMs,
     source,
     isNativeHandoff,
-    steamAdopted,
+    macNativeRoute,
     skippedDepots,
     delegatedToSteamClient
   }: {
     intervalMs: number
     source: AcfSource
     isNativeHandoff: boolean
-    steamAdopted: boolean
+    macNativeRoute: boolean
     skippedDepots: string[]
     delegatedToSteamClient: boolean
   } =
@@ -3086,7 +3085,7 @@ export function startInstallPolling(
           intervalMs: intervalMsOrOptions,
           source: 'native',
           isNativeHandoff: false,
-          steamAdopted: false,
+          macNativeRoute: false,
           skippedDepots: [],
           delegatedToSteamClient: false
         }
@@ -3094,7 +3093,7 @@ export function startInstallPolling(
           intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
           source: intervalMsOrOptions.source ?? 'native',
           isNativeHandoff: intervalMsOrOptions.isNativeHandoff ?? false,
-          steamAdopted: intervalMsOrOptions.steamAdopted ?? false,
+          macNativeRoute: intervalMsOrOptions.macNativeRoute ?? false,
           skippedDepots: intervalMsOrOptions.skippedDepots ?? [],
           delegatedToSteamClient:
             intervalMsOrOptions.delegatedToSteamClient ?? false
@@ -3113,7 +3112,7 @@ export function startInstallPolling(
     notifiedWaiting: false,
     stalledTicks: 0,
     isNativeHandoff,
-    steamAdopted,
+    macNativeRoute,
     skippedDepots,
     notifiedDepotSkipped: false,
     delegatedToSteamClient,

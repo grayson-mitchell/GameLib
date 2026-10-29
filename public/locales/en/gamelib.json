@@ -413,6 +413,11 @@
         "checkingSteamInstallOptions": "Checking install options…"
     },
     "steam": {
+        "adoptRestart": {
+            "busy": "Steam is busy with a GameLib sign-in. Try Play again in a moment.",
+            "gameRunning": "Quit the game running in Steam, then press Play to finish setting up {{game}}.",
+            "quitTimeout": "Steam didn't quit, so {{game}} couldn't be set up. Quit Steam and press Play again."
+        },
         "bottle": {
             "finishInstall": {
                 "button": "Start Steam to finish",

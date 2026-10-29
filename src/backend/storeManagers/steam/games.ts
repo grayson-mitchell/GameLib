@@ -87,7 +87,15 @@ import {
   removeSteamInstallCopy,
   STEAM_BRIDGE_FINISHING_CONTEXT
 } from './library'
-import { syncRunningMacSteam } from './runningSteamSync'
+import {
+  probeMacSteamPid,
+  readAcfSnapshot,
+  recordPendingAdoption,
+  readPendingAdoption,
+  clearPendingAdoption,
+  decidePlayAdoption,
+  restartMacSteamForAdoption
+} from './macSteamAdoption'
 import {
   isBottleReady,
   tellBottledSteamToInstall,
@@ -2819,32 +2827,45 @@ export default class SteamGame implements Game {
         lease.release()
       }
 
-      // Quick 261029-iwy (spikes 047-049): the lease is released first so
-      // Mac Steam's go-offline wrap is restored before Steam is asked to
-      // fetch manifests. If Mac Steam is running, `steam://install/<appId>`
-      // makes it adopt the finished install with no restart; Play stays
-      // disabled ('steam-starting') until Steam rewrites the ACF itself. Not
-      // running, timeout or abort all fall back to the restart hint. This
-      // stays inside the outer try so the in-flight registry and abort
-      // controller still cover the whole sync.
+      // Quick 261029-ji2: native Mac route. `steam://install` only opens
+      // Steam's install dialog (needs a click), so it is no longer fired.
+      // A RUNNING Mac Steam never notices the ACF GameLib wrote, but a Steam
+      // that starts afterwards adopts it. If Steam is running now, remember
+      // its PID so Play can restart it once (macSteamAdoption.ts); if not, the
+      // next Steam start adopts it and any stale record is dropped. This is
+      // the ONLY place a pending-adoption record is written: GameLib's own
+      // depot download finished here (the lease is released first so the
+      // go-offline wrap is restored). Steam-performed installs (steam-client,
+      // bottle, bridge, pollerSource) never reach this branch.
       if (deferredPoll.handoff && leasedResult.status === 'done') {
         const handoff = deferredPoll.handoff
-        let steamAdopted = false
-        const { isMacSteamRunning } =
-          await import('./bridge/drm/drmLaunchSetup')
-        const running = await isMacSteamRunning().catch(() => false)
-        if (running) {
-          const syncOutcome = await syncRunningMacSteam(
-            this.appId,
-            handoff.manifestPath,
-            { signal: controller.signal }
-          )
-          steamAdopted = syncOutcome === 'adopted'
+        const pid = await probeMacSteamPid().catch(() => null)
+        if (pid !== null) {
+          const baseline = readAcfSnapshot(handoff.manifestPath)
+          if (baseline) {
+            recordPendingAdoption(this.appId, {
+              steamPid: pid,
+              manifestPath: handoff.manifestPath,
+              baseline,
+              recordedAt: Date.now()
+            })
+            logInfo(
+              `SteamGame: recorded pending Steam adoption for ${this.appId} (steam_osx pid ${pid})`,
+              LogPrefix.Steam
+            )
+          } else {
+            logWarning(
+              `SteamGame: no manifest at ${handoff.manifestPath}; not recording pending adoption for ${this.appId}`,
+              LogPrefix.Steam
+            )
+          }
+        } else {
+          clearPendingAdoption(this.appId)
         }
         startInstallPolling(this.appId, {
           isNativeHandoff: true,
           skippedDepots: handoff.skippedDepots,
-          ...(steamAdopted ? { steamAdopted: true } : {})
+          macNativeRoute: true
         })
       }
       return leasedResult
@@ -3070,8 +3091,8 @@ export default class SteamGame implements Game {
         skippedDepots: outcome.skippedDepots ?? []
       })
     } else if (isMac) {
-      // Quick 261029-iwy: native Mac route. The poll starts in the caller
-      // after the running-Steam sync (runNativeDepotDownload).
+      // Quick 261029-ji2: native Mac route. The poll starts in the caller
+      // after the Steam PID is recorded (runNativeDepotDownload).
       deferredPoll.handoff = {
         manifestPath: join(targetSteamappsDir, `appmanifest_${this.appId}.acf`),
         skippedDepots: outcome.skippedDepots ?? []
@@ -3472,6 +3493,60 @@ export default class SteamGame implements Game {
     // flash before the game appears. With activate:false, Steam processes
     // rungameid in the background and the only Space switch is directly to the
     // game's own window. Ignored on Linux (no effect on Steam Deck game mode).
+    // Quick 261029-ji2: a GameLib-downloaded Mac install that the still-running
+    // Steam never adopted makes rungameid open the install dialog, so Steam is
+    // restarted once first. Only installs with a pending-adoption record (see
+    // runNativeDepotDownload) ever probe or restart anything.
+    if (isMac) {
+      const record = readPendingAdoption(this.appId)
+      if (record) {
+        const currentPid = await probeMacSteamPid().catch(() => null)
+        const decision = decidePlayAdoption({
+          record,
+          currentPid,
+          currentAcf: readAcfSnapshot(record.manifestPath)
+        })
+        if (decision === 'clear-and-launch') {
+          clearPendingAdoption(this.appId)
+        } else if (decision === 'restart') {
+          const outcome = await restartMacSteamForAdoption(this.appId, {
+            launchRunGameId: () => shell.openExternal(url, { activate: false })
+          })
+          if (outcome.kind === 'relaunched') {
+            clearPendingAdoption(this.appId)
+            return true
+          }
+          // Refuse rather than fall back to a plain launch: an unadopted
+          // install in a running Steam opens the install dialog (the failure
+          // being removed), and quitting would end the user's game session.
+          // Steam is never killed; the record stays pending.
+          const game = this.getGameInfo().title
+          const body =
+            outcome.kind === 'game-running'
+              ? i18next.t(
+                  'gamelib:steam.adoptRestart.gameRunning',
+                  'Quit the game running in Steam, then press Play to finish setting up {{game}}.',
+                  { game }
+                )
+              : outcome.kind === 'steam-busy'
+                ? i18next.t(
+                    'gamelib:steam.adoptRestart.busy',
+                    'Steam is busy with a GameLib sign-in. Try Play again in a moment.'
+                  )
+                : i18next.t(
+                    'gamelib:steam.adoptRestart.quitTimeout',
+                    "Steam didn't quit, so {{game}} couldn't be set up. Quit Steam and press Play again.",
+                    { game }
+                  )
+          logWarning(
+            `SteamGame: Play for ${this.appId} not launched (${outcome.kind}); pending adoption kept`,
+            LogPrefix.Steam
+          )
+          notify({ title: game, body })
+          return false
+        }
+      }
+    }
     await shell.openExternal(url, { activate: false })
     return true
   }
@@ -4678,6 +4753,8 @@ export default class SteamGame implements Game {
       // appmanifest, without requiring a focus round-trip (D-07). Symmetric to
       // install polling. State is never optimistically flipped here (D-02).
       startUninstallPolling(this.appId)
+      // quick 261029-ji2: a removed install has nothing left to adopt.
+      clearPendingAdoption(this.appId)
 
       return { stdout: '', stderr: '' }
     }

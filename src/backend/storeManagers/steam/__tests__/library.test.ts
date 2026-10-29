@@ -4929,8 +4929,8 @@ describe('pollInstallOnce()', () => {
     })
   })
 
-  // ── quick 261029-iwy: a poll Steam adopted (runningSteamSync) ──────────────
-  it('261029-iwy: a steamAdopted native poll fires Installation Finished and NOT the "Restart Steam" notify', async () => {
+  // ── quick 261029-ji2: native Mac route (Play restarts Steam to adopt) ───────
+  it('261029-ji2: a macNativeRoute StateFlags 4 poll fires Installation Finished and NOT the "Restart Steam" notify', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {
         appid: '730',
@@ -4942,7 +4942,7 @@ describe('pollInstallOnce()', () => {
     startInstallPolling('730', {
       intervalMs: 60000,
       isNativeHandoff: true,
-      steamAdopted: true
+      macNativeRoute: true
     })
     await pollInstallOnce('730')
     expect(notify).not.toHaveBeenCalledWith(
@@ -4955,7 +4955,7 @@ describe('pollInstallOnce()', () => {
     )
   })
 
-  it('261029-iwy: a second startInstallPolling call carrying steamAdopted upgrades the registered poll', async () => {
+  it('261029-ji2: a second startInstallPolling call carrying macNativeRoute upgrades the registered poll', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {
         appid: '730',
@@ -4968,10 +4968,32 @@ describe('pollInstallOnce()', () => {
     startInstallPolling('730', {
       intervalMs: 60000,
       isNativeHandoff: true,
-      steamAdopted: true
+      macNativeRoute: true
     })
     await pollInstallOnce('730')
     expect(notify).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('Restart Steam to finish installing')
+      })
+    )
+  })
+
+  it('261029-ji2: a macNativeRoute poll at StateFlags 1026 (fail-closed handoff, not FullyInstalled) keeps the waiting state and restart hint', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', {
+      intervalMs: 60000,
+      isNativeHandoff: true,
+      macNativeRoute: true
+    })
+    await pollInstallOnce('730')
+    expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.stringContaining('Restart Steam to finish installing')
       })
