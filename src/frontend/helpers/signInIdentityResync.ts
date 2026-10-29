@@ -52,7 +52,7 @@ export interface SignInIdentityReaders {
   steamUsername: () => Maybe<string>
 }
 
-export interface SignInIdentityPatch {
+interface SignInIdentityPatch {
   epic?: { username?: string }
   gog?: { username?: string }
   amazon?: { user_id?: string; username?: string }

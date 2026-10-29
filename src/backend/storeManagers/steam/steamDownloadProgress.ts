@@ -9,7 +9,7 @@
  * steamDownloadMonitor.ts.
  */
 
-export type ContentLogEvent =
+type ContentLogEvent =
   | {
       kind: 'started'
       appId: string
@@ -96,7 +96,7 @@ export function applyNettopRow(
   return acc
 }
 
-export type ActiveUpdate = {
+type ActiveUpdate = {
   downloadDone: number
   downloadTotal: number
   cumAtStart: number
@@ -132,7 +132,7 @@ export function activeCount(tracker: UpdateTracker): number {
   return tracker.active.size
 }
 
-export type LiveProgress = {
+type LiveProgress = {
   bytesDone: number
   total: number
   /** 0..99, unrounded. */

@@ -124,7 +124,7 @@ export function listSteamRestartHolds(
   return out
 }
 
-export type SteamRestartHoldRearmDecision =
+type SteamRestartHoldRearmDecision =
   | { kind: 'arm'; pids: number[] }
   | { kind: 'drop'; reason: 'expired' | 'steam-exited' | 'pid-reused' }
   | { kind: 'unknown' }

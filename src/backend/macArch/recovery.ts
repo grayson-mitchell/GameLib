@@ -64,7 +64,7 @@ function enqueuePrompt(task: () => Promise<void>) {
   promptChain = promptChain.then(task).catch(() => undefined)
 }
 
-export interface CheckInstalledMacArchArgs {
+interface CheckInstalledMacArchArgs {
   runner: Runner
   appName: string
   installPath: string
@@ -190,7 +190,7 @@ export async function offerWindowsReinstall(
   }
 }
 
-export interface SweepCandidate {
+interface SweepCandidate {
   appName: string
   installPath: string
   executable?: string

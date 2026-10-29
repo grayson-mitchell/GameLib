@@ -246,7 +246,7 @@ export async function startSteamDownloadMonitor(
   }
 }
 
-export type SteamDownloadReading = {
+type SteamDownloadReading = {
   bytesDone: number
   bytesTotal: number
   speedBytesPerSec?: number
