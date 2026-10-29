@@ -44,6 +44,7 @@ import { GameConfig } from 'backend/game_config'
 import {
   isMac,
   isLinux,
+  isWindows,
   isAppleSiliconMac
 } from 'backend/constants/environment'
 import {
@@ -433,9 +434,13 @@ function hostSteamDepotOs(): string {
  * injection into steam:// URLs (threat T-03-01).
  *
  * Reused by install/uninstall (plan 03-02) for the same guard.
+ *
+ * `launch` (Windows Play, quick 261029-i1n) is the only verb with a suffix.
+ * The suffix is the fixed literal `/Dialog`, never caller input, so the numeric
+ * guard still covers every variable byte of every URL.
  */
 export function buildSteamProtocolUrl(
-  verb: 'rungameid' | 'install' | 'uninstall',
+  verb: 'rungameid' | 'launch' | 'install' | 'uninstall',
   appId: string
 ): string | null {
   if (!/^\d+$/.test(appId)) {
@@ -444,6 +449,9 @@ export function buildSteamProtocolUrl(
       LogPrefix.Steam
     )
     return null
+  }
+  if (verb === 'launch') {
+    return `steam://launch/${appId}/Dialog`
   }
   return `steam://${verb}/${appId}`
 }
@@ -3390,7 +3398,9 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * Delegates launching to the Steam client via the steam://rungameid protocol.
+   * Delegates launching to the Steam client through a steam:// URL:
+   * `steam://launch/<appId>/Dialog` on Windows (quick 261029-i1n) and
+   * `steam://rungameid/<appId>` on macOS and Linux.
    * The appId is validated by buildSteamProtocolUrl (T-03-01 mitigation) before
    * any URL is constructed or passed to shell.openExternal.
    *
@@ -3475,7 +3485,16 @@ export default class SteamGame implements Game {
       return result.status === 'done'
     }
 
-    const url = buildSteamProtocolUrl('rungameid', this.appId)
+    // On Windows, `rungameid` makes Steam show its "Starting game / LAUNCHING —
+    // Open Steam" window on every Play, even with `steam.exe -silent`.
+    // `steam://launch/<id>/Dialog` (Playnite's form) does not show it. The
+    // operator measured this on 2026-10-29 with WazHack 264160 (quick
+    // 261029-i1n). macOS and Linux stay on `rungameid` because the window has
+    // not been seen there.
+    const url = buildSteamProtocolUrl(
+      isWindows ? 'launch' : 'rungameid',
+      this.appId
+    )
     if (!url) {
       // Non-numeric appId — rejection already logged by buildSteamProtocolUrl
       return false
@@ -3485,12 +3504,13 @@ export default class SteamGame implements Game {
       `SteamGame: launching appId ${this.appId} via ${url}`,
       LogPrefix.Steam
     )
-    // Hand the steam:// URL to the Steam client WITHOUT bringing it to the
-    // foreground (macOS/Windows). Activating Steam is what forces macOS to leave
-    // GameLib's fullscreen Space (Console mode), causing a visible desktop-Space
-    // flash before the game appears. With activate:false, Steam processes
-    // rungameid in the background and the only Space switch is directly to the
-    // game's own window. Ignored on Linux (no effect on Steam Deck game mode).
+    // activate:false asks the opener not to bring Steam forward. Its purpose is
+    // macOS Console mode, where activating Steam pulls GameLib out of its
+    // fullscreen Space and the desktop Space flashes before the game appears.
+    // The option is currently dropped before it reaches the Rust opener (todo
+    // 2026-10-29-open-external-drops-activate-false). It is not what controls
+    // Windows Steam's "Starting game" window: the `rungameid` verb causes that,
+    // which is why Windows uses the `launch` verb above. No effect on Linux.
     // Quick 261029-ji2: a GameLib-downloaded Mac install that the still-running
     // Steam never adopted makes rungameid open the install dialog, so Steam is
     // restarted once first. Only installs with a pending-adoption record (see

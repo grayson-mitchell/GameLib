@@ -40,7 +40,8 @@ import SteamGame, {
   DRM_DLLPATH_CHANNEL,
   DRM_DLLOVERRIDES_CHANNEL,
   DRM_TRACE_KEEP_PER_APP,
-  MAC_STEAM_CLIENT_SUBPATH
+  MAC_STEAM_CLIENT_SUBPATH,
+  buildSteamProtocolUrl
 } from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
@@ -1386,12 +1387,45 @@ describe('SteamLibraryManager.getGameInfo integration — lazy fetch delegation'
 
 // ── GAME-01: SteamGame.launch() + appId guard (T-03-01) ──────────────────────
 
+describe('buildSteamProtocolUrl — quick 261029-i1n launch verb', () => {
+  it('launch verb emits steam://launch/<id>/Dialog (capital D, Playnite form)', () => {
+    expect(buildSteamProtocolUrl('launch', '264160')).toBe(
+      'steam://launch/264160/Dialog'
+    )
+  })
+
+  it('rungameid, install and uninstall verbs are unchanged', () => {
+    expect(buildSteamProtocolUrl('rungameid', '264160')).toBe(
+      'steam://rungameid/264160'
+    )
+    expect(buildSteamProtocolUrl('install', '264160')).toBe(
+      'steam://install/264160'
+    )
+    expect(buildSteamProtocolUrl('uninstall', '264160')).toBe(
+      'steam://uninstall/264160'
+    )
+  })
+
+  it.each(['abc', '264160/../uninstall/5', ''])(
+    'launch verb rejects non-numeric appId %j before looking at the verb',
+    (badId) => {
+      expect(buildSteamProtocolUrl('launch', badId)).toBeNull()
+    }
+  )
+})
+
 describe('SteamGame.launch() — GAME-01', () => {
   let shellOpenExternal: jest.Mock
   let notifyMock: jest.Mock
   let logWarningMock: jest.Mock
 
   beforeEach(() => {
+    // quick 261029-i1n: pin the host to the module-mock defaults (Linux) so the
+    // rungameid assertions below are an explicit Linux pin, not order-dependent.
+    const envPin = jest.requireMock('backend/constants/environment')
+    envPin.isWindows = false
+    envPin.isMac = false
+    envPin.isLinux = true
     library.clear()
     pendingFetches.clear()
     const { shell } = jest.requireMock('backend/platform')
@@ -1483,6 +1517,57 @@ describe('SteamGame.launch() — GAME-01', () => {
     expect(calls.length).toBe(1)
     const url: string = calls[0][0]
     expect(url).toMatch(/^steam:\/\/rungameid\/\d+$/)
+  })
+
+  describe('quick 261029-i1n: Windows host launches via steam://launch/<appId>/Dialog', () => {
+    beforeEach(() => {
+      const env = jest.requireMock('backend/constants/environment')
+      env.isWindows = true
+      env.isMac = false
+      env.isLinux = false
+    })
+
+    afterEach(() => {
+      const env = jest.requireMock('backend/constants/environment')
+      env.isWindows = false
+      env.isMac = false
+      env.isLinux = true
+    })
+
+    it('opens steam://launch/<appId>/Dialog with activate:false and resolves true', async () => {
+      const game = new SteamGame(APP_ID)
+      const result = await game.launch({} as any)
+
+      expect(result).toBe(true)
+      expect(shellOpenExternal).toHaveBeenCalledTimes(1)
+      expect(shellOpenExternal).toHaveBeenCalledWith(
+        `steam://launch/${APP_ID}/Dialog`,
+        { activate: false }
+      )
+    })
+
+    it('never opens a rungameid URL', async () => {
+      const game = new SteamGame(APP_ID)
+      await game.launch({} as any)
+
+      for (const call of shellOpenExternal.mock.calls) {
+        expect(String(call[0])).not.toContain('rungameid')
+      }
+    })
+
+    it.each(['abc', '12; rm -rf ~', '10/../uninstall/5'])(
+      'rejects non-numeric appId %j: no openExternal, resolves false, warns',
+      async (badId) => {
+        library.set(badId, makeEntry({ app_name: badId, title: 'BadGame' }))
+        const badGame = new SteamGame(badId)
+
+        const result = await badGame.launch({} as any)
+
+        expect(shellOpenExternal).not.toHaveBeenCalled()
+        expect(result).toBe(false)
+        expect(logWarningMock).toHaveBeenCalled()
+      }
+    )
   })
 })
 
