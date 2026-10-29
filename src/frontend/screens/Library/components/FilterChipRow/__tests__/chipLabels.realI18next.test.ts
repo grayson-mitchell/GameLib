@@ -101,7 +101,7 @@ function makeSentinelT(instance: ReturnType<typeof createInstance>): TFunc {
     instance.t(key, SENTINEL_DEFAULT, options)
 }
 
-// One `ActiveFilterDescriptor` per member of the eleven-kind union.
+// One `ActiveFilterDescriptor` per member of the twelve-kind union.
 // `collection` uses `PRESET_UNCATEGORIZED` and `store` uses `'sideload'`
 // deliberately (not an arbitrary collection name / runner id): those are
 // the ONLY values of their kind that `chipLabelSpec` routes through a real
@@ -111,7 +111,8 @@ function makeSentinelT(instance: ReturnType<typeof createInstance>): TFunc {
 // distinction this file exists to draw -- reproducing WR-16's own disease
 // inside WR-16's fix.
 const ALL_KIND_DESCRIPTORS: ActiveFilterDescriptor[] = [
-  { id: 'view:installed', kind: 'view', value: 'installed' },
+  { id: 'installedOnly', kind: 'installedOnly', value: 'on' },
+  { id: 'nativeOnly', kind: 'nativeOnly', value: 'on' },
   {
     id: 'collection:preset_uncategorized',
     kind: 'collection',

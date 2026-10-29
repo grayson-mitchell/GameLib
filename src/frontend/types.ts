@@ -352,9 +352,15 @@ export interface LibraryContextType {
   setAlphabetFilterLetter: (letter: string | null) => void
   gamesForAlphabetFilter: GameInfo[]
 
-  // D-05: single-select view. Default 'all'.
-  libraryView: LibraryView
-  setLibraryView: (value: LibraryView) => void
+  // Quick 261029-riq: the panel's quick-filter row is (Installed) | (All)
+  // (Native). Installed is an independent toggle; `nativeOnly` is the
+  // All/Native single-select pair (false = All). `nativeFilterAvailable` is
+  // false on win32, where the pair is not rendered (D-riq-1).
+  installedOnly: boolean
+  setInstalledOnly: (value: boolean) => void
+  nativeOnly: boolean
+  setNativeOnly: (value: boolean) => void
+  nativeFilterAvailable: boolean
   // D-01: opt-in store selection. Default []. [] means no constraint.
   storeFacet: StoreFacetValue[]
   setStoreFacet: (value: StoreFacetValue[]) => void
@@ -451,6 +457,9 @@ export interface HelpItem {
 
 // D-05: the Games tier-2 panel's single-select view set. 'all' is the
 // default and the only value that produces no chip (D-26).
+// Since quick 261029-riq this serves only the Focus row
+// (`focusRowSelectors.ts`) and the engine's `view` stage; the main grid has no
+// view selector and always passes 'all'.
 export type LibraryView = 'all' | 'installed' | 'recentlyPlayed' | 'favourites'
 
 // D-09/D-10: the runnability facet's rows. 'bottle' collapses the
@@ -490,6 +499,10 @@ export type FacetKind =
 // The Games tier-2 filter panel's full engine state (D-01, D-05, D-21).
 export interface FilterEngineState {
   view: LibraryView
+  // Quick 261029-riq: Installed is an independent toggle that ANDs with
+  // everything else; `nativeOnly` is the All/Native pair (false = All).
+  installedOnly: boolean
+  nativeOnly: boolean
   // A `customCategories` key, the literal 'preset_uncategorized', or `null`
   // for no constraint. Collections are single-select (D-21).
   collection: string | null
@@ -535,7 +548,8 @@ export interface ActiveFilterDescriptor {
   // 'runnability:bottle', 'view:installed', 'collection:Backlog', 'search'.
   id: string
   kind:
-    | 'view'
+    | 'installedOnly'
+    | 'nativeOnly'
     | 'collection'
     | 'store'
     | 'runnability'

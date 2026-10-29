@@ -79,6 +79,8 @@ describe('DEFAULT_FILTER_ENGINE_STATE', () => {
   it('is every filter at its default -- all view, no collection, no facets, no search, nothing shown extra', () => {
     expect(DEFAULT_FILTER_ENGINE_STATE).toEqual({
       view: 'all',
+      installedOnly: false,
+      nativeOnly: false,
       collection: null,
       stores: [],
       runnability: [],

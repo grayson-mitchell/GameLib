@@ -90,9 +90,9 @@ const LibraryTour: React.FC = () => {
       },
       {
         element: '[data-tour="library-views-collections"]',
-        intro: t(
-          'tour.library.viewsCollections',
-          'Switch between Views like All games, Installed, Recently played and Favourites, or browse your custom Collections.'
+        intro: tGamelib(
+          'gamelib:tour.library.quickFiltersCollections',
+          'Show only installed games or only native builds, or browse your custom Collections.'
         ),
         position: 'bottom'
       },

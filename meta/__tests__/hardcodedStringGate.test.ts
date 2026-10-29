@@ -2037,7 +2037,8 @@ describe('hardcodedStringGate', () => {
         expect(facetResult.exempted).toBe(16)
 
         expect(chipResult.violations).toHaveLength(0)
-        expect(chipResult.exempted).toBe(36)
+        // quick 261029-riq: 36 -> 34. The retired 'view' chip case (three key + default literal pairs) gave way to installedOnly / nativeOnly (two pairs); re-measured, 0 violations.
+        expect(chipResult.exempted).toBe(34)
 
         expect(gamepadResult.violations).toHaveLength(0)
         expect(gamepadResult.exempted).toBe(0)

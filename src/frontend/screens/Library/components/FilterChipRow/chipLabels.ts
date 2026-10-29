@@ -38,36 +38,21 @@ export function chipLabelSpec(
   descriptor: ActiveFilterDescriptor
 ): ChipLabelSpec | null {
   switch (descriptor.kind) {
-    case 'view': {
-      // `describeActiveFilters` never emits view:all -- but if tampered
-      // state somehow produced one, no chip must ever say "All games"
-      // (D-26).
-      if (descriptor.value === 'all') {
-        return null
+    // Quick 261029-riq: the retired 'view' kind is gone; Installed and Native
+    // are independent chips.
+    case 'installedOnly':
+      return {
+        ns: 'gamelib',
+        key: 'gamelib:library.filterPanel.viewInstalled',
+        defaultText: 'Installed'
       }
-      switch (descriptor.value) {
-        case 'installed':
-          return {
-            ns: 'gamelib',
-            key: 'gamelib:library.filterPanel.viewInstalled',
-            defaultText: 'Installed'
-          }
-        case 'recentlyPlayed':
-          return {
-            ns: 'gamelib',
-            key: 'gamelib:library.filterPanel.viewRecentlyPlayed',
-            defaultText: 'Recently played'
-          }
-        case 'favourites':
-          return {
-            ns: 'gamelib',
-            key: 'gamelib:library.filterPanel.viewFavourites',
-            defaultText: 'Favourites'
-          }
-        default:
-          return null
+
+    case 'nativeOnly':
+      return {
+        ns: 'gamelib',
+        key: 'gamelib:library.filterPanel.native',
+        defaultText: 'Native'
       }
-    }
 
     case 'collection':
       // CR-04: the Uncategorized pseudo-category is NOT user data -- it is
@@ -227,8 +212,7 @@ export function joinChipLabels(labels: string[]): string {
  * `chipLabelSpec` can actually name, so a count greater than zero always
  * implies at least one renderable label exists. Before this filter existed,
  * a forged/retired value reaching `describeActiveFilters` (e.g. a
- * `libraryView` localStorage entry naming a view outside
- * `installed|recentlyPlayed|favourites`) produced a descriptor `chipLabelSpec`
+ * stale collection or runnability value outside its map) produced a descriptor `chipLabelSpec`
  * returns `null` for, which inflated the count with nothing to show for it --
  * the chip row rendered no chip for it and the zero-result sentence printed
  * `"No games match ."`, an empty filter list.

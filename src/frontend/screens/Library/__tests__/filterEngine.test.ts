@@ -20,6 +20,10 @@ import {
   describeActiveFilters,
   filterLibrary,
   gameKey,
+  hasNativeBuild,
+  isHostNative,
+  migrateLegacyLibraryView,
+  splitNativeFromRunnabilityFacet,
   migrateFilterMode,
   migrateRunnabilityFacetSelection,
   passesHiddenLaneFilter,
@@ -62,6 +66,8 @@ function makeState(
 ): FilterEngineState {
   return {
     view: 'all',
+    installedOnly: false,
+    nativeOnly: false,
     collection: null,
     stores: [],
     runnability: [],
@@ -603,15 +609,27 @@ describe('empty', () => {
     expect(describeActiveFilters(state, '')).toEqual([])
   })
 
-  it("view:'installed' produces exactly one descriptor and view:'all' produces none (D-26)", () => {
-    const installed = describeActiveFilters(
-      makeState({ view: 'installed' }),
-      ''
-    )
-    const all = describeActiveFilters(makeState({ view: 'all' }), '')
+  it('no view value produces a descriptor any more (quick 261029-riq)', () => {
+    for (const view of [
+      'all',
+      'installed',
+      'recentlyPlayed',
+      'favourites'
+    ] as const) {
+      expect(describeActiveFilters(makeState({ view }), '')).toEqual([])
+    }
+  })
 
-    expect(installed).toHaveLength(1)
-    expect(all).toHaveLength(0)
+  it('installedOnly and nativeOnly each produce one removable descriptor, installed first', () => {
+    expect(
+      describeActiveFilters(makeState({ installedOnly: true }), '')
+    ).toEqual([{ id: 'installedOnly', kind: 'installedOnly', value: 'on' }])
+    expect(
+      describeActiveFilters(
+        makeState({ installedOnly: true, nativeOnly: true }),
+        ''
+      ).map((d) => d.kind)
+    ).toEqual(['installedOnly', 'nativeOnly'])
   })
 
   it("a tri-state at 'only' produces a descriptor whose value is 'only', and one at 'show' produces one whose value is 'show'", () => {
@@ -737,5 +755,106 @@ describe('store facet prune on disconnect', () => {
     )
 
     expect(result).toEqual(['steam'])
+  })
+})
+
+describe('native predicates (quick 261029-riq)', () => {
+  const mac = (o: Partial<GameInfo>) => makeGame({ is_mac_native: true, ...o })
+
+  it('hasNativeBuild follows the host flag and is false on win32', () => {
+    expect(hasNativeBuild(makeGame({ is_mac_native: true }), 'darwin')).toBe(
+      true
+    )
+    expect(hasNativeBuild(makeGame({ is_mac_native: true }), 'linux')).toBe(
+      false
+    )
+    expect(hasNativeBuild(makeGame({ is_linux_native: true }), 'linux')).toBe(
+      true
+    )
+    expect(
+      hasNativeBuild(
+        makeGame({ is_mac_native: true, is_linux_native: true }),
+        'win32'
+      )
+    ).toBe(false)
+  })
+
+  it('isHostNative on darwin includes 64 / unknown / absent bitness and excludes 32', () => {
+    expect(isHostNative(mac({ mac_arch: '64' }), 'darwin')).toBe(true)
+    expect(isHostNative(mac({ mac_arch: 'unknown' }), 'darwin')).toBe(true)
+    expect(isHostNative(mac({}), 'darwin')).toBe(true)
+    expect(isHostNative(mac({ mac_arch: '32' }), 'darwin')).toBe(false)
+    expect(isHostNative(makeGame({ mac_arch: '64' }), 'darwin')).toBe(false)
+  })
+
+  it('isHostNative on linux ignores mac_arch; win32 is always false', () => {
+    expect(
+      isHostNative(makeGame({ is_linux_native: true, mac_arch: '32' }), 'linux')
+    ).toBe(true)
+    expect(isHostNative(mac({}), 'win32')).toBe(false)
+  })
+
+  it('D-riq-4: a mac-native 32-bit game is still tier native, though the Native chip excludes it', () => {
+    const game = mac({ mac_arch: '32' })
+    expect(deriveRunnabilityTier(game, {}, 'darwin')).toBe('native')
+    expect(isHostNative(game, 'darwin')).toBe(false)
+  })
+
+  it('filterLibrary: installedOnly, nativeOnly and both AND together', () => {
+    const library = [
+      mac({ app_name: 'a', is_installed: true }),
+      mac({ app_name: 'b', is_installed: false }),
+      makeGame({ app_name: 'c', is_installed: true }),
+      mac({ app_name: 'd', is_installed: true, mac_arch: '32' })
+    ]
+    const names = (o: Partial<FilterEngineState>) =>
+      filterLibrary(library, makeState(o), makeDeps()).map((g) => g.app_name)
+    expect(names({})).toEqual(['a', 'b', 'c', 'd'])
+    expect(names({ installedOnly: true })).toEqual(['a', 'c', 'd'])
+    expect(names({ nativeOnly: true })).toEqual(['a', 'b'])
+    expect(names({ installedOnly: true, nativeOnly: true })).toEqual(['a'])
+  })
+
+  it('countFor respects installedOnly and nativeOnly', () => {
+    const library = [
+      mac({ app_name: 'a', is_installed: true, runner: 'gog' }),
+      mac({ app_name: 'b', is_installed: false, runner: 'gog' })
+    ]
+    expect(
+      countFor(
+        library,
+        makeState({ installedOnly: true }),
+        makeDeps(),
+        'store',
+        'gog'
+      )
+    ).toBe(1)
+  })
+})
+
+describe('migrateLegacyLibraryView / splitNativeFromRunnabilityFacet (quick 261029-riq)', () => {
+  it('installed view becomes Installed on; other views keep the stored toggle', () => {
+    expect(migrateLegacyLibraryView('installed', null)).toBe(true)
+    expect(migrateLegacyLibraryView('recentlyPlayed', null)).toBe(false)
+    expect(migrateLegacyLibraryView('favourites', null)).toBe(false)
+    expect(migrateLegacyLibraryView('all', null)).toBe(false)
+    expect(migrateLegacyLibraryView(null, null)).toBe(false)
+    expect(migrateLegacyLibraryView('garbage', 'nope')).toBe(false)
+    expect(migrateLegacyLibraryView('recentlyPlayed', 'true')).toBe(true)
+    expect(migrateLegacyLibraryView(null, 'true')).toBe(true)
+  })
+
+  it('strips native from the facet and turns Native on, except on win32', () => {
+    expect(
+      splitNativeFromRunnabilityFacet(['native', 'bottle'], 'darwin')
+    ).toEqual({ tiers: ['bottle'], nativeOnly: true })
+    expect(splitNativeFromRunnabilityFacet(['native'], 'win32')).toEqual({
+      tiers: [],
+      nativeOnly: false
+    })
+    expect(splitNativeFromRunnabilityFacet(['bottle'], 'darwin')).toEqual({
+      tiers: ['bottle'],
+      nativeOnly: false
+    })
   })
 })

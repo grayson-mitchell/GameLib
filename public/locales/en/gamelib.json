@@ -261,6 +261,7 @@
             "groupSelectedCount_other": "{{count}} selected",
             "manageCollections": "Manage collections",
             "moreFilters": "More filters",
+            "native": "Native",
             "newCollection": "+ New collection",
             "noStorePage": "No store page",
             "notYetChecked": "Not yet checked",
@@ -603,6 +604,7 @@
     "tour": {
         "library": {
             "groupBy": "Group your games by install status or by store, or turn grouping off.",
+            "quickFiltersCollections": "Show only installed games or only native builds, or browse your custom Collections.",
             "sort": "Sort your games by name, last played or install size, and flip the direction.",
             "welcome": {
                 "intro2": "If the library is empty, sign in to your stores from the Accounts tab, or add your own games with the Add Game button."

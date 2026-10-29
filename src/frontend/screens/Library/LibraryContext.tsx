@@ -40,8 +40,11 @@ const initialContext: LibraryContextType = {
 
   // 34.11 Plan 04: opt-in facet surface defaults. See the field comments on
   // `LibraryContextType` (frontend/types.ts) for what each one is for.
-  libraryView: 'all',
-  setLibraryView: () => null,
+  installedOnly: false,
+  setInstalledOnly: () => null,
+  nativeOnly: false,
+  setNativeOnly: () => null,
+  nativeFilterAvailable: false,
   storeFacet: [],
   setStoreFacet: () => null,
   runnabilityFacet: [],

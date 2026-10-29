@@ -119,6 +119,15 @@ describe('LibraryTour re-anchored steps (34.12-02, D-09)', () => {
     expect(matches).toHaveLength(1)
   })
 
+  it('the views/collections step reads the quick-filters copy from gamelib:tour.library.quickFiltersCollections (quick 261029-riq)', () => {
+    const step = renderedSteps().find(
+      (s) => s.element === '[data-tour="library-views-collections"]'
+    )
+    expect(step?.intro).toBe(
+      'Show only installed games or only native builds, or browse your custom Collections.'
+    )
+  })
+
   it('contains exactly one step whose element is [data-tour="library-facets"]', () => {
     const steps = renderedSteps()
     const matches = steps.filter(

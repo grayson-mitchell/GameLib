@@ -60,6 +60,8 @@ function makeState(
 ): FilterEngineState {
   return {
     view: 'all',
+    installedOnly: false,
+    nativeOnly: false,
     collection: null,
     stores: [],
     runnability: [],

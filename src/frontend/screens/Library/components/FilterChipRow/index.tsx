@@ -32,7 +32,8 @@ export default function FilterChipRow() {
     setStoreFacet,
     runnabilityFacet,
     setRunnabilityFacet,
-    setLibraryView,
+    setInstalledOnly,
+    setNativeOnly,
     setCurrentCollection,
     handleSearch,
     setShowHidden,
@@ -64,8 +65,11 @@ export default function FilterChipRow() {
 
   const removeFilter = (descriptor: ActiveFilterDescriptor) => {
     switch (descriptor.kind) {
-      case 'view':
-        setLibraryView('all')
+      case 'installedOnly':
+        setInstalledOnly(false)
+        break
+      case 'nativeOnly':
+        setNativeOnly(false)
         break
       case 'collection':
         setCurrentCollection(null)

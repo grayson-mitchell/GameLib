@@ -98,7 +98,12 @@ export default function FilterRunnabilityFacet() {
   // explicitly not a degenerate all-pass "Runs natively" row, which was
   // considered and rejected because it would assert a claim the data model
   // cannot support.
-  if (runnabilityRows.length === 0) {
+  // Quick 261029-riq (D-riq-2): 'native' left this group for the Native
+  // quick-filter chip (FilterViewList). The Focus row still offers "Runs
+  // natively" through `runnabilityRows`, which keeps the tier. On Linux
+  // 'native' was the only row, so the group disappears there.
+  const panelRows = runnabilityRows.filter((tier) => tier !== 'native')
+  if (panelRows.length === 0) {
     return null
   }
 
@@ -127,7 +132,7 @@ export default function FilterRunnabilityFacet() {
           : undefined
       }
     >
-      {runnabilityRows.map((tier: RunnabilityTier) => (
+      {panelRows.map((tier: RunnabilityTier) => (
         <FilterFacetRow
           key={tier}
           label={runnabilityLabel(tier, tGamelib)}

@@ -82,6 +82,37 @@ export function gameKey(game: GameInfo): string {
 }
 
 /**
+ * Quick 261029-riq: does the game ship a native build for this host?
+ * darwin `is_mac_native === true`, linux `is_linux_native === true`, win32
+ * always false (GameInfo carries no Windows-native signal). Shared by
+ * `deriveRunnabilityTier` and `isHostNative` so the two cannot drift on the
+ * native-build test itself.
+ */
+export function hasNativeBuild(game: GameInfo, hostPlatform: string): boolean {
+  if (hostPlatform === 'darwin') return game.is_mac_native === true
+  if (hostPlatform === 'linux') return game.is_linux_native === true
+  return false
+}
+
+/**
+ * Quick 261029-riq: the Native chip's rule. A native build for this host, and
+ * on macOS excluding games confirmed 32-bit (`mac_arch === '32'`); unknown or
+ * absent bitness is included. Linux ignores `mac_arch`.
+ *
+ * Where the 32-bit signal comes from (`GameInfo.mac_arch`, absent = unknown):
+ * - Steam only: the post-install Mach-O ground-truth check (`lipo -archs`,
+ *   falling back to `file`, in steam/library.ts) and a curated known-fix
+ *   `macArch: "32"` hint seeded on Apple silicon only. The pre-install min-OS
+ *   heuristic only ever yields '64' or 'unknown'.
+ * - GOG, Epic, Amazon, Zoom, sideload: no arch signal, so a mac-native game
+ *   is always included. Amazon never matches (native flags are hard false).
+ */
+export function isHostNative(game: GameInfo, hostPlatform: string): boolean {
+  if (!hasNativeBuild(game, hostPlatform)) return false
+  return !(hostPlatform === 'darwin' && game.mac_arch === '32')
+}
+
+/**
  * D-12: derives the runnability tier for one game on one host, or `null`
  * when the tier is uncomputable there — `null` means "render no row for
  * this game", not "render an all-pass row".
@@ -110,11 +141,14 @@ export function deriveRunnabilityTier(
   }
 
   if (hostPlatform === 'linux') {
-    return game.is_linux_native === true ? 'native' : null
+    return hasNativeBuild(game, hostPlatform) ? 'native' : null
   }
 
   // darwin
-  if (game.is_mac_native === true) {
+  // D-riq-4 (quick 261029-riq): this precedes the 32-bit bottle rule, so a
+  // mac-native game with `mac_arch === '32'` is still 'native' here, while
+  // the Native chip (`isHostNative`) excludes it. Deliberate; not changed.
+  if (hasNativeBuild(game, hostPlatform)) {
     return 'native'
   }
 
@@ -184,6 +218,19 @@ function passesView(
     default:
       return true
   }
+}
+
+// Quick 261029-riq: not FacetKinds, never skipped.
+function passesInstalledOnly(game: GameInfo, installedOnly: boolean): boolean {
+  return !installedOnly || !!game.is_installed
+}
+
+function passesNativeOnly(
+  game: GameInfo,
+  nativeOnly: boolean,
+  hostPlatform: string
+): boolean {
+  return !nativeOnly || isHostNative(game, hostPlatform)
 }
 
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
@@ -366,7 +413,7 @@ function passesMore(
 
 /**
  * Applies every filter stage whose kind is not `opts.skip`, in this order:
- * search, view, collection, store, runnability, more. This is AND across
+ * search, view, installedOnly, nativeOnly, collection, store, runnability, more. This is AND across
  * kinds (D-03). DLC is always excluded (`game.install.is_dlc`) — this is
  * not a facet and is never skipped.
  */
@@ -386,6 +433,12 @@ export function filterLibrary(
       return false
     }
     if (skip !== 'view' && !passesView(game, state.view, deps)) {
+      return false
+    }
+    if (!passesInstalledOnly(game, state.installedOnly)) {
+      return false
+    }
+    if (!passesNativeOnly(game, state.nativeOnly, deps.hostPlatform)) {
       return false
     }
     if (
@@ -465,6 +518,8 @@ export function countFor(
  */
 export const DEFAULT_FILTER_ENGINE_STATE: FilterEngineState = {
   view: 'all',
+  installedOnly: false,
+  nativeOnly: false,
   collection: null,
   stores: [],
   runnability: [],
@@ -487,12 +542,18 @@ export function describeActiveFilters(
 ): ActiveFilterDescriptor[] {
   const descriptors: ActiveFilterDescriptor[] = []
 
-  if (state.view !== 'all') {
+  // Quick 261029-riq: no 'view' descriptor -- the main grid has no view
+  // selector. Installed and Native are their own removable chips.
+  if (state.installedOnly) {
     descriptors.push({
-      id: `view:${state.view}`,
-      kind: 'view',
-      value: state.view
+      id: 'installedOnly',
+      kind: 'installedOnly',
+      value: 'on'
     })
+  }
+
+  if (state.nativeOnly) {
+    descriptors.push({ id: 'nativeOnly', kind: 'nativeOnly', value: 'on' })
   }
 
   if (state.collection !== null) {
@@ -670,6 +731,40 @@ export function migrateRunnabilityFacetSelection(
     )
   } catch {
     return []
+  }
+}
+
+/**
+ * Quick 261029-riq: one-shot migration of the retired single-select
+ * `libraryView` into the independent Installed toggle. A stored 'installed'
+ * view becomes Installed on; 'recentlyPlayed' / 'favourites' / 'all' / null /
+ * garbage fall back to the already-stored `libraryInstalledOnly` (JSON
+ * 'true' -> true, anything else false). Never throws.
+ */
+export function migrateLegacyLibraryView(
+  storedView: string | null,
+  storedInstalledOnly: string | null
+): boolean {
+  if (storedView === 'installed') return true
+  return storedInstalledOnly === 'true'
+}
+
+/**
+ * Quick 261029-riq (D-riq-2): "Runs natively" left the Runnability facet
+ * group; the Native chip replaced it. A persisted facet containing 'native'
+ * has it stripped, and the caller turns Native on -- except on win32, where
+ * the chip does not exist (D-riq-1), so nativeOnly is false there.
+ */
+export function splitNativeFromRunnabilityFacet(
+  tiers: RunnabilityTier[],
+  hostPlatform: string
+): { tiers: RunnabilityTier[]; nativeOnly: boolean } {
+  if (!tiers.includes('native')) {
+    return { tiers, nativeOnly: false }
+  }
+  return {
+    tiers: tiers.filter((tier) => tier !== 'native'),
+    nativeOnly: hostPlatform !== 'win32'
   }
 }
 

@@ -23,11 +23,7 @@ import {
 } from '../../../filterEngine'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { RunnerToStore, RUNNABILITY_LABELS } from '../../../facetLabels'
-import type {
-  ActiveFilterDescriptor,
-  LibraryView,
-  RunnabilityTier
-} from 'frontend/types'
+import type { ActiveFilterDescriptor, RunnabilityTier } from 'frontend/types'
 
 // The panel component chipLabels must agree with about the Uncategorized
 // sentinel (CR-04). Resolved relative to __dirname, matching this file's
@@ -53,11 +49,11 @@ function literalOf(spec: ChipLabelSpec | null): string | null {
 }
 
 describe('chipLabels', () => {
-  it("view:installed resolves to the gamelib spec for viewInstalled / 'Installed'", () => {
+  it("installedOnly resolves to the gamelib spec for viewInstalled / 'Installed'", () => {
     const spec = chipLabelSpec({
-      id: 'view:installed',
-      kind: 'view',
-      value: 'installed'
+      id: 'installedOnly',
+      kind: 'installedOnly',
+      value: 'on'
     })
 
     expect(spec).toEqual({
@@ -67,10 +63,18 @@ describe('chipLabels', () => {
     })
   })
 
-  it('view:all never produces a chip label, even if forged (D-26)', () => {
-    const spec = chipLabelSpec({ id: 'view:all', kind: 'view', value: 'all' })
+  it("nativeOnly resolves to the gamelib spec for native / 'Native' (quick 261029-riq)", () => {
+    const spec = chipLabelSpec({
+      id: 'nativeOnly',
+      kind: 'nativeOnly',
+      value: 'on'
+    })
 
-    expect(spec).toBeNull()
+    expect(spec).toEqual({
+      ns: 'gamelib',
+      key: 'gamelib:library.filterPanel.native',
+      defaultText: 'Native'
+    })
   })
 
   it('collection:Backlog is a literal spec carrying the name unchanged', () => {
@@ -291,7 +295,8 @@ describe('chipLabels', () => {
   })
 
   it.each<[ActiveFilterDescriptor['kind'], string]>([
-    ['view', 'installed'],
+    ['installedOnly', 'on'],
+    ['nativeOnly', 'on'],
     ['collection', 'Backlog'],
     ['store', 'gog'],
     ['runnability', 'native'],
@@ -340,9 +345,12 @@ describe('renderableActiveFilters (WR-12)', () => {
   // Failing assertion against current code: `activeFilterCount` would read
   // 1 with zero renderable labels, producing the empty
   // "No games match ." sentence.
-  it('drops a descriptor chipLabelSpec cannot name, e.g. a forged/retired libraryView', () => {
+  it('drops a descriptor chipLabelSpec cannot name, e.g. a forged/retired runnability tier', () => {
     const rawDescriptors = describeActiveFilters(
-      { ...DEFAULT_FILTER_ENGINE_STATE, view: 'retiredView' as LibraryView },
+      {
+        ...DEFAULT_FILTER_ENGINE_STATE,
+        runnability: ['retiredTier' as RunnabilityTier]
+      },
       ''
     )
 
@@ -356,9 +364,9 @@ describe('renderableActiveFilters (WR-12)', () => {
 
   // Test E: a control proving the helper is not a blanket `[]` -- a REAL
   // filter survives unchanged.
-  it('is not a blanket empty list -- a real filter (view: installed) survives unchanged', () => {
+  it('is not a blanket empty list -- a real filter (installedOnly) survives unchanged', () => {
     const rawDescriptors = describeActiveFilters(
-      { ...DEFAULT_FILTER_ENGINE_STATE, view: 'installed' },
+      { ...DEFAULT_FILTER_ENGINE_STATE, installedOnly: true },
       ''
     )
 
@@ -371,8 +379,12 @@ describe('renderableActiveFilters (WR-12)', () => {
   // from `chipLabelSpec`.
   it('is exactly `descriptors.filter(d => chipLabelSpec(d) !== null)` for a mixed list', () => {
     const mixed: ActiveFilterDescriptor[] = [
-      { id: 'view:installed', kind: 'view', value: 'installed' },
-      { id: 'view:retiredView', kind: 'view', value: 'retiredView' }
+      { id: 'installedOnly', kind: 'installedOnly', value: 'on' },
+      {
+        id: 'runnability:retiredTier',
+        kind: 'runnability',
+        value: 'retiredTier'
+      }
     ]
 
     expect(renderableActiveFilters(mixed)).toEqual(
@@ -426,7 +438,8 @@ type MockLibraryContextValue = {
   setStoreFacet: jest.Mock
   runnabilityFacet: string[]
   setRunnabilityFacet: jest.Mock
-  setLibraryView: jest.Mock
+  setInstalledOnly: jest.Mock
+  setNativeOnly: jest.Mock
   setCurrentCollection: jest.Mock
   handleSearch: jest.Mock
   setShowHidden: jest.Mock
@@ -452,7 +465,8 @@ function makeChipRowContextValue(
     setStoreFacet: jest.fn(),
     runnabilityFacet: [],
     setRunnabilityFacet: jest.fn(),
-    setLibraryView: jest.fn(),
+    setInstalledOnly: jest.fn(),
+    setNativeOnly: jest.fn(),
     setCurrentCollection: jest.fn(),
     handleSearch: jest.fn(),
     setShowHidden: jest.fn(),
@@ -562,7 +576,7 @@ describe('FilterChipRow', () => {
 
   it('descriptors for view:installed, store:gog and search render exactly three removal chips plus one Clear all chip, in descriptor order', () => {
     const descriptors: ActiveFilterDescriptor[] = [
-      { id: 'view:installed', kind: 'view', value: 'installed' },
+      { id: 'installedOnly', kind: 'installedOnly', value: 'on' },
       { id: 'store:gog', kind: 'store', value: 'gog' },
       { id: 'search', kind: 'search', value: 'witcher' }
     ]
@@ -602,7 +616,7 @@ describe('FilterChipRow', () => {
 
   it("every removal chip's × carries a real interpolated aria-label -- three active chips produce three distinct accessible names", () => {
     const descriptors: ActiveFilterDescriptor[] = [
-      { id: 'view:installed', kind: 'view', value: 'installed' },
+      { id: 'installedOnly', kind: 'installedOnly', value: 'on' },
       { id: 'store:gog', kind: 'store', value: 'gog' },
       { id: 'search', kind: 'search', value: 'witcher' }
     ]
@@ -643,22 +657,23 @@ describe('FilterChipRow', () => {
     ])
   })
 
-  it('clicking the × on a view:installed chip calls setLibraryView("all")', () => {
-    const descriptor: ActiveFilterDescriptor = {
-      id: 'view:installed',
-      kind: 'view',
-      value: 'installed'
-    }
+  it('clicking the × on an installedOnly chip calls setInstalledOnly(false), and on a nativeOnly chip setNativeOnly(false)', () => {
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: 'installedOnly', kind: 'installedOnly', value: 'on' },
+      { id: 'nativeOnly', kind: 'nativeOnly', value: 'on' }
+    ]
     chipRowContextValue = makeChipRowContextValue({
-      activeFilterDescriptors: [descriptor],
-      activeFilterCount: 1
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: 2
     })
 
     const tree = FilterChipRowImport()
-    const [removeButton] = removeButtonsOf(tree)
-    ;(removeButton?.props.onClick as () => void)()
-
-    expect(chipRowContextValue.setLibraryView).toHaveBeenCalledWith('all')
+    const [installedButton, nativeButton] = removeButtonsOf(tree)
+    ;(installedButton?.props.onClick as () => void)()
+    expect(chipRowContextValue.setInstalledOnly).toHaveBeenCalledWith(false)
+    expect(chipRowContextValue.setNativeOnly).not.toHaveBeenCalled()
+    ;(nativeButton?.props.onClick as () => void)()
+    expect(chipRowContextValue.setNativeOnly).toHaveBeenCalledWith(false)
   })
 
   it('clicking the × on a collection:Backlog chip calls setCurrentCollection(null)', () => {
@@ -725,7 +740,7 @@ describe('FilterChipRow', () => {
 
   it('clicking Clear all calls clearAllFilters exactly once and calls no individual setter (D-25)', () => {
     const descriptors: ActiveFilterDescriptor[] = [
-      { id: 'view:installed', kind: 'view', value: 'installed' },
+      { id: 'installedOnly', kind: 'installedOnly', value: 'on' },
       { id: 'store:gog', kind: 'store', value: 'gog' }
     ]
     chipRowContextValue = makeChipRowContextValue({
@@ -738,13 +753,13 @@ describe('FilterChipRow', () => {
     ;(clearAll?.props.onClick as () => void)()
 
     expect(chipRowContextValue.clearAllFilters).toHaveBeenCalledTimes(1)
-    expect(chipRowContextValue.setLibraryView).not.toHaveBeenCalled()
+    expect(chipRowContextValue.setInstalledOnly).not.toHaveBeenCalled()
     expect(chipRowContextValue.setStoreFacet).not.toHaveBeenCalled()
   })
 
   it('no chip element carries a count, a number, or a numeric child (D-28)', () => {
     const descriptors: ActiveFilterDescriptor[] = [
-      { id: 'view:installed', kind: 'view', value: 'installed' },
+      { id: 'installedOnly', kind: 'installedOnly', value: 'on' },
       { id: 'store:gog', kind: 'store', value: 'gog' }
     ]
     chipRowContextValue = makeChipRowContextValue({
@@ -812,7 +827,7 @@ import FilterZeroResultImport from '../../FilterZeroResult'
 describe('FilterZeroResult', () => {
   it("body is exactly D-30's own example sentence for view:installed + store:gog + search:witcher", () => {
     const descriptors: ActiveFilterDescriptor[] = [
-      { id: 'view:installed', kind: 'view', value: 'installed' },
+      { id: 'installedOnly', kind: 'installedOnly', value: 'on' },
       { id: 'store:gog', kind: 'store', value: 'gog' },
       { id: 'search', kind: 'search', value: 'witcher' }
     ]
@@ -906,7 +921,7 @@ describe('FilterZeroResult', () => {
 
   it('the inline action calls clearAllFilters exactly once and calls no individual setter (D-25)', () => {
     const descriptors: ActiveFilterDescriptor[] = [
-      { id: 'view:installed', kind: 'view', value: 'installed' }
+      { id: 'installedOnly', kind: 'installedOnly', value: 'on' }
     ]
     chipRowContextValue = makeChipRowContextValue({
       activeFilterDescriptors: descriptors,
@@ -920,7 +935,7 @@ describe('FilterZeroResult', () => {
     ;(action?.props.onClick as () => void)()
 
     expect(chipRowContextValue.clearAllFilters).toHaveBeenCalledTimes(1)
-    expect(chipRowContextValue.setLibraryView).not.toHaveBeenCalled()
+    expect(chipRowContextValue.setInstalledOnly).not.toHaveBeenCalled()
   })
 
   // WR-16: this mocked `t` returns its default unconditionally, so it cannot

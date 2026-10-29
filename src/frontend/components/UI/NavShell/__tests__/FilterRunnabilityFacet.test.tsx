@@ -139,26 +139,31 @@ describe('FilterRunnabilityFacet', () => {
     expect(result).toBeNull()
   })
 
-  it('given runnabilityRows === ["native"] (Linux), renders exactly one row', () => {
+  // Quick 261029-riq (D-riq-2): 'native' moved to the Native quick-filter chip,
+  // so on Linux (where it was the only row) the group disappears.
+  it('given runnabilityRows === ["native"] (Linux), returns null -- Native moved to the quick-filter chip', () => {
     contextValue = makeContextValue({ runnabilityRows: ['native'] })
 
-    const tree = FilterRunnabilityFacet() as unknown as ReactElement
-    const rows = rowsOf(tree)
-
-    expect(rows).toHaveLength(1)
-    expect(rows[0]?.props.label).toBe('Runs natively')
+    expect(FilterRunnabilityFacet()).toBeNull()
   })
 
-  it('given all four macOS rows, renders exactly four rows in that order with the minted labels', () => {
+  it('given the five macOS rows, renders four rows in order -- native is not offered here', () => {
     contextValue = makeContextValue({
-      runnabilityRows: ['native', 'bottle', 'wontRun', 'notChecked']
+      runnabilityRows: [
+        'native',
+        'runsForMe',
+        'bottle',
+        'wontRun',
+        'notChecked'
+      ]
     })
 
     const tree = FilterRunnabilityFacet() as unknown as ReactElement
     const rows = rowsOf(tree)
 
+    expect(rows).toHaveLength(4)
     expect(rows.map((r) => r.props.label)).toEqual([
-      'Runs natively',
+      'Runs for me',
       'Runs via bottle',
       "Won't run",
       'Not yet checked'
@@ -170,7 +175,7 @@ describe('FilterRunnabilityFacet', () => {
   // varies, so a caller that regressed to counting its own facet array
   // would read 0 and fail here (D3).
   it('with no active filters, passes selectedCount 0 so no badge renders', () => {
-    contextValue = makeContextValue({ runnabilityRows: ['native'] })
+    contextValue = makeContextValue({ runnabilityRows: ['bottle'] })
 
     const tree = FilterRunnabilityFacet() as unknown as ReactElement<AnyProps>
 
@@ -207,7 +212,7 @@ describe('FilterRunnabilityFacet', () => {
   })
 
   it('every other prop is unchanged -- the group still renders its own title and className', () => {
-    contextValue = makeContextValue({ runnabilityRows: ['native'] })
+    contextValue = makeContextValue({ runnabilityRows: ['bottle'] })
 
     const tree = FilterRunnabilityFacet() as unknown as ReactElement<AnyProps>
 
@@ -217,9 +222,9 @@ describe('FilterRunnabilityFacet', () => {
 
   it('each row count comes from countForRunnability, called once per rendered row', () => {
     contextValue = makeContextValue({
-      runnabilityRows: ['native', 'bottle'],
+      runnabilityRows: ['bottle', 'wontRun'],
       countForRunnability: jest.fn((tier: string) =>
-        tier === 'native' ? 12 : 3
+        tier === 'bottle' ? 12 : 3
       )
     })
 
@@ -227,28 +232,26 @@ describe('FilterRunnabilityFacet', () => {
     const rows = rowsOf(tree)
 
     expect(
-      rows.find((r) => r.props.label === 'Runs natively')?.props.count
-    ).toBe(12)
-    expect(
       rows.find((r) => r.props.label === 'Runs via bottle')?.props.count
-    ).toBe(3)
+    ).toBe(12)
+    expect(rows.find((r) => r.props.label === "Won't run")?.props.count).toBe(3)
     expect(contextValue.countForRunnability).toHaveBeenCalledTimes(2)
   })
 
   it('multi-select: toggling an unselected row adds to the array, toggling a selected row removes from it', () => {
     contextValue = makeContextValue({
-      runnabilityRows: ['native', 'bottle'],
-      runnabilityFacet: ['native']
+      runnabilityRows: ['wontRun', 'bottle'],
+      runnabilityFacet: ['wontRun']
     })
 
     const tree = FilterRunnabilityFacet() as unknown as ReactElement
     const rows = rowsOf(tree)
     const bottleRow = rows.find((r) => r.props.label === 'Runs via bottle')
-    const nativeRow = rows.find((r) => r.props.label === 'Runs natively')
+    const nativeRow = rows.find((r) => r.props.label === "Won't run")
 
     ;(bottleRow?.props.onToggle as () => void)()
     expect(contextValue.setRunnabilityFacet).toHaveBeenCalledWith([
-      'native',
+      'wontRun',
       'bottle'
     ])
     ;(nativeRow?.props.onToggle as () => void)()

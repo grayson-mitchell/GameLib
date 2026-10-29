@@ -34,7 +34,6 @@ import {
   FilterEngineDeps,
   FilterEngineState,
   FilterMode,
-  LibraryView,
   NoStorePageMode,
   RunnabilityTier,
   StoreFacetValue
@@ -83,13 +82,6 @@ import { applyLibraryTileWidth, readLibraryTileWidth } from './libraryTileSize'
 import { useNonSteamLastPlayed } from './useNonSteamLastPlayed'
 
 const storage = window.localStorage
-
-const VALID_LIBRARY_VIEWS: LibraryView[] = [
-  'all',
-  'installed',
-  'recentlyPlayed',
-  'favourites'
-]
 
 type SearchableGame = {
   original: GameInfo
@@ -141,20 +133,23 @@ export default React.memo(function Library(): JSX.Element {
     )
   }, [])
 
-  // D-05: single-select view. A format guard in the shape of
-  // migrateFilterMode below -- an unrecognised or absent value falls back
-  // to 'all' rather than throwing.
-  const initialLibraryView = (): LibraryView => {
-    const stored = storage.getItem('libraryView')
-    return (VALID_LIBRARY_VIEWS as string[]).includes(stored || '')
-      ? (stored as LibraryView)
-      : 'all'
-  }
-  const [libraryView, setLibraryView_] =
-    useState<LibraryView>(initialLibraryView)
-  const setLibraryViewPersisted = (value: LibraryView) => {
-    storage.setItem('libraryView', value)
-    setLibraryView_(value)
+  // Quick 261029-riq: the single-select `libraryView` is retired. A saved
+  // 'installed' view becomes the independent Installed toggle; 'recentlyPlayed'
+  // and 'favourites' fall back to All (they remain Focus row options). The
+  // migration is one-shot and idempotent: the result is persisted under
+  // `libraryInstalledOnly` and the old key removed.
+  const [installedOnly, setInstalledOnly_] = useState<boolean>(() => {
+    const migrated = filterEngine.migrateLegacyLibraryView(
+      storage.getItem('libraryView'),
+      storage.getItem('libraryInstalledOnly')
+    )
+    storage.setItem('libraryInstalledOnly', JSON.stringify(migrated))
+    storage.removeItem('libraryView')
+    return migrated
+  })
+  const setInstalledOnlyPersisted = (value: boolean) => {
+    storage.setItem('libraryInstalledOnly', JSON.stringify(value))
+    setInstalledOnly_(value)
   }
 
   // D-01: opt-in store facet, migrated from the legacy opt-out
@@ -173,16 +168,43 @@ export default React.memo(function Library(): JSX.Element {
 
   // D-01: opt-in runnability facet, migrated from the legacy
   // platformsFilters shape.
+  // Quick 261029-riq (D-riq-2): 'native' left this facet group for the Native
+  // chip. A persisted facet containing it is split once, in this initialiser
+  // (`platform` comes from ContextProvider and is already in scope): 'native'
+  // is stripped and persisted, and `libraryNativeOnly` is set before the
+  // nativeOnly state below reads it (initialisers run in declaration order).
   const [runnabilityFacet, setRunnabilityFacet_] = useState<RunnabilityTier[]>(
-    () =>
-      filterEngine.migrateRunnabilityFacetSelection(
+    () => {
+      const migrated = filterEngine.migrateRunnabilityFacetSelection(
         storage.getItem('runnabilityFacet'),
         storage.getItem('platformsFilters')
       )
+      const split = filterEngine.splitNativeFromRunnabilityFacet(
+        migrated,
+        platform
+      )
+      if (split.tiers.length !== migrated.length) {
+        storage.setItem('runnabilityFacet', JSON.stringify(split.tiers))
+        if (split.nativeOnly) {
+          storage.setItem('libraryNativeOnly', 'true')
+        }
+      }
+      return split.tiers
+    }
   )
   const setRunnabilityFacetPersisted = (value: RunnabilityTier[]) => {
     storage.setItem('runnabilityFacet', JSON.stringify(value))
     setRunnabilityFacet_(value)
+  }
+
+  // Quick 261029-riq: the All/Native pair (false = All). Forced off on win32
+  // in `engineState` (D-riq-1), so a stale flag from another OS has no effect.
+  const [nativeOnly, setNativeOnly_] = useState<boolean>(
+    () => storage.getItem('libraryNativeOnly') === 'true'
+  )
+  const setNativeOnlyPersisted = (value: boolean) => {
+    storage.setItem('libraryNativeOnly', JSON.stringify(value))
+    setNativeOnly_(value)
   }
 
   // D-21: single-select collection -- a customCategories key, the literal
@@ -810,7 +832,12 @@ export default React.memo(function Library(): JSX.Element {
 
   const engineState: FilterEngineState = useMemo(
     () => ({
-      view: libraryView,
+      // The main grid has no view selector since quick 261029-riq; the field
+      // serves the Focus row (focusRowSelectors.ts).
+      view: 'all',
+      installedOnly,
+      // D-riq-1: the All/Native pair does not exist on win32.
+      nativeOnly: platform !== 'win32' && nativeOnly,
       collection: currentCollection,
       stores: storeFacet,
       runnability: runnabilityFacet,
@@ -826,7 +853,9 @@ export default React.memo(function Library(): JSX.Element {
       showUpdatesOnly
     }),
     [
-      libraryView,
+      installedOnly,
+      nativeOnly,
+      platform,
       currentCollection,
       storeFacet,
       runnabilityFacet,
@@ -1045,7 +1074,8 @@ export default React.memo(function Library(): JSX.Element {
   // implementation would silently restore the old filters on next launch,
   // which would be a defect, not a simplification.
   const clearAllFilters = () => {
-    setLibraryViewPersisted('all')
+    setInstalledOnlyPersisted(false)
+    setNativeOnlyPersisted(false)
     setStoreFacetPersisted([])
     setRunnabilityFacetPersisted([])
     setCurrentCollectionPersisted(null)
@@ -1147,8 +1177,11 @@ export default React.memo(function Library(): JSX.Element {
         // sentinel field (see LibraryContext.tsx's initialContext) is
         // deliberately NOT set here -- its absence is what lets a consumer
         // tell this real provider apart from that default.
-        libraryView,
-        setLibraryView: setLibraryViewPersisted,
+        installedOnly,
+        setInstalledOnly: setInstalledOnlyPersisted,
+        nativeOnly,
+        setNativeOnly: setNativeOnlyPersisted,
+        nativeFilterAvailable: platform !== 'win32',
         storeFacet,
         setStoreFacet: setStoreFacetPersisted,
         runnabilityFacet,

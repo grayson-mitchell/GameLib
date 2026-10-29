@@ -34,7 +34,7 @@ describe('countDescriptorsOfKind', () => {
   })
 
   it('descriptors of only non-matching kinds count 0', () => {
-    const descriptors = [descriptor('view'), descriptor('search')]
+    const descriptors = [descriptor('installedOnly'), descriptor('search')]
 
     expect(countDescriptorsOfKind(descriptors, ['store'])).toBe(0)
   })
