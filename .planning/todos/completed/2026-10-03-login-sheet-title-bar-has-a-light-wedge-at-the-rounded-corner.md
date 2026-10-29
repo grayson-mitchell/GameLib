@@ -131,3 +131,9 @@ the rig for the before/after capture.
   comment); a real-sheet capture is the only faithful instrument.
 - KVC `setValue(_:forKey: "_automaticallyAdjustsContentInsets")` throws — the setter is
   `_setAutomaticallyAdjustsContentInsets:`; call it through `method_getImplementation`.
+
+## Resolution
+
+2026-10-29: fixed by quick 261029-osq (code commit e625650c4), taking route C/D. Every macOS login sheet (Humble, Amazon, Zoom, GOG) now has one native AppKit bar (`install_native_login_bar`: 32pt `#161c1e`, 1pt `#272f31` rule, centred origin from the shell-validated URL, native ×). It insets the webview 32pt below the bar, so the webview no longer touches the window's rounded top corners. The top corner radii drop to zero, and the scrollbar runs from the top of the webview. The injected cancel strip, origin banner and scrollbar-inset scripts, and the `/login-cancel` sentinel, were deleted. No private API was used; the `_effectiveCornerRadii` override was not taken.
+
+Live PASS (operator, tauri dev, `AppleShowScrollBars=Always`): no wedge, bar look, × and Esc cancel, all four store logins, GOG Cloudflare check, Epic unchanged, no jump on sheet animation.
