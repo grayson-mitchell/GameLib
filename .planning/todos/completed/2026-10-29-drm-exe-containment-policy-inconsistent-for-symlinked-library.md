@@ -28,3 +28,9 @@ Pick one policy and apply it to both exes:
 - **Library-aware:** accept a symlinked library the user set up. Realpath `dirname(exePath)` once to get `ueRootReal`, and require each candidate's real path to be inside the game's own folder rather than the bottle root. Keep returning the lexical `resolve(candidate)` so `stageDrmBottle`'s `drive_c` check still passes.
 
 Once decided, this is desk work: `ready: code`, with tests for both a symlinked Bottles dir and a symlinked `steamapps/common`.
+
+## Resolution
+
+User chose the library-aware policy over strict on 2026-10-29. Quick 261029-m0u made `detectLaunchDrmWrapper` realpath `dirname(exePath)` once (`ueRootReal`) and require both the bootstrap exe and every UE Shipping candidate to resolve inside it before scanning. Real paths are scanned, lexical paths returned, so `stageDrmBottle`'s `drive_c` check holds. A refused bootstrap yields `drmWrapper: undefined` with a warning, and the Shipping fallback still runs. The documented precondition of `detectDrmWrapper` in shimGenerate.ts now states the game-folder policy. Tests cover a symlinked Bottles dir, a symlinked steamapps/common, and in-folder escapes for both exes. Code commit: 995f3daaa.
+
+Deliberately left out of scope: the unchecked read in shimGenerate.ts, fallback `detectDrmWrapper(resolve(gameExePath))`, which only fires when no bridge bottle resolves.
