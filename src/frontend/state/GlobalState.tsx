@@ -1956,6 +1956,24 @@ class GlobalState extends PureComponent<Props> {
             enabled: true
           }
         })
+      } else if (args.runner === 'legendary') {
+        this.setState((prevState: StateProps) => {
+          const library = [...prevState.epic.library]
+          const index = library.findIndex(
+            (game) => game.app_name === args.app_name
+          )
+          if (index !== -1) {
+            library[index] = args
+          } else {
+            library.push(args)
+          }
+          return {
+            epic: {
+              library,
+              username: prevState.epic.username
+            }
+          }
+        })
       } else if (args.runner === 'steam') {
         this.setState((prevState: StateProps) => {
           const library = [...prevState.steam.library]

@@ -49,6 +49,8 @@ import { Entries } from 'type-fest'
 import { runLegendaryCommandStub } from './e2eMock'
 import { legendaryConfigPath, legendaryMetadata } from './constants'
 import { isWindows } from 'backend/constants/environment'
+import { recordedMacArch, scheduleMacArchSweep } from 'backend/macArch/recovery'
+import { sendFrontendMessage } from '../../ipc'
 import { LibraryManager } from 'common/types/game_manager'
 import LegendaryGame from './games'
 
@@ -58,12 +60,47 @@ const allGames: Set<string> = new Set()
 let installedGames: Map<string, InstalledJsonMetadata> = new Map()
 const library: Map<string, GameInfo> = new Map()
 
+/**
+ * Applies a native-Mac arch verdict (quick 261029-t39). Patches the Map entry
+ * and the persisted libraryStore 'library' array IN PLACE by app_name (never
+ * rebuilt from the Map: at boot the Map may be only partly loaded), then
+ * pushes the updated entry live.
+ */
+export function applyLegendaryMacArch(appName: string, verdict: '32' | '64') {
+  const cached = library.get(appName)
+  if (cached) library.set(appName, { ...cached, mac_arch: verdict })
+
+  const stored = libraryStore.get('library', [])
+  const idx = stored.findIndex((g) => g.app_name === appName)
+  if (idx > -1) {
+    stored[idx] = { ...stored[idx], mac_arch: verdict }
+    libraryStore.set('library', stored)
+  }
+
+  const updated = library.get(appName) ?? (idx > -1 ? stored[idx] : undefined)
+  if (updated) sendFrontendMessage('pushGameToLibrary', updated)
+}
+
 export default class LegendaryLibraryManager implements LibraryManager {
   private readonly gameCache: Map<LegendaryAppName, LegendaryGame> = new Map()
 
   async init() {
     this.loadGamesInAccount()
     this.refreshInstalled()
+
+    scheduleMacArchSweep(
+      'legendary',
+      () =>
+        [...installedGames.entries()]
+          .filter(([, i]) => i.platform === 'Mac')
+          .map(([appName, i]) => ({
+            appName,
+            installPath: i.install_path,
+            executable: i.executable,
+            title: library.get(appName)?.title
+          })),
+      applyLegendaryMacArch
+    )
   }
 
   getGame(id: string): LegendaryGame {
@@ -641,6 +678,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
       title,
       canRunOffline,
       thirdPartyManagedApp,
+      mac_arch: recordedMacArch('legendary', app_name),
       isEAManaged:
         !!thirdPartyManagedApp &&
         ['origin', 'the ea app'].includes(thirdPartyManagedApp.toLowerCase()),

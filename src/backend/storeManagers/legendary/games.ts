@@ -13,6 +13,7 @@ import {
 import { GameConfig } from '../../game_config'
 import { GlobalConfig } from '../../config'
 import { libraryManagerMap } from '..'
+import { checkInstalledMacArch } from 'backend/macArch/recovery'
 import {
   downloadFile,
   killPattern,
@@ -661,6 +662,30 @@ export default class LegendaryGame implements Game {
         LogPrefix.Legendary
       )
     )
+
+    if (isMac && LegendaryPlatform.parse(platformToInstall) === 'Mac') {
+      libraryManagerMap['legendary'].refreshInstalled()
+      const installed = libraryManagerMap['legendary'].getGameInfo(
+        this.appName,
+        true
+      )?.install
+      const installPath = installed?.install_path
+      if (installPath) {
+        // Fire-and-forget: never delays the done status (quick 261029-t39).
+        // library.ts is imported lazily: it imports this module.
+        void import('./library').then(({ applyLegendaryMacArch }) =>
+          checkInstalledMacArch({
+            runner: 'legendary',
+            appName: this.appName,
+            installPath,
+            executable: installed?.executable,
+            title: gameInfo.title,
+            apply: applyLegendaryMacArch,
+            prompt: true
+          })
+        )
+      }
+    }
 
     return { status: 'done' }
   }

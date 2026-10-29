@@ -86,6 +86,7 @@ import { spawn } from 'child_process'
 import { getUmuId } from 'backend/wiki_game_info/umu/utils'
 import { gogdlConfigPath, gogSupportPath } from './constants'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
+import { checkInstalledMacArch } from 'backend/macArch/recovery'
 import { registerLongLivedChild } from 'backend/longLivedChildren'
 
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
@@ -521,6 +522,20 @@ export default class GOGGame implements Game {
     void this.addShortcuts().catch((error) =>
       logWarning(['Could not add shortcuts for', this.id, error], LogPrefix.Gog)
     )
+    if (isMac && installPlatform === 'osx') {
+      // Fire-and-forget: never delays the done status (quick 261029-t39).
+      // library.ts is imported lazily: it imports this module.
+      void import('./library').then(({ applyGogMacArch }) =>
+        checkInstalledMacArch({
+          runner: 'gog',
+          appName: this.id,
+          installPath: install_path,
+          title: gameInfo.title,
+          apply: applyGogMacArch,
+          prompt: true
+        })
+      )
+    }
     return { status: 'done' }
   }
 

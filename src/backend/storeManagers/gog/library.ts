@@ -61,11 +61,38 @@ import { userDataPath } from 'backend/constants/paths'
 import GOGGame from './games'
 import type { LibraryManager } from 'common/types/game_manager'
 import { libraryManagerMap } from '../index'
+import { recordedMacArch, scheduleMacArchSweep } from 'backend/macArch/recovery'
 import { readdir } from 'fs/promises'
 import { statSync } from 'fs'
 
 const library: Map<string, GameInfo> = new Map()
 const installedGames: Map<string, InstalledInfo> = new Map()
+
+/**
+ * Applies a native-Mac arch verdict (quick 261029-t39) to the in-memory entry
+ * and, IN PLACE by app_name, the persisted libraryStore 'games' array the
+ * frontend reads, then pushes the merged GameInfo live. Never rebuilds the
+ * persisted array from the Map.
+ */
+export function applyGogMacArch(appName: string, verdict: '32' | '64') {
+  const cached = library.get(appName)
+  if (cached) library.set(appName, { ...cached, mac_arch: verdict })
+
+  const stored = libraryStore.get('games', [])
+  const idx = stored.findIndex((g) => g.app_name === appName)
+  if (idx > -1) {
+    stored[idx] = { ...stored[idx], mac_arch: verdict }
+    libraryStore.set('games', stored)
+  }
+
+  const base = library.get(appName) ?? (idx > -1 ? stored[idx] : undefined)
+  if (!base) return
+  const installed = installedGames.get(appName)
+  const updated: GameInfo = installed
+    ? { ...base, is_installed: true, install: installed }
+    : base
+  sendFrontendMessage('pushGameToLibrary', updated)
+}
 
 export default class GOGLibraryManager implements LibraryManager {
   private readonly gameCache: Map<string, GOGGame> = new Map()
@@ -89,6 +116,19 @@ export default class GOGLibraryManager implements LibraryManager {
       }
     })
     runOnceWhenOnline(checkForRedistUpdates)
+
+    scheduleMacArchSweep(
+      'gog',
+      () =>
+        [...installedGames.values()]
+          .filter((i) => i.platform === 'osx' && i.appName)
+          .map((i) => ({
+            appName: i.appName!,
+            installPath: i.install_path,
+            title: library.get(i.appName!)?.title
+          })),
+      applyGogMacArch
+    )
   }
 
   getGame(id: string): GOGGame {
@@ -1167,7 +1207,8 @@ export default class GOGLibraryManager implements LibraryManager {
       is_linux_native: Boolean(
         info.supported_operating_systems.find((os) => os.slug === 'linux')
       ),
-      thirdPartyManagedApp: undefined
+      thirdPartyManagedApp: undefined,
+      mac_arch: recordedMacArch('gog', String(info.external_id))
     }
 
     return object

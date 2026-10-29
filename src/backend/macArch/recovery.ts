@@ -29,7 +29,7 @@ import {
   verdictFromArchs
 } from 'backend/utils/macArch'
 import { macArchStore } from './electronStores'
-import type { GameInfo, Runner } from 'common/types'
+import type { Runner } from 'common/types'
 
 export const MAX_SWEEP_PROBES = 20
 const SWEEP_START_DELAY_MS = 20_000
@@ -174,7 +174,7 @@ export async function offerWindowsReinstall(
       params: {
         appName,
         runner,
-        gameInfo: (after?.title ? after : before) as GameInfo,
+        gameInfo: after?.title ? after : before,
         path: dirname(oldInstallPath),
         platformToInstall: windowsPlatform as never,
         installLanguage,

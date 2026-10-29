@@ -24,6 +24,12 @@ const mockRunRunnerCommand = jest.fn()
 const mockLibraryManagerImportGame = jest.fn()
 const mockLibraryManagerGetGameInfo = jest.fn()
 
+jest.mock('backend/macArch/recovery', () => ({
+  recordedMacArch: jest.fn(),
+  scheduleMacArchSweep: jest.fn(),
+  checkInstalledMacArch: jest.fn()
+}))
+
 jest.mock('../../index', () => ({
   libraryManagerMap: {
     gog: {

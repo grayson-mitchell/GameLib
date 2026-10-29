@@ -100,12 +100,16 @@ export function hasNativeBuild(game: GameInfo, hostPlatform: string): boolean {
  * absent bitness is included. Linux ignores `mac_arch`.
  *
  * Where the 32-bit signal comes from (`GameInfo.mac_arch`, absent = unknown):
- * - Steam only: the post-install Mach-O ground-truth check (`lipo -archs`,
- *   falling back to `file`, in steam/library.ts) and a curated known-fix
+ * - Steam: the post-install Mach-O ground-truth check (`lipo -archs`, falling
+ *   back to `file`, in backend/utils/macArch) and a curated known-fix
  *   `macArch: "32"` hint seeded on Apple silicon only. The pre-install min-OS
  *   heuristic only ever yields '64' or 'unknown'.
- * - GOG, Epic, Amazon, Zoom, sideload: no arch signal, so a mac-native game
- *   is always included. Amazon never matches (native flags are hard false).
+ * - GOG and Epic: the same post-install Mach-O check (`backend/utils/macArch`),
+ *   run after a native Mac install and once per game by a bounded load sweep,
+ *   persisted in macArchStore.
+ * - Zoom, Amazon and sideload: no arch signal, so a mac-native game is always
+ *   included. Zoom has no native Mac install path, and Amazon's native flags
+ *   are hard false (it never matches).
  */
 export function isHostNative(game: GameInfo, hostPlatform: string): boolean {
   if (!hasNativeBuild(game, hostPlatform)) return false

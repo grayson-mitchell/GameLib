@@ -62,12 +62,12 @@ function execFileText(cmd: string, args: string[]): Promise<string> {
         args,
         { encoding: 'utf8', timeout: 5000 },
         (err, stdout) => {
-          if (err) reject(err)
+          if (err) reject(err instanceof Error ? err : new Error(String(err)))
           else resolvePromise(String(stdout))
         }
       )
     } catch (e) {
-      reject(e)
+      reject(e instanceof Error ? e : new Error(String(e)))
     }
   })
 }

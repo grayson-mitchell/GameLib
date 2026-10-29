@@ -25,6 +25,12 @@
 const mockGetCredentials = jest.fn()
 const mockIsLoggedIn = jest.fn()
 
+jest.mock('backend/macArch/recovery', () => ({
+  recordedMacArch: jest.fn(),
+  scheduleMacArchSweep: jest.fn(),
+  checkInstalledMacArch: jest.fn()
+}))
+
 jest.mock('../user', () => ({
   GOGUser: {
     getCredentials: mockGetCredentials,
