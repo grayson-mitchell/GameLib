@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 57
 Plan: 0 of 0
 Status: Ready to plan
-Last activity: 2026-10-29 - Completed quick task 261029-o5a: Fix D-UAT-11: reset stale Steam install progress after a Delete Files cancel
+Last activity: 2026-10-29 - Completed quick task 261029-ocq: D-UAT-12: library card shows Resume Install for an incomplete Steam install
 
 Progress: [██████████] 99%
 
@@ -501,6 +501,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261029-ge1 | **Closed the `optional: 1` depot todo with no code change: Witcher EE 20902 / Oblivion GOTY 22333 are legacy `systemdefined` edition content that Steam installs by default; selecting them matches Steam.** Evidence from anonymous `getProductInfo` (14 titles; only Civ V 8930 also carries `optional`) and Valve's Steamworks DLC doc. Steam's real opt-out is `config.optionaldlc` (Dota 2 570: Workshop Tools 313250, OpenGL 401530, Vulkan 476580), which `select.ts` does not filter. Filed as a new todo. | 2026-10-29 | — | Docs only. planning-gates 12/12; every written path is prettier-ignored, so no formatter check. New todo `2026-10-29-depot-selection-installs-config-optionaldlc-opt-in-dlc.md` (`minor`/`any`/`blocked`: is free opt-in DLC owned before opt-in?). | [261029-ge1-close-optional-depot-todo-as-matches-ste](./quick/261029-ge1-close-optional-depot-todo-as-matches-ste/) |
 | 261029-nmt | Main green again before push. Added the three `steam.adoptRestart` strings to 48 catalogs (not native-reviewed). Declared mkz's `getRunsForMeMap`/`setRunsForMe` in the slice pins (70/2). Resolved 8 deadcode findings at source: 7 un-exported, 1 `ts-prune-ignore-next`. Listed and promoted 4 audited-clean fork files (scope 235, fork-touched 287). facetLabels exempted pin 14 to 16. | 2026-10-29 | a36f7329a | full `pnpm test` 661 suites / 0 failed; codecheck, planning-gates, findDeadcode clean | [261029-nmt-fix-the-5-red-jest-suites-on-main-so-it-](./quick/261029-nmt-fix-the-5-red-jest-suites-on-main-so-it-/) |
 | 261029-o5a | D-UAT-11: a successful Delete Files cancel now emits a 0% `progressUpdate` (`cancelDelete.ts`), clearing the stale percent in the frontend `useInstallProgressRaw` store that the next install opened at. Todo closed; UAT finding stays MINOR open. | 2026-10-29 | 14f572a2a | cancelDelete 18/18 + store guard 1/1 (new assertion seen red first); not re-tested live | [261029-o5a-fix-d-uat-11-reset-stale-steam-install-p](./quick/261029-o5a-fix-d-uat-11-reset-stale-steam-install-p/) |
+| 261029-ocq | D-UAT-12: library card now shows Resume Install (tooltip, context menu, status text in grid + list) for an incomplete Steam install, via `isSteamIncompleteCard` on `hasStatus`'s `statusContext`. Todo closed; UAT finding stays MINOR open. | 2026-10-29 | e704b397e | predicate 9/9 jest, tsc clean, eslint 0 errors (4 pre-existing warnings), prettier clean, planning-gates 12/12; not re-tested live | [261029-ocq-d-uat-12-library-card-shows-install-for-](./quick/261029-ocq-d-uat-12-library-card-shows-install-for-/) |
 
 ## Session Continuity
 
