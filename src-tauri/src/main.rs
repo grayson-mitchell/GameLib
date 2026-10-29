@@ -4236,9 +4236,8 @@ fn store_logout_cookie_domain_matches(domain: &str) -> bool {
 /// `app.get_window(label)` (quick-261029-o1w). The pristine shell
 /// (`open_pristine_epic_login_window`, above) is a plain `tauri::Window`, reachable only through
 /// the fallback, and the `unstable` tauri feature that enables it is already on. The fallback
-/// exists for GOG's sheet. Epic stays free-floating (REQ-34.4.2-10) NOT because the resolver
-/// cannot see it but because the resolver is only asked about labels that are presented or about
-/// to be presented, and Epic's label is never registered or presented.
+/// exists for the GOG and Epic sheets (quick-261029-o1w, quick-261029-utr; Epic's
+/// REQ-34.4.2-10 descope is lifted, so its label is now presented like any other).
 ///
 /// Side-effect free: never logs a label's URL or any page content.
 ///
@@ -5050,19 +5049,25 @@ fn install_native_login_bar(
     );
 }
 
-/// GOG's login as a macOS AppKit sheet (quick-261029-o1w). GOG uses the pristine
-/// (injection-free) WKWebView path for Cloudflare Turnstile, which is a plain `tauri::Window`
-/// with no sheet attachment. For visible requests this builds it ordered-out with a native cancel
-/// button, then presents it via `present_login_window_as_sheet` raced against the same watchdog
-/// the other store logins use, falling back to a visible free-standing window if the attach is
-/// unconfirmed. Always resolves the single-flight latch armed by `humble_login_open`.
+/// GOG's and Epic's login as a macOS AppKit sheet. GOG (quick-261029-o1w) and Epic
+/// (quick-261029-utr, lifting the REQ-34.4.2-10 Epic descope at the operator's request) both use
+/// the pristine (injection-free) WKWebView path, which is a plain `tauri::Window` with no sheet
+/// attachment. For visible requests this builds it ordered-out with a native cancel button, then
+/// presents it via `present_login_window_as_sheet` raced against the same watchdog the other
+/// store logins use, falling back to a visible free-standing window if the attach is unconfirmed.
+/// Always resolves the single-flight latch armed by `humble_login_open`. Both stores are sized
+/// 464x592 through `as_sheet = visible`. `store` (`"epic"` / `"gog"`) only labels the log lines
+/// and is derived by the caller from the validated URL host. The `as_sheet == false` branch of
+/// `open_pristine_epic_login_window` (900x700, centred, focused) now has no live caller and is
+/// kept on purpose as the rollback path should the Epic live gate fail.
 #[cfg(target_os = "macos")]
-fn open_gog_login_sheet(
+fn open_pristine_login_sheet(
     app: &AppHandle,
     label: &str,
     url: tauri::Url,
     visible: bool,
     user_agent: &str,
+    store: &str,
 ) -> Result<Value, String> {
     let result =
         match open_pristine_epic_login_window(app, label, url, visible, user_agent, visible) {
@@ -5095,19 +5100,19 @@ fn open_gog_login_sheet(
                 Ok(attached) => attached,
                 Err(_) => {
                     eprintln!(
-                        "[shell] WARN: humble_login_open:gog-sheet: '{label}' sheet-attach watchdog exceeded {LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT:?} -- treating as unconfirmed"
+                        "[shell] WARN: humble_login_open:{store}-sheet: '{label}' sheet-attach watchdog exceeded {LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT:?} -- treating as unconfirmed"
                     );
                     false
                 }
             };
             if !attached {
                 eprintln!(
-                    "[shell] WARN: humble_login_open:gog-sheet: '{label}' sheet attachment unconfirmed -- falling back to a free-standing visible window"
+                    "[shell] WARN: humble_login_open:{store}-sheet: '{label}' sheet attachment unconfirmed -- falling back to a free-standing visible window"
                 );
                 let _ = window.show();
                 let _ = window.set_focus();
             }
-            eprintln!("[shell] humble_login_open:gog-sheet: sheet_presented={attached}");
+            eprintln!("[shell] humble_login_open:{store}-sheet: sheet_presented={attached}");
         }
     }
     clear_pending_visible_login_window(label);
@@ -8163,8 +8168,9 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // arm has (see `EPIC_LOGIN_HOST`'s own doc comment).
             #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
             let is_epic_login = matches!(url.host_str(), Some(EPIC_LOGIN_HOST));
-            // quick-261029-o1w: GOG is also pristine, but is presented as a sheet and takes part
-            // in the single-flight latch below, so it routes AFTER the latch (host-keyed only).
+            // quick-261029-o1w / quick-261029-utr: GOG and Epic are pristine, presented as a sheet
+            // and take part in the single-flight latch below, so both route AFTER the latch
+            // (host-keyed only).
             #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
             let is_gog_login = matches!(url.host_str(), Some(GOG_LOGIN_HOST));
             let visible = args.get(1).and_then(|v| v.as_bool()).unwrap_or(false);
@@ -8174,29 +8180,23 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
             let label = next_login_window_label();
             let event_label = label.clone();
-            // Bounded pristine-webview attempt (checkpoint response, 2026-08-03T18:00:00
-            // superseding cycle; F-34.5-G6-01): route Epic's login window through a
+            // Pristine-webview route (F-34.5-G6-01): Epic's and GOG's login windows use a
             // Tauri-injection-free WKWebView on macOS instead of this arm's own
             // `WebviewWindowBuilder` path below. See `open_pristine_epic_login_window`'s own
-            // doc comment (above) for the full mechanism. Scoped to `is_epic_login` + macOS
-            // only -- every other runner (and Epic itself on non-macOS) falls through to the
-            // existing, completely untouched code
-            // below. `url` is only moved into this branch when it is actually taken (`return`
-            // on the same expression), so the unconditional uses of `url` further down this
-            // arm remain valid on every path that reaches them.
-            #[cfg(target_os = "macos")]
-            if is_epic_login {
-                return open_pristine_epic_login_window(
-                    app, &label, url, visible, user_agent, false,
-                );
-            }
+            // doc comment (above) for the mechanism. Since quick-261029-utr the route is taken
+            // AFTER the single-flight latch below, through `open_pristine_login_sheet`, for both
+            // hosts. Every other runner (and Epic/GOG on non-macOS) falls through to the
+            // existing, completely untouched code below. `url` is only moved into the pristine
+            // branch when it is actually taken (`return` on the same expression), so the
+            // unconditional uses of `url` further down this arm remain valid.
             // T-34.4.2-39 single-flight guard (Phase 34.4.2 Plan 14): refuse a second VISIBLE
             // login window while one is already pending (armed here, not yet resolved) or
             // presented (`PRESENTED_LOGIN_SHEETS` non-empty), so AppKit is never asked to queue
             // a second `beginSheet:` behind the first -- the concrete failure mode this closes
             // is typing one store's password into another store's just-arrived sheet. Sits
-            // AFTER Epic's early return above (structural exemption, D-D) and BEFORE the
-            // builder below (a refused request never gets a window built). Scoped to `visible`
+            // AFTER the pristine-route variables above and BEFORE the pristine route and the
+            // builder below (quick-261029-utr: Epic's old pre-latch exemption, D-D, is lifted),
+            // so a refused request never gets a window built. Scoped to `visible`
             // only -- hidden reveal/clear windows (e.g. the Humble health-check/disconnect
             // routes in `src/backend/humble/user.ts`, both `visible: false`) never arm or are
             // refused by this latch.
@@ -8261,11 +8261,13 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     "[shell] humble_login_open: visible login window '{label}' armed as the single pending login flow (T-34.4.2-39)"
                 );
             }
-            // quick-261029-o1w: GOG's pristine window, presented as a sheet. Placed AFTER the
-            // latch so a refused second login never builds a window and GOG arms the latch.
+            // quick-261029-o1w (GOG) and quick-261029-utr (Epic): the pristine window, presented
+            // as a sheet. Placed AFTER the latch so a refused second login never builds a window
+            // and both stores arm the latch. `store` comes only from the validated URL host.
             #[cfg(target_os = "macos")]
-            if is_gog_login {
-                return open_gog_login_sheet(app, &label, url, visible, user_agent);
+            if is_epic_login || is_gog_login {
+                let store = if is_epic_login { "epic" } else { "gog" };
+                return open_pristine_login_sheet(app, &label, url, visible, user_agent, store);
             }
             // Shared last-known main-frame origin (Phase 34.5 Plan 27): seeded from the
             // validated open URL so it is never empty, updated only from `on_page_load`
@@ -8560,9 +8562,9 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // Decision" section): the child-window mechanism went live-CONFIRMED broken
             // (F-34.4.2-01/-02). Presents a VISIBLE login window as a sheet on `main`
             // immediately once it exists. Hidden reveal/clear windows this arm also builds
-            // are never presented. The pristine Epic login window
-            // (`open_pristine_epic_login_window`) is deliberately NOT wired here or anywhere
-            // else -- REQ-34.4.2-10, locked user decision, Epic ships last. On Windows/Linux
+            // are never presented. The pristine Epic and GOG login windows are presented by
+            // `open_pristine_login_sheet`, which returns before this point (quick-261029-utr
+            // lifted the REQ-34.4.2-10 Epic descope). On Windows/Linux
             // the login window keeps exactly today's free-floating behavior -- declared
             // UNVERIFIED here, matching the skill's Constraints section.
             // quick-261029-osq: install the native bar (and inset the webview below it) BEFORE the
@@ -13337,11 +13339,10 @@ fn main() {
             // from it. This monitor sees every keystroke the app receives, including the
             // password being typed into the login sheet.
             //
-            // Epic non-interference is STRUCTURAL, not conditional: the pristine Epic login
-            // window is never registered in `PRESENTED_LOGIN_SHEETS` (Plan 07 registers only
-            // `present_login_window_as_sheet` callers, and Epic is never one -- REQ-34.4.2-10),
-            // so the window-membership check below can never match it. No explicit Epic label
-            // check is added -- a structural guarantee is stronger than a name-based one.
+            // Epic is no longer exempt (quick-261029-utr lifted the REQ-34.4.2-10 descope): its
+            // pristine sheet is registered in `PRESENTED_LOGIN_SHEETS` through
+            // `present_login_window_as_sheet` like every other store, so the window-membership
+            // check below matches it and Esc cancels it. No explicit label check is added.
             //
             // Leaked for the process lifetime via `std::mem::forget`, matching the retired
             // deminiaturize observer's own precedent (and the pristine arm's own monitor-leak

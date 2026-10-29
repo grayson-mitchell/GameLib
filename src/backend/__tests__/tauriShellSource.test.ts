@@ -1919,8 +1919,8 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
   }
 
   // quick-261029-o1w: DELIBERATELY UPDATED 1 -> 2 call sites. The second is GOG's sheet
-  // (`open_gog_login_sheet`); the arm's own count stays 1.
-  test('Test 1 (INVERTED 2026-08-04, updated quick-261029-o1w): present_login_window_as_sheet( is CALLED exactly twice in the file -- once inside the humble_login_open arm, once inside open_gog_login_sheet -- catches a future caller landing in (or being dropped from) the wrong place', () => {
+  // (now `open_pristine_login_sheet`, renamed and shared with Epic by quick-261029-utr); the arm's own count stays 1.
+  test('Test 1 (INVERTED 2026-08-04, updated quick-261029-o1w, updated quick-261029-utr): present_login_window_as_sheet( is CALLED exactly twice in the file -- once inside the humble_login_open arm, once inside open_pristine_login_sheet -- catches a future caller landing in (or being dropped from) the wrong place', () => {
     const code = loadMainRsCode()
     // Negative lookbehind excludes the `fn present_login_window_as_sheet(` definition
     // itself, which also ends in a trailing `(` -- this counts CALL sites only.
@@ -1933,7 +1933,7 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
       armBody.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
     expect(armCallSites.length).toBe(1)
 
-    const gogStart = code.indexOf('fn open_gog_login_sheet(')
+    const gogStart = code.indexOf('fn open_pristine_login_sheet(')
     expect(gogStart).toBeGreaterThan(-1)
     const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
     expect(gogEnd).toBeGreaterThan(gogStart)
@@ -1943,14 +1943,14 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
   })
 
   // quick-261029-o1w: DELIBERATELY UPDATED 2 -> 3. The third call is GOG's Destroyed hook in
-  // `open_gog_login_sheet`.
-  test("Test 2 (INVERTED 2026-08-04, updated 2026-08-04 by Plan 08, updated quick-261029-o1w): dismiss_login_window_sheet( is CALLED exactly THREE times in the file (third inside open_gog_login_sheet) -- the original two: once directly inside the humble_login_open arm's WindowEvent::Destroyed branch (this test's original assertion), and once inside Plan 08's request_login_sheet_cancel, the shared dismissal entry point both close-affordance routes call -- catches either call site being dropped -- once directly inside the humble_login_open arm's WindowEvent::Destroyed branch (this test's original assertion), and once inside Plan 08's request_login_sheet_cancel, the shared dismissal entry point both close-affordance routes call -- catches either call site being dropped", () => {
+  // `open_pristine_login_sheet` (renamed from `open_gog_login_sheet`, quick-261029-utr).
+  test("Test 2 (INVERTED 2026-08-04, updated 2026-08-04 by Plan 08, updated quick-261029-o1w, updated quick-261029-utr): dismiss_login_window_sheet( is CALLED exactly THREE times in the file (third inside open_pristine_login_sheet) -- the original two: once directly inside the humble_login_open arm's WindowEvent::Destroyed branch (this test's original assertion), and once inside Plan 08's request_login_sheet_cancel, the shared dismissal entry point both close-affordance routes call -- catches either call site being dropped -- once directly inside the humble_login_open arm's WindowEvent::Destroyed branch (this test's original assertion), and once inside Plan 08's request_login_sheet_cancel, the shared dismissal entry point both close-affordance routes call -- catches either call site being dropped", () => {
     const code = loadMainRsCode()
     const fileCallSites =
       code.match(/(?<!fn )dismiss_login_window_sheet\(/g) ?? []
     expect(fileCallSites.length).toBe(3)
 
-    const gogStart = code.indexOf('fn open_gog_login_sheet(')
+    const gogStart = code.indexOf('fn open_pristine_login_sheet(')
     expect(gogStart).toBeGreaterThan(-1)
     const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
     expect(gogEnd).toBeGreaterThan(gogStart)
@@ -2399,22 +2399,23 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
     return code.slice(markerIdx, i + 1)
   }
 
-  // ORDERING. Both bounds matter: the first is Epic's structural exemption (D-D) -- the guard
-  // must never run before Epic's own early return has had its chance to fire; the second is
-  // "no window is built for a refused request" -- the guard must run before the shared
-  // `WebviewWindowBuilder` this arm's every other runner (and Epic on non-macOS) goes on to
-  // construct.
-  test('Test 1 (ORDERING): PENDING_VISIBLE_LOGIN_WINDOW is referenced after open_pristine_epic_login_window( and before tauri::WebviewWindowBuilder::new( inside the humble_login_open arm', () => {
+  // ORDERING (updated quick-261029-utr). Epic's structural exemption (D-D) is lifted: the arm
+  // no longer calls the pristine Epic window directly. It is reached only through
+  // `open_pristine_login_sheet`, which must come AFTER the latch (a refused request never builds a
+  // window) and BEFORE the shared `WebviewWindowBuilder` every other runner goes on to construct.
+  // See .planning/todos/pending/2026-10-29-epic-login-window-as-macos-sheet-like-gog.md.
+  test('Test 1 (ORDERING, updated quick-261029-utr): the arm no longer calls open_pristine_epic_login_window( directly; PENDING_VISIBLE_LOGIN_WINDOW is referenced before open_pristine_login_sheet( which precedes tauri::WebviewWindowBuilder::new(', () => {
     const code = loadMainRsCode()
     const armBody = extractHumbleLoginOpenArmBody(code)
-    const epicReturnIdx = armBody.indexOf('open_pristine_epic_login_window(')
+    expect(armBody).not.toContain('open_pristine_epic_login_window(')
     const guardIdx = armBody.indexOf('PENDING_VISIBLE_LOGIN_WINDOW')
+    const sheetIdx = armBody.indexOf('open_pristine_login_sheet(')
     const builderIdx = armBody.indexOf('tauri::WebviewWindowBuilder::new(')
-    expect(epicReturnIdx).toBeGreaterThan(-1)
     expect(guardIdx).toBeGreaterThan(-1)
+    expect(sheetIdx).toBeGreaterThan(-1)
     expect(builderIdx).toBeGreaterThan(-1)
-    expect(guardIdx).toBeGreaterThan(epicReturnIdx)
-    expect(guardIdx).toBeLessThan(builderIdx)
+    expect(guardIdx).toBeLessThan(sheetIdx)
+    expect(sheetIdx).toBeLessThan(builderIdx)
   })
 
   // VISIBLE-ONLY SCOPING. Brace-matched the way Plan 03's own `if visible` guard test does
@@ -2435,16 +2436,16 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
   // definition itself -- counts CALL sites only, mirroring Plan 08 Test 1's identical idiom.
   // Six call sites (quick-261029-o1w: 3 -> 6, DELIBERATELY UPDATED). The humble_login_open arm
   // has three: sheet presentation confirmed, the visible-fallback
-  // (`window.show()`/`window.set_focus()`), and `WindowEvent::Destroyed`. `open_gog_login_sheet`
-  // has three more: the pristine-build Err path, its own Destroyed hook, and the single
+  // (`window.show()`/`window.set_focus()`), and `WindowEvent::Destroyed`. `open_pristine_login_sheet`
+  // (renamed from `open_gog_login_sheet`, quick-261029-utr; shared by Epic and GOG) has three more: the pristine-build Err path, its own Destroyed hook, and the single
   // resolution call after presentation/fallback.
-  test('Test 3 (CLEAR-ON-EVERY-PATH): clear_pending_visible_login_window( is CALLED exactly six times in comment-stripped production source, three of them inside open_gog_login_sheet', () => {
+  test('Test 3 (CLEAR-ON-EVERY-PATH): clear_pending_visible_login_window( is CALLED exactly six times in comment-stripped production source, three of them inside open_pristine_login_sheet (updated quick-261029-utr)', () => {
     const code = loadMainRsCode()
     const callSites =
       code.match(/(?<!fn )clear_pending_visible_login_window\(/g) ?? []
     expect(callSites.length).toBe(6)
 
-    const gogStart = code.indexOf('fn open_gog_login_sheet(')
+    const gogStart = code.indexOf('fn open_pristine_login_sheet(')
     expect(gogStart).toBeGreaterThan(-1)
     const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
     expect(gogEnd).toBeGreaterThan(gogStart)
@@ -2455,17 +2456,17 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
     expect(gogCallSites.length).toBe(3)
   })
 
-  // quick-261029-o1w: GOG routes AFTER the latch (so a refused second login never builds a
-  // window and GOG arms the latch); Epic's early return stays BEFORE it (structural exemption).
-  test('Test 3b (quick-261029-o1w ORDERING): in the humble_login_open arm, `if is_epic_login {` precedes `if visible == true {`, which precedes `if is_gog_login {`', () => {
+  // quick-261029-utr: Epic and GOG both route AFTER the latch (so a refused second login never
+  // builds a window and both arm the latch); Epic's pre-latch early return (D-D) is gone.
+  test('Test 3b (quick-261029-o1w ORDERING, updated quick-261029-utr): Epic and GOG both route after the latch -- no `if is_epic_login {` exemption survives, and `if visible == true {` precedes `if is_epic_login || is_gog_login {`', () => {
     const code = loadMainRsCode()
     const armBody = extractHumbleLoginOpenArmBody(code)
-    const epicIdx = armBody.indexOf('if is_epic_login {')
+    // Line-anchored: the routing branch's own `let store = if is_epic_login { "epic" }` is fine.
+    expect(armBody).not.toMatch(/^\s*if is_epic_login \{\s*$/m)
     const latchIdx = armBody.indexOf('if visible == true {')
-    const gogIdx = armBody.indexOf('if is_gog_login {')
-    expect(epicIdx).toBeGreaterThan(-1)
-    expect(latchIdx).toBeGreaterThan(epicIdx)
-    expect(gogIdx).toBeGreaterThan(latchIdx)
+    const routeIdx = armBody.indexOf('if is_epic_login || is_gog_login {')
+    expect(latchIdx).toBeGreaterThan(-1)
+    expect(routeIdx).toBeGreaterThan(latchIdx)
   })
 
   // BOUNDED, NOT UNBOUNDED (T-34.4.2-41). A latch with no expiry would convert this plan's own
