@@ -319,6 +319,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-10-26] [steam] "Cancelling a native Steam download and removing it from Downloads still leaves the game on \"Resume install\"" — [todo file](.planning/todos/pending/2026-10-26-cancelled-steam-download-leaves-resume-install.md)
 - [2026-10-26] [steam] "Install poller logs \"no manifest detected; user may have cancelled\" after a successful native install into GameLibSteam" — [todo file](.planning/todos/pending/2026-10-26-install-poller-false-cancel-warning-after-native-install.md)
 - [2026-10-26] [steam-bridge] "Bridge scan auto-clear drops scan.originalFingerprints, so the next launch does one extra rescan and shim re-place" — [todo file](.planning/todos/pending/2026-10-26-bridge-auto-clear-drops-original-fingerprints.md)
+- [2026-10-29] [login-window] "Epic login window presents as a macOS sheet on main, like GOG and the other logins (lift the REQ-34.4.2-10 Epic descope)" — [todo file](.planning/todos/pending/2026-10-29-epic-login-window-as-macos-sheet-like-gog.md)
 
 ### Blockers/Concerns
 
