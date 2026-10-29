@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
 Plan: 8 of 34
 Status: Ready to execute
-Last activity: 2026-10-29 - Completed quick task 261029-iwy: fire steam://install to sync running Mac Steam after native install (live check outstanding)
+Last activity: 2026-10-29 - Completed quick task 261029-ji2: restart Mac Steam on Play to adopt GameLib native installs (live check outstanding)
 
 Progress: [██████████] 99%
 
@@ -457,6 +457,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261029-avh | Install route notice consults DRM routing: `resolveBridgeRoute` row 7 calls the launch path's `resolveBridgeMode(scan.drmWrapper)` and skips the scan-miss notice for steamclient-layer (SteamStub) titles such as Grim Dawn; routing and the persisted scan verdict unchanged. Deferred: row 5 `win64-no-shim` notice for DRM titles; never-scanned DRM titles carry no `drmWrapper`. Closes the route-notice todo. | 2026-10-29 | `939ed1618` | Unit-tested, not live-gated. bridgeRoute 58/58, games.test scan-miss 7/7; one unrelated failure pre-existing from `985c2a950` (known-fixes applier 4th arg). | [261029-avh-route-notice-consults-drm-routing-before](./quick/261029-avh-route-notice-consults-drm-routing-before/) |
 | fast | Known-fixes applier launch test (quick 261024-tny case) expects the `exePath` 4th arg added by `985c2a950` (quick 261028-k7l). | 2026-10-29 | `2a4e3e390` | games.test.ts 446/446. | — |
 | 261029-iwy | After a native Mac Steam depot install with Steam running, GameLib fires `open -g steam://install/<appId>` (spikes 047–049) and waits for Steam to rewrite the ACF (differs from post-write baseline + bit 4 + buildid≠0; 120 s idle / 30 min cap, falls back to today's restart hint). New `'steam-syncing'` status mirrors `'drm-setup'`: "Syncing Steam" (with % during a 1026 repair) on tile, game page, Downloads hero, console; Play disabled until synced. Steam-not-running, Windows/Linux, bottle and bridge routes unchanged. | 2026-10-29 | 669b2d093 | Needs Review: live WazHack check outstanding | [261029-iwy-fire-steam-install-after-native-steam-in](./quick/261029-iwy-fire-steam-install-after-native-steam-in/) |
+| 261029-ji2 | **Supersedes 261029-iwy's steam://install sync, which needs a click in Steam's install dialog (Installs.ContinueInstall/CancelInstall evidence; spikes 047–049 corrected in 17207760f).** A GameLib native Mac depot install finished while Mac Steam is running persists a per-appId pending-adoption record (steam_osx PID + GameLib-written ACF). Play: no record, or Steam not running / different PID / Steam-rewritten ACF → normal rungameid launch. Same PID and not adopted → "Starting Steam": `steam://exit`, wait up to 30 s, relaunch with the game (startup adoption, no dialog). Refuses (notify, keeps the record) if a Steam game is running, a go-offline wrap is owed, or the quit times out. No restart hint on the StateFlags 4 path; fail-closed 1026 keeps it. Steam-performed, bottle and bridge installs never record. | 2026-10-29 | ef1cb3b20 | Needs Review: live WazHack check outstanding | [261029-ji2-replace-steam-install-sync-with-restart-](./quick/261029-ji2-replace-steam-install-sync-with-restart-/) |
 
 ## Deferred Items
 
