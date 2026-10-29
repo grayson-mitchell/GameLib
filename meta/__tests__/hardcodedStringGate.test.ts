@@ -1816,7 +1816,8 @@ describe('hardcodedStringGate', () => {
         )
 
         expect(facetResult.violations).toHaveLength(0)
-        expect(facetResult.exempted).toBe(14)
+        // quick 261029-nmt: 14 -> 16. a30cda4a0 (quick 261029-mkz) added the runsForMe RUNNABILITY_LABELS tuple -- +1 key literal +1 defaultText literal, both exempted, 0 violations; re-measured, not assumed.
+        expect(facetResult.exempted).toBe(16)
 
         expect(chipResult.violations).toHaveLength(0)
         expect(chipResult.exempted).toBe(36)

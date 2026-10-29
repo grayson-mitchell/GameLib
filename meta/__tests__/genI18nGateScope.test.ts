@@ -347,6 +347,14 @@ const FIXTURE_DIFF_LINES = [
  * untranslated user text. They leave this array when the todo
  * `2026-10-29-widen-hardcoded-string-gate-for-key-table-shapes` widens the
  * gate and promotes them into scope.
+ *
+ * 2026-10-29 (quick 261029-nmt): fork-touched 283 -> 287, scope 231 -> 235.
+ * 4 fork files added by recent local quicks: tabLocationMemory.ts and
+ * librarySessionSearch.ts (261029-n4v), RunsForMeToggle.tsx and
+ * RunsForMeBadge.tsx (261029-mkz). All 4 audited ZERO violations with
+ * `scanScope({ extraFiles })` and were hand-inserted into
+ * `meta/i18nGateScope.json` in sorted position. DECLARED_UNSCANNED_DEBT needs
+ * no edit.
  */
 const DECLARED_UNSCANNED_DEBT = [
   // TEMPORARY (56-30 A-17): removed by todo 2026-10-29-widen-hardcoded-string-gate-for-key-table-shapes
@@ -1114,9 +1122,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 231-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 283-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(231)
-    expect(forkTouchedSnapshot.files.length).toBe(283)
+  it('A0 fixture sanity: the seeded scope is the REAL 235-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 287-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(235)
+    expect(forkTouchedSnapshot.files.length).toBe(287)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1157,7 +1165,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 231 -> 283 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 235 -> 287 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1180,7 +1188,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 283', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 287', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1193,12 +1201,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(283)
+    expect(rewritten.files.length).toBe(287)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 283 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 287 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1211,7 +1219,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(283)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(287)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
