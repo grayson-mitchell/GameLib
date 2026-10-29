@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 57
 Plan: 0 of 0
 Status: Ready to plan
-Last activity: 2026-10-29 - Completed quick task 261029-m68: failed DRM-mode launch always ends card status
+Last activity: 2026-10-29 - Completed quick task 261029-mbl: launchArgs and exeOverride tier-1 known-fix keys
 
 Progress: [██████████] 99%
 
@@ -492,6 +492,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261029-nag | Uninstall no longer adds the game to `nonAvailableGames` (`handleNonAvailableGames` checks `getGameInfo` first); the Library silent-exclusion guard waits for the reconcile pass, ending the one-off false alarm. | 2026-10-29 | 674fef9db | Tests green; not seen live | [261029-nag-nonavailable-uninstall-and-guard](./quick/261029-nag-nonavailable-uninstall-and-guard/) |
 | fast | `dialogDisplayed` (send-kind, added by `509bcb01b`) bucketed in `IPC-PORT-INVENTORY.md`; Unique channels 229 → 230, Ported 74 → 75. `pnpm planning-gates` 12/12. | 2026-10-29 | `28c85c608` | Done | — |
 | fast | Library tile shows Stop for a playing Steam game (context menu too), and the recently-played first tile swaps PLAY for a STOP label; D-08 card hide dropped to match MainButton. Not live-tested. | 2026-10-29 | `78f657b58` | Done | — |
+| 261029-mbl | `launchArgs` and `exeOverride` added as tier-1 known-fix keys (operator decision). Wired into GOG, Amazon, Epic, Zoom and non-DRM Steam bridge launches; exeOverride is checked to be relative, inside the install folder (realpath) and an existing file. Not live-tested; Steam DRM-mode and steam:// launches apply neither key. | 2026-10-29 | `108c408e9` `2c93c4901` `e19f24c8c` `8f7f138ae` | Done | [261029-mbl-add-launchargs-and-exeoverride-tier-1-kn](./quick/261029-mbl-add-launchargs-and-exeoverride-tier-1-kn/) |
 
 ## Session Continuity
 
