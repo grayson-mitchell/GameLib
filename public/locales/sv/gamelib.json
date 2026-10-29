@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "Bläddring i butik och wiki i appen är inte tillgänglig på den här plattformen ännu"
+            },
+            "origin": {
+                "heading": "GameLib kan inte öppna den här länken i appen",
+                "body": "Den här länken leder till en plats som GameLibs butiks- och wikiwebbläsare i appen inte öppnar."
             }
         },
         "embedPlaceholder": {

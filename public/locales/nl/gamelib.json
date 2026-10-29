@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "In-app store en wiki bladeren is nog niet beschikbaar op dit platform"
+            },
+            "origin": {
+                "heading": "GameLib kan deze link niet in de app openen",
+                "body": "Deze link leidt naar een plek die de in-app store- en wikibrowser van GameLib niet opent."
             }
         },
         "embedPlaceholder": {

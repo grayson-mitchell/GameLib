@@ -618,6 +618,10 @@
             },
             "platform": {
                 "heading": "Parduotuvės ir wiki naršymas programoje šioje platformoje dar nepasiekiamas"
+            },
+            "origin": {
+                "heading": "GameLib negali atidaryti šios nuorodos programoje",
+                "body": "Ši nuoroda veda ten, kur GameLib programoje esanti parduotuvės ir wiki naršyklė neatidaro."
             }
         },
         "embedPlaceholder": {

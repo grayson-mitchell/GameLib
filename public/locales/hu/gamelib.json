@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "Az alkalmazáson belüli áruház- és wikiböngészés még nem érhető el ezen a platformon"
+            },
+            "origin": {
+                "heading": "A GameLib nem tudja megnyitni ezt a hivatkozást az alkalmazásban",
+                "body": "Ez a hivatkozás olyan helyre vezet, amelyet a GameLib alkalmazáson belüli áruház- és wikiböngészője nem nyit meg."
             }
         },
         "embedPlaceholder": {

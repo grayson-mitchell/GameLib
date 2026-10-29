@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "App barruko denda eta wiki nabigazioa ez dago erabilgarri plataforma honetan oraindik"
+            },
+            "origin": {
+                "heading": "GameLib-ek ezin du esteka hau aplikazioan ireki",
+                "body": "Esteka honek GameLib-en app barruko denda eta wiki arakatzaileak irekitzen ez duen lekura darama."
             }
         },
         "embedPlaceholder": {

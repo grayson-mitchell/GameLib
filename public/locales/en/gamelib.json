@@ -706,6 +706,10 @@
             },
             "next-step": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
             "open-in-browser": "Open in browser",
+            "origin": {
+                "body": "This link leads somewhere GameLib's in-app store and wiki browser doesn't open.",
+                "heading": "GameLib can't open this link in-app"
+            },
             "platform": {
                 "body": "GameLib can't open this page in its in-app store and wiki browser.",
                 "heading": "In-app store and wiki browsing isn't available on this platform yet"

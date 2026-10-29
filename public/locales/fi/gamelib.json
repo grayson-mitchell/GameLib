@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "Sovelluksen sisäinen kaupan ja wikin selaus ei ole vielä käytettävissä tällä alustalla"
+            },
+            "origin": {
+                "heading": "GameLib ei voi avata tätä linkkiä sovelluksessa",
+                "body": "Tämä linkki johtaa paikkaan, jota GameLibin sovelluksen sisäinen kaupan ja wikin selain ei avaa."
             }
         },
         "embedPlaceholder": {

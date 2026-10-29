@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "Tətbiq daxilində mağaza və wiki baxışı bu platformada hələ mövcud deyil"
+            },
+            "origin": {
+                "heading": "GameLib bu keçidi tətbiq daxilində aça bilmir",
+                "body": "Bu keçid GameLib-in tətbiqdaxili mağaza və wiki brauzerinin açmadığı yerə aparır."
             }
         },
         "embedPlaceholder": {

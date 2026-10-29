@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "이 플랫폼에서는 아직 앱 내 스토어 및 위키 탐색을 사용할 수 없습니다"
+            },
+            "origin": {
+                "heading": "GameLib에서 이 링크를 앱 안에서 열 수 없습니다",
+                "body": "이 링크는 GameLib의 앱 내 스토어 및 위키 브라우저가 열지 않는 곳으로 연결됩니다."
             }
         },
         "embedPlaceholder": {

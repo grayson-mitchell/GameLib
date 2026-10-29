@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "Duyệt cửa hàng và wiki trong ứng dụng chưa khả dụng trên nền tảng này"
+            },
+            "origin": {
+                "heading": "GameLib không thể mở liên kết này trong ứng dụng",
+                "body": "Liên kết này dẫn đến nơi mà trình duyệt cửa hàng và wiki trong ứng dụng của GameLib không mở được."
             }
         },
         "embedPlaceholder": {

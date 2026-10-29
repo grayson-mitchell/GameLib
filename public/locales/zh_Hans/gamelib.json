@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "此平台尚不支持应用内商店和 wiki 浏览功能"
+            },
+            "origin": {
+                "heading": "GameLib 无法在应用内打开此链接",
+                "body": "此链接指向的位置不是 GameLib 应用内商店和 wiki 浏览器能打开的。"
             }
         },
         "embedPlaceholder": {

@@ -611,6 +611,10 @@
             },
             "platform": {
                 "heading": "Pregledavanje trgovine i wikija unutar aplikacije još nije dostupno na ovoj platformi"
+            },
+            "origin": {
+                "heading": "GameLib ne može otvoriti ovu poveznicu unutar aplikacije",
+                "body": "Ova poveznica vodi na mjesto koje GameLibov preglednik trgovine i wikija unutar aplikacije ne otvara."
             }
         },
         "embedPlaceholder": {

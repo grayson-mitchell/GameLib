@@ -554,8 +554,11 @@ export default function WebView() {
   // surface (its "Open in browser" button is the same `window.api.openExternalUrl` call the
   // effect above already fired automatically) -- this keeps the user off a blank screen even if
   // the automatic open above was blocked, without introducing a second escape-hatch component.
+  // It passes the origin reason so a supported OS is never told its platform is the cause.
   if (deepLinkShouldOpenExternally) {
-    return <WebviewUnavailablePanel url={deepLinkUrl ?? undefined} />
+    return (
+      <WebviewUnavailablePanel url={deepLinkUrl ?? undefined} reason="origin" />
+    )
   }
 
   // D-01/D-02: the live embed runs on macOS, Linux and Windows (Linux per the positioning todo's

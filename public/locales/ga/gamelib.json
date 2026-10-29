@@ -625,6 +625,10 @@
             },
             "platform": {
                 "heading": "Níl brabhsáil siopa agus vicí san aip ar fáil ar an ardán seo fós"
+            },
+            "origin": {
+                "heading": "Ní féidir le GameLib an nasc seo a oscailt san aip",
+                "body": "Téann an nasc seo áit nach n-osclaíonn brabhsálaí siopa agus vicí GameLib san aip."
             }
         },
         "embedPlaceholder": {

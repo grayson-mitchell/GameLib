@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "Ilova ichida do'kon va vikini ko'rish bu platformada hali mavjud emas"
+            },
+            "origin": {
+                "heading": "GameLib bu havolani ilova ichida ocha olmaydi",
+                "body": "Bu havola GameLib'ning ilova ichidagi do'kon va viki brauzeri ochmaydigan joyga olib boradi."
             }
         },
         "embedPlaceholder": {

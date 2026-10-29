@@ -611,6 +611,10 @@
             },
             "platform": {
                 "heading": "La navegación por tienda y wiki dentro de la aplicación aún no está disponible en esta plataforma"
+            },
+            "origin": {
+                "heading": "GameLib no puede abrir este enlace dentro de la aplicación",
+                "body": "Este enlace lleva a un sitio que el navegador de tienda y wiki de GameLib dentro de la aplicación no abre."
             }
         },
         "embedPlaceholder": {

@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "アプリ内ストア・Wiki 閲覧はこのプラットフォームではまだ利用できません"
+            },
+            "origin": {
+                "heading": "GameLib はこのリンクをアプリ内で開けません",
+                "body": "このリンクの移動先は、GameLib のアプリ内ストア・Wiki ブラウザーでは開けません。"
             }
         },
         "embedPlaceholder": {

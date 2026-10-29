@@ -625,6 +625,10 @@
             },
             "platform": {
                 "heading": "N'eo ket hegerz c'hoazh furchal ar stal hag ar wiki en-diabarzh war ar rummstal-mañ"
+            },
+            "origin": {
+                "heading": "Ne c'hall ket GameLib digeriñ al liamm-mañ en arload",
+                "body": "Al liamm-mañ a gas d'ul lec'h ma ne zigor ket merdeer stal ha wiki GameLib en-diabarzh."
             }
         },
         "embedPlaceholder": {

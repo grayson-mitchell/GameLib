@@ -3,17 +3,21 @@ import { useTranslation } from 'react-i18next'
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
 // flagged the previously-exported form as a used-in-module finding -- there
 // is no external consumer, so the export served no purpose).
-type WebviewUnavailableReason = 'platform' | 'epic' | 'epic-challenged'
+type WebviewUnavailableReason =
+  | 'platform'
+  | 'epic'
+  | 'epic-challenged'
+  | 'origin'
 
 interface Props {
   url?: string
   /**
-   * Phase 40 Plan 10 (D-02/D-08, REQ-40-12): which of the three honest,
-   * distinct reasons this panel is showing for. Defaults to `'platform'` --
-   * the pre-existing D-34 deep-link-to-an-unconfigured-origin call site in
-   * `WebView/index.tsx` does not know or care which applies, and
-   * `'platform'` is the most general of the three (it was this panel's ONLY
-   * reason before Phase 40 Plan 10 minted `'epic'`).
+   * Phase 40 Plan 10 (D-02/D-08, REQ-40-12): which of the honest, distinct
+   * reasons this panel is showing for. Defaults to `'platform'` (it was this
+   * panel's ONLY reason before Phase 40 Plan 10 minted `'epic'`). The D-34
+   * deep-link escape hatch in `WebView/index.tsx` now passes `'origin'`
+   * explicitly (quick 261030-ah1), so the default is only reached by callers
+   * that omit the prop.
    */
   reason?: WebviewUnavailableReason
   /**
@@ -30,7 +34,7 @@ interface Props {
 /**
  * D-10/D-11 (Phase 50 Plan 03, UI-SPEC Copywriting Contract): extends the
  * pre-existing two-branch `reason === 'epic' ? ... : ...` ternaries to
- * three. Deliberately NOT a `Record<WebviewUnavailableReason, ...>` lookup
+ * four (quick 261030-ah1 added `'origin'`). Deliberately NOT a `Record<WebviewUnavailableReason, ...>` lookup
  * keyed by `reason` -- `i18next-parser` (see `i18next-parser.config.js`'s
  * `lexers.functions: ['t', 'tGamelib']`) statically greps for a LITERAL
  * string as `tGamelib`'s first argument; a call site like
@@ -55,11 +59,13 @@ interface Props {
  *   measured it on a harness, the shipped-app live run is still owed as
  *   Phase 38 ledger items, D-04). `src/preload/tauriAttach.ts` yields only
  *   those three platform values, so the branch in `WebView/index.tsx`'s
- *   platform gate is a defensive fallback (an unknown platform value). This
- *   reason is still reached on EVERY OS by the D-34 deep-link escape hatch,
- *   which renders this panel with no `reason` (so the default applies) for
- *   a deep link to an unconfigured origin. That is why the body copy names
- *   no OS.
+ *   platform gate is a defensive fallback (an unknown platform value). The D-34
+ *   deep-link escape hatch no longer reaches this reason (it passes
+ *   `'origin'`), so this copy is only the unknown-platform fallback.
+ * - `reason="origin"` (quick 261030-ah1, operator decision 2026-10-30): the
+ *   D-34 deep-link escape hatch, on EVERY OS, for a deep link to an
+ *   unconfigured origin or a known-but-not-embeddable store. OS-neutral copy,
+ *   so a supported OS is never told its platform is the cause.
  * - `reason="epic"` (D-05/D-08): as of Phase 50 (the D-05 call,
  *   `.planning/todos/completed/2026-10-12-make-the-d-05-call-*`), `/store/epic`
  *   embeds on macOS through the Rust-managed raw WKWebView subview Phase 50
@@ -124,10 +130,15 @@ const WebviewUnavailablePanel = ({
             'webview.unavailable.epic.heading',
             "Epic Store browsing isn't available in-app yet"
           )
-        : tGamelib(
-            'webview.unavailable.platform.heading',
-            "In-app store and wiki browsing isn't available on this platform yet"
-          )
+        : reason === 'origin'
+          ? tGamelib(
+              'webview.unavailable.origin.heading',
+              "GameLib can't open this link in-app"
+            )
+          : tGamelib(
+              'webview.unavailable.platform.heading',
+              "In-app store and wiki browsing isn't available on this platform yet"
+            )
 
   const body =
     reason === 'epic-challenged'
@@ -140,10 +151,15 @@ const WebviewUnavailablePanel = ({
             'webview.unavailable.epic.body',
             "GameLib doesn't yet embed Epic Store pages in-app."
           )
-        : tGamelib(
-            'webview.unavailable.platform.body',
-            "GameLib can't open this page in its in-app store and wiki browser."
-          )
+        : reason === 'origin'
+          ? tGamelib(
+              'webview.unavailable.origin.body',
+              "This link leads somewhere GameLib's in-app store and wiki browser doesn't open."
+            )
+          : tGamelib(
+              'webview.unavailable.platform.body',
+              "GameLib can't open this page in its in-app store and wiki browser."
+            )
 
   const nextStep = tGamelib(
     'webview.unavailable.next-step',

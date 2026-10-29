@@ -611,6 +611,10 @@
             },
             "platform": {
                 "heading": "La navegació per la botiga i el wiki dins l'aplicació encara no està disponible en aquesta plataforma"
+            },
+            "origin": {
+                "heading": "GameLib no pot obrir aquest enllaç dins l'aplicació",
+                "body": "Aquest enllaç porta a un lloc que el navegador de botiga i wiki de GameLib dins l'aplicació no obre."
             }
         },
         "embedPlaceholder": {

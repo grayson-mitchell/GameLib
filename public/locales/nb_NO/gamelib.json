@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "Innebygd nettlesing av butikk og wiki er ikke tilgjengelig på denne plattformen ennå"
+            },
+            "origin": {
+                "heading": "GameLib kan ikke åpne denne lenken i appen",
+                "body": "Denne lenken fører til et sted som GameLibs innebygde butikk- og wiki-nettleser ikke åpner."
             }
         },
         "embedPlaceholder": {

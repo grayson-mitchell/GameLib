@@ -134,7 +134,7 @@ describe('WebviewUnavailablePanel (D-06, store/wiki-only)', () => {
 })
 
 describe('WebviewUnavailablePanel — reason="platform" (D-02, REQ-40-12)', () => {
-  it('defaults to the platform reason when no reason prop is passed (D-34 deep-link call site compatibility)', () => {
+  it('defaults to the platform reason when no reason prop is passed', () => {
     const element = WebviewUnavailablePanel({}) as AnyReactElement
     const text = collectText(element)
 
@@ -276,6 +276,89 @@ describe('WebviewUnavailablePanel — reason="epic" (D-05/D-08, REQ-40-12)', () 
     expect(button).not.toBeNull()
     button?.props.onClick?.()
     expect(mockApi.openExternalUrl).toHaveBeenCalledWith(url)
+  })
+})
+
+describe('WebviewUnavailablePanel — reason="origin" (D-34 escape hatch, todo item 5)', () => {
+  beforeEach(() => mockApi.openExternalUrl.mockClear())
+
+  it('renders the origin heading and body', () => {
+    const text = collectText(
+      WebviewUnavailablePanel({ reason: 'origin' }) as AnyReactElement
+    )
+    expect(text).toContain("GameLib can't open this link in-app")
+    expect(text).toContain(
+      "This link leads somewhere GameLib's in-app store and wiki browser doesn't open."
+    )
+  })
+
+  it('is OS-neutral and never shows the platform or epic heading', () => {
+    const text = collectText(
+      WebviewUnavailablePanel({ reason: 'origin' }) as AnyReactElement
+    )
+    expect(text.toLowerCase()).not.toMatch(
+      /platform|this build|macos|linux|windows|sign in|signing in|login/
+    )
+    expect(text).not.toContain("isn't available on this platform yet")
+    expect(text).not.toContain("Epic Store browsing isn't available in-app yet")
+  })
+
+  it('renders Open in browser with the exact url and no Try again button', () => {
+    const url = 'https://example.com/some/page'
+    const element = WebviewUnavailablePanel({
+      url,
+      reason: 'origin',
+      onTryAgain: jest.fn()
+    }) as AnyReactElement
+    const button = findByClassName(
+      element,
+      'WebView__unavailablePanel-openInBrowser'
+    )
+    expect(button).not.toBeNull()
+    button?.props.onClick?.()
+    expect(mockApi.openExternalUrl).toHaveBeenCalledWith(url)
+    expect(
+      findByClassName(element, 'WebView__unavailablePanel-tryAgain')
+    ).toBeNull()
+  })
+
+  it('still defaults to the platform heading with no reason', () => {
+    expect(
+      collectText(WebviewUnavailablePanel({}) as AnyReactElement)
+    ).toContain(
+      "In-app store and wiki browsing isn't available on this platform yet"
+    )
+  })
+
+  describe('index.tsx D-34 escape hatch passes reason="origin"', () => {
+    const webViewIndexPath = join(__dirname, '..', '..', 'index.tsx')
+
+    function deepLinkReturnHasOrigin(stripped: string): boolean {
+      const ifIdx = stripped.indexOf('if (deepLinkShouldOpenExternally)')
+      if (ifIdx === -1) return false
+      const retIdx = stripped.indexOf('return', ifIdx)
+      const endIdx = stripped.indexOf('/>', retIdx)
+      if (retIdx === -1 || endIdx === -1) return false
+      return stripped.slice(retIdx, endIdx).includes('reason="origin"')
+    }
+
+    it('the real source passes reason="origin" exactly once', () => {
+      const stripped = stripSourceComments(
+        readFileSync(webViewIndexPath, 'utf-8')
+      )
+      expect(deepLinkReturnHasOrigin(stripped)).toBe(true)
+      expect(stripped.split('reason="origin"').length - 1).toBe(1)
+    })
+
+    it('self-test: the gate rejects a deep-link return with no reason prop', () => {
+      const synthetic = [
+        'if (deepLinkShouldOpenExternally) {',
+        '  return <WebviewUnavailablePanel url={deepLinkUrl ?? undefined} />',
+        '}',
+        'return <WebviewUnavailablePanel url={x} reason="origin" />'
+      ].join('\n')
+      expect(deepLinkReturnHasOrigin(synthetic)).toBe(false)
+    })
   })
 })
 
@@ -449,7 +532,9 @@ describe('WebviewUnavailablePanel — minted i18n keys (Task 1, gamelib.json onl
     ['webview', 'unavailable', 'epic', 'body'],
     ['webview', 'unavailable', 'epic-challenged', 'heading'],
     ['webview', 'unavailable', 'epic-challenged', 'body'],
-    ['webview', 'unavailable', 'epic-challenged', 'tryAgain']
+    ['webview', 'unavailable', 'epic-challenged', 'tryAgain'],
+    ['webview', 'unavailable', 'origin', 'heading'],
+    ['webview', 'unavailable', 'origin', 'body']
   ]
 
   it.each(mintedKeyPaths)('gamelib.json has the minted key %s', (...path) => {

@@ -601,6 +601,10 @@
             },
             "platform": {
                 "heading": "Rakendusesisene poe ja wiki sirvimine pole sellel platvormil veel saadaval"
+            },
+            "origin": {
+                "heading": "GameLib ei saa seda linki rakenduses avada",
+                "body": "See link viib kohta, mida GameLibi rakendusesisene poe ja wiki brauser ei ava."
             }
         },
         "embedPlaceholder": {

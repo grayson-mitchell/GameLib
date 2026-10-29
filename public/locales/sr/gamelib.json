@@ -611,6 +611,10 @@
             },
             "platform": {
                 "heading": "Pregledanje prodavnice i wiki-ja unutar aplikacije još uvek nije dostupno na ovoj platformi"
+            },
+            "origin": {
+                "heading": "GameLib ne može da otvori ovaj link unutar aplikacije",
+                "body": "Ovaj link vodi na mesto koje GameLib-ov pregledač prodavnice i wiki-ja unutar aplikacije ne otvara."
             }
         },
         "embedPlaceholder": {

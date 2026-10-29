@@ -618,6 +618,10 @@
             },
             "platform": {
                 "heading": "Brskanje po trgovini in wikiju znotraj aplikacije na tej platformi še ni na voljo"
+            },
+            "origin": {
+                "heading": "GameLib te povezave ne more odpreti v aplikaciji",
+                "body": "Ta povezava vodi na mesto, ki ga brskalnik trgovine in wikija znotraj aplikacije GameLib ne odpre."
             }
         },
         "embedPlaceholder": {

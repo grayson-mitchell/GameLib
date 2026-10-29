@@ -618,6 +618,10 @@
             },
             "platform": {
                 "heading": "Przeglądanie sklepu i wiki w aplikacji nie jest jeszcze dostępne na tej platformie"
+            },
+            "origin": {
+                "heading": "GameLib nie może otworzyć tego linku w aplikacji",
+                "body": "Ten link prowadzi w miejsce, którego przeglądarka sklepu i wiki w aplikacji GameLib nie otwiera."
             }
         },
         "embedPlaceholder": {

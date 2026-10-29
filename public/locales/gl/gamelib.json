@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "A navegación pola tenda e a wiki dentro da aplicación aínda non está dispoñible nesta plataforma"
+            },
+            "origin": {
+                "heading": "GameLib non pode abrir esta ligazón dentro da aplicación",
+                "body": "Esta ligazón leva a un sitio que o navegador de tenda e wiki de GameLib dentro da aplicación non abre."
             }
         },
         "embedPlaceholder": {

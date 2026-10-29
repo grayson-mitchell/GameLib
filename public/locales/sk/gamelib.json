@@ -618,6 +618,10 @@
             },
             "platform": {
                 "heading": "Prehliadanie obchodu a wiki v aplikácii zatiaľ nie je na tejto platforme dostupné"
+            },
+            "origin": {
+                "heading": "GameLib nemôže otvoriť tento odkaz v aplikácii",
+                "body": "Tento odkaz vedie na miesto, ktoré prehliadač obchodu a wiki v aplikácii GameLib neotvára."
             }
         },
         "embedPlaceholder": {

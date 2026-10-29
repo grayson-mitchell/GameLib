@@ -495,6 +495,8 @@
     "steam.goOffline.continue",
     "steam.goOffline.stillOnline",
     "steam.goOffline.readyRedeem",
-    "steam.goOffline.error"
+    "steam.goOffline.error",
+    "webview.unavailable.origin.heading",
+    "webview.unavailable.origin.body"
   ]
 }

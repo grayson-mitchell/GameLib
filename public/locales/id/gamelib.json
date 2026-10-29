@@ -604,6 +604,10 @@
             },
             "platform": {
                 "heading": "Penjelajahan toko dan wiki dalam aplikasi belum tersedia di platform ini"
+            },
+            "origin": {
+                "heading": "GameLib tidak dapat membuka tautan ini di dalam aplikasi",
+                "body": "Tautan ini mengarah ke tempat yang tidak dibuka oleh peramban toko dan wiki dalam aplikasi GameLib."
             }
         },
         "embedPlaceholder": {
