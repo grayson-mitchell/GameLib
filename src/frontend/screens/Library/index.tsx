@@ -376,6 +376,12 @@ export default React.memo(function Library(): JSX.Element {
   // `libraryUnion` change, not on a timer) pick up the correction without
   // waiting on an unrelated future state change.
   const [reconcileTick, setReconcileTick] = useState(0)
+  // Quick 261029-nag: the libraryUnion the reconcile pass last finished for.
+  // The silent-exclusion guard waits for it, so it never reports an entry
+  // the pass is about to heal.
+  const [reconciledUnion, setReconciledUnion] = useState<GameInfo[] | null>(
+    null
+  )
 
   // Migration helper: maps legacy 'true'/'false'/null to FilterMode. The rule
   // itself lives in filterEngine alongside the other migrations (and is unit
@@ -1008,9 +1014,11 @@ export default React.memo(function Library(): JSX.Element {
   useEffect(() => {
     let cancelled = false
     reconcileNonAvailableGames(libraryUnion).then((healed) => {
-      if (!cancelled && healed.length > 0) {
+      if (cancelled) return
+      if (healed.length > 0) {
         setReconcileTick((tick) => tick + 1)
       }
+      setReconciledUnion(libraryUnion)
     })
     return () => {
       cancelled = true
@@ -1028,6 +1036,7 @@ export default React.memo(function Library(): JSX.Element {
   // (unused directly) so this re-runs against the corrected `engineDeps`
   // after a heal, not just against the pre-heal snapshot.
   useEffect(() => {
+    if (reconciledUnion !== libraryUnion) return
     const stillExcluded = findSilentlyExcludedGames(libraryUnion, engineDeps)
     if (stillExcluded.length > 0) {
       window.api.logError(
@@ -1036,7 +1045,7 @@ export default React.memo(function Library(): JSX.Element {
           `entry: ${stillExcluded.join(', ')}`
       )
     }
-  }, [libraryUnion, engineDeps, reconcileTick])
+  }, [libraryUnion, engineDeps, reconcileTick, reconciledUnion])
 
   // D-25: clears AND PERSISTS every filter to its default -- "whatever the
   // chip row shows is what comes back next launch". A non-persisting

@@ -129,6 +129,7 @@ describe('reconcileNonAvailableGames', () => {
       'missing) stays on the list and is not reported as healed',
     async () => {
       const isGameAvailable = jest.fn().mockResolvedValue(false)
+      const getGameInfo = jest.fn().mockResolvedValue({ is_installed: true })
       const { storage } = makeFakeLocalStorage({
         nonAvailableGames: JSON.stringify(['app2'])
       })
@@ -136,10 +137,13 @@ describe('reconcileNonAvailableGames', () => {
         globalThis as unknown as {
           window: {
             localStorage: FakeLocalStorage
-            api: { isGameAvailable: jest.Mock }
+            api: { isGameAvailable: jest.Mock; getGameInfo: jest.Mock }
           }
         }
-      ).window = { localStorage: storage, api: { isGameAvailable } }
+      ).window = {
+        localStorage: storage,
+        api: { isGameAvailable, getGameInfo }
+      }
 
       let constants!: ConstantsModule
       jest.isolateModules(() => {
@@ -168,6 +172,60 @@ describe('reconcileNonAvailableGames', () => {
       })
     }
   )
+})
+
+describe('handleNonAvailableGames mid-uninstall (quick 261029-nag)', () => {
+  function load(isInstalledInBackend: boolean | 'throws') {
+    const isGameAvailable = jest.fn().mockResolvedValue(false)
+    const getGameInfo =
+      isInstalledInBackend === 'throws'
+        ? jest.fn().mockRejectedValue(new Error('ipc down'))
+        : jest.fn().mockResolvedValue({ is_installed: isInstalledInBackend })
+    const { storage } = makeFakeLocalStorage()
+    ;(
+      globalThis as unknown as {
+        window: {
+          localStorage: FakeLocalStorage
+          api: { isGameAvailable: jest.Mock; getGameInfo: jest.Mock }
+        }
+      }
+    ).window = { localStorage: storage, api: { isGameAvailable, getGameInfo } }
+    let constants!: ConstantsModule
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      constants = require('../constants')
+    })
+    const listed = () =>
+      JSON.parse(storage.getItem('nonAvailableGames') || '[]') as string[]
+    return { constants, listed }
+  }
+
+  it('does not list a game the backend already has as uninstalled', async () => {
+    const { constants, listed } = load(false)
+
+    const available = await constants.handleNonAvailableGames('219990', 'steam')
+
+    expect(available).toBe(true)
+    expect(listed()).not.toContain('219990')
+  })
+
+  it('still lists an installed game whose files are missing', async () => {
+    const { constants, listed } = load(true)
+
+    const available = await constants.handleNonAvailableGames('219990', 'steam')
+
+    expect(available).toBe(false)
+    expect(listed()).toContain('219990')
+  })
+
+  it('keeps the old verdict when the game-info lookup fails', async () => {
+    const { constants, listed } = load('throws')
+
+    const available = await constants.handleNonAvailableGames('219990', 'steam')
+
+    expect(available).toBe(false)
+    expect(listed()).toContain('219990')
+  })
 })
 
 describe('isNonAvailableGame delisted-independence premise (REQ-37-02/D-15: premise retired)', () => {

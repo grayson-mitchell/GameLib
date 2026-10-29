@@ -123,6 +123,21 @@ export async function handleNonAvailableGames(appName: string, runner: Runner) {
   })
 
   if (!gameAvailable) {
+    // Quick 261029-nag: an uninstall deletes the files before the card's
+    // is_installed flips, and isGameAvailable is false for a game that is not
+    // installed at all. Only list a game the backend still has as installed;
+    // otherwise it is mid-uninstall, not missing.
+    let stillInstalled = true
+    try {
+      const fresh = await window.api.getGameInfo(appName, runner)
+      stillInstalled = !!fresh?.is_installed
+    } catch {
+      // Keep the old verdict when the lookup itself fails.
+    }
+    if (!stillInstalled) {
+      dropFromNonAvailableGames(appName)
+      return true
+    }
     if (!nonAvailbleGamesArray.includes(appName)) {
       nonAvailbleGamesArray.push(appName)
       storage.setItem(
