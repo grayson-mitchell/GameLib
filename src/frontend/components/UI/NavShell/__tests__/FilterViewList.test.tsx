@@ -109,11 +109,7 @@ describe('FilterViewList (quick 261029-riq)', () => {
       'button'
     ])
     expect(kids[1].props['aria-hidden']).toBe('true')
-    expect(chipsOf(tree).map(labelOf)).toEqual([
-      'Installed',
-      'All games',
-      'Native'
-    ])
+    expect(chipsOf(tree).map(labelOf)).toEqual(['Installed', 'All', 'Native'])
     expect(
       chipsOf(tree).every(
         (el) =>
@@ -191,7 +187,7 @@ describe('FilterViewList (quick 261029-riq)', () => {
     )
     expect(source.match(/tGamelib\(\s*'gamelib:/g)).toHaveLength(3)
     expect(source).toContain("'gamelib:library.filterPanel.native'")
-    expect(source).toContain("'gamelib:library.filterPanel.viewAll'")
+    expect(source).toContain("'gamelib:library.filterPanel.nativeAll'")
   })
 })
 

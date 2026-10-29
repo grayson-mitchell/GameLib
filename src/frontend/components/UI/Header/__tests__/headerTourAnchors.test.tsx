@@ -492,14 +492,15 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
       expect(dropdown.props.closeOnSelect).toBe(true)
     })
 
-    it('its children are three NavItem button rows in LIBRARY_SORT_FIELDS order, the current field active', () => {
+    it('its children are four NavItem button rows in LIBRARY_SORT_FIELDS order, the current field active', () => {
       libraryContextValue = makeLibraryContextValue({ sortField: 'lastPlayed' })
       const dropdown = dropdownIn(
         findByDataTour(sortGroupOf(renderHeader()), 'library-sort')[0]
       )
       const rows = rowsOf(dropdown)
-      expect(rows).toHaveLength(3)
+      expect(rows).toHaveLength(4)
       expect(rows.map((r) => r.props.elementType)).toEqual([
+        'button',
         'button',
         'button',
         'button'
@@ -508,9 +509,15 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
       expect(rows.map((r) => r.props.label)).toEqual([
         'Name',
         'Last played',
-        'Install size'
+        'Install size',
+        'Metacritic'
       ])
-      expect(rows.map((r) => r.props.active)).toEqual([false, true, false])
+      expect(rows.map((r) => r.props.active)).toEqual([
+        false,
+        true,
+        false,
+        false
+      ])
     })
 
     it('clicking a row calls setSortField once with that row literal field', () => {
@@ -538,6 +545,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
       }
       expect(titleText('name')).toBe('Sort by|Name')
       expect(titleText('lastPlayed')).toBe('Sort by|Last played')
+      expect(titleText('metacritic')).toBe('Sort by|Metacritic')
     })
 
     it('the direction button flips asc to desc and desc to asc', () => {

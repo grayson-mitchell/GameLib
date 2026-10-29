@@ -99,7 +99,7 @@ export default function Header({ list, totalGames }: Props) {
       : tGamelib('gamelib:library.sort.direction.descending', 'Descending')
   // Quick 261029-riq item 4: the sort field picker is a themed Dropdown, not a
   // native <select> (whose popup is OS-drawn). Rows are literal t() call sites
-  // in LIBRARY_SORT_FIELDS order (name, lastPlayed, installSize).
+  // in LIBRARY_SORT_FIELDS order (name, lastPlayed, installSize, metacritic).
   const sortRows: Array<{ value: LibrarySortField; label: string }> = [
     {
       value: 'name',
@@ -112,6 +112,10 @@ export default function Header({ list, totalGames }: Props) {
     {
       value: 'installSize',
       label: tGamelib('gamelib:library.sort.field.installSize', 'Install size')
+    },
+    {
+      value: 'metacritic',
+      label: tGamelib('gamelib:library.sort.field.metacritic', 'Metacritic')
     }
   ]
   const currentSortRow =

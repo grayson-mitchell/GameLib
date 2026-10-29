@@ -58,7 +58,7 @@ export default function FilterViewList() {
             aria-pressed={!nativeOnly}
             onClick={() => setNativeOnly(false)}
           >
-            {tGamelib('gamelib:library.filterPanel.viewAll', 'All games')}
+            {tGamelib('gamelib:library.filterPanel.nativeAll', 'All')}
           </button>
           <button
             type="button"

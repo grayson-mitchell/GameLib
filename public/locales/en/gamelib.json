@@ -262,6 +262,7 @@
             "manageCollections": "Manage collections",
             "moreFilters": "More filters",
             "native": "Native",
+            "nativeAll": "All",
             "newCollection": "+ New collection",
             "noStorePage": "No store page",
             "notYetChecked": "Not yet checked",
@@ -305,6 +306,7 @@
             "field": {
                 "installSize": "Install size",
                 "lastPlayed": "Last played",
+                "metacritic": "Metacritic",
                 "name": "Name"
             },
             "label": "Sort by"
@@ -608,6 +610,7 @@
             "groupBy": "Group your games by install status or by store, or turn grouping off.",
             "quickFiltersCollections": "Show only installed games or only native builds, or browse your custom Collections.",
             "sort": "Sort your games by name, last played or install size, and flip the direction.",
+            "sortWithMetacritic": "Sort your games by name, last played, install size or Metacritic score, and flip the direction.",
             "welcome": {
                 "intro2": "If the library is empty, sign in to your stores from the Accounts tab, or add your own games with the Add Game button."
             }

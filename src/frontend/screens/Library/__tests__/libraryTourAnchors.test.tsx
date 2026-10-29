@@ -128,6 +128,15 @@ describe('LibraryTour re-anchored steps (34.12-02, D-09)', () => {
     )
   })
 
+  it('the sort step reads gamelib:tour.library.sortWithMetacritic copy (quick 261029-sbi)', () => {
+    const step = renderedSteps().find(
+      (s) => s.element === '[data-tour="library-sort"]'
+    )
+    expect(step?.intro).toBe(
+      'Sort your games by name, last played, install size or Metacritic score, and flip the direction.'
+    )
+  })
+
   it('contains exactly one step whose element is [data-tour="library-facets"]', () => {
     const steps = renderedSteps()
     const matches = steps.filter(

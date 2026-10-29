@@ -115,8 +115,8 @@ const LibraryTour: React.FC = () => {
       {
         element: '[data-tour="library-sort"]',
         intro: tGamelib(
-          'gamelib:tour.library.sort',
-          'Sort your games by name, last played or install size, and flip the direction.'
+          'gamelib:tour.library.sortWithMetacritic',
+          'Sort your games by name, last played, install size or Metacritic score, and flip the direction.'
         ),
         position: 'left'
       },
