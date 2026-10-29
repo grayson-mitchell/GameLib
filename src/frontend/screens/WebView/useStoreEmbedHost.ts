@@ -6,7 +6,7 @@ import { readWebviewZoomFactor, scaleRectForZoom } from './storeEmbedZoom'
 
 // Dispatched on `window` by `applyFramelessDecorations` (`src/preload/api/tauriWindowChrome.ts`,
 // which cannot import from frontend/ -- keep the two string literals identical).
-const TITLEBAR_STYLE_APPLIED_EVENT = 'gamelib:titlebar-style-applied'
+const TITLEBAR_STYLE_APPLIED_EVENT = 'gamelib-titlebar-style-applied'
 
 /**
  * Store embed host hook (Phase 40 Plan 08, D-18/D-19/D-20/D-21, REQ-40-02/REQ-40-03).
