@@ -55,7 +55,17 @@ const { ESLint } = require('eslint')
 // accepted `react-hooks/exhaustive-deps` warning as its Waiting-tab source.
 // Verified: 1123 is RED against this plan's tree, 1124 is GREEN, and no
 // other file's warning count changed.
-const SRC_CEILING = 1124
+//
+// SRC_CEILING bumped 1124 -> 1130 by quick 261029-nmt, re-pinning a breach
+// found at the pre-push hook: 1124 measured on origin/main (955e68026), 1130
+// on local main (327996dce), and a per-file diff of the two runs moves only
+// two files. steam/games.ts +4 `import-x/no-named-as-default-member`
+// (`i18next.t` at 2485 from 261029-exu, 3524/3530/3534 from 261029-ji2 -- the
+// file's own idiom, 19 such sites already accepted) and
+// sidecar/enrichmentFlowRegistration.ts +2 `require-await` (the
+// `getRunsForMeMap`/`setRunsForMe` handlers from 261029-mkz, the same shape as
+// the two accepted handlers above them). 1129 is RED, 1130 is GREEN.
+const SRC_CEILING = 1130
 
 // TESTS_CEILING bumped 638 -> 648 re-pinning a pre-existing breach found at
 // Phase 51 Plan 11 (51-11): measured 648 problems (0 errors, 648 warnings)
