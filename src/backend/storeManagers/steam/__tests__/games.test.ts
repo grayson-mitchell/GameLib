@@ -912,6 +912,63 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     )
   })
 
+  it('261029-sbi: appdetails metacritic.score is persisted with metacriticCaptured and lands on the pushed GameInfo', async () => {
+    const withScore = {
+      data: {
+        [APP_ID]: {
+          ...fixtureApiResponse.data[APP_ID],
+          data: {
+            ...fixtureApiResponse.data[APP_ID].data,
+            metacritic: { score: 88, url: 'https://example.invalid' }
+          }
+        }
+      }
+    }
+    ;(axios.get as jest.Mock).mockResolvedValue(withScore)
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(library.get(APP_ID)!.metacritic_score).toBe(88)
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({
+        metacritic_score: 88,
+        metacriticCaptured: true
+      })
+    )
+  })
+
+  it('261029-sbi: no appdetails metacritic carries existing score/captured forward, and invents none', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      metacritic_score: 75,
+      metacriticCaptured: true
+    })
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
+    expect(written.metacritic_score).toBe(75)
+    expect(written.metacriticCaptured).toBe(true)
+  })
+
+  it('261029-sbi: no appdetails metacritic and no existing entry writes neither field', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
+    expect('metacritic_score' in written).toBe(false)
+    expect('metacriticCaptured' in written).toBe(false)
+  })
+
   it('D-17 false-safe: platforms.windows false yields is_windows_native false on BOTH the GameInfo and the persisted entry', async () => {
     const fixtureWindowsFalse = {
       data: {

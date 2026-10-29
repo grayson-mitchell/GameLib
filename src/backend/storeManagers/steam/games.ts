@@ -35,6 +35,7 @@ import {
 } from 'common/types'
 import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
+import { parseMetacriticScore } from 'common/metacriticScore'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
@@ -1389,6 +1390,10 @@ export default class SteamGame implements Game {
       const is_linux_native = !!data.platforms?.linux
       const is_windows_native = !!data.platforms?.windows
 
+      // Quick 261029-sbi: appdetails `metacritic.score` (a number), validated
+      // by the shared parser. Absent keeps whatever was already captured.
+      const metacritic_score = parseMetacriticScore(data.metacritic?.score)
+
       // Quick task 260816-qcn (WR-02/CR-01): this appdetails fetch is one of
       // TWO independent writers of the platform triple — platformCapture.ts's
       // bulk PICS `oslist` capture is the other. resolvePlatformWrite (D-A)
@@ -1459,6 +1464,7 @@ export default class SteamGame implements Game {
         // successful appdetails fetch, which is exactly when platforms are
         // captured — mirrors steamMetadataStore.platformsCaptured below.
         steamPlatformsCaptured: true,
+        metacritic_score: metacritic_score ?? existingMeta?.metacritic_score,
         extra
       }
 
@@ -1523,7 +1529,20 @@ export default class SteamGame implements Game {
         // REPLACES the whole entry (T-18-02-04), so a declined/refreshed
         // appdetails write would otherwise silently wipe a scan result the
         // bridge already paid for.
-        ...(existingMeta?.bridge ? { bridge: existingMeta.bridge } : {})
+        ...(existingMeta?.bridge ? { bridge: existingMeta.bridge } : {}),
+        // Quick 261029-sbi: SIXTH standing carry-forward on this enumerated
+        // write (same T-18-02-04 trap). A fresh score wins; otherwise the
+        // existing score and captured flag are carried, never invented.
+        ...(metacritic_score !== undefined
+          ? { metacritic_score, metacriticCaptured: true as const }
+          : {
+              ...(existingMeta?.metacritic_score !== undefined
+                ? { metacritic_score: existingMeta.metacritic_score }
+                : {}),
+              ...(existingMeta?.metacriticCaptured === true
+                ? { metacriticCaptured: true as const }
+                : {})
+            })
       })
 
       // Update in-memory library so subsequent getGameInfo calls return enriched data

@@ -220,6 +220,9 @@ jest.mock('../platformCapture', () => ({
     failed: false
   })
 }))
+jest.mock('../metacriticCapture', () => ({
+  captureOwnedAppMetacritic: jest.fn()
+}))
 
 // ── child_process — deliberately NOT mocked. Neither init()/refresh() (the
 // paths this file exercises) nor the constraint-1 git check below touch it

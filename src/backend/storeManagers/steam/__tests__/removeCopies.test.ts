@@ -200,6 +200,9 @@ jest.mock('../bridge/helperProcess', () => ({
 
 // ── platformCapture mock ──────────────────────────────────────────────────────
 jest.mock('../platformCapture', () => ({ captureOwnedAppPlatforms: jest.fn() }))
+jest.mock('../metacriticCapture', () => ({
+  captureOwnedAppMetacritic: jest.fn()
+}))
 
 // ── nativeInstallSetting mock ─────────────────────────────────────────────────
 jest.mock('../nativeInstallSetting', () => ({

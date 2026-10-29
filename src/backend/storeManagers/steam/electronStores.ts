@@ -77,6 +77,15 @@ export interface SteamMetadataCacheEntry {
    * captured" (every pre-34.13 cache entry) and MUST NOT be coerced to
    * available. */
   is_windows_native?: boolean
+  /** Quick 261029-sbi: Metacritic score (1..100) from PICS
+   * `common.metacritic_score` or appdetails `metacritic.score`. Absent means
+   * unknown. The enumerated appdetails write in games.ts must carry this and
+   * `metacriticCaptured` forward. */
+  metacritic_score?: number
+  /** Quick 261029-sbi: true means a PICS or appdetails answer was read for
+   * this app, whether or not it carried a score. Scope predicate for the bulk
+   * metacritic capture. */
+  metacriticCaptured?: boolean
   /** D-17: the PERSISTED verdict of a completed forced Windows-via-bottle
    * install (34.13-14 is the sole reader/writer).
    *

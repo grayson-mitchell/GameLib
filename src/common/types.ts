@@ -291,6 +291,11 @@ export interface GameInfo {
   /** Phase 17 D-08 reconciliation — mirrors steamMetadataStore.platformsCaptured
    * so the frontend bottle indicator matches the backend D-11 routing gate. */
   steamPlatformsCaptured?: boolean
+  /** Quick 261029-sbi: Metacritic score (1..100). Set only for Steam, from
+   * steamMetadataStore (PICS / appdetails). `undefined` means unknown, never
+   * 0. Non-Steam scores come from the wiki cache in the renderer (see
+   * librarySort.ts). */
+  metacritic_score?: number
   browserUrl?: string
   description?: string
   //used for store release versions. if remote !== local, then update

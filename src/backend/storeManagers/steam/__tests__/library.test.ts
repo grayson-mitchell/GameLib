@@ -90,6 +90,7 @@ import { library } from '../state'
 import * as gamesModule from '../games'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { captureOwnedAppPlatforms } from '../platformCapture'
+import { captureOwnedAppMetacritic } from '../metacriticCapture'
 import {
   listSteamClientPids,
   readSteamProcessStartTokens
@@ -296,6 +297,9 @@ jest.mock('../bridge/launchTarget', () => ({
 }))
 jest.mock('../platformCapture', () => ({
   captureOwnedAppPlatforms: jest.fn()
+}))
+jest.mock('../metacriticCapture', () => ({
+  captureOwnedAppMetacritic: jest.fn()
 }))
 // D-UAT-13: the install poller asks which Steam client PIDs are alive when a
 // native handoff finalizes. A bare jest.fn() resolves undefined = "inconclusive"
@@ -767,6 +771,46 @@ describe('SteamLibraryManager', () => {
     expect(pushed?.is_windows_native).toBeUndefined()
   })
 
+  it('261029-sbi: synced GameInfo carries metacritic_score from cachedMeta', async () => {
+    const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+    jest
+      .mocked(SteamUser.getClient)
+      .mockReturnValue(makeFakeClient(apps) as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      metacritic_score: 90
+    })
+
+    await manager.refresh()
+
+    const pushed = jest
+      .mocked(sendFrontendMessage)
+      .mock.calls.find(
+        ([_m, info]) => (info as any).app_name === '570'
+      )?.[1] as any
+    expect(pushed?.metacritic_score).toBe(90)
+  })
+
+  it('261029-sbi: absent cachedMeta gives metacritic_score undefined, never 0', async () => {
+    const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+    jest
+      .mocked(SteamUser.getClient)
+      .mockReturnValue(makeFakeClient(apps) as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+
+    await manager.refresh()
+
+    const pushed = jest
+      .mocked(sendFrontendMessage)
+      .mock.calls.find(
+        ([_m, info]) => (info as any).app_name === '570'
+      )?.[1] as any
+    expect(pushed).toBeDefined()
+    expect(pushed.metacritic_score).toBeUndefined()
+  })
+
   it('D-17: a CONFIRMED-false cachedMeta stays false -- distinct from the never-captured case above', async () => {
     const apps = [makeOwnedApp(570, 'Dota 2', 120)]
     const fakeClient = makeFakeClient(apps)
@@ -1149,6 +1193,40 @@ describe('SteamLibraryManager', () => {
       await manager.refresh()
 
       expect(captureOwnedAppPlatforms).toHaveBeenCalledTimes(2)
+    })
+
+    it('261029-sbi: metacritic capture gets the anonymous client and runs before the first push', async () => {
+      const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(getAnonymousPicsClient).mockResolvedValue(anon as never)
+      jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
+        scopedCount: 0,
+        capturedCount: 0,
+        skippedCount: 0,
+        failed: false
+      })
+
+      await manager.refresh()
+
+      expect(captureOwnedAppMetacritic).toHaveBeenCalledWith(anon, [570])
+      const capOrder = jest.mocked(captureOwnedAppMetacritic).mock
+        .invocationCallOrder[0]
+      const pushIdx = jest
+        .mocked(sendFrontendMessage)
+        .mock.calls.findIndex(([m]) => m === 'pushGameToLibrary')
+      expect(pushIdx).toBeGreaterThanOrEqual(0)
+      expect(capOrder).toBeLessThan(
+        jest.mocked(sendFrontendMessage).mock.invocationCallOrder[pushIdx]
+      )
+    })
+
+    it('261029-sbi: no anonymous client falls back to the held session', async () => {
+      const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+
+      await manager.refresh()
+
+      expect(captureOwnedAppMetacritic).toHaveBeenCalledWith(fakeClient, [570])
     })
 
     it('no anonymous client: one pass on the held session', async () => {

@@ -70,6 +70,12 @@ import {
   readSteamProcessStartTokens
 } from './steamClientProcess'
 import {
+  readSteamDownloadMonitor,
+  startSteamDownloadMonitor,
+  stopSteamDownloadMonitor
+} from './steamDownloadMonitor'
+import { liveProgress } from './steamDownloadProgress'
+import {
   clearSteamRestartHold,
   decideSteamRestartHoldRearm,
   listSteamRestartHolds,
@@ -78,6 +84,7 @@ import {
 import { bridgeAllowlist } from './bridge/allowlist'
 import { backfillBridgeLaunchTargets } from './bridge/launchTarget'
 import { depotSignalCaptured } from './metadataCapture'
+import { captureOwnedAppMetacritic } from './metacriticCapture'
 import {
   captureOwnedAppPlatforms,
   type PlatformCapturePicsClient
@@ -1271,6 +1278,16 @@ export default class SteamLibraryManager implements LibraryManager {
       logCapture(await captureOwnedAppPlatforms(heldClient, appIds))
     }
 
+    // Quick 261029-sbi: bulk Metacritic score capture. Public appinfo, so the
+    // anonymous client is enough (Phase 54); otherwise only the session this
+    // Refresh already holds, never a new sign-in. Single pass with no
+    // held-session second pass: an app missed here stays uncaptured and is
+    // retried on the next sync. Return value deliberately unread.
+    await captureOwnedAppMetacritic(
+      (anonClient ?? heldClient) as unknown as PlatformCapturePicsClient,
+      appIds
+    )
+
     // 34.15 D-07 exit path 4 of 4 — the previously UNDOCUMENTED one. Steps 2-4
     // below carried NO try/catch at HEAD, so a hydration-loop exception (e.g.
     // a corrupt ACF file, a throwing map builder) became an unhandled
@@ -1415,6 +1432,7 @@ export default class SteamLibraryManager implements LibraryManager {
           is_mac_native: cachedMeta?.is_mac_native ?? false,
           is_linux_native: cachedMeta?.is_linux_native ?? false,
           is_windows_native: cachedMeta?.is_windows_native,
+          metacritic_score: cachedMeta?.metacritic_score,
           // GAP-B: seed the persisted delisted verdict so it survives a library resync
           is_delisted: cachedMeta?.is_delisted ?? false,
           // CR-01 fix: seed the persisted Mach-O ground-truth verdict so a
@@ -3065,14 +3083,35 @@ export async function pollInstallOnce(
     // existing so a direct unit-test call with no active poll never flags
     // paused. The staged-fallback phase (bytesToDownload===0) can never
     // satisfy realDownloadInFlight, so it's never mistaken for paused.
-    const realDownloadInFlight =
-      bytesToDownload > 0 && bytesDownloaded < bytesToDownload
+    //
+    // quick 261029-sex (spike 050): Steam does not rewrite the ACF mid-download,
+    // so BytesDownloaded sits frozen at 0 below a non-zero BytesToDownload and
+    // this stall logic would raise 'steam-paused' for the whole download. On an
+    // eligible macOS native poll the monitor's nettop counter supplies the
+    // effective bytes (dlBytes/dlTotal) instead; undefined means ACF as before.
+    const live =
+      poll && isMac && poll.source === 'native' && !poll.isNativeHandoff
+        ? readSteamDownloadMonitor(appId)
+        : undefined
+    const liveP = live
+      ? liveProgress({
+          downloadDone: live.bytesDone,
+          downloadTotal: live.bytesTotal,
+          cumAtStart: 0,
+          cumNow: 0,
+          acfBytesDownloaded: bytesDownloaded,
+          acfBytesToDownload: bytesToDownload
+        })
+      : undefined
+    const dlBytes = liveP ? liveP.bytesDone : bytesDownloaded
+    const dlTotal = liveP ? liveP.total : bytesToDownload
+    const realDownloadInFlight = dlTotal > 0 && dlBytes < dlTotal
     let isPaused = false
     if (poll) {
       if (
         realDownloadInFlight &&
         poll.lastBytesDownloaded !== undefined &&
-        bytesDownloaded <= poll.lastBytesDownloaded
+        dlBytes <= poll.lastBytesDownloaded
       ) {
         poll.stalledTicks += 1
       } else {
@@ -3136,7 +3175,7 @@ export async function pollInstallOnce(
       const prevTickMs = poll.lastTickMs
 
       if (prevBytes !== undefined && prevTickMs !== undefined) {
-        const deltaBytes = bytesDownloaded - prevBytes
+        const deltaBytes = dlBytes - prevBytes
         const deltaMs = nowMs - prevTickMs
         // rollingRateMiBs guards the div-by-near-zero window (two ticks
         // landing back-to-back — e.g. a Steam preallocation jump) by
@@ -3147,18 +3186,19 @@ export async function pollInstallOnce(
           downSpeedMiBs = rate
         }
       }
+      // quick 261029-sex: the nettop window rate (<= 3 s) beats the 3 s ACF delta.
+      if (liveP && live?.speedBytesPerSec !== undefined) {
+        const liveRate = live.speedBytesPerSec / BYTES_PER_MIB
+        if (Number.isFinite(liveRate) && liveRate > 0) downSpeedMiBs = liveRate
+      }
 
-      poll.lastBytesDownloaded = bytesDownloaded
+      poll.lastBytesDownloaded = dlBytes
       poll.lastTickMs = nowMs
     }
 
     let eta = ''
-    if (
-      downSpeedMiBs !== undefined &&
-      downSpeedMiBs > 0 &&
-      bytesToDownload > bytesDownloaded
-    ) {
-      const remainingBytes = bytesToDownload - bytesDownloaded
+    if (downSpeedMiBs !== undefined && downSpeedMiBs > 0 && dlTotal > dlBytes) {
+      const remainingBytes = dlTotal - dlBytes
       const speedBytesPerSec = downSpeedMiBs * BYTES_PER_MIB
       const etaSeconds = remainingBytes / speedBytesPerSec
       if (Number.isFinite(etaSeconds) && etaSeconds > 0) {
@@ -3166,14 +3206,25 @@ export async function pollInstallOnce(
       }
     }
 
-    const useStaged = !(bytesToDownload > 0)
-    const denominator = useStaged ? bytesToStage : bytesToDownload
-    const numerator = useStaged ? bytesStaged : bytesDownloaded
+    const useStaged = !liveP && !(bytesToDownload > 0)
+    const denominator = liveP
+      ? dlTotal
+      : useStaged
+        ? bytesToStage
+        : bytesToDownload
+    const numerator = liveP
+      ? dlBytes
+      : useStaged
+        ? bytesStaged
+        : bytesDownloaded
 
     if (denominator > 0) {
       const rawPercent = (numerator / denominator) * 100
       if (Number.isFinite(rawPercent)) {
-        const percent = Math.min(100, Math.max(0, Math.round(rawPercent)))
+        // Live path: 100 % comes only from the installed branch (StateFlags 4).
+        const percent = liveP
+          ? Math.min(99, Math.max(0, Math.round(rawPercent)))
+          : Math.min(100, Math.max(0, Math.round(rawPercent)))
         sendFrontendMessage('progressUpdate', {
           appName: appId,
           runner: 'steam',
@@ -3460,6 +3511,13 @@ export function startInstallPolling(
         LogPrefix.Steam
       )
     }
+    // quick 261029-sex: an upgrade to handoff or a retarget ends eligibility;
+    // a delegated native poll gains it. Start is idempotent per appId.
+    if (isLiveMonitorEligible(existingEntry)) {
+      void startSteamDownloadMonitor(appId)
+    } else {
+      stopSteamDownloadMonitor(appId)
+    }
     return // idempotent — no second interval either way
   }
 
@@ -3670,6 +3728,19 @@ export function startInstallPolling(
 
   entry.timer = timer
   activePolls.set(appId, entry)
+  if (isLiveMonitorEligible(entry)) void startSteamDownloadMonitor(appId)
+}
+
+/**
+ * quick 261029-sex: only macOS native polls are downloaded by Steam itself. Bottle and
+ * bridge-bottle polls are a Wine Steam process, and handoff polls are GameLib's own depot
+ * downloader, so none of them may spawn a nettop child.
+ */
+function isLiveMonitorEligible(poll: {
+  source: AcfSource
+  isNativeHandoff: boolean
+}): boolean {
+  return isMac && poll.source === 'native' && !poll.isNativeHandoff
 }
 
 /**
@@ -3711,6 +3782,7 @@ export function stopInstallPolling(appId: string): void {
   if (poll.steamHold === 'holding') clearSteamRestartHold(appId)
   clearInterval(poll.timer)
   activePolls.delete(appId)
+  stopSteamDownloadMonitor(appId)
   logInfo(`Steam: stopped install polling for appId ${appId}`, LogPrefix.Steam)
 }
 
