@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "GameLib có bản sửa lỗi cho trò chơi này, nên nó sẽ chạy được"
         },
-        "refresh-rating": "Làm mới xếp hạng"
+        "refresh-rating": "Làm mới xếp hạng",
+        "runsForMe": {
+            "autoSet": "Tự động bật sau phiên chơi từ một phút trở lên",
+            "description": "Đánh dấu trò chơi này là chạy được trên Mac này, bất kể xếp hạng CrossOver nói gì. GameLib tự động bật tùy chọn này sau khi trò chơi chạy được một phút, trừ khi bạn đã tắt nó.",
+            "label": "Chạy được trên máy tôi"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "Chưa kiểm tra",
             "removeFilter": "Xóa bộ lọc {{filterLabel}}",
             "runnabilityGroup": "Khả năng chạy",
+            "runsForMe": "Chạy được trên máy tôi",
             "runsNatively": "Chạy gốc",
             "runsViaBottle": "Chạy qua bottle",
             "storeGroup": "Cửa Hàng",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "Không có game nào thiếu trang cửa hàng trong thư viện của bạn",
         "noStorePage": "Không có trang cửa hàng",
+        "runsForMeBadge": "Chạy được trên Mac này",
         "signIn": {
             "dismiss": "Đóng thông báo đăng nhập {{store}}",
             "expired": "Phiên đăng nhập {{store}} của bạn đã hết hạn",

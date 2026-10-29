@@ -206,7 +206,12 @@
             "label": "GameLib",
             "title": "Ur reizhadenn zo gant GameLib evit ar c'hoari-mañ, setu e tlefe mont en-dro"
         },
-        "refresh-rating": "Freskaat ar priziadur"
+        "refresh-rating": "Freskaat ar priziadur",
+        "runsForMe": {
+            "autoSet": "Gweredekaet ent emgefreek goude ur sesadenn c'hoari eus ur vunutenn pe muioc'h",
+            "description": "Merkit ar c'hoari-mañ evel ma'z a en-dro war ar Mac-mañ, daoust da renkadur CrossOver. GameLib a laka se da vont ent emgefreek goude ma vo bet o treiñ ar c'hoari e-pad ur vunutenn, nemet ma vefe bet diweredekaet ganeoc'h.",
+            "label": "Mont a ra din-me"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -247,6 +252,7 @@
             "notYetChecked": "N'eo ket bet gwiriet c'hoazh",
             "removeFilter": "Lemel ar sil {{filterLabel}}",
             "runnabilityGroup": "Gallout lañsañ",
+            "runsForMe": "Mont a ra din-me",
             "runsNatively": "O redek ent naturel",
             "runsViaBottle": "O redek dre boutailh",
             "storeGroup": "Stal",
@@ -278,6 +284,7 @@
         },
         "no_no_store_page_games": "C'hoari ebet hep pajenn stal en ho levraoueg",
         "noStorePage": "Pajenn stal ebet",
+        "runsForMeBadge": "Mont a ra din-me war ar Mac-mañ",
         "signIn": {
             "dismiss": "Serriñ ar c'hemenn kevreañ {{store}}",
             "expired": "Aet eo da get ho kevreadur {{store}}",

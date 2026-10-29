@@ -200,7 +200,12 @@
             "label": "GameLib",
             "title": "GameLib ima popravek za to igro, zato bi morala delovati"
         },
-        "refresh-rating": "Osveži oceno"
+        "refresh-rating": "Osveži oceno",
+        "runsForMe": {
+            "autoSet": "Samodejno vklopljeno po igralni seji ene minute ali več",
+            "description": "Označite to igro kot delujočo na tem računalniku Mac, ne glede na oceno CrossOver. GameLib to samodejno vklopi, ko igra deluje eno minuto, razen če ste to izklopili.",
+            "label": "Deluje pri meni"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -241,6 +246,7 @@
             "notYetChecked": "Še ni preverjeno",
             "removeFilter": "Odstrani filter {{filterLabel}}",
             "runnabilityGroup": "Zagonljivost",
+            "runsForMe": "Deluje pri meni",
             "runsNatively": "Teče nativno",
             "runsViaBottle": "Teče preko bottle",
             "storeGroup": "Trgovina",
@@ -271,6 +277,7 @@
         },
         "no_no_store_page_games": "V vaši knjižnici ni iger brez trgovinske strani",
         "noStorePage": "Brez trgovinske strani",
+        "runsForMeBadge": "Deluje pri meni na tem računalniku Mac",
         "signIn": {
             "dismiss": "Opusti obvestilo o prijavi v {{store}}",
             "expired": "Vaša prijava v {{store}} je potekla",

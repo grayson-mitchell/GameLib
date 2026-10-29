@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "GameLibillä on korjaus tähän peliin, joten sen pitäisi toimia"
         },
-        "refresh-rating": "Päivitä arvostelu"
+        "refresh-rating": "Päivitä arvostelu",
+        "runsForMe": {
+            "autoSet": "Kytketty päälle automaattisesti minuutin tai pidemmän pelisession jälkeen",
+            "description": "Merkitse tämä peli toimivaksi tällä Mac-tietokoneella riippumatta CrossOver-arvosanasta. GameLib kytkee tämän päälle automaattisesti, kun peli on ollut käynnissä minuutin, ellet ole kytkenyt sitä pois.",
+            "label": "Toimii minulla"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "Ei vielä tarkistettu",
             "removeFilter": "Poista suodatin {{filterLabel}}",
             "runnabilityGroup": "Toimivuus",
+            "runsForMe": "Toimii minulla",
             "runsNatively": "Toimii natiivisti",
             "runsViaBottle": "Toimii bottlen kautta",
             "storeGroup": "Kauppa",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "Kirjastossasi ei ole pelejä ilman kauppasivua",
         "noStorePage": "Ei kauppasivua",
+        "runsForMeBadge": "Toimii minulla tällä Mac-tietokoneella",
         "signIn": {
             "dismiss": "Sulje {{store}}-kirjautumisilmoitus",
             "expired": "{{store}}-kirjautumisesi on vanhentunut",

@@ -206,7 +206,12 @@
             "label": "GameLib",
             "title": "Tá deisiú ag GameLib don chluiche seo, mar sin ba cheart go n-oibreodh sé"
         },
-        "refresh-rating": "Athnuaigh an rátáil"
+        "refresh-rating": "Athnuaigh an rátáil",
+        "runsForMe": {
+            "autoSet": "Casta air go huathoibríoch tar éis seisiún súgartha nóiméid nó níos faide",
+            "description": "Marcáil an cluiche seo mar cluiche a oibríonn ar an Mac seo, is cuma cad a deir rátáil CrossOver. Casann GameLib é seo air go huathoibríoch tar éis don chluiche rith ar feadh nóiméid, mura bhfuil sé curtha as agat.",
+            "label": "Oibríonn sé dom"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -247,6 +252,7 @@
             "notYetChecked": "Nár seiceáladh fós",
             "removeFilter": "Bain scagaire {{filterLabel}}",
             "runnabilityGroup": "Inrite",
+            "runsForMe": "Oibríonn sé dom",
             "runsNatively": "Ritheann go dúchasach",
             "runsViaBottle": "Ritheann trí bhuidéal",
             "storeGroup": "Siopa",
@@ -278,6 +284,7 @@
         },
         "no_no_store_page_games": "Níl aon chluiche gan leathanach siopa i do leabharlann",
         "noStorePage": "Gan leathanach siopa",
+        "runsForMeBadge": "Oibríonn sé dom ar an Mac seo",
         "signIn": {
             "dismiss": "Dún fógra síniú isteach {{store}}",
             "expired": "Chuaigh do shíniú isteach {{store}} in éag",

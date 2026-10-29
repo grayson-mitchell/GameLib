@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "A GameLib rendelkezik javítással ehhez a játékhoz, ezért futnia kell"
         },
-        "refresh-rating": "Értékelés frissítése"
+        "refresh-rating": "Értékelés frissítése",
+        "runsForMe": {
+            "autoSet": "Automatikusan bekapcsolva egy perces vagy hosszabb játékmenet után",
+            "description": "Jelöld meg ezt a játékot úgy, hogy működik ezen a Mac gépen, függetlenül a CrossOver-értékeléstől. A GameLib ezt automatikusan bekapcsolja, miután a játék egy percig futott, hacsak te ki nem kapcsoltad.",
+            "label": "Nálam működik"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "Még nincs ellenőrizve",
             "removeFilter": "{{filterLabel}} szűrő eltávolítása",
             "runnabilityGroup": "Futtathatóság",
+            "runsForMe": "Nálam működik",
             "runsNatively": "Natívan fut",
             "runsViaBottle": "Bottle-on keresztül fut",
             "storeGroup": "Áruház",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "Nincs áruházi oldal nélküli játék a könyvtáradban",
         "noStorePage": "Nincs áruházi oldal",
+        "runsForMeBadge": "Nálam működik ezen a Mac gépen",
         "signIn": {
             "dismiss": "A(z) {{store}} bejelentkezési értesítésének elvetése",
             "expired": "A(z) {{store}} bejelentkezésed lejárt",

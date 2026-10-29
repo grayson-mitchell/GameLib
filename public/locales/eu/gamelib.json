@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "GameLib-ek zuzenketa bat dauka joko honetarako, beraz funtzionatu beharko luke"
         },
-        "refresh-rating": "Freskatu balorazioa"
+        "refresh-rating": "Freskatu balorazioa",
+        "runsForMe": {
+            "autoSet": "Automatikoki aktibatu da minutu bateko edo luzeagoko joko-saio baten ondoren",
+            "description": "Markatu joko hau Mac honetan funtzionatzen duela, CrossOver-en balorazioak dioena gorabehera. GameLib-ek automatikoki aktibatzen du jokoak minutu bat martxan egon ondoren, zuk desaktibatu ez baduzu.",
+            "label": "Niretzat funtzionatzen du"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "Oraindik egiaztatu gabe",
             "removeFilter": "Kendu {{filterLabel}} iragazkia",
             "runnabilityGroup": "Exekuzio-gaitasuna",
+            "runsForMe": "Niretzat funtzionatzen du",
             "runsNatively": "Modu nabatiboan exekutatzen da",
             "runsViaBottle": "Bottle bidez exekutatzen da",
             "storeGroup": "Denda",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "Ez dago denda-orririk gabeko jokorik zure liburutegian",
         "noStorePage": "Denda-orririk ez",
+        "runsForMeBadge": "Niretzat funtzionatzen du Mac honetan",
         "signIn": {
             "dismiss": "Baztertu {{store}} saio-hasieraren oharra",
             "expired": "Zure {{store}} saioa iraungi da",

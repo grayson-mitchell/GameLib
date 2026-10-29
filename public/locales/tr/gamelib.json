@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "GameLib bu oyun için bir düzeltmeye sahip, bu yüzden çalışması gerekir"
         },
-        "refresh-rating": "Puanı yenile"
+        "refresh-rating": "Puanı yenile",
+        "runsForMe": {
+            "autoSet": "Bir dakika veya daha uzun bir oyun oturumundan sonra otomatik olarak açıldı",
+            "description": "Bu oyunu, CrossOver derecelendirmesi ne derse desin, bu Mac'te çalışıyor olarak işaretleyin. GameLib, siz kapatmadığınız sürece, oyun bir dakika çalıştıktan sonra bunu otomatik olarak açar.",
+            "label": "Bende çalışıyor"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "Henüz kontrol edilmedi",
             "removeFilter": "{{filterLabel}} filtresini kaldır",
             "runnabilityGroup": "Çalıştırılabilirlik",
+            "runsForMe": "Bende çalışıyor",
             "runsNatively": "Yerel olarak çalışır",
             "runsViaBottle": "Bottle üzerinden çalışır",
             "storeGroup": "Mağaza",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "Kitaplığınızda mağaza sayfası olmayan oyun yok",
         "noStorePage": "Mağaza sayfası yok",
+        "runsForMeBadge": "Bu Mac'te bende çalışıyor",
         "signIn": {
             "dismiss": "{{store}} oturum bildirimini kapat",
             "expired": "{{store}} oturumunuzun süresi doldu",

@@ -194,7 +194,12 @@
             "label": "GameLib",
             "title": "GameLib ha una correzione per questo gioco, quindi dovrebbe funzionare"
         },
-        "refresh-rating": "Aggiorna valutazione"
+        "refresh-rating": "Aggiorna valutazione",
+        "runsForMe": {
+            "autoSet": "Attivato automaticamente dopo una sessione di gioco di un minuto o più",
+            "description": "Segna questo gioco come funzionante su questo Mac, a prescindere dalla valutazione di CrossOver. GameLib lo attiva automaticamente dopo che il gioco è rimasto in esecuzione per un minuto, a meno che tu non l'abbia disattivato.",
+            "label": "Funziona per me"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -235,6 +240,7 @@
             "notYetChecked": "Non ancora verificato",
             "removeFilter": "Rimuovi il filtro {{filterLabel}}",
             "runnabilityGroup": "Eseguibilità",
+            "runsForMe": "Funziona per me",
             "runsNatively": "Eseguibile nativamente",
             "runsViaBottle": "Eseguibile tramite bottle",
             "storeGroup": "Negozio",
@@ -264,6 +270,7 @@
         },
         "no_no_store_page_games": "Nessun gioco senza pagina store nella tua libreria",
         "noStorePage": "Nessuna pagina store",
+        "runsForMeBadge": "Funziona per me su questo Mac",
         "signIn": {
             "dismiss": "Chiudi l'avviso di accesso a {{store}}",
             "expired": "L'accesso a {{store}} è scaduto",

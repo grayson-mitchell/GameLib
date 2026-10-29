@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "GameLib'il on sellele mängule parandus, seega peaks see käivituma"
         },
-        "refresh-rating": "Värskenda hinnangut"
+        "refresh-rating": "Värskenda hinnangut",
+        "runsForMe": {
+            "autoSet": "Automaatselt sisse lülitatud pärast minuti või pikemat mänguseanssi",
+            "description": "Märgi see mäng selles Mac-arvutis töötavaks, olenemata CrossOver-hinnangust. GameLib lülitab selle automaatselt sisse, kui mäng on töötanud minuti, välja arvatud juhul, kui oled selle välja lülitanud.",
+            "label": "Töötab minu jaoks"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "Veel kontrollimata",
             "removeFilter": "Eemalda filter {{filterLabel}}",
             "runnabilityGroup": "Käivitatavus",
+            "runsForMe": "Töötab minu jaoks",
             "runsNatively": "Töötab natiivselt",
             "runsViaBottle": "Töötab bottle'i kaudu",
             "storeGroup": "Pood",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "Sinu teegis pole ühtegi mängu ilma poeleheta",
         "noStorePage": "Poeleht puudub",
+        "runsForMeBadge": "Töötab minu jaoks sellel Mac-arvutil",
         "signIn": {
             "dismiss": "Sulge {{store}} sisselogimise teade",
             "expired": "Sinu {{store}} sisselogimine aegus",

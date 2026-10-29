@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "GameLib memiliki perbaikan untuk game ini, jadi seharusnya bisa berjalan"
         },
-        "refresh-rating": "Segarkan rating"
+        "refresh-rating": "Segarkan rating",
+        "runsForMe": {
+            "autoSet": "Dinyalakan otomatis setelah sesi bermain satu menit atau lebih",
+            "description": "Tandai game ini sebagai berfungsi di Mac ini, apa pun peringkat dari CrossOver. GameLib menyalakan ini secara otomatis setelah game berjalan selama satu menit, kecuali Anda telah mematikannya.",
+            "label": "Berjalan untuk saya"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "Belum diperiksa",
             "removeFilter": "Hapus filter {{filterLabel}}",
             "runnabilityGroup": "Kemampuan berjalan",
+            "runsForMe": "Berjalan untuk saya",
             "runsNatively": "Berjalan secara native",
             "runsViaBottle": "Berjalan melalui bottle",
             "storeGroup": "Toko",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "Tidak ada gim tanpa halaman toko di perpustakaan Anda",
         "noStorePage": "Tanpa halaman toko",
+        "runsForMeBadge": "Berjalan untuk saya di Mac ini",
         "signIn": {
             "dismiss": "Tutup pemberitahuan masuk {{store}}",
             "expired": "Sesi masuk {{store}} Anda telah berakhir",

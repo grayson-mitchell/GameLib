@@ -194,7 +194,12 @@
             "label": "GameLib",
             "title": "GameLib are o corecție pentru acest joc, deci ar trebui să ruleze"
         },
-        "refresh-rating": "Reîmprospătează evaluarea"
+        "refresh-rating": "Reîmprospătează evaluarea",
+        "runsForMe": {
+            "autoSet": "Activat automat după o sesiune de joc de un minut sau mai mult",
+            "description": "Marchează acest joc ca funcțional pe acest Mac, indiferent de evaluarea CrossOver. GameLib activează automat această opțiune după ce jocul a rulat un minut, cu excepția cazului în care ai dezactivat-o.",
+            "label": "Funcționează la mine"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -235,6 +240,7 @@
             "notYetChecked": "Neverificat încă",
             "removeFilter": "Elimină filtrul {{filterLabel}}",
             "runnabilityGroup": "Rulabilitate",
+            "runsForMe": "Funcționează la mine",
             "runsNatively": "Rulează nativ",
             "runsViaBottle": "Rulează prin bottle",
             "storeGroup": "Magazin",
@@ -264,6 +270,7 @@
         },
         "no_no_store_page_games": "Nu există jocuri fără pagină de magazin în biblioteca ta",
         "noStorePage": "Fără pagină de magazin",
+        "runsForMeBadge": "Funcționează la mine pe acest Mac",
         "signIn": {
             "dismiss": "Închide notificarea de conectare la {{store}}",
             "expired": "Sesiunea ta {{store}} a expirat",

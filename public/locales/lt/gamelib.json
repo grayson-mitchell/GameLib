@@ -200,7 +200,12 @@
             "label": "GameLib",
             "title": "GameLib turi šio žaidimo pataisą, todėl jis turėtų veikti"
         },
-        "refresh-rating": "Atnaujinti įvertinimą"
+        "refresh-rating": "Atnaujinti įvertinimą",
+        "runsForMe": {
+            "autoSet": "Automatiškai įjungta po minutės ar ilgesnės žaidimo sesijos",
+            "description": "Pažymėkite šį žaidimą kaip veikiantį šiame Mac kompiuteryje, nepaisant CrossOver įvertinimo. GameLib tai įjungia automatiškai, kai žaidimas veikia minutę, nebent jūs tai išjungėte.",
+            "label": "Veikia man"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -241,6 +246,7 @@
             "notYetChecked": "Dar nepatikrinta",
             "removeFilter": "Pašalinti filtrą „{{filterLabel}}“",
             "runnabilityGroup": "Paleidžiamumas",
+            "runsForMe": "Veikia man",
             "runsNatively": "Veikia natūraliai",
             "runsViaBottle": "Veikia per talpyklą",
             "storeGroup": "Parduotuvė",
@@ -271,6 +277,7 @@
         },
         "no_no_store_page_games": "Jūsų bibliotekoje nėra žaidimų be parduotuvės puslapio",
         "noStorePage": "Be parduotuvės puslapio",
+        "runsForMeBadge": "Veikia man šiame Mac kompiuteryje",
         "signIn": {
             "dismiss": "Uždaryti pranešimą apie prisijungimą prie {{store}}",
             "expired": "Jūsų {{store}} prisijungimo galiojimas baigėsi",

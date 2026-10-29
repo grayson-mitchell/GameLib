@@ -200,7 +200,12 @@
             "label": "GameLib",
             "title": "GameLib má pro tuto hru opravu, takže by měla běžet"
         },
-        "refresh-rating": "Obnovit hodnocení"
+        "refresh-rating": "Obnovit hodnocení",
+        "runsForMe": {
+            "autoSet": "Zapnuto automaticky po hře trvající minutu nebo déle",
+            "description": "Označte tuto hru jako funkční na tomto počítači Mac, bez ohledu na hodnocení CrossOver. GameLib to zapne automaticky po minutě hraní, pokud jste to sami nevypnuli.",
+            "label": "Funguje mi"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -241,6 +246,7 @@
             "notYetChecked": "Ještě nezkontrolováno",
             "removeFilter": "Odstranit filtr {{filterLabel}}",
             "runnabilityGroup": "Spustitelnost",
+            "runsForMe": "Funguje mi",
             "runsNatively": "Běží nativně",
             "runsViaBottle": "Běží přes bottle",
             "storeGroup": "Obchod",
@@ -271,6 +277,7 @@
         },
         "no_no_store_page_games": "Ve vaší knihovně nejsou žádné hry bez stránky v obchodě",
         "noStorePage": "Bez stránky v obchodě",
+        "runsForMeBadge": "Funguje mi na tomto počítači Mac",
         "signIn": {
             "dismiss": "Zavřít oznámení o přihlášení ({{store}})",
             "expired": "Platnost přihlášení ({{store}}) vypršela",

@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "GameLib heeft een fix voor deze game, dus hij zou moeten werken"
         },
-        "refresh-rating": "Beoordeling vernieuwen"
+        "refresh-rating": "Beoordeling vernieuwen",
+        "runsForMe": {
+            "autoSet": "Automatisch aangezet na een speelsessie van een minuut of langer",
+            "description": "Markeer deze game als werkend op deze Mac, ongeacht wat de CrossOver-beoordeling zegt. GameLib zet dit automatisch aan nadat de game een minuut heeft gedraaid, tenzij je het hebt uitgezet.",
+            "label": "Werkt voor mij"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "Nog niet gecontroleerd",
             "removeFilter": "Verwijder filter {{filterLabel}}",
             "runnabilityGroup": "Uitvoerbaarheid",
+            "runsForMe": "Werkt voor mij",
             "runsNatively": "Werkt native",
             "runsViaBottle": "Werkt via bottle",
             "storeGroup": "Store",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "Geen spellen zonder winkelpagina in je bibliotheek",
         "noStorePage": "Geen winkelpagina",
+        "runsForMeBadge": "Werkt voor mij op deze Mac",
         "signIn": {
             "dismiss": "Melding over {{store}}-aanmelding sluiten",
             "expired": "Je {{store}}-aanmelding is verlopen",

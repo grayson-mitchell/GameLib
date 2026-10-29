@@ -209,7 +209,12 @@
             "label": "GameLib",
             "title": "GameLib has a fix for this game, so it should run"
         },
-        "refresh-rating": "Refresh rating"
+        "refresh-rating": "Refresh rating",
+        "runsForMe": {
+            "autoSet": "Turned on automatically after a play session of a minute or more",
+            "description": "Mark this game as working on this Mac, whatever its CrossOver rating says. GameLib turns this on by itself after the game has run for a minute, unless you have turned it off.",
+            "label": "Runs for me"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -261,6 +266,7 @@
             "notYetChecked": "Not yet checked",
             "removeFilter": "Remove {{filterLabel}} filter",
             "runnabilityGroup": "Runnability",
+            "runsForMe": "Runs for me",
             "runsNatively": "Runs natively",
             "runsViaBottle": "Runs via bottle",
             "storeGroup": "Store",
@@ -282,6 +288,7 @@
         },
         "no_no_store_page_games": "No games without a store page in your library",
         "noStorePage": "No store page",
+        "runsForMeBadge": "Runs for me on this Mac",
         "signIn": {
             "dismiss": "Dismiss the {{store}} sign-in notice",
             "expired": "Your {{store}} sign-in expired",

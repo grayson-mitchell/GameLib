@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "GameLib 已为这款游戏提供修复，因此它应该可以运行"
         },
-        "refresh-rating": "刷新评分"
+        "refresh-rating": "刷新评分",
+        "runsForMe": {
+            "autoSet": "游玩满一分钟或更久后已自动开启",
+            "description": "无论 CrossOver 评级如何，都将此游戏标记为可在这台 Mac 上运行。游戏运行满一分钟后，GameLib 会自动开启此项，除非你已将其关闭。",
+            "label": "在我这里能运行"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "尚未检查",
             "removeFilter": "移除 {{filterLabel}} 筛选项",
             "runnabilityGroup": "可运行性",
+            "runsForMe": "在我这里能运行",
             "runsNatively": "原生运行",
             "runsViaBottle": "通过容器运行",
             "storeGroup": "商店",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "您的资料库中没有无商店页面的游戏",
         "noStorePage": "无商店页面",
+        "runsForMeBadge": "在这台 Mac 上能运行",
         "signIn": {
             "dismiss": "关闭 {{store}} 登录通知",
             "expired": "你的 {{store}} 登录已过期",

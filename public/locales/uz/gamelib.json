@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "GameLib bu o'yin uchun tuzatishga ega, shuning uchun u ishlashi kerak"
         },
-        "refresh-rating": "Reytingni yangilash"
+        "refresh-rating": "Reytingni yangilash",
+        "runsForMe": {
+            "autoSet": "Bir daqiqa yoki undan uzoq o'yin sessiyasidan so'ng avtomatik yoqildi",
+            "description": "Bu o'yinni CrossOver reytingidan qat'i nazar, ushbu Mac'da ishlaydi deb belgilang. O'yin bir daqiqa ishlagandan so'ng GameLib buni avtomatik yoqadi, agar siz uni o'chirib qo'ymagan bo'lsangiz.",
+            "label": "Menda ishlaydi"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "Hali tekshirilmagan",
             "removeFilter": "{{filterLabel}} filtrini olib tashlash",
             "runnabilityGroup": "Ishga tushirilishi",
+            "runsForMe": "Menda ishlaydi",
             "runsNatively": "Tabiiy ravishda ishlaydi",
             "runsViaBottle": "Bottle orqali ishlaydi",
             "storeGroup": "Do'kon",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "Kutubxonangizda do'kon sahifasi yo'q o'yinlar yo'q",
         "noStorePage": "Do'kon sahifasi yo'q",
+        "runsForMeBadge": "Bu Mac'da menda ishlaydi",
         "signIn": {
             "dismiss": "{{store}} kirish bildirishnomasini yopish",
             "expired": "{{store}} kirish muddati tugadi",

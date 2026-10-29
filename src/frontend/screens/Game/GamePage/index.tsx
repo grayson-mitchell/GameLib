@@ -56,6 +56,7 @@ import GameContext from '../GameContext'
 import { GameContextType } from 'frontend/types'
 import {
   AppleWikiInfo,
+  RunsForMeToggle,
   CloudSavesSync,
   CompatibilityInfo,
   Description,
@@ -631,6 +632,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
                         >
                           <PlatformSupport gameInfo={gameInfo} />
                           <AppleWikiInfo gameInfo={gameInfo} />
+                          <RunsForMeToggle gameInfo={gameInfo} />
                           <DownloadSizeInfo gameInfo={gameInfo} />
                           <InstalledInfo gameInfo={gameInfo} />
                           <CloudSavesSync gameInfo={gameInfo} />

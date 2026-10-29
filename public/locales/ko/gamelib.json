@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "이 게임에는 GameLib 수정 사항이 있으므로 실행될 것입니다"
         },
-        "refresh-rating": "평점 새로고침"
+        "refresh-rating": "평점 새로고침",
+        "runsForMe": {
+            "autoSet": "1분 이상의 플레이 세션 후 자동으로 켜짐",
+            "description": "CrossOver 평가와 관계없이 이 게임이 이 Mac에서 작동하는 것으로 표시합니다. 게임이 1분 동안 실행되면 GameLib이 자동으로 이를 켭니다. 직접 꺼 둔 경우는 제외입니다.",
+            "label": "내 환경에서 실행됨"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "아직 확인되지 않음",
             "removeFilter": "{{filterLabel}} 필터 제거",
             "runnabilityGroup": "실행 가능 여부",
+            "runsForMe": "내 환경에서 실행됨",
             "runsNatively": "네이티브로 실행됨",
             "runsViaBottle": "보틀을 통해 실행됨",
             "storeGroup": "스토어",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "라이브러리에 스토어 페이지가 없는 게임이 없습니다",
         "noStorePage": "스토어 페이지 없음",
+        "runsForMeBadge": "이 Mac에서 실행됨",
         "signIn": {
             "dismiss": "{{store}} 로그인 알림 닫기",
             "expired": "{{store}} 로그인이 만료되었습니다",

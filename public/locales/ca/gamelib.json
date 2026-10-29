@@ -194,7 +194,12 @@
             "label": "GameLib",
             "title": "GameLib té una correcció per a aquest joc, així que hauria de funcionar"
         },
-        "refresh-rating": "Actualitza la valoració"
+        "refresh-rating": "Actualitza la valoració",
+        "runsForMe": {
+            "autoSet": "S'ha activat automàticament després d'una sessió de joc d'un minut o més",
+            "description": "Marca aquest joc com a funcional en aquest Mac, sigui quina sigui la valoració de CrossOver. GameLib ho activa automàticament quan el joc ha funcionat durant un minut, tret que ho hagis desactivat.",
+            "label": "Funciona per a mi"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -235,6 +240,7 @@
             "notYetChecked": "Encara no comprovat",
             "removeFilter": "Elimina el filtre {{filterLabel}}",
             "runnabilityGroup": "Executabilitat",
+            "runsForMe": "Funciona per a mi",
             "runsNatively": "S'executa nativament",
             "runsViaBottle": "S'executa mitjançant una bottle",
             "storeGroup": "Botiga",
@@ -264,6 +270,7 @@
         },
         "no_no_store_page_games": "No hi ha jocs sense pàgina de botiga a la teva biblioteca",
         "noStorePage": "Sense pàgina de botiga",
+        "runsForMeBadge": "Funciona per a mi en aquest Mac",
         "signIn": {
             "dismiss": "Descarta l'avís d'inici de sessió de {{store}}",
             "expired": "La teva sessió de {{store}} ha caducat",

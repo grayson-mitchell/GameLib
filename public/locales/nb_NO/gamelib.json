@@ -188,7 +188,12 @@
             "label": "GameLib",
             "title": "GameLib har en rettelse for dette spillet, så det bør kjøre"
         },
-        "refresh-rating": "Oppdater vurdering"
+        "refresh-rating": "Oppdater vurdering",
+        "runsForMe": {
+            "autoSet": "Slått på automatisk etter en spilløkt på ett minutt eller mer",
+            "description": "Marker dette spillet som fungerende på denne Mac-en, uansett hva CrossOver-vurderingen sier. GameLib slår dette på automatisk når spillet har kjørt i ett minutt, med mindre du har slått det av.",
+            "label": "Fungerer for meg"
+        }
     },
     "installFlows": {
         "crossoverRating": {
@@ -229,6 +234,7 @@
             "notYetChecked": "Ikke sjekket ennå",
             "removeFilter": "Fjern filteret {{filterLabel}}",
             "runnabilityGroup": "Kjørbarhet",
+            "runsForMe": "Fungerer for meg",
             "runsNatively": "Kjører nativt",
             "runsViaBottle": "Kjører via bottle",
             "storeGroup": "Butikk",
@@ -257,6 +263,7 @@
         },
         "no_no_store_page_games": "Ingen spill uten butikkside i biblioteket ditt",
         "noStorePage": "Ingen butikkside",
+        "runsForMeBadge": "Fungerer for meg på denne Mac-en",
         "signIn": {
             "dismiss": "Lukk varselet om {{store}}-innlogging",
             "expired": "{{store}}-innloggingen din er utløpt",
