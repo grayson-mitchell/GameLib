@@ -45,6 +45,15 @@
      padding-inline below; the two must stay equal (pinned in
      focusRowStripSource.test.ts). Logical property: RTL locales ship. */
   scroll-padding-inline: 15px;
+  /* Quick 261029-v5a: a free trackpad or wheel scroll stopped wherever its
+     momentum ended, leaving the first card half-clipped and off the grid
+     columns below. Snap positions are whole pitches (card width + 1.5rem), the
+     same set the chevron paging, end of travel and focus scroll already target,
+     so snapping cannot fight them or `scroll-behavior: smooth`. `inline`, not
+     `x`, so RTL locales snap the same way. `mandatory`, not `proximity`: a slow
+     drag must not rest between columns. No `scroll-snap-stop`: the default lets
+     a fling cross several columns. */
+  scroll-snap-type: inline mandatory;
   /* Quick 261029-quw item 1: clip the track to the grid's whole-column extent.
      The percentage base is the viewport content box, C + 15, so `100% - 15px`
      is the grid content width C. `round(down, ...)` is n pitches, n =
@@ -114,6 +123,9 @@
   );
   padding-block: 0;
   padding-inline: 15px;
+  /* Quick 261029-v5a: containing block for the hero snap anchor below. No
+     z-index, so no stacking context. */
+  position: relative;
 }
 
 /* G-48-8c (operator ruling 2026-10-07, "match the grid", amending D-01): a
@@ -128,6 +140,31 @@
      inflates (or collapses) and the strip pages into blank space. Pinning the
      width is the only counterfactual that fixed all 108 measured variants. */
   width: var(--focus-row-card-width, 156px);
+  /* Quick 261029-v5a: with the track's 15px scroll-padding-inline, each snap
+     position puts a card's start 15px inside the track, which is grid column 1.
+     The hero rule below inherits this through the same `> *` selector. */
+  scroll-snap-align: start;
+}
+
+/* Quick 261029-v5a hero anchor. A strip that starts with the wide hero has snap
+   positions {0, 2p, 3p, ...} and nothing at 1p, yet the focus scroll end-aligns
+   the first off-screen card to scrollLeft = 1p. A mandatory container would
+   re-snap that to 0 or 2p, an exact tie, and at 0 the focused card stays
+   off-screen. This 1px absolutely positioned box is not a flex item, takes no
+   gap and adds no layout; it supplies the 1p snap position. In a non-hero strip
+   1p is already card 1's own position, so it is a no-op. Unconditional because
+   `:has()` cannot nest the hero's own `:has()`. The 15px and 1.5rem repeat the
+   list padding-inline and gap (pinned in focusRowStripSource.test.ts). Logical
+   properties: RTL locales ship. */
+.focusRowTrack .gameList::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(15px + var(--focus-row-card-width, 156px) + 1.5rem);
+  inline-size: 1px;
+  block-size: 1px;
+  pointer-events: none;
+  scroll-snap-align: start;
 }
 
 /* 261011-ulj D-01 (operator decision 2026-10-11, "Restore wide hero"): the

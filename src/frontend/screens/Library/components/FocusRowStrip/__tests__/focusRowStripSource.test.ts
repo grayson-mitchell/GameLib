@@ -966,3 +966,51 @@ describe('FocusRowStrip/index.css -- heading aligned to first tile (quick 261029
     expect(strip).toMatch(/padding:\s*0 var\(--space-md-fixed\)/)
   })
 })
+
+describe('FocusRowStrip/index.css -- scroll snapping to grid columns (261029-v5a)', () => {
+  // A free trackpad or wheel scroll stops wherever momentum ends, leaving a
+  // half-clipped card at the start edge. Every scripted path already rests on a
+  // whole pitch p = w + 1.5rem: pageScrollDelta returns whole pitches, end of
+  // travel is (m - n) * p, and the focus scroll lands on c * p or (c + 1 - n) * p.
+  // Snap positions at whole pitches therefore agree with all of them. The hero
+  // slot plus its gap is exactly 2p, so a ::before anchor supplies the 1p
+  // position the hero strip would otherwise lack.
+  const css = read(FOCUS_ROW_CSS_PATH)
+
+  it('Pin A: .focusRowTrack snaps on the logical inline axis, mandatory', () => {
+    const track = cssBlock(css, '.focusRowTrack')
+    expect(track).toMatch(/scroll-snap-type:\s*inline mandatory;/)
+    expect(track).not.toMatch(/scroll-snap-type:\s*x\b/)
+  })
+
+  it('Pin B: every strip card aligns its start, and the hero does not override it', () => {
+    const card = cssBlock(css, '.focusRowTrack .gameList > *')
+    expect(card).toMatch(/scroll-snap-align:\s*start;/)
+    const hero = cssBlock(
+      css,
+      '.focusRowTrack .gameList > :is(.justPlayed, :has(.justPlayed))'
+    )
+    expect(hero).not.toMatch(/scroll-snap-align/)
+  })
+
+  it('Pin C: no scroll-snap-stop: always, so a fling can cross several columns', () => {
+    expect(css).not.toMatch(/scroll-snap-stop:\s*always/)
+  })
+
+  it('Pin D: the one-pitch hero snap anchor mirrors the list padding and gap', () => {
+    const list = cssBlock(css, '.focusRowTrack .gameList')
+    expect(list).toMatch(/position:\s*relative;/)
+    const padding = /padding-inline:\s*(\d+px);/.exec(list)?.[1]
+    const gap = /gap:\s*([\d.]+rem);/.exec(list)?.[1]
+    expect(padding).toBeDefined()
+    expect(gap).toBeDefined()
+    const anchor = cssBlock(css, '.focusRowTrack .gameList::before')
+    expect(anchor).toMatch(/position:\s*absolute;/)
+    expect(anchor).toMatch(/scroll-snap-align:\s*start;/)
+    expect(anchor).toMatch(/pointer-events:\s*none;/)
+    expect(anchor).toContain(
+      `inset-inline-start: calc(${padding} + var(--focus-row-card-width, 156px) + ${gap});`
+    )
+    expect(anchor).not.toMatch(/(^|[\s;])(left|right):/)
+  })
+})
