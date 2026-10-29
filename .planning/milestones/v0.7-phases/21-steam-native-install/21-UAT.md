@@ -13,7 +13,7 @@ open_macos_bug_items: 0
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (RESOLVED — code fix ab0500c6 real-HW verified on Windows 2026-10-29 once D-UAT-13 made the waiting state reachable; tile hint not separately observed), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (RESOLVED — real-HW verified on Windows 2026-10-29 via item 1d: incomplete install shows Resume Install, never Play), D-UAT-10 (DEFERRED tracked-debt 2026-07-20 — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven; macOS-only, revisit via /gsd-debug or later phase; NOT blocking Phase 21), D-UAT-11 (MINOR open — stale progress % after Delete Files cancel; code fix 14f572a2a quick-261029-o5a, awaiting Windows re-test), D-UAT-12 (MINOR open — library card shows plain Install for an incomplete install), D-UAT-13 (RESOLVED — fix 128148bf3 real-HW verified on Windows 2026-10-29: hold at finalize, released when the old Steam exited, Play launched with no install dialog; open edge: hold is in-memory, lost on a GameLib restart while the old Steam runs), D-UAT-14 (MAJOR open — cross-app depotfromapp content depot skipped)]
+open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (RESOLVED — code fix ab0500c6 real-HW verified on Windows 2026-10-29 once D-UAT-13 made the waiting state reachable; tile hint not separately observed), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (RESOLVED — real-HW verified on Windows 2026-10-29 via item 1d: incomplete install shows Resume Install, never Play), D-UAT-10 (DEFERRED tracked-debt 2026-07-20 — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven; macOS-only, revisit via /gsd-debug or later phase; NOT blocking Phase 21), D-UAT-11 (MINOR open — stale progress % after Delete Files cancel; code fix 14f572a2a quick-261029-o5a, awaiting Windows re-test), D-UAT-12 (MINOR open — library card shows plain Install for an incomplete install; code fix e704b397e quick-261029-ocq, awaiting Windows re-test), D-UAT-13 (RESOLVED — fix 128148bf3 real-HW verified on Windows 2026-10-29: hold at finalize, released when the old Steam exited, Play launched with no install dialog; open edge: hold is in-memory, lost on a GameLib restart while the old Steam runs), D-UAT-14 (MAJOR open — cross-app depotfromapp content depot skipped)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-10-29
 audit_acknowledged:
@@ -716,11 +716,19 @@ page button **Resume Install** ✅ and that hint ✅; never Play ✅.
 >
 > **Reported:** "card only shows download icon, hovering tooltip says 'install (darkest dungeon)"
 >
-> Code-localized, not yet fixed: `GameCard/index.tsx:301` hardcodes the tooltip to
+> Code-localized (fixed in code, see below): `GameCard/index.tsx:301` hardcodes the tooltip to
 > `t('button.install')`, and the status text (`label` from `hasStatus` → `getStatusLabel`, which
 > does produce "Resume Install" for `statusContext === 'steam-incomplete'`) renders at line 539 only
 > under `haveStatus`, which the `notInstalled` state does not appear to set. So the D-UAT-09
 > resumable-install label reaches the detail page but not the card.
+>
+> **Code fix (quick-261029-ocq, e704b397e, 2026-10-29):** GameCard now keeps the `statusContext` that
+> `hasStatus` returns and a pure predicate `isSteamIncompleteCard` (steam + `notInstalled` +
+> `steam-incomplete`) drives the install tooltip, the context-menu install entry and the status text
+> (grid pill and list info) to "Resume Install". Plain not-installed and non-Steam cards are unchanged.
+> Re-verify on Windows: with an incomplete Steam install the card tooltip reads "Resume Install
+> (<title>)", the card shows "Resume Install" status text, and the right-click menu says "Resume
+> Install". Finding stays MINOR open until re-tested.
 
 - Resume Install (09:54) → resumed at **12%** (kept files reused, not a restart from 0) → finished
   09:57:15. Log: `Writing StateFlags=4 full-ownership manifest for appId 262060 (sizeOnDisk=2264929176,

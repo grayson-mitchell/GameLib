@@ -15,3 +15,12 @@ With an incomplete (StateFlags 1026) install, the detail page correctly shows Re
 card shows only the download icon and the tooltip "Install (Darkest Dungeon)". GameCard/index.tsx:301
 hardcodes t('button.install'), and the hasStatus label ("Resume Install" for statusContext
 steam-incomplete) renders at line 539 only under haveStatus, which notInstalled does not appear to set.
+
+## Resolution
+
+- **Fix commit:** e704b397e (quick-261029-ocq).
+- **Root cause:** GameCard dropped `statusContext` from `hasStatus`; the tooltip and context-menu
+  hardcoded `button.install`; `haveStatus` excludes `notInstalled`, so the "Resume Install" label
+  never rendered.
+- **Fix:** `isSteamIncompleteCard` predicate drives the tooltip, context-menu label and status text.
+- **Status:** code fix only, not live re-tested on Windows.
