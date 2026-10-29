@@ -20,5 +20,5 @@ New test `quick 261029-mbi: the only done is the final one, after the redist ste
 old code (one `sendFrontendMessage('gameStatusUpdate', {status:'done'})`) and passes now.
 
 Verification: steam suites 91/91 (3475 passed), tsc clean, prettier clean, eslint 0 errors.
-Live check outstanding: reinstall Grim Dawn and watch the game page stay on "Finishing install…" /
-"Installing Redistributables" until Play.
+Live check passed 2026-10-29: Grim Dawn reinstall, the game page showed no Play until the install
+finished.
