@@ -396,6 +396,88 @@ function isLocalDiagnosticWrapperArgument(node: Node): boolean {
   return false
 }
 
+/**
+ * quick 261029-oog (shape 3): a CSS class list returned from a `*ClassName`
+ * function, e.g. `messageBoxButtonClassName()`'s `return 'button is-primary'`.
+ * This is `isDropdownButtonClassProp` / the excluded `className` attribute
+ * carried across a function boundary. ALL THREE must hold: (a) the literal is
+ * the direct expression of a `return`; (b) the nearest enclosing function is
+ * named `/ClassName$/` (own name, or the variable it initializes); (c) the
+ * text is a whitespace-separated list of 2+ class tokens with at least one
+ * containing `-` or `_`. Refused deliberately: `return 'Install anyway'`
+ * (fails c), `return 'click to continue'` (no hyphen token), and the same
+ * body in a non-`*ClassName` function (fails b).
+ */
+const CSS_CLASS_TOKEN_RE = /^[a-z][a-zA-Z0-9]*([-_]{1,2}[a-zA-Z0-9]+)*$/
+
+function isClassNameFunctionReturn(node: Node): boolean {
+  if (
+    !Node.isStringLiteral(node) &&
+    !Node.isNoSubstitutionTemplateLiteral(node)
+  ) {
+    return false
+  }
+  const parent = node.getParent()
+  if (!parent) return false
+  // `return '...'`, or a concise arrow body `() => '...'` (the same position).
+  const isReturned = Node.isReturnStatement(parent)
+    ? parent.getExpression() === node
+    : Node.isArrowFunction(parent) && parent.getBody() === node
+  if (!isReturned) return false
+
+  const fn = node.getFirstAncestor(
+    (a) =>
+      Node.isFunctionDeclaration(a) ||
+      Node.isArrowFunction(a) ||
+      Node.isFunctionExpression(a) ||
+      Node.isMethodDeclaration(a)
+  )
+  if (!fn) return false
+  let name: string | undefined
+  if (Node.isFunctionDeclaration(fn) || Node.isMethodDeclaration(fn)) {
+    name = fn.getName()
+  } else {
+    const holder = fn.getParent()
+    if (holder && Node.isVariableDeclaration(holder)) name = holder.getName()
+  }
+  if (!name || !/ClassName$/.test(name)) return false
+
+  const tokens = node.getLiteralText().split(/\s+/).filter(Boolean)
+  if (tokens.length < 2) return false
+  if (!tokens.every((t) => CSS_CLASS_TOKEN_RE.test(t))) return false
+  return tokens.some((t) => /[-_]/.test(t))
+}
+
+/**
+ * quick 261029-oog (shape 4): an argument to an INJECTED logger parameter whose
+ * declared type IS an already-exempt diagnostic channel, e.g.
+ * `resolveBootLanguage.ts`'s `logFallback: typeof window.api.logError`.
+ * RESOLUTION-based, not NAME-based (see GAP-C above): the callee identifier is
+ * resolved to a `ParameterDeclaration` whose type node is a `typeof` query of
+ * `window.api.log*` or `console.<log|info|warn|error|debug>`. A parameter named
+ * `logIn`/`logFallback` with a plain function type, or a `typeof` query of a
+ * non-log channel (`window.api.openDialog`), gets nothing.
+ */
+function isInjectedDiagnosticLoggerArgument(node: Node): boolean {
+  const call = node.getFirstAncestor(Node.isCallExpression)
+  if (!call) return false
+  const callee = call.getExpression()
+  if (!Node.isIdentifier(callee)) return false
+  for (const decl of callee.getDefinitionNodes()) {
+    if (!Node.isParameterDeclaration(decl)) continue
+    const typeNode = decl.getTypeNode()
+    if (!typeNode || !Node.isTypeQuery(typeNode)) continue
+    const expr = typeNode.getExprName().getText()
+    if (
+      /^window\.api\.log([A-Z][a-zA-Z]*)?$/.test(expr) ||
+      /^console\.(log|info|warn|error|debug)$/.test(expr)
+    ) {
+      return true
+    }
+  }
+  return false
+}
+
 function isNewErrorArgument(node: Node): boolean {
   const newExpr = node.getFirstAncestor(Node.isNewExpression)
   if (!newExpr) return false
@@ -1031,6 +1113,8 @@ function isStructuralNonCandidate(
   if (isLocalDiagnosticWrapperArgument(node)) return true
   if (isInternalStringComparisonArgument(node)) return true
   if (isIncludesArrayLiteralElement(node)) return true
+  if (isClassNameFunctionReturn(node)) return true
+  if (isInjectedDiagnosticLoggerArgument(node)) return true
   return false
 }
 
@@ -1348,6 +1432,44 @@ function isTCallDefaultValueProperty(
 // MANDATORY, so a namespace prefix alone (no dot) still cannot pass.
 const DOTTED_KEY_RE =
   /^([a-zA-Z][a-zA-Z0-9]*:)?[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/
+
+/**
+ * quick 261029-oog (shape 1): a bare i18n key path -- optional `ns:` prefix and
+ * THREE or more lowerCamel dot-separated segments, no whitespace, no
+ * uppercase-initial segment -- e.g. `statusKey: 'welcome.appManagement.status.granted'`
+ * (welcomeState.ts) and the `REASON_KEYS` / `KNOWN_BAD_KEYS` tables in
+ * bridgeRouteDisplay.ts / steamBridgeRouteLine.ts. Stricter than `DOTTED_KEY_RE`
+ * (2+ segments, any case): camelCase segments defeat the all-lowercase
+ * `DOMAIN_RE` discard, and a whitespace-free 3+-segment lowerCamel dotted path
+ * is never English prose. Refused: `'Access granted'`, `'welcome.appManagement'`
+ * (2 segments), `'Steam.Bridge.Route'`, and prose containing a key.
+ *
+ * One position exclusion: the initializer of a property named exactly `key`.
+ * That slot belongs to `isKeyDefaultObjectProperty`'s pairing rule, whose
+ * dangling-key fixture (`key: 'library.filterPanel.chipHiddenOnly'` with only a
+ * `label` sibling stays flagged) this rule must not void.
+ */
+const I18N_KEY_PATH_RE =
+  /^([a-z][a-zA-Z0-9]*:)?[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){2,}$/
+
+function isBareI18nKeyPathLiteral(node: Node): boolean {
+  if (
+    !Node.isStringLiteral(node) &&
+    !Node.isNoSubstitutionTemplateLiteral(node)
+  ) {
+    return false
+  }
+  const parent = node.getParent()
+  if (
+    parent &&
+    Node.isPropertyAssignment(parent) &&
+    parent.getInitializer() === node &&
+    parent.getName() === 'key'
+  ) {
+    return false
+  }
+  return I18N_KEY_PATH_RE.test(node.getLiteralText())
+}
 
 /**
  * Pattern 2: exempts both string elements of a `[i18nKeyString,
@@ -1751,6 +1873,11 @@ export function scanSource(
     // direct t-call-argument (one parent hop) before dataflow
     // (`findReferencesAsNodes()`, the only one that walks the whole file).
     if (isKeyDefaultTupleElement(node) || isKeyDefaultObjectProperty(node)) {
+      exempted += 1
+      return
+    }
+
+    if (isBareI18nKeyPathLiteral(node)) {
       exempted += 1
       return
     }

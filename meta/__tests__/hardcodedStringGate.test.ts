@@ -1357,6 +1357,190 @@ describe('hardcodedStringGate', () => {
     })
   })
 
+  describe('quick 261029-oog: key-table / class-list / injected-logger shapes', () => {
+    const scan = (source: string, file = 'fixture.ts') =>
+      scanSource(file, source, EMPTY_GLOSSARY)
+
+    it('P1: exempts a bare 3+-segment lowerCamel key path in a *Key property', () => {
+      const result = scan(`
+        export function f(s: string) {
+          switch (s) {
+            case 'a':
+              return { visible: true, statusKey: 'welcome.appManagement.status.granted' }
+            default:
+              return { visible: false }
+          }
+        }
+      `)
+      expect(result.violations).toHaveLength(0)
+      expect(result.exempted).toBeGreaterThan(0)
+    })
+
+    it('P2: exempts key tables and a push argument', () => {
+      const result = scan(`
+        const REASON_KEYS: Record<string, string> = {
+          'scan-clean': 'steam.bridge.route.reason.scanClean',
+          'win64-no-shim': 'steam.bridge.route.reason.win64NoShim'
+        }
+        const limitedLineKeys: string[] = []
+        limitedLineKeys.push('steam.bridge.limited.identityFallback')
+      `)
+      expect(result.violations).toHaveLength(0)
+      expect(result.exempted).toBeGreaterThan(0)
+    })
+
+    it('P3: exempts an ns-prefixed key path', () => {
+      const result = scan(
+        `const x = { titleKey: 'gamelib:installFlows.crossoverRating.knownBadTitle' }`
+      )
+      expect(result.violations).toHaveLength(0)
+      expect(result.exempted).toBeGreaterThan(0)
+    })
+
+    it('N1: a *Key slot with English prose is still flagged', () => {
+      const result = scan(`const x = { statusKey: 'Access granted' }`)
+      expect(result.violations).toHaveLength(1)
+    })
+
+    it('N2: two segments is not enough', () => {
+      const result = scan(`const x = { statusKey: 'welcome.appManagement' }`)
+      expect(result.violations).toHaveLength(1)
+    })
+
+    it('N3: an uppercase-initial segment is not a key path', () => {
+      const result = scan(`const x = { label: 'Steam.Bridge.Route' }`)
+      expect(result.violations).toHaveLength(1)
+    })
+
+    it('N4: whitespace means prose', () => {
+      const result = scan(
+        `const x = { hint: 'See steam.bridge.route.reasonSeed for details' }`
+      )
+      expect(result.violations).toHaveLength(1)
+    })
+
+    it('N5: the `key` slot stays under the pairing rule', () => {
+      const result = scan(`
+        function spec() {
+          return { ns: 'gamelib', key: 'library.filterPanel.chipHiddenOnly', label: 'Hidden only' }
+        }
+      `)
+      const texts = result.violations.map((v) => v.text)
+      expect(texts).toContain('library.filterPanel.chipHiddenOnly')
+      expect(texts).toContain('Hidden only')
+    })
+
+    it('P4: exempts a class list returned from a *ClassName function', () => {
+      const result = scan(`
+        export function messageBoxButtonClassName(variant?: string): string {
+          switch (variant) {
+            case 'primary':
+              return 'button is-primary'
+            case 'danger':
+              return 'button is-danger messageBoxModal__button--separated'
+            default:
+              return 'button is-secondary outline'
+          }
+        }
+        const rowClassName = () => 'row row--active'
+      `)
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('P4b: exempts an arrow-bodied *ClassName with a block return', () => {
+      const result = scan(`
+        const rowClassName = (): string => { return 'row row--active' }
+      `)
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('N6: the same body in a non-ClassName function is flagged', () => {
+      const result = scan(`
+        export function messageBoxButtonLabel(variant?: string): string {
+          switch (variant) {
+            case 'primary':
+              return 'button is-primary'
+            case 'danger':
+              return 'button is-danger messageBoxModal__button--separated'
+            default:
+              return 'button is-secondary outline'
+          }
+        }
+      `)
+      expect(result.violations).toHaveLength(3)
+    })
+
+    it('N7: prose returned from a *ClassName function is flagged', () => {
+      const result = scan(
+        `function bannerClassName() { return 'Install anyway' }`
+      )
+      expect(result.violations.map((v) => v.text)).toEqual(['Install anyway'])
+    })
+
+    it('N8: lowercase prose without a hyphen/underscore token is flagged', () => {
+      const result = scan(
+        `function bannerClassName() { return 'click to continue' }`
+      )
+      expect(result.violations.map((v) => v.text)).toEqual([
+        'click to continue'
+      ])
+    })
+
+    it('N9: a non-return position inside a *ClassName function is flagged', () => {
+      const result = scan(
+        `function bannerClassName() { const label = 'Install anyway now'; return label }`
+      )
+      expect(result.violations.map((v) => v.text)).toContain(
+        'Install anyway now'
+      )
+    })
+
+    it('P5: exempts args to a parameter typed as an exempt diagnostic channel', () => {
+      const result = scan(`
+        export function resolveBootLanguage(c: string | undefined, s: string | null, logFallback: typeof window.api.logError) {
+          logFallback(\`[GameLib] configStore has no 'language' key; resolved to "\${s}" via \` + (s ? \`stale localStorage fallback (was "\${s}")\` : "the 'en' default"))
+        }
+      `)
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('P5b: exempts a typeof console.warn parameter', () => {
+      const result = scan(`
+        export function f(warn: typeof console.warn) {
+          warn('Something odd happened here')
+        }
+      `)
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('N10: a plain function type buys nothing, whatever the name', () => {
+      const result = scan(`
+        export function resolveBootLanguage(c: string | undefined, s: string | null, logFallback: (message: string) => void) {
+          logFallback(\`[GameLib] configStore has no 'language' key; resolved to "\${s}" via \` + (s ? \`stale localStorage fallback (was "\${s}")\` : "the 'en' default"))
+        }
+      `)
+      expect(result.violations).toHaveLength(3)
+    })
+
+    it('N11: a typeof of a non-log channel is not exempt', () => {
+      const result = scan(`
+        export function f(notify: typeof window.api.openDialog) {
+          notify('Choose a folder to continue')
+        }
+      `)
+      expect(result.violations).toHaveLength(1)
+    })
+
+    it('N12: a login verb with a plain type is not exempt', () => {
+      const result = scan(`
+        export function f(logIn: (user: string) => void) {
+          logIn('Welcome back, friend')
+        }
+      `)
+      expect(result.violations).toHaveLength(1)
+    })
+  })
+
   describe('D-14: repairFailure English fallbacks', () => {
     it('never flags the assigned-then-passed-to-t() title/message fallback — real Game/GameSubMenu/repairFailure.ts:113-121', () => {
       const source = `
