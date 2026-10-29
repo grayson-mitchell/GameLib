@@ -5100,6 +5100,36 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     )
   })
 
+  it('quick 261029-mbi: the only done is the final one, after the redist step', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+    ;(sendFrontendMessage as jest.Mock).mockClear()
+
+    await new SteamGame(APP_ID).install({} as any)
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ is_installed: true })
+    )
+    const frontendDone = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel, payload]) =>
+        channel === 'gameStatusUpdate' && payload?.status === 'done'
+    )
+    expect(frontendDone).toHaveLength(0)
+    const doneIndexes = (sendGameStatusUpdate as jest.Mock).mock.calls
+      .map(([payload], i) => (payload.status === 'done' ? i : -1))
+      .filter((i) => i !== -1)
+    expect(doneIndexes).toHaveLength(1)
+    expect(
+      (sendGameStatusUpdate as jest.Mock).mock.invocationCallOrder[
+        doneIndexes[0]
+      ]
+    ).toBeGreaterThan(
+      (installSteamBridgeSharedRedists as jest.Mock).mock.invocationCallOrder[0]
+    )
+  })
+
   it('56-20 Gap 3: a rejecting redist step still sends the final done status', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)

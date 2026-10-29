@@ -2613,11 +2613,9 @@ export default class SteamGame implements Game {
       steamLibraryStore.set('games', Array.from(library.values()))
       sendFrontendMessage('pushGameToLibrary', updated)
     }
-    sendFrontendMessage('gameStatusUpdate', {
-      appName: this.appId,
-      runner: 'steam',
-      status: 'done'
-    })
+    // Quick 261029-mbi: no 'done' here. The install keeps going (shared
+    // redists, DRM prefetch) and installBridgeGame sends the one final 'done';
+    // an early one cleared "Finishing install…" and showed Play for a moment.
   }
 
   /**
