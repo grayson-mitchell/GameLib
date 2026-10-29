@@ -3902,6 +3902,12 @@ fn request_login_sheet_cancel(app: &AppHandle, label: &str, route: &str) {
 /// without changing that constant, per this cycle's hard constraint.
 const EPIC_LOGIN_HOST: &str = "www.epicgames.com";
 
+/// GOG's login entry host (`GOG_LOGIN_URL`, `loginRoutes.ts`). GOG added a Cloudflare Turnstile
+/// check that fails inside the Tauri-injected login window, so on macOS it takes the same
+/// pristine (injection-free) WKWebView route as Epic. Host-keyed like `EPIC_LOGIN_HOST`; never
+/// caller-chosen. The function/delegate keep their Epic names (historical).
+const GOG_LOGIN_HOST: &str = "auth.gog.com";
+
 // ---- Pristine Epic login webview (bounded "pristine-webview attempt", checkpoint response,
 // 2026-08-03T18:00:00 superseding cycle, F-34.5-G6-01) ----
 //
@@ -8231,7 +8237,8 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // moves into the builder below, since this is the only signal this runner-agnostic
             // arm has (see `EPIC_LOGIN_HOST`'s own doc comment).
             #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
-            let is_epic_login = url.host_str() == Some(EPIC_LOGIN_HOST);
+            let is_epic_login =
+                matches!(url.host_str(), Some(EPIC_LOGIN_HOST) | Some(GOG_LOGIN_HOST));
             let visible = args.get(1).and_then(|v| v.as_bool()).unwrap_or(false);
             let user_agent = args
                 .get(2)
