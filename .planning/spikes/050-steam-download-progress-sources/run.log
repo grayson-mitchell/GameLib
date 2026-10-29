@@ -1,0 +1,117 @@
+2026-10-29T06:54:30.953Z [run] sample awf-1 {"appId":"2706020","url":"steam://install/2706020","maxSecs":1800,"steamPid":"48169\n48188","acf0":{"present":false}}
+2026-10-29T06:54:30.996Z [fire] steam://install/2706020
+2026-10-29T06:54:30.997Z [tick] 0s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:54:40.998Z [tick] 10s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:54:50.998Z [tick] 20s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:55:00.997Z [tick] 30s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:55:10.998Z [tick] 40s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:55:20.998Z [tick] 50s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:55:30.997Z [tick] 60s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:55:40.997Z [tick] 70s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:55:50.998Z [tick] 80s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:56:00.998Z [tick] 90s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:56:10.998Z [tick] 100s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:56:20.997Z [tick] 110s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:56:30.997Z [tick] 120s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:56:40.998Z [tick] 130s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:56:50.998Z [tick] 140s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:57:00.998Z [tick] 150s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:57:10.998Z [tick] 160s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:57:20.998Z [tick] 170s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:57:30.997Z [tick] 180s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:57:40.999Z [tick] 190s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:57:50.998Z [tick] 200s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:58:21.948Z [run] sample outlast-1 {"appId":"238320","url":"steam://install/238320","maxSecs":1800,"steamPid":"48169\n48188","acf0":{"present":false}}
+2026-10-29T06:58:21.988Z [fire] steam://install/238320
+2026-10-29T06:58:21.989Z [tick] 0s {"acf":[null,null],"staging":null,"install":null}
+2026-10-29T06:58:29.997Z [content_log] [2026-10-29 19:58:29] Downloading 3719 chunks for depot 238323 (3317545544496803274)
+2026-10-29T06:58:31.992Z [tick] 10s {"acf":[0,2813215248],"staging":[3390104661,3391135744,438],"install":[0,0]}
+2026-10-29T06:58:41.994Z [tick] 20s {"acf":[0,2813215248],"staging":[3392871017,3394301952,600],"install":[0,0]}
+2026-10-29T06:58:51.996Z [tick] 30s {"acf":[0,2813215248],"staging":[3393425476,3394867200,606],"install":[0,0]}
+2026-10-29T06:59:01.993Z [tick] 40s {"acf":[0,2813215248],"staging":[3394102138,3395559424,614],"install":[0,0]}
+2026-10-29T06:59:11.997Z [tick] 50s {"acf":[0,2813215248],"staging":[3394521848,3395989504,619],"install":[0,0]}
+2026-10-29T06:59:21.996Z [tick] 60s {"acf":[0,2813215248],"staging":[3395285314,3396775936,630],"install":[0,0]}
+2026-10-29T06:59:31.997Z [tick] 70s {"acf":[0,2813215248],"staging":[3395367905,3396866048,633],"install":[0,0]}
+2026-10-29T06:59:41.997Z [content_log] [2026-10-29 19:59:41] Current download rate: 197.866 Mbps
+2026-10-29T06:59:41.997Z [tick] 80s {"acf":[0,2813215248],"staging":[3395580570,3397107712,644],"install":[0,0]}
+2026-10-29T06:59:51.994Z [tick] 90s {"acf":[0,2813215248],"staging":[3395720489,3397263360,651],"install":[0,0]}
+2026-10-29T07:00:01.996Z [tick] 100s {"acf":[0,2813215248],"staging":[3397213528,3398852608,688],"install":[0,0]}
+2026-10-29T07:00:11.996Z [tick] 110s {"acf":[0,2813215248],"staging":[3397812225,3399479296,703],"install":[0,0]}
+2026-10-29T07:00:21.997Z [tick] 120s {"acf":[0,2813215248],"staging":[3401037827,3402842112,757],"install":[0,0]}
+2026-10-29T07:00:23.000Z [run] scheduler finished seen; 5 s grace
+2026-10-29T07:00:29.012Z [run] done outlast-1 {"steamRestarted":false}
+2026-10-29T07:02:38.771Z [run] sample nettop-dry {"appId":"238320","maxSecs":4,"steamPid":"48169","acf0":{"present":true,"mtimeMs":1793257222452.6929,"StateFlags":"4","buildid":"576074","installdir":"Outlast","BytesToDownload":2813215248,"BytesDownloaded":2813215248,"BytesToStage":3401037827,"BytesStaged":3401037827}}
+2026-10-29T07:02:38.777Z [tick] 0s {"acf":[2813215248,2813215248],"staging":null,"install":[3401037827,3402842112],"nettop":0}
+2026-10-29T07:02:42.791Z [run] done nettop-dry {"steamRestarted":false}
+2026-10-29T07:03:10.034Z [run] sample nettop-dry {"appId":"238320","maxSecs":5,"steamPid":"48169","acf0":{"present":true,"mtimeMs":1793257222452.6929,"StateFlags":"4","buildid":"576074","installdir":"Outlast","BytesToDownload":2813215248,"BytesDownloaded":2813215248,"BytesToStage":3401037827,"BytesStaged":3401037827}}
+2026-10-29T07:03:10.040Z [tick] 0s {"acf":[2813215248,2813215248],"staging":null,"install":[3401037827,3402842112],"nettop":0}
+2026-10-29T07:03:15.067Z [run] done nettop-dry {"steamRestarted":false}
+2026-10-29T07:11:58.294Z [run] sample metro-1 {"appId":"43160","url":"steam://install/43160","maxSecs":1800,"steamPid":"48169","acf0":{"present":false}}
+2026-10-29T07:11:58.338Z [fire] steam://install/43160
+2026-10-29T07:11:58.339Z [tick] 0s {"acf":[null,null],"staging":null,"install":null,"nettop":0}
+2026-10-29T07:12:01.340Z [content_log] [2026-10-29 20:12:01] AppID 43160 state changed : Update Required,
+2026-10-29T07:12:01.340Z [content_log] [2026-10-29 20:12:01] AppID 43160 state changed : Update Required,Update Queued,
+2026-10-29T07:12:02.340Z [content_log] [2026-10-29 20:12:01] AppID 43160 state changed : Update Required,Update Queued,Update Running,
+2026-10-29T07:12:02.340Z [content_log] [2026-10-29 20:12:01] AppID 43160 App update changed : Running Update,
+2026-10-29T07:12:02.340Z [content_log] [2026-10-29 20:12:01] AppID 43160 App update changed : Running Update,Reconfiguring,
+2026-10-29T07:12:03.340Z [content_log] [2026-10-29 20:12:03] AppID 43160 App update changed : Running Update,
+2026-10-29T07:12:03.340Z [content_log] [2026-10-29 20:12:03] AppID 43160 App update changed : Running Update,Verifying Installed,
+2026-10-29T07:12:03.340Z [content_log] [2026-10-29 20:12:03] AppID 43160 App update changed : Running Update,
+2026-10-29T07:12:03.340Z [content_log] [2026-10-29 20:12:03] AppID 43160 App update changed : Running Update,Preallocating,
+2026-10-29T07:12:04.340Z [content_log] [2026-10-29 20:12:03] AppID 43160 App update changed : Running Update,
+2026-10-29T07:12:04.340Z [content_log] [2026-10-29 20:12:03] AppID 43160 update started : download 0/8736151712, store 0/0, reuse 0/0, delta 0/0, stage 0/9614286648 
+2026-10-29T07:12:04.340Z [content_log] [2026-10-29 20:12:03] AppID 43160 state changed : Update Required,Update Queued,Update Running,Update Started,
+2026-10-29T07:12:04.340Z [content_log] [2026-10-29 20:12:03] AppID 43160 App update changed : Running Update,Downloading,Staging,
+2026-10-29T07:12:04.340Z [content_log] [2026-10-29 20:12:03] Downloading 9188 chunks for depot 43164 (8074282923124235513)
+2026-10-29T07:12:08.340Z [tick] 10s {"acf":[0,8736151712],"staging":[9614278697,9614348288,32],"install":[0,0],"nettop":66999430}
+2026-10-29T07:12:15.340Z [content_log] [2026-10-29 20:12:14] Current download rate: 108.490 Mbps
+2026-10-29T07:12:18.339Z [tick] 20s {"acf":[0,8736151712],"staging":[9614278697,9614348288,32],"install":[0,0],"nettop":284733157}
+2026-10-29T07:12:28.339Z [tick] 30s {"acf":[0,8736151712],"staging":[9614278697,9614348288,32],"install":[0,0],"nettop":514134063}
+2026-10-29T07:12:38.340Z [tick] 40s {"acf":[0,8736151712],"staging":[9614278697,9614348288,32],"install":[0,0],"nettop":749344876}
+2026-10-29T07:12:48.339Z [tick] 50s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":999006140}
+2026-10-29T07:12:58.340Z [tick] 60s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":1260052040}
+2026-10-29T07:13:08.340Z [tick] 70s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":1507195799}
+2026-10-29T07:13:15.339Z [content_log] [2026-10-29 20:13:15] Current download rate: 206.532 Mbps
+2026-10-29T07:13:18.340Z [tick] 80s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":1770339523}
+2026-10-29T07:13:28.339Z [tick] 90s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":2021900433}
+2026-10-29T07:13:38.340Z [tick] 100s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":2264039261}
+2026-10-29T07:13:48.340Z [tick] 110s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":2500981398}
+2026-10-29T07:13:58.339Z [tick] 120s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":2735022695}
+2026-10-29T07:14:08.339Z [tick] 130s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":2988743002}
+2026-10-29T07:14:16.339Z [content_log] [2026-10-29 20:14:15] Current download rate: 195.505 Mbps
+2026-10-29T07:14:18.340Z [tick] 140s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":3239943246}
+2026-10-29T07:14:28.339Z [tick] 150s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":3492944289}
+2026-10-29T07:14:38.340Z [tick] 160s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":3749521264}
+2026-10-29T07:14:48.340Z [tick] 170s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":3994490099}
+2026-10-29T07:14:58.340Z [tick] 180s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":4244457320}
+2026-10-29T07:15:08.339Z [tick] 190s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":4491774901}
+2026-10-29T07:15:16.340Z [content_log] [2026-10-29 20:15:15] Current download rate: 200.551 Mbps
+2026-10-29T07:15:18.339Z [tick] 200s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":4742056993}
+2026-10-29T07:15:28.340Z [tick] 210s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":4997580099}
+2026-10-29T07:15:38.339Z [tick] 220s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":5252951016}
+2026-10-29T07:15:48.340Z [tick] 230s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":5503014490}
+2026-10-29T07:15:58.340Z [tick] 240s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":5759853708}
+2026-10-29T07:16:08.341Z [tick] 250s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":6010429910}
+2026-10-29T07:16:17.339Z [content_log] [2026-10-29 20:16:16] Current download rate: 201.814 Mbps
+2026-10-29T07:16:18.340Z [tick] 260s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":6263586433}
+2026-10-29T07:16:28.339Z [tick] 270s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":6512810933}
+2026-10-29T07:16:38.339Z [tick] 280s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":6760246860}
+2026-10-29T07:16:48.338Z [tick] 290s {"acf":[0,8736151712],"staging":[9614279225,9614356480,34],"install":[0,0],"nettop":6991728434}
+2026-10-29T07:16:58.339Z [tick] 300s {"acf":[0,8736151712],"staging":[9614283602,9614364672,35],"install":[0,0],"nettop":7227422349}
+2026-10-29T07:17:08.340Z [tick] 310s {"acf":[0,8736151712],"staging":[9614283602,9614364672,35],"install":[0,0],"nettop":7476778729}
+2026-10-29T07:17:17.341Z [content_log] [2026-10-29 20:17:16] Current download rate: 194.889 Mbps
+2026-10-29T07:17:18.339Z [tick] 320s {"acf":[0,8736151712],"staging":[9614283602,9614364672,35],"install":[0,0],"nettop":7723551142}
+2026-10-29T07:17:28.340Z [tick] 330s {"acf":[0,8736151712],"staging":[9614283602,9614364672,35],"install":[0,0],"nettop":7959068119}
+2026-10-29T07:17:38.340Z [tick] 340s {"acf":[0,8736151712],"staging":[9614283602,9614364672,35],"install":[0,0],"nettop":8211123319}
+2026-10-29T07:17:48.339Z [tick] 350s {"acf":[0,8736151712],"staging":[9614283602,9614364672,35],"install":[0,0],"nettop":8454405193}
+2026-10-29T07:17:58.340Z [tick] 360s {"acf":[0,8736151712],"staging":[9614283602,9614364672,35],"install":[0,0],"nettop":8718525815}
+2026-10-29T07:18:03.340Z [content_log] [2026-10-29 20:18:02] AppID 43160 App update changed : Running Update,
+2026-10-29T07:18:03.340Z [content_log] [2026-10-29 20:18:02] AppID 43160 App update changed : Running Update,Committing,
+2026-10-29T07:18:03.340Z [content_log] [2026-10-29 20:18:02] AppID 43160 state changed : Fully Installed,Update Queued,Update Running,
+2026-10-29T07:18:03.340Z [content_log] [2026-10-29 20:18:02] AppID 43160 App update changed : Running Update,
+2026-10-29T07:18:03.340Z [content_log] [2026-10-29 20:18:02] AppID 43160 App update changed : None
+2026-10-29T07:18:03.340Z [content_log] [2026-10-29 20:18:02] AppID 43160 state changed : Fully Installed,Update Queued,
+2026-10-29T07:18:03.340Z [content_log] [2026-10-29 20:18:02] AppID 43160 state changed : Fully Installed,
+2026-10-29T07:18:03.341Z [run] scheduler finished seen; 5 s grace
+2026-10-29T07:18:08.340Z [tick] 370s {"acf":[8736151712,8736151712],"staging":null,"install":[9614286648,9614368768],"nettop":8770693182}
+2026-10-29T07:18:09.370Z [run] done metro-1 {"steamRestarted":false}

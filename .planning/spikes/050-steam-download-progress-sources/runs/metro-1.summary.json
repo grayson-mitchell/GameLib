@@ -1,0 +1,419 @@
+{
+  "label": "metro-1",
+  "appId": "43160",
+  "durationS": 371.001,
+  "samples": 372,
+  "totals": {
+    "BytesToDownload": 8736151712,
+    "BytesToStage": 9614286648
+  },
+  "acfWrites": {
+    "n": 4,
+    "gapMs": {
+      "p50": 3494.33154296875,
+      "p90": 355500.474609375
+    }
+  },
+  "contentLogRate": {
+    "n": 6,
+    "gapMs": {
+      "p50": 60001,
+      "max": 61000
+    },
+    "values": [
+      [
+        17001,
+        108.49
+      ],
+      [
+        77001,
+        206.532
+      ],
+      [
+        138001,
+        195.505
+      ],
+      [
+        198001,
+        200.551
+      ],
+      [
+        259001,
+        201.814
+      ],
+      [
+        319002,
+        194.889
+      ]
+    ]
+  },
+  "preallocation": {
+    "maxApparentMinusAllocatedFrac": 0,
+    "firstStagingSample": {
+      "t": 5001,
+      "size": 2756223147,
+      "alloc": 2756251648,
+      "files": 11,
+      "walkMs": 0.6
+    }
+  },
+  "walkMs": {
+    "p90": 0.3
+  },
+  "stats": {
+    "acfDownloaded": {
+      "w1s": {
+        "changes": 1,
+        "updateGapMs": {
+          "p50": null,
+          "p90": null,
+          "max": null
+        },
+        "stepPct": {
+          "p50": 100,
+          "max": 100
+        },
+        "backwards": 0,
+        "activeSpanMs": 0,
+        "speedWindowMs": 1000,
+        "speedMBps": null
+      },
+      "w3s": {
+        "changes": 1,
+        "updateGapMs": {
+          "p50": null,
+          "p90": null,
+          "max": null
+        },
+        "stepPct": {
+          "p50": 100,
+          "max": 100
+        },
+        "backwards": 0,
+        "activeSpanMs": 0,
+        "speedWindowMs": 3000,
+        "speedMBps": null
+      }
+    },
+    "acfStaged": {
+      "w1s": {
+        "changes": 1,
+        "updateGapMs": {
+          "p50": null,
+          "p90": null,
+          "max": null
+        },
+        "stepPct": {
+          "p50": 100,
+          "max": 100
+        },
+        "backwards": 0,
+        "activeSpanMs": 0,
+        "speedWindowMs": 1000,
+        "speedMBps": null
+      },
+      "w3s": {
+        "changes": 1,
+        "updateGapMs": {
+          "p50": null,
+          "p90": null,
+          "max": null
+        },
+        "stepPct": {
+          "p50": 100,
+          "max": 100
+        },
+        "backwards": 0,
+        "activeSpanMs": 0,
+        "speedWindowMs": 3000,
+        "speedMBps": null
+      }
+    },
+    "stagingSize": {
+      "w1s": {
+        "changes": 7,
+        "updateGapMs": {
+          "p50": 40001,
+          "p90": 247000,
+          "max": 247000
+        },
+        "stepPct": {
+          "p50": 0.00004552599855040228,
+          "max": 71.33
+        },
+        "backwards": 0,
+        "activeSpanMs": 357000,
+        "speedWindowMs": 1000,
+        "speedMBps": {
+          "mean": 19.21,
+          "cv": 18.868,
+          "zeroSamples": 351,
+          "n": 357
+        }
+      },
+      "w3s": {
+        "changes": 7,
+        "updateGapMs": {
+          "p50": 40001,
+          "p90": 247000,
+          "max": 247000
+        },
+        "stepPct": {
+          "p50": 0.00004552599855040228,
+          "max": 71.33
+        },
+        "backwards": 0,
+        "activeSpanMs": 357000,
+        "speedWindowMs": 3000,
+        "speedMBps": {
+          "mean": 0,
+          "cv": 15.894,
+          "zeroSamples": 344,
+          "n": 354
+        }
+      }
+    },
+    "stagingAlloc": {
+      "w1s": {
+        "changes": 7,
+        "updateGapMs": {
+          "p50": 40001,
+          "p90": 247000,
+          "max": 247000
+        },
+        "stepPct": {
+          "p50": 0.00008520652961500925,
+          "max": 71.33
+        },
+        "backwards": 0,
+        "activeSpanMs": 357000,
+        "speedWindowMs": 1000,
+        "speedMBps": {
+          "mean": 19.21,
+          "cv": 18.867,
+          "zeroSamples": 351,
+          "n": 357
+        }
+      },
+      "w3s": {
+        "changes": 7,
+        "updateGapMs": {
+          "p50": 40001,
+          "p90": 247000,
+          "max": 247000
+        },
+        "stepPct": {
+          "p50": 0.00008520652961500925,
+          "max": 71.33
+        },
+        "backwards": 0,
+        "activeSpanMs": 357000,
+        "speedWindowMs": 3000,
+        "speedMBps": {
+          "mean": 0,
+          "cv": 12.256,
+          "zeroSamples": 344,
+          "n": 354
+        }
+      }
+    },
+    "installSize": {
+      "w1s": {
+        "changes": 1,
+        "updateGapMs": {
+          "p50": null,
+          "p90": null,
+          "max": null
+        },
+        "stepPct": {
+          "p50": 100,
+          "max": 100
+        },
+        "backwards": 0,
+        "activeSpanMs": 0,
+        "speedWindowMs": 1000,
+        "speedMBps": null
+      },
+      "w3s": {
+        "changes": 1,
+        "updateGapMs": {
+          "p50": null,
+          "p90": null,
+          "max": null
+        },
+        "stepPct": {
+          "p50": 100,
+          "max": 100
+        },
+        "backwards": 0,
+        "activeSpanMs": 0,
+        "speedWindowMs": 3000,
+        "speedMBps": null
+      }
+    },
+    "installAlloc": {
+      "w1s": {
+        "changes": 1,
+        "updateGapMs": {
+          "p50": null,
+          "p90": null,
+          "max": null
+        },
+        "stepPct": {
+          "p50": 100.00085414553368,
+          "max": 100
+        },
+        "backwards": 0,
+        "activeSpanMs": 0,
+        "speedWindowMs": 1000,
+        "speedMBps": null
+      },
+      "w3s": {
+        "changes": 1,
+        "updateGapMs": {
+          "p50": null,
+          "p90": null,
+          "max": null
+        },
+        "stepPct": {
+          "p50": 100.00085414553368,
+          "max": 100
+        },
+        "backwards": 0,
+        "activeSpanMs": 0,
+        "speedWindowMs": 3000,
+        "speedMBps": null
+      }
+    },
+    "nettopIn": {
+      "w1s": {
+        "changes": 364,
+        "updateGapMs": {
+          "p50": 1000,
+          "p90": 1001,
+          "max": 1999
+        },
+        "stepPct": {
+          "p50": 0.2844951395001598,
+          "max": 0.32
+        },
+        "backwards": 0,
+        "activeSpanMs": 363999,
+        "speedWindowMs": 1000,
+        "speedMBps": {
+          "mean": 24.16,
+          "cv": 0.168,
+          "zeroSamples": 0,
+          "n": 363
+        }
+      },
+      "w3s": {
+        "changes": 364,
+        "updateGapMs": {
+          "p50": 1000,
+          "p90": 1001,
+          "max": 1999
+        },
+        "stepPct": {
+          "p50": 0.2844951395001598,
+          "max": 0.32
+        },
+        "backwards": 0,
+        "activeSpanMs": 363999,
+        "speedWindowMs": 3000,
+        "speedMBps": {
+          "mean": 24.28,
+          "cv": 0.134,
+          "zeroSamples": 0,
+          "n": 361
+        }
+      }
+    }
+  },
+  "phases": [
+    [
+      3001,
+      "AppID 43160 state changed : Update Required,"
+    ],
+    [
+      3001,
+      "AppID 43160 state changed : Update Required,Update Queued,"
+    ],
+    [
+      4001,
+      "AppID 43160 state changed : Update Required,Update Queued,Update Running,"
+    ],
+    [
+      4001,
+      "AppID 43160 App update changed : Running Update,"
+    ],
+    [
+      4001,
+      "AppID 43160 App update changed : Running Update,Reconfiguring,"
+    ],
+    [
+      5001,
+      "AppID 43160 App update changed : Running Update,"
+    ],
+    [
+      5001,
+      "AppID 43160 App update changed : Running Update,Verifying Installed,"
+    ],
+    [
+      5001,
+      "AppID 43160 App update changed : Running Update,"
+    ],
+    [
+      5001,
+      "AppID 43160 App update changed : Running Update,Preallocating,"
+    ],
+    [
+      6001,
+      "AppID 43160 App update changed : Running Update,"
+    ],
+    [
+      6001,
+      "AppID 43160 update started : download 0/8736151712, store 0/0, reuse 0/0, delta 0/0, stage 0/9614286648 "
+    ],
+    [
+      6001,
+      "AppID 43160 state changed : Update Required,Update Queued,Update Running,Update Started,"
+    ],
+    [
+      6001,
+      "AppID 43160 App update changed : Running Update,Downloading,Staging,"
+    ],
+    [
+      6001,
+      "Downloading 9188 chunks for depot 43164 (8074282923124235513)"
+    ],
+    [
+      365001,
+      "AppID 43160 App update changed : Running Update,"
+    ],
+    [
+      365001,
+      "AppID 43160 App update changed : Running Update,Committing,"
+    ],
+    [
+      365001,
+      "AppID 43160 state changed : Fully Installed,Update Queued,Update Running,"
+    ],
+    [
+      365001,
+      "AppID 43160 App update changed : Running Update,"
+    ],
+    [
+      365001,
+      "AppID 43160 App update changed : None"
+    ],
+    [
+      365001,
+      "AppID 43160 state changed : Fully Installed,Update Queued,"
+    ],
+    [
+      365001,
+      "AppID 43160 state changed : Fully Installed,"
+    ]
+  ]
+}
