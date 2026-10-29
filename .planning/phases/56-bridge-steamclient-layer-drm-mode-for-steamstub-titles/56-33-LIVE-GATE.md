@@ -411,7 +411,7 @@ result: pass. Segment-A pid 86847 unchanged from PC6 through the install and the
 ### 14. G9 repeat DRM launch passes bottle-stage (BLOCKING)
 
 expected: Grim Dawn launch 2 logs exactly one new anchor and zero `reason=drm-bottle-stage` lines in DELTA(2); `registry not staged:` presence and menu reached recorded (sinks: SIDECAR copy by delta and operator, launch 2)
-result: pending
+pass. Scored on the reconstructed launch-2 window (`gamelib-launch-2.log` lines 419-end, `delta2-real.txt`; 14:38:38 to 14:42:09): exactly one new `[bridge-drm] appId=219990 mode=steamclient-layer` anchor (14:38:39; whole-log anchor count 3 = runs 1, 1b and 2, so 2 before the click and +1), `reason=drm-bottle-stage` x0, `[bridge-notice]` x0, `timed out after` x0, `registry not staged:` x0 (as expected on a staged bottle). Operator: "launch 2: menu, no notices"; the monitor logged game started pid 93627 and `game stopped after 209s of play`. Run on pad count 1 (connected). `procs-launch-2.txt` does not exist (the snapshot was not taken); it is not a G9 clause, and it is recorded as missing, not fabricated.
 
 ### 15. G10 notice display confirmed (non-blocking)
 
@@ -527,6 +527,11 @@ Note: DELTA(0) is the reinstall window of the current segment-A `gamelib.log` af
 - DEVIATION (two game runs in DELTA(1)): run 1 at 14:28:42 (stage ran, anchor, game pid 89531, 14 s of play) and run 1b at 14:29:22 (a manual re-click, game pid 89772, 34 s of play, no stage). Operator, verbatim: "yes, I quit it before i added the log file command, so restarted to do that... this is a pass". Reading: run 1 reached an interactive main menu and was quit from the menu (the 14 s clean shutdown was operator-initiated, not a crash); run 1b was a manual re-click made to take the procs snapshot. Per the retry rule run 1b is evidence-only (`1b`, `evidence-only (post-FAIL)` by analogy: it is a re-click, not a retry the product did) and cannot change the verdict. Items 3 and 13 are scored on run 1's sub-window only; item 4's procs clause and part of item 5/6's trace evidence come from run 1b as well as run 1 and are labelled as such. The operator's "this is a pass" is verdict input only; each item above is scored from evidence.
 - Lesson recorded: the procs snapshot command must be pasted at the menu BEFORE quitting, in the same Play; the operator quit first. From launch 2 on, `gate-launch.sh` prints the snapshot command before the click.
 - Observation on the "[play now]" flash during install: recorded above; unscored.
+
+### 56-34 launch 2 (G9) archive deviation
+
+- The operator ran `gate-launch.sh 2 219990` four times (the first three were Ctrl-C'd): `terminal.log` has four `=== GATE LAUNCH 2` delimiters, at 01:36:25Z, 01:37:19Z, 01:39:00Z and 01:40:50Z. The Play click (about 14:38:39 local) came before the last run's baseline (14:40:50), so the script's `lines-before-launch-2.txt` (488) and `delta2.txt` start after the anchor and its "anchors in delta" output is wrong for this launch. The real launch-2 window is `gamelib-launch-2.log` lines 419-end, saved as `delta2-real.txt`; the wine log `219990-1793237919158.wine.log` was copied by hand to `wine-launch-2.log` (the script's wine-log grep had run on the misaligned delta); `trace-launch-2.log` and `system-reg-launch-2.reg` were copied by the script from the right files. Run 1b's stop is at line 418 of the same file, so lines 419-end contain run 2 only.
+- No snapshot for launch 2 (`procs-launch-2.txt` missing).
 
 ## Gaps
 
