@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 57
 Plan: 0 of 0
 Status: Ready to plan
-Last activity: 2026-10-29 - Completed quick task 261029-mkz: Runs for me override
+Last activity: 2026-10-29 - Completed quick task 261029-my4: Contain the no-bottle DRM fallback exe reads in placeShimForGame
 
 Progress: [██████████] 99%
 
@@ -462,6 +462,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261029-l9w | Uninstalling a GameLib native Mac install that the running Steam never adopted (pending-adoption record, same steam_osx PID, ACF still GameLib's) now removes it directly via `removeSteamInstallCopy('native')` + `pollUninstallOnce('native')` instead of a `steam://uninstall` that Steam ignores; badge flips, pill clears, one toast. Every other state keeps the delegation. Also fixes the "Starting Steam" pill never clearing after ji2's adoption restart (`restartMacSteamForAdoption` now always emits `done`). | 2026-10-29 | 4d3079ef9, 564f13fb2 | Verified (live 2026-10-29: unadopted uninstall + Starting Steam clear pass) | [261029-l9w-native-uninstall-of-unadopted-steam-inst](./quick/261029-l9w-native-uninstall-of-unadopted-steam-inst/) |
 | 261029-m0u | DRM exe containment is library-aware: `detectLaunchDrmWrapper` requires both the launch exe and every UE Shipping candidate to resolve inside `realpath(dirname(exePath))` before reading them, so a symlinked Bottles dir or `steamapps/common` keeps SteamStub routing and an in-folder symlink escaping the game folder is refused. Remaining unchecked read: `shimGenerate.ts` no-bottle fallback (~l.496). | 2026-10-29 | 995f3daaa | Desk-verified (jest 13/13, tsc, prettier) | [261029-m0u-library-aware-drm-exe-containment](./quick/261029-m0u-library-aware-drm-exe-containment/) |
 | 261029-m68 | A failed DRM-ready Steam launch now always ends the card's status: `launchDrmModeGame` runs in a try/finally that sends `done` on a false return or a throw (throw still propagates), no longer gated on `drm.progressSent` — so a cached-prefetch Play that fails after a known-fixes/shared-redist `winetricks`/`redist` status no longer sticks. Success sends no `done`. Closes 56-REVIEW WR-01. | 2026-10-29 | 9773a9276 | Desk-verified (jest launch 134/134, tsc, prettier) | [261029-m68-drm-launch-failure-ends-card-status](./quick/261029-m68-drm-launch-failure-ends-card-status/) |
+| 261029-my4 | `placeShimForGame`'s no-bottle DRM fallback now realpath-contains the game exe before `detectDrmWrapper` and the CEG `detectExeSteamDrm` scan, using new exported `containedGameExeReal` (drmScanExe.ts). A refused exe gives no `drmWrapper`, no `drm` and a `logWarning`. Todo closed. Follow-ups: `readFileEffectiveArch` and the Inner import scan still read the lexical path. | 2026-10-29 | 1bff92963 | jest 129/129, tsc/eslint/prettier clean, planning-gates 12/12; not seen live | [261029-my4-contain-the-no-bottle-drm-fallback-exe-r](./quick/261029-my4-contain-the-no-bottle-drm-fallback-exe-r/) |
 
 ## Deferred Items
 
