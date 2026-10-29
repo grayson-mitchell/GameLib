@@ -5,6 +5,9 @@ area: login-window
 severity: minor
 platform: macos
 ready: live-gate
+status: CLOSED
+closed: 2026-10-29
+closed_by: 'd3dfcc0b6 + bcb6f22cd (quick-261029-utr); live gate passed, operator approved 2026-10-29'
 found_by: "operator request 2026-10-29, after quick-261029-o1w made GOG's pristine login a sheet and left Epic free-floating"
 files:
   - src-tauri/src/main.rs
