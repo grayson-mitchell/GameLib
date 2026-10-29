@@ -167,6 +167,9 @@ objc2 = "0.6.4"
 # here rather than left as unused surface; `cargo build` was re-run clean with it gone
 # (confirmed, see `34.4.2-13-SUMMARY.md`), and both `Cargo.lock` and `pnpm-lock.yaml` stayed
 # byte-identical (removing a feature declaration, not a dependency, moves neither lockfile).
+# `NSColor`/`NSFont` added (quick-261029-o1w): the GOG login sheet's native cancel button is
+# styled to match the other sheets' injected cancel box. `NSColor` is already unioned in via
+# `tao`'s own request; `NSFont` is net-new surface.
 objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "NSView",
     "NSWindow",
@@ -177,6 +180,8 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "NSEvent",
     "NSResponder",
     "NSTextField",
+    "NSColor",
+    "NSFont",
     "block2",
 ] }
 objc2-foundation = "0.3.2"

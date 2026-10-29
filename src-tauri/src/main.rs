@@ -3911,10 +3911,11 @@ const EPIC_LOGIN_HOST: &str = "www.epicgames.com";
 /// caller-chosen. The function/delegate keep their Epic names (historical).
 const GOG_LOGIN_HOST: &str = "auth.gog.com";
 
-/// Height (points) of the native band the GOG sheet reserves above its pristine webview for the
-/// AppKit cancel button (quick-261029-o1w).
+/// Side (points) of the native cancel button overlaid on the GOG sheet's pristine webview
+/// (quick-261029-o1w). Matches the injected `login_cancel_strip_script` box (32px square,
+/// top-right, overlaid on the page rather than reserving a band).
 #[cfg(target_os = "macos")]
-const NATIVE_LOGIN_CANCEL_STRIP_HEIGHT: f64 = 32.0;
+const NATIVE_LOGIN_CANCEL_BUTTON_SIZE: f64 = 32.0;
 
 // ---- Pristine Epic login webview (bounded "pristine-webview attempt", checkpoint response,
 // 2026-08-03T18:00:00 superseding cycle, F-34.5-G6-01) ----
@@ -4241,8 +4242,14 @@ fn open_pristine_epic_login_window(
     // Epic's free-floating path and is unchanged.
     let mut window_builder = tauri::WindowBuilder::new(app, label).visible(visible && !as_sheet);
     if visible {
+        // The GOG sheet uses the 464x592 size every other login sheet uses (the
+        // `humble_login_open` arm's own `.inner_size(464.0, 592.0)`); Epic stays 900x700.
+        window_builder = if as_sheet {
+            window_builder.inner_size(464.0, 592.0)
+        } else {
+            window_builder.inner_size(900.0, 700.0)
+        };
         window_builder = window_builder
-            .inner_size(900.0, 700.0)
             .theme(Some(tauri::Theme::Light))
             .title(login_window_title(&origin, None));
         if !as_sheet {
@@ -4337,21 +4344,13 @@ fn open_pristine_epic_login_window(
                 unsafe { &*(ns_view_addr.0 as *const objc2_app_kit::NSView) };
             let frame = ns_view.frame();
 
-            // quick-261029-o1w: sheet windows reserve a native band for the cancel control.
+            // quick-261029-o1w: the sheet's cancel button overlays the page's top-right corner
+            // (added after the webview, so it sits above it); the webview fills the window.
             let flipped = ns_view.isFlipped();
-            let webview_frame = if as_sheet {
-                let band = NATIVE_LOGIN_CANCEL_STRIP_HEIGHT;
-                NSRect::new(
-                    NSPoint::new(frame.origin.x, if flipped { band } else { 0.0 }),
-                    NSSize::new(frame.size.width, (frame.size.height - band).max(0.0)),
-                )
-            } else {
-                frame
-            };
 
             let config = unsafe { WKWebViewConfiguration::new(mtm) };
             let webview: Retained<WKWebView> = unsafe {
-                WKWebView::initWithFrame_configuration(mtm.alloc(), webview_frame, &config)
+                WKWebView::initWithFrame_configuration(mtm.alloc(), frame, &config)
             };
             webview.setAutoresizingMask(
                 objc2_app_kit::NSAutoresizingMaskOptions::ViewWidthSizable
@@ -5264,10 +5263,11 @@ impl PristineLoginCancelTarget {
     }
 }
 
-/// Adds the native "x" cancel button in the top-right of the `NATIVE_LOGIN_CANCEL_STRIP_HEIGHT`
-/// band `open_pristine_epic_login_window` reserves when `as_sheet` is set. Pure AppKit: no JS is
-/// evaluated or injected (Turnstile fails on any injection). `flipped` is the content view's
-/// `isFlipped`, which decides which edge the band is on.
+/// Adds the native "x" cancel button, overlaid on the top-right corner of the pristine webview
+/// when `open_pristine_epic_login_window` runs with `as_sheet` set. Styled to match the injected
+/// `login_cancel_strip_script` box the other login sheets show (18pt glyph, `#caf3fd` on
+/// `#161c1e`). Pure AppKit: no JS is evaluated or injected (Turnstile fails on any injection).
+/// `flipped` is the content view's `isFlipped`, which decides which edge is the top.
 #[cfg(target_os = "macos")]
 fn install_native_login_cancel_button(
     ns_view: &objc2_app_kit::NSView,
@@ -5276,7 +5276,7 @@ fn install_native_login_cancel_button(
     flipped: bool,
     mtm: objc2::MainThreadMarker,
 ) {
-    let band = NATIVE_LOGIN_CANCEL_STRIP_HEIGHT;
+    let band = NATIVE_LOGIN_CANCEL_BUTTON_SIZE;
     let view_frame = ns_view.frame();
     let target = PristineLoginCancelTarget::new(app, label, mtm);
     let button = unsafe {
@@ -5288,6 +5288,27 @@ fn install_native_login_cancel_button(
         )
     };
     button.setBordered(false);
+    button.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(18.0)));
+    button.setContentTintColor(Some(
+        &objc2_app_kit::NSColor::colorWithSRGBRed_green_blue_alpha(
+            0xca as f64 / 255.0,
+            0xf3 as f64 / 255.0,
+            0xfd as f64 / 255.0,
+            1.0,
+        ),
+    ));
+    let background = objc2_app_kit::NSColor::colorWithSRGBRed_green_blue_alpha(
+        0x16 as f64 / 255.0,
+        0x1c as f64 / 255.0,
+        0x1e as f64 / 255.0,
+        1.0,
+    );
+    // `NSButtonCell.backgroundColor` applies to borderless buttons only, which this is. Sent via
+    // `msg_send!` so no `NSButtonCell`/`NSCell` feature is needed for a single setter.
+    unsafe {
+        let cell: *mut AnyObject = msg_send![&*button, cell];
+        let _: () = msg_send![cell, setBackgroundColor: &*background];
+    }
     let y = if flipped {
         0.0
     } else {
