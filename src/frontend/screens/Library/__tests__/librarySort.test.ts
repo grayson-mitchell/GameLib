@@ -5,8 +5,11 @@ import {
   LIBRARY_SORT_DIRECTION_KEY,
   LIBRARY_SORT_FIELD_KEY,
   LEGACY_SORT_DESCENDING_KEY,
+  LIBRARY_SORT_FIELDS,
+  buildWikiMetacriticByTitle,
   defaultDirectionFor,
   lastPlayedMs,
+  metacriticScoreOf,
   parseInstallSize,
   readLibrarySortPrefs,
   sortLibrary,
@@ -253,6 +256,7 @@ describe('defaultDirectionFor', () => {
     expect(defaultDirectionFor('name')).toBe('asc')
     expect(defaultDirectionFor('lastPlayed')).toBe('desc')
     expect(defaultDirectionFor('installSize')).toBe('desc')
+    expect(defaultDirectionFor('metacritic')).toBe('desc')
   })
 })
 
@@ -261,6 +265,12 @@ describe('readLibrarySortPrefs', () => {
     const m = new Map(Object.entries(entries))
     return { getItem: (k: string) => m.get(k) ?? null }
   }
+  it('accepts a stored metacritic field (quick 261029-sbi)', () => {
+    expect(
+      readLibrarySortPrefs(fake({ [LIBRARY_SORT_FIELD_KEY]: 'metacritic' }))
+        .field
+    ).toBe('metacritic')
+  })
   it('defaults on empty storage', () => {
     expect(readLibrarySortPrefs(fake({}))).toEqual(DEFAULT_LIBRARY_SORT_PREFS)
     expect(DEFAULT_LIBRARY_SORT_PREFS).toEqual({
@@ -363,5 +373,76 @@ describe('write helpers', () => {
     }
     expect(() => writeLibrarySortField({ setItem }, 'name')).not.toThrow()
     expect(() => writeLibrarySortDirection({ setItem }, 'asc')).not.toThrow()
+  })
+})
+
+describe('metacritic sort (quick 261029-sbi)', () => {
+  const scored = (title: string, score?: number, runner = 'gog'): GameInfo =>
+    ({ ...game({ title, runner }), metacritic_score: score }) as GameInfo
+
+  it('offers the four fields in order', () => {
+    expect(LIBRARY_SORT_FIELDS).toEqual([
+      'name',
+      'lastPlayed',
+      'installSize',
+      'metacritic'
+    ])
+  })
+
+  it('metacriticScoreOf: Steam score wins over the wiki, wiki fills in otherwise, invalid is unknown', () => {
+    expect(metacriticScoreOf(scored('A', 90, 'steam'), { A: 70 })).toBe(90)
+    expect(metacriticScoreOf(scored('B'), { B: 81 })).toBe(81)
+    expect(metacriticScoreOf(scored('C', 0), {})).toBeUndefined()
+  })
+
+  it('desc puts highest first, unknown last; asc keeps unknown last', () => {
+    const input = [
+      scored('A', 70),
+      scored('B'),
+      scored('C', 90),
+      scored('D', 70)
+    ]
+    const o = { ...baseOpts, field: 'metacritic' as const }
+    expect(titles(sortLibrary(input, { ...o, direction: 'desc' }))).toEqual([
+      'C',
+      'A',
+      'D',
+      'B'
+    ])
+    expect(titles(sortLibrary(input, { ...o, direction: 'asc' }))).toEqual([
+      'A',
+      'D',
+      'C',
+      'B'
+    ])
+  })
+
+  it('uses wikiMetacriticByTitle when given', () => {
+    const input = [scored('A'), scored('B')]
+    expect(
+      titles(
+        sortLibrary(input, {
+          ...baseOpts,
+          field: 'metacritic',
+          direction: 'desc',
+          wikiMetacriticByTitle: { B: 60 }
+        })
+      )
+    ).toEqual(['B', 'A'])
+  })
+
+  describe('buildWikiMetacriticByTitle', () => {
+    it('reads pcgamingwiki.metacritic.score via the shared parser, keyed by raw title', () => {
+      const entries: Record<string, unknown> = {
+        'A: B': { pcgamingwiki: { metacritic: { score: '88' } } },
+        N: null,
+        W: {},
+        E: { pcgamingwiki: { metacritic: { score: '' } } }
+      }
+      const games = ['A: B', 'N', 'W', 'E', 'Missing'].map((t) => scored(t))
+      expect(buildWikiMetacriticByTitle(games, (t) => entries[t])).toEqual({
+        'A: B': 88
+      })
+    })
   })
 })

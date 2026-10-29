@@ -80,6 +80,7 @@ import {
 } from './engineWiring'
 import { applyLibraryTileWidth, readLibraryTileWidth } from './libraryTileSize'
 import { useNonSteamLastPlayed } from './useNonSteamLastPlayed'
+import { useWikiMetacriticScores } from './useWikiMetacriticScores'
 
 const storage = window.localStorage
 
@@ -900,6 +901,14 @@ export default React.memo(function Library(): JSX.Element {
     recentAppNames
   )
 
+  // Quick 261029-sbi: PCGamingWiki scores already in the wiki cache, read
+  // from the local snapshot only (no network). Unfiltered union, same WR-02
+  // reasoning as above; null while hydrating.
+  const wikiMetacriticByTitle = useWikiMetacriticScores(
+    sortField === 'metacritic',
+    libraryUnion
+  )
+
   // select library
   const libraryToShow = useMemo(() => {
     let library = [...gamesForAlphabetFilter]
@@ -928,17 +937,22 @@ export default React.memo(function Library(): JSX.Element {
     // until the real last-played order can be computed (WR-02).
     const lastPlayedPending =
       sortField === 'lastPlayed' && nonSteamLastPlayedIso === null
+    const metacriticPending =
+      sortField === 'metacritic' && wikiMetacriticByTitle === null
+    const pending = lastPlayedPending || metacriticPending
     return sortLibrary(library, {
-      field: lastPlayedPending ? 'name' : sortField,
-      direction: lastPlayedPending ? 'asc' : sortDirection,
-      nonSteamLastPlayedIso: nonSteamLastPlayedIso ?? {}
+      field: pending ? 'name' : sortField,
+      direction: pending ? 'asc' : sortDirection,
+      nonSteamLastPlayedIso: nonSteamLastPlayedIso ?? {},
+      wikiMetacriticByTitle: wikiMetacriticByTitle ?? {}
     })
   }, [
     gamesForAlphabetFilter,
     alphabetFilterLetter,
     sortField,
     sortDirection,
-    nonSteamLastPlayedIso
+    nonSteamLastPlayedIso,
+    wikiMetacriticByTitle
   ])
 
   // Reports to the shell that the Games tier-2 column has content, so it can

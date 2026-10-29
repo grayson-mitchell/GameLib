@@ -16,18 +16,30 @@
  * store (ISO, "last launched from GameLib"). Both are normalised to epoch ms.
  * The timestamp store is never read for Steam.
  *
+ * A fourth field, Metacritic, was added by operator request in quick
+ * 261029-sbi. Its sources are Steam's own score on `GameInfo.metacritic_score`
+ * first, then a PCGamingWiki score already in the wiki cache. It is never
+ * fetched for a sort; an unknown score sorts last.
+ *
  * Pure: no React, no window, no store imports, so a node jest test covers it.
+ * (`common/metacriticScore` is a pure common module.)
  */
 
 import type { GameInfo } from 'common/types'
+import { parseMetacriticScore } from 'common/metacriticScore'
 
-export type LibrarySortField = 'name' | 'lastPlayed' | 'installSize'
+export type LibrarySortField =
+  | 'name'
+  | 'lastPlayed'
+  | 'installSize'
+  | 'metacritic'
 export type LibrarySortDirection = 'asc' | 'desc'
 
 export const LIBRARY_SORT_FIELDS: readonly LibrarySortField[] = [
   'name',
   'lastPlayed',
-  'installSize'
+  'installSize',
+  'metacritic'
 ]
 const LIBRARY_SORT_DIRECTIONS: readonly LibrarySortDirection[] = ['asc', 'desc']
 
@@ -48,7 +60,8 @@ export const DEFAULT_LIBRARY_SORT_PREFS: LibrarySortPrefs = {
 /**
  * The direction a field starts in when the user switches to it: Name reads
  * A to Z, Last played shows the most recent first, Install size the largest
- * first. The direction button still flips it afterwards.
+ * first, Metacritic the highest score first. The direction button still flips
+ * it afterwards.
  */
 export function defaultDirectionFor(
   field: LibrarySortField
@@ -180,17 +193,56 @@ function installSizeBytes(game: GameInfo): number | undefined {
   return parseInstallSize(game.install?.install_size)
 }
 
+/**
+ * Score for a game: Steam's own (re-validated, so a corrupt cached number
+ * cannot rank), else a PCGamingWiki score already in the wiki cache by title.
+ */
+export function metacriticScoreOf(
+  game: GameInfo,
+  wikiMetacriticByTitle: Readonly<Record<string, number | undefined>>
+): number | undefined {
+  return (
+    parseMetacriticScore(game.metacritic_score) ??
+    wikiMetacriticByTitle[game.title]
+  )
+}
+
+/**
+ * title -> score from cached wiki entries. `readEntry` returns the raw cached
+ * WikiInfo (untrusted shape), so it is narrowed defensively here. Keyed by the
+ * raw `game.title`.
+ */
+export function buildWikiMetacriticByTitle(
+  games: readonly GameInfo[],
+  readEntry: (title: string) => unknown
+): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const g of games) {
+    const entry = readEntry(g.title)
+    if (typeof entry !== 'object' || entry === null) continue
+    const wiki = (entry as { pcgamingwiki?: unknown }).pcgamingwiki
+    if (typeof wiki !== 'object' || wiki === null) continue
+    const meta = (wiki as { metacritic?: unknown }).metacritic
+    if (typeof meta !== 'object' || meta === null) continue
+    const score = parseMetacriticScore((meta as { score?: unknown }).score)
+    if (score !== undefined) out[g.title] = score
+  }
+  return out
+}
+
 interface SortOptions {
   field: LibrarySortField
   direction: LibrarySortDirection
   nonSteamLastPlayedIso: Readonly<Record<string, string | undefined>>
+  wikiMetacriticByTitle?: Readonly<Record<string, number | undefined>>
 }
 
 export function sortLibrary(
   games: readonly GameInfo[],
   opts: SortOptions
 ): GameInfo[] {
-  const { field, direction, nonSteamLastPlayedIso } = opts
+  const { field, direction, nonSteamLastPlayedIso, wikiMetacriticByTitle } =
+    opts
   const sign = direction === 'desc' ? -1 : 1
 
   const titleKey = new Map<GameInfo, string>()
@@ -200,6 +252,8 @@ export function sortLibrary(
     if (field === 'lastPlayed')
       numKey.set(g, lastPlayedMs(g, nonSteamLastPlayedIso))
     else if (field === 'installSize') numKey.set(g, installSizeBytes(g))
+    else if (field === 'metacritic')
+      numKey.set(g, metacriticScoreOf(g, wikiMetacriticByTitle ?? {}))
   }
   const byTitle = (a: GameInfo, b: GameInfo) =>
     (titleKey.get(a) as string).localeCompare(titleKey.get(b) as string)
