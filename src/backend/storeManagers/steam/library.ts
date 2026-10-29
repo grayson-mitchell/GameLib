@@ -65,7 +65,16 @@ import {
   UnsafeInstalldirError
 } from './installLocation'
 import { readAcfInstalldir } from './acfInstalldir'
-import { listSteamClientPids } from './steamClientProcess'
+import {
+  listSteamClientPids,
+  readSteamProcessStartTokens
+} from './steamClientProcess'
+import {
+  clearSteamRestartHold,
+  decideSteamRestartHoldRearm,
+  listSteamRestartHolds,
+  recordSteamRestartHold
+} from './steamRestartHold'
 import { bridgeAllowlist } from './bridge/allowlist'
 import { backfillBridgeLaunchTargets } from './bridge/launchTarget'
 import { depotSignalCaptured } from './metadataCapture'
@@ -119,6 +128,10 @@ type PollOptions = {
    *  user to confirm Steam's dialog before any appmanifest exists. Install-
    *  poller-only (quick 261024-exo). */
   delegatedToSteamClient?: boolean
+  /** Boot re-arm only (quick 261029-pkp): start the poll already holding for
+   *  a Steam restart, with `startTicks` already elapsed so the MAX_TICKS cap
+   *  stays measured from the original finalize. */
+  restoredSteamHold?: { pids: number[]; startTicks: number }
 }
 
 /**
@@ -739,6 +752,111 @@ function breadcrumbAppIsFullyInstalledOnDisk(
   }
 }
 
+/**
+ * quick 261029-pkp (D-UAT-13 follow-up): at boot, re-arm the persisted
+ * "Restart Steam to finish" hold for every app whose recorded Steam process
+ * is still the live one; drop the record otherwise. Never throws. With zero
+ * records it spawns nothing. An inconclusive probe arms nothing and keeps
+ * the record (fail-open, as before D-UAT-13).
+ */
+async function rearmPersistedSteamRestartHolds(): Promise<{
+  dropped: number
+}> {
+  let dropped = 0
+  const records = listSteamRestartHolds()
+  if (records.length === 0) return { dropped }
+  reconcileRanDuringRearm = false
+  // Synchronously, before any await: fail closed until verified.
+  for (const [appId] of records) pendingSteamHoldRearm.add(appId)
+  try {
+    const livePids = await listSteamClientPids()
+    let startTokens: Map<number, string> | undefined = new Map()
+    if (livePids) {
+      const union = new Set<number>()
+      for (const [, record] of records) {
+        for (const p of record.pids) {
+          if (livePids.includes(p.pid)) union.add(p.pid)
+        }
+      }
+      if (union.size > 0) {
+        startTokens = await readSteamProcessStartTokens([...union])
+      }
+    }
+    const now = Date.now()
+    for (const [appId, record] of records) {
+      try {
+        if (isNativeInstallInFlight(appId) || activePolls.has(appId)) {
+          clearSteamRestartHold(appId)
+          dropped++
+          continue
+        }
+        const decision = decideSteamRestartHoldRearm({
+          record,
+          livePids,
+          startTokens,
+          nowMs: now,
+          maxAgeMs: MAX_TICKS * 3000
+        })
+        if (decision.kind === 'unknown') {
+          logInfo(
+            `Steam: Steam restart hold for appId ${appId} could not be verified at boot; not re-arming (fail-open), keeping the record`,
+            LogPrefix.Steam
+          )
+          // Counts as released: the game is reported installed (fail-open).
+          dropped++
+          continue
+        }
+        if (decision.kind === 'drop') {
+          clearSteamRestartHold(appId)
+          dropped++
+          logInfo(
+            `Steam: dropped persisted Steam restart hold for appId ${appId} (${decision.reason})`,
+            LogPrefix.Steam
+          )
+          continue
+        }
+        const acf = await readAcfState(appId, 'native')
+        if (acf.state !== 'installed') {
+          clearSteamRestartHold(appId)
+          dropped++
+          logInfo(
+            `Steam: dropped persisted Steam restart hold for appId ${appId} (manifest is ${acf.state})`,
+            LogPrefix.Steam
+          )
+          continue
+        }
+        startInstallPolling(appId, {
+          isNativeHandoff: true,
+          source: 'native',
+          macNativeRoute: record.macNativeRoute,
+          skippedDepots: record.skippedDepots,
+          restoredSteamHold: {
+            pids: decision.pids,
+            startTicks: Math.floor((now - record.recordedAt) / 3000)
+          }
+        })
+        logInfo(
+          `Steam: re-armed steam-waiting-for-restart for appId ${appId} (Steam pid ${decision.pids.join(', ')}) after a GameLib restart`,
+          LogPrefix.Steam
+        )
+      } catch (error) {
+        logWarning(
+          [`Steam: could not re-arm Steam restart hold for ${appId}:`, error],
+          LogPrefix.Steam
+        )
+      }
+    }
+  } catch (error) {
+    logWarning(
+      ['Steam: re-arming persisted Steam restart holds failed:', error],
+      LogPrefix.Steam
+    )
+  } finally {
+    for (const [appId] of records) pendingSteamHoldRearm.delete(appId)
+  }
+  return { dropped }
+}
+
 export default class SteamLibraryManager implements LibraryManager {
   /**
    * On startup: load the cached library immediately, SURFACE (never
@@ -763,6 +881,14 @@ export default class SteamLibraryManager implements LibraryManager {
         `Steam: loaded ${cached.length} games from cache`,
         LogPrefix.Steam
       )
+    }
+
+    // quick 261029-pkp: re-arm persisted "Restart Steam to finish" holds
+    // before anything can reconcile install state.
+    const { dropped } = await rearmPersistedSteamRestartHolds()
+    if (dropped > 0 && reconcileRanDuringRearm) {
+      reconcileRanDuringRearm = false
+      void this.refreshInstallState()
     }
 
     // steam-startup-resume-crash (2026-07-18) / D-04 softened: DETECT any
@@ -2678,7 +2804,31 @@ function notifyRestartSteamToFinish(title: string): void {
  * installed (-> Play -> Steam's install dialog) behind the poller's back.
  */
 function isHoldingForSteamRestart(appId: string): boolean {
+  // quick 261029-pkp: fail CLOSED while boot re-arm verification is pending,
+  // so a concurrent focus reconcile cannot flip the game to Play.
+  if (pendingSteamHoldRearm.has(appId)) {
+    reconcileRanDuringRearm = true
+    return true
+  }
   return activePolls.get(appId)?.steamHold === 'holding'
+}
+
+/** Apps whose persisted hold record is being verified at boot (quick
+ *  261029-pkp). Treated as holding until verification resolves. */
+const pendingSteamHoldRearm = new Set<string>()
+/** Set when a reconcile consulted the fail-closed window above. */
+let reconcileRanDuringRearm = false
+
+/**
+ * quick 261029-pkp: the single place a hold ends. Sets 'released' and deletes
+ * the persisted record so it can never re-arm a finished hold.
+ */
+function releaseSteamHold(
+  appId: string,
+  poll: { steamHold: 'unprobed' | 'holding' | 'released' }
+): void {
+  poll.steamHold = 'released'
+  clearSteamRestartHold(appId)
 }
 
 /**
@@ -2737,7 +2887,8 @@ async function shouldHoldForSteamRestart(
     if (activePolls.get(appId) !== poll) return false
     poll.lastSteamProbeMs = Date.now()
     if (!pids || pids.length === 0) {
-      poll.steamHold = 'released'
+      // Also removes a stale record left by an earlier hold of this app.
+      releaseSteamHold(appId, poll)
       return false
     }
     poll.steamPidsAtHandoff = pids
@@ -2751,6 +2902,35 @@ async function shouldHoldForSteamRestart(
       `Steam: native install of appId ${appId} finalized while the Steam client (pid ${pids.join(', ')}) is running — holding in steam-waiting-for-restart until it restarts (D-UAT-13)`,
       LogPrefix.Steam
     )
+    // quick 261029-pkp: persist the hold so it survives a GameLib restart.
+    // Can never change the hold decision.
+    try {
+      const tokens = await readSteamProcessStartTokens(pids)
+      if (activePolls.get(appId) === poll && poll.steamHold === 'holding') {
+        const recorded = pids.flatMap((pid) => {
+          const startToken = tokens?.get(pid)
+          return startToken ? [{ pid, startToken }] : []
+        })
+        if (recorded.length > 0) {
+          recordSteamRestartHold(appId, {
+            pids: recorded,
+            recordedAt: Date.now(),
+            macNativeRoute: poll.macNativeRoute,
+            skippedDepots: poll.skippedDepots
+          })
+        } else {
+          logWarning(
+            `Steam: could not read Steam process start time for appId ${appId}; the steam-waiting-for-restart hold will not survive a GameLib restart`,
+            LogPrefix.Steam
+          )
+        }
+      }
+    } catch (error) {
+      logWarning(
+        ['Steam: could not persist the Steam restart hold:', error],
+        LogPrefix.Steam
+      )
+    }
     return true
   }
 
@@ -2764,7 +2944,7 @@ async function shouldHoldForSteamRestart(
     // `undefined` (probe inconclusive) keeps holding: only positive evidence
     // that every recorded process is gone may release.
     if (pids && !pids.some((pid) => poll.steamPidsAtHandoff.includes(pid))) {
-      poll.steamHold = 'released'
+      releaseSteamHold(appId, poll)
       logInfo(
         `Steam: the Steam client that was running when appId ${appId} finalized (pid ${poll.steamPidsAtHandoff.join(', ')}) has exited — releasing steam-waiting-for-restart (D-UAT-13)`,
         LogPrefix.Steam
@@ -2803,7 +2983,7 @@ export async function pollInstallOnce(
       // rewriting it (e.g. a post-restart update) — the wait is over, and
       // this poll continues as an ordinary one to the final 'installed'.
       if (poll.steamHold === 'holding') {
-        poll.steamHold = 'released'
+        releaseSteamHold(appId, poll)
         logInfo(
           `Steam: Steam is now rewriting the manifest for appId ${appId} (StateFlags ${result.stateFlags}) — releasing steam-waiting-for-restart (D-UAT-13)`,
           LogPrefix.Steam
@@ -2861,7 +3041,7 @@ export async function pollInstallOnce(
     // as "the client that has not seen the manifest" and the user would be
     // told to restart Steam a second time. Terminal, like every release.
     if (isWaitingForSteamRestart && poll) {
-      poll.steamHold = 'released'
+      releaseSteamHold(appId, poll)
     }
 
     // quick 261024-h5y: the bottle route has no user-visible Steam to
@@ -3289,7 +3469,8 @@ export function startInstallPolling(
     isNativeHandoff,
     macNativeRoute,
     skippedDepots,
-    delegatedToSteamClient
+    delegatedToSteamClient,
+    restoredSteamHold
   }: {
     intervalMs: number
     source: AcfSource
@@ -3297,6 +3478,7 @@ export function startInstallPolling(
     macNativeRoute: boolean
     skippedDepots: string[]
     delegatedToSteamClient: boolean
+    restoredSteamHold: PollOptions['restoredSteamHold']
   } =
     typeof intervalMsOrOptions === 'number'
       ? {
@@ -3305,7 +3487,8 @@ export function startInstallPolling(
           isNativeHandoff: false,
           macNativeRoute: false,
           skippedDepots: [],
-          delegatedToSteamClient: false
+          delegatedToSteamClient: false,
+          restoredSteamHold: undefined
         }
       : {
           intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
@@ -3314,7 +3497,8 @@ export function startInstallPolling(
           macNativeRoute: intervalMsOrOptions.macNativeRoute ?? false,
           skippedDepots: intervalMsOrOptions.skippedDepots ?? [],
           delegatedToSteamClient:
-            intervalMsOrOptions.delegatedToSteamClient ?? false
+            intervalMsOrOptions.delegatedToSteamClient ?? false,
+          restoredSteamHold: intervalMsOrOptions.restoredSteamHold
         }
 
   logInfo(
@@ -3324,10 +3508,11 @@ export function startInstallPolling(
 
   const entry = {
     timer: null as unknown as NodeJS.Timeout,
-    ticks: 0,
-    seenDownloading: false,
+    // quick 261029-pkp: a restored hold resumes the elapsed tick count.
+    ticks: restoredSteamHold?.startTicks ?? 0,
+    seenDownloading: restoredSteamHold ? true : false,
     source,
-    notifiedWaiting: false,
+    notifiedWaiting: restoredSteamHold ? true : false,
     stalledTicks: 0,
     isNativeHandoff,
     macNativeRoute,
@@ -3337,9 +3522,12 @@ export function startInstallPolling(
     absentTicksSinceSeen: 0,
     awaitingBottledSteam: false,
     bottledSteamDispatched: false,
-    steamHold: 'unprobed' as 'unprobed' | 'holding' | 'released',
-    steamPidsAtHandoff: [] as number[],
-    lastSteamProbeMs: 0
+    steamHold: (restoredSteamHold ? 'holding' : 'unprobed') as
+      | 'unprobed'
+      | 'holding'
+      | 'released',
+    steamPidsAtHandoff: restoredSteamHold?.pids ?? ([] as number[]),
+    lastSteamProbeMs: restoredSteamHold ? Date.now() : 0
   }
 
   const timer = setInterval(async () => {
@@ -3357,7 +3545,7 @@ export function startInstallPolling(
         `Steam: install polling for appId ${appId} hit safety cap (${MAX_TICKS} ticks) while waiting for a Steam restart; reporting it installed`,
         LogPrefix.Steam
       )
-      entry.steamHold = 'released'
+      releaseSteamHold(appId, entry)
       capReleasedHold = true
     }
 
@@ -3518,6 +3706,9 @@ export function markBottledSteamDispatched(appId: string): void {
 export function stopInstallPolling(appId: string): void {
   const poll = activePolls.get(appId)
   if (!poll) return
+  // quick 261029-pkp: a stopped holding poll (cancel, uninstall, manifest
+  // vanished) must not leave a record that re-arms at the next boot.
+  if (poll.steamHold === 'holding') clearSteamRestartHold(appId)
   clearInterval(poll.timer)
   activePolls.delete(appId)
   logInfo(`Steam: stopped install polling for appId ${appId}`, LogPrefix.Steam)

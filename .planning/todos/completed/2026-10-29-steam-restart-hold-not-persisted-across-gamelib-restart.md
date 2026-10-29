@@ -30,3 +30,20 @@ Related, accepted and not part of this todo: a held game reports `installing`, s
 the system-sleep assertion until Steam restarts (bounded by the existing ~6 h poll cap); bottle and
 bridge roots never hold; the Library tile hint and the alt-tab persistence were unit-tested but not
 separately observed live.
+
+## Resolution (quick 261029-pkp)
+
+Chose the persisted-record approach. When the hold arms, `library.ts` stores the app id plus each Steam
+PID and an opaque per-process start-time token (`steam_restart_hold` store, `steamRestartHold.ts`;
+`readSteamProcessStartTokens` in `steamClientProcess.ts`). At boot `rearmPersistedSteamRestartHolds()`
+re-arms the hold only while that same process (PID and start token) is still the live Steam and the
+native manifest is still StateFlags 4; otherwise the record is dropped. An inconclusive probe arms
+nothing and keeps the record. The record is deleted on every hold-ending path (Steam exit, Steam
+rewriting the manifest, the 6 h cap, the manifest vanishing, stopInstallPolling).
+
+The manifest-mtime alternative was rejected for provenance: a running Steam rewrites
+`appmanifest_*.acf` for its own installs and updates, so "manifest newer than Steam start" cannot tell
+GameLib's native handoff from Steam's own writes, and it still needs the same per-OS start-time probe.
+
+Honest limit: unit-tested against all three platforms' probe shapes (mocked execFile); the live
+cross-restart case on Windows (and macOS/Linux) has not been exercised.
