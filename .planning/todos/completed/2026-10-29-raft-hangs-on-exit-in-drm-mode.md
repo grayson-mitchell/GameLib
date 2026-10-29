@@ -15,3 +15,7 @@ In 56-34 launch 3 (Raft 648800, steamclient-layer DRM mode) the game reached its
 ## Next
 
 Reproduce: quit Raft from its menu in DRM mode and watch whether it exits. Compare against a Raft run through the ordinary bridge path (non-DRM) to tell the DRM layer from Raft's own exit path. Look in the trace for an unanswered shutdown call (ISteamUser/ISteamClient release) after the last call, and in the wine log for the last output.
+
+## Resolution
+
+2026-10-29, closed as not reproducible. The operator quit Raft from its menu in DRM mode several more times during DRM testing, and it exited normally every time. The hang happened once, in 56-34 launch 3. The likeliest cause is the extra trace and logging that run had switched on, not the DRM layer or Raft's own exit path. If it comes back with tracing off, reopen this todo and follow the Next steps above.
