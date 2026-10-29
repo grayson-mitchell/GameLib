@@ -16,6 +16,7 @@ import {
   LIBRARY_TILE_WIDTH_MAX,
   LIBRARY_TILE_WIDTH_MIN
 } from '../../../libraryTileSize'
+import { canScrollForward, pageScrollDelta } from '../focusRowOverflow'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..', '..')
 
@@ -838,5 +839,113 @@ describe('FocusRowStrip/index.css -- overflow controls (Plan 48-04)', () => {
 
   it('does not reintroduce scrollbar-gutter anywhere in the stylesheet', () => {
     expect(css).not.toMatch(/scrollbar-gutter/)
+  })
+})
+
+describe('FocusRowStrip/index.css -- track end clip is the grid whole-column extent (quick 261029-quw item 1)', () => {
+  const strip = read(FOCUS_ROW_CSS_PATH)
+  const track = cssBlock(strip, '.focusRowTrack')
+  const stripList = cssBlock(strip, '.focusRowTrack .gameList')
+  const viewport = cssBlock(strip, '.focusRowStrip__viewport')
+  const grid = cssBlock(read(LIBRARY_CSS_PATH), '.gameList')
+  // Whitespace-normalised: prettier wraps the long calc() across lines.
+  const inlineSize = (
+    track.match(/(?:^|[\s;])inline-size:\s*([^;]+);/)?.[1] ?? ''
+  )
+    .replace(/\s+/g, ' ')
+    .replace(/\( /g, '(')
+
+  it('declares an inline-size built from round(down, ...)', () => {
+    expect(inlineSize).toContain('round(down,')
+    expect(inlineSize).toContain('var(--focus-row-card-width, 156px)')
+  })
+
+  it('its gap text is the list gap and the grid grid-gap, read from the parsed files', () => {
+    const listGap = stripList.match(/(?:^|[\s;])gap:\s*([^;]+);/)?.[1]?.trim()
+    const gridGap = grid.match(/grid-gap:\s*([^;]+);/)?.[1]?.trim()
+    expect(listGap).toBeDefined()
+    expect(listGap).toBe(gridGap)
+    expect(inlineSize).toContain(listGap as string)
+  })
+
+  it('its 15px bleed is the list padding-inline and the viewport start bleed', () => {
+    const pad = stripList.match(/padding-inline:\s*([^;]+);/)?.[1]?.trim()
+    const bleed = viewport
+      .match(/margin-inline-start:\s*-([^;]+);/)?.[1]
+      ?.trim()
+    expect(pad).toBe('15px')
+    expect(bleed).toBe(pad)
+    expect(inlineSize).toContain(`100% - ${pad}`)
+  })
+
+  describe('arithmetic sweep (real pageScrollDelta / canScrollForward)', () => {
+    const GAP = 24
+    const BLEED = 15
+    const trackWidthFor = (w: number, C: number) => {
+      const pitch = w + GAP
+      const n = Math.floor((C + GAP) / pitch)
+      return { pitch, n, width: Math.max(w + 30, n * pitch + 6) }
+    }
+
+    it.each([140, 156, 188, 320])(
+      'w=%i: no sliver, ring fits, pages n, controls only on real overflow',
+      (w) => {
+        for (let C = w; C <= 2400; C++) {
+          const { pitch, n, width } = trackWidthFor(w, C)
+          // (a) no sliver of card n+1
+          expect(BLEED + n * pitch).toBeGreaterThanOrEqual(width)
+          // (b) card n plus hovered ring reach fits
+          expect(
+            BLEED + (n - 1) * pitch + w + 0.025 * w + 5.25
+          ).toBeLessThanOrEqual(width)
+          // (c) a page is exactly n cards
+          expect(
+            pageScrollDelta(
+              { clientWidth: width, scrollWidth: 1e6, scrollLeft: 0 },
+              pitch,
+              9
+            )
+          ).toBe(n * pitch)
+          // (d) no overflow with n cards, overflow with n + 1
+          expect(
+            canScrollForward({
+              clientWidth: width,
+              scrollWidth: n * pitch + 6,
+              scrollLeft: 0
+            })
+          ).toBe(false)
+          expect(
+            canScrollForward({
+              clientWidth: width,
+              scrollWidth: (n + 1) * pitch + 6,
+              scrollLeft: 0
+            })
+          ).toBe(true)
+        }
+      }
+    )
+
+    it.each([140, 156, 188, 320])(
+      'w=%i non-vacuity: the OLD clip (C + 15) showed a sliver',
+      (w) => {
+        const pitch = w + GAP
+        let slivers = 0
+        for (let C = w; C <= 2400; C++) {
+          const n = Math.floor((C + GAP) / pitch)
+          if (BLEED + n * pitch < C + BLEED) slivers++
+        }
+        expect(slivers).toBeGreaterThan(0)
+      }
+    )
+  })
+})
+
+describe('FocusRowStrip/index.css -- strip heading size (quick 261029-quw item 3)', () => {
+  it('.focusRowStrip .libraryHeader is 4px smaller than --text-2xl', () => {
+    const header = cssBlock(
+      read(FOCUS_ROW_CSS_PATH),
+      '.focusRowStrip .libraryHeader'
+    )
+    expect(header).toMatch(/font-size:\s*calc\(var\(--text-2xl\) - 4px\);/)
   })
 })

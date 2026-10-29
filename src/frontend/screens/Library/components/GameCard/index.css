@@ -276,6 +276,9 @@ body.keyboardNav .gameCard:hover:not(:focus-within) {
   display: block;
   block-size: var(--game-card-art-height);
   object-fit: contain;
+  /* Quick 261029-quw item 4: the letterbox bands collect below the art, so the
+     hero's art top lines up with its neighbours' art tops. */
+  object-position: center top;
   width: 100%;
   background-image: var(--gradient-gamecard);
 }

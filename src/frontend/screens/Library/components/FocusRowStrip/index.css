@@ -7,19 +7,16 @@
    leading padding the list adds inward in `.focusRowTrack .gameList` below, so
    the first card stays on grid column 1 to the pixel and keeps its ring room
    (`.focusRowStrip` keeps its padding; the header is outside the viewport and
-   does not move). End side: no bleed, so the track's end clip is
-   `.focusRowStrip`'s content edge. That is the grid's content edge, because
-   both boxes carry the same `--space-md-fixed` inline padding inside
-   `.listing`. At scrollLeft 0, card k is then fully visible exactly when
-   k x pitch + w <= C, which is the grid's own placement test: the 15px window
-   that showed a column the grid cannot fit is gone. Ring clearance at the end
-   of travel still comes from the list's trailing padding (G-48-8a/b/c).
-   Consequence for the controls: `canScrollForward` now reads clientWidth =
-   C + 15, so they mount when the cards plus their 15px trailing ring room pass
-   the grid content edge. The band where every card is visible yet the forward
-   control nudges by up to 15px keeps its width; it moves from a card span in
-   (C+1, C+15] to (C-14, C+1]. The controls are positioned against this box.
-   Logical properties: this app ships RTL locales (ar, fa, he). */
+   does not move). End side: no bleed, so the viewport's content box is
+   C + 15 wide, where C is the grid's content width (both boxes carry the same
+   `--space-md-fixed` inline padding inside `.listing`). The grid only places
+   whole columns, so it leaves up to one pitch empty at its end; if the track
+   clipped at C the strip would paint the left part of tile n+1 in that band
+   (quick 261029-quw item 1). `.focusRowTrack` therefore sets its own
+   inline-size to the grid's whole-column extent (see there), so at scrollLeft
+   0 the strip shows exactly the grid's n columns and nothing of tile n+1.
+   The controls are positioned against this box and mount only on real
+   overflow (more than n cards).    Logical properties: this app ships RTL locales (ar, fa, he). */
 .focusRowStrip__viewport {
   position: relative;
   margin-inline-start: -15px;
@@ -48,6 +45,27 @@
      padding-inline below; the two must stay equal (pinned in
      focusRowStripSource.test.ts). Logical property: RTL locales ship. */
   scroll-padding-inline: 15px;
+  /* Quick 261029-quw item 1: clip the track to the grid's whole-column extent.
+     The percentage base is the viewport content box, C + 15, so `100% - 15px`
+     is the grid content width C. `round(down, ...)` is n pitches, n =
+     floor((C + gap) / (w + gap)), the grid's own auto-fill count. The
+     `- 1.5rem + 30px` adds the 15px leading list padding and 15px of trailing
+     ring room; the `max()` floor keeps one tile visible when C < one tile.
+     The 1.5rem is the list gap and the grid grid-gap, the 15px is the list
+     padding-inline and the viewport start bleed (all pinned in
+     focusRowStripSource.test.ts). An engine without CSS round() drops the
+     declaration and keeps the old auto width. */
+  inline-size: max(
+    calc(var(--focus-row-card-width, 156px) + 30px),
+    calc(
+      round(
+          down,
+          100% - 15px + 1.5rem,
+          var(--focus-row-card-width, 156px) + 1.5rem
+        ) -
+        1.5rem + 30px
+    )
+  );
   /* Strip card = one grid column = the library tile width (261011-t4y). The
      grid's columns are fixed-width now, so aliasing the strip's card width to
      the same variable keeps "match the grid" true by construction, with no
@@ -164,6 +182,8 @@
 }
 
 .focusRowStrip .libraryHeader {
+  /* Quick 261029-quw item 3: 4px below the h3 default of --text-2xl. */
+  font-size: calc(var(--text-2xl) - 4px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

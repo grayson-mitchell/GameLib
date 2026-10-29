@@ -362,6 +362,9 @@ describe('just-played hero: neighbour height by construction, letterboxed art (2
     expect(requireDecl(rule, HERO_IMG, 'background-image')).toBe(
       'var(--gradient-gamecard)'
     )
+    // quick 261029-quw item 4: letterbox bands collect below the art, so the
+    // hero's art top lines up with its neighbours' art tops.
+    expect(requireDecl(rule, HERO_IMG, 'object-position')).toBe('center top')
     expect(rule.declarations.has('aspect-ratio')).toBe(false)
   })
 
