@@ -54,6 +54,12 @@ import { SelectField, ToggleSwitch } from 'frontend/components/UI'
 import { MenuItem } from '@mui/material'
 import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { buildLoginOpenPath } from 'frontend/screens/Login/loginOpenParam'
+import {
+  resolveSteamInstallSignInState,
+  steamInstallNeedsSignIn
+} from '../../../../../helpers/steamInstallSignIn'
 import {
   installSteamGame,
   logSteamInstallDispatchFailure,
@@ -202,7 +208,20 @@ export default function SteamDialog({
 }: Props) {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
-  const { platform, showDialogModal } = useContext(ContextProvider)
+  const { platform, showDialogModal, steam, signInProbeOutcomes } =
+    useContext(ContextProvider)
+  const navigate = useNavigate()
+  // Quick 261029-s5l (todo 2026-10-29): GameLib-native installs need GameLib's
+  // own Steam token. Delegated installs (native OFF) never do, so never gate.
+  const signInRequired =
+    nativeInstallOn &&
+    steamInstallNeedsSignIn(
+      resolveSteamInstallSignInState(steam?.username, signInProbeOutcomes)
+    )
+  const handleSignIn = useCallback(() => {
+    backdropClick()
+    navigate(buildLoginOpenPath('steam'))
+  }, [backdropClick, navigate])
   const { crossoverRatings, runsForMe } = useGlobalState.keys(
     'crossoverRatings',
     'runsForMe'
@@ -367,6 +386,9 @@ export default function SteamDialog({
   }, [gating.freeSpaceLine, selectedPath, steamLibraries])
 
   const proceedInstall = useCallback(async () => {
+    if (signInRequired) {
+      return
+    }
     // WR-13: re-entrancy guard. `handleInstall` awaits
     // `persistBottleWineVersion` before it calls `backdropClick()`, and
     // nothing disabled the button across that await --
@@ -533,7 +555,8 @@ export default function SteamDialog({
     backdropClick,
     submitting,
     bridgeLine,
-    forceBottlePending
+    forceBottlePending,
+    signInRequired
   ])
 
   // Quick 261024-ho4: a CrossOver rating below 4 of 5 asks before the install
@@ -593,6 +616,27 @@ export default function SteamDialog({
           ))}
       </DialogHeader>
       <DialogContent>
+        {/* Quick 261029-s5l (todo 2026-10-29-steam-ui-signed-in-while-dev-vault-
+            has-no-refresh-token): shown before any download starts when the
+            Steam sign-in is latched expired. Install is disabled through the
+            footer's single `disabled` term. */}
+        {signInRequired && (
+          <div className="infoBox">
+            <FontAwesomeIcon icon={faWarning} />
+            <p>
+              {tGamelib(
+                'gamelib:steam.install.signInRequiredNotice',
+                "GameLib isn't signed in to Steam, so it can't download this game. Sign in to Steam again, then install."
+              )}
+            </p>
+            <button className="button is-primary" onClick={handleSignIn}>
+              {tGamelib(
+                'gamelib:steam.install.signInRequiredAction',
+                'Sign in to Steam'
+              )}
+            </button>
+          </div>
+        )}
         {steamDegrade && (
           <div className="infoBox">
             <FontAwesomeIcon
@@ -790,7 +834,7 @@ export default function SteamDialog({
         <button
           className="button is-secondary"
           onClick={handleInstall}
-          disabled={eligibilityPending || submitting}
+          disabled={eligibilityPending || submitting || signInRequired}
         >
           {t('button.install')}
         </button>

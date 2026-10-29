@@ -563,6 +563,8 @@
             "libraryPrimarySuffix": "default",
             "noCrossoverEngine": "No CrossOver installation was found. CrossOver is required to install this game. Install it from codeweavers.com, then reopen this dialog.",
             "sharedBottleNotice": "The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.",
+            "signInRequiredAction": "Sign in to Steam",
+            "signInRequiredNotice": "GameLib isn't signed in to Steam, so it can't download this game. Sign in to Steam again, then install.",
             "withOptionsLabel": "Install with options…"
         },
         "resumeAvailable": {

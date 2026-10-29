@@ -1134,6 +1134,18 @@ describe('34.15 D-13: the glyph row is gated on the resolved depot signal', () =
   })
 })
 
+describe('261029-s5l sign-in gate', () => {
+  it('derives the gate from the shared helper, only for native installs, and routes to the Steam QR overlay', () => {
+    const stripped = readDialogStripped()
+    expect(stripped).toContain('steamInstallNeedsSignIn(')
+    expect(stripped).toContain("buildLoginOpenPath('steam')")
+    expect(stripped).toContain(
+      'disabled={eligibilityPending || submitting || signInRequired}'
+    )
+    expect(stripped).toMatch(/const signInRequired =\s*nativeInstallOn &&/)
+  })
+})
+
 // Finish with a full-suite run in Task 3's own <verify> command
 // (`pnpm test:ci`) -- this plan adds files only, so any suite that flips
 // red is a real regression, not an expected update.
