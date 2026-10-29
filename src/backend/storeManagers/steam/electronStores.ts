@@ -45,6 +45,17 @@ export const steamPendingAdoptionStore = new CacheStore<unknown>(
   null
 )
 
+// ── quick 261029-pkp: persisted "Restart Steam to finish" hold records ──────
+// One record per appId whose native install is held waiting for a Steam
+// restart, so the hold survives a GameLib restart. Consumed only through the
+// lazy `require('./electronStores')` in steamRestartHold.ts, which ts-prune
+// cannot trace. The export is deliberate.
+// ts-prune-ignore-next
+export const steamRestartHoldStore = new CacheStore<unknown>(
+  'steam_restart_hold',
+  null
+)
+
 export interface SteamMetadataCacheEntry {
   art_cover: string
   art_square: string

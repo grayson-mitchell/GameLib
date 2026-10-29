@@ -43,6 +43,13 @@
  * short-lived child bounded by `PROBE_TIMEOUT_MS` (execFile kills it on
  * expiry), so no unbounded in-flight work and no long-lived handle. It is
  * only ever called from the install poller, never at boot.
+ *
+ * Start-time identity (quick 261029-pkp). A persisted "Restart Steam to
+ * finish" hold must survive a GameLib restart without being pinned by PID
+ * reuse, so `readSteamProcessStartTokens` returns an opaque per-process
+ * start-time token. The token is compared for string equality only and never
+ * parsed, so it does not depend on locale. It is only called at boot when a
+ * hold record exists (zero records means zero spawns), or when a hold arms.
  */
 import { execFile } from 'child_process'
 import { join } from 'path'
@@ -50,6 +57,9 @@ import { logWarning, LogPrefix } from 'backend/logger'
 
 /** Hard bound on a single probe child (tasklist measured ~200 ms cold). */
 const PROBE_TIMEOUT_MS = 5000
+
+/** Cold PowerShell start is much slower than tasklist; still one bounded child. */
+const START_TOKEN_TIMEOUT_MS = 15_000
 
 /**
  * Parses `tasklist /FO CSV /NH` output into steam.exe PIDs. Only rows whose
@@ -85,19 +95,16 @@ export function parsePgrepPids(stdout: string): number[] {
 
 type ExecResult = { code: number | string | null | undefined; stdout: string }
 
-function run(file: string, args: string[]): Promise<ExecResult> {
+function run(
+  file: string,
+  args: string[],
+  timeout: number = PROBE_TIMEOUT_MS
+): Promise<ExecResult> {
   return new Promise<ExecResult>((resolve) => {
-    execFile(
-      file,
-      args,
-      { timeout: PROBE_TIMEOUT_MS, windowsHide: true },
-      (err, stdout) => {
-        const code = err
-          ? ((err as { code?: number | string }).code ?? 'ERR')
-          : 0
-        resolve({ code, stdout: typeof stdout === 'string' ? stdout : '' })
-      }
-    )
+    execFile(file, args, { timeout, windowsHide: true }, (err, stdout) => {
+      const code = err ? ((err as { code?: number | string }).code ?? 'ERR') : 0
+      resolve({ code, stdout: typeof stdout === 'string' ? stdout : '' })
+    })
   })
 }
 
@@ -141,6 +148,83 @@ export async function listSteamClientPids(
   } catch (error) {
     logWarning(
       ['Steam: Steam client process probe failed unexpectedly:', error],
+      LogPrefix.Steam
+    )
+  }
+  return undefined
+}
+
+/**
+ * Parses `<pid> <token>` lines (ps `pid=,lstart=` or the PowerShell tick
+ * lines) into a PID -> opaque token map. Internal whitespace in the token is
+ * collapsed so equal instants compare equal.
+ */
+// ts-prune-ignore-next
+export function parsePidTokenLines(stdout: string): Map<number, string> {
+  const out = new Map<number, string>()
+  for (const line of stdout.split(/\r?\n/)) {
+    const match = /^(\d+)\s+(.+)$/.exec(line.trim())
+    if (!match) continue
+    const pid = Number(match[1])
+    if (!Number.isSafeInteger(pid) || pid <= 0) continue
+    out.set(pid, match[2].replace(/\s+/g, ' '))
+  }
+  return out
+}
+
+/**
+ * Start-time tokens for the given PIDs (quick 261029-pkp). Never rejects.
+ * Empty Map = none of them exist; `undefined` = unknown (probe failed).
+ * Only PIDs that were asked for appear in the result.
+ */
+export async function readSteamProcessStartTokens(
+  pids: number[],
+  platform: NodeJS.Platform = process.platform
+): Promise<Map<number, string> | undefined> {
+  // Only safe positive integers are ever interpolated (injection guard).
+  const wanted = pids.filter((p) => Number.isSafeInteger(p) && p > 0)
+  if (wanted.length === 0) return new Map()
+  const csv = wanted.join(',')
+  try {
+    let result: ExecResult | undefined
+    if (platform === 'darwin' || platform === 'linux') {
+      const file = platform === 'darwin' ? '/bin/ps' : 'ps'
+      result = await run(
+        file,
+        ['-o', 'pid=,lstart=', '-p', csv],
+        START_TOKEN_TIMEOUT_MS
+      )
+      if (result.code === 1) return new Map()
+    } else if (platform === 'win32') {
+      const powershell = join(
+        process.env.SystemRoot ?? 'C:\\Windows',
+        'System32',
+        'WindowsPowerShell',
+        'v1.0',
+        'powershell.exe'
+      )
+      const script =
+        `Get-Process -Id ${csv} -ErrorAction SilentlyContinue | ` +
+        'ForEach-Object { "$($_.Id) $($_.StartTime.ToUniversalTime().Ticks)" }; exit 0'
+      result = await run(
+        powershell,
+        ['-NoProfile', '-NonInteractive', '-Command', script],
+        START_TOKEN_TIMEOUT_MS
+      )
+    } else {
+      return undefined
+    }
+    if (result.code !== 0) return undefined
+    const parsed = parsePidTokenLines(result.stdout)
+    const out = new Map<number, string>()
+    for (const pid of wanted) {
+      const token = parsed.get(pid)
+      if (token !== undefined) out.set(pid, token)
+    }
+    return out
+  } catch (error) {
+    logWarning(
+      ['Steam: Steam process start-time probe failed unexpectedly:', error],
       LogPrefix.Steam
     )
   }

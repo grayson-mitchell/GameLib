@@ -13,6 +13,8 @@ import { execFile } from 'child_process'
 import {
   listSteamClientPids,
   parsePgrepPids,
+  parsePidTokenLines,
+  readSteamProcessStartTokens,
   parseTasklistSteamPids
 } from '../steamClientProcess'
 
@@ -191,5 +193,79 @@ describe('listSteamClientPids()', () => {
       throw new Error('boom')
     }) as never)
     await expect(listSteamClientPids('win32')).resolves.toBeUndefined()
+  })
+})
+
+describe('parsePidTokenLines()', () => {
+  it('parses ps lstart lines and tick lines, ignoring noise', () => {
+    expect(parsePidTokenLines('  4410 Thu Oct 29  12:12:31 2026\n')).toEqual(
+      new Map([[4410, 'Thu Oct 29 12:12:31 2026']])
+    )
+    expect(parsePidTokenLines('13712 638659123450000000\r\n')).toEqual(
+      new Map([[13712, '638659123450000000']])
+    )
+    expect(parsePidTokenLines('\nPID START\nabc 5\n')).toEqual(new Map())
+  })
+})
+
+describe('readSteamProcessStartTokens()', () => {
+  it('spawns nothing for an empty or invalid pid list', async () => {
+    await expect(readSteamProcessStartTokens([], 'linux')).resolves.toEqual(
+      new Map()
+    )
+    await expect(
+      readSteamProcessStartTokens([-1, 1.5, NaN], 'win32')
+    ).resolves.toEqual(new Map())
+    expect(calls()).toHaveLength(0)
+  })
+
+  it('darwin uses /bin/ps with lstart', async () => {
+    mockExec(0, '4410 Thu Oct 29 12:12:31 2026\n')
+    const r = await readSteamProcessStartTokens([4410, 4411], 'darwin')
+    expect(r).toEqual(new Map([[4410, 'Thu Oct 29 12:12:31 2026']]))
+    const [file, args] = calls()[0] as unknown as [string, string[]]
+    expect(file).toBe('/bin/ps')
+    expect(args).toEqual(['-o', 'pid=,lstart=', '-p', '4410,4411'])
+  })
+
+  it('linux uses bare ps; code 1 is empty, other codes unknown', async () => {
+    mockExec(0, '900 Thu Oct 29 12:12:31 2026\n')
+    await readSteamProcessStartTokens([900], 'linux')
+    expect((calls()[0] as unknown as [string])[0]).toBe('ps')
+    mockExec(1)
+    await expect(readSteamProcessStartTokens([900], 'linux')).resolves.toEqual(
+      new Map()
+    )
+    mockExec(2)
+    await expect(
+      readSteamProcessStartTokens([900], 'linux')
+    ).resolves.toBeUndefined()
+  })
+
+  it('win32 uses PowerShell Get-Process ticks', async () => {
+    mockExec(0, '13712 638659123450000000\r\n99 5\r\n')
+    const r = await readSteamProcessStartTokens([13712, 4410], 'win32')
+    expect(r).toEqual(new Map([[13712, '638659123450000000']]))
+    const [file, args] = calls()[0] as unknown as [string, string[]]
+    expect(file).toMatch(/powershell\.exe$/)
+    expect(args.slice(0, 3)).toEqual([
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command'
+    ])
+    expect(args[3]).toContain('Get-Process -Id 13712,4410')
+    expect(args[3]).toContain('-ErrorAction SilentlyContinue')
+    expect(args[3]).toContain('StartTime.ToUniversalTime().Ticks')
+    expect(args[3].endsWith('exit 0')).toBe(true)
+    mockExec(1)
+    await expect(
+      readSteamProcessStartTokens([13712], 'win32')
+    ).resolves.toBeUndefined()
+  })
+
+  it('is undefined on an unsupported platform', async () => {
+    await expect(
+      readSteamProcessStartTokens([1], 'freebsd' as unknown as NodeJS.Platform)
+    ).resolves.toBeUndefined()
   })
 })
