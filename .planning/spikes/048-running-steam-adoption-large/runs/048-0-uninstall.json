@@ -1,0 +1,54 @@
+{
+  "label": "048-0-uninstall",
+  "cmd": "fire",
+  "url": "steam://uninstall/8930",
+  "secs": 180,
+  "before": {
+    "at": "2026-10-29T00:29:10.587Z",
+    "steamPid": "50647\n50663",
+    "acf": {
+      "present": true,
+      "mtime": "2026-10-26T04:12:36.128Z",
+      "StateFlags": "4",
+      "buildid": "4390913",
+      "installdir": "Sid Meier's Civilization V",
+      "SizeOnDisk": "7716100293",
+      "BytesToDownload": "7716100293",
+      "BytesDownloaded": "7716100293",
+      "LastUpdated": "1792987956",
+      "sha": "7075361fb6d3e2f34d4d763612ff3c460b766e1f60418e95a8800d915576a4e8"
+    },
+    "install": {
+      "bytes": 7716100293,
+      "files": 10897
+    },
+    "contentLogSize": 116926
+  },
+  "after": {
+    "at": "2026-10-29T00:29:23.829Z",
+    "steamPid": "50647\n50663",
+    "acf": {
+      "present": false
+    },
+    "install": null,
+    "contentLogSize": 118081
+  },
+  "contentLogApp": [
+    "[2026-10-29 13:29:18] AppID 8930 state changed : Update Required,Fully Installed,Files Missing,Uninstalling,\r",
+    "[2026-10-29 13:29:20] Failed to initialize depots during uninstalling app 8930, deleting everything\r",
+    "[2026-10-29 13:29:20] AppID 8930 state changed : Uninstalled,\r",
+    "[2026-10-29 13:29:20] AppID 8930 finished uninstall (No Error)\r"
+  ],
+  "contentLogAll": [
+    "[2026-10-29 13:29:18] AppID 8930 state changed : Update Required,Fully Installed,Files Missing,Uninstalling,\r",
+    "[2026-10-29 13:29:19] Moving to source priority class '8'\r",
+    "[2026-10-29 13:29:19] Created download interface of type 'SteamCache' (7) to host cache1-akl-edgx.steamcontent.com (cache1-akl-edgx.steamcontent.com)\r",
+    "[2026-10-29 13:29:19] Created download interface of type 'SteamCache' (7) to host cache2-akl-tpwr.steamcontent.com (cache2-akl-tpwr.steamcontent.com)\r",
+    "[2026-10-29 13:29:19] Created download interface of type 'SteamCache' (7) to host cache1-akl-tpwr.steamcontent.com (cache1-akl-tpwr.steamcontent.com)\r",
+    "[2026-10-29 13:29:20] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): cache1-akl-edgx.steamcontent.com/depot/34481/manifest/2388328581570924122/5/3743438007672557279 - manifest request received 200 (OK) HTTP response\r",
+    "[2026-10-29 13:29:20] Failed to initialize depots during uninstalling app 8930, deleting everything\r",
+    "[2026-10-29 13:29:20] AppID 8930 state changed : Uninstalled,\r",
+    "[2026-10-29 13:29:20] AppID 8930 finished uninstall (No Error)\r"
+  ],
+  "steamRestarted": false
+}

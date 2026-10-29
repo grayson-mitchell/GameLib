@@ -1,0 +1,51 @@
+{
+  "label": "048-1-passive",
+  "cmd": "watch",
+  "url": null,
+  "secs": 20,
+  "before": {
+    "at": "2026-10-29T00:29:34.618Z",
+    "steamPid": "50647\n50663",
+    "acf": {
+      "present": true,
+      "mtime": "2026-10-29T00:29:34.552Z",
+      "StateFlags": "1026",
+      "buildid": "4390913",
+      "installdir": "Sid Meier's Civilization V",
+      "SizeOnDisk": "7716100293",
+      "BytesToDownload": "0",
+      "BytesDownloaded": "0",
+      "LastUpdated": "1792987956",
+      "sha": "a6626b8129c961420aac056b3be34b73e3868122c66d87a8f36972e732c7a857"
+    },
+    "install": {
+      "bytes": 7716100293,
+      "files": 10897
+    },
+    "contentLogSize": 118138
+  },
+  "after": {
+    "at": "2026-10-29T00:29:54.943Z",
+    "steamPid": "50647\n50663",
+    "acf": {
+      "present": true,
+      "mtime": "2026-10-29T00:29:34.552Z",
+      "StateFlags": "1026",
+      "buildid": "4390913",
+      "installdir": "Sid Meier's Civilization V",
+      "SizeOnDisk": "7716100293",
+      "BytesToDownload": "0",
+      "BytesDownloaded": "0",
+      "LastUpdated": "1792987956",
+      "sha": "a6626b8129c961420aac056b3be34b73e3868122c66d87a8f36972e732c7a857"
+    },
+    "install": {
+      "bytes": 7716100293,
+      "files": 10897
+    },
+    "contentLogSize": 118138
+  },
+  "contentLogApp": [],
+  "contentLogAll": [],
+  "steamRestarted": false
+}
