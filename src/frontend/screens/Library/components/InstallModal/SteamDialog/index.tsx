@@ -80,6 +80,7 @@ import {
   resolveCrossoverInstallRisk
 } from '../crossoverInstallRisk'
 import ContextProvider from 'frontend/state/ContextProvider'
+import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
 import useGlobalState from 'frontend/state/GlobalStateV2'
 
 interface Props {
@@ -202,7 +203,10 @@ export default function SteamDialog({
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
   const { platform, showDialogModal } = useContext(ContextProvider)
-  const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
+  const { crossoverRatings, runsForMe } = useGlobalState.keys(
+    'crossoverRatings',
+    'runsForMe'
+  )
 
   const [selectedPath, setSelectedPath] = useState('')
   const [diskSpace, setDiskSpace] = useState<DiskSpaceInfo | null>(null)
@@ -543,7 +547,10 @@ export default function SteamDialog({
       platform,
       installsViaCrossover:
         gating.wineSection && wineVersion?.type === 'crossover',
-      rating: crossoverRatings[appName]
+      rating: crossoverRatings[appName],
+      runsForMe: isRunsForMeOn(
+        runsForMe[runsForMeKey(appName, gameInfo.runner)]
+      )
     })
     if (risk.kind === 'confirm') {
       showDialogModal({
@@ -564,6 +571,7 @@ export default function SteamDialog({
     gating,
     wineVersion,
     crossoverRatings,
+    runsForMe,
     appName,
     showDialogModal,
     gameInfo,

@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next'
 import AllowedIcon from 'frontend/assets/rounded_checkmark_icon.svg?react'
 import { AvailablePlatforms } from '..'
 import './index.css'
+import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
 
 interface Props {
   backdropClick: () => void
@@ -54,7 +55,10 @@ export default function ThirdPartyDialog({
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
   const { platform, showDialogModal } = useContext(ContextProvider)
-  const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
+  const { crossoverRatings, runsForMe } = useGlobalState.keys(
+    'crossoverRatings',
+    'runsForMe'
+  )
   const isWin = platform === 'win32'
   const progress = {} as InstallProgress
 
@@ -98,7 +102,8 @@ export default function ThirdPartyDialog({
       platform,
       installsViaCrossover:
         platformToInstall === 'Windows' && wineVersion?.type === 'crossover',
-      rating: crossoverRatings[appName]
+      rating: crossoverRatings[appName],
+      runsForMe: isRunsForMeOn(runsForMe[runsForMeKey(appName, runner)])
     })
     if (risk.kind === 'confirm') {
       showDialogModal({
@@ -118,6 +123,8 @@ export default function ThirdPartyDialog({
     platformToInstall,
     wineVersion,
     crossoverRatings,
+    runsForMe,
+    runner,
     appName,
     showDialogModal,
     gameInfo,

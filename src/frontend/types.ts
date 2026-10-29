@@ -20,6 +20,7 @@ import { NileLoginData, NileRegisterData } from 'common/types/nile'
 import { HumbleKey } from 'common/types/humble'
 import type { OAuthLoginCompletionPayload } from 'frontend/screens/WebView/useTauriOAuthLogin'
 import type { SteamSyncStatus } from 'common/types/ipc'
+import type { RunsForMeState } from 'common/runsForMe'
 import type {
   LibraryGroupBy,
   LibrarySortDirection,
@@ -460,7 +461,15 @@ export type LibraryView = 'all' | 'installed' | 'recentlyPlayed' | 'favourites'
 // evidence, not user-facing controls (D-10). 'notChecked' is the
 // `rating === null` row (looked up, no data). A game whose tier cannot be
 // computed on the current host renders NO row at all (D-12).
-export type RunnabilityTier = 'native' | 'bottle' | 'wontRun' | 'notChecked'
+// 'runsForMe' (quick 261029-mkz) is user-asserted (or auto-set after a 60 s
+// session): it wins over every rating-derived tier and 'notChecked', never
+// over 'native'.
+export type RunnabilityTier =
+  | 'native'
+  | 'runsForMe'
+  | 'bottle'
+  | 'wontRun'
+  | 'notChecked'
 
 // D-01: the store facet's opt-in value union, mirroring StoresFilters' six
 // runner keys so a selection can be a plain array instead of a boolean mask.
@@ -517,6 +526,8 @@ export interface FilterEngineDeps {
   customCategories: Record<string, string[]>
   gameUpdates: string[]
   crossoverRatings: Record<string, number | null>
+  // Quick 261029-mkz: keyed by gameKey() (`${app_name}_${runner}`).
+  runsForMe: Record<string, RunsForMeState>
   // ContextProvider's `platform`, i.e. 'darwin' | 'linux' | 'win32'.
   hostPlatform: string
 }

@@ -1759,6 +1759,18 @@ class GlobalState extends PureComponent<Props> {
         window.api.logError(`CrossOver index pull failed: ${String(error)}`)
       )
 
+    // Quick 261029-mkz: "Runs for me" override map -- push on every change,
+    // plus a one-time pull so the first paint has it.
+    window.api.handleRunsForMeChanged((e, map) => {
+      useGlobalState.getState().setRunsForMe(map)
+    })
+    window.api
+      .getRunsForMeMap()
+      .then((map) => useGlobalState.getState().setRunsForMe(map))
+      .catch((error) =>
+        window.api.logError(`Runs-for-me pull failed: ${String(error)}`)
+      )
+
     // D-09: state-only listener — never opens a dialog/modal directly. The
     // non-blocking expiry toast (HumbleExpiryToast) reacts to the resulting
     // `expired` state transition on its own.

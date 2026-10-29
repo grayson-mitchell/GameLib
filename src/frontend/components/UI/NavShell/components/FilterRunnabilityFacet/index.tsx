@@ -45,6 +45,8 @@ export function runnabilityLabel(
         'gamelib:library.filterPanel.runsNatively',
         'Runs natively'
       )
+    case 'runsForMe':
+      return tGamelib('gamelib:library.filterPanel.runsForMe', 'Runs for me')
     case 'bottle':
       return tGamelib(
         'gamelib:library.filterPanel.runsViaBottle',

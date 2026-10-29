@@ -62,6 +62,8 @@ import {
 } from 'frontend/state/InstallGameModal'
 import { showSteamCardInstallOptions } from 'frontend/helpers/steamInstallOptionsEntry'
 import CrossoverBadge from './CrossoverBadge'
+import RunsForMeBadge from './RunsForMeBadge'
+import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
 
 interface Card {
   buttonClick: () => void
@@ -120,18 +122,21 @@ const GameCard = ({
     favouriteGames,
     showDialogModal,
     activeController,
-    connectivity
+    connectivity,
+    platform
   } = useContext(ContextProvider)
   const {
     openGameSettingsModal,
     openGameLogsModal,
     openGameCategoriesModal,
-    crossoverRatings
+    crossoverRatings,
+    runsForMe
   } = useGlobalState.keys(
     'openGameSettingsModal',
     'openGameLogsModal',
     'openGameCategoriesModal',
-    'crossoverRatings'
+    'crossoverRatings',
+    'runsForMe'
   )
 
   const { layout } = useContext(LibraryContext)
@@ -144,6 +149,11 @@ const GameCard = ({
     install: gameInstallInfo
   } = { ...gameInfoFromProps }
   const crossoverRating = crossoverRatings[appName]
+  // Quick 261029-mkz: a user/auto "Runs for me" replaces the CrossOver dot.
+  const runsForMeOn =
+    platform === 'darwin' &&
+    !gameInfoFromProps.is_mac_native &&
+    isRunsForMeOn(runsForMe[runsForMeKey(appName, runner)])
   const title = gameInfoFromProps.overrides?.title || gameInfoFromProps.title
   const art_cover =
     gameInfoFromProps.overrides?.art_cover || gameInfoFromProps.art_cover
@@ -565,7 +575,11 @@ const GameCard = ({
               {tGamelib('gamelib:library.noStorePage', 'No store page')}
             </span>
           )}
-          <CrossoverBadge rating={crossoverRating} />
+          {runsForMeOn ? (
+            <RunsForMeBadge />
+          ) : (
+            <CrossoverBadge rating={crossoverRating} />
+          )}
           <Link
             to={`/gamepage/${runner}/${appName}`}
             state={{ gameInfo }}

@@ -479,6 +479,32 @@ body:not(.controllerLayout):not(.keyboardNav)
   pointer-events: none;
 }
 
+.gameCard .gameCardRunsForMeBadge {
+  position: absolute;
+  z-index: 3;
+  bottom: 5px;
+  right: 0.5rem;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--neutral-01);
+  background-color: var(--status-success);
+  pointer-events: none;
+}
+
+/* The check glyph: a rotated L painted with two borders. */
+.gameCard .gameCardRunsForMeBadge::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1.5px;
+  width: 3px;
+  height: 6px;
+  border: solid var(--neutral-01);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
 .gameCardCrossoverBadge--gold {
   background-color: var(--status-success);
 }

@@ -366,6 +366,7 @@ export default React.memo(function Library(): JSX.Element {
 
   // 19-06 slice: app_name -> rating|null; absent = never looked up (D-16).
   const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
+  const { runsForMe } = useGlobalState.keys('runsForMe')
 
   const [filterText, setFilterText] = useState('')
 
@@ -790,6 +791,7 @@ export default React.memo(function Library(): JSX.Element {
         customCategories: customCategories.list,
         gameUpdates,
         crossoverRatings,
+        runsForMe,
         hostPlatform: platform
       }),
     [
@@ -800,6 +802,7 @@ export default React.memo(function Library(): JSX.Element {
       customCategories,
       gameUpdates,
       crossoverRatings,
+      runsForMe,
       platform,
       // Debug session steam-library-22-games-missing (2026-08-21): not read
       // inside the factory above -- included purely to invalidate this memo

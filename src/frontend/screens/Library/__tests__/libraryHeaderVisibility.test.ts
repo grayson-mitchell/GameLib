@@ -69,6 +69,7 @@ function makeDeps(overrides: Partial<FilterEngineDeps> = {}): FilterEngineDeps {
     customCategories: {},
     gameUpdates: [],
     crossoverRatings: {},
+    runsForMe: {},
     hostPlatform: 'darwin',
     ...overrides
   }

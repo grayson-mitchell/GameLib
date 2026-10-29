@@ -13,6 +13,7 @@ import { faCircleInfo, faWarning } from '@fortawesome/free-solid-svg-icons'
 import { WineVersionListItem } from 'frontend/screens/Settings/components/WineVersionSelector'
 import { MenuItem } from '@mui/material'
 import { useAwaited } from 'frontend/hooks/useAwaited'
+import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
 import ContextProvider from 'frontend/state/ContextProvider'
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import {
@@ -90,8 +91,15 @@ export default function WineSelector({
   const [useSharedPrefix, setUseSharedPrefix] = useState(false)
 
   const { platform } = useContext(ContextProvider)
-  const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
+  const { crossoverRatings, runsForMe } = useGlobalState.keys(
+    'crossoverRatings',
+    'runsForMe'
+  )
   const crossoverRating = crossoverRatings[appName]
+  // Quick 261029-mkz: a "Runs for me" game gets no CrossOver risk hint/notice.
+  const runsForMeOn =
+    runner !== undefined &&
+    isRunsForMeOn(runsForMe[runsForMeKey(appName, runner)])
 
   const globalConfig = useAwaited(() => window.api.requestAppSettings())
 
@@ -185,6 +193,7 @@ export default function WineSelector({
   // may-have-problems copy). The `disabled` half still holds: a confirm step,
   // never a disabled button. This hint itself stays a passive sibling render.
   const isKnownNotToWork =
+    !runsForMeOn &&
     platform === 'darwin' &&
     runner === 'steam' &&
     showBottle &&
@@ -288,15 +297,18 @@ export default function WineSelector({
               </a>
             </span>
           )}
-          {platform === 'darwin' && showBottle && crossoverRating === null && (
-            <div className="infoBox">
-              <FontAwesomeIcon icon={faCircleInfo} />
-              {tGamelib(
-                'gamelib:installFlows.crossoverRating.unratedNotice',
-                'No CrossOver rating found for this game. CodeWeavers has no compatibility report for it, so there is no early warning either way.'
-              )}
-            </div>
-          )}
+          {!runsForMeOn &&
+            platform === 'darwin' &&
+            showBottle &&
+            crossoverRating === null && (
+              <div className="infoBox">
+                <FontAwesomeIcon icon={faCircleInfo} />
+                {tGamelib(
+                  'gamelib:installFlows.crossoverRating.unratedNotice',
+                  'No CrossOver rating found for this game. CodeWeavers has no compatibility report for it, so there is no early warning either way.'
+                )}
+              </div>
+            )}
           {isKnownNotToWork && (
             <div className="infoBox">
               <FontAwesomeIcon

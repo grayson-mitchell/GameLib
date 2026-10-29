@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 
 import type { GetLogFileArgs } from 'backend/logger/paths'
 import type { GameInfo } from 'common/types'
+import type { RunsForMeState } from 'common/runsForMe'
 import type { GameSettingsModalType } from '../screens/Settings/components/SettingsModal'
 import { notify } from 'frontend/helpers'
 import { gameOverridesStore } from 'frontend/helpers/electronStores'
@@ -45,6 +46,11 @@ interface GlobalStateV2 {
   // component writes back to it, and reading it never triggers a fetch.
   crossoverRatings: Record<string, number | null>
   setCrossoverRatings: (ratings: Record<string, number | null>) => void
+
+  // Quick 261029-mkz: per-game "Runs for me" override map, keyed
+  // `${app_name}_${runner}`. Backend-persisted; this slice mirrors it.
+  runsForMe: Record<string, RunsForMeState>
+  setRunsForMe: (map: Record<string, RunsForMeState>) => void
 }
 
 const useGlobalStateRaw = create<GlobalStateV2>()((set) => ({
@@ -92,6 +98,9 @@ const useGlobalStateRaw = create<GlobalStateV2>()((set) => ({
 
   crossoverRatings: {},
   setCrossoverRatings: (crossoverRatings) => set({ crossoverRatings }),
+
+  runsForMe: {},
+  setRunsForMe: (runsForMe) => set({ runsForMe }),
 
   refreshingWineVersions: false,
   refreshWineVersions: (fetch) => {

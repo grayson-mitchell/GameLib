@@ -51,6 +51,7 @@ function makeDeps(overrides: Partial<FilterEngineDeps> = {}): FilterEngineDeps {
     customCategories: {},
     gameUpdates: [],
     crossoverRatings: {},
+    runsForMe: {},
     hostPlatform: 'darwin',
     ...overrides
   }
@@ -395,6 +396,108 @@ describe('runnability', () => {
     const game = makeGame({ app_name: 'linux-app' })
 
     expect(deriveRunnabilityTier(game, {}, 'linux')).toBeNull()
+  })
+
+  describe('runsForMe (quick 261029-mkz)', () => {
+    const game = makeGame({ app_name: 'rfm', runner: 'gog' })
+    const key = 'rfm_gog'
+
+    it.each<
+      [
+        string,
+        'auto' | 'user-on' | 'user-off',
+        number | null | undefined,
+        RunnabilityTier | null
+      ]
+    >([
+      ['rating 1 + user-on', 'user-on', 1, 'runsForMe'],
+      ['rating 1 + auto', 'auto', 1, 'runsForMe'],
+      ['rating 1 + user-off', 'user-off', 1, 'wontRun'],
+      ['rating null + auto beats notChecked', 'auto', null, 'runsForMe'],
+      [
+        'rating undefined + user-on is not null',
+        'user-on',
+        undefined,
+        'runsForMe'
+      ],
+      ['rating 5 + user-on', 'user-on', 5, 'runsForMe']
+    ])('darwin: %s', (_name, state, rating, expected) => {
+      const ratings: Record<string, number | null> =
+        rating === undefined ? {} : { rfm: rating }
+      expect(
+        deriveRunnabilityTier(game, ratings, 'darwin', { [key]: state })
+      ).toBe(expected)
+    })
+
+    it('native stays native', () => {
+      const native = makeGame({
+        app_name: 'rfm',
+        runner: 'gog',
+        is_mac_native: true
+      })
+      expect(
+        deriveRunnabilityTier(native, { rfm: 1 }, 'darwin', {
+          [key]: 'user-on'
+        })
+      ).toBe('native')
+    })
+
+    it('beats the 32-bit bottle rule', () => {
+      const old = makeGame({ app_name: 'rfm', runner: 'gog', mac_arch: '32' })
+      expect(
+        deriveRunnabilityTier(old, {}, 'darwin', { [key]: 'user-on' })
+      ).toBe('runsForMe')
+    })
+
+    it('is keyed app_name + runner', () => {
+      expect(
+        deriveRunnabilityTier(game, { rfm: 1 }, 'darwin', {
+          rfm_steam: 'user-on'
+        })
+      ).toBe('wontRun')
+    })
+
+    it('linux and win32 ignore it entirely', () => {
+      expect(
+        deriveRunnabilityTier(game, {}, 'linux', { [key]: 'user-on' })
+      ).toBeNull()
+      expect(
+        deriveRunnabilityTier(game, {}, 'win32', { [key]: 'user-on' })
+      ).toBeNull()
+    })
+
+    it('omitting the 4th argument behaves as before', () => {
+      expect(deriveRunnabilityTier(game, { rfm: 1 }, 'darwin')).toBe('wontRun')
+    })
+
+    it('the darwin facet has a runsForMe row after native; other hosts unchanged', () => {
+      expect(runnabilityRowsForHost('darwin')).toEqual([
+        'native',
+        'runsForMe',
+        'bottle',
+        'wontRun',
+        'notChecked'
+      ])
+      expect(runnabilityRowsForHost('linux')).toEqual(['native'])
+      expect(runnabilityRowsForHost('win32')).toEqual([])
+    })
+
+    it('migrateRunnabilityFacetSelection accepts a stored runsForMe', () => {
+      expect(
+        migrateRunnabilityFacetSelection(JSON.stringify(['runsForMe']), null)
+      ).toEqual(['runsForMe'])
+    })
+
+    it('countFor counts a runs-for-me game under runsForMe, not wontRun', () => {
+      const library = [game]
+      const deps = makeDeps({
+        crossoverRatings: { rfm: 1 },
+        runsForMe: { [key]: 'user-on' }
+      })
+      const state = makeState()
+      expect(countFor(library, state, deps, 'runnability', 'runsForMe')).toBe(1)
+      expect(countFor(library, state, deps, 'runnability', 'wontRun')).toBe(0)
+    })
   })
 
   it('renders no runnability rows at all on a Windows host (D-12 extension)', () => {

@@ -58,6 +58,7 @@ import GameLanguageSelector from './GameLanguageSelector'
 import { hasAnticheatInfo } from 'frontend/hooks/hasAnticheatInfo'
 import BranchSelector from './BranchSelector'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
+import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
 
 interface Props {
   backdropClick: () => void
@@ -116,7 +117,10 @@ export default function DownloadDialog({
   ) as InstallProgress
   const { libraryStatus, platform, showDialogModal } =
     useContext(ContextProvider)
-  const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
+  const { crossoverRatings, runsForMe } = useGlobalState.keys(
+    'crossoverRatings',
+    'runsForMe'
+  )
 
   const isWin = platform === 'win32'
 
@@ -295,7 +299,8 @@ export default function DownloadDialog({
         platform,
         installsViaCrossover:
           platformToInstall === 'Windows' && wineVersion?.type === 'crossover',
-        rating: crossoverRatings[appName]
+        rating: crossoverRatings[appName],
+        runsForMe: isRunsForMeOn(runsForMe[runsForMeKey(appName, runner)])
       })
       if (risk.kind === 'confirm') {
         showDialogModal({

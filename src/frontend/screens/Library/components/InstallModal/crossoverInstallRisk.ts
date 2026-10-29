@@ -23,13 +23,17 @@ type CrossoverInstallRisk =
 export function resolveCrossoverInstallRisk({
   platform,
   installsViaCrossover,
-  rating
+  rating,
+  runsForMe
 }: {
   platform: string
   installsViaCrossover: boolean
   rating: number | null | undefined
+  // Quick 261029-mkz: the game is marked "Runs for me" -- skip every warning.
+  runsForMe?: boolean
 }): CrossoverInstallRisk {
   if (platform !== 'darwin' || !installsViaCrossover) return { kind: 'none' }
+  if (runsForMe) return { kind: 'none' }
   if (rating === null) return { kind: 'unrated' }
   if (typeof rating !== 'number' || !Number.isFinite(rating)) {
     return { kind: 'none' }

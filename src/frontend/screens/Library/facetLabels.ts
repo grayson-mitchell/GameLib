@@ -39,6 +39,7 @@ export const RunnerToStore: Record<string, string> = {
 // localisation gate for them -- this module only declares the tuples.
 export const RUNNABILITY_LABELS: Record<RunnabilityTier, [string, string]> = {
   native: ['gamelib:library.filterPanel.runsNatively', 'Runs natively'],
+  runsForMe: ['gamelib:library.filterPanel.runsForMe', 'Runs for me'],
   bottle: ['gamelib:library.filterPanel.runsViaBottle', 'Runs via bottle'],
   wontRun: ['gamelib:library.filterPanel.wontRun', "Won't run"],
   notChecked: ['gamelib:library.filterPanel.notYetChecked', 'Not yet checked']

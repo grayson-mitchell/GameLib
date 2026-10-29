@@ -262,9 +262,9 @@ describe('literal default text matches facetLabels.ts (WR-06)', () => {
   // Test B (non-vacuity): if a future edit deleted members off
   // RUNNABILITY_LABELS, Test A's `it.each` table would silently shrink and
   // could pass vacuously with zero real assertions run. Pinning the table
-  // length to the four known tiers keeps that possibility a named failure.
-  it('the drift table covers exactly the four known tiers -- not a table that has silently emptied', () => {
-    expect(tiers).toHaveLength(4)
+  // length to the five known tiers keeps that possibility a named failure.
+  it('the drift table covers exactly the five known tiers -- not a table that has silently emptied', () => {
+    expect(tiers).toHaveLength(5)
   })
 
   // Test A: the module-scope `throw` this used to be is now this `it.each`.

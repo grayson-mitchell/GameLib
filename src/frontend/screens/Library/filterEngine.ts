@@ -27,6 +27,7 @@
  */
 
 import { GameInfo } from 'common/types'
+import { isRunsForMeOn, type RunsForMeState } from 'common/runsForMe'
 import {
   ActiveFilterDescriptor,
   FacetKind,
@@ -51,6 +52,7 @@ const VALID_STORE_FACET_VALUES: StoreFacetValue[] = [
 
 const VALID_RUNNABILITY_TIERS: RunnabilityTier[] = [
   'native',
+  'runsForMe',
   'bottle',
   'wontRun',
   'notChecked'
@@ -90,11 +92,15 @@ export function gameKey(game: GameInfo): string {
  * D-16: `ratings[app_name] === undefined` (never looked up) is NOT the same
  * state as `=== null` (looked up, no data) — collapsing them would present
  * a fabricated compatibility verdict as fact.
+ * Quick 261029-mkz: on darwin, native > runsForMe > every rating-derived
+ * tier (including the 32-bit bottle rule and the never-looked-up null). The
+ * override is keyed `${app_name}_${runner}`; linux and win32 ignore it.
  */
 export function deriveRunnabilityTier(
   game: GameInfo,
   ratings: Record<string, number | null>,
-  hostPlatform: string
+  hostPlatform: string,
+  runsForMe: Record<string, RunsForMeState> = {}
 ): RunnabilityTier | null {
   if (hostPlatform === 'win32') {
     // GameInfo carries no Windows-native signal of any kind — every row is
@@ -110,6 +116,10 @@ export function deriveRunnabilityTier(
   // darwin
   if (game.is_mac_native === true) {
     return 'native'
+  }
+
+  if (isRunsForMeOn(runsForMe[gameKey(game)])) {
+    return 'runsForMe'
   }
 
   if (game.mac_arch === '32') {
@@ -149,7 +159,7 @@ export function runnabilityRowsForHost(
   if (hostPlatform === 'linux') {
     return ['native']
   }
-  return ['native', 'bottle', 'wontRun', 'notChecked']
+  return ['native', 'runsForMe', 'bottle', 'wontRun', 'notChecked']
 }
 
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
@@ -232,7 +242,8 @@ function passesRunnability(
   const tier = deriveRunnabilityTier(
     game,
     deps.crossoverRatings,
-    deps.hostPlatform
+    deps.hostPlatform,
+    deps.runsForMe
   )
   return tier !== null && runnability.includes(tier)
 }
@@ -419,8 +430,12 @@ export function countFor(
 
   return survivors.filter(
     (game) =>
-      deriveRunnabilityTier(game, deps.crossoverRatings, deps.hostPlatform) ===
-      value
+      deriveRunnabilityTier(
+        game,
+        deps.crossoverRatings,
+        deps.hostPlatform,
+        deps.runsForMe
+      ) === value
   ).length
 }
 

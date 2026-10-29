@@ -28,6 +28,21 @@ describe('resolveCrossoverInstallRisk', () => {
     })
   })
 
+  test.each([1, 3, null])(
+    'runsForMe skips every warning (rating %s)',
+    (rating) => {
+      expect(
+        resolveCrossoverInstallRisk({ ...mac, rating, runsForMe: true })
+      ).toEqual({ kind: 'none' })
+    }
+  )
+
+  test('runsForMe false behaves as today', () => {
+    expect(
+      resolveCrossoverInstallRisk({ ...mac, rating: 1, runsForMe: false })
+    ).toEqual({ kind: 'confirm', severity: 'known-not-to-work', rating: 1 })
+  })
+
   test('null is unrated, undefined is none', () => {
     expect(resolveCrossoverInstallRisk({ ...mac, rating: null })).toEqual({
       kind: 'unrated'

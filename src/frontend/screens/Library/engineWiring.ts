@@ -24,6 +24,7 @@
  */
 
 import { FavouriteGame, GameInfo, HiddenGame } from 'common/types'
+import type { RunsForMeState } from 'common/runsForMe'
 import {
   FilterEngineDeps,
   FilterEngineState,
@@ -117,6 +118,7 @@ export interface EngineDepsInputs {
   customCategories: Record<string, string[]>
   gameUpdates: string[]
   crossoverRatings: Record<string, number | null>
+  runsForMe: Record<string, RunsForMeState>
   hostPlatform: string
 }
 
@@ -237,6 +239,7 @@ export function buildEngineDeps(inputs: EngineDepsInputs): FilterEngineDeps {
     customCategories: inputs.customCategories,
     gameUpdates: inputs.gameUpdates,
     crossoverRatings: inputs.crossoverRatings,
+    runsForMe: inputs.runsForMe,
     hostPlatform: inputs.hostPlatform
   }
 }
