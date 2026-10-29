@@ -102,7 +102,7 @@ import {
 } from './peSections'
 import { runtimeLoadedSteamApiMarker } from './importParse'
 import { detectSteamDrmInPe } from './peSteamDrm'
-import { detectLaunchDrmWrapper } from './drm/drmScanExe'
+import { containedGameExeReal, detectLaunchDrmWrapper } from './drm/drmScanExe'
 import {
   readInterfaceVersionStrings,
   resolveRequiredInterfaceVersions,
@@ -484,16 +484,22 @@ export async function placeShimForGame(
         resolve(gameExePath)
       )
     : undefined
+  // Quick 261029-my4: the no-bottle fallback applies the same realpath
+  // game-folder containment as detectLaunchDrmWrapper; only the contained
+  // real path is ever opened (real scanned, lexical returned).
+  const fallbackReal = launchWrapper
+    ? null
+    : await containedGameExeReal(resolve(gameExePath), 'placeShimForGame')
   // CR-02: drm (CEG) is read from the same exe the resolver chose for
   // drmWrapper, so launch routing and the persisted verdict agree.
-  const drmSource = launchWrapper?.drmExe ?? resolve(gameExePath)
-  const drm = detectExeSteamDrm(appId, drmSource)
+  const drmSource = launchWrapper ? launchWrapper.drmExe : fallbackReal
+  const drm = drmSource ? detectExeSteamDrm(appId, drmSource) : undefined
   const flagged = withDrmWrapper(
     appId,
     gameExePath,
     result,
     launchWrapper ?? {
-      drmWrapper: detectDrmWrapper(resolve(gameExePath)),
+      drmWrapper: fallbackReal ? detectDrmWrapper(fallbackReal) : undefined,
       drmExe: resolve(gameExePath)
     }
   )
@@ -505,7 +511,8 @@ export async function placeShimForGame(
  * section table. Reads at most PE_SECTION_SCAN_BYTES, closes the fd in
  * finally, never throws. Callers invoke it only on a real path already
  * confirmed to lie inside the real path of the game folder (dirname of the
- * launch exe), as detectLaunchDrmWrapper does.
+ * launch exe). Both callers enforce this: detectLaunchDrmWrapper, and
+ * placeShimForGame's no-bottle fallback via containedGameExeReal.
  */
 export function detectDrmWrapper(
   exePath: string

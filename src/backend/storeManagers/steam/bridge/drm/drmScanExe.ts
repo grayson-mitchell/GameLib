@@ -15,6 +15,9 @@
  * work while a symlink inside the game folder that escapes it is refused. Real
  * paths are scanned, lexical paths returned.
  *
+ * The no-bottle fallback in shimGenerate.ts uses the same policy through
+ * containedGameExeReal (quick 261029-my4).
+ *
  * Callers (games.ts, wired in 56-21) must read CEG markers from `drmExe`, not
  * from the launch exe. Never throws.
  */
@@ -33,27 +36,51 @@ export interface LaunchDrmWrapper {
 /** Real path of `path` if it resolves inside `rootReal`, else null (logged). */
 async function containedReal(
   rootReal: string,
-  path: string
+  path: string,
+  label: string
 ): Promise<string | null> {
   const name = basename(path)
   let real: string
   try {
     real = await realpath(path)
   } catch {
-    logWarning(
-      `detectLaunchDrmWrapper: skipped ${name} (realpath failed)`,
-      LogPrefix.Steam
-    )
+    logWarning(`${label}: skipped ${name} (realpath failed)`, LogPrefix.Steam)
     return null
   }
   if (!isContainedWithin(rootReal, real)) {
     logWarning(
-      `detectLaunchDrmWrapper: skipped ${name} (escapes game folder)`,
+      `${label}: skipped ${name} (escapes game folder)`,
       LogPrefix.Steam
     )
     return null
   }
   return real
+}
+
+/**
+ * Real path of `exePath` if it resolves inside realpath(dirname(exePath)),
+ * else null (logged). Single shared entry point for callers that scan one
+ * exe. Never throws.
+ */
+export async function containedGameExeReal(
+  exePath: string,
+  label: string
+): Promise<string | null> {
+  try {
+    let rootReal: string
+    try {
+      rootReal = await realpath(dirname(exePath))
+    } catch {
+      logWarning(
+        `${label}: skipped ${basename(exePath)} (game folder unresolvable)`,
+        LogPrefix.Steam
+      )
+      return null
+    }
+    return await containedReal(rootReal, exePath, label)
+  } catch {
+    return null
+  }
 }
 
 export async function detectLaunchDrmWrapper(
@@ -80,7 +107,11 @@ export async function detectLaunchDrmWrapper(
 
   let launchResult: 'steamstub' | 'none' | undefined
   try {
-    const real = await containedReal(ueRootReal, exePath)
+    const real = await containedReal(
+      ueRootReal,
+      exePath,
+      'detectLaunchDrmWrapper'
+    )
     launchResult = real ? detect(real) : undefined
   } catch {
     launchResult = undefined
@@ -93,7 +124,11 @@ export async function detectLaunchDrmWrapper(
     if (!layout) return own
     for (const candidate of [...layout.shippingExes].sort()) {
       if (!candidate.toLowerCase().endsWith('.exe')) continue
-      const real = await containedReal(ueRootReal, candidate)
+      const real = await containedReal(
+        ueRootReal,
+        candidate,
+        'detectLaunchDrmWrapper'
+      )
       if (!real) continue
       try {
         if (detect(real) === 'steamstub') {
