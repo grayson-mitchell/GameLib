@@ -6,10 +6,8 @@
  * already threads -- single source of truth, no second read of
  * `install.steamResumePending`.
  */
-import type { Runner } from 'common/types'
-
 export function isSteamIncompleteCard(args: {
-  runner: Runner | string | undefined
+  runner: string | undefined
   status: string | undefined
   statusContext: string | undefined
 }): boolean {

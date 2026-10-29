@@ -33,6 +33,7 @@ import StoreLogos from 'frontend/components/UI/StoreLogos'
 import UninstallModal from 'frontend/components/UI/UninstallModal'
 import { getCardStatus, getImageFormatting } from './constants'
 import { observeCardVisibility } from './cardVisibility'
+import { isSteamIncompleteCard } from './steamIncompleteCard'
 import { hasStatus } from 'frontend/hooks/hasStatus'
 import fallBackImage from 'frontend/assets/gamelib_card.svg?url'
 import fallBackImageMissing from 'frontend/assets/gamelib_card_missing.svg?url'
@@ -168,7 +169,7 @@ const GameCard = ({
     ...gameInstallInfo
   }
 
-  const { status, folder, label } = hasStatus(gameInfo, size)
+  const { status, statusContext, folder, label } = hasStatus(gameInfo, size)
 
   const isBrowserGame = gameInfo.install.platform === 'Browser'
 
@@ -200,6 +201,17 @@ const GameCard = ({
     isUpdating,
     haveStatus
   } = getCardStatus(status, isInstalled, layout)
+
+  // D-UAT-12: mirror the detail page's "Resume Install" for an incomplete
+  // Steam install instead of a plain "Install".
+  const isSteamIncomplete = isSteamIncompleteCard({
+    runner,
+    status,
+    statusContext
+  })
+  const installLabel = isSteamIncomplete
+    ? tGamelib('gamelib:steam.status.resumeInstall', 'Resume Install')
+    : t('button.install')
 
   const installingGrayscale = isInstalling
     ? `${125 - getProgress(progress)}%`
@@ -319,7 +331,7 @@ const GameCard = ({
         <SvgButton
           className="downIcon"
           onClick={() => buttonClick()}
-          title={`${t('button.install')} (${title})`}
+          title={`${installLabel} (${title})`}
         >
           <DownIcon />
         </SvgButton>
@@ -402,7 +414,7 @@ const GameCard = ({
     },
     {
       // install
-      label: t('button.install'),
+      label: installLabel,
       onclick: () => buttonClick(),
       show: !isInstalled && !isQueued && isInstallable && !isDelisted,
       icon: <Download />
@@ -556,7 +568,9 @@ const GameCard = ({
           data-app-name={appName}
           data-tour={dataTour}
         >
-          {haveStatus && <span className="gameCardStatus">{label}</span>}
+          {(haveStatus || isSteamIncomplete) && (
+            <span className="gameCardStatus">{label}</span>
+          )}
           {showUpdateBadge && (
             <span className="gameCardUpdateBadge">
               {t('status.hasUpdates')}
@@ -616,10 +630,10 @@ const GameCard = ({
                 className={logoClasses}
               />
             )}
-            {haveStatus && (
+            {(haveStatus || isSteamIncomplete) && (
               <span
                 className={classNames('gameListInfo', {
-                  active: haveStatus,
+                  active: haveStatus || isSteamIncomplete,
                   installed: isInstalled
                 })}
               >
