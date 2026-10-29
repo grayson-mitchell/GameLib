@@ -74,6 +74,66 @@ export function pageScrollDelta(
   )
 }
 
+/**
+ * Quick 261029-v5a follow-up: the chevron's destination as an absolute
+ * `scrollLeft`, rounded to a whole pitch and clamped to the track's travel.
+ * Snap positions are whole pitches from 0 (the hero anchor in index.css fills
+ * 1p), so the result is always one of them and the strip never rests on a
+ * half-clipped card. An RTL track scrolls through negative `scrollLeft`, so
+ * `rtl` flips the travel range to [-max, 0]. A non-finite input leaves
+ * `scrollLeft` as it is.
+ */
+export function pagedScrollLeft(
+  m: TrackMeasurement,
+  delta: number,
+  cardPitch: number,
+  rtl = false
+): number {
+  if (
+    !isFiniteMeasurement(m) ||
+    !Number.isFinite(delta) ||
+    !Number.isFinite(cardPitch) ||
+    cardPitch <= 0
+  ) {
+    return m.scrollLeft
+  }
+  const max = Math.max(0, maxScrollLeft(m))
+  const target = Math.round((m.scrollLeft + delta) / cardPitch) * cardPitch
+  return rtl
+    ? Math.min(0, Math.max(-max, target))
+    : Math.min(max, Math.max(0, target))
+}
+
+/**
+ * Quick 261029-v5a follow-up: WKWebView does not snap a scripted smooth
+ * scroll in a `scroll-snap-type: mandatory` track. It left the strip half a
+ * card off a column, and only the next hover restyle re-snapped it. Snapping
+ * is switched off inline for the scripted scroll and handed back to the
+ * stylesheet once the track has been still for `settleMs`. `pagedScrollLeft`
+ * already lands on a snap position, so the hand-back does not move anything.
+ * If no scroll event arrives (already at the destination), the first timer
+ * still hands it back.
+ */
+export function scrollWithSnapSuspended(
+  track: HTMLElement,
+  left: number,
+  settleMs = 150
+): void {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const restore = () => {
+    track.removeEventListener('scroll', onScroll)
+    track.style.scrollSnapType = ''
+  }
+  const onScroll = () => {
+    clearTimeout(timer)
+    timer = setTimeout(restore, settleMs)
+  }
+  track.style.scrollSnapType = 'none'
+  track.addEventListener('scroll', onScroll, { passive: true })
+  timer = setTimeout(restore, settleMs)
+  track.scrollTo({ left, behavior: 'smooth' })
+}
+
 export function canScrollForward(m: TrackMeasurement): boolean {
   if (!isFiniteMeasurement(m)) {
     return false

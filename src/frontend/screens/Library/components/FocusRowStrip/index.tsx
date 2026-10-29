@@ -28,7 +28,9 @@ import {
   measureCardPitch,
   measureFitAllowance,
   pageScrollDelta,
-  scrollFocusedCardIntoViewHorizontally
+  pagedScrollLeft,
+  scrollFocusedCardIntoViewHorizontally,
+  scrollWithSnapSuspended
 } from './focusRowOverflow'
 import './index.css'
 
@@ -168,12 +170,16 @@ function FocusRowStrip({
       scrollWidth: track.scrollWidth,
       scrollLeft: track.scrollLeft
     }
-    track.scrollBy({
-      left:
-        direction *
-        pageScrollDelta(m, measureCardPitch(track), measureFitAllowance(track)),
-      behavior: 'smooth'
-    })
+    const pitch = measureCardPitch(track)
+    scrollWithSnapSuspended(
+      track,
+      pagedScrollLeft(
+        m,
+        direction * pageScrollDelta(m, pitch, measureFitAllowance(track)),
+        pitch,
+        getComputedStyle(track).direction === 'rtl'
+      )
+    )
   }
 
   if (!hasGames) {

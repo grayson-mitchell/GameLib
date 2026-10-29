@@ -755,11 +755,15 @@ describe('FocusRowStrip/index.tsx -- overflow controls (Plan 48-04)', () => {
     expect(source).toMatch(/\.disconnect\(\)/)
   })
 
-  it('pages with scrollBy over pageScrollDelta, smooth', () => {
+  // 261029-v5a follow-up: an absolute, pitch-rounded destination scrolled
+  // with snapping suspended replaced the relative smooth `scrollBy`, which
+  // WKWebView stranded half a card off a column in a mandatory snap track.
+  it('pages to a pitch-rounded pageScrollDelta destination, snap suspended', () => {
     expect(source).toMatch(/pageScrollDelta\(/)
     expect(source).toMatch(/measureFitAllowance\(track\)/)
-    expect(source).toMatch(/scrollBy\(/)
-    expect(source).toMatch(/behavior:\s*'smooth'/)
+    expect(source).toMatch(/pagedScrollLeft\(/)
+    expect(source).toMatch(/scrollWithSnapSuspended\(/)
+    expect(source).not.toMatch(/scrollBy\(/)
   })
 })
 

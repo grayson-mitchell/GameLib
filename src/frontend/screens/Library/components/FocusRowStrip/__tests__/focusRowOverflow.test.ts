@@ -11,6 +11,7 @@ import {
   measureCardPitch,
   measureFitAllowance,
   pageScrollDelta,
+  pagedScrollLeft,
   scrollFocusedCardIntoViewHorizontally
 } from '../focusRowOverflow'
 import {
@@ -129,6 +130,34 @@ describe('pageScrollDelta', () => {
   it('P1 non-vacuity: the same sweep without the allowance pages one short at least once', () => {
     expect(sweepP1(0).short).toBeGreaterThan(0)
     expect(sweepP1(9).short).toBe(0)
+  })
+})
+
+describe('pagedScrollLeft (261029-v5a follow-up)', () => {
+  it('pages from a column to the next whole-pitch column', () => {
+    expect(pagedScrollLeft(m(540, 2000, 0), 540, 180)).toBe(540)
+  })
+
+  it('rounds a half-card start back onto a column', () => {
+    // 90 is half a card in; 90 + 540 = 630 -> 3.5 pitches -> 4 pitches
+    expect(pagedScrollLeft(m(540, 2000, 90), 540, 180)).toBe(720)
+    expect(pagedScrollLeft(m(540, 2000, 80), 540, 180)).toBe(540)
+  })
+
+  it('clamps to the end of travel and to 0', () => {
+    expect(pagedScrollLeft(m(540, 1620, 900), 540, 180)).toBe(1080)
+    expect(pagedScrollLeft(m(540, 1620, 180), -540, 180)).toBe(0)
+  })
+
+  it('travels through negative scrollLeft on an RTL track', () => {
+    expect(pagedScrollLeft(m(540, 1620, 0), -540, 180, true)).toBe(-540)
+    expect(pagedScrollLeft(m(540, 1620, -900), -540, 180, true)).toBe(-1080)
+    expect(pagedScrollLeft(m(540, 1620, -180), 540, 180, true)).toBe(0)
+  })
+
+  it('leaves scrollLeft alone on a non-finite input', () => {
+    expect(pagedScrollLeft(m(540, 1620, 90), NaN, 180)).toBe(90)
+    expect(pagedScrollLeft(m(540, 1620, 90), 540, 0)).toBe(90)
   })
 })
 
