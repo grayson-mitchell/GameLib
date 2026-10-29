@@ -5265,8 +5265,9 @@ impl PristineLoginCancelTarget {
 
 /// Adds the native "x" cancel button, overlaid on the top-right corner of the pristine webview
 /// when `open_pristine_epic_login_window` runs with `as_sheet` set. Styled to match the injected
-/// `login_cancel_strip_script` box the other login sheets show (18pt glyph, `#caf3fd` on
-/// `#161c1e`). Pure AppKit: no JS is evaluated or injected (Turnstile fails on any injection).
+/// `login_cancel_strip_script` glyph the other login sheets show (18pt, `#caf3fd`). No fill:
+/// the injected box's `#161c1e` read darker than GOG's own form behind it (live feedback), so the
+/// borderless button stays transparent and the glyph sits on the page's own background. Pure AppKit: no JS is evaluated or injected (Turnstile fails on any injection).
 /// `flipped` is the content view's `isFlipped`, which decides which edge is the top.
 #[cfg(target_os = "macos")]
 fn install_native_login_cancel_button(
@@ -5297,18 +5298,6 @@ fn install_native_login_cancel_button(
             1.0,
         ),
     ));
-    let background = objc2_app_kit::NSColor::colorWithSRGBRed_green_blue_alpha(
-        0x16 as f64 / 255.0,
-        0x1c as f64 / 255.0,
-        0x1e as f64 / 255.0,
-        1.0,
-    );
-    // `NSButtonCell.backgroundColor` applies to borderless buttons only, which this is. Sent via
-    // `msg_send!` so no `NSButtonCell`/`NSCell` feature is needed for a single setter.
-    unsafe {
-        let cell: *mut AnyObject = msg_send![&*button, cell];
-        let _: () = msg_send![cell, setBackgroundColor: &*background];
-    }
     let y = if flipped {
         0.0
     } else {
