@@ -33,6 +33,7 @@
 
 import { getLoginWindowSeamOrThrow } from '../humble/loginWindowSeam'
 import { logInfo, logWarning, LogPrefix } from '../logger'
+import { isMac } from '../constants/environment'
 // Defined in common/types/ (not here) so common/types/ipc.ts's AsyncIPCFunctions.
 // oauthCaptureLogin entry (Task 2) can reference both without common/ importing FROM
 // backend/sidecar — the import direction is always common -> backend/frontend, never the
@@ -67,9 +68,20 @@ interface OAuthRedirectMatch {
 // Reproduces `WebView/index.tsx` L229-237 exactly (the per-runner UA selection inside its
 // `loadstop` handler), including Epic's distinct `EpicGamesLauncher` UA — read at plan-time off
 // the live Electron source, not re-derived.
+//
+// GOG on macOS (debug session gog-login-cloudflare-check, 2026-10-29): GOG's login page now runs
+// a Cloudflare human check, which fails when the UA claims Chrome on Windows but the engine is
+// WKWebView. Live-verified to pass only with BOTH this Safari UA AND the pristine (injection-free)
+// WKWebView route (`GOG_LOGIN_HOST`, src-tauri/src/main.rs); either alone still failed.
+// MAINTAINED VALUE: keep the Safari version current, as `STORE_EMBED_USER_AGENT` is kept.
+const GOG_MAC_SAFARI_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Safari/605.1.15'
+
 const USER_AGENTS: Record<OAuthRunner, string> = {
   legendary: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher',
-  gog: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0',
+  gog: isMac
+    ? GOG_MAC_SAFARI_USER_AGENT
+    : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0',
   nile: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0',
   zoom: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
 }

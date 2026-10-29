@@ -705,7 +705,9 @@ describe('resolveUserAgent — diagnostic UA override, exercised via captureOAut
   const DEFAULT_LEGENDARY_UA =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher'
   const DEFAULT_GOG_UA =
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
+    process.platform === 'darwin'
+      ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Safari/605.1.15'
+      : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
   const ORIGINAL_ENV = { ...process.env }
 
   const fakeSeam: LoginWindowSeam = {
