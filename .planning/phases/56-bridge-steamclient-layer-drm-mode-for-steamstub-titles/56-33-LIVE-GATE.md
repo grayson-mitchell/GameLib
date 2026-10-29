@@ -386,7 +386,7 @@ verified (census `game call ISteamUser_SteamUser017_GetSteamID`), reached menu p
 ### 9. Ranch Simulator 1119730 (recorded, non-blocking)
 
 expected: items 3-6 applied to launch 4 recorded as verified, reached menu (census detail) or failed at a step, with the logged exit code if any, and whether the stage ran and how it ended (sink: SIDECAR copy, launch 4)
-result: verified (census `game call ISteamUser_SteamUser017_GetSteamID`), reached menu per the operator ("launch 4 done: menu, no notices"). DELTA(4): anchor `[bridge-drm] appId=1119730 mode=steamclient-layer` x1 (baseline 0), `reason=drm-` x0, `[bridge-notice]` x0, `timed out after` x0, `registry not staged:` x0 and no `stage wine log` line: the stage did NOT run (the Ranch bottle's registry was already staged, so the item-9 "how it ended" clause is: no stage). No exit code logged (no exit-code line in DELTA(4), so the spike 040 exit-53 variant did not occur). One `role=game create-interface` (pid=248, SteamClient017), no role=helper line. `procs-launch-4.txt` (taken during the run): steam_osx pid present, no steamwebhelper.exe or steamservice.exe line, one helper `steam.exe` line. The game ran 60 s (`game stopped` 14:52:17). The operator did not report a force-quit; recorded as not reported.
+result: verified (census `game call ISteamUser_SteamUser017_GetSteamID`), reached menu per the operator ("launch 4 done: menu, no notices"). DELTA(4): anchor `[bridge-drm] appId=1119730 mode=steamclient-layer` x1 (baseline 0), `reason=drm-` x0, `[bridge-notice]` x0, `timed out after` x0, `registry not staged:` x0 and no `stage wine log` line: the stage did NOT run (the Ranch bottle's registry was already staged, so the item-9 "how it ended" clause is: no stage). No exit code logged (no exit-code line in DELTA(4), so the spike 040 exit-53 variant did not occur). One `role=game create-interface` (pid=248, SteamClient017), no role=helper line. `procs-launch-4.txt` (taken during the run): steam_osx pid present, no steamwebhelper.exe or steamservice.exe line, one helper `steam.exe` line. The game ran 60 s (`game stopped` 14:52:17). The operator later said, verbatim: "did not need to force quit", so Ranch exited normally from its menu quit and the `game stopped after 60s` line (14:52:17) reflects a natural exit.
 
 ### 10. Networking lead (56-02)
 
@@ -543,7 +543,7 @@ Note: DELTA(0) is the reinstall window of the current segment-A `gamelib.log` af
 
 ### 56-34 launch 4 (Ranch) and segment A close
 
-- Operator: "launch 4 done: menu, no notices". Not reported by the operator: any force-quit, and the Ranch card state afterwards (C1 observation).
+- Operator: "launch 4 done: menu, no notices". Force-quit: the operator said "did not need to force quit" (natural exit, unlike Raft in launch 3). Not reported by the operator: the Ranch card state afterwards (C1 observation).
 - The helper script ran once and archived: `gamelib-launch-4.log`, `delta4.txt`, `trace-launch-4.log`, `wine-launch-4.log` (75 bytes, no stage), `system-reg-launch-4.reg`, `procs-launch-4.txt` (taken at 14:51 during the run), plus `census-launch-4.json`.
 - Ranch's stage did not run (registry already staged from earlier use): the Ranch user.reg is expected to still carry the four DRM values, so PC14's COUNT should print 4 before the reset.
 - C1: no `drm setup: ... stopped at` line in any segment-A DELTA, so C1 is N/A for segment A (final C1 is decided after segment B).
