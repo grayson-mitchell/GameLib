@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 56 (bridge-steamclient-layer-drm-mode-for-steamstub-titles) — EXECUTING
 Plan: 8 of 34
 Status: Ready to execute
-Last activity: 2026-10-29
+Last activity: 2026-10-29 - Completed quick task 261029-iwy: fire steam://install to sync running Mac Steam after native install (live check outstanding)
 
 Progress: [██████████] 99%
 
@@ -456,6 +456,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261028-k7l | Generic GameMaker D3D11 runner default on the Steam bridge: CrossOver launch gets `CX_GRAPHICS_BACKEND=dxvk` when `data.win` sits beside the exe, the PE imports `d3d11.dll`, and the exe holds `GR_D3D_Device->CheckMultisampleQualityLevels` (replaces the unbuildable runner>=2024 check). User env > tier-1 > default. `1603180-steam.json` kept as regression pin. Closes the GameMaker MSAA-probe todo. | 2026-10-28 | `985c2a950` | Live-gated: Mining Mechs with pin moved aside, default applied, bridge verified, no dialogs. jest 118/118, codecheck clean. | [261028-k7l-generic-gamemaker-2024-d3d11-runner-dete](./quick/261028-k7l-generic-gamemaker-2024-d3d11-runner-dete/) |
 | 261029-avh | Install route notice consults DRM routing: `resolveBridgeRoute` row 7 calls the launch path's `resolveBridgeMode(scan.drmWrapper)` and skips the scan-miss notice for steamclient-layer (SteamStub) titles such as Grim Dawn; routing and the persisted scan verdict unchanged. Deferred: row 5 `win64-no-shim` notice for DRM titles; never-scanned DRM titles carry no `drmWrapper`. Closes the route-notice todo. | 2026-10-29 | `939ed1618` | Unit-tested, not live-gated. bridgeRoute 58/58, games.test scan-miss 7/7; one unrelated failure pre-existing from `985c2a950` (known-fixes applier 4th arg). | [261029-avh-route-notice-consults-drm-routing-before](./quick/261029-avh-route-notice-consults-drm-routing-before/) |
 | fast | Known-fixes applier launch test (quick 261024-tny case) expects the `exePath` 4th arg added by `985c2a950` (quick 261028-k7l). | 2026-10-29 | `2a4e3e390` | games.test.ts 446/446. | — |
+| 261029-iwy | After a native Mac Steam depot install with Steam running, GameLib fires `open -g steam://install/<appId>` (spikes 047–049) and waits for Steam to rewrite the ACF (differs from post-write baseline + bit 4 + buildid≠0; 120 s idle / 30 min cap, falls back to today's restart hint). New `'steam-syncing'` status mirrors `'drm-setup'`: "Syncing Steam" (with % during a 1026 repair) on tile, game page, Downloads hero, console; Play disabled until synced. Steam-not-running, Windows/Linux, bottle and bridge routes unchanged. | 2026-10-29 | 669b2d093 | Needs Review: live WazHack check outstanding | [261029-iwy-fire-steam-install-after-native-steam-in](./quick/261029-iwy-fire-steam-install-after-native-steam-in/) |
 
 ## Deferred Items
 
