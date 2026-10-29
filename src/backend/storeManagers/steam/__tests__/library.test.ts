@@ -97,6 +97,11 @@ import {
 } from '../steamClientProcess'
 import { steamRestartHoldStore } from '../electronStores'
 import { logInfo } from 'backend/logger'
+import {
+  readSteamDownloadMonitor,
+  startSteamDownloadMonitor,
+  stopSteamDownloadMonitor
+} from '../steamDownloadMonitor'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -305,6 +310,12 @@ jest.mock('../metacriticCapture', () => ({
 // native handoff finalizes. A bare jest.fn() resolves undefined = "inconclusive"
 // = fail open (no hold), so every pre-existing test keeps its old behaviour;
 // the D-UAT-13 describe below drives it explicitly. Never a real child spawn.
+// quick 261029-sex: bare jest.fn = undefined = no live signal = ACF behaviour.
+jest.mock('../steamDownloadMonitor', () => ({
+  startSteamDownloadMonitor: jest.fn(),
+  readSteamDownloadMonitor: jest.fn(),
+  stopSteamDownloadMonitor: jest.fn()
+}))
 jest.mock('../steamClientProcess', () => ({
   listSteamClientPids: jest.fn(),
   // quick 261029-pkp: start-time identity probe (bare jest.fn = undefined =
@@ -4854,6 +4865,144 @@ describe('pollInstallOnce()', () => {
     expect(notify).toHaveBeenCalledWith({
       title: 'CS:GO',
       body: 'Installation Finished'
+    })
+  })
+
+  describe('quick 261029-sex live Steam download progress', () => {
+    const envMock = jest.requireMock('backend/constants/environment')
+    const frozenAcf = {
+      AppState: {
+        appid: '730',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '0',
+        BytesToDownload: '8736151712'
+      }
+    }
+    const live = (bytesDone: number, speed = 25e6) => ({
+      bytesDone,
+      bytesTotal: 8736151712,
+      speedBytesPerSec: speed
+    })
+    const progressCalls = () =>
+      (sendFrontendMessage as jest.Mock).mock.calls.filter(
+        ([channel]) => channel === 'progressUpdate'
+      )
+    const statusCalls = () =>
+      (sendFrontendMessage as jest.Mock).mock.calls.filter(
+        ([channel]) => channel === 'gameStatusUpdate'
+      )
+
+    beforeEach(() => {
+      envMock.isMac = true
+      ;(vdf.parse as jest.Mock).mockReturnValue(frozenAcf)
+    })
+    afterEach(() => {
+      envMock.isMac = false
+    })
+
+    it('starts the monitor for native non-handoff polls on macOS and stops it on stop', () => {
+      startInstallPolling('730', 60000)
+      expect(startSteamDownloadMonitor).toHaveBeenCalledWith('730')
+      stopInstallPolling('730')
+      expect(stopSteamDownloadMonitor).toHaveBeenCalledWith('730')
+    })
+
+    it('upgrading an existing poll to delegated starts the monitor (idempotent)', () => {
+      startInstallPolling('730', 60000)
+      ;(startSteamDownloadMonitor as jest.Mock).mockClear()
+      startInstallPolling('730', {
+        intervalMs: 60000,
+        delegatedToSteamClient: true
+      })
+      expect(startSteamDownloadMonitor).toHaveBeenCalledWith('730')
+    })
+
+    it.each([
+      ['bottle', { source: 'bottle' as const }],
+      ['native handoff', { isNativeHandoff: true }]
+    ])('never starts the monitor for %s polls', (_n, opts) => {
+      startInstallPolling('730', { intervalMs: 60000, ...opts })
+      expect(startSteamDownloadMonitor).not.toHaveBeenCalled()
+    })
+
+    it('never starts the monitor off macOS', () => {
+      envMock.isMac = false
+      startInstallPolling('730', 60000)
+      expect(startSteamDownloadMonitor).not.toHaveBeenCalled()
+    })
+
+    it('emits live percent, speed and eta while the ACF is frozen at 0', async () => {
+      ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(
+        live(4_368_075_856)
+      )
+      startInstallPolling('730', 60000)
+      await pollInstallOnce('730')
+      jest.advanceTimersByTime(3000)
+      await pollInstallOnce('730')
+      const [, second] = progressCalls()
+      expect(second[1].progress.percent).toBe(50)
+      expect(second[1].progress.downSpeed).toBeCloseTo(25e6 / (1024 * 1024), 5)
+      expect(second[1].progress.eta).not.toBe('')
+    })
+
+    it('caps a live overshoot at 99', async () => {
+      ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(
+        live(8_770_693_182)
+      )
+      startInstallPolling('730', 60000)
+      await pollInstallOnce('730')
+      expect(progressCalls()[0][1].progress.percent).toBe(99)
+    })
+
+    it('never reports steam-paused while the live counter advances', async () => {
+      startInstallPolling('730', 60000)
+      for (let i = 1; i <= 5; i++) {
+        ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(
+          live(i * 100_000_000)
+        )
+        await pollInstallOnce('730')
+        jest.advanceTimersByTime(3000)
+      }
+      for (const [, payload] of statusCalls()) {
+        expect(payload.context).not.toBe('steam-paused')
+      }
+    })
+
+    it('still reports steam-paused when the live counter freezes', async () => {
+      ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(
+        live(100_000_000)
+      )
+      startInstallPolling('730', 60000)
+      for (let i = 0; i < 5; i++) {
+        await pollInstallOnce('730')
+        jest.advanceTimersByTime(3000)
+      }
+      const calls = statusCalls()
+      expect(calls[calls.length - 1][1].context).toBe('steam-paused')
+    })
+
+    it('falls back to the ACF when the monitor returns undefined', async () => {
+      ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(undefined)
+      startInstallPolling('730', 60000)
+      await pollInstallOnce('730')
+      const [call] = progressCalls()
+      expect(call[1].progress.percent).toBe(0)
+      expect(call[1].progress.downSpeed).toBeUndefined()
+    })
+
+    it('ignores the monitor on a bottle poll', async () => {
+      jest
+        .mocked(getSteamBottleSettings)
+        .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+      jest.mocked(getBottleSteamappsDir).mockReturnValue('/bottle/steamapps')
+      ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(live(5e9))
+      startInstallPolling('730', { intervalMs: 60000, source: 'bottle' })
+      await pollInstallOnce('730', 'bottle')
+      for (const [, payload] of progressCalls()) {
+        expect(payload.progress.percent).toBe(0)
+      }
     })
   })
 
