@@ -389,8 +389,10 @@ pub(crate) fn main_window_content_top_inset(app: &AppHandle) -> Result<f64, Stri
 /// `NSRect` in `ns_view`'s own coordinate space. Ported verbatim from spike 024's own conditional
 /// -- `NSView`'s coordinate origin is bottom-left UNLESS the view opts into `isFlipped() == true`
 /// (top-left, matching web/CSS convention), and the subview-attach target's flip state
-/// is not assumed either way here.
+/// is not assumed either way here. `y` is shifted by [`content_top_inset`] first, the same
+/// correction the Tauri-managed embed applies, so a visible titlebar does not lift the subview.
 fn rect_to_ns_rect(ns_view: &NSView, x: f64, y: f64, w: f64, h: f64) -> NSRect {
+    let y = y + content_top_inset(ns_view);
     let bounds = ns_view.bounds();
     let origin_y = if ns_view.isFlipped() {
         y
