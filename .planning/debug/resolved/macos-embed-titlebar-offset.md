@@ -1,6 +1,6 @@
 ---
 slug: macos-embed-titlebar-offset
-status: awaiting_human_verify
+status: resolved
 trigger: "macOS store embed: with the native title bar visible (framelessWindow OFF), the Tauri store-embed child webview sits ~28px (one titlebar height) too high, covering the StoreEmbedControls row; plus R7: after resizing the window while away from Stores, the embed shows at stale size for ~1s then snaps"
 created: 2026-10-30
 updated: 2026-10-30
@@ -75,7 +75,7 @@ Two defects. The operator asked for BOTH to be fixed.
 ## Current Focus
 
 - hypothesis: (A) wry/Tauri macOS child y-flip uses frame height incl. titlebar; (B) existing-embed open branch ignores the rect
-- next_action: operator restarts pnpm tauri:dev and runs R1-R7 with frameless OFF and ON
+- next_action: none (resolved 2026-10-30)
 
 ## Evidence
 
@@ -91,4 +91,5 @@ Two defects. The operator asked for BOTH to be fixed.
 
 - root_cause: (A) Tauri's Visible title bar style leaves the content view full-size, so wry's child position (content-view coords) is one titlebar height above the renderer's viewport-relative slot rect. (B) store_embed_open's existing-embed branch skipped the rect on macOS/Windows.
 - fix: `macos_epic_embed::content_top_inset` (0 when titlebar transparent/overlay, else contentView height - contentLayoutRect height), added to y in `store_embed_apply_rect`, used by set_bounds, the existing-embed open branch (now applies rect before show) and add_child. Renderer re-flushes on `gamelib:titlebar-style-applied` (dispatched after setTitleBarStyle resolves) for runtime frameless toggles.
-- verification: cargo check/fmt/test (371) and jest WebView+preload (445) pass; live R1-R7 pending operator.
+- verification: cargo check/fmt/test (371) and jest WebView+preload (445) pass. Live, operator report 2026-10-30 after a dev restart: non-Epic stores PASS with frameless OFF and ON, R7 included. Epic was still offset after 2fd875107 and PASSED after b69e5efad, which applies `content_top_inset` in `rect_to_ns_rect`. No captures were taken of the re-run.
+- files_changed: src-tauri/src/macos_epic_embed.rs, src-tauri/src/main.rs, src/frontend/screens/WebView/useStoreEmbedHost.ts, src/preload/api/tauriWindowChrome.ts (2fd875107, b69e5efad)

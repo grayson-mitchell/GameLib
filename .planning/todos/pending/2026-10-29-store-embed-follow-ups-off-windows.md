@@ -3,8 +3,8 @@ created: 2026-10-29
 title: "Store embed: macOS/Linux live runs of 261012-f25 / 261012-gn8, the resize-while-away geometry case, and the UA and panel-copy observations"
 area: tauri-shell
 severity: minor
-platform: macos
-ready: live-gate
+platform: any
+ready: code
 found_by: "quick 261029-bv7 closing the Windows todo .planning/todos/completed/2026-10-11-stores-tab-embed-not-implemented-on-windows.md"
 files:
   - src/frontend/screens/WebView/useStoreEmbedHost.ts
@@ -68,3 +68,49 @@ so they keep a tracked file. The closed todo is
 2. Item 3 on Windows, which is the cheapest place to measure it.
 3. Item 2 when the Linux machine is to hand.
 4. Items 4 and 5 once the operator decides, as one small change.
+
+## macOS live run (2026-10-30)
+
+The operator ran R1-R6 and the resize-while-away step (R7) on the Mac, in `pnpm tauri:dev` at
+`3fbe162b3`. The orchestrator took screenshots on a 1x display (3440x1440).
+
+First pass, with "Use frameless window" OFF (the native titlebar visible):
+
+- R1 PASS, R3-R6 PASS: the embed tracked zoom, resize and store switches.
+- R2 FAIL: at 120% the embed was not flush with the slot top.
+- Screenshots showed the cause: at every zoom the embed sat about 28px (one titlebar height) too
+  high and covered the `StoreEmbedControls` row. That is about 32px at 100% and 28px at 140%.
+  The row was hidden almost completely at 100%, so R1 "passed" without anyone noticing it was
+  missing.
+- With frameless ON, at 140%, the embed sat flush under the row.
+- R7 PARTIAL: after a resize away from Stores, the embed showed at the old size, then snapped
+  after about 1 s. This answers item 3 on macOS: `a8e03e290`'s follow-up `setBounds` did not
+  cover it in time.
+
+Fixed in debug session `macos-embed-titlebar-offset` (`.planning/debug/resolved/`):
+
+- `2fd875107`: `content_top_inset` adds the visible titlebar's height to the Tauri embed's y.
+  The renderer re-flushes after a runtime `setTitleBarStyle`. The existing-embed branch of
+  `store_embed_open` now applies the rect before `show()` on macOS and Windows.
+- `b69e5efad`: the same inset for the raw Epic `WKWebView` subview.
+
+The re-run after the restart was the operator's report, with no captures:
+
+- The non-Epic stores were fixed with frameless OFF and ON, R7 included.
+- Epic was still off after `2fd875107` and passed after `b69e5efad`.
+
+Item 1 (macOS) and the macOS half of item 3 are done.
+
+## Decisions (2026-10-30, operator)
+
+- Item 4: keep the single `Macintosh` UA on every OS. No change.
+- Item 5: add a dedicated origin reason, used on supported OSes in place of the platform heading,
+  with its locale keys added under the D-09 key-presence rule. This is now the desk-ready next
+  action, hence `platform: any` and `ready: code`.
+
+## Still open
+
+- Item 5's code change.
+- Item 2: the Linux live run, which needs the Linux machine.
+- Item 3 on Windows. The Windows half of `2fd875107`'s existing-embed rect is compiled but not
+  observed live. Windows has no titlebar inset, because `content_top_inset` is macOS-only.
