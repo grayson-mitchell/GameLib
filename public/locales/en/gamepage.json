@@ -281,7 +281,7 @@
             "third-party-game": "Third-Party Game NOT Supported"
         },
         "drmSetup": "Preparing Steam DRM support",
-        "steamSyncing": "Syncing Steam",
+        "steamStarting": "Starting Steam",
         "launching": "Launching",
         "playing": {
             "start": "Play Now",
@@ -369,8 +369,7 @@
         "clickToUpdate": "Click to Update",
         "downloading": "Downloading",
         "drmSetup": "Preparing Steam DRM support ({{step}})",
-        "steamSyncing": "Syncing Steam",
-        "steamSyncingProgress": "Syncing Steam ({{progress}})",
+        "steamStarting": "Starting Steam",
         "extracting": "Extracting",
         "gameNotAvailable": "Game not available",
         "gog-goodie": "This game doesn't appear to be installable. Check downloadable content on https://gog.com/account",

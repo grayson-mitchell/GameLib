@@ -31,7 +31,7 @@ const DEFAULT_IS: GameContextType['is'] = {
   installingWinetricksPackages: false,
   installingRedist: false,
   preparingDrm: false,
-  syncingSteam: false,
+  startingSteam: false,
   launching: false,
   linux: false,
   linuxNative: false,

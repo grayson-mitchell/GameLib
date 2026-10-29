@@ -303,7 +303,7 @@ export function classifySleepAssertionKind(status: Status): SleepAssertionKind {
     case 'updating':
     case 'redist':
     case 'drm-setup':
-    case 'steam-syncing':
+    case 'steam-starting':
     case 'winetricks':
     case 'extracting':
     case 'repairing':
@@ -1545,7 +1545,7 @@ class GlobalState extends PureComponent<Props> {
         'winetricks',
         'redist',
         'drm-setup',
-        'steam-syncing',
+        'steam-starting',
         'queued'
       ].includes(status)
     ) {

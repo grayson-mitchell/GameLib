@@ -108,18 +108,14 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       )
     }
 
-    // quick 261029-iwy: a running Steam is adopting the finished install.
-    if (is.syncingSteam) {
+    // quick 261029-ji2: Play is restarting Mac Steam so it adopts the install.
+    if (is.startingSteam) {
       return (
         <span
           style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
         >
           <CircularProgress size={14} color="inherit" />
-          {statusContext
-            ? t('status.steamSyncingProgress', 'Syncing Steam ({{progress}})', {
-                progress: statusContext
-              })
-            : t('status.steamSyncing', 'Syncing Steam')}
+          {t('status.steamStarting', 'Starting Steam')}
         </span>
       )
     }

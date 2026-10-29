@@ -2823,7 +2823,7 @@ export default class SteamGame implements Game {
       // Mac Steam's go-offline wrap is restored before Steam is asked to
       // fetch manifests. If Mac Steam is running, `steam://install/<appId>`
       // makes it adopt the finished install with no restart; Play stays
-      // disabled ('steam-syncing') until Steam rewrites the ACF itself. Not
+      // disabled ('steam-starting') until Steam rewrites the ACF itself. Not
       // running, timeout or abort all fall back to the restart hint. This
       // stays inside the outer try so the in-flight registry and abort
       // controller still cover the whole sync.

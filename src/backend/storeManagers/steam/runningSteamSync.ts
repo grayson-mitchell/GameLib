@@ -117,7 +117,7 @@ function defaultDeps(): SteamSyncDeps {
       sendGameStatusUpdate({
         appName: appId,
         runner: 'steam',
-        status: 'steam-syncing',
+        status: 'steam-starting',
         context
       }),
     now: Date.now,

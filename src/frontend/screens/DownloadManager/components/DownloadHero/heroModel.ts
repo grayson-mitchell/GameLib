@@ -89,7 +89,6 @@ export function heroPercent(
 export type HeroPhase =
   | { kind: 'redist'; context: string }
   | { kind: 'drm-setup'; context: string }
-  | { kind: 'steam-syncing'; context: string }
   | { kind: 'finishing' }
 
 /**
@@ -107,9 +106,6 @@ export function heroPhase(entry?: {
   }
   if (entry.status === 'drm-setup') {
     return { kind: 'drm-setup', context: entry.context ?? '' }
-  }
-  if (entry.status === 'steam-syncing') {
-    return { kind: 'steam-syncing', context: entry.context ?? '' }
   }
   if (
     entry.status === 'installing' &&

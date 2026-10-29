@@ -88,16 +88,9 @@ export function getStatusLabel({
       'Preparing Steam DRM support ({{step}})',
       { step: statusContext || '' }
     ),
-    // quick 261029-iwy: running Steam is adopting the install
-    'steam-syncing': statusContext
-      ? t(
-          'gamepage:status.steamSyncingProgress',
-          'Syncing Steam ({{progress}})',
-          {
-            progress: statusContext
-          }
-        )
-      : t('gamepage:status.steamSyncing', 'Syncing Steam')
+    // quick 261029-ji2: Play is quitting and relaunching Mac Steam so it adopts
+    // the install at startup
+    'steam-starting': t('gamepage:status.steamStarting', 'Starting Steam')
   }
 
   return statusMap[status] || t('gamepage:status.notinstalled')

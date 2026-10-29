@@ -412,7 +412,7 @@ export interface GameContextType {
     installingWinetricksPackages: boolean
     installingRedist: boolean
     preparingDrm: boolean
-    syncingSteam: boolean
+    startingSteam: boolean
     launching: boolean
     linux: boolean
     linuxNative: boolean

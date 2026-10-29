@@ -1,7 +1,7 @@
 /**
- * quick 261029-iwy: while a running Mac Steam adopts a finished native install
- * ('steam-syncing') the game is installed but Play must be disabled and read
- * "Syncing Steam".
+ * quick 261029-ji2: while Play restarts Mac Steam so it adopts a native install
+ * ('steam-starting') the game is installed but Play must be disabled and read
+ * "Starting Steam".
  *
  * Same no-jsdom pattern as MainButton.bridgeFinishing.test.tsx.
  */
@@ -144,13 +144,13 @@ function render(): ReactElement {
   }) as ReactElement
 }
 
-describe('MainButton — Steam syncing (quick 261029-iwy)', () => {
-  it('disables Play and reads "Syncing Steam" while Steam adopts the install', () => {
-    mockIs = { ...baseIs, syncingSteam: true }
+describe('MainButton — Steam starting (quick 261029-ji2)', () => {
+  it('disables Play and reads "Starting Steam" while Steam restarts for adoption', () => {
+    mockIs = { ...baseIs, startingSteam: true }
     mockStatusContext = undefined
     const tree = render()
     const text = collectText(tree)
-    expect(text).toContain('Syncing Steam')
+    expect(text).toContain('Starting Steam')
     expect(text).not.toContain('Play Now')
     expect(hasDisabled(tree)).toBe(true)
   })
