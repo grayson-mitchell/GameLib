@@ -2159,29 +2159,6 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
   }
 
   /**
-   * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
-   * (inclusive of both braces). Local copy of the identical helper other Plan-scoped describe
-   * blocks in this file already use.
-   */
-  function extractBracedBlock(code: string, openMarker: string): string {
-    const markerIdx = code.indexOf(openMarker)
-    expect(markerIdx).toBeGreaterThan(-1)
-    const braceStart = code.indexOf('{', markerIdx)
-    expect(braceStart).toBeGreaterThan(-1)
-    let depth = 0
-    let i = braceStart
-    for (; i < code.length; i++) {
-      if (code[i] === '{') depth++
-      else if (code[i] === '}') {
-        depth--
-        if (depth === 0) break
-      }
-    }
-    expect(depth).toBe(0)
-    return code.slice(markerIdx, i + 1)
-  }
-
-  /**
    * Bounds the search to PRODUCTION code only -- everything before `mod tests {` -- mirroring
    * Plan 03's own identical helper and its rationale verbatim: `login_cancel_strip_script` is a
    * pure, cargo-tested helper (Task 1) with multiple call sites inside `mod tests` by design; a
