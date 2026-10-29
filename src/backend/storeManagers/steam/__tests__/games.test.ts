@@ -8057,6 +8057,218 @@ describe('SteamGame.uninstall() — GAME-03', () => {
   })
 })
 
+// ── quick 261029-l9w: unadopted Mac native install is removed directly ───────
+
+describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native install', () => {
+  let envMock: any
+  let shellOpenExternal: jest.Mock
+  let startPollingSpy: jest.SpyInstance
+  let readAcfStateSpy: jest.SpyInstance
+  let removeCopySpy: jest.SpyInstance
+  let pollOnceSpy: jest.SpyInstance
+  const adoption = () =>
+    jest.requireMock<Record<string, jest.Mock>>('../macSteamAdoption')
+  const MANIFEST = `${NATIVE_LIBRARY_ROOT}/steamapps/appmanifest_${APP_ID}.acf`
+  const BASELINE = { mtimeMs: 1, content: 'gamelib' }
+  const RECORD = {
+    steamPid: 50647,
+    manifestPath: MANIFEST,
+    baseline: BASELINE,
+    recordedAt: 0
+  }
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    const { shell } = jest.requireMock('backend/platform')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    library.set(
+      APP_ID,
+      makeEntry({
+        title: 'Dota 2',
+        is_installed: true,
+        install: { install_path: NATIVE_INSTALL_PATH }
+      })
+    )
+    ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
+    startPollingSpy = jest
+      .spyOn(libraryModule, 'startUninstallPolling')
+      .mockImplementation(() => {})
+    readAcfStateSpy = jest
+      .spyOn(libraryModule, 'readAcfState')
+      .mockResolvedValue({
+        state: 'installed',
+        installPath: NATIVE_INSTALL_PATH,
+        stateFlags: 4
+      } as any)
+    removeCopySpy = jest
+      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .mockResolvedValue({
+        status: 'removed',
+        source: 'native',
+        manifestOnly: false
+      } as any)
+    pollOnceSpy = jest
+      .spyOn(libraryModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
+    // Use ji2's real decision so each arm exercises it, not a canned value.
+    adoption().decidePlayAdoption.mockImplementation(
+      jest.requireActual('../macSteamAdoption').decidePlayAdoption
+    )
+    adoption().readPendingAdoption.mockReturnValue(RECORD)
+    adoption().readAcfSnapshot.mockReturnValue(BASELINE)
+    adoption().probeMacSteamPid.mockResolvedValue(50647)
+    ;(parse as jest.Mock).mockReturnValue(undefined)
+    // resolveInstallRoot() consults the bottle root first on Mac.
+    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'Steam'
+    })
+    ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
+      '/mock/bottle/steamapps'
+    )
+  })
+
+  afterEach(() => {
+    envMock.isMac = false
+    startPollingSpy.mockRestore()
+    readAcfStateSpy.mockRestore()
+    removeCopySpy.mockRestore()
+    pollOnceSpy.mockRestore()
+  })
+
+  const expectDelegated = () => {
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://uninstall/${APP_ID}`
+    )
+    expect(startPollingSpy).toHaveBeenCalledWith(APP_ID)
+    expect(removeCopySpy).not.toHaveBeenCalled()
+  }
+
+  it('direct arm: removes via removeSteamInstallCopy then pollUninstallOnce, no steam://uninstall', async () => {
+    const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(startPollingSpy).not.toHaveBeenCalled()
+    expect(removeCopySpy).toHaveBeenCalledWith(APP_ID, 'native')
+    expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+    expect(pollOnceSpy).toHaveBeenCalledWith(APP_ID, 'native')
+    expect(removeCopySpy.mock.invocationCallOrder[0]).toBeLessThan(
+      pollOnceSpy.mock.invocationCallOrder[0]
+    )
+    expect(result).toEqual({ stdout: '', stderr: '' })
+  })
+
+  it('direct arm, absent race: still clears the record and completes via pollUninstallOnce', async () => {
+    removeCopySpy.mockResolvedValue({ status: 'absent', source: 'native' })
+
+    await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+    expect(pollOnceSpy).toHaveBeenCalledWith(APP_ID, 'native')
+  })
+
+  it('delegates when there is no pending-adoption record', async () => {
+    adoption().readPendingAdoption.mockReturnValue(undefined)
+    await new SteamGame(APP_ID).uninstall({} as any)
+    expectDelegated()
+  })
+
+  it('delegates when the steam_osx PID differs', async () => {
+    adoption().probeMacSteamPid.mockResolvedValue(99999)
+    await new SteamGame(APP_ID).uninstall({} as any)
+    expectDelegated()
+  })
+
+  it('delegates when Steam is not running', async () => {
+    adoption().probeMacSteamPid.mockResolvedValue(null)
+    await new SteamGame(APP_ID).uninstall({} as any)
+    expectDelegated()
+  })
+
+  it('delegates when the PID probe rejects (treated as not running)', async () => {
+    adoption().probeMacSteamPid.mockRejectedValue(new Error('pgrep failed'))
+    await new SteamGame(APP_ID).uninstall({} as any)
+    expectDelegated()
+  })
+
+  it('delegates when the ACF is Steam-adopted', async () => {
+    ;(parse as jest.Mock).mockReturnValue({
+      AppState: { StateFlags: '4', buildid: '123' }
+    })
+    adoption().readAcfSnapshot.mockReturnValue({
+      mtimeMs: 2,
+      content: 'steam-rewrote'
+    })
+    await new SteamGame(APP_ID).uninstall({} as any)
+    expectDelegated()
+  })
+
+  it('delegates when the native ACF is not "installed" (downloading)', async () => {
+    readAcfStateSpy.mockResolvedValue({ state: 'downloading' } as any)
+    await new SteamGame(APP_ID).uninstall({} as any)
+    expectDelegated()
+  })
+
+  it('delegates when record.manifestPath is a different library manifest', async () => {
+    adoption().readPendingAdoption.mockReturnValue({
+      ...RECORD,
+      manifestPath: `/other/lib/steamapps/appmanifest_${APP_ID}.acf`
+    })
+    await new SteamGame(APP_ID).uninstall({} as any)
+    expectDelegated()
+  })
+
+  it('delegates on a non-Mac host without probing or reading the record', async () => {
+    envMock.isMac = false
+    await new SteamGame(APP_ID).uninstall({} as any)
+    expectDelegated()
+    expect(adoption().probeMacSteamPid).not.toHaveBeenCalled()
+    expect(adoption().readPendingAdoption).not.toHaveBeenCalled()
+  })
+
+  it('refusal arm: deletes nothing, no delegation, keeps record, clears status, stderr set', async () => {
+    removeCopySpy.mockResolvedValue({
+      status: 'refused',
+      source: 'native',
+      reason: 'install path outside common/'
+    })
+
+    const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(startPollingSpy).not.toHaveBeenCalled()
+    expect(adoption().clearPendingAdoption).not.toHaveBeenCalled()
+    expect(pollOnceSpy).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
+      appName: APP_ID,
+      runner: 'steam',
+      status: 'done'
+    })
+    expect(result.stderr).toContain('Refused')
+  })
+
+  it('throw arm: never throws out of uninstall(); same containment as refusal', async () => {
+    removeCopySpy.mockRejectedValue(new Error('EACCES'))
+
+    const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(startPollingSpy).not.toHaveBeenCalled()
+    expect(adoption().clearPendingAdoption).not.toHaveBeenCalled()
+    expect(pollOnceSpy).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
+      appName: APP_ID,
+      runner: 'steam',
+      status: 'done'
+    })
+    expect(result.stderr).toContain('EACCES')
+  })
+})
+
 // ── Phase 17 (D-10/D-11): SteamGame.uninstall() bottle routing ──────────────
 
 describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => {

@@ -4662,7 +4662,9 @@ export default class SteamGame implements Game {
    *     legitimately be installed in a bottle that was never provisioned;
    *     request guided setup rather than a generic refuse.
    *
-   * Native delegation itself is unchanged: does NOT show a GamerLib
+   * Native delegation itself is unchanged (one exception, quick 261029-l9w: a
+   * Mac install the running Steam never adopted is removed directly, see
+   * uninstallUnadoptedMacNativeDirectly()): does NOT show a GamerLib
    * confirmation dialog — Steam owns its own confirm dialog (D-05). Install
    * state is never optimistically flipped from a click (D-02); badges flip
    * only after confirmed ACF data. After the URL fires we poll the ACF (D-07)
@@ -4740,6 +4742,11 @@ export default class SteamGame implements Game {
       if (!url) {
         return { stdout: '', stderr: `Invalid appId: ${this.appId}` }
       }
+
+      // quick 261029-l9w: a running Steam that never adopted a GameLib install
+      // ignores steam://uninstall, so remove that one state directly.
+      const direct = await this.uninstallUnadoptedMacNativeDirectly()
+      if (direct) return direct
 
       logInfo(
         `SteamGame: delegating uninstall for appId ${this.appId} via ${url}`,
@@ -4897,6 +4904,84 @@ export default class SteamGame implements Game {
     // Same completion as the per-game branch above.
     await pollUninstallOnce(this.appId, 'bridge')
     return { stdout: '', stderr: '' }
+  }
+
+  /**
+   * quick 261029-l9w: direct removal of a GameLib native install the running
+   * Mac Steam never adopted. Returns null to mean "delegate as before".
+   *
+   * Live evidence (2026-10-29, WazHack 264160): a Steam that still holds the
+   * app as Uninstalled ignores steam://uninstall (three dispatches, files
+   * untouched, same steam_osx PID), so the pill sat on "Uninstalling" until
+   * the poller's ~60 s grace expired.
+   *
+   * Gate: ji2's own decidePlayAdoption(...) === 'restart' (record present,
+   * same PID, ACF still GameLib's). Steam not running, a different PID or an
+   * adopted ACF all delegate: Steam then owns the app and handles the URL (a
+   * not-running Steam adopts at startup before processing it). A non-
+   * 'installed' ACF (fail-closed 1026 handoff) also delegates, unchanged.
+   *
+   * Deletion reuses removeSteamInstallCopy's guards (the port of
+   * uninstallBottleGameDirectly's); completion is pollUninstallOnce, which
+   * flips is_installed, pushes, sends done and fires the toast.
+   */
+  private async uninstallUnadoptedMacNativeDirectly(): Promise<ExecResult | null> {
+    if (!isMac) return null
+    const record = readPendingAdoption(this.appId)
+    if (!record) return null
+
+    const currentPid = await probeMacSteamPid().catch(() => null)
+    const decision = decidePlayAdoption({
+      record,
+      currentPid,
+      currentAcf: readAcfSnapshot(record.manifestPath)
+    })
+    if (decision !== 'restart') return null
+
+    const acf = await readAcfState(this.appId, 'native')
+    if (acf.state !== 'installed' || !acf.installPath) return null
+
+    // The ACF the decision was made about must be the one that gets deleted.
+    const expectedManifest = join(
+      resolve(acf.installPath, '..', '..'),
+      `appmanifest_${this.appId}.acf`
+    )
+    if (resolve(record.manifestPath) !== expectedManifest) {
+      logWarning(
+        `SteamGame: pending-adoption manifest "${record.manifestPath}" is not the native manifest "${expectedManifest}" for appId ${this.appId} — delegating uninstall`,
+        LogPrefix.Steam
+      )
+      return null
+    }
+
+    logInfo(
+      `SteamGame: running Steam (pid ${currentPid}) never adopted the GameLib install of appId ${this.appId} — removing it directly instead of steam://uninstall`,
+      LogPrefix.Steam
+    )
+
+    let failure: string
+    try {
+      const result = await removeSteamInstallCopy(this.appId, 'native')
+      if (result.status !== 'refused') {
+        clearPendingAdoption(this.appId)
+        await pollUninstallOnce(this.appId, 'native')
+        return { stdout: '', stderr: '' }
+      }
+      failure = `Refused to uninstall: ${result.reason} for appId ${this.appId}`
+    } catch (error) {
+      failure = `Failed to remove native install: ${String(error)}`
+    }
+
+    logWarning(`SteamGame: ${failure}`, LogPrefix.Steam)
+    // uninstallGameCallback set "Uninstalling" and suppresses done for steam;
+    // clear it (same reason as the A-10 refusal in uninstallBottleGameDirectly).
+    // The record is kept, and no steam://uninstall fallback: Steam ignores it.
+    sendFrontendMessage('gameStatusUpdate', {
+      appName: this.appId,
+      runner: 'steam',
+      status: 'done'
+    })
+    return { stdout: '', stderr: failure }
   }
 
   /**
