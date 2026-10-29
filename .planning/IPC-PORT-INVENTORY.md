@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 230 |
-| Ported to sidecar | 75 |
+| Unique channels | 232 |
+| Ported to sidecar | 77 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -647,6 +647,21 @@ and `preload-surface-gate.py` was the only thing that caught it.
 both numbers moved together by +1 and `Unported` (159) is unchanged.
 
 `dialogDisplayed`
+
+## Quick 261029-mkz — Runs for me override (2 channels) — **PORTED**
+
+Added 2026-10-29 by quick task `261029-mkz`. Both channels are BRAND NEW, invoke-kind
+(`makeHandlerInvoker`, `src/preload/api/library.ts`), and registered only in the sidecar, in
+`enrichmentFlowRegistration.ts` (bodies: `getRunsForMeMap` / `setRunsForMeByUser`,
+`runsForMe/index.ts`). There is no Electron leg, so `Ported to sidecar` rises along with
+`Unique channels`. The companion `runsForMeChanged` is a one-way push (`frontendListenerSlot`)
+and is noted, not counted, per `## Method`.
+
+**Unique channels raised 230 → 232, Ported to sidecar raised 75 → 77 (quick 261029-mkz, 2026-10-29):**
+both numbers moved together by +2 and `Unported` (159) is unchanged.
+
+`getRunsForMeMap`
+`setRunsForMe`
 
 ## Not an IPC channel, but blocks Phase 35
 

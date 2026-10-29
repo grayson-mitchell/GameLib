@@ -195,7 +195,8 @@ describe('round-trip', () => {
     // round-trip like every other store.
     'uploadedLogs',
     'migrationsStore',
-    'gameOverridesStore'
+    'gameOverridesStore',
+    'runsForMeStore'
   ] as const
 
   it.each(ALL_VALID_STORE_NAMES)(

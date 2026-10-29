@@ -15,6 +15,7 @@ import { join } from 'node:path'
 import { spawnAsync } from 'backend/utils'
 import { logInfo, logWarning } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
+import { recordPlaySession } from 'backend/runsForMe'
 import { getBottleDir } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import {
@@ -82,6 +83,11 @@ jest.mock('../../../ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
 
+// Quick 261029-mkz: the 60 s auto-set hook is asserted via this mock.
+jest.mock('backend/runsForMe', () => ({
+  recordPlaySession: jest.fn()
+}))
+
 jest.mock('backend/utils/wineWindowRaise', () => ({
   raiseWineGameWindow: jest.fn(),
   windowsExeNameFromCommand: jest.requireActual('backend/utils/wineWindowRaise')
@@ -123,6 +129,7 @@ jest.mock('../bottleLaunchSignals', () => ({
 }))
 
 const mockedSpawnAsync = spawnAsync as jest.Mock
+const mockedRecordPlaySession = recordPlaySession as jest.Mock
 const mockedRaise = raiseWineGameWindow as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
@@ -739,6 +746,8 @@ describe('bottleProcessMonitor.ts', () => {
       // quick/261024-gvu: give-up with no match now clears Launching.
       expect(statusesFor('38410')).toEqual(['launching', 'done'])
       expect(jest.getTimerCount()).toBe(0)
+      // Quick 261029-mkz: the give-up path is not a play signal.
+      expect(mockedRecordPlaySession).not.toHaveBeenCalled()
       jest.useRealTimers()
     })
 
@@ -818,6 +827,13 @@ describe('bottleProcessMonitor.ts', () => {
       await flushMicrotasks()
       expect(statusesFor('38410')).toEqual(['launching', 'playing', 'done'])
       expect(getBottleProcessMonitorPhase('38410')).toBeNull()
+      // Quick 261029-mkz: recorded exactly once, with now - matchedAt (ms).
+      expect(mockedRecordPlaySession).toHaveBeenCalledTimes(1)
+      expect(mockedRecordPlaySession).toHaveBeenCalledWith(
+        '38410',
+        'steam',
+        1500
+      )
       jest.useRealTimers()
     })
 
@@ -859,6 +875,8 @@ describe('bottleProcessMonitor.ts', () => {
         expect(dones.length).toBe(1)
         expect(getBottleProcessMonitorPhase('38410')).toBeNull()
         expect(jest.getTimerCount()).toBe(0)
+        // Quick 261029-mkz: an external stop is not a play signal.
+        expect(mockedRecordPlaySession).not.toHaveBeenCalled()
         jest.useRealTimers()
       }
     )

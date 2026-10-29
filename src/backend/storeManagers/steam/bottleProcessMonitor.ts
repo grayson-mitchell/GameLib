@@ -50,6 +50,7 @@ import {
   windowsExeNameFromCommand
 } from 'backend/utils/wineWindowRaise'
 import { sendFrontendMessage } from '../../ipc'
+import { recordPlaySession } from 'backend/runsForMe'
 import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
 import {
   readBoundedTail,
@@ -362,11 +363,24 @@ async function runPollLoop(
     if (matches.length > 0 && !entry.everMatched) {
       recordFirstMatch(appId, entry, matches)
     } else if (matches.length === 0 && entry.everMatched) {
-      const elapsedSeconds = Math.round((Date.now() - entry.matchedAt) / 1000)
+      const elapsedMs = Date.now() - entry.matchedAt
+      const elapsedSeconds = Math.round(elapsedMs / 1000)
       logInfo(
         `bottleProcessMonitor [${appId}]: matched process(es) gone after ${elapsedSeconds}s of play — game stopped`,
         LogPrefix.Steam
       )
+      // Quick 261029-mkz (U-2): a session that stayed up 60 s+ auto-marks the
+      // game "Runs for me". Own try/catch so cleanup below always runs
+      // (T-mkz-03). Recorded only on this branch: the give-up path and a
+      // stopBottleProcessMonitor() cancel never reach it.
+      try {
+        recordPlaySession(appId, 'steam', elapsedMs)
+      } catch (error) {
+        logWarning(
+          [`bottleProcessMonitor [${appId}]: recordPlaySession failed`, error],
+          LogPrefix.Steam
+        )
+      }
       sendTerminalDoneOnce(appId, entry)
       // Phase 51 Plan 01 (D-51-01): fires exactly once, here, on the ONLY
       // branch that observes the game's own process(es) genuinely gone --

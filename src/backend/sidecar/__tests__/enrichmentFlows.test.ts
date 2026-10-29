@@ -815,6 +815,45 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     })
   })
 
+  // ── quick 261029-mkz: Runs for me override ─────────────────────────────────
+  describe('quick 261029-mkz setRunsForMe / getRunsForMeMap (invoke)', () => {
+    it('round-trips a user-on through the real fileStore', async () => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'rfm-1', 'setRunsForMe', [
+        { appName: 'rfm.game', runner: 'steam', on: true }
+      ])
+      await flush()
+      writeInvoke(input, 'rfm-2', 'getRunsForMeMap', [])
+      await flush()
+
+      expect(findResponse(frames, 'rfm-1')?.ok).toBe(true)
+      const response = findResponse(frames, 'rfm-2')
+      expect(response?.ok).toBe(true)
+      expect(response?.result).toEqual({ 'rfm.game_steam': 'user-on' })
+    })
+
+    it.each([
+      ['non-string appName', { appName: 7, runner: 'gog', on: true }],
+      ['empty appName', { appName: '', runner: 'gog', on: true }],
+      ['unknown runner', { appName: 'x.bad', runner: 'epic', on: true }],
+      ['non-boolean on', { appName: 'x.bad', runner: 'gog', on: 'yes' }],
+      ['null payload', null]
+    ])('writes nothing for a malformed payload: %s', async (_name, payload) => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'rfm-bad', 'setRunsForMe', [payload])
+      await flush()
+      writeInvoke(input, 'rfm-get', 'getRunsForMeMap', [])
+      await flush()
+
+      const response = findResponse(frames, 'rfm-get')
+      expect(response?.ok).toBe(true)
+      const map = response?.result as Record<string, string>
+      expect(Object.keys(map)).not.toContain('x.bad_gog')
+      expect(Object.keys(map)).not.toContain('7_gog')
+      expect(Object.keys(map)).not.toContain('_gog')
+    })
+  })
+
   // ── REQ-34.2-11/D-16: getCrossoverIndex three-state map ───────────────────
   describe('REQ-34.2-11/D-16 getCrossoverIndex (invoke)', () => {
     it('REQ-34.2-11/D-16 resolves the three-state map: ineligible key-absent, eligible-unmatched null, eligible-matched number', async () => {

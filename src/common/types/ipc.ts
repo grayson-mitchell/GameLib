@@ -52,6 +52,7 @@ import type {
   WineVersionInfo
 } from '../types'
 import type { CatalogLocaleSettings, CatalogProduct } from './discounts'
+import type { RunsForMeState } from '../runsForMe'
 import type {
   StoreSearchDeal,
   StoreSearchResult,
@@ -588,6 +589,13 @@ interface AsyncIPCFunctions {
     appName: string,
     runner: Runner
   ) => Promise<GamelibFixStatus | null>
+  // Quick 261029-mkz: per-game "Runs for me" override map.
+  getRunsForMeMap: () => Promise<Record<string, RunsForMeState>>
+  setRunsForMe: (args: {
+    appName: string
+    runner: Runner
+    on: boolean
+  }) => Promise<Record<string, RunsForMeState>>
   getGameMetadataOverride: (appName: string) => Promise<{
     title?: string
     art_cover?: string
@@ -875,6 +883,8 @@ interface FrontendMessages {
   // refresh so the grid picks up freshly resolved ratings without a manual
   // pull. Same three-state shape as `getCrossoverIndex`'s resolved map.
   crossoverIndexChanged: (index: Record<string, number | null>) => void
+  // Quick 261029-mkz: full "Runs for me" map, pushed after every change.
+  runsForMeChanged: (map: Record<string, RunsForMeState>) => void
   // Plan 02 (Phase 10): pushed by HumbleUser.checkHealthAndFlagExpiry() on a
   // startup/401 expiry detection. MUST NOT include the session cookie
   // (Pitfall 4 / T-10-05) — HumbleAuthState is structurally cookie-free.

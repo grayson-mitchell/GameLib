@@ -1,4 +1,5 @@
 import type { Options as ConfOptions } from 'conf'
+import type { RunsForMeState } from 'common/runsForMe'
 import { Get } from 'type-fest'
 
 import {
@@ -180,6 +181,9 @@ export interface StoreStructure {
         art_square?: string
       }
     >
+  }
+  runsForMeStore: {
+    games: Record<string, RunsForMeState>
   }
 }
 

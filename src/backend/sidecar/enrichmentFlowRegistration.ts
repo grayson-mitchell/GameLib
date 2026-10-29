@@ -2,7 +2,7 @@
  * Curated enrichment-channel registration (Phase 34.2 Plan 06, D-04/D-07/
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
- * Registers the 15 enrichment channels the game-details page and store
+ * Registers the 17 enrichment channels the game-details page and store
  * search container depend on, onto electronStub's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
@@ -23,6 +23,9 @@
  *     - `getGamelibFixStatus` -> `backend/knownFixes.ts`'s
  *       `readGamelibFixStatus(appName, runner)` (quick 261027-ch9; brand new,
  *       local + bundled layers only)
+ *     - `getRunsForMeMap` / `setRunsForMe` -> `runsForMe/index.ts`'s
+ *       `getRunsForMeMap()` / `setRunsForMeByUser(appName, runner, on)`
+ *       (quick 261029-mkz; brand new, backend-persisted per-game override)
  *     - `getCrossoverIndex` -> `crossover_index/crossoverRatingMap.ts`'s
  *       `buildCrossoverRatingMap()` (Plan 34.2-03 extraction; registered at
  *       `crossover_index/ipc_handler.ts:47` today)
@@ -168,6 +171,7 @@ import {
   handleGetStoreSearchDeals,
   handleGetStoreSearchStoreMap
 } from '../storeSearch/handlers'
+import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
 import { removeRecentGame } from '../recent_games/recent_games'
 import { getSteamGridDbSecretStore } from '../steamgrid/secretStore'
 import * as SteamGridDB from '../steamgrid/utils'
@@ -176,8 +180,17 @@ import { logError, logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
 import type { CatalogLocaleSettings } from 'common/types/discounts'
 
+const RUNS_FOR_ME_RUNNERS: ReadonlySet<string> = new Set([
+  'legendary',
+  'gog',
+  'sideload',
+  'nile',
+  'zoom',
+  'steam'
+])
+
 /**
- * Registers the 15 enrichment channels. Called once from `handlers.ts`
+ * Registers the 17 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -217,6 +230,40 @@ export function registerEnrichmentFlows(): void {
     'getGamelibFixStatus',
     async (_event: unknown, ...args: unknown[]) =>
       readGamelibFixStatus(args[0] as string, args[1] as Runner)
+  )
+
+  // Quick 261029-mkz: per-game "Runs for me" override. Untrusted payload:
+  // validated before any write (T-mkz-01).
+  ipcMain.handle('getRunsForMeMap', async () => getRunsForMeMap())
+
+  ipcMain.handle(
+    'setRunsForMe',
+    async (_event: unknown, ...args: unknown[]) => {
+      const payload = args[0] as
+        | { appName?: unknown; runner?: unknown; on?: unknown }
+        | null
+        | undefined
+      if (
+        !payload ||
+        typeof payload !== 'object' ||
+        typeof payload.appName !== 'string' ||
+        payload.appName.length === 0 ||
+        typeof payload.runner !== 'string' ||
+        !RUNS_FOR_ME_RUNNERS.has(payload.runner) ||
+        typeof payload.on !== 'boolean'
+      ) {
+        logWarning(
+          'setRunsForMe: rejected malformed payload (appName/runner/on)',
+          LogPrefix.Backend
+        )
+        return getRunsForMeMap()
+      }
+      return setRunsForMeByUser(
+        payload.appName,
+        payload.runner as Runner,
+        payload.on
+      )
+    }
   )
 
   // D-10: exempted from the 60s invoke bound in main.rs's

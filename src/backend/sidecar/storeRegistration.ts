@@ -99,6 +99,7 @@ import {
 } from '../humble/electronStores'
 
 import { gameOverridesStore as _gameOverridesStore } from '../game_overrides/electronStores'
+import { runsForMeStore as _runsForMeStore } from '../runsForMe/electronStores'
 
 import {
   wikiGameInfoStore as _wikiGameInfoStore,
@@ -188,6 +189,7 @@ export function ensureStoresRegistered(): void {
     _humbleNotifiedExpirationStore,
     _humbleSettleDeclinedStore,
     _gameOverridesStore,
+    _runsForMeStore,
     _wikiGameInfoStore,
     _umuStore,
     _wineDownloaderInfoStore,

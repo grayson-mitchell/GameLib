@@ -73,6 +73,7 @@ import {
 import { download, isInstalled } from './wine/runtimes/runtimes'
 import { getMainWindow } from './main_window'
 import { sendFrontendMessage } from './ipc'
+import { recordPlaySession } from './runsForMe'
 import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
 import { app, powerSaveBlocker } from 'backend/platform'
@@ -261,6 +262,9 @@ const launchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     status: 'launching'
   })
 
+  // Quick 261029-mkz: taken right at launch, NOT startPlayingDate (which
+  // precedes pre-launch work) -- the play signal is time the game ran.
+  const launchedAt = Date.now()
   const command = game.launch(
     logWriter,
     launchArguments,
@@ -287,6 +291,14 @@ const launchEventCallback: (args: LaunchParams) => StatusPromise = async ({
       await runAfterLaunchScript(gameInfo, gameSettings, logWriter)
       await logWriter.close()
     })
+
+  // Quick 261029-mkz (U-2): `await command` resolves when the game process
+  // exits for the generic runners, so its duration is a play signal. Steam is
+  // skipped: its launch promise tracks a steam:// hand-off or a bridge spawn,
+  // not the game; bottleProcessMonitor records Steam sessions.
+  if (runner !== 'steam' && launchResult) {
+    recordPlaySession(appName, runner, Date.now() - launchedAt)
+  }
 
   if (runner === 'gog') {
     gogPresence.setCurrentGame('')
