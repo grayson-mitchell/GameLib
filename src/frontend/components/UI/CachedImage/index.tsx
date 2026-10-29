@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import classNames from 'classnames'
 // Relative, not the bare `preload/...` specifier: electron.vite.config.ts's
 // srcAliases only aliases backend/frontend/common, so a `preload/` alias
@@ -44,12 +44,20 @@ const CachedImage = (props: Props) => {
   const [loaded, setLoaded] = useState(false)
   // -1 means "showing the primary src"; 0..n-1 indexes into `fallbacks`.
   const [fallbackIndex, setFallbackIndex] = useState(-1)
+  const [stateSrc, setStateSrc] = useState(props.src)
 
-  useEffect(() => {
+  // Reset per-src state DURING render, not in an effect. A tile that is
+  // reused with a new src (the recently-played row reorders and the same
+  // CachedImage instance flips between cover and justPlayed art) would
+  // otherwise commit the new src with `loaded` still true, and a passive
+  // effect resetting it afterwards can run AFTER the new image's load event
+  // already fired -- leaving `loaded` false forever (opacity 0, black tile).
+  if (stateSrc !== props.src) {
+    setStateSrc(props.src)
     setLoaded(false)
     setFallbackIndex(-1)
     setUseCache(shouldUseCache(props.src))
-  }, [props.src])
+  }
 
   const onError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     // if not cached, tried with the real
