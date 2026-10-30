@@ -1003,6 +1003,25 @@ describe('FocusRowStrip/index.css -- heading aligned to first tile (quick 261029
     expect(header).toMatch(/padding-inline:\s*0;/)
   })
 
+  it('the heading pads in by the same centring slack as the viewport end margin', () => {
+    const css = read(FOCUS_ROW_CSS_PATH)
+    const norm = (v: string) => v.replace(/\s+/g, ' ').replace(/\( /g, '(')
+    const centred = (block: string, prop: string) =>
+      [...block.matchAll(new RegExp(`(?:^|[\\s;])${prop}:\\s*([^;]+);`, 'g'))]
+        .map((m) => norm(m[1]))
+        .find((v) => v.includes('round(down,'))
+    const header = centred(
+      cssBlock(css, '.focusRowStrip .libraryHeader'),
+      'padding-inline'
+    )
+    const viewportEnd = centred(
+      cssBlock(css, '.focusRowStrip__viewport'),
+      'margin-inline-end'
+    )
+    expect(viewportEnd).toBeDefined()
+    expect(header).toBe(viewportEnd)
+  })
+
   it('non-vacuity: the two inputs that cause the offset are both present', () => {
     const base = cssBlock(read(LIBRARY_CSS_PATH), '.libraryHeader')
     expect(base).toMatch(/padding:\s*var\(--space-md-fixed\);/)

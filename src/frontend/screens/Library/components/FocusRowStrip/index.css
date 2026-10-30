@@ -263,6 +263,27 @@
      card. Zeroing the inline padding puts the text start on the strip padding
      edge, where the first strip card and the first grid tile start. */
   padding-inline: 0;
+  /* Centring: the grid and the strip viewport sit in by the slack L, so the
+     title pads in by the same L at both ends (same expression as
+     `.focusRowStrip__viewport`; the unstyled `.library-section-header` wrapper
+     is C wide, the same percentage base). The end side keeps the ellipsis at
+     the grid's last column. An engine without round() keeps the 0 above. */
+  padding-inline: max(
+    0px,
+    (
+        100% -
+          max(
+            var(--library-tile-css-width, 156px),
+            round(
+                down,
+                100% + 1.5rem,
+                var(--library-tile-css-width, 156px) + 1.5rem
+              ) -
+              1.5rem
+          )
+      ) /
+      2
+  );
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
