@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState
 } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -80,8 +81,27 @@ const Accessibility = React.memo(function Accessibility() {
     setContentFont(secondaryFont.trim())
   }, [])
 
+  // The window zoom is only applied when the range input commits (the DOM
+  // `change` event: pointer release, or each keyboard step). React's
+  // onChange is the DOM `input` event, which fires on every drag tick and
+  // would reflow the whole page under the pointer -- it only moves the draft.
+  const zoomInputRef = useRef<HTMLInputElement>(null)
+  const [zoomDraft, setZoomDraft] = useState(zoomPercent)
+
+  useEffect(() => {
+    setZoomDraft(zoomPercent)
+  }, [zoomPercent])
+
+  useEffect(() => {
+    const input = zoomInputRef.current
+    if (!input) return
+    const commitZoom = () => setZoomPercent(parseInt(input.value))
+    input.addEventListener('change', commitZoom)
+    return () => input.removeEventListener('change', commitZoom)
+  }, [setZoomPercent])
+
   const handleZoomLevel = (event: ChangeEvent<HTMLInputElement>) => {
-    setZoomPercent(parseInt(event.target.value))
+    setZoomDraft(parseInt(event.target.value))
   }
 
   const handleContentFontFamily = (event: SelectChangeEvent) => {
@@ -114,11 +134,12 @@ const Accessibility = React.memo(function Accessibility() {
 
         <span className="rangeWrapper Field">
           <label className={classNames({ isRTL: isRTL })}>
-            {t('accessibility.zoom', 'Zoom')} ({zoomPercent}%)
+            {t('accessibility.zoom', 'Zoom')} ({zoomDraft}%)
           </label>
           <input
+            ref={zoomInputRef}
             type="range"
-            value={zoomPercent}
+            value={zoomDraft}
             onChange={handleZoomLevel}
             min="60"
             max="200"
