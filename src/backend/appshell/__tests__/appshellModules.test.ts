@@ -60,11 +60,6 @@ jest.mock('../../logger', () => ({
   LogPrefix: { Backend: 'Backend' }
 }))
 
-import {
-  existsSync as mockedExistsSync,
-  readdirSync as mockedReaddirSync,
-  readFileSync as mockedReadFileSync
-} from 'graceful-fs'
 import { GlobalConfig } from '../../config'
 import {
   getLatestReleases as mockedGetLatestReleases,
@@ -74,7 +69,6 @@ import i18next from 'i18next'
 import { gameInfoStore } from '../../storeManagers/legendary/electronStores'
 import { backendEvents } from '../../backend_events'
 
-import { getCustomThemes, getThemeCSS, getCustomCSS } from '../themes'
 import {
   getLatestReleasesForStartup,
   getCurrentChangelogEntry
@@ -94,77 +88,6 @@ function mockAppSettings(partial: Record<string, unknown>) {
   })
   return { setSetting }
 }
-
-describe('backend/appshell/themes.ts (REQ-34.1-04)', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
-
-  it('REQ-34.1-04 getCustomThemes returns [] when customThemesPath does not exist', async () => {
-    mockAppSettings({ customThemesPath: '/does/not/exist' })
-    ;(mockedExistsSync as jest.Mock).mockReturnValue(false)
-
-    const result = await getCustomThemes()
-
-    expect(result).toEqual([])
-    expect(mockedReaddirSync).not.toHaveBeenCalled()
-  })
-
-  it('REQ-34.1-04 getCustomThemes returns only .css filenames when the path exists', async () => {
-    mockAppSettings({ customThemesPath: '/themes' })
-    ;(mockedExistsSync as jest.Mock).mockReturnValue(true)
-    ;(mockedReaddirSync as jest.Mock).mockReturnValue([
-      'dark.css',
-      'readme.txt',
-      'light.css'
-    ])
-
-    const result = await getCustomThemes()
-
-    expect(result).toEqual(['dark.css', 'light.css'])
-  })
-
-  it("REQ-34.1-04 getThemeCSS returns '' for a missing file", async () => {
-    mockAppSettings({ customThemesPath: '/themes' })
-    ;(mockedExistsSync as jest.Mock).mockReturnValue(false)
-
-    const result = await getThemeCSS('missing.css')
-
-    expect(result).toBe('')
-    expect(mockedReadFileSync).not.toHaveBeenCalled()
-  })
-
-  it("REQ-34.1-04 getThemeCSS joins customThemesPath with theme and returns the file's utf-8 contents for an existing file", async () => {
-    mockAppSettings({ customThemesPath: '/themes' })
-    ;(mockedExistsSync as jest.Mock).mockReturnValue(true)
-    ;(mockedReadFileSync as jest.Mock).mockReturnValue('.dark { color: red }')
-
-    const result = await getThemeCSS('dark.css')
-
-    expect(result).toBe('.dark { color: red }')
-    expect(mockedExistsSync).toHaveBeenCalledWith(join('/themes', 'dark.css'))
-    expect(mockedReadFileSync).toHaveBeenCalledWith(
-      join('/themes', 'dark.css'),
-      'utf-8'
-    )
-  })
-
-  it('REQ-34.1-04 getCustomCSS returns the customCSS setting value', async () => {
-    mockAppSettings({ customCSS: '.my-css {}' })
-
-    const result = await getCustomCSS()
-
-    expect(result).toBe('.my-css {}')
-  })
-
-  it('REQ-34.1-04 getCustomCSS returns undefined when customCSS is unset', async () => {
-    mockAppSettings({})
-
-    const result = await getCustomCSS()
-
-    expect(result).toBeUndefined()
-  })
-})
 
 describe('backend/appshell/releases.ts (REQ-34.1-04)', () => {
   beforeEach(() => {

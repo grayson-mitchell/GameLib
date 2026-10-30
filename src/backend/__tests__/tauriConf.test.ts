@@ -170,11 +170,10 @@ describe('tauri.conf.json updater plugin shape (D-07 / D-08)', () => {
  *     (`tauri-2.11.5/src/manager/mod.rs set_csp`) -- so NO 'unsafe-inline' and
  *     NO 'unsafe-eval' in script-src. `withGlobalTauri`'s `bundle.global.js` is a
  *     webview initialization script, outside CSP entirely.
- *   - styles: the Vite CSS, MUI/emotion's runtime `<style>` injection, AND the
- *     user-facing Settings -> Custom CSS feature, which writes arbitrary CSS into
- *     `<style id="customCSS">` (`src/frontend/index.tsx setCustomCSS`). That
- *     feature is the reason style-src carries 'unsafe-inline'; it is a
- *     deliberate user-authored surface, not an oversight.
+ *   - styles: the Vite CSS and MUI/emotion's runtime `<style>` injection, which
+ *     is why style-src carries 'unsafe-inline'. (The census also counted the
+ *     Settings -> Custom CSS feature's `<style id="customCSS">`; that feature
+ *     was removed in quick 261031-bst and emotion alone still needs the token.)
  *   - images: store artwork from whatever CDN each store hands back, SteamGridDB
  *     and `steamgrid.usebottles.com` results, user-entered sideload URLs, and
  *     the `data:` URL the backend returns for the login background. Not
@@ -190,7 +189,7 @@ describe('tauri.conf.json updater plugin shape (D-07 / D-08)', () => {
  *
  * LIVE-GATE FINDING #2, the Tauri nonce trap: tauri-codegen injects a nonce
  * attribute on EVERY <style> in the bundled index.html (`tauri-utils html.rs
- * inject_nonce(document, "style", ...)`) -- ours has `<style id="customCSS">` --
+ * inject_nonce(document, "style", ...)`) -- ours then had `<style id="customCSS">` --
  * and at serve time `set_csp` appends the matching 'nonce-N' to style-src. Per
  * the CSP spec a nonce in a directive makes browsers IGNORE 'unsafe-inline' in
  * that same directive, so MUI/emotion's runtime <style> injection was blocked
@@ -255,7 +254,7 @@ describe('tauri.conf.json content security policy (quick task 261008-gf1)', () =
     expect(security.dangerousDisableAssetCspModification).toEqual(['style-src'])
   })
 
-  test("style-src carries 'unsafe-inline' (the Settings -> Custom CSS feature writes into a <style>) and nothing remote", () => {
+  test("style-src carries 'unsafe-inline' (MUI/emotion injects runtime <style> elements) and nothing remote", () => {
     const src = sources('style-src')
     expect(src).toContain("'self'")
     expect(src).toContain("'unsafe-inline'")

@@ -216,17 +216,6 @@ document
   .querySelector('html')
   ?.setAttribute('lang', toI18nextCode(languageCode))
 
-window.setCustomCSS = (cssString: string) => {
-  const style = document.createElement('style')
-  style.innerHTML = cssString
-  document.getElementById('customCSS')!.innerText = style.innerText
-}
-
-window.api
-  .getCustomCSS()
-  .then(window.setCustomCSS)
-  .catch(() => {})
-
 i18next
   // load translation using http -> see /public/locales
   // learn more: https://github.com/i18next/i18next-http-backend
@@ -278,22 +267,13 @@ probeMark('after-root-render')
 i18next.on('initialized', () => probeMark('i18next-initialized'))
 i18next.on('loaded', () => probeMark('i18next-loaded'))
 
-// helper function to set the theme class and load custom css if needed
+// helper function to set the theme class
 window.setTheme = async (themeClass: string) => {
-  document.querySelector('style.customTheme')?.remove()
-
-  if (
-    themeClass !== DEFAULT_THEME &&
-    !Object.keys(defaultThemes).includes(themeClass)
-  ) {
-    const cssContent = await window.api.getThemeCSS(themeClass)
-    themeClass = themeClass
-      .replace('.css', '') // remove extension
-      .replace(/[\s.]/, '_') // remove dots and empty spaces
-    const style = document.createElement('style')
-    style.classList.add('customTheme')
-    style.innerHTML = cssContent
-    document.body.insertAdjacentElement('afterbegin', style)
+  // Custom CSS themes were removed (quick 261031-bst). A stored value naming a
+  // theme file from that era is not a built-in key; fall back rather than
+  // leave the body on a class no stylesheet defines.
+  if (!Object.keys(defaultThemes).includes(themeClass)) {
+    themeClass = DEFAULT_THEME
   }
 
   document.body.className = themeClass
@@ -321,9 +301,8 @@ window.setTheme = async (themeClass: string) => {
 // four theme keys retired from `defaultThemes` in this same change. Route
 // it through the migration once at boot and persist the result, so this is
 // a one-time rewrite rather than a translation performed on every launch.
-// A genuinely custom theme filename is not a retired key and passes
-// through `migrateThemeKey` unchanged, so it still reaches `setTheme`'s
-// custom-theme branch below untouched.
+// A leftover custom theme filename is not a retired key and passes
+// through `migrateThemeKey` unchanged; `setTheme` maps it to DEFAULT_THEME.
 const storedThemeClass = configStore.get('theme', DEFAULT_THEME)
 const themeClass = migrateThemeKey(storedThemeClass)
 if (themeClass !== storedThemeClass) {

@@ -83,7 +83,7 @@
  * out-of-scope UI copy, not a defect this plan introduces or fixes.
  *
  * Deliberately does NOT register:
- *   - `openReleases`, `openWebviewPage`, `openCustomThemesWiki`,
+ *   - `openReleases`, `openWebviewPage`,
  *     `showAboutWindow` — Phase 34.1 channels already registered by
  *     `appShellFlowRegistration.ts`; `listenerRegistry` holds an ARRAY per
  *     channel, so a second registration here would double-fire them.

@@ -115,7 +115,6 @@ interface SyncIPCFunctions {
   openWebviewPage: (url: string) => void
   openWikiLink: () => void
   openSidInfoPage: () => void
-  openCustomThemesWiki: () => void
   showConfigFileInFolder: (appName: string) => void
   removeFolder: ([path, folderName]: [string, string]) => void
   clearCache: (showDialog?: boolean, fromVersionChange?: boolean) => void
@@ -555,8 +554,6 @@ interface AsyncIPCFunctions {
   getShellPath: (path: string) => Promise<string>
   getWebviewPreloadPath: () => string
   clipboardReadText: () => string
-  getCustomThemes: () => Promise<string[]>
-  getThemeCSS: (theme: string) => Promise<string>
   isNative: (args: { appName: string; runner: Runner }) => boolean
   getLogContent: (args: GetLogFileArgs) => string
   installWineVersion: (release: WineVersionInfo) => Promise<void>
@@ -684,7 +681,6 @@ interface AsyncIPCFunctions {
   ) => Promise<false | [string, UploadedLogData]>
   deleteUploadedLogFile: (url: string) => Promise<boolean>
   getUploadedLogFiles: () => Promise<Record<string, UploadedLogData>>
-  getCustomCSS: () => Promise<string>
   // Resolves a `data:` URL for the configured Manage Accounts background, or
   // '' to mean "use the bundled default artwork".
   getLoginBackground: () => Promise<string>

@@ -81,7 +81,6 @@ jest.mock('../../../components', () => ({
   AltLegendaryBin: () => null,
   AltNileBin: () => null,
   ClearCache: () => null,
-  CustomCSS: () => null,
   DisableLogs: () => null,
   DownloadNoHTTPS: () => null,
   ExperimentalFeatures: () => null,

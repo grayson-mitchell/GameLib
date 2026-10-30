@@ -867,7 +867,7 @@ function isConfigStoreKeyArgument(node: Node): boolean {
 /**
  * Plan 10 (34.8-10): a string/template literal that is a direct argument to
  * `document.querySelector`/`querySelectorAll` (a CSS selector,
- * `index.tsx`'s `'style.customTheme'`, `ConsoleMode/index.tsx`'s
+ * `ConsoleMode/index.tsx`'s
  * `'button:not(:disabled)'`), `canvas.getContext` (a canvas context-type
  * constant, `index.tsx`'s `'2d'`), or `webview.setUserAgent` (a technical
  * User-Agent string, `WebView/index.tsx`) is a browser/DOM API technical

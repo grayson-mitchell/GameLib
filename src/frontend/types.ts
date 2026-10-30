@@ -237,7 +237,6 @@ declare global {
     isFlatpak: boolean
     flatpakRuntimeVersion?: string
     platform: NodeJS.Platform
-    setCustomCSS: (cssString: string) => void
     isE2ETesting: boolean
   }
 

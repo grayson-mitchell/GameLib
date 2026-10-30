@@ -2,15 +2,15 @@
  * Curated app-shell channel registration (Phase 34.1 Plan 04,
  * D-03/D-08/D-09/D-13, REQ-34.1-05/REQ-34.1-09/REQ-34.1-12).
  *
- * Registers the 25 sidecar-routed app-shell channels (10 invoke + 15 send) onto electronStub's
+ * Registers the 21 sidecar-routed app-shell channels (7 invoke + 14 send) onto electronStub's
  * `ipcMain` recorder, importing the REAL `backend/appshell/*` functions
  * extracted by Plan 34.1-02 unchanged (mirrors `installFlowRegistration.ts`'s
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
  * behind the new transport, not a reimplementation):
  *
- *   invoke (10, `ipcMain.handle`):
- *     - `getCustomThemes`/`getThemeCSS`/`getCustomCSS`/`getLoginBackground`
- *       -> `appshell/themes.ts`
+ *   invoke (7, `ipcMain.handle`):
+ *     - `getLoginBackground` -> `appshell/themes.ts` (the custom-theme and
+ *       Custom CSS reads beside it were removed in quick 261031-bst)
  *     - `getAppManagementStatus` (quick 261026-b9r) -> `appshell/appManagement.ts`
  *       create-and-unlink probe inside the CrossOver bundle (macOS only)
  *     - `getHeroicVersion` -> `electronStub`'s `app.getVersion()` — Electron
@@ -32,7 +32,7 @@
  *       pre-existing install's `games.recent` is full of entries that do not
  *       carry one, and stranding those is worse than a probe
  *
- *   send (15, `ipcMain.on`):
+ *   send (14, `ipcMain.on`):
  *     - `openAppManagementSettings` (quick 261026-b9r) -> opens ONLY the
  *       fixed Privacy_AppBundles URL (no renderer-supplied URL); `relaunchApp`
  *       -> `app.relaunch()` then `app.quit()`, the same pair `resetHeroic` uses
@@ -43,7 +43,7 @@
  *     - `dialogDisplayed` -> `dialog/displayAck`'s `acknowledgeDialogDisplay()` (renderer ack that a showDialog frame is on screen)
  *     - `quit` -> `backend/utils`'s `handleExit()` (`main.ts:680`), reaching
  *       `electronStub.app.exit()` -> the existing `app_exit` rustInvoke arm
- *     - `openReleases`/`openCustomThemesWiki`/`openWebviewPage` -> thin
+ *     - `openReleases`/`openWebviewPage` -> thin
  *       re-wirings of `backend/utils`'s `openUrlOrFile()` (`main.ts:716/727/
  *       730-732`), reaching `electronStub.shell.openExternal`/`openPath` ->
  *       the existing `open_external`/`shell_open_path` rustInvoke arms
@@ -165,13 +165,8 @@ import i18next from 'i18next'
 
 import { ipcMain, app, shell, powerSaveBlocker } from '../platform'
 import { isSnap, isCLINoGui, isMac } from '../constants/environment'
-import { heroicGithubURL, customThemesWikiLink } from '../constants/urls'
-import {
-  getCustomThemes,
-  getThemeCSS,
-  getCustomCSS,
-  getLoginBackground
-} from '../appshell/themes'
+import { heroicGithubURL } from '../constants/urls'
+import { getLoginBackground } from '../appshell/themes'
 import {
   getLatestReleasesForStartup,
   getCurrentChangelogEntry
@@ -260,7 +255,7 @@ function syncTrayIcon(): void {
 }
 
 /**
- * Registers the 25 app-shell channels (10 invoke + 15 send). Called once from
+ * Registers the 21 app-shell channels (7 invoke + 14 send). Called once from
  * `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
@@ -273,17 +268,10 @@ function syncTrayIcon(): void {
 export function registerAppShellFlows(
   options: { skipInitialTraySync?: boolean } = {}
 ): void {
-  // ── invoke (10) ────────────────────────────────────────────────────────
+  // ── invoke (7) ─────────────────────────────────────────────────────────
   // Was 8 under the original Phase 34.1 D-01 set; `getLoginBackground` is a
   // later addition (user-selectable Manage Accounts background artwork).
-
-  ipcMain.handle('getCustomThemes', async () => getCustomThemes())
-
-  ipcMain.handle('getThemeCSS', async (_event: unknown, ...args: unknown[]) =>
-    getThemeCSS(args[0] as string)
-  )
-
-  ipcMain.handle('getCustomCSS', async () => getCustomCSS())
+  // `getCustomThemes`/`getThemeCSS`/`getCustomCSS` removed in quick 261031-bst.
 
   ipcMain.handle('getLoginBackground', async () => getLoginBackground())
 
@@ -367,12 +355,6 @@ export function registerAppShellFlows(
   ipcMain.on('openReleases', () => {
     openUrlOrFile(heroicGithubURL).catch((error) =>
       logSendFailure('openReleases', error)
-    )
-  })
-
-  ipcMain.on('openCustomThemesWiki', () => {
-    openUrlOrFile(customThemesWikiLink).catch((error) =>
-      logSendFailure('openCustomThemesWiki', error)
     )
   })
 

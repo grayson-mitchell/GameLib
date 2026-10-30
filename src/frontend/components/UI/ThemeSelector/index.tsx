@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { SelectField } from '..'
@@ -16,19 +16,6 @@ export const ThemeSelector = () => {
   const { theme, setTheme } = useContext(ContextProvider)
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
-  const [themes, setThemes] = useState<string[]>(Object.keys(defaultThemes))
-
-  // The Custom Themes Path field was removed from Settings (261031-blb).
-  // Themes from a folder already saved in config are still listed, so a
-  // previously selected custom theme stays selectable.
-  useEffect(() => {
-    const loadThemes = async () => {
-      const themes = await window.api.getCustomThemes()
-      setThemes([...Object.keys(defaultThemes), ...themes])
-    }
-
-    void loadThemes()
-  }, [])
 
   return (
     <SelectField
@@ -37,7 +24,7 @@ export const ThemeSelector = () => {
       onChange={(event) => setTheme(event.target.value)}
       value={theme}
     >
-      {themes.map((key) => (
+      {Object.keys(defaultThemes).map((key) => (
         <MenuItem key={key} value={key}>
           {resolveThemeLabel(key, tGamelib)}
         </MenuItem>

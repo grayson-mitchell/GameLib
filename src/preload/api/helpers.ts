@@ -10,7 +10,6 @@ export const openSupportPage = makeListenerCaller('openSupportPage')
 export const quit = makeListenerCaller('quit')
 export const openDiscordLink = makeListenerCaller('openDiscordLink')
 export const openWinePrefixFAQ = makeListenerCaller('openWinePrefixFAQ')
-export const openCustomThemesWiki = makeListenerCaller('openCustomThemesWiki')
 // D-12 (Phase 34.1 Plan 07): createNewWindow opens a genuine Tauri WebviewWindow --
 // renderer-side, per tauriChildWindows.ts's module comment. Phase 35 plan 17 collapsed
 // the Electron-branch fallback (`makeListenerCaller('createNewWindow')`), which is
@@ -55,9 +54,6 @@ export const getSignInProbeOutcomes = makeHandlerInvoker('getSignInProbeOutcomes
 export const setConnectivityOnline = makeListenerCaller('set-connectivity-online')
 export const connectivityChanged = makeListenerCaller('connectivity-changed')
 export const isNative = makeHandlerInvoker('isNative')
-export const getThemeCSS = makeHandlerInvoker('getThemeCSS')
-export const getCustomThemes = makeHandlerInvoker('getCustomThemes')
-export const getCustomCSS = makeHandlerInvoker('getCustomCSS')
 export const getLoginBackground = makeHandlerInvoker('getLoginBackground')
 export const getGogDiscounts = makeHandlerInvoker('getGogDiscounts')
 export const setTitleBarOverlay = makeListenerCaller('setTitleBarOverlay')

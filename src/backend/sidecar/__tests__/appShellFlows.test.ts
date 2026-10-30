@@ -335,8 +335,6 @@ let warnSpy: jest.SpyInstance
 describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-09)', () => {
   beforeEach(() => {
     mockAppSettings({
-      customThemesPath: '/does/not/exist',
-      customCSS: '.gamelib {}',
       checkForUpdatesOnStartup: false,
       language: 'en'
     })
@@ -357,53 +355,6 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   })
 
   // ── invoke (8) ──────────────────────────────────────────────────────────
-
-  it('REQ-34.1-05 getCustomThemes (invoke) resolves an array, not the unported marker', async () => {
-    const { input, frames } = startSidecar()
-    writeInvoke(input, 'themes-1', 'getCustomThemes', [])
-    await flush()
-
-    const response = frames.find((f) => f.id === 'themes-1') as
-      | { ok: boolean; result?: unknown; error?: string }
-      | undefined
-    expect(response?.ok).toBe(true)
-    expect(response?.error).toBeUndefined()
-    expect(Array.isArray(response?.result)).toBe(true)
-  })
-
-  it('REQ-34.1-05 getThemeCSS (invoke) forwards its argument and returns the seeded theme file contents', async () => {
-    const themesDir = join(
-      tmpdir(),
-      `gamelib-appshellflows-themes-${process.pid}`
-    )
-    mkdirSync(themesDir, { recursive: true })
-    writeFileSync(join(themesDir, 'dark.css'), '.dark { color: red }')
-    mockAppSettings({ customThemesPath: themesDir })
-
-    const { input, frames } = startSidecar()
-    writeInvoke(input, 'theme-css-1', 'getThemeCSS', ['dark.css'])
-    await flush()
-
-    const response = frames.find((f) => f.id === 'theme-css-1') as
-      | { ok: boolean; result?: unknown; error?: string }
-      | undefined
-    expect(response?.ok).toBe(true)
-    expect(response?.result).toBe('.dark { color: red }')
-  })
-
-  it('REQ-34.1-05 getCustomCSS (invoke) resolves the configured customCSS value', async () => {
-    mockAppSettings({ customCSS: '.my-theme { color: blue }' })
-
-    const { input, frames } = startSidecar()
-    writeInvoke(input, 'custom-css-1', 'getCustomCSS', [])
-    await flush()
-
-    const response = frames.find((f) => f.id === 'custom-css-1') as
-      | { ok: boolean; result?: unknown }
-      | undefined
-    expect(response?.ok).toBe(true)
-    expect(response?.result).toBe('.my-theme { color: blue }')
-  })
 
   it('REQ-34.1-05/T-34.1-17 getHeroicVersion (invoke) resolves a real, non-empty version, never the 0.0.0 fallback', async () => {
     const { input, frames } = startSidecar()
@@ -672,18 +623,6 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     expect((pushed?.args as unknown[])?.[0]).toContain(
       'HeroicGamesLauncher/releases/latest'
     )
-  })
-
-  it('REQ-34.1-05 openCustomThemesWiki (send) reaches shell.openExternal with customThemesWikiLink', async () => {
-    const { input, frames } = startSidecar()
-    writeSend(input, 'open-themes-wiki-1', 'openCustomThemesWiki', [])
-    await flush()
-
-    const pushed = frames.find((f) => f.kind === 'openExternal') as
-      | { args?: unknown[] }
-      | undefined
-    expect(pushed).toBeDefined()
-    expect((pushed?.args as unknown[])?.[0]).toContain('Custom-Themes')
   })
 
   it('REQ-34.1-05 openWebviewPage (send) forwards its argument to shell.openExternal', async () => {
