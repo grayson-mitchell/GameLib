@@ -206,6 +206,42 @@ describe('applyWirePolicy', () => {
   })
 })
 
+describe('applyWirePolicy 58-06 passthrough', () => {
+  it('copies structSize, capBytes, shimLocal and helperCustom into the manifest methods', () => {
+    const methods = parseProtonThunks(fixtureText, 'AbiFamily', 'AbiFamily002')
+    const policy: WirePolicy = {
+      AbiFamily: {
+        SetWidgetName: {
+          helperFlat: 'SteamAPI_IAbiFamily_SetWidgetName',
+          helperCustom: 'gl_set_widget_name',
+          params: {
+            pchName: {
+              kind: 'out-buffer',
+              sizeParam: 'widgetID',
+              capBytes: 61440
+            },
+            widgetID: { kind: 'value', structSize: 136 }
+          }
+        },
+        GetWidgetID: { shimLocal: true }
+      }
+    }
+    const wired = applyWirePolicy(methods, 'AbiFamily', policy)
+
+    const set = wired.find((m) => m.name === 'SetWidgetName')!
+    expect(set.helperCustom).toBe('gl_set_widget_name')
+    expect(set.shimLocal).toBeUndefined()
+    expect(set.params.find((p) => p.name === 'pchName')!.capBytes).toBe(61440)
+    expect(set.params.find((p) => p.name === 'widgetID')!.structSize).toBe(136)
+
+    // a shimLocal entry needs no helperFlat
+    const local = wired.find((m) => m.name === 'GetWidgetID')!
+    expect(local.mode).toBe('wire')
+    expect(local.shimLocal).toBe(true)
+    expect(local.helperFlat).toBeUndefined()
+  })
+})
+
 describe('computeFlatAccessor', () => {
   it('modern "<Family><digits>" versions get SteamAPI_<Family>_v<digits>', () => {
     expect(computeFlatAccessor('SteamUser016', 'SteamUser')).toBe(

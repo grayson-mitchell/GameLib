@@ -93,10 +93,19 @@ export interface WirePolicyParamOverride {
   valueType?: 'int32' | 'uint32' | 'float' | 'bool' | 'uint64'
   sizeParam?: string
   lenParam?: string
+  /** 58-06: exact struct byte size for kind in-struct/out-struct. */
+  structSize?: number
+  /** 58-06: out-buffer cap override (up to WIRE_LARGE_MAX_BYTES). */
+  capBytes?: number
 }
 
 export interface WirePolicyMethodEntry {
+  /** Optional when `shimLocal` is true: the method never reaches the helper. */
   helperFlat?: string
+  /** 58-06: answered by a named shim-side body, never crosses the wire. */
+  shimLocal?: boolean
+  /** 58-06: hand-written helper function replacing the generic decode. */
+  helperCustom?: string
   /** 53-14: arity (excluding self) of the Mac Steam's native flat function.
    * A version whose game-side signature has fewer params gets the difference
    * as `helperTrailingNullArgs` (NULL-filled helper-side, never sent). */
@@ -585,11 +594,17 @@ export function applyWirePolicy(
       if (override.sizeParam !== undefined)
         merged.sizeParam = override.sizeParam
       if (override.lenParam !== undefined) merged.lenParam = override.lenParam
+      if (override.structSize !== undefined)
+        merged.structSize = override.structSize
+      if (override.capBytes !== undefined) merged.capBytes = override.capBytes
       return merged
     })
 
     const wired: MethodSignature = { ...method, mode: 'wire', params }
     if (entry.helperFlat !== undefined) wired.helperFlat = entry.helperFlat
+    if (entry.shimLocal !== undefined) wired.shimLocal = entry.shimLocal
+    if (entry.helperCustom !== undefined)
+      wired.helperCustom = entry.helperCustom
     if (entry.helperNativeArgs !== undefined) {
       const missing = entry.helperNativeArgs - params.length
       if (missing > 0) wired.helperTrailingNullArgs = missing
