@@ -4170,3 +4170,56 @@ describe('quick 261027-jgs: STUBCALL first-call reporting in the shim', () => {
     })
   })
 })
+
+describe('58-03 flatAccessorAliases', () => {
+  const base = (
+    over: Partial<InterfaceManifestV2> = {}
+  ): InterfaceManifestV2 => ({
+    schemaVersion: 2,
+    interface: 'SteamAliasProbe001',
+    family: 'SteamAliasProbe',
+    ordinal: 60001,
+    arches: ['x64'],
+    mode: 'stub',
+    complete: true,
+    flatAccessor: 'SteamAPI_SteamAliasProbe_v001',
+    source: { kind: 'proton-lsteamclient', ref: 'x', file: 'x' },
+    methods: [],
+    ...over
+  })
+
+  it('emits an alias as an extra export returning the same instance', () => {
+    const m = base({ flatAccessorAliases: ['SteamAPI_SteamAliasprobe_v001'] })
+    const shim = generateShimC([m])
+    const re = (n: string) =>
+      new RegExp(`void \\*${n}\\(void\\) \\{ return &(\\w+); \\}`)
+    const a = shim.match(re('SteamAPI_SteamAlias[Pp]robe_v001'))
+    const b = shim.match(re('SteamAPI_SteamAliasprobe_v001'))
+    expect(a).not.toBeNull()
+    expect(b).not.toBeNull()
+    expect(b![1]).toBe(a![1])
+    expect(generateDefFile([m], 'x64')).toContain(
+      'SteamAPI_SteamAliasprobe_v001'
+    )
+  })
+
+  it('rejects a malformed alias and a duplicate of another export', () => {
+    const bad = base({ flatAccessorAliases: ['not-an-export'] })
+    expect(validateManifest(bad, [bad]).join('\n')).toMatch(/not a valid/)
+    const other = base({
+      interface: 'SteamOtherProbe001',
+      ordinal: 60002,
+      flatAccessor: 'SteamAPI_Other_v001'
+    })
+    const dupOther = base({ flatAccessorAliases: ['SteamAPI_Other_v001'] })
+    expect(validateManifest(dupOther, [dupOther, other]).join('\n')).toMatch(
+      /duplicates an export of SteamOtherProbe001/
+    )
+    const dupSelf = base({
+      flatAccessorAliases: ['SteamAPI_SteamAliasProbe_v001']
+    })
+    expect(validateManifest(dupSelf, [dupSelf]).join('\n')).toMatch(
+      /own export/
+    )
+  })
+})

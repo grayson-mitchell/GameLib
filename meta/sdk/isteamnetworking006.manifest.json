@@ -6,6 +6,7 @@
   "arches": ["x64"],
   "mode": "stub",
   "complete": true,
+  "helperInterface": "SteamAPI_SteamNetworking_v006",
   "flatAccessor": "SteamAPI_SteamNetworking_v006",
   "source": {
     "kind": "proton-lsteamclient",

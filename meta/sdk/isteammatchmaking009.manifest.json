@@ -6,7 +6,9 @@
   "arches": ["x86", "x64"],
   "mode": "stub",
   "complete": true,
-  "flatAccessor": "SteamAPI_SteamMatchMaking_v009",
+  "helperInterface": "SteamAPI_SteamMatchmaking_v009",
+  "flatAccessor": "SteamAPI_SteamMatchmaking_v009",
+  "flatAccessorAliases": ["SteamAPI_SteamMatchMaking_v009"],
   "source": {
     "kind": "proton-lsteamclient",
     "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",

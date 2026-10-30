@@ -216,6 +216,11 @@ export interface InterfaceManifestV2 {
    * Falls back to `SteamAPI_${toVersionedAccessorSuffix(interface)}` when
    * absent. */
   flatAccessor?: string
+  /** 58-03: extra flat export names that return the same instance as the
+   * primary accessor (e.g. the SDK spelling vs a previously-shipped one).
+   * Each must match ^SteamAPI_[A-Za-z0-9_]+$ and be unique across every
+   * manifest's accessors and aliases. */
+  flatAccessorAliases?: string[]
   source: ManifestSource
   /** Free-form authoring note (e.g. "51-11 completes the remaining
    * slots..."). Never names a moved/synthetic method (the _TESTONLY gate
@@ -366,6 +371,33 @@ export function validateManifest(
         .join(', ')}`
     )
   }
+
+  const aliases = flatAccessorAliasNames(manifest)
+  const taken = new Map<string, string>()
+  for (const other of allManifests) {
+    if (other === manifest) continue
+    for (const n of [flatAccessorName(other), ...flatAccessorAliasNames(other)])
+      taken.set(n, other.interface)
+  }
+  const ownPrimary = flatAccessorName(manifest)
+  aliases.forEach((alias, i) => {
+    if (!/^SteamAPI_[A-Za-z0-9_]+$/.test(alias)) {
+      errors.push(
+        `${ctx}: flatAccessorAlias '${alias}' is not a valid SteamAPI_ name`
+      )
+    }
+    if (alias === ownPrimary || aliases.indexOf(alias) !== i) {
+      errors.push(
+        `${ctx}: flatAccessorAlias '${alias}' duplicates this manifest's own export`
+      )
+    }
+    const owner = taken.get(alias)
+    if (owner !== undefined) {
+      errors.push(
+        `${ctx}: flatAccessorAlias '${alias}' duplicates an export of ${owner}`
+      )
+    }
+  })
 
   const sortedSlots = [...manifest.methods]
     .map((m) => m.slot)
@@ -2429,9 +2461,15 @@ function flatAccessorName(manifest: InterfaceManifestV2): string {
   )
 }
 
+function flatAccessorAliasNames(manifest: InterfaceManifestV2): string[] {
+  return manifest.flatAccessorAliases ?? []
+}
+
 function emitFlatAccessor(manifest: InterfaceManifest): string {
   const instanceName = `g_${manifest.interface.toLowerCase()}_instance`
-  return `void *${flatAccessorName(manifest)}(void) { return &${instanceName}; }\n`
+  return [flatAccessorName(manifest), ...flatAccessorAliasNames(manifest)]
+    .map((name) => `void *${name}(void) { return &${instanceName}; }\n`)
+    .join('')
 }
 
 // ---------------------------------------------------------------------------
@@ -4621,7 +4659,10 @@ function defExportNames(
   const sortedManifests = [...archManifests].sort(
     (a, b) => a.ordinal - b.ordinal
   )
-  const accessorExports = sortedManifests.map((m) => flatAccessorName(m))
+  const accessorExports = sortedManifests.flatMap((m) => [
+    flatAccessorName(m),
+    ...flatAccessorAliasNames(m)
+  ])
   const families = [...new Set(sortedManifests.map((m) => m.family))]
     .filter((f) => !hasGameServerFlatStub(bareAccessorName(f)))
     .sort()
