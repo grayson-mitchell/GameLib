@@ -590,6 +590,116 @@ int gl_helper_cr_track(uint64_t hCall, int32_t iCallback) {
   return gl_cr_track(&g_cr, hCall, iCallback);
 }
 
+/* === 58-13: legacy ISteamNetworking 006 P2P helpers ======================= */
+
+#define GL_P2P_MAX_READ 61440u
+#define GL_P2P_REMOTE_MAX 16
+
+/* Remotes this helper has itself accepted (fallback below). Never logged. */
+static uint64_t g_p2p_accepted[GL_P2P_REMOTE_MAX];
+static unsigned g_p2p_accepted_n = 0;
+/* Latest 1202 remote seen by the pump; helper-only, never logged. */
+static uint64_t g_p2p_last_remote = 0;
+static int      g_p2p_last_valid = 0;
+static int      g_p2p_path_seen[2];
+
+/* Fail-closed ReadP2PPacket (Pitfall 4). Request (generic encoding):
+ * [u32 capacity][u32 cubDest][i32 nChannel]. Response: [i32 ret][u32 pcubMsgSize]
+ * [u64 steamIDRemote][u32 len][len bytes]. A packet larger than
+ * min(cubDest, 61440, capacity, response room) is left unread -- never
+ * truncated. */
+int gl_net_read_p2p_packet(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                           uint32_t respCap, uint32_t *respLen) {
+  *respLen = 0;
+  if (args == NULL || argLen != 12 || resp == NULL || respCap < 20) return 1;
+  if (self == NULL || g_bd_flat_SteamNetworking006_IsP2PPacketAvailable == NULL ||
+      g_bd_flat_SteamNetworking006_ReadP2PPacket == NULL)
+    return 1;
+  uint32_t cap, cubDest;
+  int32_t chan;
+  memcpy(&cap, args, 4);
+  memcpy(&cubDest, args + 4, 4);
+  memcpy(&chan, args + 8, 4);
+  uint32_t limit = cubDest;
+  if (cap < limit) limit = cap;
+  if (limit > GL_P2P_MAX_READ) limit = GL_P2P_MAX_READ;
+  if (limit > respCap - 20) limit = respCap - 20;
+
+  int32_t ret = 0;
+  uint32_t msgSize = 0;
+  uint64_t remote = 0;
+  uint32_t len = 0;
+  uint32_t avail = 0;
+  int have = g_bd_flat_SteamNetworking006_IsP2PPacketAvailable(self, &avail, chan) & 0xff;
+  if (have) {
+    if (avail > limit) {
+      gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_NETWORKING, 0, avail, GL_NET_PATH_UNKNOWN);
+    } else {
+      uint32_t got = 0;
+      int ok = g_bd_flat_SteamNetworking006_ReadP2PPacket(self, resp + 20, limit, &got, &remote, chan) & 0xff;
+      if (ok && got <= limit) {
+        ret = 1;
+        msgSize = got;
+        len = got;
+        gl_net_evidence(1, GL_NET_KIND_RECV, GL_NET_IFACE_NETWORKING, 0, got, GL_NET_PATH_UNKNOWN);
+      } else {
+        remote = 0;
+        gl_cbq_secure_zero(resp + 20, limit);
+      }
+    }
+  }
+  memcpy(resp, &ret, 4);
+  memcpy(resp + 4, &msgSize, 4);
+  memcpy(resp + 8, &remote, 8);
+  memcpy(resp + 16, &len, 4);
+  *respLen = 20 + len;
+  return 0;
+}
+
+/* GetP2PSessionState with relay/direct observation (D-06). Request:
+ * [u64 steamIDRemote]. Response: [i32 ret][u8 present][20 bytes
+ * P2PSessionState_t]. */
+int gl_net_get_p2p_session_state(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                                 uint32_t respCap, uint32_t *respLen) {
+  *respLen = 0;
+  if (args == NULL || argLen != 8 || resp == NULL || respCap < 25) return 1;
+  if (self == NULL || g_bd_flat_SteamNetworking006_GetP2PSessionState == NULL) return 1;
+  uint64_t remote;
+  memcpy(&remote, args, 8);
+  uint8_t st[20];
+  memset(st, 0, sizeof st);
+  int32_t ret = g_bd_flat_SteamNetworking006_GetP2PSessionState(self, remote, st) & 0xff;
+  memcpy(resp, &ret, 4);
+  resp[4] = 1;
+  memcpy(resp + 5, st, sizeof st);
+  *respLen = 25;
+  if (ret) {
+    int relayed = st[3] != 0; /* m_bUsingRelay, measured offset 3 (58-02) */
+    if (!g_p2p_path_seen[relayed]) {
+      g_p2p_path_seen[relayed] = 1;
+      gl_net_evidence(1, GL_NET_KIND_PATH, GL_NET_IFACE_NETWORKING, 0, 0,
+                      relayed ? GL_NET_PATH_RELAYED : GL_NET_PATH_DIRECT);
+    }
+  }
+  return 0;
+}
+
+/* M-04 fallback: the shim reported a 1202 with no listener (ndispatched 0,
+ * held 0), so accept the remote ourselves, once per remote. Helper-originated:
+ * logged as src=helper and never counted as evidence. */
+static void gl_p2p_fallback_accept(void) {
+  if (!g_p2p_last_valid || g_bd_self_steamnetworking006 == NULL ||
+      g_bd_flat_SteamNetworking006_AcceptP2PSessionWithUser == NULL)
+    return;
+  uint64_t remote = g_p2p_last_remote;
+  g_p2p_last_valid = 0;
+  for (unsigned i = 0; i < g_p2p_accepted_n; i++)
+    if (g_p2p_accepted[i] == remote) return;
+  if (g_p2p_accepted_n < GL_P2P_REMOTE_MAX) g_p2p_accepted[g_p2p_accepted_n++] = remote;
+  (void)g_bd_flat_SteamNetworking006_AcceptP2PSessionWithUser(g_bd_self_steamnetworking006, remote);
+  logts("CBQ", "p2p-accept src=helper");
+}
+
 /* Records a join seen by the pump (latest wins); resolved by the shim's slot-10
  * report for the same id. `mac` is the raw Mac buffer, size already checked. */
 static void gl_note_join_from_mac(int32_t id, const uint8_t *mac) {
@@ -702,6 +812,10 @@ static void gl_manual_pump_into_ring(void) {
         uint8_t win[GL_CBQ_MAX_PARAM_BYTES];
         gl_cbq_repack_fields(msg.m_pubParam, win, row);
         queued = gl_cbq_offer(&g_cbq, msg.m_iCallback, win, (int32_t)row->winSize);
+        if (msg.m_iCallback == GL_CBQ_ID_P2P_SESSION_REQUEST && msg.m_cubParam == 8) {
+          memcpy(&g_p2p_last_remote, msg.m_pubParam, 8);
+          g_p2p_last_valid = 1;
+        }
         if (queued) gl_note_join_from_mac(msg.m_iCallback, msg.m_pubParam);
         gl_cbq_secure_zero(win, sizeof win);
       } else {
@@ -1124,6 +1238,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
         send_response(fd, requestId, STATUS_ERR, NULL, 0);
         return;
       }
+      if (did == GL_CBQ_ID_P2P_SESSION_REQUEST && dn == 0 && dheld == 0) gl_p2p_fallback_accept();
       // D-08: promote a pending join to role=game only when the shim says it
       // dispatched the callback to at least one registered target.
       if (g_join_note.valid && g_join_note.id == did) {
@@ -1233,6 +1348,8 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
     logts("CALL", bd_call_name(ci));
   }
   send_response(fd, requestId, status, g_dispatch_respbuf, respLen);
+  // 58-13: packet bytes and SteamIDs never linger in the shared scratch.
+  if (respLen <= sizeof(g_dispatch_respbuf)) gl_cbq_secure_zero(g_dispatch_respbuf, respLen);
 }
 
 /*

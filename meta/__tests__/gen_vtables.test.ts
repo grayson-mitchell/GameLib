@@ -4612,7 +4612,11 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
 
     it('a manifest set without the new kinds embeds the base text only; one using them embeds all of it', () => {
       const plain = real
-        .filter((m) => m.interface !== 'SteamMatchMaking009')
+        .filter(
+          (m) =>
+            m.interface !== 'SteamMatchMaking009' &&
+            m.interface !== 'SteamNetworking006'
+        )
         .map((m) => ({
           ...m,
           methods: m.methods.filter((x) => !x.shimLocal)
@@ -4748,11 +4752,22 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
         ])
       expect(
         computeDispatchRespScratchBytes(
-          real.filter((m) => m.interface !== 'SteamMatchMaking009')
+          real.filter(
+            (m) =>
+              m.interface !== 'SteamMatchMaking009' &&
+              m.interface !== 'SteamNetworking006'
+          )
         )
       ).toBe(4096)
       // 58-12: ret 4 + (4 + 256) + (4 + 8192) for GetLobbyDataByIndex.
-      expect(computeDispatchRespScratchBytes(real)).toBe(8460)
+      expect(
+        computeDispatchRespScratchBytes(
+          real.filter((m) => m.interface !== 'SteamNetworking006')
+        )
+      ).toBe(8460)
+      // 58-13: ReadP2PPacket/RetrieveData 61440-byte out-buffers plus the
+      // return and out-values.
+      expect(computeDispatchRespScratchBytes(real)).toBe(61456)
       expect(computeDispatchRespScratchBytes([recv(61440)])).toBe(4 + 4 + 61440)
       const header = generateDispatchHeader([recv(61440)])
       expect(header).toContain(
@@ -4774,10 +4789,16 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       expect(header).not.toContain('arg_pData_len')
     })
 
-    it('real manifests declare no custom prototype', () => {
-      expect(generateDispatchHeader(real)).not.toMatch(
-        /hand-written in bridge_helper/
-      )
+    it('real manifests declare exactly the two 58-13 SteamNetworking006 custom prototypes', () => {
+      const protos = [
+        ...generateDispatchHeader(real).matchAll(
+          /^int (gl_[a-z0-9_]+)\(void \*self,/gm
+        )
+      ].map((m) => m[1])
+      expect(protos.sort()).toEqual([
+        'gl_net_get_p2p_session_state',
+        'gl_net_read_p2p_packet'
+      ])
     })
   })
 

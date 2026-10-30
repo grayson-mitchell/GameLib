@@ -5,7 +5,7 @@
  * native/steam-bridge/generated/steam_api_shim.c marshals the shim side
  * of. #include'd from native/steam-bridge/helper/bridge_helper.c.
  *
- * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, SteamMatchMaking009, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, SteamClient014, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamUtils009, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007.
+ * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, SteamMatchMaking009, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, SteamClient014, SteamNetworking006, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamUtils009, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007.
  */
 #ifndef GAMELIB_BRIDGE_DISPATCH_H
 #define GAMELIB_BRIDGE_DISPATCH_H
@@ -108,13 +108,19 @@ Method modes:
 // tuples BRIDGE_SHIM_TABLE_HASH (steam_api_shim.c) embeds -- a drift
 // between the two means the shim and this dispatch table disagree about
 // what is on the wire.
-#define BRIDGE_DISPATCH_TABLE_HASH "3905e453066c"
+#define BRIDGE_DISPATCH_TABLE_HASH "7274b9e83bd4"
 
 // Response scratch -- bridge_dispatch() never writes past respCap, which
 // the caller (bridge_helper.c) sizes to this constant.
-#define BRIDGE_DISPATCH_RESP_SCRATCH_BYTES 8460
+#define BRIDGE_DISPATCH_RESP_SCRATCH_BYTES 61456
 
 typedef void *(*BDAccessorFn_t)(void);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_net_get_p2p_session_state(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_net_read_p2p_packet(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
 
 #define BD_ORDINAL_SteamUser023 1
 static BDAccessorFn_t g_bd_accessor_steamuser023;
@@ -167,6 +173,9 @@ static void *g_bd_self_steamapps_interface_version008;
 #define BD_ORDINAL_SteamClient014 22
 static BDAccessorFn_t g_bd_accessor_steamclient014;
 static void *g_bd_self_steamclient014;
+#define BD_ORDINAL_SteamNetworking006 23
+static BDAccessorFn_t g_bd_accessor_steamnetworking006;
+static void *g_bd_self_steamnetworking006;
 #define BD_ORDINAL_SteamClient020 25
 static BDAccessorFn_t g_bd_accessor_steamclient020;
 static void *g_bd_self_steamclient020;
@@ -816,6 +825,60 @@ static BDFlatFn_SteamClient014_GetISteamAppList_t g_bd_flat_SteamClient014_GetIS
 #define BD_SLOT_SteamClient014_GetISteamMusic 28
 typedef void * (*BDFlatFn_SteamClient014_GetISteamMusic_t)(void *, int32_t, int32_t, const char *);
 static BDFlatFn_SteamClient014_GetISteamMusic_t g_bd_flat_SteamClient014_GetISteamMusic;
+#define BD_SLOT_SteamNetworking006_SendP2PPacket 0
+typedef int (*BDFlatFn_SteamNetworking006_SendP2PPacket_t)(void *, uint64_t, const void *, uint32_t, uint32_t, int32_t);
+static BDFlatFn_SteamNetworking006_SendP2PPacket_t g_bd_flat_SteamNetworking006_SendP2PPacket;
+#define BD_SLOT_SteamNetworking006_IsP2PPacketAvailable 1
+typedef int (*BDFlatFn_SteamNetworking006_IsP2PPacketAvailable_t)(void *, uint32_t *, int32_t);
+static BDFlatFn_SteamNetworking006_IsP2PPacketAvailable_t g_bd_flat_SteamNetworking006_IsP2PPacketAvailable;
+#define BD_SLOT_SteamNetworking006_ReadP2PPacket 2
+typedef int (*BDFlatFn_SteamNetworking006_ReadP2PPacket_t)(void *, void *, uint32_t, uint32_t *, uint64_t *, int32_t);
+static BDFlatFn_SteamNetworking006_ReadP2PPacket_t g_bd_flat_SteamNetworking006_ReadP2PPacket;
+#define BD_SLOT_SteamNetworking006_AcceptP2PSessionWithUser 3
+typedef int (*BDFlatFn_SteamNetworking006_AcceptP2PSessionWithUser_t)(void *, uint64_t);
+static BDFlatFn_SteamNetworking006_AcceptP2PSessionWithUser_t g_bd_flat_SteamNetworking006_AcceptP2PSessionWithUser;
+#define BD_SLOT_SteamNetworking006_CloseP2PSessionWithUser 4
+typedef int (*BDFlatFn_SteamNetworking006_CloseP2PSessionWithUser_t)(void *, uint64_t);
+static BDFlatFn_SteamNetworking006_CloseP2PSessionWithUser_t g_bd_flat_SteamNetworking006_CloseP2PSessionWithUser;
+#define BD_SLOT_SteamNetworking006_CloseP2PChannelWithUser 5
+typedef int (*BDFlatFn_SteamNetworking006_CloseP2PChannelWithUser_t)(void *, uint64_t, int32_t);
+static BDFlatFn_SteamNetworking006_CloseP2PChannelWithUser_t g_bd_flat_SteamNetworking006_CloseP2PChannelWithUser;
+#define BD_SLOT_SteamNetworking006_GetP2PSessionState 6
+typedef int (*BDFlatFn_SteamNetworking006_GetP2PSessionState_t)(void *, uint64_t, void *);
+static BDFlatFn_SteamNetworking006_GetP2PSessionState_t g_bd_flat_SteamNetworking006_GetP2PSessionState;
+#define BD_SLOT_SteamNetworking006_AllowP2PPacketRelay 7
+typedef int (*BDFlatFn_SteamNetworking006_AllowP2PPacketRelay_t)(void *, int);
+static BDFlatFn_SteamNetworking006_AllowP2PPacketRelay_t g_bd_flat_SteamNetworking006_AllowP2PPacketRelay;
+#define BD_SLOT_SteamNetworking006_CreateP2PConnectionSocket 9
+typedef uint32_t (*BDFlatFn_SteamNetworking006_CreateP2PConnectionSocket_t)(void *, uint64_t, int32_t, int32_t, int);
+static BDFlatFn_SteamNetworking006_CreateP2PConnectionSocket_t g_bd_flat_SteamNetworking006_CreateP2PConnectionSocket;
+#define BD_SLOT_SteamNetworking006_DestroySocket 11
+typedef int (*BDFlatFn_SteamNetworking006_DestroySocket_t)(void *, uint32_t, int);
+static BDFlatFn_SteamNetworking006_DestroySocket_t g_bd_flat_SteamNetworking006_DestroySocket;
+#define BD_SLOT_SteamNetworking006_DestroyListenSocket 12
+typedef int (*BDFlatFn_SteamNetworking006_DestroyListenSocket_t)(void *, uint32_t, int);
+static BDFlatFn_SteamNetworking006_DestroyListenSocket_t g_bd_flat_SteamNetworking006_DestroyListenSocket;
+#define BD_SLOT_SteamNetworking006_SendDataOnSocket 13
+typedef int (*BDFlatFn_SteamNetworking006_SendDataOnSocket_t)(void *, uint32_t, const void *, uint32_t, int);
+static BDFlatFn_SteamNetworking006_SendDataOnSocket_t g_bd_flat_SteamNetworking006_SendDataOnSocket;
+#define BD_SLOT_SteamNetworking006_IsDataAvailableOnSocket 14
+typedef int (*BDFlatFn_SteamNetworking006_IsDataAvailableOnSocket_t)(void *, uint32_t, uint32_t *);
+static BDFlatFn_SteamNetworking006_IsDataAvailableOnSocket_t g_bd_flat_SteamNetworking006_IsDataAvailableOnSocket;
+#define BD_SLOT_SteamNetworking006_RetrieveDataFromSocket 15
+typedef int (*BDFlatFn_SteamNetworking006_RetrieveDataFromSocket_t)(void *, uint32_t, void *, uint32_t, uint32_t *);
+static BDFlatFn_SteamNetworking006_RetrieveDataFromSocket_t g_bd_flat_SteamNetworking006_RetrieveDataFromSocket;
+#define BD_SLOT_SteamNetworking006_IsDataAvailable 16
+typedef int (*BDFlatFn_SteamNetworking006_IsDataAvailable_t)(void *, uint32_t, uint32_t *, uint32_t *);
+static BDFlatFn_SteamNetworking006_IsDataAvailable_t g_bd_flat_SteamNetworking006_IsDataAvailable;
+#define BD_SLOT_SteamNetworking006_RetrieveData 17
+typedef int (*BDFlatFn_SteamNetworking006_RetrieveData_t)(void *, uint32_t, void *, uint32_t, uint32_t *, uint32_t *);
+static BDFlatFn_SteamNetworking006_RetrieveData_t g_bd_flat_SteamNetworking006_RetrieveData;
+#define BD_SLOT_SteamNetworking006_GetSocketConnectionType 20
+typedef uint32_t (*BDFlatFn_SteamNetworking006_GetSocketConnectionType_t)(void *, uint32_t);
+static BDFlatFn_SteamNetworking006_GetSocketConnectionType_t g_bd_flat_SteamNetworking006_GetSocketConnectionType;
+#define BD_SLOT_SteamNetworking006_GetMaxPacketSize 21
+typedef int32_t (*BDFlatFn_SteamNetworking006_GetMaxPacketSize_t)(void *, uint32_t);
+static BDFlatFn_SteamNetworking006_GetMaxPacketSize_t g_bd_flat_SteamNetworking006_GetMaxPacketSize;
 #define BD_SLOT_SteamClient020_CreateSteamPipe 0
 typedef int32_t (*BDFlatFn_SteamClient020_CreateSteamPipe_t)(void *);
 static BDFlatFn_SteamClient020_CreateSteamPipe_t g_bd_flat_SteamClient020_CreateSteamPipe;
@@ -1526,6 +1589,26 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamClient014_GetISteamUGC = (BDFlatFn_SteamClient014_GetISteamUGC_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamUGC");
   g_bd_flat_SteamClient014_GetISteamAppList = (BDFlatFn_SteamClient014_GetISteamAppList_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamAppList");
   g_bd_flat_SteamClient014_GetISteamMusic = (BDFlatFn_SteamClient014_GetISteamMusic_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamMusic");
+  g_bd_accessor_steamnetworking006 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamNetworking_v006");
+  g_bd_self_steamnetworking006 = g_bd_accessor_steamnetworking006 ? g_bd_accessor_steamnetworking006() : NULL;
+  g_bd_flat_SteamNetworking006_SendP2PPacket = (BDFlatFn_SteamNetworking006_SendP2PPacket_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_SendP2PPacket");
+  g_bd_flat_SteamNetworking006_IsP2PPacketAvailable = (BDFlatFn_SteamNetworking006_IsP2PPacketAvailable_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_IsP2PPacketAvailable");
+  g_bd_flat_SteamNetworking006_ReadP2PPacket = (BDFlatFn_SteamNetworking006_ReadP2PPacket_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_ReadP2PPacket");
+  g_bd_flat_SteamNetworking006_AcceptP2PSessionWithUser = (BDFlatFn_SteamNetworking006_AcceptP2PSessionWithUser_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_AcceptP2PSessionWithUser");
+  g_bd_flat_SteamNetworking006_CloseP2PSessionWithUser = (BDFlatFn_SteamNetworking006_CloseP2PSessionWithUser_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_CloseP2PSessionWithUser");
+  g_bd_flat_SteamNetworking006_CloseP2PChannelWithUser = (BDFlatFn_SteamNetworking006_CloseP2PChannelWithUser_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_CloseP2PChannelWithUser");
+  g_bd_flat_SteamNetworking006_GetP2PSessionState = (BDFlatFn_SteamNetworking006_GetP2PSessionState_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_GetP2PSessionState");
+  g_bd_flat_SteamNetworking006_AllowP2PPacketRelay = (BDFlatFn_SteamNetworking006_AllowP2PPacketRelay_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_AllowP2PPacketRelay");
+  g_bd_flat_SteamNetworking006_CreateP2PConnectionSocket = (BDFlatFn_SteamNetworking006_CreateP2PConnectionSocket_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_CreateP2PConnectionSocket");
+  g_bd_flat_SteamNetworking006_DestroySocket = (BDFlatFn_SteamNetworking006_DestroySocket_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_DestroySocket");
+  g_bd_flat_SteamNetworking006_DestroyListenSocket = (BDFlatFn_SteamNetworking006_DestroyListenSocket_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_DestroyListenSocket");
+  g_bd_flat_SteamNetworking006_SendDataOnSocket = (BDFlatFn_SteamNetworking006_SendDataOnSocket_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_SendDataOnSocket");
+  g_bd_flat_SteamNetworking006_IsDataAvailableOnSocket = (BDFlatFn_SteamNetworking006_IsDataAvailableOnSocket_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_IsDataAvailableOnSocket");
+  g_bd_flat_SteamNetworking006_RetrieveDataFromSocket = (BDFlatFn_SteamNetworking006_RetrieveDataFromSocket_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_RetrieveDataFromSocket");
+  g_bd_flat_SteamNetworking006_IsDataAvailable = (BDFlatFn_SteamNetworking006_IsDataAvailable_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_IsDataAvailable");
+  g_bd_flat_SteamNetworking006_RetrieveData = (BDFlatFn_SteamNetworking006_RetrieveData_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_RetrieveData");
+  g_bd_flat_SteamNetworking006_GetSocketConnectionType = (BDFlatFn_SteamNetworking006_GetSocketConnectionType_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_GetSocketConnectionType");
+  g_bd_flat_SteamNetworking006_GetMaxPacketSize = (BDFlatFn_SteamNetworking006_GetMaxPacketSize_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_GetMaxPacketSize");
   g_bd_accessor_steamclient020 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamClient");
   g_bd_self_steamclient020 = g_bd_accessor_steamclient020 ? g_bd_accessor_steamclient020() : NULL;
   g_bd_flat_SteamClient020_CreateSteamPipe = (BDFlatFn_SteamClient020_CreateSteamPipe_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_CreateSteamPipe");
@@ -1704,7 +1787,7 @@ int bridge_dispatch_init(void *dylibHandle) {
 
 // 53-06 (D-53-13): game-originated call trace tables. Not a wire tuple,
 // so BRIDGE_DISPATCH_TABLE_HASH is unaffected.
-#define BD_CALL_COUNT 356
+#define BD_CALL_COUNT 374
 static int bd_call_index(uint16_t ordinal, uint16_t slot) {
   switch (((uint32_t)ordinal << 16) | (uint32_t)slot) {
     case (((uint32_t)BD_ORDINAL_SteamUser023 << 16) | (uint32_t)BD_SLOT_SteamUser023_GetHSteamUser): return 0;
@@ -1912,157 +1995,175 @@ static int bd_call_index(uint16_t ordinal, uint16_t slot) {
     case (((uint32_t)BD_ORDINAL_SteamClient014 << 16) | (uint32_t)BD_SLOT_SteamClient014_GetISteamUGC): return 202;
     case (((uint32_t)BD_ORDINAL_SteamClient014 << 16) | (uint32_t)BD_SLOT_SteamClient014_GetISteamAppList): return 203;
     case (((uint32_t)BD_ORDINAL_SteamClient014 << 16) | (uint32_t)BD_SLOT_SteamClient014_GetISteamMusic): return 204;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_CreateSteamPipe): return 205;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_BReleaseSteamPipe): return 206;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_ConnectToGlobalUser): return 207;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_CreateLocalUser): return 208;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_ReleaseUser): return 209;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamUser): return 210;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamGameServer): return 211;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamFriends): return 212;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamUtils): return 213;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamMatchmaking): return 214;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamMatchmakingServers): return 215;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamGenericInterface): return 216;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamUserStats): return 217;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamGameServerStats): return 218;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamApps): return 219;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamNetworking): return 220;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamRemoteStorage): return 221;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamScreenshots): return 222;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_RunFrame): return 223;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetIPCCallCount): return 224;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_BShutdownIfAllPipesClosed): return 225;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamHTTP): return 226;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_DEPRECATED_GetISteamUnifiedMessages): return 227;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamController): return 228;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamUGC): return 229;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamAppList): return 230;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamMusic): return 231;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamMusicRemote): return 232;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamHTMLSurface): return 233;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamInventory): return 234;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamVideo): return 235;
-    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamParentalSettings): return 236;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_CreateSteamPipe): return 237;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_BReleaseSteamPipe): return 238;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_ConnectToGlobalUser): return 239;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_CreateLocalUser): return 240;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_ReleaseUser): return 241;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamUser): return 242;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamGameServer): return 243;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamFriends): return 244;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamUtils): return 245;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamMatchmaking): return 246;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamMatchmakingServers): return 247;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamGenericInterface): return 248;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamUserStats): return 249;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamGameServerStats): return 250;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamApps): return 251;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamNetworking): return 252;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamRemoteStorage): return 253;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamScreenshots): return 254;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_RunFrame): return 255;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetIPCCallCount): return 256;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_BShutdownIfAllPipesClosed): return 257;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamHTTP): return 258;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamController): return 259;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamUGC): return 260;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamMusic): return 261;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamMusicRemote): return 262;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamHTMLSurface): return 263;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamInventory): return 264;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamVideo): return 265;
-    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamParentalSettings): return 266;
-    case (((uint32_t)BD_ORDINAL_SteamUser021 << 16) | (uint32_t)BD_SLOT_SteamUser021_GetHSteamUser): return 267;
-    case (((uint32_t)BD_ORDINAL_SteamUser021 << 16) | (uint32_t)BD_SLOT_SteamUser021_BLoggedOn): return 268;
-    case (((uint32_t)BD_ORDINAL_SteamUser021 << 16) | (uint32_t)BD_SLOT_SteamUser021_GetSteamID): return 269;
-    case (((uint32_t)BD_ORDINAL_SteamUser021 << 16) | (uint32_t)BD_SLOT_SteamUser021_GetAuthSessionTicket): return 270;
-    case (((uint32_t)BD_ORDINAL_SteamUser021 << 16) | (uint32_t)BD_SLOT_SteamUser021_CancelAuthTicket): return 271;
-    case (((uint32_t)BD_ORDINAL_SteamFriends017 << 16) | (uint32_t)BD_SLOT_SteamFriends017_GetPersonaName): return 272;
-    case (((uint32_t)BD_ORDINAL_SteamFriends017 << 16) | (uint32_t)BD_SLOT_SteamFriends017_GetPersonaState): return 273;
-    case (((uint32_t)BD_ORDINAL_SteamFriends017 << 16) | (uint32_t)BD_SLOT_SteamFriends017_GetFriendPersonaName): return 274;
-    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetSecondsSinceAppActive): return 275;
-    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetSecondsSinceComputerActive): return 276;
-    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetConnectedUniverse): return 277;
-    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetServerRealTime): return 278;
-    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetIPCountry): return 279;
-    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetCurrentBatteryPower): return 280;
-    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetAppID): return 281;
-    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_IsOverlayEnabled): return 282;
-    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetSteamUILanguage): return 283;
-    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_IsSteamRunningInVR): return 284;
-    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_IsSteamInBigPictureMode): return 285;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2): return 286;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat): return 287;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2): return 288;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat): return 289;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat): return 290;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement): return 291;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement): return 292;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement): return 293;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime): return 294;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats): return 295;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute): return 296;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress): return 297;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements): return 298;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName): return 299;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats): return 300;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2): return 301;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat): return 302;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2): return 303;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat): return 304;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat): return 305;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement): return 306;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement): return 307;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement): return 308;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime): return 309;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats): return 310;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute): return 311;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress): return 312;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements): return 313;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName): return 314;
-    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats): return 315;
-    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetSecondsSinceAppActive): return 316;
-    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetSecondsSinceComputerActive): return 317;
-    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetConnectedUniverse): return 318;
-    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetServerRealTime): return 319;
-    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetIPCountry): return 320;
-    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetCurrentBatteryPower): return 321;
-    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetAppID): return 322;
-    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_IsOverlayEnabled): return 323;
-    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetSteamUILanguage): return 324;
-    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_IsSteamRunningInVR): return 325;
-    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_IsSteamInBigPictureMode): return 326;
-    case (((uint32_t)BD_ORDINAL_SteamUser018 << 16) | (uint32_t)BD_SLOT_SteamUser018_GetHSteamUser): return 327;
-    case (((uint32_t)BD_ORDINAL_SteamUser018 << 16) | (uint32_t)BD_SLOT_SteamUser018_BLoggedOn): return 328;
-    case (((uint32_t)BD_ORDINAL_SteamUser018 << 16) | (uint32_t)BD_SLOT_SteamUser018_GetSteamID): return 329;
-    case (((uint32_t)BD_ORDINAL_SteamUser018 << 16) | (uint32_t)BD_SLOT_SteamUser018_GetAuthSessionTicket): return 330;
-    case (((uint32_t)BD_ORDINAL_SteamUser018 << 16) | (uint32_t)BD_SLOT_SteamUser018_CancelAuthTicket): return 331;
-    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetSecondsSinceAppActive): return 332;
-    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetSecondsSinceComputerActive): return 333;
-    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetConnectedUniverse): return 334;
-    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetServerRealTime): return 335;
-    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetIPCountry): return 336;
-    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetCurrentBatteryPower): return 337;
-    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetAppID): return 338;
-    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_IsOverlayEnabled): return 339;
-    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetSteamUILanguage): return 340;
-    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_IsSteamRunningInVR): return 341;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribed): return 342;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsLowViolence): return 343;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsCybercafe): return 344;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsVACBanned): return 345;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage): return 346;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages): return 347;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribedApp): return 348;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsDlcInstalled): return 349;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetEarliestPurchaseUnixTime): return 350;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribedFromFreeWeekend): return 351;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetDLCCount): return 352;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsAppInstalled): return 353;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner): return 354;
-    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId): return 355;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_SendP2PPacket): return 205;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_IsP2PPacketAvailable): return 206;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_ReadP2PPacket): return 207;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_AcceptP2PSessionWithUser): return 208;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_CloseP2PSessionWithUser): return 209;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_CloseP2PChannelWithUser): return 210;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_GetP2PSessionState): return 211;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_AllowP2PPacketRelay): return 212;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_CreateP2PConnectionSocket): return 213;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_DestroySocket): return 214;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_DestroyListenSocket): return 215;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_SendDataOnSocket): return 216;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_IsDataAvailableOnSocket): return 217;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_RetrieveDataFromSocket): return 218;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_IsDataAvailable): return 219;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_RetrieveData): return 220;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_GetSocketConnectionType): return 221;
+    case (((uint32_t)BD_ORDINAL_SteamNetworking006 << 16) | (uint32_t)BD_SLOT_SteamNetworking006_GetMaxPacketSize): return 222;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_CreateSteamPipe): return 223;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_BReleaseSteamPipe): return 224;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_ConnectToGlobalUser): return 225;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_CreateLocalUser): return 226;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_ReleaseUser): return 227;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamUser): return 228;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamGameServer): return 229;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamFriends): return 230;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamUtils): return 231;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamMatchmaking): return 232;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamMatchmakingServers): return 233;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamGenericInterface): return 234;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamUserStats): return 235;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamGameServerStats): return 236;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamApps): return 237;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamNetworking): return 238;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamRemoteStorage): return 239;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamScreenshots): return 240;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_RunFrame): return 241;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetIPCCallCount): return 242;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_BShutdownIfAllPipesClosed): return 243;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamHTTP): return 244;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_DEPRECATED_GetISteamUnifiedMessages): return 245;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamController): return 246;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamUGC): return 247;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamAppList): return 248;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamMusic): return 249;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamMusicRemote): return 250;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamHTMLSurface): return 251;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamInventory): return 252;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamVideo): return 253;
+    case (((uint32_t)BD_ORDINAL_SteamClient020 << 16) | (uint32_t)BD_SLOT_SteamClient020_GetISteamParentalSettings): return 254;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_CreateSteamPipe): return 255;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_BReleaseSteamPipe): return 256;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_ConnectToGlobalUser): return 257;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_CreateLocalUser): return 258;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_ReleaseUser): return 259;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamUser): return 260;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamGameServer): return 261;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamFriends): return 262;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamUtils): return 263;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamMatchmaking): return 264;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamMatchmakingServers): return 265;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamGenericInterface): return 266;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamUserStats): return 267;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamGameServerStats): return 268;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamApps): return 269;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamNetworking): return 270;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamRemoteStorage): return 271;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamScreenshots): return 272;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_RunFrame): return 273;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetIPCCallCount): return 274;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_BShutdownIfAllPipesClosed): return 275;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamHTTP): return 276;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamController): return 277;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamUGC): return 278;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamMusic): return 279;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamMusicRemote): return 280;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamHTMLSurface): return 281;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamInventory): return 282;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamVideo): return 283;
+    case (((uint32_t)BD_ORDINAL_SteamClient021 << 16) | (uint32_t)BD_SLOT_SteamClient021_GetISteamParentalSettings): return 284;
+    case (((uint32_t)BD_ORDINAL_SteamUser021 << 16) | (uint32_t)BD_SLOT_SteamUser021_GetHSteamUser): return 285;
+    case (((uint32_t)BD_ORDINAL_SteamUser021 << 16) | (uint32_t)BD_SLOT_SteamUser021_BLoggedOn): return 286;
+    case (((uint32_t)BD_ORDINAL_SteamUser021 << 16) | (uint32_t)BD_SLOT_SteamUser021_GetSteamID): return 287;
+    case (((uint32_t)BD_ORDINAL_SteamUser021 << 16) | (uint32_t)BD_SLOT_SteamUser021_GetAuthSessionTicket): return 288;
+    case (((uint32_t)BD_ORDINAL_SteamUser021 << 16) | (uint32_t)BD_SLOT_SteamUser021_CancelAuthTicket): return 289;
+    case (((uint32_t)BD_ORDINAL_SteamFriends017 << 16) | (uint32_t)BD_SLOT_SteamFriends017_GetPersonaName): return 290;
+    case (((uint32_t)BD_ORDINAL_SteamFriends017 << 16) | (uint32_t)BD_SLOT_SteamFriends017_GetPersonaState): return 291;
+    case (((uint32_t)BD_ORDINAL_SteamFriends017 << 16) | (uint32_t)BD_SLOT_SteamFriends017_GetFriendPersonaName): return 292;
+    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetSecondsSinceAppActive): return 293;
+    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetSecondsSinceComputerActive): return 294;
+    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetConnectedUniverse): return 295;
+    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetServerRealTime): return 296;
+    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetIPCountry): return 297;
+    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetCurrentBatteryPower): return 298;
+    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetAppID): return 299;
+    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_IsOverlayEnabled): return 300;
+    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_GetSteamUILanguage): return 301;
+    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_IsSteamRunningInVR): return 302;
+    case (((uint32_t)BD_ORDINAL_SteamUtils010 << 16) | (uint32_t)BD_SLOT_SteamUtils010_IsSteamInBigPictureMode): return 303;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2): return 304;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat): return 305;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2): return 306;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat): return 307;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat): return 308;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement): return 309;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement): return 310;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement): return 311;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime): return 312;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats): return 313;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute): return 314;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress): return 315;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements): return 316;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName): return 317;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats): return 318;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2): return 319;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat): return 320;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2): return 321;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat): return 322;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat): return 323;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement): return 324;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement): return 325;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement): return 326;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime): return 327;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats): return 328;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute): return 329;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress): return 330;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements): return 331;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName): return 332;
+    case (((uint32_t)BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 << 16) | (uint32_t)BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats): return 333;
+    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetSecondsSinceAppActive): return 334;
+    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetSecondsSinceComputerActive): return 335;
+    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetConnectedUniverse): return 336;
+    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetServerRealTime): return 337;
+    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetIPCountry): return 338;
+    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetCurrentBatteryPower): return 339;
+    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetAppID): return 340;
+    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_IsOverlayEnabled): return 341;
+    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_GetSteamUILanguage): return 342;
+    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_IsSteamRunningInVR): return 343;
+    case (((uint32_t)BD_ORDINAL_SteamUtils009 << 16) | (uint32_t)BD_SLOT_SteamUtils009_IsSteamInBigPictureMode): return 344;
+    case (((uint32_t)BD_ORDINAL_SteamUser018 << 16) | (uint32_t)BD_SLOT_SteamUser018_GetHSteamUser): return 345;
+    case (((uint32_t)BD_ORDINAL_SteamUser018 << 16) | (uint32_t)BD_SLOT_SteamUser018_BLoggedOn): return 346;
+    case (((uint32_t)BD_ORDINAL_SteamUser018 << 16) | (uint32_t)BD_SLOT_SteamUser018_GetSteamID): return 347;
+    case (((uint32_t)BD_ORDINAL_SteamUser018 << 16) | (uint32_t)BD_SLOT_SteamUser018_GetAuthSessionTicket): return 348;
+    case (((uint32_t)BD_ORDINAL_SteamUser018 << 16) | (uint32_t)BD_SLOT_SteamUser018_CancelAuthTicket): return 349;
+    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetSecondsSinceAppActive): return 350;
+    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetSecondsSinceComputerActive): return 351;
+    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetConnectedUniverse): return 352;
+    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetServerRealTime): return 353;
+    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetIPCountry): return 354;
+    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetCurrentBatteryPower): return 355;
+    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetAppID): return 356;
+    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_IsOverlayEnabled): return 357;
+    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_GetSteamUILanguage): return 358;
+    case (((uint32_t)BD_ORDINAL_SteamUtils007 << 16) | (uint32_t)BD_SLOT_SteamUtils007_IsSteamRunningInVR): return 359;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribed): return 360;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsLowViolence): return 361;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsCybercafe): return 362;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsVACBanned): return 363;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage): return 364;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages): return 365;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribedApp): return 366;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsDlcInstalled): return 367;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetEarliestPurchaseUnixTime): return 368;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribedFromFreeWeekend): return 369;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetDLCCount): return 370;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsAppInstalled): return 371;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner): return 372;
+    case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId): return 373;
     default: return -1;
   }
 }
@@ -2273,157 +2374,175 @@ static const char *bd_call_name(int idx) {
     case 202: return "SteamClient014.GetISteamUGC";
     case 203: return "SteamClient014.GetISteamAppList";
     case 204: return "SteamClient014.GetISteamMusic";
-    case 205: return "SteamClient020.CreateSteamPipe";
-    case 206: return "SteamClient020.BReleaseSteamPipe";
-    case 207: return "SteamClient020.ConnectToGlobalUser";
-    case 208: return "SteamClient020.CreateLocalUser";
-    case 209: return "SteamClient020.ReleaseUser";
-    case 210: return "SteamClient020.GetISteamUser";
-    case 211: return "SteamClient020.GetISteamGameServer";
-    case 212: return "SteamClient020.GetISteamFriends";
-    case 213: return "SteamClient020.GetISteamUtils";
-    case 214: return "SteamClient020.GetISteamMatchmaking";
-    case 215: return "SteamClient020.GetISteamMatchmakingServers";
-    case 216: return "SteamClient020.GetISteamGenericInterface";
-    case 217: return "SteamClient020.GetISteamUserStats";
-    case 218: return "SteamClient020.GetISteamGameServerStats";
-    case 219: return "SteamClient020.GetISteamApps";
-    case 220: return "SteamClient020.GetISteamNetworking";
-    case 221: return "SteamClient020.GetISteamRemoteStorage";
-    case 222: return "SteamClient020.GetISteamScreenshots";
-    case 223: return "SteamClient020.RunFrame";
-    case 224: return "SteamClient020.GetIPCCallCount";
-    case 225: return "SteamClient020.BShutdownIfAllPipesClosed";
-    case 226: return "SteamClient020.GetISteamHTTP";
-    case 227: return "SteamClient020.DEPRECATED_GetISteamUnifiedMessages";
-    case 228: return "SteamClient020.GetISteamController";
-    case 229: return "SteamClient020.GetISteamUGC";
-    case 230: return "SteamClient020.GetISteamAppList";
-    case 231: return "SteamClient020.GetISteamMusic";
-    case 232: return "SteamClient020.GetISteamMusicRemote";
-    case 233: return "SteamClient020.GetISteamHTMLSurface";
-    case 234: return "SteamClient020.GetISteamInventory";
-    case 235: return "SteamClient020.GetISteamVideo";
-    case 236: return "SteamClient020.GetISteamParentalSettings";
-    case 237: return "SteamClient021.CreateSteamPipe";
-    case 238: return "SteamClient021.BReleaseSteamPipe";
-    case 239: return "SteamClient021.ConnectToGlobalUser";
-    case 240: return "SteamClient021.CreateLocalUser";
-    case 241: return "SteamClient021.ReleaseUser";
-    case 242: return "SteamClient021.GetISteamUser";
-    case 243: return "SteamClient021.GetISteamGameServer";
-    case 244: return "SteamClient021.GetISteamFriends";
-    case 245: return "SteamClient021.GetISteamUtils";
-    case 246: return "SteamClient021.GetISteamMatchmaking";
-    case 247: return "SteamClient021.GetISteamMatchmakingServers";
-    case 248: return "SteamClient021.GetISteamGenericInterface";
-    case 249: return "SteamClient021.GetISteamUserStats";
-    case 250: return "SteamClient021.GetISteamGameServerStats";
-    case 251: return "SteamClient021.GetISteamApps";
-    case 252: return "SteamClient021.GetISteamNetworking";
-    case 253: return "SteamClient021.GetISteamRemoteStorage";
-    case 254: return "SteamClient021.GetISteamScreenshots";
-    case 255: return "SteamClient021.RunFrame";
-    case 256: return "SteamClient021.GetIPCCallCount";
-    case 257: return "SteamClient021.BShutdownIfAllPipesClosed";
-    case 258: return "SteamClient021.GetISteamHTTP";
-    case 259: return "SteamClient021.GetISteamController";
-    case 260: return "SteamClient021.GetISteamUGC";
-    case 261: return "SteamClient021.GetISteamMusic";
-    case 262: return "SteamClient021.GetISteamMusicRemote";
-    case 263: return "SteamClient021.GetISteamHTMLSurface";
-    case 264: return "SteamClient021.GetISteamInventory";
-    case 265: return "SteamClient021.GetISteamVideo";
-    case 266: return "SteamClient021.GetISteamParentalSettings";
-    case 267: return "SteamUser021.GetHSteamUser";
-    case 268: return "SteamUser021.BLoggedOn";
-    case 269: return "SteamUser021.GetSteamID";
-    case 270: return "SteamUser021.GetAuthSessionTicket";
-    case 271: return "SteamUser021.CancelAuthTicket";
-    case 272: return "SteamFriends017.GetPersonaName";
-    case 273: return "SteamFriends017.GetPersonaState";
-    case 274: return "SteamFriends017.GetFriendPersonaName";
-    case 275: return "SteamUtils010.GetSecondsSinceAppActive";
-    case 276: return "SteamUtils010.GetSecondsSinceComputerActive";
-    case 277: return "SteamUtils010.GetConnectedUniverse";
-    case 278: return "SteamUtils010.GetServerRealTime";
-    case 279: return "SteamUtils010.GetIPCountry";
-    case 280: return "SteamUtils010.GetCurrentBatteryPower";
-    case 281: return "SteamUtils010.GetAppID";
-    case 282: return "SteamUtils010.IsOverlayEnabled";
-    case 283: return "SteamUtils010.GetSteamUILanguage";
-    case 284: return "SteamUtils010.IsSteamRunningInVR";
-    case 285: return "SteamUtils010.IsSteamInBigPictureMode";
-    case 286: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetStat_2";
-    case 287: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetStat";
-    case 288: return "STEAMUSERSTATS_INTERFACE_VERSION012.SetStat_2";
-    case 289: return "STEAMUSERSTATS_INTERFACE_VERSION012.SetStat";
-    case 290: return "STEAMUSERSTATS_INTERFACE_VERSION012.UpdateAvgRateStat";
-    case 291: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievement";
-    case 292: return "STEAMUSERSTATS_INTERFACE_VERSION012.SetAchievement";
-    case 293: return "STEAMUSERSTATS_INTERFACE_VERSION012.ClearAchievement";
-    case 294: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievementAndUnlockTime";
-    case 295: return "STEAMUSERSTATS_INTERFACE_VERSION012.StoreStats";
-    case 296: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievementDisplayAttribute";
-    case 297: return "STEAMUSERSTATS_INTERFACE_VERSION012.IndicateAchievementProgress";
-    case 298: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetNumAchievements";
-    case 299: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievementName";
-    case 300: return "STEAMUSERSTATS_INTERFACE_VERSION012.ResetAllStats";
-    case 301: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetStat_2";
-    case 302: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetStat";
-    case 303: return "STEAMUSERSTATS_INTERFACE_VERSION013.SetStat_2";
-    case 304: return "STEAMUSERSTATS_INTERFACE_VERSION013.SetStat";
-    case 305: return "STEAMUSERSTATS_INTERFACE_VERSION013.UpdateAvgRateStat";
-    case 306: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievement";
-    case 307: return "STEAMUSERSTATS_INTERFACE_VERSION013.SetAchievement";
-    case 308: return "STEAMUSERSTATS_INTERFACE_VERSION013.ClearAchievement";
-    case 309: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievementAndUnlockTime";
-    case 310: return "STEAMUSERSTATS_INTERFACE_VERSION013.StoreStats";
-    case 311: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievementDisplayAttribute";
-    case 312: return "STEAMUSERSTATS_INTERFACE_VERSION013.IndicateAchievementProgress";
-    case 313: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetNumAchievements";
-    case 314: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievementName";
-    case 315: return "STEAMUSERSTATS_INTERFACE_VERSION013.ResetAllStats";
-    case 316: return "SteamUtils009.GetSecondsSinceAppActive";
-    case 317: return "SteamUtils009.GetSecondsSinceComputerActive";
-    case 318: return "SteamUtils009.GetConnectedUniverse";
-    case 319: return "SteamUtils009.GetServerRealTime";
-    case 320: return "SteamUtils009.GetIPCountry";
-    case 321: return "SteamUtils009.GetCurrentBatteryPower";
-    case 322: return "SteamUtils009.GetAppID";
-    case 323: return "SteamUtils009.IsOverlayEnabled";
-    case 324: return "SteamUtils009.GetSteamUILanguage";
-    case 325: return "SteamUtils009.IsSteamRunningInVR";
-    case 326: return "SteamUtils009.IsSteamInBigPictureMode";
-    case 327: return "SteamUser018.GetHSteamUser";
-    case 328: return "SteamUser018.BLoggedOn";
-    case 329: return "SteamUser018.GetSteamID";
-    case 330: return "SteamUser018.GetAuthSessionTicket";
-    case 331: return "SteamUser018.CancelAuthTicket";
-    case 332: return "SteamUtils007.GetSecondsSinceAppActive";
-    case 333: return "SteamUtils007.GetSecondsSinceComputerActive";
-    case 334: return "SteamUtils007.GetConnectedUniverse";
-    case 335: return "SteamUtils007.GetServerRealTime";
-    case 336: return "SteamUtils007.GetIPCountry";
-    case 337: return "SteamUtils007.GetCurrentBatteryPower";
-    case 338: return "SteamUtils007.GetAppID";
-    case 339: return "SteamUtils007.IsOverlayEnabled";
-    case 340: return "SteamUtils007.GetSteamUILanguage";
-    case 341: return "SteamUtils007.IsSteamRunningInVR";
-    case 342: return "STEAMAPPS_INTERFACE_VERSION007.BIsSubscribed";
-    case 343: return "STEAMAPPS_INTERFACE_VERSION007.BIsLowViolence";
-    case 344: return "STEAMAPPS_INTERFACE_VERSION007.BIsCybercafe";
-    case 345: return "STEAMAPPS_INTERFACE_VERSION007.BIsVACBanned";
-    case 346: return "STEAMAPPS_INTERFACE_VERSION007.GetCurrentGameLanguage";
-    case 347: return "STEAMAPPS_INTERFACE_VERSION007.GetAvailableGameLanguages";
-    case 348: return "STEAMAPPS_INTERFACE_VERSION007.BIsSubscribedApp";
-    case 349: return "STEAMAPPS_INTERFACE_VERSION007.BIsDlcInstalled";
-    case 350: return "STEAMAPPS_INTERFACE_VERSION007.GetEarliestPurchaseUnixTime";
-    case 351: return "STEAMAPPS_INTERFACE_VERSION007.BIsSubscribedFromFreeWeekend";
-    case 352: return "STEAMAPPS_INTERFACE_VERSION007.GetDLCCount";
-    case 353: return "STEAMAPPS_INTERFACE_VERSION007.BIsAppInstalled";
-    case 354: return "STEAMAPPS_INTERFACE_VERSION007.GetAppOwner";
-    case 355: return "STEAMAPPS_INTERFACE_VERSION007.GetAppBuildId";
+    case 205: return "SteamNetworking006.SendP2PPacket";
+    case 206: return "SteamNetworking006.IsP2PPacketAvailable";
+    case 207: return "SteamNetworking006.ReadP2PPacket";
+    case 208: return "SteamNetworking006.AcceptP2PSessionWithUser";
+    case 209: return "SteamNetworking006.CloseP2PSessionWithUser";
+    case 210: return "SteamNetworking006.CloseP2PChannelWithUser";
+    case 211: return "SteamNetworking006.GetP2PSessionState";
+    case 212: return "SteamNetworking006.AllowP2PPacketRelay";
+    case 213: return "SteamNetworking006.CreateP2PConnectionSocket";
+    case 214: return "SteamNetworking006.DestroySocket";
+    case 215: return "SteamNetworking006.DestroyListenSocket";
+    case 216: return "SteamNetworking006.SendDataOnSocket";
+    case 217: return "SteamNetworking006.IsDataAvailableOnSocket";
+    case 218: return "SteamNetworking006.RetrieveDataFromSocket";
+    case 219: return "SteamNetworking006.IsDataAvailable";
+    case 220: return "SteamNetworking006.RetrieveData";
+    case 221: return "SteamNetworking006.GetSocketConnectionType";
+    case 222: return "SteamNetworking006.GetMaxPacketSize";
+    case 223: return "SteamClient020.CreateSteamPipe";
+    case 224: return "SteamClient020.BReleaseSteamPipe";
+    case 225: return "SteamClient020.ConnectToGlobalUser";
+    case 226: return "SteamClient020.CreateLocalUser";
+    case 227: return "SteamClient020.ReleaseUser";
+    case 228: return "SteamClient020.GetISteamUser";
+    case 229: return "SteamClient020.GetISteamGameServer";
+    case 230: return "SteamClient020.GetISteamFriends";
+    case 231: return "SteamClient020.GetISteamUtils";
+    case 232: return "SteamClient020.GetISteamMatchmaking";
+    case 233: return "SteamClient020.GetISteamMatchmakingServers";
+    case 234: return "SteamClient020.GetISteamGenericInterface";
+    case 235: return "SteamClient020.GetISteamUserStats";
+    case 236: return "SteamClient020.GetISteamGameServerStats";
+    case 237: return "SteamClient020.GetISteamApps";
+    case 238: return "SteamClient020.GetISteamNetworking";
+    case 239: return "SteamClient020.GetISteamRemoteStorage";
+    case 240: return "SteamClient020.GetISteamScreenshots";
+    case 241: return "SteamClient020.RunFrame";
+    case 242: return "SteamClient020.GetIPCCallCount";
+    case 243: return "SteamClient020.BShutdownIfAllPipesClosed";
+    case 244: return "SteamClient020.GetISteamHTTP";
+    case 245: return "SteamClient020.DEPRECATED_GetISteamUnifiedMessages";
+    case 246: return "SteamClient020.GetISteamController";
+    case 247: return "SteamClient020.GetISteamUGC";
+    case 248: return "SteamClient020.GetISteamAppList";
+    case 249: return "SteamClient020.GetISteamMusic";
+    case 250: return "SteamClient020.GetISteamMusicRemote";
+    case 251: return "SteamClient020.GetISteamHTMLSurface";
+    case 252: return "SteamClient020.GetISteamInventory";
+    case 253: return "SteamClient020.GetISteamVideo";
+    case 254: return "SteamClient020.GetISteamParentalSettings";
+    case 255: return "SteamClient021.CreateSteamPipe";
+    case 256: return "SteamClient021.BReleaseSteamPipe";
+    case 257: return "SteamClient021.ConnectToGlobalUser";
+    case 258: return "SteamClient021.CreateLocalUser";
+    case 259: return "SteamClient021.ReleaseUser";
+    case 260: return "SteamClient021.GetISteamUser";
+    case 261: return "SteamClient021.GetISteamGameServer";
+    case 262: return "SteamClient021.GetISteamFriends";
+    case 263: return "SteamClient021.GetISteamUtils";
+    case 264: return "SteamClient021.GetISteamMatchmaking";
+    case 265: return "SteamClient021.GetISteamMatchmakingServers";
+    case 266: return "SteamClient021.GetISteamGenericInterface";
+    case 267: return "SteamClient021.GetISteamUserStats";
+    case 268: return "SteamClient021.GetISteamGameServerStats";
+    case 269: return "SteamClient021.GetISteamApps";
+    case 270: return "SteamClient021.GetISteamNetworking";
+    case 271: return "SteamClient021.GetISteamRemoteStorage";
+    case 272: return "SteamClient021.GetISteamScreenshots";
+    case 273: return "SteamClient021.RunFrame";
+    case 274: return "SteamClient021.GetIPCCallCount";
+    case 275: return "SteamClient021.BShutdownIfAllPipesClosed";
+    case 276: return "SteamClient021.GetISteamHTTP";
+    case 277: return "SteamClient021.GetISteamController";
+    case 278: return "SteamClient021.GetISteamUGC";
+    case 279: return "SteamClient021.GetISteamMusic";
+    case 280: return "SteamClient021.GetISteamMusicRemote";
+    case 281: return "SteamClient021.GetISteamHTMLSurface";
+    case 282: return "SteamClient021.GetISteamInventory";
+    case 283: return "SteamClient021.GetISteamVideo";
+    case 284: return "SteamClient021.GetISteamParentalSettings";
+    case 285: return "SteamUser021.GetHSteamUser";
+    case 286: return "SteamUser021.BLoggedOn";
+    case 287: return "SteamUser021.GetSteamID";
+    case 288: return "SteamUser021.GetAuthSessionTicket";
+    case 289: return "SteamUser021.CancelAuthTicket";
+    case 290: return "SteamFriends017.GetPersonaName";
+    case 291: return "SteamFriends017.GetPersonaState";
+    case 292: return "SteamFriends017.GetFriendPersonaName";
+    case 293: return "SteamUtils010.GetSecondsSinceAppActive";
+    case 294: return "SteamUtils010.GetSecondsSinceComputerActive";
+    case 295: return "SteamUtils010.GetConnectedUniverse";
+    case 296: return "SteamUtils010.GetServerRealTime";
+    case 297: return "SteamUtils010.GetIPCountry";
+    case 298: return "SteamUtils010.GetCurrentBatteryPower";
+    case 299: return "SteamUtils010.GetAppID";
+    case 300: return "SteamUtils010.IsOverlayEnabled";
+    case 301: return "SteamUtils010.GetSteamUILanguage";
+    case 302: return "SteamUtils010.IsSteamRunningInVR";
+    case 303: return "SteamUtils010.IsSteamInBigPictureMode";
+    case 304: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetStat_2";
+    case 305: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetStat";
+    case 306: return "STEAMUSERSTATS_INTERFACE_VERSION012.SetStat_2";
+    case 307: return "STEAMUSERSTATS_INTERFACE_VERSION012.SetStat";
+    case 308: return "STEAMUSERSTATS_INTERFACE_VERSION012.UpdateAvgRateStat";
+    case 309: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievement";
+    case 310: return "STEAMUSERSTATS_INTERFACE_VERSION012.SetAchievement";
+    case 311: return "STEAMUSERSTATS_INTERFACE_VERSION012.ClearAchievement";
+    case 312: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievementAndUnlockTime";
+    case 313: return "STEAMUSERSTATS_INTERFACE_VERSION012.StoreStats";
+    case 314: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievementDisplayAttribute";
+    case 315: return "STEAMUSERSTATS_INTERFACE_VERSION012.IndicateAchievementProgress";
+    case 316: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetNumAchievements";
+    case 317: return "STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievementName";
+    case 318: return "STEAMUSERSTATS_INTERFACE_VERSION012.ResetAllStats";
+    case 319: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetStat_2";
+    case 320: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetStat";
+    case 321: return "STEAMUSERSTATS_INTERFACE_VERSION013.SetStat_2";
+    case 322: return "STEAMUSERSTATS_INTERFACE_VERSION013.SetStat";
+    case 323: return "STEAMUSERSTATS_INTERFACE_VERSION013.UpdateAvgRateStat";
+    case 324: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievement";
+    case 325: return "STEAMUSERSTATS_INTERFACE_VERSION013.SetAchievement";
+    case 326: return "STEAMUSERSTATS_INTERFACE_VERSION013.ClearAchievement";
+    case 327: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievementAndUnlockTime";
+    case 328: return "STEAMUSERSTATS_INTERFACE_VERSION013.StoreStats";
+    case 329: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievementDisplayAttribute";
+    case 330: return "STEAMUSERSTATS_INTERFACE_VERSION013.IndicateAchievementProgress";
+    case 331: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetNumAchievements";
+    case 332: return "STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievementName";
+    case 333: return "STEAMUSERSTATS_INTERFACE_VERSION013.ResetAllStats";
+    case 334: return "SteamUtils009.GetSecondsSinceAppActive";
+    case 335: return "SteamUtils009.GetSecondsSinceComputerActive";
+    case 336: return "SteamUtils009.GetConnectedUniverse";
+    case 337: return "SteamUtils009.GetServerRealTime";
+    case 338: return "SteamUtils009.GetIPCountry";
+    case 339: return "SteamUtils009.GetCurrentBatteryPower";
+    case 340: return "SteamUtils009.GetAppID";
+    case 341: return "SteamUtils009.IsOverlayEnabled";
+    case 342: return "SteamUtils009.GetSteamUILanguage";
+    case 343: return "SteamUtils009.IsSteamRunningInVR";
+    case 344: return "SteamUtils009.IsSteamInBigPictureMode";
+    case 345: return "SteamUser018.GetHSteamUser";
+    case 346: return "SteamUser018.BLoggedOn";
+    case 347: return "SteamUser018.GetSteamID";
+    case 348: return "SteamUser018.GetAuthSessionTicket";
+    case 349: return "SteamUser018.CancelAuthTicket";
+    case 350: return "SteamUtils007.GetSecondsSinceAppActive";
+    case 351: return "SteamUtils007.GetSecondsSinceComputerActive";
+    case 352: return "SteamUtils007.GetConnectedUniverse";
+    case 353: return "SteamUtils007.GetServerRealTime";
+    case 354: return "SteamUtils007.GetIPCountry";
+    case 355: return "SteamUtils007.GetCurrentBatteryPower";
+    case 356: return "SteamUtils007.GetAppID";
+    case 357: return "SteamUtils007.IsOverlayEnabled";
+    case 358: return "SteamUtils007.GetSteamUILanguage";
+    case 359: return "SteamUtils007.IsSteamRunningInVR";
+    case 360: return "STEAMAPPS_INTERFACE_VERSION007.BIsSubscribed";
+    case 361: return "STEAMAPPS_INTERFACE_VERSION007.BIsLowViolence";
+    case 362: return "STEAMAPPS_INTERFACE_VERSION007.BIsCybercafe";
+    case 363: return "STEAMAPPS_INTERFACE_VERSION007.BIsVACBanned";
+    case 364: return "STEAMAPPS_INTERFACE_VERSION007.GetCurrentGameLanguage";
+    case 365: return "STEAMAPPS_INTERFACE_VERSION007.GetAvailableGameLanguages";
+    case 366: return "STEAMAPPS_INTERFACE_VERSION007.BIsSubscribedApp";
+    case 367: return "STEAMAPPS_INTERFACE_VERSION007.BIsDlcInstalled";
+    case 368: return "STEAMAPPS_INTERFACE_VERSION007.GetEarliestPurchaseUnixTime";
+    case 369: return "STEAMAPPS_INTERFACE_VERSION007.BIsSubscribedFromFreeWeekend";
+    case 370: return "STEAMAPPS_INTERFACE_VERSION007.GetDLCCount";
+    case 371: return "STEAMAPPS_INTERFACE_VERSION007.BIsAppInstalled";
+    case 372: return "STEAMAPPS_INTERFACE_VERSION007.GetAppOwner";
+    case 373: return "STEAMAPPS_INTERFACE_VERSION007.GetAppBuildId";
     default: return "";
   }
 }
@@ -5823,6 +5942,261 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
         snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient014.GetISteamMusic ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
       if (respCap < 4) { *respLen = 0; return 1; }
       memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 0u): { // SteamNetworking006.SendP2PPacket
+      if (g_bd_flat_SteamNetworking006_SendP2PPacket == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint64_t arg_steamIDRemote; memcpy(&arg_steamIDRemote, arg + 0u, 8);
+      static uint8_t g_bd_flat_SteamNetworking006_SendP2PPacket_pubData_buf[61440];
+      uint32_t arg_pubData_len = 0;
+      if (argLen < (0u + 8) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pubData_len, arg + (0u + 8), 4);
+      if (arg_pubData_len > 61440) { gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_NETWORKING, 0, arg_pubData_len, GL_NET_PATH_UNKNOWN); *respLen = 0; return 1; } // oversize refusal is NET evidence -- 58-10
+      if (arg_pubData_len > 61440 || (uint64_t)argLen < (uint64_t)((0u + 8)) + 4u + arg_pubData_len) { *respLen = 0; return 1; } // in-buffer past cap or argLen -- T-58-16
+      memcpy(g_bd_flat_SteamNetworking006_SendP2PPacket_pubData_buf, arg + (0u + 8) + 4, arg_pubData_len);
+      const void *arg_pubData = g_bd_flat_SteamNetworking006_SendP2PPacket_pubData_buf;
+      if (argLen < ((0u + 8) + 4 + arg_pubData_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_cubData; memcpy(&arg_cubData, arg + ((0u + 8) + 4 + arg_pubData_len), 4);
+      if (argLen < (((0u + 8) + 4 + arg_pubData_len) + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_eP2PSendType; memcpy(&arg_eP2PSendType, arg + (((0u + 8) + 4 + arg_pubData_len) + 4), 4);
+      if (argLen < ((((0u + 8) + 4 + arg_pubData_len) + 4) + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_nChannel; memcpy(&arg_nChannel, arg + ((((0u + 8) + 4 + arg_pubData_len) + 4) + 4), 4);
+      if ((int64_t)arg_cubData != (int64_t)arg_pubData_len) { *respLen = 0; return 1; } // lenParam must equal the bytes sent -- T-58-16
+      int __ret = g_bd_flat_SteamNetworking006_SendP2PPacket(g_bd_self_steamnetworking006, arg_steamIDRemote, arg_pubData, arg_cubData, arg_eP2PSendType, arg_nChannel);
+      if (__ret) gl_net_evidence(1, GL_NET_KIND_SEND, GL_NET_IFACE_NETWORKING, 0, arg_pubData_len, GL_NET_PATH_UNKNOWN);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 1u): { // SteamNetworking006.IsP2PPacketAvailable
+      if (g_bd_flat_SteamNetworking006_IsP2PPacketAvailable == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t arg_pcubMsgSize = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_nChannel; memcpy(&arg_nChannel, arg + 0u, 4);
+      int __ret = g_bd_flat_SteamNetworking006_IsP2PPacketAvailable(g_bd_self_steamnetworking006, &arg_pcubMsgSize, arg_nChannel);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pcubMsgSize, 4);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 2u): { // SteamNetworking006.ReadP2PPacket
+      if (g_bd_flat_SteamNetworking006_ReadP2PPacket == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_net_read_p2p_packet
+        if (gl_net_read_p2p_packet(g_bd_self_steamnetworking006, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)23) << 16 | 3u): { // SteamNetworking006.AcceptP2PSessionWithUser
+      if (g_bd_flat_SteamNetworking006_AcceptP2PSessionWithUser == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint64_t arg_steamIDRemote; memcpy(&arg_steamIDRemote, arg + 0u, 8);
+      int __ret = g_bd_flat_SteamNetworking006_AcceptP2PSessionWithUser(g_bd_self_steamnetworking006, arg_steamIDRemote);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 4u): { // SteamNetworking006.CloseP2PSessionWithUser
+      if (g_bd_flat_SteamNetworking006_CloseP2PSessionWithUser == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint64_t arg_steamIDRemote; memcpy(&arg_steamIDRemote, arg + 0u, 8);
+      int __ret = g_bd_flat_SteamNetworking006_CloseP2PSessionWithUser(g_bd_self_steamnetworking006, arg_steamIDRemote);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 5u): { // SteamNetworking006.CloseP2PChannelWithUser
+      if (g_bd_flat_SteamNetworking006_CloseP2PChannelWithUser == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint64_t arg_steamIDRemote; memcpy(&arg_steamIDRemote, arg + 0u, 8);
+      if (argLen < (0u + 8) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_nChannel; memcpy(&arg_nChannel, arg + (0u + 8), 4);
+      int __ret = g_bd_flat_SteamNetworking006_CloseP2PChannelWithUser(g_bd_self_steamnetworking006, arg_steamIDRemote, arg_nChannel);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 6u): { // SteamNetworking006.GetP2PSessionState
+      if (g_bd_flat_SteamNetworking006_GetP2PSessionState == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_net_get_p2p_session_state
+        if (gl_net_get_p2p_session_state(g_bd_self_steamnetworking006, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)23) << 16 | 7u): { // SteamNetworking006.AllowP2PPacketRelay
+      if (g_bd_flat_SteamNetworking006_AllowP2PPacketRelay == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int arg_bAllow; memcpy(&arg_bAllow, arg + 0u, 4);
+      int __ret = g_bd_flat_SteamNetworking006_AllowP2PPacketRelay(g_bd_self_steamnetworking006, arg_bAllow);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 9u): { // SteamNetworking006.CreateP2PConnectionSocket
+      if (g_bd_flat_SteamNetworking006_CreateP2PConnectionSocket == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint64_t arg_steamIDTarget; memcpy(&arg_steamIDTarget, arg + 0u, 8);
+      if (argLen < (0u + 8) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_nVirtualPort; memcpy(&arg_nVirtualPort, arg + (0u + 8), 4);
+      if (argLen < ((0u + 8) + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_nTimeoutSec; memcpy(&arg_nTimeoutSec, arg + ((0u + 8) + 4), 4);
+      if (argLen < (((0u + 8) + 4) + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int arg_bAllowUseOfPacketRelay; memcpy(&arg_bAllowUseOfPacketRelay, arg + (((0u + 8) + 4) + 4), 4);
+      uint32_t __ret = g_bd_flat_SteamNetworking006_CreateP2PConnectionSocket(g_bd_self_steamnetworking006, arg_steamIDTarget, arg_nVirtualPort, arg_nTimeoutSec, arg_bAllowUseOfPacketRelay);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 11u): { // SteamNetworking006.DestroySocket
+      if (g_bd_flat_SteamNetworking006_DestroySocket == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_hSocket; memcpy(&arg_hSocket, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int arg_bNotifyRemoteEnd; memcpy(&arg_bNotifyRemoteEnd, arg + (0u + 4), 4);
+      int __ret = g_bd_flat_SteamNetworking006_DestroySocket(g_bd_self_steamnetworking006, arg_hSocket, arg_bNotifyRemoteEnd);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 12u): { // SteamNetworking006.DestroyListenSocket
+      if (g_bd_flat_SteamNetworking006_DestroyListenSocket == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_hSocket; memcpy(&arg_hSocket, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int arg_bNotifyRemoteEnd; memcpy(&arg_bNotifyRemoteEnd, arg + (0u + 4), 4);
+      int __ret = g_bd_flat_SteamNetworking006_DestroyListenSocket(g_bd_self_steamnetworking006, arg_hSocket, arg_bNotifyRemoteEnd);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 13u): { // SteamNetworking006.SendDataOnSocket
+      if (g_bd_flat_SteamNetworking006_SendDataOnSocket == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_hSocket; memcpy(&arg_hSocket, arg + 0u, 4);
+      static uint8_t g_bd_flat_SteamNetworking006_SendDataOnSocket_pubData_buf[61440];
+      uint32_t arg_pubData_len = 0;
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pubData_len, arg + (0u + 4), 4);
+      if (arg_pubData_len > 61440) { gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_NETWORKING, 0, arg_pubData_len, GL_NET_PATH_UNKNOWN); *respLen = 0; return 1; } // oversize refusal is NET evidence -- 58-10
+      if (arg_pubData_len > 61440 || (uint64_t)argLen < (uint64_t)((0u + 4)) + 4u + arg_pubData_len) { *respLen = 0; return 1; } // in-buffer past cap or argLen -- T-58-16
+      memcpy(g_bd_flat_SteamNetworking006_SendDataOnSocket_pubData_buf, arg + (0u + 4) + 4, arg_pubData_len);
+      const void *arg_pubData = g_bd_flat_SteamNetworking006_SendDataOnSocket_pubData_buf;
+      if (argLen < ((0u + 4) + 4 + arg_pubData_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_cubData; memcpy(&arg_cubData, arg + ((0u + 4) + 4 + arg_pubData_len), 4);
+      if (argLen < (((0u + 4) + 4 + arg_pubData_len) + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int arg_bReliable; memcpy(&arg_bReliable, arg + (((0u + 4) + 4 + arg_pubData_len) + 4), 4);
+      if ((int64_t)arg_cubData != (int64_t)arg_pubData_len) { *respLen = 0; return 1; } // lenParam must equal the bytes sent -- T-58-16
+      int __ret = g_bd_flat_SteamNetworking006_SendDataOnSocket(g_bd_self_steamnetworking006, arg_hSocket, arg_pubData, arg_cubData, arg_bReliable);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 14u): { // SteamNetworking006.IsDataAvailableOnSocket
+      if (g_bd_flat_SteamNetworking006_IsDataAvailableOnSocket == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_hSocket; memcpy(&arg_hSocket, arg + 0u, 4);
+      uint32_t arg_pcubMsgSize = 0;
+      int __ret = g_bd_flat_SteamNetworking006_IsDataAvailableOnSocket(g_bd_self_steamnetworking006, arg_hSocket, &arg_pcubMsgSize);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pcubMsgSize, 4);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 15u): { // SteamNetworking006.RetrieveDataFromSocket
+      if (g_bd_flat_SteamNetworking006_RetrieveDataFromSocket == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_hSocket; memcpy(&arg_hSocket, arg + 0u, 4);
+      static uint8_t g_bd_flat_SteamNetworking006_RetrieveDataFromSocket_pubDest_buf[61440];
+      uint32_t cap_pubDest = 0;
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&cap_pubDest, arg + (0u + 4), 4);
+      if (cap_pubDest > 61440) cap_pubDest = 61440;
+      if (respCap < 12) { *respLen = 0; return 1; }
+      if (cap_pubDest > respCap - 12) cap_pubDest = (uint32_t)(respCap - 12); // response must fit the scratch
+      memset(g_bd_flat_SteamNetworking006_RetrieveDataFromSocket_pubDest_buf, 0, cap_pubDest); // no earlier call's bytes cross into the game (53-17 WR-04)
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_cubDest; memcpy(&arg_cubDest, arg + ((0u + 4) + 4), 4);
+      uint32_t arg_pcubMsgSize = 0;
+      if ((int64_t)arg_cubDest < 0 || (int64_t)arg_cubDest > (int64_t)cap_pubDest) arg_cubDest = (uint32_t)cap_pubDest;
+      int __ret = g_bd_flat_SteamNetworking006_RetrieveDataFromSocket(g_bd_self_steamnetworking006, arg_hSocket, g_bd_flat_SteamNetworking006_RetrieveDataFromSocket_pubDest_buf, arg_cubDest, &arg_pcubMsgSize);
+      if (respCap < 12) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pcubMsgSize, 4);
+      uint32_t outLen_pubDest = cap_pubDest;
+      memcpy(resp + 8, &outLen_pubDest, 4);
+      memcpy(resp + 8 + 4, g_bd_flat_SteamNetworking006_RetrieveDataFromSocket_pubDest_buf, outLen_pubDest);
+      *respLen = 8 + 4 + outLen_pubDest;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 16u): { // SteamNetworking006.IsDataAvailable
+      if (g_bd_flat_SteamNetworking006_IsDataAvailable == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_hListenSocket; memcpy(&arg_hListenSocket, arg + 0u, 4);
+      uint32_t arg_pcubMsgSize = 0;
+      uint32_t arg_phSocket = 0;
+      int __ret = g_bd_flat_SteamNetworking006_IsDataAvailable(g_bd_self_steamnetworking006, arg_hListenSocket, &arg_pcubMsgSize, &arg_phSocket);
+      if (respCap < 12) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pcubMsgSize, 4);
+      memcpy(resp + 8, &arg_phSocket, 4);
+      *respLen = 12;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 17u): { // SteamNetworking006.RetrieveData
+      if (g_bd_flat_SteamNetworking006_RetrieveData == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_hListenSocket; memcpy(&arg_hListenSocket, arg + 0u, 4);
+      static uint8_t g_bd_flat_SteamNetworking006_RetrieveData_pubDest_buf[61440];
+      uint32_t cap_pubDest = 0;
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&cap_pubDest, arg + (0u + 4), 4);
+      if (cap_pubDest > 61440) cap_pubDest = 61440;
+      if (respCap < 16) { *respLen = 0; return 1; }
+      if (cap_pubDest > respCap - 16) cap_pubDest = (uint32_t)(respCap - 16); // response must fit the scratch
+      memset(g_bd_flat_SteamNetworking006_RetrieveData_pubDest_buf, 0, cap_pubDest); // no earlier call's bytes cross into the game (53-17 WR-04)
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_cubDest; memcpy(&arg_cubDest, arg + ((0u + 4) + 4), 4);
+      uint32_t arg_pcubMsgSize = 0;
+      uint32_t arg_phSocket = 0;
+      if ((int64_t)arg_cubDest < 0 || (int64_t)arg_cubDest > (int64_t)cap_pubDest) arg_cubDest = (uint32_t)cap_pubDest;
+      int __ret = g_bd_flat_SteamNetworking006_RetrieveData(g_bd_self_steamnetworking006, arg_hListenSocket, g_bd_flat_SteamNetworking006_RetrieveData_pubDest_buf, arg_cubDest, &arg_pcubMsgSize, &arg_phSocket);
+      if (respCap < 16) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pcubMsgSize, 4);
+      memcpy(resp + 8, &arg_phSocket, 4);
+      uint32_t outLen_pubDest = cap_pubDest;
+      memcpy(resp + 12, &outLen_pubDest, 4);
+      memcpy(resp + 12 + 4, g_bd_flat_SteamNetworking006_RetrieveData_pubDest_buf, outLen_pubDest);
+      *respLen = 12 + 4 + outLen_pubDest;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 20u): { // SteamNetworking006.GetSocketConnectionType
+      if (g_bd_flat_SteamNetworking006_GetSocketConnectionType == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_hSocket; memcpy(&arg_hSocket, arg + 0u, 4);
+      uint32_t __ret = g_bd_flat_SteamNetworking006_GetSocketConnectionType(g_bd_self_steamnetworking006, arg_hSocket);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)23) << 16 | 21u): { // SteamNetworking006.GetMaxPacketSize
+      if (g_bd_flat_SteamNetworking006_GetMaxPacketSize == NULL || g_bd_self_steamnetworking006 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_hSocket; memcpy(&arg_hSocket, arg + 0u, 4);
+      int32_t __ret = g_bd_flat_SteamNetworking006_GetMaxPacketSize(g_bd_self_steamnetworking006, arg_hSocket);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
       *respLen = 4;
       return 0;
     }

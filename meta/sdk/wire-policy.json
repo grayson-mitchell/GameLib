@@ -732,5 +732,148 @@
     "SetLinkedLobby": {
       "helperFlat": "SteamAPI_ISteamMatchmaking_SetLinkedLobby"
     }
+  },
+  "SteamNetworking": {
+    "SendP2PPacket": {
+      "helperFlat": "SteamAPI_ISteamNetworking_SendP2PPacket",
+      "params": {
+        "pubData": {
+          "kind": "in-buffer",
+          "lenParam": "cubData"
+        }
+      },
+      "evidence": {
+        "kind": "send",
+        "iface": "Networking"
+      }
+    },
+    "IsP2PPacketAvailable": {
+      "helperFlat": "SteamAPI_ISteamNetworking_IsP2PPacketAvailable",
+      "params": {
+        "pcubMsgSize": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        }
+      }
+    },
+    "ReadP2PPacket": {
+      "helperFlat": "SteamAPI_ISteamNetworking_ReadP2PPacket",
+      "params": {
+        "pubDest": {
+          "kind": "out-buffer",
+          "sizeParam": "cubDest",
+          "capBytes": 61440
+        },
+        "pcubMsgSize": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        },
+        "psteamIDRemote": {
+          "kind": "out-value",
+          "valueType": "uint64"
+        }
+      },
+      "helperCustom": "gl_net_read_p2p_packet"
+    },
+    "AcceptP2PSessionWithUser": {
+      "helperFlat": "SteamAPI_ISteamNetworking_AcceptP2PSessionWithUser"
+    },
+    "CloseP2PSessionWithUser": {
+      "helperFlat": "SteamAPI_ISteamNetworking_CloseP2PSessionWithUser"
+    },
+    "CloseP2PChannelWithUser": {
+      "helperFlat": "SteamAPI_ISteamNetworking_CloseP2PChannelWithUser"
+    },
+    "AllowP2PPacketRelay": {
+      "helperFlat": "SteamAPI_ISteamNetworking_AllowP2PPacketRelay"
+    },
+    "CreateP2PConnectionSocket": {
+      "helperFlat": "SteamAPI_ISteamNetworking_CreateP2PConnectionSocket"
+    },
+    "DestroySocket": {
+      "helperFlat": "SteamAPI_ISteamNetworking_DestroySocket"
+    },
+    "DestroyListenSocket": {
+      "helperFlat": "SteamAPI_ISteamNetworking_DestroyListenSocket"
+    },
+    "GetSocketConnectionType": {
+      "helperFlat": "SteamAPI_ISteamNetworking_GetSocketConnectionType"
+    },
+    "GetMaxPacketSize": {
+      "helperFlat": "SteamAPI_ISteamNetworking_GetMaxPacketSize"
+    },
+    "GetP2PSessionState": {
+      "helperFlat": "SteamAPI_ISteamNetworking_GetP2PSessionState",
+      "params": {
+        "pConnectionState": {
+          "kind": "out-struct",
+          "structSize": 20
+        }
+      },
+      "helperCustom": "gl_net_get_p2p_session_state"
+    },
+    "SendDataOnSocket": {
+      "helperFlat": "SteamAPI_ISteamNetworking_SendDataOnSocket",
+      "params": {
+        "pubData": {
+          "kind": "in-buffer",
+          "lenParam": "cubData"
+        }
+      }
+    },
+    "IsDataAvailableOnSocket": {
+      "helperFlat": "SteamAPI_ISteamNetworking_IsDataAvailableOnSocket",
+      "params": {
+        "pcubMsgSize": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        }
+      }
+    },
+    "RetrieveDataFromSocket": {
+      "helperFlat": "SteamAPI_ISteamNetworking_RetrieveDataFromSocket",
+      "params": {
+        "pubDest": {
+          "kind": "out-buffer",
+          "sizeParam": "cubDest",
+          "capBytes": 61440
+        },
+        "pcubMsgSize": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        }
+      }
+    },
+    "IsDataAvailable": {
+      "helperFlat": "SteamAPI_ISteamNetworking_IsDataAvailable",
+      "params": {
+        "pcubMsgSize": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        },
+        "phSocket": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        }
+      }
+    },
+    "RetrieveData": {
+      "helperFlat": "SteamAPI_ISteamNetworking_RetrieveData",
+      "params": {
+        "pubDest": {
+          "kind": "out-buffer",
+          "sizeParam": "cubDest",
+          "capBytes": 61440
+        },
+        "pcubMsgSize": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        },
+        "phSocket": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        }
+      }
+    }
   }
 }

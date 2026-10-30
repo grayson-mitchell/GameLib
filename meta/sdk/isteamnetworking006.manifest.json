@@ -27,7 +27,9 @@
         },
         {
           "name": "pubData",
-          "type": "const void*"
+          "type": "const void*",
+          "kind": "in-buffer",
+          "lenParam": "cubData"
         },
         {
           "name": "cubData",
@@ -41,7 +43,13 @@
           "name": "nChannel",
           "type": "int32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_SendP2PPacket",
+      "evidence": {
+        "kind": "send",
+        "iface": "Networking"
+      }
     },
     {
       "slot": 1,
@@ -52,13 +60,17 @@
       "params": [
         {
           "name": "pcubMsgSize",
-          "type": "uint32*"
+          "type": "uint32*",
+          "kind": "out-value",
+          "valueType": "uint32"
         },
         {
           "name": "nChannel",
           "type": "int32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_IsP2PPacketAvailable"
     },
     {
       "slot": 2,
@@ -69,7 +81,10 @@
       "params": [
         {
           "name": "pubDest",
-          "type": "void*"
+          "type": "void*",
+          "kind": "out-buffer",
+          "sizeParam": "cubDest",
+          "capBytes": 61440
         },
         {
           "name": "cubDest",
@@ -77,17 +92,24 @@
         },
         {
           "name": "pcubMsgSize",
-          "type": "uint32*"
+          "type": "uint32*",
+          "kind": "out-value",
+          "valueType": "uint32"
         },
         {
           "name": "psteamIDRemote",
-          "type": "CSteamID*"
+          "type": "CSteamID*",
+          "kind": "out-value",
+          "valueType": "uint64"
         },
         {
           "name": "nChannel",
           "type": "int32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_ReadP2PPacket",
+      "helperCustom": "gl_net_read_p2p_packet"
     },
     {
       "slot": 3,
@@ -100,7 +122,9 @@
           "name": "steamIDRemote",
           "type": "CSteamID"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_AcceptP2PSessionWithUser"
     },
     {
       "slot": 4,
@@ -113,7 +137,9 @@
           "name": "steamIDRemote",
           "type": "CSteamID"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_CloseP2PSessionWithUser"
     },
     {
       "slot": 5,
@@ -130,7 +156,9 @@
           "name": "nChannel",
           "type": "int32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_CloseP2PChannelWithUser"
     },
     {
       "slot": 6,
@@ -145,9 +173,14 @@
         },
         {
           "name": "pConnectionState",
-          "type": "P2PSessionState_t*"
+          "type": "P2PSessionState_t*",
+          "kind": "out-struct",
+          "structSize": 20
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_GetP2PSessionState",
+      "helperCustom": "gl_net_get_p2p_session_state"
     },
     {
       "slot": 7,
@@ -160,7 +193,9 @@
           "name": "bAllow",
           "type": "bool"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_AllowP2PPacketRelay"
     },
     {
       "slot": 8,
@@ -210,7 +245,9 @@
           "name": "bAllowUseOfPacketRelay",
           "type": "bool"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_CreateP2PConnectionSocket"
     },
     {
       "slot": 10,
@@ -248,7 +285,9 @@
           "name": "bNotifyRemoteEnd",
           "type": "bool"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_DestroySocket"
     },
     {
       "slot": 12,
@@ -265,7 +304,9 @@
           "name": "bNotifyRemoteEnd",
           "type": "bool"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_DestroyListenSocket"
     },
     {
       "slot": 13,
@@ -280,7 +321,9 @@
         },
         {
           "name": "pubData",
-          "type": "void*"
+          "type": "void*",
+          "kind": "in-buffer",
+          "lenParam": "cubData"
         },
         {
           "name": "cubData",
@@ -290,7 +333,9 @@
           "name": "bReliable",
           "type": "bool"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_SendDataOnSocket"
     },
     {
       "slot": 14,
@@ -305,9 +350,13 @@
         },
         {
           "name": "pcubMsgSize",
-          "type": "uint32*"
+          "type": "uint32*",
+          "kind": "out-value",
+          "valueType": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_IsDataAvailableOnSocket"
     },
     {
       "slot": 15,
@@ -322,7 +371,10 @@
         },
         {
           "name": "pubDest",
-          "type": "void*"
+          "type": "void*",
+          "kind": "out-buffer",
+          "sizeParam": "cubDest",
+          "capBytes": 61440
         },
         {
           "name": "cubDest",
@@ -330,9 +382,13 @@
         },
         {
           "name": "pcubMsgSize",
-          "type": "uint32*"
+          "type": "uint32*",
+          "kind": "out-value",
+          "valueType": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_RetrieveDataFromSocket"
     },
     {
       "slot": 16,
@@ -347,13 +403,19 @@
         },
         {
           "name": "pcubMsgSize",
-          "type": "uint32*"
+          "type": "uint32*",
+          "kind": "out-value",
+          "valueType": "uint32"
         },
         {
           "name": "phSocket",
-          "type": "uint32*"
+          "type": "uint32*",
+          "kind": "out-value",
+          "valueType": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_IsDataAvailable"
     },
     {
       "slot": 17,
@@ -368,7 +430,10 @@
         },
         {
           "name": "pubDest",
-          "type": "void*"
+          "type": "void*",
+          "kind": "out-buffer",
+          "sizeParam": "cubDest",
+          "capBytes": 61440
         },
         {
           "name": "cubDest",
@@ -376,13 +441,19 @@
         },
         {
           "name": "pcubMsgSize",
-          "type": "uint32*"
+          "type": "uint32*",
+          "kind": "out-value",
+          "valueType": "uint32"
         },
         {
           "name": "phSocket",
-          "type": "uint32*"
+          "type": "uint32*",
+          "kind": "out-value",
+          "valueType": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_RetrieveData"
     },
     {
       "slot": 18,
@@ -445,7 +516,9 @@
           "name": "hSocket",
           "type": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_GetSocketConnectionType"
     },
     {
       "slot": 21,
@@ -458,7 +531,9 @@
           "name": "hSocket",
           "type": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworking_GetMaxPacketSize"
     }
   ]
 }

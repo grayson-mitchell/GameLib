@@ -168,7 +168,7 @@ Method modes:
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "3905e453066c"
+#define BRIDGE_SHIM_TABLE_HASH "7274b9e83bd4"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -15405,68 +15405,184 @@ static struct FakeSteamClient014 g_steamclient014_instance = { g_steamclient014_
 #if defined(__x86_64__)
 // === SteamNetworking006 (ordinal 23, family SteamNetworking) ===
 
-// slot 0: SendP2PPacket(CSteamID steamIDRemote, const void* pubData, uint32 cubData, uint32 eP2PSendType, int32 nChannel) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_SteamNetworking006_SendP2PPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
-  static volatile LONG gamelib_sc[2];
+// slot 0: SendP2PPacket(CSteamID steamIDRemote, const void* pubData, uint32 cubData, uint32 eP2PSendType, int32 nChannel) -> bool | __thiscall ret 24
+static int THISCALL vt_SteamNetworking006_SendP2PPacket(void *self, uint64_t steamIDRemote, void * pubData, uint32_t cubData, uint32_t eP2PSendType, int32_t nChannel) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "SendP2PPacket", 0, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  static uint8_t argbuf[61464];
+  static uint8_t retbuf[4];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  AcquireSRWLockExclusive(&g_bridge_lock);
+  memcpy(argbuf + argOff, &steamIDRemote, 8); argOff += 8;
+  {
+    uint32_t bufLen;
+    int64_t rawLen = (int64_t)cubData;
+    if (rawLen < 0 || rawLen > 61440 || (pubData == NULL && rawLen > 0)) {
+      // 58-06 Pitfall 4: never truncate -- send the over-limit marker with no
+      // bytes; the helper refuses it and this method returns its failure value.
+      bufLen = 61440 + 1u;
+      memcpy(argbuf + argOff, &bufLen, 4); argOff += 4;
+    } else {
+      bufLen = (uint32_t)rawLen;
+      memcpy(argbuf + argOff, &bufLen, 4); argOff += 4;
+      if (bufLen > 0) { memcpy(argbuf + argOff, pubData, bufLen); argOff += bufLen; }
+    }
+  }
+  memcpy(argbuf + argOff, &cubData, 4); argOff += 4;
+  memcpy(argbuf + argOff, &eP2PSendType, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nChannel, 4); argOff += 4;
+  int ok = bridge_transact_locked(23, 0, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+  } else {
+  }
+  ReleaseSRWLockExclusive(&g_bridge_lock);
+  return result;
 }
 
-// slot 1: IsP2PPacketAvailable(uint32* pcubMsgSize, int32 nChannel) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamNetworking006_IsP2PPacketAvailable(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 1: IsP2PPacketAvailable(uint32* pcubMsgSize, int32 nChannel) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamNetworking006_IsP2PPacketAvailable(void *self, uint32_t * pcubMsgSize, int32_t nChannel) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "IsP2PPacketAvailable", 1, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &nChannel, 4); argOff += 4;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pcubMsgSize != NULL) *pcubMsgSize = 0;
+    return 0;
+  }
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pcubMsgSize != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pcubMsgSize = outVal;
+  }
+  respOff += 4;
+  return ret;
 }
 
-// slot 2: ReadP2PPacket(void* pubDest, uint32 cubDest, uint32* pcubMsgSize, CSteamID* psteamIDRemote, int32 nChannel) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_SteamNetworking006_ReadP2PPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
-  static volatile LONG gamelib_sc[2];
+// slot 2: ReadP2PPacket(void* pubDest, uint32 cubDest, uint32* pcubMsgSize, CSteamID* psteamIDRemote, int32 nChannel) -> bool | __thiscall ret 20
+static int THISCALL vt_SteamNetworking006_ReadP2PPacket(void *self, void * pubDest, uint32_t cubDest, uint32_t * pcubMsgSize, uint64_t * psteamIDRemote, int32_t nChannel) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "ReadP2PPacket", 2, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  static uint8_t argbuf[12];
+  static uint8_t retbuf[61460];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  AcquireSRWLockExclusive(&g_bridge_lock);
+  uint32_t cap_pubDest = (cubDest < 0) ? 0u : (uint32_t)cubDest; // negative size -> capacity 0 (53-14, T-53-56)
+  if (cap_pubDest > 61440) cap_pubDest = 61440;
+  memcpy(argbuf + argOff, &cap_pubDest, 4); argOff += 4;
+  memcpy(argbuf + argOff, &cubDest, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nChannel, 4); argOff += 4;
+  int ok = bridge_transact_locked(23, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+    uint32_t copied_pubDest = 0;
+    if (pcubMsgSize != NULL && retlen >= respOff + 4) {
+      uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+      *pcubMsgSize = outVal;
+    }
+    respOff += 4;
+    if (psteamIDRemote != NULL && retlen >= respOff + 8) {
+      uint64_t outVal; memcpy(&outVal, retbuf + respOff, 8);
+      *psteamIDRemote = outVal;
+    }
+    respOff += 8;
+    if (retlen >= respOff + 4) {
+      uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;
+      uint32_t copyLen = declLen;
+      if (copyLen > 61440) copyLen = 61440;
+      if (copyLen > cap_pubDest) copyLen = cap_pubDest; // never write past the caller's own capacity (53-14, T-53-56)
+      if (pubDest != NULL && retlen >= respOff + copyLen) {
+        memcpy(pubDest, retbuf + respOff, copyLen);
+        copied_pubDest = copyLen;
+      }
+      respOff += declLen;
+    }
+  } else {
+    if (pcubMsgSize != NULL) *pcubMsgSize = 0;
+    if (psteamIDRemote != NULL) *psteamIDRemote = 0;
+  }
+  ReleaseSRWLockExclusive(&g_bridge_lock);
+  return result;
 }
 
-// slot 3: AcceptP2PSessionWithUser(CSteamID steamIDRemote) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamNetworking006_AcceptP2PSessionWithUser(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 3: AcceptP2PSessionWithUser(CSteamID steamIDRemote) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamNetworking006_AcceptP2PSessionWithUser(void *self, uint64_t steamIDRemote) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "AcceptP2PSessionWithUser", 3, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDRemote, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 4: CloseP2PSessionWithUser(CSteamID steamIDRemote) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamNetworking006_CloseP2PSessionWithUser(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 4: CloseP2PSessionWithUser(CSteamID steamIDRemote) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamNetworking006_CloseP2PSessionWithUser(void *self, uint64_t steamIDRemote) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "CloseP2PSessionWithUser", 4, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDRemote, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 5: CloseP2PChannelWithUser(CSteamID steamIDRemote, int32 nChannel) -> bool | __thiscall ret 12 (STUB)
-static int THISCALL vt_SteamNetworking006_CloseP2PChannelWithUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 5: CloseP2PChannelWithUser(CSteamID steamIDRemote, int32 nChannel) -> bool | __thiscall ret 12
+static int THISCALL vt_SteamNetworking006_CloseP2PChannelWithUser(void *self, uint64_t steamIDRemote, int32_t nChannel) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "CloseP2PChannelWithUser", 5, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[12];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDRemote, 8); argOff += 8;
+  memcpy(argbuf + argOff, &nChannel, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 6: GetP2PSessionState(CSteamID steamIDRemote, P2PSessionState_t* pConnectionState) -> bool | __thiscall ret 12 (STUB)
-static int THISCALL vt_SteamNetworking006_GetP2PSessionState(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 6: GetP2PSessionState(CSteamID steamIDRemote, P2PSessionState_t* pConnectionState) -> bool | __thiscall ret 12
+static int THISCALL vt_SteamNetworking006_GetP2PSessionState(void *self, uint64_t steamIDRemote, void * pConnectionState) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "GetP2PSessionState", 6, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  uint8_t argbuf[8];
+  uint8_t retbuf[25];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  memcpy(argbuf + argOff, &steamIDRemote, 8); argOff += 8;
+  int ok = bridge_transact(23, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+    if (retlen >= respOff + 1) {
+      uint8_t present_pConnectionState = retbuf[respOff]; respOff += 1;
+      if (present_pConnectionState == 1 && retlen >= respOff + 20) {
+        if (pConnectionState != NULL) memcpy(pConnectionState, retbuf + respOff, 20);
+        respOff += 20;
+      }
+    }
+  } else {
+  }
+  return result;
 }
 
-// slot 7: AllowP2PPacketRelay(bool bAllow) -> bool | __thiscall ret 4 (STUB)
-static int THISCALL vt_SteamNetworking006_AllowP2PPacketRelay(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 7: AllowP2PPacketRelay(bool bAllow) -> bool | __thiscall ret 4
+static int THISCALL vt_SteamNetworking006_AllowP2PPacketRelay(void *self, int bAllow) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "AllowP2PPacketRelay", 7, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &bAllow, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 // slot 8: CreateListenSocket(int32 nVirtualP2PPort, SteamIPAddress_t nIP, uint32 nPort, bool bAllowUseOfPacketRelay) -> uint32 | __thiscall ret 16 (STUB)
@@ -15477,12 +15593,19 @@ static uint32_t THISCALL vt_SteamNetworking006_CreateListenSocket(void *self, ui
   return 0;
 }
 
-// slot 9: CreateP2PConnectionSocket(CSteamID steamIDTarget, int32 nVirtualPort, int32 nTimeoutSec, bool bAllowUseOfPacketRelay) -> uint32 | __thiscall ret 20 (STUB)
-static uint32_t THISCALL vt_SteamNetworking006_CreateP2PConnectionSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
-  static volatile LONG gamelib_sc[2];
+// slot 9: CreateP2PConnectionSocket(CSteamID steamIDTarget, int32 nVirtualPort, int32 nTimeoutSec, bool bAllowUseOfPacketRelay) -> uint32 | __thiscall ret 20
+static uint32_t THISCALL vt_SteamNetworking006_CreateP2PConnectionSocket(void *self, uint64_t steamIDTarget, int32_t nVirtualPort, int32_t nTimeoutSec, int bAllowUseOfPacketRelay) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "CreateP2PConnectionSocket", 9, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[20];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDTarget, 8); argOff += 8;
+  memcpy(argbuf + argOff, &nVirtualPort, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nTimeoutSec, 4); argOff += 4;
+  memcpy(argbuf + argOff, &bAllowUseOfPacketRelay, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 // slot 10: CreateConnectionSocket(SteamIPAddress_t nIP, uint32 nPort, int32 nTimeoutSec) -> uint32 | __thiscall ret 12 (STUB)
@@ -15493,60 +15616,204 @@ static uint32_t THISCALL vt_SteamNetworking006_CreateConnectionSocket(void *self
   return 0;
 }
 
-// slot 11: DestroySocket(uint32 hSocket, bool bNotifyRemoteEnd) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamNetworking006_DestroySocket(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 11: DestroySocket(uint32 hSocket, bool bNotifyRemoteEnd) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamNetworking006_DestroySocket(void *self, uint32_t hSocket, int bNotifyRemoteEnd) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "DestroySocket", 11, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSocket, 4); argOff += 4;
+  memcpy(argbuf + argOff, &bNotifyRemoteEnd, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 11, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 12: DestroyListenSocket(uint32 hSocket, bool bNotifyRemoteEnd) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamNetworking006_DestroyListenSocket(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 12: DestroyListenSocket(uint32 hSocket, bool bNotifyRemoteEnd) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamNetworking006_DestroyListenSocket(void *self, uint32_t hSocket, int bNotifyRemoteEnd) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "DestroyListenSocket", 12, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSocket, 4); argOff += 4;
+  memcpy(argbuf + argOff, &bNotifyRemoteEnd, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 13: SendDataOnSocket(uint32 hSocket, void* pubData, uint32 cubData, bool bReliable) -> bool | __thiscall ret 16 (STUB)
-static int THISCALL vt_SteamNetworking006_SendDataOnSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
-  static volatile LONG gamelib_sc[2];
+// slot 13: SendDataOnSocket(uint32 hSocket, void* pubData, uint32 cubData, bool bReliable) -> bool | __thiscall ret 16
+static int THISCALL vt_SteamNetworking006_SendDataOnSocket(void *self, uint32_t hSocket, void * pubData, uint32_t cubData, int bReliable) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "SendDataOnSocket", 13, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  static uint8_t argbuf[61456];
+  static uint8_t retbuf[4];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  AcquireSRWLockExclusive(&g_bridge_lock);
+  memcpy(argbuf + argOff, &hSocket, 4); argOff += 4;
+  {
+    uint32_t bufLen;
+    int64_t rawLen = (int64_t)cubData;
+    if (rawLen < 0 || rawLen > 61440 || (pubData == NULL && rawLen > 0)) {
+      // 58-06 Pitfall 4: never truncate -- send the over-limit marker with no
+      // bytes; the helper refuses it and this method returns its failure value.
+      bufLen = 61440 + 1u;
+      memcpy(argbuf + argOff, &bufLen, 4); argOff += 4;
+    } else {
+      bufLen = (uint32_t)rawLen;
+      memcpy(argbuf + argOff, &bufLen, 4); argOff += 4;
+      if (bufLen > 0) { memcpy(argbuf + argOff, pubData, bufLen); argOff += bufLen; }
+    }
+  }
+  memcpy(argbuf + argOff, &cubData, 4); argOff += 4;
+  memcpy(argbuf + argOff, &bReliable, 4); argOff += 4;
+  int ok = bridge_transact_locked(23, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+  } else {
+  }
+  ReleaseSRWLockExclusive(&g_bridge_lock);
+  return result;
 }
 
-// slot 14: IsDataAvailableOnSocket(uint32 hSocket, uint32* pcubMsgSize) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamNetworking006_IsDataAvailableOnSocket(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 14: IsDataAvailableOnSocket(uint32 hSocket, uint32* pcubMsgSize) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamNetworking006_IsDataAvailableOnSocket(void *self, uint32_t hSocket, uint32_t * pcubMsgSize) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "IsDataAvailableOnSocket", 14, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSocket, 4); argOff += 4;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pcubMsgSize != NULL) *pcubMsgSize = 0;
+    return 0;
+  }
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pcubMsgSize != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pcubMsgSize = outVal;
+  }
+  respOff += 4;
+  return ret;
 }
 
-// slot 15: RetrieveDataFromSocket(uint32 hSocket, void* pubDest, uint32 cubDest, uint32* pcubMsgSize) -> bool | __thiscall ret 16 (STUB)
-static int THISCALL vt_SteamNetworking006_RetrieveDataFromSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
-  static volatile LONG gamelib_sc[2];
+// slot 15: RetrieveDataFromSocket(uint32 hSocket, void* pubDest, uint32 cubDest, uint32* pcubMsgSize) -> bool | __thiscall ret 16
+static int THISCALL vt_SteamNetworking006_RetrieveDataFromSocket(void *self, uint32_t hSocket, void * pubDest, uint32_t cubDest, uint32_t * pcubMsgSize) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "RetrieveDataFromSocket", 15, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  static uint8_t argbuf[12];
+  static uint8_t retbuf[61452];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  AcquireSRWLockExclusive(&g_bridge_lock);
+  memcpy(argbuf + argOff, &hSocket, 4); argOff += 4;
+  uint32_t cap_pubDest = (cubDest < 0) ? 0u : (uint32_t)cubDest; // negative size -> capacity 0 (53-14, T-53-56)
+  if (cap_pubDest > 61440) cap_pubDest = 61440;
+  memcpy(argbuf + argOff, &cap_pubDest, 4); argOff += 4;
+  memcpy(argbuf + argOff, &cubDest, 4); argOff += 4;
+  int ok = bridge_transact_locked(23, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+    uint32_t copied_pubDest = 0;
+    if (pcubMsgSize != NULL && retlen >= respOff + 4) {
+      uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+      *pcubMsgSize = outVal;
+    }
+    respOff += 4;
+    if (retlen >= respOff + 4) {
+      uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;
+      uint32_t copyLen = declLen;
+      if (copyLen > 61440) copyLen = 61440;
+      if (copyLen > cap_pubDest) copyLen = cap_pubDest; // never write past the caller's own capacity (53-14, T-53-56)
+      if (pubDest != NULL && retlen >= respOff + copyLen) {
+        memcpy(pubDest, retbuf + respOff, copyLen);
+        copied_pubDest = copyLen;
+      }
+      respOff += declLen;
+    }
+  } else {
+    if (pcubMsgSize != NULL) *pcubMsgSize = 0;
+  }
+  ReleaseSRWLockExclusive(&g_bridge_lock);
+  return result;
 }
 
-// slot 16: IsDataAvailable(uint32 hListenSocket, uint32* pcubMsgSize, uint32* phSocket) -> bool | __thiscall ret 12 (STUB)
-static int THISCALL vt_SteamNetworking006_IsDataAvailable(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 16: IsDataAvailable(uint32 hListenSocket, uint32* pcubMsgSize, uint32* phSocket) -> bool | __thiscall ret 12
+static int THISCALL vt_SteamNetworking006_IsDataAvailable(void *self, uint32_t hListenSocket, uint32_t * pcubMsgSize, uint32_t * phSocket) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "IsDataAvailable", 16, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hListenSocket, 4); argOff += 4;
+  uint8_t retbuf[12]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 16, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pcubMsgSize != NULL) *pcubMsgSize = 0;
+    if (phSocket != NULL) *phSocket = 0;
+    return 0;
+  }
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pcubMsgSize != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pcubMsgSize = outVal;
+  }
+  respOff += 4;
+  if (phSocket != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *phSocket = outVal;
+  }
+  respOff += 4;
+  return ret;
 }
 
-// slot 17: RetrieveData(uint32 hListenSocket, void* pubDest, uint32 cubDest, uint32* pcubMsgSize, uint32* phSocket) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_SteamNetworking006_RetrieveData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
-  static volatile LONG gamelib_sc[2];
+// slot 17: RetrieveData(uint32 hListenSocket, void* pubDest, uint32 cubDest, uint32* pcubMsgSize, uint32* phSocket) -> bool | __thiscall ret 20
+static int THISCALL vt_SteamNetworking006_RetrieveData(void *self, uint32_t hListenSocket, void * pubDest, uint32_t cubDest, uint32_t * pcubMsgSize, uint32_t * phSocket) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "RetrieveData", 17, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  static uint8_t argbuf[12];
+  static uint8_t retbuf[61456];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  AcquireSRWLockExclusive(&g_bridge_lock);
+  memcpy(argbuf + argOff, &hListenSocket, 4); argOff += 4;
+  uint32_t cap_pubDest = (cubDest < 0) ? 0u : (uint32_t)cubDest; // negative size -> capacity 0 (53-14, T-53-56)
+  if (cap_pubDest > 61440) cap_pubDest = 61440;
+  memcpy(argbuf + argOff, &cap_pubDest, 4); argOff += 4;
+  memcpy(argbuf + argOff, &cubDest, 4); argOff += 4;
+  int ok = bridge_transact_locked(23, 17, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+    uint32_t copied_pubDest = 0;
+    if (pcubMsgSize != NULL && retlen >= respOff + 4) {
+      uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+      *pcubMsgSize = outVal;
+    }
+    respOff += 4;
+    if (phSocket != NULL && retlen >= respOff + 4) {
+      uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+      *phSocket = outVal;
+    }
+    respOff += 4;
+    if (retlen >= respOff + 4) {
+      uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;
+      uint32_t copyLen = declLen;
+      if (copyLen > 61440) copyLen = 61440;
+      if (copyLen > cap_pubDest) copyLen = cap_pubDest; // never write past the caller's own capacity (53-14, T-53-56)
+      if (pubDest != NULL && retlen >= respOff + copyLen) {
+        memcpy(pubDest, retbuf + respOff, copyLen);
+        copied_pubDest = copyLen;
+      }
+      respOff += declLen;
+    }
+  } else {
+    if (pcubMsgSize != NULL) *pcubMsgSize = 0;
+    if (phSocket != NULL) *phSocket = 0;
+  }
+  ReleaseSRWLockExclusive(&g_bridge_lock);
+  return result;
 }
 
 // slot 18: GetSocketInfo(uint32 hSocket, CSteamID* pSteamIDRemote, int32* peSocketStatus, SteamIPAddress_t* punIPRemote, uint16_t* punPortRemote) -> bool | __thiscall ret 20 (STUB)
@@ -15565,20 +15832,28 @@ static int THISCALL vt_SteamNetworking006_GetListenSocketInfo(void *self, uint32
   return 0;
 }
 
-// slot 20: GetSocketConnectionType(uint32 hSocket) -> uint32 | __thiscall ret 4 (STUB)
-static uint32_t THISCALL vt_SteamNetworking006_GetSocketConnectionType(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 20: GetSocketConnectionType(uint32 hSocket) -> uint32 | __thiscall ret 4
+static uint32_t THISCALL vt_SteamNetworking006_GetSocketConnectionType(void *self, uint32_t hSocket) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "GetSocketConnectionType", 20, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSocket, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 20, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 21: GetMaxPacketSize(uint32 hSocket) -> int32 | __thiscall ret 4 (STUB)
-static int32_t THISCALL vt_SteamNetworking006_GetMaxPacketSize(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 21: GetMaxPacketSize(uint32 hSocket) -> int32 | __thiscall ret 4
+static int32_t THISCALL vt_SteamNetworking006_GetMaxPacketSize(void *self, uint32_t hSocket) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworking006", "GetMaxPacketSize", 21, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSocket, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(23, 21, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 static vfn g_steamnetworking006_vtbl[22] = {

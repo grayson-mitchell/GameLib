@@ -1847,5 +1847,79 @@ describeDarwinOnly(
       expect(callAt).toBeGreaterThan(dispatchAt)
       expect(src).toContain('status == STATUS_OK && ci >= 0')
     })
+
+    // 58-13 (T-58-41): ReadP2PPacket request = [u32 cap][u32 cubDest][i32 chan].
+    // With no Steam session every dispatch is STATUS_ERR, so this proves the
+    // arg-decode bounds: an oversized cubDest and a truncated blob are both
+    // answered (never a crash) and the helper keeps serving afterwards.
+    test('58-13: ReadP2PPacket with cubDest 70000 or a truncated argBlob is answered STATUS_ERR and the helper stays up', async () => {
+      const h = await startAuthHelper('p58-13-read-', authedEnv())
+      try {
+        const socket = await h.connect()
+        try {
+          await authenticate(socket)
+          const NETWORKING_006_ORDINAL = 23
+          const READ_P2P_SLOT = 2
+          const ok = Buffer.alloc(12)
+          ok.writeUInt32LE(61440, 0)
+          ok.writeUInt32LE(70000, 4)
+          ok.writeInt32LE(0, 8)
+          for (const [id, blob] of [
+            [1, ok],
+            [2, ok.subarray(0, 7)],
+            [3, Buffer.alloc(0)]
+          ] as const) {
+            const res = await sendFrameOnSocket(
+              socket,
+              encodeRequest(
+                id,
+                NETWORKING_006_ORDINAL,
+                READ_P2P_SLOT,
+                Buffer.from(blob)
+              )
+            )
+            expect(res.status).toBe(STATUS_ERR)
+          }
+          expect(
+            (await sendFrameOnSocket(socket, encodeControl(9, 'health'))).status
+          ).toBe(STATUS_OK)
+        } finally {
+          socket.destroy()
+        }
+      } finally {
+        h.child.kill()
+      }
+    }, 15000)
+
+    test('58-13 source pin: gl_net_read_p2p_packet probes IsP2PPacketAvailable before ReadP2PPacket and compares against 61440', () => {
+      const src = readFileSync(HELPER_SOURCE_PATH, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      const start = src.indexOf('int gl_net_read_p2p_packet(')
+      const end = src.indexOf('int gl_net_get_p2p_session_state(')
+      expect(start).toBeGreaterThan(-1)
+      expect(end).toBeGreaterThan(start)
+      const body = src.slice(start, end)
+      const probe = body.indexOf('_IsP2PPacketAvailable(self')
+      const read = body.indexOf('_ReadP2PPacket(self')
+      expect(probe).toBeGreaterThan(-1)
+      expect(read).toBeGreaterThan(probe)
+      expect(body).toMatch(/GL_P2P_MAX_READ/)
+      expect(src).toContain('#define GL_P2P_MAX_READ 61440u')
+      expect(body).toContain('GL_NET_KIND_OVERSIZE')
+    })
+
+    test('58-13 source pin: the 1202 fallback logs only a fixed line, with no %s, and stores at most 16 remotes', () => {
+      const raw = readFileSync(HELPER_SOURCE_PATH, 'utf8')
+      const src = raw
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      expect(src).toContain('logts("CBQ", "p2p-accept src=helper")')
+      expect(src).toContain('#define GL_P2P_REMOTE_MAX 16')
+      expect(src).toContain('g_p2p_accepted_n < GL_P2P_REMOTE_MAX')
+      expect(src).not.toMatch(/logts(?:_f)?\("(NET|CBQ)",[^;]*%s/)
+      const fb = src.slice(src.indexOf('static void gl_p2p_fallback_accept'))
+      expect(fb.slice(0, fb.indexOf('\n}\n'))).not.toMatch(/logts_f/)
+    })
   }
 )
