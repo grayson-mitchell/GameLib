@@ -1544,3 +1544,142 @@ describe('keyless claim-button destination honesty, sites 3+4 (260925-kt4)', () 
     expect(textContent(button?.props?.children).trim()).toBe('Claim on Other')
   })
 })
+
+// 261030-sqq: live bug (operator, 2026-10-30). The ownership badge states a
+// fact about the key; it does not depend on which action the row offers.
+// The 'gift-only' branch used to omit it while 'settled' and
+// 'override-pending' rendered it, so an owned, UNREVEALED, giftable key
+// showed no Activate button and no message saying why. The same omission
+// existed in 'claim-and-gift' when an owned row carried neither a claim nor
+// a gift action.
+describe('owned rows show the ownership badge whatever action is offered (261030-sqq)', () => {
+  function ownedGiftOnlyKey(): HumbleKey {
+    return makeHumbleKey({
+      platform: 'steam',
+      state: 'UNREVEALED',
+      ownedElsewhere: true,
+      matchConfidence: 'exact'
+    })
+  }
+
+  function ownedBadgesIn(
+    tree: ReactElement,
+    cellPart: string
+  ): ReactElement<PropsWithChildren>[] {
+    const cell = findByClassNamePart(tree, cellPart)
+    return collectElements(cell?.props?.children).filter(
+      (el) =>
+        typeof el.props?.className === 'string' &&
+        el.props.className.split(' ').includes('humbleKeyOwnedBadge')
+    )
+  }
+
+  function buttons(tree: ReactElement): ReactElement<PropsWithChildren>[] {
+    return collectElements(tree).filter((el) => el.type === 'button')
+  }
+
+  it("gift-only: renders the 'Owned on Steam' badge in KEY (not GAME) with no override question", () => {
+    expect(
+      resolveKeyScenario({
+        humbleKey: ownedGiftOnlyKey(),
+        hasGiftAction: true,
+        hasClaimAction: false,
+        hasSettleAction: false,
+        undoOverride: false
+      })
+    ).toBe('gift-only')
+
+    const tree = HumbleKeyRow({
+      humbleKey: ownedGiftOnlyKey(),
+      giftAction: { giftedAt: null, onGift: jest.fn() }
+    }) as ReactElement
+    const inKey = ownedBadgesIn(tree, 'humbleKeyColumnCell')
+
+    expect(inKey).toHaveLength(1)
+    expect(ownedBadgesIn(tree, 'humbleKeyGameCell')).toHaveLength(0)
+    expect(textContent(inKey[0])).toContain('Owned on Steam')
+    expect(textContent(inKey[0])).not.toContain('Likely')
+    expect(textContent(inKey[0])).not.toContain('Not the same game')
+  })
+
+  it('gift-only: still withholds Activate/claim (D-60) -- the only button is Gift on Humble', () => {
+    const tree = HumbleKeyRow({
+      humbleKey: ownedGiftOnlyKey(),
+      giftAction: { giftedAt: null, onGift: jest.fn() }
+    }) as ReactElement
+    const all = buttons(tree)
+
+    expect(all).toHaveLength(1)
+    expect(all[0].props.className).toBe('humbleKeyGiftButton')
+    expect(textContent(tree)).not.toContain('Activate')
+    expect(textContent(tree)).not.toContain('Claim on')
+  })
+
+  it('gift-only: the badge comes before the gift button in the KEY cell', () => {
+    const tree = HumbleKeyRow({
+      humbleKey: ownedGiftOnlyKey(),
+      giftAction: { giftedAt: null, onGift: jest.fn() }
+    }) as ReactElement
+    const keyText = textContent(
+      findByClassNamePart(tree, 'humbleKeyColumnCell')?.props?.children
+    )
+
+    expect(keyText.indexOf('Owned on Steam')).toBeGreaterThanOrEqual(0)
+    expect(keyText.indexOf('Owned on Steam')).toBeLessThan(
+      keyText.indexOf('Gift on Humble')
+    )
+  })
+
+  it('gift-only, already gifted: badge plus gifted annotation and zero buttons', () => {
+    const tree = HumbleKeyRow({
+      humbleKey: ownedGiftOnlyKey(),
+      giftAction: { giftedAt: 1_700_000_000_000, onGift: jest.fn() }
+    }) as ReactElement
+    const inKey = ownedBadgesIn(tree, 'humbleKeyColumnCell')
+
+    expect(inKey).toHaveLength(1)
+    expect(textContent(inKey[0])).toContain('Owned on Steam')
+    expect(findByClassNamePart(tree, 'humbleKeyGiftedAnnotation')).toBeDefined()
+    expect(buttons(tree)).toHaveLength(0)
+  })
+
+  it('claim-and-gift with neither claim nor gift action: an owned REVEALED key shows the badge and no buttons', () => {
+    const key = makeHumbleKey({
+      platform: 'steam',
+      state: 'REVEALED',
+      ownedElsewhere: true,
+      matchConfidence: 'exact'
+    })
+    expect(
+      resolveKeyScenario({
+        humbleKey: key,
+        hasGiftAction: false,
+        hasClaimAction: false,
+        hasSettleAction: false,
+        undoOverride: false
+      })
+    ).toBe('claim-and-gift')
+
+    const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
+    const inKey = ownedBadgesIn(tree, 'humbleKeyColumnCell')
+
+    expect(inKey).toHaveLength(1)
+    expect(textContent(inKey[0])).toContain('Owned on Steam')
+    expect(buttons(tree)).toHaveLength(0)
+    expect(findByClassNamePart(tree, 'humbleKeyActionRow')).toBeUndefined()
+  })
+
+  it('claim-and-gift on a NON-owned row renders no ownership badge (regression guard)', () => {
+    const tree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({
+        platform: 'steam',
+        state: 'UNREVEALED',
+        ownedElsewhere: false
+      }),
+      giftAction: { giftedAt: null, onGift: jest.fn() }
+    }) as ReactElement
+
+    expect(ownedBadgesIn(tree, 'humbleKeyColumnCell')).toHaveLength(0)
+    expect(ownedBadgesIn(tree, 'humbleKeyGameCell')).toHaveLength(0)
+  })
+})

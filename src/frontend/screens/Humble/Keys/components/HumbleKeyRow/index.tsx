@@ -201,7 +201,10 @@ export type HumbleKeyScenarioId =
  *     together.
  *  5. An owned, not-yet-revealed key with only a gift action (no claim
  *     action) is a giftable spare (D-60) — claiming a game you already own
- *     elsewhere makes no sense, gifting it still does.
+ *     elsewhere makes no sense, gifting it still does. The row also carries
+ *     the ownership badge (261030-sqq), which explains the missing claim
+ *     action; `'claim-and-gift'` renders it too, so an owned row with no
+ *     action at all still says so.
  *  6. Otherwise, for a live key with a claim action: D-43-13 re-verifies
  *     `getGameLibLoginStore` here (not just trusting the caller's
  *     `storeLoginConnected`) so scenario 1 is STRUCTURALLY unreachable for
@@ -688,10 +691,15 @@ export default function HumbleKeyRow({
       case 'override-undo':
         return undoOverrideBadge
       case 'gift-only':
+        // D-60 withholds Activate because the game is already owned, so the
+        // badge is what tells the user why; omitting it was the 261030-sqq bug.
         return (
-          giftContent && (
-            <span className="humbleKeyActionRow">{giftContent}</span>
-          )
+          <>
+            {ownedBadge}
+            {giftContent && (
+              <span className="humbleKeyActionRow">{giftContent}</span>
+            )}
+          </>
         )
       case 'login-and-claim':
         // D-43-12: ONE full-width button. Means "connect this store to
@@ -715,14 +723,18 @@ export default function HumbleKeyRow({
       case 'claim-and-gift':
         // UI-SPEC Column Geometry Contract: the claim/activate control and
         // the gift control sit side by side in ONE `.humbleKeyActionRow`
-        // (each `flex: 1 1 8.5rem`) when both are present.
+        // (each `flex: 1 1 8.5rem`) when both are present. 261030-sqq: an
+        // owned row with neither action still shows the badge, no empty row.
         return (
-          (claimContent || giftContent) && (
-            <span className="humbleKeyActionRow">
-              {claimContent}
-              {giftContent}
-            </span>
-          )
+          <>
+            {ownedBadge}
+            {(claimContent || giftContent) && (
+              <span className="humbleKeyActionRow">
+                {claimContent}
+                {giftContent}
+              </span>
+            )}
+          </>
         )
       default: {
         const _exhaustive: never = scenario
