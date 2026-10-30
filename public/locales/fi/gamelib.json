@@ -389,15 +389,6 @@
             "quitTimeout": "Steam ei sulkeutunut, joten peliä {{game}} ei voitu ottaa käyttöön. Sulje Steam ja paina Pelaa uudelleen."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib lakkasi saamasta vastausta Steam-bottlen asetuksesta. Se voi olla edelleen käynnissä — tarkista, avautuiko Steam-asennusikkuna, ja yritä sitten uudelleen.",
             "waiting": {
                 "cause": {

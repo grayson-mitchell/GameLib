@@ -66,9 +66,6 @@
  *   - `steamRemoveAllCopies` -> `removeAllSteamInstallCopies(appName)`,
  *     quick-260821-le0 Task 3 — sweeps every recorded install root for a
  *     Steam title in one action, same shared-seam pattern as the pair above.
- *   - `steamFinishBottledInstall` -> `startBottledSteamToFinishInstall(args[0])`
- *     (`bottledHandoff.ts`), quick 261024-h5y — the explicit "Start Steam to
- *     finish" click for a bottle-route install parked at StateFlags 1026.
  *   - `steamGoOfflineRetry` -> `checkGuidedOfflineReady()` (`macSteamOffline.ts`),
  *     Phase 54 Plan 07 — the guided Go Offline dialog's Continue.
  *   - `steamGoOfflineCancel` -> `payAbandonedGuidedOffline('cancel')`
@@ -151,7 +148,6 @@ import {
   handleSetSteamBridgeUserRoute
 } from '../storeManagers/steam/installFormIpc'
 import { removeAllSteamInstallCopies } from '../storeManagers/steam/removeAllCopies'
-import { startBottledSteamToFinishInstall } from '../storeManagers/steam/bottledHandoff'
 import {
   checkGuidedOfflineReady,
   payAbandonedGuidedOffline
@@ -360,15 +356,6 @@ export function registerSteamAuthFlows(): void {
     'steamRemoveAllCopies',
     async (_event: unknown, ...args: unknown[]) => {
       return removeAllSteamInstallCopies(args[0])
-    }
-  )
-
-  // quick 261024-h5y: user-clicked "Start Steam to finish" for a bottle-route
-  // 1026 handoff. The callee validates args[0] and refuses outside that state.
-  ipcMain.handle(
-    'steamFinishBottledInstall',
-    async (_event: unknown, ...args: unknown[]) => {
-      return startBottledSteamToFinishInstall(args[0])
     }
   )
 

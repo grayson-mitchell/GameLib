@@ -389,15 +389,6 @@
             "quitTimeout": "Steam が終了しなかったため、{{game}} をセットアップできませんでした。Steam を終了して、もう一度「プレイ」を押してください。"
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLibはSteamボトルのセットアップに関する応答を受信できなくなりました。まだ処理が続いている可能性があります — Steamインストーラーのウィンドウを確認してから、もう一度お試しください。",
             "waiting": {
                 "cause": {

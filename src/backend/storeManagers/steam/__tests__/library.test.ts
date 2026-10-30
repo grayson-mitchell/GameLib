@@ -36,9 +36,7 @@ import SteamLibraryManager, {
   verifyMacArchGroundTruth,
   isFullyInstalledStateFlags,
   markSteamInstallIncomplete,
-  buildIncompleteInstallSet,
-  isAwaitingBottledSteamAdoption,
-  markBottledSteamDispatched
+  buildIncompleteInstallSet
 } from '../library'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import {
@@ -74,8 +72,7 @@ import {
   getBridgeBottleSettings,
   isBottleProvisioned,
   listReadyBridgeBottleNames,
-  resolveBridgeBottleName,
-  tellBottledSteamToInstall
+  resolveBridgeBottleName
 } from '../bottle'
 import {
   finalizeToSteam,
@@ -235,16 +232,13 @@ jest.mock('../electronStores', () => ({
 }))
 
 // ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
-// tellBottledSteamToInstall included so the D-05 no-auto-drive regression test
-// (folded-todo guard) can assert init() never dispatches to the bottled client.
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
   getBridgeBottleSettings: jest.fn(),
   isBottleProvisioned: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
-  resolveBridgeBottleName: jest.fn(),
-  tellBottledSteamToInstall: jest.fn()
+  resolveBridgeBottleName: jest.fn()
 }))
 
 // ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
@@ -3086,7 +3080,7 @@ describe('SteamLibraryManager', () => {
     jest.useRealTimers()
   })
 
-  it('D-05: resumeInterruptedSteamInstall() never dispatches to Steam/CrossOver (tellBottledSteamToInstall / shell.openExternal / runWineCommand — folded-todo regression guard)', async () => {
+  it('D-05: resumeInterruptedSteamInstall() never dispatches to Steam/CrossOver (shell.openExternal / runWineCommand — folded-todo regression guard)', async () => {
     jest.useFakeTimers()
     library.clear()
     library.set('730', {
@@ -3117,7 +3111,6 @@ describe('SteamLibraryManager', () => {
 
     await resumeInterruptedSteamInstall('730')
 
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(shell.openExternal).not.toHaveBeenCalled()
     expect(runWineCommand).not.toHaveBeenCalled()
     // Phase 23 (23-03, D-04) regression: rebuilding a real DepotPlan for
@@ -5091,9 +5084,9 @@ describe('pollInstallOnce()', () => {
     )
   })
 
-  // ── quick 261024-h5y: bottle-source 1026 handoff is actionable ────────────
+  // ── quick 261030-o77: a bottle-source 1026 is incomplete + resumable ──────
 
-  describe('bottle-source 1026 handoff (quick 261024-h5y)', () => {
+  describe('bottle-source 1026 handoff (quick 261030-o77)', () => {
     const mockAcf = (flags: string) =>
       (vdf.parse as jest.Mock).mockReturnValue({
         AppState: {
@@ -5115,48 +5108,69 @@ describe('pollInstallOnce()', () => {
       })
     }
 
-    it('emits steam-waiting-for-bottled-steam and reports awaiting adoption', async () => {
-      mockAcf('1026')
-      startBottleHandoff()
-      await pollInstallOnce('730', 'bottle')
-      expect(sendFrontendMessage).toHaveBeenCalledWith(
-        'gameStatusUpdate',
-        expect.objectContaining({
-          appName: '730',
-          context: 'steam-waiting-for-bottled-steam'
-        })
-      )
-      expect(isAwaitingBottledSteamAdoption('730')).toBe(true)
+    beforeEach(() => {
+      library.clear()
+      library.set('730', {
+        runner: 'steam',
+        app_name: '730',
+        title: 'CS:GO',
+        is_installed: false,
+        install: {},
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] },
+        canRunOffline: true,
+        installable: true
+      } as any)
     })
 
-    it('markBottledSteamDispatched pushes the finishing context at once and the next tick keeps it', async () => {
+    it('a bottle-source poll at 1026 marks the install incomplete and resumable, stops the poll, and sends no bottled-Steam context or notify', async () => {
       mockAcf('1026')
       startBottleHandoff()
       await pollInstallOnce('730', 'bottle')
-      ;(sendFrontendMessage as jest.Mock).mockClear()
-      markBottledSteamDispatched('730')
+
+      const entry = library.get('730')
+      expect(entry?.is_installed).toBe(false)
+      expect(entry?.install?.steamResumePending).toBe(true)
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({
+          app_name: '730',
+          is_installed: false,
+          install: expect.objectContaining({ steamResumePending: true })
+        })
+      )
       expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
         appName: '730',
         runner: 'steam',
-        status: 'installing',
-        context: 'steam-finishing-in-bottled-steam'
+        status: 'done'
       })
-      ;(sendFrontendMessage as jest.Mock).mockClear()
-      await pollInstallOnce('730', 'bottle')
-      expect(sendFrontendMessage).toHaveBeenCalledWith(
-        'gameStatusUpdate',
-        expect.objectContaining({
-          context: 'steam-finishing-in-bottled-steam'
-        })
+      const contexts = (sendFrontendMessage as jest.Mock).mock.calls
+        .filter(([channel]) => channel === 'gameStatusUpdate')
+        .map(([, payload]) => (payload as { context?: string }).context)
+      expect(contexts.every((c) => c === undefined)).toBe(true)
+      expect(notify).not.toHaveBeenCalled()
+      expect(i18nextT).not.toHaveBeenCalledWith(
+        'steam.waitingForSteam.notify',
+        expect.anything(),
+        expect.anything()
       )
     })
 
-    it('markBottledSteamDispatched is a no-op with no active poll', () => {
-      markBottledSteamDispatched('730')
-      expect(sendFrontendMessage).not.toHaveBeenCalled()
+    it('a bottle-source poll at StateFlags 4 is installed on the first tick (fast path unchanged)', async () => {
+      mockAcf('4')
+      startBottleHandoff()
+      await pollInstallOnce('730', 'bottle')
+
+      expect(library.get('730')?.is_installed).toBe(true)
+      expect(library.get('730')?.install?.steamResumePending).not.toBe(true)
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'gameStatusUpdate',
+        expect.objectContaining({ appName: '730', status: 'done' })
+      )
     })
 
-    it('a native handoff at 1026 still emits steam-waiting-for-restart and is not awaiting bottled Steam', async () => {
+    it('a native handoff at 1026 still emits steam-waiting-for-restart and the native notify', async () => {
       mockAcf('1026')
       startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
       await pollInstallOnce('730')
@@ -5164,37 +5178,27 @@ describe('pollInstallOnce()', () => {
         'gameStatusUpdate',
         expect.objectContaining({ context: 'steam-waiting-for-restart' })
       )
-      expect(isAwaitingBottledSteamAdoption('730')).toBe(false)
-    })
-
-    it('clears the awaiting flag once StateFlags leaves 1026', async () => {
-      mockAcf('1026')
-      startBottleHandoff()
-      await pollInstallOnce('730', 'bottle')
-      expect(isAwaitingBottledSteamAdoption('730')).toBe(true)
-      mockAcf('1042')
-      await pollInstallOnce('730', 'bottle')
-      expect(isAwaitingBottledSteamAdoption('730')).toBe(false)
-    })
-
-    it('uses the gamelib: bottle notify key for bottle, the native key for native', async () => {
-      mockAcf('1026')
-      startBottleHandoff()
-      await pollInstallOnce('730', 'bottle')
-      expect(i18nextT).toHaveBeenCalledWith(
-        'gamelib:steam.bottle.finishInstall.notify',
-        expect.any(String),
-        expect.anything()
-      )
-      stopInstallPolling('730')
-      ;(i18nextT as jest.Mock).mockClear()
-      startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
-      await pollInstallOnce('730')
+      expect(library.get('730')?.install?.steamResumePending).not.toBe(true)
       expect(i18nextT).toHaveBeenCalledWith(
         'steam.waitingForSteam.notify',
         expect.any(String),
         expect.anything()
       )
+    })
+
+    it('a bridge-source poll at 1026 is not converted to incomplete', async () => {
+      mockAcf('1026')
+      jest
+        .mocked(getBridgeBottleSettings)
+        .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
+      jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+      startInstallPolling('730', {
+        intervalMs: 60000,
+        source: 'bridge',
+        isNativeHandoff: true
+      })
+      await pollInstallOnce('730', 'bridge')
+      expect(library.get('730')?.install?.steamResumePending).not.toBe(true)
     })
   })
 
@@ -5554,7 +5558,7 @@ describe('pollInstallOnce()', () => {
         }
       })
     // No isNativeHandoff — mirrors games.ts's OFF-path startInstallPolling
-    // calls (steam://install handoff / legacy tellBottledSteamToInstall).
+    // calls (steam://install handoff).
     startInstallPolling('730', 60000)
     for (let i = 0; i < 3; i++) {
       await pollInstallOnce('730')

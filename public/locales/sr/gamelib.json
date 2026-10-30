@@ -396,15 +396,6 @@
             "quitTimeout": "Steam се није затворио, па игру {{game}} није било могуће подесити. Затворите Steam и поново притисните Играј."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib je prestao da prima odgovore o podešavanju Steam bočice. Možda se i dalje izvršava — proverite da li postoji prozor Steam instalacije, pa pokušajte ponovo.",
             "waiting": {
                 "cause": {

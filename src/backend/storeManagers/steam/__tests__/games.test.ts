@@ -57,7 +57,6 @@ import * as bridgeVerdictModule from '../bridge/bridgeVerdict'
 import * as gamesModule from '../games'
 import {
   isBottleReady,
-  tellBottledSteamToInstall,
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
   getSteamBottleSettings,
@@ -310,7 +309,6 @@ jest.mock('../bottle', () => {
     isCrossoverInstalled: async () => crossoverInstalled() !== false,
     CROSSOVER_MISSING: 'crossover-missing',
     isBottleReady: jest.fn(),
-    tellBottledSteamToInstall: jest.fn(),
     tellBottledSteamToLaunch: jest.fn(),
     tellBottledSteamToUninstall: jest.fn(),
     getSteamBottleSettings: jest.fn(),
@@ -4780,7 +4778,6 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     envMock.isWindows = false
     envMock.isLinux = false
     ;(isBottleReady as jest.Mock).mockReset()
-    ;(tellBottledSteamToInstall as jest.Mock).mockReset()
   })
 
   afterEach(() => {
@@ -4798,7 +4795,6 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     const result = await game.install({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'steamBottleSetupRequired',
       { appName: APP_ID }
@@ -4827,7 +4823,6 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
       'steamBottleSetupRequired',
       { appName: APP_ID }
     )
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
 
@@ -4846,7 +4841,6 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
 
     expect(installBottleNative).toHaveBeenCalledTimes(1)
     expect(shellOpenExternal).not.toHaveBeenCalled()
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(result).toEqual({ status: 'done' })
   })
 
@@ -4863,7 +4857,6 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
       .mockResolvedValue({ status: 'error', error: 'boom' } as any)
     const result = await game.install({} as any)
 
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startInstallPollingSpy).not.toHaveBeenCalled()
     expect(result).toEqual({ status: 'error', error: 'boom' })
@@ -4879,7 +4872,6 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     await game.install({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
       'steamBottleSetupRequired',
       expect.anything()
@@ -4896,7 +4888,6 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     await game.install({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
   })
 
   it('D-10/scope-fence: NON-eligible (non-mac) — install() STILL calls shell.openExternal with steam://install/<appId>', async () => {
@@ -4910,7 +4901,6 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     await game.install({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
   })
 })
 
@@ -4922,10 +4912,9 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
 // — the SAME mechanism SNI-07's native branch uses, just with the write
 // target swapped to getBottleSteamappsDir() and os hard-coded 'windows'. Never
 // dispatches to the bottled Steam client for the download itself
-// (tellBottledSteamToInstall/dispatchToBottledSteam untouched — that Wine-
-// dispatch mechanism stays reserved for guided setup/launch/uninstall). OFF
-// preserves the existing tellBottledSteamToInstall bottle path unchanged
-// (D-13 safety valve); not-ready still requests guided setup with zero depot
+// (dispatchToBottledSteam stays reserved for guided setup/launch/uninstall).
+// quick 261030-o77: the bottle route always uses this depot download, with the
+// toggle ON or OFF; not-ready still requests guided setup with zero depot
 // download attempted.
 
 describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', () => {
@@ -4962,7 +4951,6 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
       is_mac_native: false
     })
     ;(isBottleReady as jest.Mock).mockReset()
-    ;(tellBottledSteamToInstall as jest.Mock).mockReset()
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(BOTTLE_STEAMAPPS_DIR)
     ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
       wineCrossoverBottle: 'GameLib'
@@ -5029,7 +5017,6 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     const game = new SteamGame(APP_ID)
     await game.install({} as any)
 
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(shellOpenExternal).not.toHaveBeenCalled()
   })
 
@@ -5041,7 +5028,6 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     const game = new SteamGame(APP_ID)
     const result = await game.install({} as any)
 
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
       targetSteamappsDir: BOTTLE_STEAMAPPS_DIR,
@@ -5082,7 +5068,6 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     const result = await game.install({} as any)
 
     expect(downloadSteamDepots).not.toHaveBeenCalled()
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'steamBottleSetupRequired',
       {
@@ -5137,7 +5122,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       is_mac_native: false
     })
     ;(isBottleReady as jest.Mock).mockReset()
-    ;(tellBottledSteamToInstall as jest.Mock).mockReset()
     ;(bridgeAllowlist.has as jest.Mock).mockReset()
     ;(isBridgeBottleReady as jest.Mock).mockReset()
     ;(provisionBridgeBottle as jest.Mock).mockReset()
@@ -5184,14 +5168,13 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     envMock.isLinux = true
   })
 
-  it('allowlisted + bottle-eligible: install() routes to installBridgeGame (bridge bottle target + shimGenerate called), NOT tellBottledSteamToInstall', async () => {
+  it('allowlisted + bottle-eligible: install() routes to installBridgeGame (bridge bottle target + shimGenerate called), NOT the bottle depot download', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
 
     const game = new SteamGame(APP_ID)
     const result = await game.install({} as any)
 
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(provisionBridgeBottle).not.toHaveBeenCalled()
     // quick/261016-u1w (D-A): isBridgeBottleReady is consulted against the
     // PER-GAME bottle name, not the shared legacy name.
@@ -5371,7 +5354,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       'steamBridgeSetupRequired',
       expect.anything()
     )
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     // not marked bridge-failed: a second install() still routes to the bridge
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     await new SteamGame(APP_ID).install({} as any)
@@ -5407,7 +5389,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       'steamBridgeSetupRequired',
       expect.anything()
     )
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     const persistCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
       ([id, value]) =>
         id === APP_ID &&
@@ -5424,7 +5405,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       bridge: { scan: missVerdict, noticeAcknowledgedFor: 'scan-miss' }
     })
     await new SteamGame(APP_ID).install({} as any)
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
   })
 
   it("D-51-09 (Task 3): placeShimForGame's shim-not-built with arch x64 at INSTALL time (win64-no-shim) deletes the per-game bottle, clears userRoute, and fires steamBridgeSetupRequired with reason win64-no-shim and the literal steam_api64.dll missing symbol", async () => {
@@ -5566,9 +5546,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       // away from the bridge (failed-this-session -> bottled Steam).
       ;(placeShimForGame as jest.Mock).mockClear()
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
-      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-        status: 'done'
-      })
       await new SteamGame(APP_ID).install({} as any)
       expect(placeShimForGame).not.toHaveBeenCalled()
     })
@@ -5861,7 +5838,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     // D-51-08: no silent heavy Windows Steam client -- the bottled dispatch
     // never runs while the notice is unacknowledged.
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith('steamBridgeRouteNotice', {
       appName: APP_ID,
       reason: 'known-bad',
@@ -5885,7 +5861,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(knownFixSaysCeg).toHaveBeenCalledWith(APP_ID)
     expect(placeShimForGame).not.toHaveBeenCalled()
     expect(downloadSteamDepots).not.toHaveBeenCalled()
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith('steamBridgeRouteNotice', {
       appName: APP_ID,
       reason: 'known-bad',
@@ -5916,7 +5891,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       'steamBridgeRouteNotice',
       expect.anything()
     )
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(downloadSteamDepots).toHaveBeenCalled()
     expect(result).toEqual({ status: 'done' })
   })
@@ -5945,9 +5919,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
       ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
       ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
-      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-        status: 'done'
-      })
     }
     const noticeCalls = () =>
       (sendFrontendMessage as jest.Mock).mock.calls.filter(
@@ -5958,7 +5929,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       arrange()
       const result = await new SteamGame(APP_ID).install({} as any)
 
-      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
       expect(downloadSteamDepots).not.toHaveBeenCalled()
       expect(noticeCalls()).toEqual([
         [
@@ -5982,7 +5952,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
       expect(noticeCalls()).toEqual([])
       expect(downloadSteamDepots).toHaveBeenCalled()
-      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     })
 
     it('quick 261029-avh: DRM-mode miss (steamstub), unacknowledged: no notice, downloads through the bridge', async () => {
@@ -5992,7 +5961,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       expect(noticeCalls()).toEqual([])
       expect(result).not.toEqual({ status: 'done', deferredToSetup: true })
       expect(downloadSteamDepots).toHaveBeenCalled()
-      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     })
 
     it('quick 261029-avh: non-DRM miss, unacknowledged: exactly one scan-miss notice on route bridge', async () => {
@@ -6066,9 +6034,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
           status: 'done'
         })
-        ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-          status: 'done'
-        })
       }
 
       it('unacknowledged: fires the informational known-bad notice on route bridge and defers', async () => {
@@ -6087,7 +6052,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           }
         )
         expect(downloadSteamDepots).not.toHaveBeenCalled()
-        expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
         expect(result).toEqual({ status: 'done', deferredToSetup: true })
       })
 
@@ -6100,7 +6064,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           expect.anything()
         )
         expect(downloadSteamDepots).toHaveBeenCalled()
-        expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
       })
 
       it("userRoute 'bottle': no known-bad notice, takes the bottled path", async () => {
@@ -6130,8 +6093,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     const game = new SteamGame(APP_ID)
     await game.install({} as any)
-
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
   })
 
   // 51-REVIEW WR-08: install() must route by LOCATION when partial bits of an
@@ -6341,7 +6302,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       const result = await game.install({} as any)
 
       expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(APP_ID, 'x64')
-      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
       expect(downloadSteamDepots).toHaveBeenCalled()
       expect(result).toEqual({ status: 'done' })
     })
@@ -6526,7 +6486,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       // i18next is mocked to echo the key in this file
       expect(result.error).toContain('crossoverRequired')
       expect(provisionBridgeBottle).not.toHaveBeenCalled()
-      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
       expect(downloadSteamDepots).not.toHaveBeenCalled()
       expect(sendFrontendMessage).not.toHaveBeenCalledWith(
         'steamBridgeSetupRequired',
@@ -6544,7 +6503,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       })
       await game.install({} as any)
       expect(provisionBridgeBottle).toHaveBeenCalledTimes(1)
-      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     })
 
     it('race: provisionBridgeBottle reports crossover-missing -> error, no setup dialog, next install still tries the bridge', async () => {
@@ -6569,7 +6527,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
       await game.install({} as any)
       expect(provisionBridgeBottle).toHaveBeenCalledTimes(2)
-      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     })
 
     it('CrossOver absent on a bottle-routed, non-bridge-eligible title: same error, no bottled-Steam setup dialog', async () => {
@@ -6707,7 +6664,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const game = new SteamGame(APP_ID)
     await game.install({} as any)
 
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     const clearCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
       ([id, value]) =>
         id === APP_ID &&
@@ -6828,7 +6784,6 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     envMock.isWindows = false
     envMock.isLinux = false
     ;(isBottleReady as jest.Mock).mockReset()
-    ;(tellBottledSteamToInstall as jest.Mock).mockReset()
     // Native-install ON/OFF is a routing axis in this block — every spec
     // sets it explicitly below rather than relying on resetMocks' implicit
     // undefined/false default, so it is never an accidental coupling.
@@ -6982,7 +6937,6 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     // which routes 'native-protocol'. F1 and B1 differ in exactly one key:
     // proof the override is the operative input, not the fixture shape.
     assertExactlyOneRoute('bottle-native', terminals)
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
   })
 
   it('F2: D-15 preserved on the forced path — un-provisioned bottle still defers to guided setup', async () => {
@@ -7100,7 +7054,6 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     let terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
     assertExactlyOneRoute('native-protocol', terminals)
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
 
     // Pass 2: Windows host — both non-mac hosts covered, not one assumed
     // from the other.
@@ -7111,7 +7064,6 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
     assertExactlyOneRoute('native-protocol', terminals)
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
   })
 
   it('F7: value contract — an explicit false override is byte-identical to B1 (only === true has any effect)', async () => {
@@ -10007,7 +9959,6 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
       .spyOn(libraryModule, 'startInstallPolling')
       .mockImplementation(() => {})
     ;(isBottleReady as jest.Mock).mockReset()
-    ;(tellBottledSteamToInstall as jest.Mock).mockReset()
   })
 
   afterEach(() => {
@@ -10065,7 +10016,6 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
     await libraryModule.promptI386Recovery(APP_ID)
 
     expect(dialogShowMessageBox).toHaveBeenCalledTimes(1)
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(shellOpenExternal).not.toHaveBeenCalled()
     // forceUninstall() never ran — the native (unrunnable) install stays in
     // the in-memory library untouched.

@@ -389,15 +389,6 @@
             "quitTimeout": "Steam bağlanmadı, ona görə {{game}} quraşdırıla bilmədi. Steam-i bağlayın və yenidən Oyna düyməsini basın."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib Steam bottle qurulumu haqqında məlumat almağı dayandırdı. Hələ də işləyə bilər — Steam quraşdırıcı pəncərəsini yoxlayın, sonra yenidən cəhd edin.",
             "waiting": {
                 "cause": {

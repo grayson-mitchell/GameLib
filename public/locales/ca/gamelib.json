@@ -396,15 +396,6 @@
             "quitTimeout": "Steam no s'ha tancat, així que no s'ha pogut configurar {{game}}. Tanca Steam i torna a prémer Juga."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib ha deixat de rebre resposta sobre la configuració de la bottle de Steam. Pot ser que encara s'estigui executant — comprova si hi ha una finestra de l'instal·lador de Steam i torna-ho a provar.",
             "waiting": {
                 "cause": {

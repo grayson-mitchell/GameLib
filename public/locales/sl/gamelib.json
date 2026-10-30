@@ -403,15 +403,6 @@
             "quitTimeout": "Steam se ni zaprl, zato igre {{game}} ni bilo mogoče nastaviti. Zaprite Steam in znova pritisnite Igraj."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib ni več prejemal odzivov o nastavitvi Steam bottle. Postopek morda še vedno teče — preverite, ali je odprto namestitveno okno Steam, nato poskusite znova.",
             "waiting": {
                 "cause": {

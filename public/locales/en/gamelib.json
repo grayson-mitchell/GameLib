@@ -434,15 +434,6 @@
             "quitTimeout": "Steam didn't quit, so {{game}} couldn't be set up. Quit Steam and press Play again."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again.",
             "waiting": {
                 "cause": {

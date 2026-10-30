@@ -403,15 +403,6 @@
             "quitTimeout": "Steam se neukončil, takže hru {{game}} nebylo možné nastavit. Ukončete Steam a znovu stiskněte Hrát."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib přestal dostávat odpovědi ohledně nastavení bottle pro Steam. Proces možná stále běží — zkontrolujte, zda se nezobrazilo okno instalátoru Steamu, a zkuste to znovu.",
             "waiting": {
                 "cause": {

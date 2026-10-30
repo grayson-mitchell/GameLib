@@ -28,9 +28,6 @@ export const setSteamBridgeUserRoute = makeHandlerInvoker('setSteamBridgeUserRou
 // quick-260821-le0 (Task 3): sweeps every recorded install root for a Steam
 // title in one action — registered on BOTH runtimes.
 export const steamRemoveAllCopies = makeHandlerInvoker('steamRemoveAllCopies')
-// quick 261024-h5y: user-clicked "Start Steam to finish" for a bottle-route
-// 1026 handoff -- sidecar-only, backend refuses outside that state.
-export const steamFinishBottledInstall = makeHandlerInvoker('steamFinishBottledInstall')
 // Phase 54 Plan 07: Continue in the guided Go Offline dialog -- sidecar-only;
 // reports whether Mac Steam now reads Logged Off. Never logs on.
 export const steamGoOfflineRetry = makeHandlerInvoker('steamGoOfflineRetry')

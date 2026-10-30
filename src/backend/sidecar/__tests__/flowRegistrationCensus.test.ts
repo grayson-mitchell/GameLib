@@ -96,10 +96,11 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'shortcutsFlowRegistration.ts': { invoke: 6, send: 1 },
   // Phase 51 Plan 13 (2026-10-21): invoke 18 -> 20 -- `getSteamBridgeRoute` and
   // `setSteamBridgeUserRoute` registered for the bridge-routing notice dialog.
-  // Quick 261024-h5y (2026-10-24): invoke 20 -> 21 -- steamFinishBottledInstall
+  // Quick 261024-h5y (2026-10-24): invoke 20 -> 21 -- the bottled-Steam "finish install" channel
+  // Quick 261030-o77 (2026-10-30): invoke 23 -> 22 -- that channel removed with the bottled-Steam finish handoff
   // Phase 54 Plan 07 (2026-10-27): invoke 21 -> 22 -- steamGoOfflineRetry, the guided Go Offline dialog's Continue
   // 54-REVIEW WR-05 (2026-10-28): invoke 22 -> 23 -- steamGoOfflineCancel, the guided Go Offline dialog's Cancel/close
-  'steamAuthFlowRegistration.ts': { invoke: 23, send: 1 },
+  'steamAuthFlowRegistration.ts': { invoke: 22, send: 1 },
   // Quick 260908-ci2 (2026-09-08): send 0 -> 1 -- `shellWindowFocused`, restoring the
   // install-badge reconciliation trigger dropped in the Electron to Tauri cutover
   // (`mainWindow.on('focus', ...)`, `main.ts:272-274`, deleted in `5643c7583`). Shell-originated

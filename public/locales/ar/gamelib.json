@@ -417,15 +417,6 @@
             "quitTimeout": "لم يُغلق Steam، لذا تعذّر إعداد {{game}}. أغلق Steam واضغط على العب مرة أخرى."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "توقف GameLib عن تلقي ردود بشأن إعداد بوتل Steam. قد يكون لا يزال قيد التشغيل — تحقق من وجود نافذة مثبت Steam، ثم أعد المحاولة.",
             "waiting": {
                 "cause": {

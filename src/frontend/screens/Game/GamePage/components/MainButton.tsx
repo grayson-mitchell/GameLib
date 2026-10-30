@@ -53,16 +53,6 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     // lands but keeps installing (redists, DRM support) until its own 'done'.
     (is_installed && is.installing)
 
-  // quick 261024-h5y: a bottle-route install parked at StateFlags 1026 has no
-  // user-visible Steam to restart, so the button becomes an explicit
-  // "Start Steam to finish" / "Show Steam" action (steamFinishBottledInstall).
-  // Native-route 'steam-waiting-for-restart' is deliberately NOT included.
-  const bottledHandoffContext =
-    gameInfo.runner === 'steam' &&
-    is.installing &&
-    (statusContext === 'steam-waiting-for-bottled-steam' ||
-      statusContext === 'steam-finishing-in-bottled-steam')
-
   const disabledInstallButtons =
     is.playing ||
     is.updating ||
@@ -73,8 +63,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     is.notInstallable ||
     is.importing ||
     // Steam installs cannot be cancelled from GamerLib — disable the button while polling (D-07).
-    // Exception (quick 261024-h5y): the bottled 1026 handoff is actionable.
-    (gameInfo.runner === 'steam' && is.installing && !bottledHandoffContext) ||
+    (gameInfo.runner === 'steam' && is.installing) ||
     // Phase 17 (17-11), GAP 3 gap-closure: a guided bottle-setup surface is
     // active for this game — disable Install so a click cannot re-dispatch
     // a no-op install while setup is in progress
@@ -190,22 +179,6 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
         <span className="buttonWithIcon">
           <Cancel />
           {t('button.queue.remove', 'Remove from Queue')}
-        </span>
-      )
-    }
-
-    // quick 261024-h5y: bottle-route 1026 handoff is actionable. The native
-    // restart hint below stays passive.
-    if (bottledHandoffContext) {
-      return (
-        <span className="buttonWithIcon">
-          <PlayArrow />
-          {statusContext === 'steam-finishing-in-bottled-steam'
-            ? t('gamelib:steam.bottle.finishInstall.showSteam', 'Show Steam')
-            : t(
-                'gamelib:steam.bottle.finishInstall.button',
-                'Start Steam to finish'
-              )}
         </span>
       )
     }
@@ -343,12 +316,6 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
         <span className="installButtons">
           <button
             onClick={async () => {
-              // quick 261024-h5y: backend is single-flight and refuses
-              // outside the bottled 1026 state, so repeat clicks are safe.
-              if (bottledHandoffContext) {
-                void window.api.steamFinishBottledInstall(gameInfo.app_name)
-                return
-              }
               // quick 260907-dbh: the label branch at :222 reads
               // `is.installing` and renders Pause/cancel, but this guard did
               // not — so a mid-download click on a non-steam game reopened
@@ -411,7 +378,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
             isInstalled: is_installed,
             isQueued: is.queued,
             isDelisted: !!gameInfo.is_delisted,
-            installDisabled: disabledInstallButtons || bottledHandoffContext
+            installDisabled: disabledInstallButtons
           }) && (
             <Dropdown
               className="SteamInstallCaret"

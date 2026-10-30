@@ -1154,12 +1154,6 @@ async function dispatchToBottledSteam(
   }
 }
 
-export function tellBottledSteamToInstall(
-  appId: string
-): Promise<BottledSteamResult> {
-  return dispatchToBottledSteam('install', appId)
-}
-
 export function tellBottledSteamToLaunch(
   appId: string
 ): Promise<BottledSteamResult> {

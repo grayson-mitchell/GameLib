@@ -44,7 +44,6 @@ import {
   sanitizeBottleName,
   getSteamBottleSettings,
   provisionBottle,
-  tellBottledSteamToInstall,
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
   __stopBottledRaiseLoops,
@@ -1211,15 +1210,9 @@ describe('bottle.ts', () => {
     })
   })
 
-  describe('tellBottledSteamTo{Install,Launch,Uninstall}', () => {
+  describe('tellBottledSteamTo{Launch,Uninstall}', () => {
     const BAD_APP_ID = '123; rm -rf /'
     const GOOD_APP_ID = '440'
-
-    test('rejects a non-numeric appId for install without calling runWineCommand', async () => {
-      const result = await tellBottledSteamToInstall(BAD_APP_ID)
-      expect(result.status).toBe('error')
-      expect(mockedRunWineCommand).not.toHaveBeenCalled()
-    })
 
     test('rejects a non-numeric appId for launch without calling runWineCommand', async () => {
       const result = await tellBottledSteamToLaunch(BAD_APP_ID)
@@ -1236,11 +1229,9 @@ describe('bottle.ts', () => {
     test('returns an error (no spawn) when the bottle is not provisioned', async () => {
       mockedExistsSync.mockReturnValue(false) // isBottleReady() -> false (neither conf nor steam.exe)
 
-      const installResult = await tellBottledSteamToInstall(GOOD_APP_ID)
       const launchResult = await tellBottledSteamToLaunch(GOOD_APP_ID)
       const uninstallResult = await tellBottledSteamToUninstall(GOOD_APP_ID)
 
-      expect(installResult.status).toBe('error')
       expect(launchResult.status).toBe('error')
       expect(uninstallResult.status).toBe('error')
       expect(mockedRunWineCommand).not.toHaveBeenCalled()
@@ -1251,10 +1242,10 @@ describe('bottle.ts', () => {
         path.includes('cxbottle.conf')
       )
 
-      const installResult = await tellBottledSteamToInstall(GOOD_APP_ID)
+      const launchResult = await tellBottledSteamToLaunch(GOOD_APP_ID)
 
-      expect(installResult.status).toBe('error')
-      expect(installResult.error).toMatch(/not ready/)
+      expect(launchResult.status).toBe('error')
+      expect(launchResult.error).toMatch(/not ready/)
       expect(mockedRunWineCommand).not.toHaveBeenCalled()
     })
 
@@ -1341,14 +1332,13 @@ describe('bottle.ts', () => {
         expect(mockedStopBottleProcessMonitor).toHaveBeenCalledWith(GOOD_APP_ID)
       })
 
-      test('install and uninstall do NOT start a bottle process monitor (LD-1)', async () => {
+      test('uninstall does NOT start a bottle process monitor (LD-1)', async () => {
         mockedExistsSync.mockReturnValue(true)
         mockedGetNodefault.mockReturnValue(undefined)
         library.set(GOOD_APP_ID, {
           install: { install_path: seededInstallPath }
         } as never)
 
-        await tellBottledSteamToInstall(GOOD_APP_ID)
         await tellBottledSteamToUninstall(GOOD_APP_ID)
         await Promise.resolve()
         await Promise.resolve()
@@ -1374,22 +1364,6 @@ describe('bottle.ts', () => {
       })
     })
 
-    test('install dispatches steam://install/<appId> targeting the bottle Steam.exe', async () => {
-      mockedExistsSync.mockReturnValue(true)
-      mockedGetNodefault.mockReturnValue(undefined)
-
-      const result = await tellBottledSteamToInstall(GOOD_APP_ID)
-
-      expect(result.status).toBe('done')
-      const { commandParts } = mockedRunWineCommand.mock.calls[0][0]
-      expect(commandParts[0]).toBe(
-        getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME)
-      )
-      expect(commandParts.some((p: string) => p.includes(GOOD_APP_ID))).toBe(
-        true
-      )
-    })
-
     test('uninstall dispatches steam://uninstall/<appId> targeting the bottle Steam.exe', async () => {
       mockedExistsSync.mockReturnValue(true)
       mockedGetNodefault.mockReturnValue(undefined)
@@ -1408,7 +1382,6 @@ describe('bottle.ts', () => {
 
     test.each([
       ['launch', tellBottledSteamToLaunch],
-      ['install', tellBottledSteamToInstall],
       ['uninstall', tellBottledSteamToUninstall]
     ])(
       '%s passes -silent right after Steam.exe so a cold start skips the main window and offers popup',
@@ -1431,7 +1404,7 @@ describe('bottle.ts', () => {
     }
 
     test('a fired raise loop schedules a retry timer that __stopBottledRaiseLoops clears (jest.getTimerCount() returns to 0)', async () => {
-      // Ready bottle so the install dispatch reaches `void raiseInstallerWindow`.
+      // Ready bottle so the uninstall dispatch reaches `void raiseInstallerWindow`.
       mockedExistsSync.mockReturnValue(true)
       mockedGetNodefault.mockReturnValue(undefined)
 
@@ -1439,7 +1412,7 @@ describe('bottle.ts', () => {
       // Fire-and-forget, exactly as dispatchToBottledSteam does. The raise loop
       // awaits the (mocked) isMac import, then schedules the first unref'd
       // sleep(1500) retry timer.
-      void tellBottledSteamToInstall('440')
+      void tellBottledSteamToUninstall('440')
       await flushMicrotasks()
 
       // The pending retry timer is what previously survived Jest teardown.

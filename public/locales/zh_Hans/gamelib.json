@@ -389,15 +389,6 @@
             "quitTimeout": "Steam 没有退出，因此无法设置 {{game}}。请退出 Steam，然后再次点击“玩”。"
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib 未能收到 Steam 容器设置的响应。它可能仍在运行——请检查是否有 Steam 安装程序窗口，然后重试。",
             "waiting": {
                 "cause": {

@@ -389,15 +389,6 @@
             "quitTimeout": "Steam non se pechou, así que non se puido configurar {{game}}. Pecha Steam e volve premer Xogar."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib deixou de recibir resposta sobre a configuración da botella de Steam. Pode que aínda estea en marcha — comproba se hai unha xanela do instalador de Steam e téntao de novo.",
             "waiting": {
                 "cause": {

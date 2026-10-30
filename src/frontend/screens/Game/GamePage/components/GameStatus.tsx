@@ -159,14 +159,7 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       return `${t('status.updating')} ${currentProgress}`
     }
 
-    // quick 261024-h5y: bottle-route 1026 handoff has a user action.
     if (runner === 'steam' && is.installing) {
-      if (statusContext === 'steam-waiting-for-bottled-steam') {
-        return tGamelib(
-          'gamelib:steam.bottle.finishInstall.status',
-          'Downloaded. Start Steam to finish installing.'
-        )
-      }
       // quick 261029-exu: a bridge install's post-download tail.
       if (statusContext === 'steam-bridge-finishing') {
         return (
@@ -176,12 +169,6 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
             <CircularProgress size={14} color="inherit" />
             {t('status.steamFinishing', 'Finishing install…')}
           </span>
-        )
-      }
-      if (statusContext === 'steam-finishing-in-bottled-steam') {
-        return tGamelib(
-          'gamelib:steam.bottle.finishInstall.finishing',
-          'Steam is finishing the install. It may update itself or ask you to sign in first.'
         )
       }
     }

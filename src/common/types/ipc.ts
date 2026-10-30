@@ -362,11 +362,6 @@ interface AsyncIPCFunctions {
     refused: number
     error?: string
   }>
-  // quick 261024-h5y: dispatches steam://install into the bottle for a
-  // bottle-route install parked at StateFlags 1026. Backend-guarded.
-  steamFinishBottledInstall: (
-    appId: string
-  ) => Promise<{ status: 'done' | 'error'; error?: string }>
   // Phase 54: sidecar-only, registered by plan 07. The renderer's Continue
   // button on the guided Go Offline step; arms the one-shot guided restore.
   steamGoOfflineRetry: () => Promise<SteamGoOfflineRetryResult>

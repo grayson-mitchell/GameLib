@@ -389,15 +389,6 @@
             "quitTimeout": "Steam ไม่ได้ปิด จึงตั้งค่า {{game}} ไม่ได้ ปิด Steam แล้วกดเล่นอีกครั้ง"
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib ไม่ได้รับการตอบกลับเกี่ยวกับการตั้งค่า Steam bottle อีกต่อไป อาจยังทำงานอยู่ — ลองตรวจสอบหน้าต่างตัวติดตั้ง Steam แล้วลองอีกครั้ง",
             "waiting": {
                 "cause": {

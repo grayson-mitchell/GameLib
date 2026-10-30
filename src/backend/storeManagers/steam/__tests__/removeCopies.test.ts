@@ -155,7 +155,6 @@ jest.mock('../bottle', () => ({
   isCrossoverInstalled: () => Promise.resolve(true),
   CROSSOVER_MISSING: 'crossover-missing',
   isBottleReady: jest.fn(),
-  tellBottledSteamToInstall: jest.fn(),
   tellBottledSteamToLaunch: jest.fn(),
   tellBottledSteamToUninstall: jest.fn(),
   getSteamBottleSettings: jest.fn(),

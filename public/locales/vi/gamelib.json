@@ -389,15 +389,6 @@
             "quitTimeout": "Steam không thoát nên không thể thiết lập {{game}}. Hãy thoát Steam rồi nhấn Chơi lại."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib không còn nhận được phản hồi về việc thiết lập bottle Steam. Quá trình này có thể vẫn đang chạy — hãy kiểm tra cửa sổ cài đặt Steam, sau đó thử lại.",
             "waiting": {
                 "cause": {

@@ -403,15 +403,6 @@
             "quitTimeout": "Steam не закрыўся, таму не атрымалася наладзіць {{game}}. Закрыйце Steam і націсніце «Гуляць» яшчэ раз."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "GameLib перастаў атрымліваць адказ пра наладку бутэлькі Steam. Магчыма, працэс яшчэ ідзе — праверце, ці не адкрылося акно ўсталёўшчыка Steam, і паспрабуйце зноў.",
             "waiting": {
                 "cause": {

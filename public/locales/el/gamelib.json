@@ -389,15 +389,6 @@
             "quitTimeout": "Το Steam δεν έκλεισε, οπότε δεν ήταν δυνατή η ρύθμιση του {{game}}. Κλείστε το Steam και πατήστε ξανά Παίξε."
         },
         "bottle": {
-            "finishInstall": {
-                "button": "Start Steam to finish",
-                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
-                "finishingShort": "Finishing in Steam…",
-                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
-                "showSteam": "Show Steam",
-                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
-                "status": "Downloaded. Start Steam to finish installing."
-            },
             "statusPollTimeout": "Το GameLib σταμάτησε να λαμβάνει απόκριση σχετικά με τη ρύθμιση του Steam bottle. Ίσως εξακολουθεί να εκτελείται — ελέγξτε για ένα παράθυρο εγκαταστάτη Steam και δοκιμάστε ξανά.",
             "waiting": {
                 "cause": {

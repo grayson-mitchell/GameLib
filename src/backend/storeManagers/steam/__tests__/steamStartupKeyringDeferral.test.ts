@@ -152,7 +152,6 @@ jest.mock('backend/constants/environment', () => ({
 
 jest.mock('../bottle', () => ({
   isBottleReady: jest.fn(),
-  tellBottledSteamToInstall: jest.fn(),
   tellBottledSteamToLaunch: jest.fn(),
   tellBottledSteamToUninstall: jest.fn(),
   getSteamBottleSettings: jest.fn(),
