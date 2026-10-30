@@ -2,13 +2,14 @@
   color: var(--text-secondary);
   display: grid;
   /* Tile width comes from the Library tile-size slider (261011-t4y); window
-     width only changes how many columns fit, and leftover width collects at
-     the inline end. Fixed tracks, not minmax(.., 1fr), so tiles never grow. */
+     width only changes how many columns fit, and leftover width is split
+     evenly on both sides so the tile block stays centered. Fixed tracks, not
+     minmax(.., 1fr), so tiles never grow. */
   grid-template-columns: repeat(
     auto-fill,
     var(--library-tile-css-width, 156px)
   );
-  justify-content: start;
+  justify-content: center;
   grid-gap: 1.5rem;
   padding: 0 var(--space-md-fixed) var(--space-3xl);
   margin: var(--space-md) 0;

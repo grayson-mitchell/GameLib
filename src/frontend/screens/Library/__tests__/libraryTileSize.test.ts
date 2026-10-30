@@ -182,14 +182,14 @@ describe('applyLibraryTileWidth', () => {
 describe('Library/index.css -- fixed-width tile columns (source gate)', () => {
   const css = read(LIBRARY_CSS_PATH)
 
-  it('.gameList uses fixed auto-fill tracks at the derived tile width and packs leftover width at the end', () => {
+  it('.gameList uses fixed auto-fill tracks at the derived tile width and centers the leftover width', () => {
     const block = cssBlock(css, '.gameList')
     const m = block.match(
       /grid-template-columns:\s*repeat\(\s*auto-fill,\s*var\(--library-tile-css-width,\s*(\d+(?:\.\d+)?)px\)\s*\)/
     )
     expect(m).not.toBeNull()
     expect(Number(m?.[1])).toBe(LIBRARY_TILE_WIDTH_DEFAULT)
-    expect(block).toMatch(/justify-content:\s*start/)
+    expect(block).toMatch(/justify-content:\s*center/)
     expect(block).not.toMatch(/minmax\(/)
     expect(block).not.toMatch(/1fr/)
   })
