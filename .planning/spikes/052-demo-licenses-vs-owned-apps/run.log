@@ -1,0 +1,15 @@
+2026-10-30T22:48:35.838Z + 118413ms [token] read from Keychain {"prefix":"eyA","length":493}
+2026-10-30T22:48:35.839Z + 118414ms [fire] open -g steam://open/gooffline
+2026-10-30T22:48:36.137Z + 118712ms [state] Mac Steam offline after 251 ms
+2026-10-30T22:48:37.493Z + 120068ms [hit] loggedOn {"steamID":"7656119…"}
+2026-10-30T22:48:39.494Z + 122069ms [fire] open -g steam://open/goonline
+2026-10-30T22:48:40.787Z + 123362ms [hit] Mac Steam back online 1254 ms after goonline
+2026-10-30T22:48:41.111Z + 123686ms [owned] current_gamelib {"count":389,"hasSubject":false,"subjectPlaytime":null}
+2026-10-30T22:48:41.420Z + 123995ms [owned] plus_free_sub {"count":389,"hasSubject":false,"subjectPlaytime":null}
+2026-10-30T22:48:41.746Z + 124321ms [owned] plus_unvetted {"count":390,"hasSubject":false,"subjectPlaytime":null}
+2026-10-30T22:48:42.130Z + 124705ms [owned] all_flags {"count":390,"hasSubject":false,"subjectPlaytime":null}
+2026-10-30T22:48:42.131Z + 124706ms [licenses] license list {"licenses":485,"packages":485}
+2026-10-30T22:48:42.596Z + 125171ms [licenses] apps via licenses {"licenses":485,"packages":485,"apps":1143,"subjectLicensed":true,"subjectLicense":{"package_id":1136752,"license_type":1,"payment_method":1024,"flags":0,"time_created":1793398192,"billingtype":12,"licensetype":1}}
+2026-10-30T22:48:46.768Z + 129343ms [subject] app info {"name":"Schedule I: Free Sample","type":"Demo","parent":"3164500","oslist":"windows","releasestate":"released","freetodownload":null}
+2026-10-30T22:48:46.769Z + 129344ms [diff] licensed but not in current owned list {"total":754,"byType":{"dlc":440,"tool":190,"config":65,"unknown":25,"music":9,"game":10,"demo":12,"application":3}}
+2026-10-30T22:48:46.769Z + 129344ms [verdict] SUBJECT_LICENSED_NOT_OWNED {"result":"result.json"}

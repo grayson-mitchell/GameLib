@@ -1,0 +1,153 @@
+{
+  "subject": 3205720,
+  "ownedVariants": {
+    "current_gamelib": {
+      "count": 389,
+      "hasSubject": false,
+      "subjectPlaytime": null
+    },
+    "plus_free_sub": {
+      "count": 389,
+      "hasSubject": false,
+      "subjectPlaytime": null
+    },
+    "plus_unvetted": {
+      "count": 390,
+      "hasSubject": false,
+      "subjectPlaytime": null
+    },
+    "all_flags": {
+      "count": 390,
+      "hasSubject": false,
+      "subjectPlaytime": null
+    }
+  },
+  "licenses": {
+    "licenses": 485,
+    "packages": 485,
+    "apps": 1143,
+    "subjectLicensed": true,
+    "subjectLicense": {
+      "package_id": 1136752,
+      "license_type": 1,
+      "payment_method": 1024,
+      "flags": 0,
+      "time_created": 1793398192,
+      "billingtype": 12,
+      "licensetype": 1
+    }
+  },
+  "subjectInfo": {
+    "name": "Schedule I: Free Sample",
+    "type": "Demo",
+    "parent": "3164500",
+    "oslist": "windows",
+    "releasestate": "released",
+    "freetodownload": null
+  },
+  "diff": {
+    "licensedNotOwned": 754,
+    "byTypeCounts": {
+      "dlc": 440,
+      "tool": 190,
+      "config": 65,
+      "unknown": 25,
+      "music": 9,
+      "game": 10,
+      "demo": 12,
+      "application": 3
+    },
+    "demos": [
+      {
+        "appid": 3801710,
+        "name": "Wonderia Demo"
+      },
+      {
+        "appid": 219,
+        "name": "Half-Life 2: Demo"
+      },
+      {
+        "appid": 410,
+        "name": "Portal: First Slice"
+      },
+      {
+        "appid": 18010,
+        "name": "Penny Arcade Adventures: On the Rain-Slick Precipice of Darkness, Episode One Demo"
+      },
+      {
+        "appid": 18030,
+        "name": "Penny Arcade Adventures: On the Rain-Slick Precipice of Darkness, Episode Two Demo"
+      },
+      {
+        "appid": 22150,
+        "name": "Europa Universalis III Demo"
+      },
+      {
+        "appid": 4349200,
+        "name": "Probably Stolen Demo"
+      },
+      {
+        "appid": 5355880,
+        "name": "Emberville Demo"
+      },
+      {
+        "appid": 5208630,
+        "name": "Fart Together Demo"
+      },
+      {
+        "appid": 4762520,
+        "name": "MSO FreeCell Arena Demo"
+      },
+      {
+        "appid": 5012760,
+        "name": "Ski-E-O! Ski Resort Tycoon Demo"
+      },
+      {
+        "appid": 3205720,
+        "name": "Schedule I: Free Sample"
+      }
+    ],
+    "games": [
+      {
+        "appid": 238960,
+        "name": "Path of Exile"
+      },
+      {
+        "appid": 306130,
+        "name": "The Elder Scrolls Online"
+      },
+      {
+        "appid": 976620,
+        "name": "Enderal: Forgotten Stories (Special Edition)"
+      },
+      {
+        "appid": 1467450,
+        "name": "The Chronicles Of Myrtana: Archolos"
+      },
+      {
+        "appid": 1149460,
+        "name": "Icarus"
+      },
+      {
+        "appid": 440,
+        "name": "Team Fortress 2"
+      },
+      {
+        "appid": 480,
+        "name": "Spacewar"
+      },
+      {
+        "appid": 570,
+        "name": "Dota 2"
+      },
+      {
+        "appid": 1222670,
+        "name": "The Sims™ 4"
+      },
+      {
+        "appid": 230410,
+        "name": "Warframe"
+      }
+    ]
+  }
+}
