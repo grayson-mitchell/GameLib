@@ -1002,14 +1002,18 @@ describe('Grim Dawn (219990) x64 acceptance (52-13)', () => {
     ).toEqual([])
   })
 
-  test('SteamUser023 is wire, the other two are stub on x64', () => {
+  test('SteamUser023 and SteamNetworking006 (58-13) are wire, RemoteStorage016 stays stub on x64', () => {
     expect(SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamUser023')).toEqual({
       family: 'SteamUser',
       mode: 'wire'
     })
-    expect(
-      SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamNetworking006')?.mode
-    ).toBe('stub')
+    expect(SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamNetworking006')).toEqual({
+      family: 'SteamNetworking',
+      mode: 'wire'
+    })
+    expect(SHIM_SERVED_INTERFACE_VERSIONS.get('SteamNetworking006')).toBe(
+      undefined
+    )
     expect(
       SHIM64_SERVED_INTERFACE_VERSIONS.get(
         'STEAMREMOTESTORAGE_INTERFACE_VERSION016'

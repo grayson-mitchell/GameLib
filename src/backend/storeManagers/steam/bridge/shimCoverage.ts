@@ -269,7 +269,11 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   // The other two are stub (51-14 sub-decision 1: cloud disabled, P2P
   // unavailable).
   ['SteamUser023', { family: 'SteamUser', mode: 'wire' }],
-  ['SteamNetworking006', { family: 'SteamNetworking', mode: 'stub' }],
+  // D-07 / 58-13: legacy P2P is wired to the real Mac Steam. Four socket
+  // methods stay local stubs because they carry SteamIPAddress_t by value or
+  // pointer (CreateListenSocket, CreateConnectionSocket, GetSocketInfo,
+  // GetListenSocketInfo; no measured need, D-09).
+  ['SteamNetworking006', { family: 'SteamNetworking', mode: 'wire' }],
   // 58-03 (D-07): current-version baseline for the multiplayer families, each
   // extracted from its own Proton block, x64 only (D-11), stub until wired.
   [
