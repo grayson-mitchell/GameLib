@@ -49,8 +49,8 @@ Probe:
 Built (`4be6400bd`, `e34ad8668`):
 - Leaving the Steam store embed runs the Steam library refresh (`origin: 'steam-store-exit'`).
 - It only runs after the visit loaded a store app, cart or checkout page.
-- It runs at most once every 2 minutes, never while a refresh is running, and never when signed
-  out.
+- It never runs while a refresh is already running, or when signed out. (The first build also
+  throttled it to once per 2 minutes; `e598f12da` removed that.)
 
 Live gate (open):
 1. Restart `tauri dev`.
@@ -58,3 +58,12 @@ Live gate (open):
 3. The game should appear without a manual Refresh, and the log should show
    `origin=steam-store-exit`.
 4. Note whether the macOS Go Offline dialog appears.
+
+First live test (2026-10-30), a demo:
+- The trigger fired on the first store exit (19:27:35).
+- The exit after the "Add to Library" grant (19:28:59) was `skipped-throttled`. `e598f12da`
+  removed the throttle. The same commit made a scoped refresh spin the Refresh button instead of
+  a second spinner.
+- A demo is the wrong test subject anyway. GameLib's owned-games fetch leaves out free-on-demand
+  licenses (demos, free-to-play) until played, and the operator chose to keep it that way.
+- Retest with a paid purchase or a free-to-keep giveaway.
