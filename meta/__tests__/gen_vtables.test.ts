@@ -14,6 +14,7 @@ import {
   emitFlatExports,
   flatMethodName,
   LIFECYCLE_NOOP_EXPORTS,
+  MANUAL_DISPATCH_EXPORT_BODIES,
   LEGACY_CSTEAMWORKS_X64_EXPORTS,
   isSretReturn,
   isRaxStructSize,
@@ -2672,7 +2673,7 @@ describe('Phase 53 flat API', () => {
     expect(body).not.toContain('g_fx001_instance')
   })
 
-  it('every lifecycle no-op is x64-only, and ManualDispatch answers false without touching the bridge', () => {
+  it('every lifecycle export is x64-only, and ManualDispatch has real bodies that never touch the bridge (58-11)', () => {
     const c = generateShimC(real)
     const x64Start = c.indexOf('Steamworks.NET lifecycle no-ops')
     const guardOpen = c.indexOf('#if defined(__x86_64__)', x64Start)
@@ -2690,9 +2691,45 @@ describe('Phase 53 flat API', () => {
       'SteamAPI_ManualDispatch_GetNextCallback',
       'SteamAPI_ManualDispatch_GetAPICallResult'
     ]) {
-      expect(block).toContain(`int ${name}(void) { return 0; }`)
+      expect(block).not.toContain(`int ${name}(void) { return 0; }`)
     }
+    expect(block).toContain('return gl_md_get_next(pCallbackMsg);')
+    expect(block).toContain('return gl_md_get_api_call_result(')
+    expect(block).toContain('gl_md_init();')
+    expect(block).toContain('gl_md_run_frame();')
+    expect(block).toContain('gl_md_free_last();')
     expect(block).not.toContain('bridge_transact')
+  })
+
+  it('the five ManualDispatch exports stay in the x64 .def exactly once and out of x86 (58-11, D-11)', () => {
+    const names = [
+      'SteamAPI_ManualDispatch_FreeLastCallback',
+      'SteamAPI_ManualDispatch_GetAPICallResult',
+      'SteamAPI_ManualDispatch_GetNextCallback',
+      'SteamAPI_ManualDispatch_Init',
+      'SteamAPI_ManualDispatch_RunFrame'
+    ]
+    const x64 = generateDefFile(real, 'x64').split('\n')
+    const x86 = generateDefFile(real, 'x86').split('\n')
+    for (const n of names) {
+      expect(x64.filter((l) => l === n)).toHaveLength(1)
+      expect(x86).not.toContain(n)
+      expect(LIFECYCLE_NOOP_EXPORTS).toContain(n)
+    }
+    expect(Object.keys(MANUAL_DISPATCH_EXPORT_BODIES).sort()).toEqual(names)
+  })
+
+  it('ISteamUtils polling is shimLocal: no helper case for IsAPICallCompleted / GetAPICallResult (58-11)', () => {
+    expect(SHIM_LOCAL_BODIES['SteamUtils.IsAPICallCompleted']).toContain(
+      'gl_md_is_api_call_completed('
+    )
+    expect(SHIM_LOCAL_BODIES['SteamUtils.GetAPICallResult']).toContain(
+      'gl_md_get_api_call_result('
+    )
+    const c = generateShimC(real)
+    expect(c).toContain('return gl_md_is_api_call_completed(hSteamAPICall')
+    const header = generateDispatchHeader(real)
+    expect(header).not.toMatch(/IsAPICallCompleted|GetAPICallResult/)
   })
 
   it('a float parameter keeps its real type in the signature and the call cast', () => {
@@ -3689,9 +3726,17 @@ describe('callback delivery wiring (P55-6)', () => {
     )
     expect(c).toContain('void Steam_RunCallbacks(void) { }')
     expect(c).toContain('void SteamGameServer_RunCallbacks(void) { }')
-    expect(c).toContain(
-      'int SteamAPI_ManualDispatch_GetNextCallback(void) { return 0; }'
-    )
+    expect(c).toContain('return gl_md_get_next(pCallbackMsg);')
+  })
+
+  it('the manual-dispatch block is x64-only and runs RunCallbacks inert once enabled (58-11)', () => {
+    const reg = generateCallbackRegistryC()
+    expect(reg).toContain('gl_cb_running || gl_md_enabled ||')
+    const fifo = reg.indexOf('typedef struct {\n  int32_t id;\n  uint32_t cub;')
+    expect(reg.lastIndexOf('#if !defined(__i386__)', fifo)).toBeGreaterThan(-1)
+    // bounded, static storage
+    expect(reg).toContain('#define GL_MD_FIFO_CAP 32')
+    expect(reg).toContain('#define GL_MD_RES_CAP 16')
   })
 })
 
@@ -4556,8 +4601,12 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       expect(WIRE_LAYOUT_DOC).toMatch(/needs repack/)
     })
 
-    it('real manifests embed the base text only; a manifest using the new kinds embeds all of it', () => {
-      expect(generateDispatchHeader(real)).not.toMatch(
+    it('a manifest set without the new kinds embeds the base text only; one using them embeds all of it', () => {
+      const plain = real.map((m) => ({
+        ...m,
+        methods: m.methods.filter((x) => !x.shimLocal)
+      }))
+      expect(generateDispatchHeader(plain)).not.toMatch(
         /Extended kinds and modes/
       )
       const header = generateDispatchHeader([wireManifest([sendMethod])])
@@ -4715,7 +4764,7 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
     })
   })
 
-  it('the committed generated files are exactly what the committed manifests regenerate (nothing uses the new kinds yet)', () => {
+  it('the committed generated files are exactly what the committed manifests regenerate (58-11 uses shimLocal only)', () => {
     const inventory = realInventory
     const shim = readFileSync(
       join(

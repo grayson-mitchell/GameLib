@@ -283,6 +283,16 @@ static void reset(void) {
   gl_cr_fail_count = 0;
   gl_cr_last_fail_ms = 0;
   gl_cb_running = 0;
+  gl_md_enabled = 0;
+  gl_md_head = gl_md_count = 0;
+  gl_md_front_out = gl_md_front_reported = 0;
+  gl_md_dropped = 0;
+  gl_md_running = 0;
+  gl_md_have_run = 0;
+  gl_md_res_dropped = 0;
+  gl_md_poll_have = 0;
+  memset(gl_md_fifo, 0, sizeof gl_md_fifo);
+  memset(gl_md_results, 0, sizeof gl_md_results);
   g_cqhead = g_cqtail = 0;
   g_ctcalls = 0;
   g_lastcrbuf = NULL;
@@ -1007,6 +1017,222 @@ static void case_cr_buffer_zeroed(void) {
   PASS();
 }
 
+
+/* ---- 58-11: manual dispatch and the results table ---- */
+typedef struct {
+  int32_t user;
+  int32_t id;
+  void *pub;
+  int32_t cub;
+} md_view;
+
+static md_view md_read(const uint8_t *raw) {
+  md_view v;
+  memcpy(&v.user, raw + 0, 4);
+  memcpy(&v.id, raw + 4, 4);
+  memcpy(&v.pub, raw + 8, sizeof(void *));
+  memcpy(&v.cub, raw + 16, 4);
+  return v;
+}
+
+static void case_md_broadcast(void) {
+  uint8_t raw[24];
+  md_view v;
+  uint8_t keep[64];
+  uint32_t size = gl_cb_relay_size(504);
+  g_case = "md_broadcast";
+  reset();
+  CHECK(size > 0 && size <= sizeof keep);
+  gl_md_init();
+  push_msg(504, 1, size, size);
+  gl_md_run_frame();
+  CHECK(gl_md_get_next(raw) == 1);
+  v = md_read(raw);
+  CHECK(v.id == 504);
+  CHECK(v.cub == (int32_t)size);
+  CHECK(v.user == 1);
+  CHECK(((uint8_t *)v.pub)[12] == 0xAB);
+  CHECK(((uint32_t *)v.pub)[0] == 0x11223344u);
+  /* a second get_next before free is the same message */
+  CHECK(gl_md_get_next(raw) == 1);
+  CHECK(md_read(raw).pub == v.pub);
+  memcpy(keep, v.pub, size);
+  gl_md_free_last();
+  CHECK(gl_md_get_next(raw) == 0);
+  /* freed buffer is zero */
+  CHECK(all_zero(&gl_md_fifo[0], sizeof gl_md_fifo[0]));
+  PASS();
+}
+
+static void case_md_callresult(void) {
+  uint8_t raw[24];
+  uint8_t out[64];
+  uint8_t failed = 7;
+  md_view v;
+  uint64_t ah;
+  int32_t aid;
+  uint32_t acub;
+  uint32_t size = gl_cr_size(513);
+  g_case = "md_callresult";
+  reset();
+  gl_md_init();
+  push_cr(9, 513, 0, 0x5A);
+  gl_md_run_frame();
+  CHECK(gl_md_get_next(raw) == 1);
+  v = md_read(raw);
+  CHECK(v.id == 703);
+  CHECK(v.cub == 16);
+  memcpy(&ah, (uint8_t *)v.pub + 0, 8);
+  memcpy(&aid, (uint8_t *)v.pub + 8, 4);
+  memcpy(&acub, (uint8_t *)v.pub + 12, 4);
+  CHECK(ah == 9 && aid == 513 && acub == size);
+  gl_md_free_last();
+  CHECK(gl_md_get_api_call_result(9, out, (int)size, 513, &failed) == 1);
+  CHECK(failed == 0);
+  CHECK(out[0] == 0x5A);
+  CHECK(gl_md_get_api_call_result(9, out, (int)size, 513, &failed) == 0);
+  PASS();
+}
+
+static void case_md_callresult_failed_flag(void) {
+  uint8_t out[64];
+  uint8_t failed = 0;
+  uint32_t size = gl_cr_size(513);
+  g_case = "md_callresult_failed_flag";
+  reset();
+  gl_md_init();
+  push_cr(11, 513, 1, 0x33);
+  gl_md_run_frame();
+  CHECK(gl_md_get_api_call_result(11, out, (int)size, 513, &failed) == 1);
+  CHECK(failed == 1);
+  PASS();
+}
+
+static void case_md_callresult_wrong_id(void) {
+  uint8_t out[64];
+  uint8_t failed = 0;
+  uint32_t size = gl_cr_size(513);
+  g_case = "md_callresult_wrong_id";
+  reset();
+  gl_md_init();
+  push_cr(9, 513, 0, 0x5A);
+  gl_md_run_frame();
+  CHECK(gl_md_get_api_call_result(9, out, (int)size, 510, &failed) == 0);
+  CHECK(gl_md_get_api_call_result(9, out, (int)size + 1, 513, &failed) == 0);
+  CHECK(gl_md_get_api_call_result(9, out, (int)size, 513, &failed) == 1);
+  PASS();
+}
+
+static void case_md_fifo_bounded(void) {
+  uint8_t raw[24];
+  int i;
+  uint32_t size = gl_cb_relay_size(504);
+  g_case = "md_fifo_bounded";
+  reset();
+  gl_md_init();
+  for (i = 0; i < 33; i++) {
+    CHECK(gl_md_head < GL_MD_FIFO_CAP);
+    {
+      uint8_t body[64];
+      int32_t dropped = 0;
+      memset(body, (uint8_t)(i + 1), sizeof body);
+      GL_CB_LOCK();
+      gl_md_push_locked(504, body, size, &dropped);
+      GL_CB_UNLOCK();
+    }
+  }
+  CHECK(gl_md_count == 32);
+  CHECK(gl_md_dropped == 1);
+  /* the oldest (seed 1) was evicted: the front is seed 2 */
+  CHECK(gl_md_get_next(raw) == 1);
+  CHECK(((uint8_t *)md_read(raw).pub)[0] == 2);
+  /* with the front in the game's hands a full FIFO drops the new message */
+  {
+    uint8_t body[64];
+    int32_t dropped = 0;
+    int r;
+    memset(body, 0x77, sizeof body);
+    GL_CB_LOCK();
+    r = gl_md_push_locked(504, body, size, &dropped);
+    GL_CB_UNLOCK();
+    CHECK(r == 2);
+    CHECK(gl_md_count == 32);
+  }
+  PASS();
+}
+
+static void case_md_runcallbacks_inert(void) {
+  g_case = "md_runcallbacks_inert";
+  reset();
+  gl_cb_register(&objA, 504);
+  gl_cr_register(&objC, 0x10);
+  gl_md_init();
+  push_msg(504, 1, gl_cb_relay_size(504), gl_cb_relay_size(504));
+  push_cr(0x10, 513, 0, 0x01);
+  gl_cb_run_callbacks();
+  CHECK(g_tcalls == 0);
+  CHECK(g_ctcalls == 0);
+  CHECK(objA.calls == 0);
+  CHECK(objC.cr_calls == 0);
+  PASS();
+}
+
+static void case_md_report(void) {
+  uint8_t raw[24];
+  uint32_t size = gl_cb_relay_size(504);
+  g_case = "md_report";
+  reset();
+  gl_md_init();
+  push_msg(504, 1, size, size);
+  gl_md_run_frame();
+  CHECK(g_nrep == 0);
+  CHECK(gl_md_get_next(raw) == 1);
+  CHECK(gl_md_get_next(raw) == 1);
+  CHECK(g_nrep == 1);
+  CHECK(g_rep[0].id == 504 && g_rep[0].nd == 1 && g_rep[0].held == 0);
+  gl_md_free_last();
+  /* an unread result expires and reports (id, 0, 0) */
+  push_cr(9, 513, 0, 0x5A);
+  g_now += 31;
+  gl_md_run_frame();
+  g_nrep = 0;
+  g_now += GL_CR_HELD_EXPIRY_MS;
+  gl_md_expire(g_now);
+  CHECK(g_nrep == 1);
+  CHECK(g_rep[0].id == 513 && g_rep[0].nd == 0 && g_rep[0].held == 0);
+  CHECK(all_zero(gl_md_results, sizeof gl_md_results));
+  PASS();
+}
+
+static void case_utils_poll(void) {
+  uint8_t failed = 9;
+  uint8_t out[64];
+  uint32_t size = gl_cr_size(513);
+  g_case = "utils_poll";
+  reset();
+  push_cr(9, 513, 0, 0x5A);
+  CHECK(gl_md_is_api_call_completed(9, &failed) == 1);
+  CHECK(failed == 0);
+  CHECK(gl_md_is_api_call_completed(9, &failed) == 1);
+  CHECK(gl_md_get_api_call_result(9, out, (int)size, 513, &failed) == 1);
+  g_now += 31;
+  CHECK(gl_md_is_api_call_completed(9, &failed) == 0);
+  PASS();
+}
+
+static void case_md_registry_unmatched_pollable(void) {
+  uint8_t failed = 0;
+  g_case = "md_registry_unmatched_pollable";
+  reset();
+  /* a registry-mode result with no CCallResult is also readable by polling */
+  gl_cr_register(&objC, 0x1);
+  push_cr(0x77, 513, 0, 0x01);
+  gl_cb_run_callbacks();
+  CHECK(gl_cr_held_count == 1);
+  CHECK(gl_md_is_api_call_completed(0x77, &failed) == 1);
+  PASS();
+}
+
 int main(void) {
   pthread_mutexattr_t attr;
   uint32_t i;
@@ -1052,5 +1278,14 @@ int main(void) {
   case_cr_held_capacity();
   case_cr_max_per_run_and_backoff();
   case_cr_buffer_zeroed();
+  case_md_broadcast();
+  case_md_callresult();
+  case_md_callresult_failed_flag();
+  case_md_callresult_wrong_id();
+  case_md_fifo_bounded();
+  case_md_runcallbacks_inert();
+  case_md_report();
+  case_utils_poll();
+  case_md_registry_unmatched_pollable();
   return 0;
 }

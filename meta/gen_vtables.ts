@@ -654,7 +654,9 @@ export function validateManifest(
       // 51-06 Task 3: wire methods marshal by-value scalars, in-strings,
       // out-values and bounded out-buffers -- anything else is rejected at
       // generation time (never a silently-wrong marshal).
-      for (const p of method.params) {
+      // A shimLocal method never marshals its params (the shim answers it),
+      // so the wire-kind rules do not apply to it (58-11).
+      for (const p of method.shimLocal ? [] : method.params) {
         const kind = p.kind ?? 'value'
         const isPointerType = p.type.endsWith('*')
         if (kind === 'value') {
@@ -822,8 +824,15 @@ const WIRE_STACK_BUFFER_MAX_BYTES = 4096 + 64
 /** 58-06: shim-local method bodies, keyed `<Family>.<Method>`. The value is
  * C statement text (the inside of the function braces) taking the method's own
  * C parameters after `self`. A `shimLocal` method with no entry here fails
- * generation. Empty today: wiring plans 58-12..58-21 add entries. */
-export const SHIM_LOCAL_BODIES: Readonly<Record<string, string>> = {}
+ * generation. 58-11 adds the two ISteamUtils polling methods; wiring plans
+ * 58-12..58-21 add more. Parameter names are the served manifests' own
+ * (identical across SteamUtils005..010). */
+export const SHIM_LOCAL_BODIES: Readonly<Record<string, string>> = {
+  'SteamUtils.IsAPICallCompleted':
+    '  return gl_md_is_api_call_completed(hSteamAPICall, (uint8_t *)pbFailed);',
+  'SteamUtils.GetAPICallResult':
+    '  return gl_md_get_api_call_result(hSteamAPICall, pCallback, cubCallback, iCallbackExpected, (uint8_t *)pbFailed);'
+}
 
 const HELPER_CUSTOM_NAME = /^gl_[a-z0-9_]{1,48}$/
 
@@ -1070,16 +1079,10 @@ const GAMESERVER_FLAT_STUB_BODIES: Record<
 // Q uint64 (0), P pointer (NULL), S const char* (static empty string).
 // A spec may carry a parameter list when the body writes through it
 // (`T` = a `char *buf, size_t cap` pair after `self`; `L` = an `int *cbLen`
-// out-length). ManualDispatch_GetNextCallback / _GetAPICallResult answer
-// false, so no callback is ever delivered through them -- the same outcome as
-// the existing no-op SteamAPI_RunCallbacks.
+// out-length). The five SteamAPI_ManualDispatch_* names are not in this table:
+// 58-11 gives them real bodies (MANUAL_DISPATCH_EXPORT_BODIES below).
 const LIFECYCLE_NOOP_SPECS: Readonly<Record<string, string>> = {
   SteamAPI_GetSteamInstallPath: 'S',
-  SteamAPI_ManualDispatch_FreeLastCallback: 'V',
-  SteamAPI_ManualDispatch_GetAPICallResult: 'B',
-  SteamAPI_ManualDispatch_GetNextCallback: 'B',
-  SteamAPI_ManualDispatch_Init: 'V',
-  SteamAPI_ManualDispatch_RunFrame: 'V',
   SteamAPI_ReleaseCurrentThreadMemory: 'V',
   SteamAPI_SetBreakpadAppID: 'V',
   SteamAPI_SetMiniDumpComment: 'V',
@@ -1131,8 +1134,43 @@ const LIFECYCLE_NOOP_SPECS: Readonly<Record<string, string>> = {
   SteamGameServer_ReleaseCurrentThreadMemory: 'V'
 }
 
-export const LIFECYCLE_NOOP_EXPORTS: readonly string[] =
-  Object.keys(LIFECYCLE_NOOP_SPECS).sort()
+/**
+ * 58-11: the manual-dispatch exports (Steamworks.NET / Facepunch pump these
+ * instead of C++ callback objects). x64-only like the rest of this list. The
+ * bodies call the generated registry's gl_md_* functions; the export names
+ * are unchanged from the earlier no-ops, so the export set does not move.
+ * `bool` returns are an int and `bool *` out-params a single byte (the SDK's
+ * bool is one byte).
+ */
+export const MANUAL_DISPATCH_EXPORT_BODIES: Readonly<Record<string, string>> = {
+  SteamAPI_ManualDispatch_FreeLastCallback:
+    'void SteamAPI_ManualDispatch_FreeLastCallback(int hSteamPipe) {\n' +
+    '  (void)hSteamPipe;\n' +
+    '  gl_md_free_last();\n' +
+    '}',
+  SteamAPI_ManualDispatch_GetAPICallResult:
+    'int SteamAPI_ManualDispatch_GetAPICallResult(int hSteamPipe, uint64_t hSteamAPICall, void *pCallback, int cubCallback, int iCallbackExpected, uint8_t *pbFailed) {\n' +
+    '  (void)hSteamPipe;\n' +
+    '  return gl_md_get_api_call_result(hSteamAPICall, pCallback, cubCallback, iCallbackExpected, pbFailed);\n' +
+    '}',
+  SteamAPI_ManualDispatch_GetNextCallback:
+    'int SteamAPI_ManualDispatch_GetNextCallback(int hSteamPipe, void *pCallbackMsg) {\n' +
+    '  (void)hSteamPipe;\n' +
+    '  return gl_md_get_next(pCallbackMsg);\n' +
+    '}',
+  SteamAPI_ManualDispatch_Init:
+    'void SteamAPI_ManualDispatch_Init(void) {\n' + '  gl_md_init();\n' + '}',
+  SteamAPI_ManualDispatch_RunFrame:
+    'void SteamAPI_ManualDispatch_RunFrame(int hSteamPipe) {\n' +
+    '  (void)hSteamPipe;\n' +
+    '  gl_md_run_frame();\n' +
+    '}'
+}
+
+export const LIFECYCLE_NOOP_EXPORTS: readonly string[] = [
+  ...Object.keys(LIFECYCLE_NOOP_SPECS),
+  ...Object.keys(MANUAL_DISPATCH_EXPORT_BODIES)
+].sort()
 
 // quick 261025-t7i: Unclaimed World (284100) loads CSteamworks64.dll
 // (Steamworks.NET 7.0.0 / Steamworks SDK 1.34), which imports six names from
@@ -1213,7 +1251,8 @@ export const LIFECYCLE_NOOP_EXPORT_BODIES: Readonly<Record<string, string>> =
   Object.fromEntries(
     LIFECYCLE_NOOP_EXPORTS.map((name) => [
       name,
-      lifecycleNoopBody(name, LIFECYCLE_NOOP_SPECS[name])
+      MANUAL_DISPATCH_EXPORT_BODIES[name] ??
+        lifecycleNoopBody(name, LIFECYCLE_NOOP_SPECS[name])
     ])
   )
 
@@ -1740,19 +1779,20 @@ static void gl_cr_retry_held(uint32_t now) {
   }
 }
 
-/* One slot-11 pull. Called with NO lock held. Returns 1 to keep draining. */
-static int gl_cr_pull_one(uint8_t *buf, uint32_t now) {
+/* Reads and validates one slot-11 reply. Called with NO lock held. Returns 1
+ * for a valid result (outputs set; the body is at buf + 24), 0 for an empty or
+ * malformed reply, -1 for a transport failure (counted for backoff). */
+static int gl_cr_read_reply(uint8_t *buf, uint32_t now, uint64_t *h,
+                            int32_t *id, uint32_t *failed, uint32_t *cub) {
   uint32_t len = 0;
-  uint32_t count, failed, cub, size;
-  uint64_t h;
-  int32_t id;
+  uint32_t count, size;
   int ok = gl_cb_transport_drain_cr(buf, GL_CR_DRAIN_RESP_MAX_BYTES, &len);
   if (!ok) {
     GL_CB_LOCK();
     gl_cr_fail_count++;
     gl_cr_last_fail_ms = now;
     GL_CB_UNLOCK();
-    return 0;
+    return -1;
   }
   GL_CB_LOCK();
   gl_cr_fail_count = 0;
@@ -1761,15 +1801,405 @@ static int gl_cr_pull_one(uint8_t *buf, uint32_t now) {
   memcpy(&count, buf, 4);
   if (count != 1) return 0;
   if (len < 24) return 0;
-  memcpy(&h, buf + 4, 8);
-  memcpy(&id, buf + 12, 4);
-  memcpy(&failed, buf + 16, 4);
-  memcpy(&cub, buf + 20, 4);
-  size = gl_cr_size(id);
-  if (!size || cub != size || failed > 1) return 0;
-  if (len != 24u + cub) return 0;
+  memcpy(h, buf + 4, 8);
+  memcpy(id, buf + 12, 4);
+  memcpy(failed, buf + 16, 4);
+  memcpy(cub, buf + 20, 4);
+  size = gl_cr_size(*id);
+  if (!size || *cub != size || *failed > 1) return 0;
+  if (len != 24u + *cub) return 0;
+  return 1;
+}
+
+/* ---- results table and manual dispatch (58-11) ----
+ * The results table (16 entries, 10 s expiry, zeroed) serves GetAPICallResult
+ * and ISteamUtils polling on both DLLs. The message FIFO (32) and every
+ * ManualDispatch entry point exist for the 64-bit DLL only (D-11). All table
+ * and FIFO mutation is under GL_CB_LOCK; the transport and the report hook
+ * are never called with it held. */
+#define GL_MD_RES_CAP 16
+#define GL_MD_FIFO_CAP 32
+#define GL_MD_PARAM_MAX (GL_CB_DRAIN_RESP_MAX_BYTES - 12)
+
+typedef struct {
+  int valid;
+  uint64_t h;
+  int32_t id;
+  uint32_t failed;
+  uint32_t cub;
+  uint32_t t_ms;
+  uint8_t bytes[GL_CR_HELD_MAX_BYTES];
+} gl_md_res;
+
+static gl_md_res gl_md_results[GL_MD_RES_CAP];
+static int gl_md_enabled;
+static uint32_t gl_md_res_dropped;
+static int gl_md_poll_have;
+static uint32_t gl_md_poll_last_ms;
+
+#if !defined(__i386__)
+typedef struct {
+  int32_t id;
+  uint32_t cub;
+  uint8_t bytes[GL_MD_PARAM_MAX];
+} gl_md_msg;
+
+static gl_md_msg gl_md_fifo[GL_MD_FIFO_CAP];
+static uint32_t gl_md_head;
+static uint32_t gl_md_count;
+static int gl_md_front_out;
+static int gl_md_front_reported;
+static uint32_t gl_md_dropped;
+static int gl_md_running;
+static int gl_md_have_run;
+static uint32_t gl_md_last_run_ms;
+
+/* Caller holds the lock. Returns 0 queued, 1 queued after evicting the oldest
+ * (its id in *dropped_id), 2 the new message was dropped (the oldest is in the
+ * game's hands and cannot move). */
+static int gl_md_push_locked(int32_t id, const uint8_t *bytes, uint32_t cub,
+                             int32_t *dropped_id) {
+  int r = 0;
+  uint32_t tail;
+  if (cub > GL_MD_PARAM_MAX) return 2;
+  if (gl_md_count >= GL_MD_FIFO_CAP) {
+    gl_md_dropped++;
+    if (gl_md_front_out) {
+      *dropped_id = id;
+      return 2;
+    }
+    *dropped_id = gl_md_fifo[gl_md_head].id;
+    gl_cb_zero(&gl_md_fifo[gl_md_head], (uint32_t)sizeof(gl_md_fifo[0]));
+    gl_md_head = (gl_md_head + 1) % GL_MD_FIFO_CAP;
+    gl_md_count--;
+    gl_md_front_reported = 0;
+    r = 1;
+  }
+  tail = (gl_md_head + gl_md_count) % GL_MD_FIFO_CAP;
+  gl_cb_zero(&gl_md_fifo[tail], (uint32_t)sizeof(gl_md_fifo[0]));
+  gl_md_fifo[tail].id = id;
+  gl_md_fifo[tail].cub = cub;
+  memcpy(gl_md_fifo[tail].bytes, bytes, cub);
+  gl_md_count++;
+  return r;
+}
+#endif
+
+/* Stores a completed result. In manual-dispatch mode it also queues the
+ * synthesized SteamAPICallCompleted_t (703). Called with NO lock held. */
+static void gl_md_store_result(uint64_t h, int32_t id, uint32_t failed,
+                               uint32_t cub, const uint8_t *bytes,
+                               uint32_t now) {
+  uint32_t i;
+  int slot = -1;
+  int evicted = 0;
+  int32_t evicted_id = 0;
+  int dropped = 0;
+  int32_t dropped_id = 0;
+  if (cub > GL_CR_HELD_MAX_BYTES) return;
+  GL_CB_LOCK();
+  for (i = 0; i < GL_MD_RES_CAP; i++) {
+    if (gl_md_results[i].valid && gl_md_results[i].h == h) { slot = (int)i; break; }
+  }
+  if (slot < 0) {
+    for (i = 0; i < GL_MD_RES_CAP; i++) {
+      if (!gl_md_results[i].valid) { slot = (int)i; break; }
+    }
+  }
+  if (slot < 0) {
+    uint32_t oldest = 0;
+    slot = 0;
+    for (i = 0; i < GL_MD_RES_CAP; i++) {
+      uint32_t age = (uint32_t)(now - gl_md_results[i].t_ms);
+      if (age >= oldest) { oldest = age; slot = (int)i; }
+    }
+    evicted = 1;
+    evicted_id = gl_md_results[slot].id;
+    gl_md_res_dropped++;
+  }
+  gl_cb_zero(&gl_md_results[slot], (uint32_t)sizeof(gl_md_results[slot]));
+  gl_md_results[slot].valid = 1;
+  gl_md_results[slot].h = h;
+  gl_md_results[slot].id = id;
+  gl_md_results[slot].failed = failed;
+  gl_md_results[slot].cub = cub;
+  gl_md_results[slot].t_ms = now;
+  memcpy(gl_md_results[slot].bytes, bytes, cub);
+#if !defined(__i386__)
+  if (gl_md_enabled) {
+    uint8_t ann[${CALLBACK_LAYOUTS.SteamAPICallCompleted_t.x64.size}];
+    int pr;
+    int32_t icb = id;
+    uint32_t cp = cub;
+    memset(ann, 0, sizeof(ann));
+    memcpy(ann + ${CALLBACK_LAYOUTS.SteamAPICallCompleted_t.x64.fields.m_hAsyncCall}, &h, 8);
+    memcpy(ann + ${CALLBACK_LAYOUTS.SteamAPICallCompleted_t.x64.fields.m_iCallback}, &icb, 4);
+    memcpy(ann + ${CALLBACK_LAYOUTS.SteamAPICallCompleted_t.x64.fields.m_cubParam}, &cp, 4);
+    pr = gl_md_push_locked(${CALLBACK_LAYOUTS.SteamAPICallCompleted_t.id}, ann, (uint32_t)sizeof(ann), &dropped_id);
+    dropped = pr != 0;
+  }
+#endif
+  GL_CB_UNLOCK();
+  (void)dropped;
+  (void)dropped_id;
+  if (evicted) gl_cb_report_dispatch(evicted_id, 0, 0);
+#if !defined(__i386__)
+  if (dropped) gl_cb_report_dispatch(dropped_id, 0, 0);
+#endif
+}
+
+/* Expires old results, zeroing them. In manual-dispatch mode each expiry is
+ * reported (id, 0, 0). Called with NO lock held. */
+static void gl_md_expire(uint32_t now) {
+  int32_t ids[GL_MD_RES_CAP];
+  uint32_t n = 0, i;
+  int rep;
+  GL_CB_LOCK();
+  for (i = 0; i < GL_MD_RES_CAP; i++) {
+    if (gl_md_results[i].valid &&
+        (uint32_t)(now - gl_md_results[i].t_ms) >= GL_CR_HELD_EXPIRY_MS) {
+      ids[n++] = gl_md_results[i].id;
+      gl_cb_zero(&gl_md_results[i], (uint32_t)sizeof(gl_md_results[i]));
+    }
+  }
+  rep = gl_md_enabled;
+  GL_CB_UNLOCK();
+  if (rep) {
+    for (i = 0; i < n; i++) gl_cb_report_dispatch(ids[i], 0, 0);
+  }
+}
+
+/* Routes one validated slot-11 result: a result whose CCallResult is already
+ * registered goes to the held table (the next RunCallbacks delivers it on the
+ * game's own thread); anything else lands in the results table. */
+static void gl_md_route_result(uint64_t h, int32_t id, uint32_t failed,
+                               uint32_t cub, const uint8_t *bytes,
+                               uint32_t now) {
+  int paired;
+  GL_CB_LOCK();
+  paired = gl_cr_find_handle(h) >= 0;
+  GL_CB_UNLOCK();
+  if (paired) gl_cr_hold(h, id, failed, cub, bytes, now);
+  else gl_md_store_result(h, id, failed, cub, bytes, now);
+}
+
+/* Polling games (no manual dispatch, no CCallResult): pulls pending results
+ * on demand, at most once per drain interval, honouring the slot-11 backoff.
+ * Called with NO lock held. */
+static void gl_md_poll(uint32_t now) {
+  uint8_t buf[GL_CR_DRAIN_RESP_MAX_BYTES];
+  uint32_t iter;
+  int skip;
+  GL_CB_LOCK();
+  skip = (gl_md_poll_have &&
+          (uint32_t)(now - gl_md_poll_last_ms) < GL_CB_DRAIN_MIN_INTERVAL_MS) ||
+         (gl_cr_fail_count >= GL_CB_DRAIN_FAIL_BACKOFF_AFTER &&
+          (uint32_t)(now - gl_cr_last_fail_ms) < GL_CB_DRAIN_BACKOFF_MS);
+  if (!skip) {
+    gl_md_poll_have = 1;
+    gl_md_poll_last_ms = now;
+  }
+  GL_CB_UNLOCK();
+  if (skip) return;
+  for (iter = 0; iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
+    uint64_t h;
+    int32_t id;
+    uint32_t failed, cub;
+    int r = gl_cr_read_reply(buf, now, &h, &id, &failed, &cub);
+    if (r > 0) gl_md_route_result(h, id, failed, cub, buf + 24, now);
+    gl_cb_zero(buf, GL_CR_DRAIN_RESP_MAX_BYTES);
+    if (r <= 0) break;
+  }
+}
+
+/* ISteamUtils::IsAPICallCompleted (shimLocal). */
+static int gl_md_is_api_call_completed(uint64_t h, uint8_t *pbFailed) {
+  uint32_t i;
+  int found = 0;
+  uint32_t now = gl_cb_now_ms();
+  gl_md_expire(now);
+  if (!gl_md_enabled) gl_md_poll(now);
+  GL_CB_LOCK();
+  for (i = 0; i < GL_MD_RES_CAP; i++) {
+    if (gl_md_results[i].valid && gl_md_results[i].h == h) {
+      found = 1;
+      if (pbFailed) *pbFailed = gl_md_results[i].failed ? 1 : 0;
+      break;
+    }
+  }
+  GL_CB_UNLOCK();
+  return found;
+}
+
+/* GetAPICallResult for the flat ManualDispatch export and ISteamUtils. Copies
+ * only when the id and size match exactly; the entry is removed on success. */
+static int gl_md_get_api_call_result(uint64_t h, void *out, int cub,
+                                     int iExpected, uint8_t *pbFailed) {
+  uint32_t i;
+  int ok = 0;
+  uint32_t now = gl_cb_now_ms();
+  gl_md_expire(now);
+  if (!gl_md_enabled) gl_md_poll(now);
+  if (!out || cub < 0) return 0;
+  GL_CB_LOCK();
+  for (i = 0; i < GL_MD_RES_CAP; i++) {
+    if (gl_md_results[i].valid && gl_md_results[i].h == h) {
+      if (gl_md_results[i].id == (int32_t)iExpected &&
+          gl_md_results[i].cub == (uint32_t)cub) {
+        memcpy(out, gl_md_results[i].bytes, gl_md_results[i].cub);
+        if (pbFailed) *pbFailed = gl_md_results[i].failed ? 1 : 0;
+        gl_cb_zero(&gl_md_results[i], (uint32_t)sizeof(gl_md_results[i]));
+        ok = 1;
+      }
+      break;
+    }
+  }
+  GL_CB_UNLOCK();
+  return ok;
+}
+
+#if !defined(__i386__)
+static void gl_md_init(void) {
+  GL_CB_LOCK();
+  gl_md_enabled = 1;
+  GL_CB_UNLOCK();
+}
+
+/* Pulls slot 6 and slot 11 into the FIFO / results table. At most one pull
+ * pass per call, under the shared 30 ms floor and the slot backoffs. */
+static void gl_md_run_frame(void) {
+  uint8_t buf[GL_CR_DRAIN_RESP_MAX_BYTES];
+  uint32_t now, iter, interval;
+  int crskip;
+  GL_CB_LOCK();
+  if (!gl_md_enabled || gl_md_running) {
+    GL_CB_UNLOCK();
+    return;
+  }
+  now = gl_cb_now_ms();
+  interval = gl_cb_fail_count >= GL_CB_DRAIN_FAIL_BACKOFF_AFTER
+                 ? GL_CB_DRAIN_BACKOFF_MS
+                 : GL_CB_DRAIN_MIN_INTERVAL_MS;
+  if (gl_md_have_run && (uint32_t)(now - gl_md_last_run_ms) < interval) {
+    GL_CB_UNLOCK();
+    return;
+  }
+  gl_md_have_run = 1;
+  gl_md_last_run_ms = now;
+  gl_md_running = 1;
+  GL_CB_UNLOCK();
+
+  gl_md_expire(now);
+
+  for (iter = 0; iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
+    uint32_t len = 0;
+    uint32_t count, cub, size;
+    int32_t id;
+    int pr;
+    int32_t dropped_id = 0;
+    int ok = gl_cb_transport_drain(buf, GL_CB_DRAIN_RESP_MAX_BYTES, &len);
+    if (!ok) {
+      GL_CB_LOCK();
+      gl_cb_fail_count++;
+      GL_CB_UNLOCK();
+      break;
+    }
+    GL_CB_LOCK();
+    gl_cb_fail_count = 0;
+    GL_CB_UNLOCK();
+    if (len > GL_CB_DRAIN_RESP_MAX_BYTES || len < 12) break;
+    memcpy(&count, buf, 4);
+    if (count != 1) break;
+    memcpy(&id, buf + 4, 4);
+    memcpy(&cub, buf + 8, 4);
+    size = gl_cb_relay_size(id);
+    if (!size || cub != size) break;
+    if (len != 12u + cub) break;
+    GL_CB_LOCK();
+    pr = gl_md_push_locked(id, buf + 12, cub, &dropped_id);
+    GL_CB_UNLOCK();
+    if (pr != 0) gl_cb_report_dispatch(dropped_id, 0, 0);
+  }
+  gl_cb_zero(buf, GL_CR_DRAIN_RESP_MAX_BYTES);
+
+  GL_CB_LOCK();
+  crskip = gl_cr_fail_count >= GL_CB_DRAIN_FAIL_BACKOFF_AFTER &&
+           (uint32_t)(now - gl_cr_last_fail_ms) < GL_CB_DRAIN_BACKOFF_MS;
+  GL_CB_UNLOCK();
+  for (iter = 0; !crskip && iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
+    uint64_t h;
+    int32_t id;
+    uint32_t failed, cub;
+    int r = gl_cr_read_reply(buf, now, &h, &id, &failed, &cub);
+    if (r > 0) gl_md_store_result(h, id, failed, cub, buf + 24, now);
+    gl_cb_zero(buf, GL_CR_DRAIN_RESP_MAX_BYTES);
+    if (r <= 0) break;
+  }
+
+  GL_CB_LOCK();
+  gl_md_running = 0;
+  GL_CB_UNLOCK();
+}
+
+/* Fills a CallbackMsg_t for the front message (x64 layout, measured). The
+ * parameter pointer is shim-owned and valid until gl_md_free_last. */
+static int gl_md_get_next(void *out) {
+  int32_t id = 0;
+  int report = 0;
+  int32_t user = 1;
+  uint8_t *o = (uint8_t *)out;
+  if (!o) return 0;
+  GL_CB_LOCK();
+  if (!gl_md_enabled || gl_md_count == 0) {
+    GL_CB_UNLOCK();
+    return 0;
+  }
+  {
+    gl_md_msg *m = &gl_md_fifo[gl_md_head];
+    void *pub = m->bytes;
+    int32_t cubp = (int32_t)m->cub;
+    memset(o, 0, ${CALLBACK_LAYOUTS.CallbackMsg_t.x64.size});
+    memcpy(o + ${CALLBACK_LAYOUTS.CallbackMsg_t.x64.fields.m_hSteamUser}, &user, 4);
+    memcpy(o + ${CALLBACK_LAYOUTS.CallbackMsg_t.x64.fields.m_iCallback}, &m->id, 4);
+    memcpy(o + ${CALLBACK_LAYOUTS.CallbackMsg_t.x64.fields.m_pubParam}, &pub, sizeof(pub));
+    memcpy(o + ${CALLBACK_LAYOUTS.CallbackMsg_t.x64.fields.m_cubParam}, &cubp, 4);
+    id = m->id;
+  }
+  gl_md_front_out = 1;
+  if (!gl_md_front_reported) {
+    gl_md_front_reported = 1;
+    report = 1;
+  }
+  GL_CB_UNLOCK();
+  if (report) gl_cb_report_dispatch(id, 1, 0);
+  return 1;
+}
+
+static void gl_md_free_last(void) {
+  GL_CB_LOCK();
+  if (gl_md_front_out && gl_md_count > 0) {
+    gl_cb_zero(&gl_md_fifo[gl_md_head], (uint32_t)sizeof(gl_md_fifo[0]));
+    gl_md_head = (gl_md_head + 1) % GL_MD_FIFO_CAP;
+    gl_md_count--;
+  }
+  gl_md_front_out = 0;
+  gl_md_front_reported = 0;
+  GL_CB_UNLOCK();
+}
+#endif
+
+/* One slot-11 pull for RunCallbacks. Called with NO lock held. Returns 1 to
+ * keep draining. */
+static int gl_cr_pull_one(uint8_t *buf, uint32_t now) {
+  uint64_t h;
+  int32_t id;
+  uint32_t failed, cub;
+  int r = gl_cr_read_reply(buf, now, &h, &id, &failed, &cub);
+  if (r <= 0) return 0;
   if (!gl_cr_deliver(h, id, failed, buf + 24)) {
     gl_cr_hold(h, id, failed, cub, buf + 24, now);
+    /* a polling game can still read it with GetAPICallResult */
+    gl_md_store_result(h, id, failed, cub, buf + 24, now);
   }
   return 1;
 }
@@ -1838,7 +2268,7 @@ static void gl_cb_run_callbacks(void) {
   int do_bcast, do_cr;
 
   GL_CB_LOCK();
-  if (gl_cb_running ||
+  if (gl_cb_running || gl_md_enabled ||
       (gl_cb_relay_count == 0 && gl_cr_count == 0 && gl_cr_held_count == 0)) {
     GL_CB_UNLOCK();
     return;

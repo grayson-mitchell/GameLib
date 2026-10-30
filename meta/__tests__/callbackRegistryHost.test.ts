@@ -51,7 +51,16 @@ const CASES = [
   'cr_rejects_malformed_and_168',
   'cr_held_capacity',
   'cr_max_per_run_and_backoff',
-  'cr_buffer_zeroed'
+  'cr_buffer_zeroed',
+  'md_broadcast',
+  'md_callresult',
+  'md_callresult_failed_flag',
+  'md_callresult_wrong_id',
+  'md_fifo_bounded',
+  'md_runcallbacks_inert',
+  'md_report',
+  'utils_poll',
+  'md_registry_unmatched_pollable'
 ]
 
 function spawnArgv(
