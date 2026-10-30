@@ -5,7 +5,7 @@ Type: struct CSteamID::SteamID_t::SteamIDComponent_t
 
 Layout: <ASTRecordLayout
   Size:64
-  Alignment:32
+  Alignment:8
   BaseOffsets: []>
   VBaseOffsets: []>
   FieldOffsets: [0, 32, 52, 56]>
@@ -15,13 +15,33 @@ Type: union CSteamID::SteamID_t
 
 Layout: <ASTRecordLayout
   Size:64
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct CSteamIDLegacy::SteamID_t::SteamIDComponent_t
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 52, 56]>
+
+*** Dumping AST Record Layout
+Type: union CSteamIDLegacy::SteamID_t
+
+Layout: <ASTRecordLayout
+  Size:64
   Alignment:64
   BaseOffsets: []>
   VBaseOffsets: []>
   FieldOffsets: [0, 0]>
 
 *** Dumping AST Record Layout
-Type: class CSteamID
+Type: class CSteamIDLegacy
 
 Layout: <ASTRecordLayout
   Size:64
@@ -41,7 +61,7 @@ Layout: <ASTRecordLayout
   FieldOffsets: [0, 64, 128]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x75910ddb98 <meta/__tests__/fixtures/steam_callback_structs.cpp:27:5, line:32:5> line:27:12 struct SteamIDComponent_t definition
+Record: CXXRecordDecl 0x7872d893d8 <meta/__tests__/fixtures/steam_callback_structs.cpp:96:5, line:101:5> line:96:12 struct SteamIDComponent_t definition
 |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 | |-DefaultConstructor exists trivial
 | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -49,34 +69,34 @@ Record: CXXRecordDecl 0x75910ddb98 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial
-|-MaxFieldAlignmentAttr 0x75910ddc50 <<invalid sloc>> Implicit 64
-|-CXXRecordDecl 0x75910ddd18 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
-|-FieldDecl 0x75910dde60 <line:28:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
-| `-ConstantExpr 0x75910dde40 <col:30> 'int'
+|-MaxFieldAlignmentAttr 0x7872d89490 <<invalid sloc>> Implicit 64
+|-CXXRecordDecl 0x7872d89558 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
+|-FieldDecl 0x7872d89638 <line:97:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
+| `-ConstantExpr 0x7872d89618 <col:30> 'int'
 |   |-value: Int 32
-|   `-IntegerLiteral 0x75910dde10 <col:30> 'int' 32
-|-FieldDecl 0x75910ddf08 <line:29:7, col:42> col:20 m_unAccountInstance 'unsigned int'
-| `-ConstantExpr 0x75910ddee8 <col:42> 'int'
+|   `-IntegerLiteral 0x7872d895e8 <col:30> 'int' 32
+|-FieldDecl 0x7872d896e0 <line:98:7, col:42> col:20 m_unAccountInstance 'unsigned int'
+| `-ConstantExpr 0x7872d896c0 <col:42> 'int'
 |   |-value: Int 20
-|   `-IntegerLiteral 0x75910ddeb0 <col:42> 'int' 20
-|-FieldDecl 0x75910ddfb0 <line:30:7, col:37> col:20 m_EAccountType 'unsigned int'
-| `-ConstantExpr 0x75910ddf90 <col:37> 'int'
+|   `-IntegerLiteral 0x7872d89688 <col:42> 'int' 20
+|-FieldDecl 0x7872d89788 <line:99:7, col:37> col:20 m_EAccountType 'unsigned int'
+| `-ConstantExpr 0x7872d89768 <col:37> 'int'
 |   |-value: Int 4
-|   `-IntegerLiteral 0x75910ddf58 <col:37> 'int' 4
-|-FieldDecl 0x7591108058 <line:31:7, col:25> col:11 m_EUniverse 'int'
-| `-ConstantExpr 0x7591108038 <col:25> 'int'
+|   `-IntegerLiteral 0x7872d89730 <col:37> 'int' 4
+|-FieldDecl 0x7872d89830 <line:100:7, col:25> col:11 m_EUniverse 'int'
+| `-ConstantExpr 0x7872d89810 <col:25> 'int'
 |   |-value: Int 8
-|   `-IntegerLiteral 0x7591108000 <col:25> 'int' 8
-|-CXXConstructorDecl 0x75911083f0 <line:27:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
-|-CXXDestructorDecl 0x75911084d8 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x75911084d8
-|-CXXConstructorDecl 0x7591108890 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x7591108890
-| `-ParmVarDecl 0x75911089c0 <col:12> col:12 'const SteamIDComponent_t &'
-`-CXXConstructorDecl 0x7591108aa0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x7591108aa0
-  `-ParmVarDecl 0x7591108bd0 <col:12> col:12 'SteamIDComponent_t &&'
+|   `-IntegerLiteral 0x7872d897d8 <col:25> 'int' 8
+|-CXXConstructorDecl 0x7872d89bd0 <line:96:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
+|-CXXDestructorDecl 0x7872d89cb8 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x7872d89cb8
+|-CXXConstructorDecl 0x7872d8a090 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x7872d8a090
+| `-ParmVarDecl 0x7872d8a1c0 <col:12> col:12 'const SteamIDComponent_t &'
+`-CXXConstructorDecl 0x7872d8a2a0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x7872d8a2a0
+  `-ParmVarDecl 0x7872d8a3d0 <col:12> col:12 'SteamIDComponent_t &&'
 
 Layout: <CGRecordLayout
-  LLVMType:%"struct.CSteamID::SteamID_t::SteamIDComponent_t" = type { i32, i32 }
-  NonVirtualBaseLLVMType:%"struct.CSteamID::SteamID_t::SteamIDComponent_t" = type { i32, i32 }
+  LLVMType:%"struct.CSteamIDLegacy::SteamID_t::SteamIDComponent_t" = type { i32, i32 }
+  NonVirtualBaseLLVMType:%"struct.CSteamIDLegacy::SteamID_t::SteamIDComponent_t" = type { i32, i32 }
   IsZeroInitializable:1
   BitFields:[
     <CGBitFieldInfo Offset:0 Size:32 IsSigned:0 StorageSize:32 StorageOffset:0 VolatileOffset:0 VolatileStorageSize:0 VolatileStorageOffset:0>
@@ -86,7 +106,7 @@ Layout: <CGRecordLayout
 ]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x75910dd990 <meta/__tests__/fixtures/steam_callback_structs.cpp:26:3, line:34:3> line:26:9 union SteamID_t definition
+Record: CXXRecordDecl 0x7872d891d0 <meta/__tests__/fixtures/steam_callback_structs.cpp:95:3, line:103:3> line:95:9 union SteamID_t definition
 |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal has_variant_members
 | |-DefaultConstructor exists trivial
 | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -94,9 +114,9 @@ Record: CXXRecordDecl 0x75910dd990 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial needs_implicit
-|-MaxFieldAlignmentAttr 0x75910dda40 <<invalid sloc>> Implicit 64
-|-CXXRecordDecl 0x75910ddb08 <col:3, col:9> col:9 implicit union SteamID_t
-|-CXXRecordDecl 0x75910ddb98 <line:27:5, line:32:5> line:27:12 struct SteamIDComponent_t definition
+|-MaxFieldAlignmentAttr 0x7872d89280 <<invalid sloc>> Implicit 64
+|-CXXRecordDecl 0x7872d89348 <col:3, col:9> col:9 implicit union SteamID_t
+|-CXXRecordDecl 0x7872d893d8 <line:96:5, line:101:5> line:96:12 struct SteamIDComponent_t definition
 | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 | | |-DefaultConstructor exists trivial
 | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -104,48 +124,48 @@ Record: CXXRecordDecl 0x75910dd990 <meta/__tests__/fixtures/steam_callback_struc
 | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | | |-MoveAssignment exists simple trivial needs_implicit
 | | `-Destructor simple irrelevant trivial
-| |-MaxFieldAlignmentAttr 0x75910ddc50 <<invalid sloc>> Implicit 64
-| |-CXXRecordDecl 0x75910ddd18 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
-| |-FieldDecl 0x75910dde60 <line:28:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
-| | `-ConstantExpr 0x75910dde40 <col:30> 'int'
+| |-MaxFieldAlignmentAttr 0x7872d89490 <<invalid sloc>> Implicit 64
+| |-CXXRecordDecl 0x7872d89558 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
+| |-FieldDecl 0x7872d89638 <line:97:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
+| | `-ConstantExpr 0x7872d89618 <col:30> 'int'
 | |   |-value: Int 32
-| |   `-IntegerLiteral 0x75910dde10 <col:30> 'int' 32
-| |-FieldDecl 0x75910ddf08 <line:29:7, col:42> col:20 m_unAccountInstance 'unsigned int'
-| | `-ConstantExpr 0x75910ddee8 <col:42> 'int'
+| |   `-IntegerLiteral 0x7872d895e8 <col:30> 'int' 32
+| |-FieldDecl 0x7872d896e0 <line:98:7, col:42> col:20 m_unAccountInstance 'unsigned int'
+| | `-ConstantExpr 0x7872d896c0 <col:42> 'int'
 | |   |-value: Int 20
-| |   `-IntegerLiteral 0x75910ddeb0 <col:42> 'int' 20
-| |-FieldDecl 0x75910ddfb0 <line:30:7, col:37> col:20 m_EAccountType 'unsigned int'
-| | `-ConstantExpr 0x75910ddf90 <col:37> 'int'
+| |   `-IntegerLiteral 0x7872d89688 <col:42> 'int' 20
+| |-FieldDecl 0x7872d89788 <line:99:7, col:37> col:20 m_EAccountType 'unsigned int'
+| | `-ConstantExpr 0x7872d89768 <col:37> 'int'
 | |   |-value: Int 4
-| |   `-IntegerLiteral 0x75910ddf58 <col:37> 'int' 4
-| |-FieldDecl 0x7591108058 <line:31:7, col:25> col:11 m_EUniverse 'int'
-| | `-ConstantExpr 0x7591108038 <col:25> 'int'
+| |   `-IntegerLiteral 0x7872d89730 <col:37> 'int' 4
+| |-FieldDecl 0x7872d89830 <line:100:7, col:25> col:11 m_EUniverse 'int'
+| | `-ConstantExpr 0x7872d89810 <col:25> 'int'
 | |   |-value: Int 8
-| |   `-IntegerLiteral 0x7591108000 <col:25> 'int' 8
-| |-CXXConstructorDecl 0x75911083f0 <line:27:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
-| |-CXXDestructorDecl 0x75911084d8 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x75911084d8
-| |-CXXConstructorDecl 0x7591108890 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x7591108890
-| | `-ParmVarDecl 0x75911089c0 <col:12> col:12 'const SteamIDComponent_t &'
-| `-CXXConstructorDecl 0x7591108aa0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x7591108aa0
-|   `-ParmVarDecl 0x7591108bd0 <col:12> col:12 'SteamIDComponent_t &&'
-|-FieldDecl 0x7591108118 <col:5, line:32:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamID::SteamID_t::SteamIDComponent_t'
-|-FieldDecl 0x7591108190 <line:33:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
-|-CXXConstructorDecl 0x75911082f0 <line:26:9> col:9 implicit used SteamID_t 'void () noexcept' inline default trivial
-| `-CompoundStmt 0x7591108ea0 <col:9>
-|-CXXConstructorDecl 0x7591108660 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &)' inline default trivial noexcept-unevaluated 0x7591108660
-| `-ParmVarDecl 0x7591108790 <col:9> col:9 'const SteamID_t &'
-`-CXXConstructorDecl 0x7591108cc0 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&)' inline default trivial noexcept-unevaluated 0x7591108cc0
-  `-ParmVarDecl 0x7591108df0 <col:9> col:9 'SteamID_t &&'
+| |   `-IntegerLiteral 0x7872d897d8 <col:25> 'int' 8
+| |-CXXConstructorDecl 0x7872d89bd0 <line:96:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
+| |-CXXDestructorDecl 0x7872d89cb8 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x7872d89cb8
+| |-CXXConstructorDecl 0x7872d8a090 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x7872d8a090
+| | `-ParmVarDecl 0x7872d8a1c0 <col:12> col:12 'const SteamIDComponent_t &'
+| `-CXXConstructorDecl 0x7872d8a2a0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x7872d8a2a0
+|   `-ParmVarDecl 0x7872d8a3d0 <col:12> col:12 'SteamIDComponent_t &&'
+|-FieldDecl 0x7872d898f8 <col:5, line:101:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamIDLegacy::SteamID_t::SteamIDComponent_t'
+|-FieldDecl 0x7872d89970 <line:102:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
+|-CXXConstructorDecl 0x7872d89ad0 <line:95:9> col:9 implicit used SteamID_t 'void () noexcept' inline default trivial
+| `-CompoundStmt 0x7872d8a670 <col:9>
+|-CXXConstructorDecl 0x7872d89e40 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &)' inline default trivial noexcept-unevaluated 0x7872d89e40
+| `-ParmVarDecl 0x7872d89f70 <col:9> col:9 'const SteamID_t &'
+`-CXXConstructorDecl 0x7872d8a4c0 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&)' inline default trivial noexcept-unevaluated 0x7872d8a4c0
+  `-ParmVarDecl 0x7872d8a5f0 <col:9> col:9 'SteamID_t &&'
 
 Layout: <CGRecordLayout
-  LLVMType:%"union.CSteamID::SteamID_t" = type { i64 }
-  NonVirtualBaseLLVMType:%"union.CSteamID::SteamID_t" = type { i64 }
+  LLVMType:%"union.CSteamIDLegacy::SteamID_t" = type { i64 }
+  NonVirtualBaseLLVMType:%"union.CSteamIDLegacy::SteamID_t" = type { i64 }
   IsZeroInitializable:1
   BitFields:[
 ]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x75910dd428 <meta/__tests__/fixtures/steam_callback_structs.cpp:20:1, line:35:1> line:20:7 referenced class CSteamID definition
+Record: CXXRecordDecl 0x7872d83cd8 <meta/__tests__/fixtures/steam_callback_structs.cpp:89:1, line:104:1> line:89:7 referenced class CSteamIDLegacy definition
 |-DefinitionData pass_in_registers standard_layout trivially_copyable has_user_declared_ctor can_const_default_init
 | |-DefaultConstructor exists non_trivial user_provided
 | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -153,28 +173,28 @@ Record: CXXRecordDecl 0x75910dd428 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial needs_implicit
-|-MaxFieldAlignmentAttr 0x75910dd4e0 <<invalid sloc>> Implicit 64
-|-CXXRecordDecl 0x75910dd5a8 <col:1, col:7> col:7 implicit referenced class CSteamID
-|-AccessSpecDecl 0x75910dd638 <line:21:2, col:8> col:2 public
-|-CXXConstructorDecl 0x75910dd700 <line:22:3, col:45> col:3 CSteamID 'void ()' implicit-inline
-| |-CXXCtorInitializer Field 0x7591108258 'm_steamid' 'union SteamID_t':'CSteamID::SteamID_t'
-| | `-CXXConstructExpr 0x759110a0f0 <col:3> 'union SteamID_t':'CSteamID::SteamID_t' 'void () noexcept'
-| `-CompoundStmt 0x759110a250 <col:14, col:45>
-|   `-BinaryOperator 0x759110a230 <col:16, col:42> 'uint64':'unsigned long long' lvalue '='
-|     |-MemberExpr 0x759110a1c8 <col:16, col:26> 'uint64':'unsigned long long' lvalue .m_unAll64Bits 0x7591108190
-|     | `-MemberExpr 0x759110a198 <col:16> 'union SteamID_t':'CSteamID::SteamID_t' lvalue ->m_steamid 0x7591108258
-|     |   `-CXXThisExpr 0x759110a188 <col:16> 'CSteamID *' implicit this
-|     `-ImplicitCastExpr 0x759110a218 <col:42> 'uint64':'unsigned long long' <IntegralCast>
-|       `-IntegerLiteral 0x759110a1f8 <col:42> 'int' 0
-|-CXXMethodDecl 0x75910dd8c0 <line:23:3, col:68> col:10 used ConvertToUint64 'uint64 () const' implicit-inline
-| `-CompoundStmt 0x759110a300 <col:34, col:68>
-|   `-ReturnStmt 0x759110a2f0 <col:36, col:53>
-|     `-ImplicitCastExpr 0x759110a2d8 <col:43, col:53> 'uint64':'unsigned long long' <LValueToRValue>
-|       `-MemberExpr 0x759110a2a8 <col:43, col:53> 'const uint64':'const unsigned long long' lvalue .m_unAll64Bits 0x7591108190
-|         `-MemberExpr 0x759110a278 <col:43> 'const union SteamID_t':'const CSteamID::SteamID_t' lvalue ->m_steamid 0x7591108258
-|           `-CXXThisExpr 0x759110a268 <col:43> 'const CSteamID *' implicit this
-|-AccessSpecDecl 0x75910dd968 <line:25:2, col:9> col:2 private
-|-CXXRecordDecl 0x75910dd990 <line:26:3, line:34:3> line:26:9 union SteamID_t definition
+|-MaxFieldAlignmentAttr 0x7872d83d90 <<invalid sloc>> Implicit 64
+|-CXXRecordDecl 0x7872d83e58 <col:1, col:7> col:7 implicit referenced class CSteamIDLegacy
+|-AccessSpecDecl 0x7872d83ee8 <line:90:2, col:8> col:2 public
+|-CXXConstructorDecl 0x7872d89000 <line:91:3, col:51> col:3 CSteamIDLegacy 'void ()' implicit-inline
+| |-CXXCtorInitializer Field 0x7872d89a38 'm_steamid' 'union SteamID_t':'CSteamIDLegacy::SteamID_t'
+| | `-CXXConstructExpr 0x7872d8a8c0 <col:3> 'union SteamID_t':'CSteamIDLegacy::SteamID_t' 'void () noexcept'
+| `-CompoundStmt 0x7872d8aa20 <col:20, col:51>
+|   `-BinaryOperator 0x7872d8aa00 <col:22, col:48> 'uint64':'unsigned long long' lvalue '='
+|     |-MemberExpr 0x7872d8a998 <col:22, col:32> 'uint64':'unsigned long long' lvalue .m_unAll64Bits 0x7872d89970
+|     | `-MemberExpr 0x7872d8a968 <col:22> 'union SteamID_t':'CSteamIDLegacy::SteamID_t' lvalue ->m_steamid 0x7872d89a38
+|     |   `-CXXThisExpr 0x7872d8a958 <col:22> 'CSteamIDLegacy *' implicit this
+|     `-ImplicitCastExpr 0x7872d8a9e8 <col:48> 'uint64':'unsigned long long' <IntegralCast>
+|       `-IntegerLiteral 0x7872d8a9c8 <col:48> 'int' 0
+|-CXXMethodDecl 0x7872d89100 <line:92:3, col:68> col:10 used ConvertToUint64 'uint64 () const' implicit-inline
+| `-CompoundStmt 0x7872d8aad0 <col:34, col:68>
+|   `-ReturnStmt 0x7872d8aac0 <col:36, col:53>
+|     `-ImplicitCastExpr 0x7872d8aaa8 <col:43, col:53> 'uint64':'unsigned long long' <LValueToRValue>
+|       `-MemberExpr 0x7872d8aa78 <col:43, col:53> 'const uint64':'const unsigned long long' lvalue .m_unAll64Bits 0x7872d89970
+|         `-MemberExpr 0x7872d8aa48 <col:43> 'const union SteamID_t':'const CSteamIDLegacy::SteamID_t' lvalue ->m_steamid 0x7872d89a38
+|           `-CXXThisExpr 0x7872d8aa38 <col:43> 'const CSteamIDLegacy *' implicit this
+|-AccessSpecDecl 0x7872d891a8 <line:94:2, col:9> col:2 private
+|-CXXRecordDecl 0x7872d891d0 <line:95:3, line:103:3> line:95:9 union SteamID_t definition
 | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal has_variant_members
 | | |-DefaultConstructor exists trivial
 | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -182,9 +202,9 @@ Record: CXXRecordDecl 0x75910dd428 <meta/__tests__/fixtures/steam_callback_struc
 | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | | |-MoveAssignment exists simple trivial needs_implicit
 | | `-Destructor simple irrelevant trivial needs_implicit
-| |-MaxFieldAlignmentAttr 0x75910dda40 <<invalid sloc>> Implicit 64
-| |-CXXRecordDecl 0x75910ddb08 <col:3, col:9> col:9 implicit union SteamID_t
-| |-CXXRecordDecl 0x75910ddb98 <line:27:5, line:32:5> line:27:12 struct SteamIDComponent_t definition
+| |-MaxFieldAlignmentAttr 0x7872d89280 <<invalid sloc>> Implicit 64
+| |-CXXRecordDecl 0x7872d89348 <col:3, col:9> col:9 implicit union SteamID_t
+| |-CXXRecordDecl 0x7872d893d8 <line:96:5, line:101:5> line:96:12 struct SteamIDComponent_t definition
 | | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 | | | |-DefaultConstructor exists trivial
 | | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -192,49 +212,49 @@ Record: CXXRecordDecl 0x75910dd428 <meta/__tests__/fixtures/steam_callback_struc
 | | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | | | |-MoveAssignment exists simple trivial needs_implicit
 | | | `-Destructor simple irrelevant trivial
-| | |-MaxFieldAlignmentAttr 0x75910ddc50 <<invalid sloc>> Implicit 64
-| | |-CXXRecordDecl 0x75910ddd18 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
-| | |-FieldDecl 0x75910dde60 <line:28:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
-| | | `-ConstantExpr 0x75910dde40 <col:30> 'int'
+| | |-MaxFieldAlignmentAttr 0x7872d89490 <<invalid sloc>> Implicit 64
+| | |-CXXRecordDecl 0x7872d89558 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
+| | |-FieldDecl 0x7872d89638 <line:97:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
+| | | `-ConstantExpr 0x7872d89618 <col:30> 'int'
 | | |   |-value: Int 32
-| | |   `-IntegerLiteral 0x75910dde10 <col:30> 'int' 32
-| | |-FieldDecl 0x75910ddf08 <line:29:7, col:42> col:20 m_unAccountInstance 'unsigned int'
-| | | `-ConstantExpr 0x75910ddee8 <col:42> 'int'
+| | |   `-IntegerLiteral 0x7872d895e8 <col:30> 'int' 32
+| | |-FieldDecl 0x7872d896e0 <line:98:7, col:42> col:20 m_unAccountInstance 'unsigned int'
+| | | `-ConstantExpr 0x7872d896c0 <col:42> 'int'
 | | |   |-value: Int 20
-| | |   `-IntegerLiteral 0x75910ddeb0 <col:42> 'int' 20
-| | |-FieldDecl 0x75910ddfb0 <line:30:7, col:37> col:20 m_EAccountType 'unsigned int'
-| | | `-ConstantExpr 0x75910ddf90 <col:37> 'int'
+| | |   `-IntegerLiteral 0x7872d89688 <col:42> 'int' 20
+| | |-FieldDecl 0x7872d89788 <line:99:7, col:37> col:20 m_EAccountType 'unsigned int'
+| | | `-ConstantExpr 0x7872d89768 <col:37> 'int'
 | | |   |-value: Int 4
-| | |   `-IntegerLiteral 0x75910ddf58 <col:37> 'int' 4
-| | |-FieldDecl 0x7591108058 <line:31:7, col:25> col:11 m_EUniverse 'int'
-| | | `-ConstantExpr 0x7591108038 <col:25> 'int'
+| | |   `-IntegerLiteral 0x7872d89730 <col:37> 'int' 4
+| | |-FieldDecl 0x7872d89830 <line:100:7, col:25> col:11 m_EUniverse 'int'
+| | | `-ConstantExpr 0x7872d89810 <col:25> 'int'
 | | |   |-value: Int 8
-| | |   `-IntegerLiteral 0x7591108000 <col:25> 'int' 8
-| | |-CXXConstructorDecl 0x75911083f0 <line:27:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
-| | |-CXXDestructorDecl 0x75911084d8 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x75911084d8
-| | |-CXXConstructorDecl 0x7591108890 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x7591108890
-| | | `-ParmVarDecl 0x75911089c0 <col:12> col:12 'const SteamIDComponent_t &'
-| | `-CXXConstructorDecl 0x7591108aa0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x7591108aa0
-| |   `-ParmVarDecl 0x7591108bd0 <col:12> col:12 'SteamIDComponent_t &&'
-| |-FieldDecl 0x7591108118 <col:5, line:32:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamID::SteamID_t::SteamIDComponent_t'
-| |-FieldDecl 0x7591108190 <line:33:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
-| |-CXXConstructorDecl 0x75911082f0 <line:26:9> col:9 implicit used SteamID_t 'void () noexcept' inline default trivial
-| | `-CompoundStmt 0x7591108ea0 <col:9>
-| |-CXXConstructorDecl 0x7591108660 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &)' inline default trivial noexcept-unevaluated 0x7591108660
-| | `-ParmVarDecl 0x7591108790 <col:9> col:9 'const SteamID_t &'
-| `-CXXConstructorDecl 0x7591108cc0 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&)' inline default trivial noexcept-unevaluated 0x7591108cc0
-|   `-ParmVarDecl 0x7591108df0 <col:9> col:9 'SteamID_t &&'
-`-FieldDecl 0x7591108258 <col:3, line:34:5> col:5 referenced m_steamid 'union SteamID_t':'CSteamID::SteamID_t'
+| | |   `-IntegerLiteral 0x7872d897d8 <col:25> 'int' 8
+| | |-CXXConstructorDecl 0x7872d89bd0 <line:96:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
+| | |-CXXDestructorDecl 0x7872d89cb8 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x7872d89cb8
+| | |-CXXConstructorDecl 0x7872d8a090 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x7872d8a090
+| | | `-ParmVarDecl 0x7872d8a1c0 <col:12> col:12 'const SteamIDComponent_t &'
+| | `-CXXConstructorDecl 0x7872d8a2a0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x7872d8a2a0
+| |   `-ParmVarDecl 0x7872d8a3d0 <col:12> col:12 'SteamIDComponent_t &&'
+| |-FieldDecl 0x7872d898f8 <col:5, line:101:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamIDLegacy::SteamID_t::SteamIDComponent_t'
+| |-FieldDecl 0x7872d89970 <line:102:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
+| |-CXXConstructorDecl 0x7872d89ad0 <line:95:9> col:9 implicit used SteamID_t 'void () noexcept' inline default trivial
+| | `-CompoundStmt 0x7872d8a670 <col:9>
+| |-CXXConstructorDecl 0x7872d89e40 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &)' inline default trivial noexcept-unevaluated 0x7872d89e40
+| | `-ParmVarDecl 0x7872d89f70 <col:9> col:9 'const SteamID_t &'
+| `-CXXConstructorDecl 0x7872d8a4c0 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&)' inline default trivial noexcept-unevaluated 0x7872d8a4c0
+|   `-ParmVarDecl 0x7872d8a5f0 <col:9> col:9 'SteamID_t &&'
+`-FieldDecl 0x7872d89a38 <col:3, line:103:5> col:5 referenced m_steamid 'union SteamID_t':'CSteamIDLegacy::SteamID_t'
 
 Layout: <CGRecordLayout
-  LLVMType:%class.CSteamID = type { %"union.CSteamID::SteamID_t" }
-  NonVirtualBaseLLVMType:%class.CSteamID = type { %"union.CSteamID::SteamID_t" }
+  LLVMType:%class.CSteamIDLegacy = type { %"union.CSteamIDLegacy::SteamID_t" }
+  NonVirtualBaseLLVMType:%class.CSteamIDLegacy = type { %"union.CSteamIDLegacy::SteamID_t" }
   IsZeroInitializable:1
   BitFields:[
 ]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x759110a318 <meta/__tests__/fixtures/steam_callback_structs.cpp:37:1, line:42:1> line:37:8 referenced struct UserStatsReceived_t definition
+Record: CXXRecordDecl 0x7872d8aae8 <meta/__tests__/fixtures/steam_callback_structs.cpp:106:1, line:111:1> line:106:8 referenced struct UserStatsReceived_t definition
 |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable
 | |-DefaultConstructor exists non_trivial needs_implicit
 | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -242,23 +262,373 @@ Record: CXXRecordDecl 0x759110a318 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial needs_implicit
-|-MaxFieldAlignmentAttr 0x759110a3d0 <<invalid sloc>> Implicit 64
-|-CXXRecordDecl 0x759110a498 <col:1, col:8> col:8 implicit struct UserStatsReceived_t
-|-EnumDecl 0x759110a528 <line:38:3, col:29> col:3
-| `-EnumConstantDecl 0x759110a630 <col:10, col:24> col:10 k_iCallback 'UserStatsReceived_t::(unnamed enum at meta/__tests__/fixtures/steam_callback_structs.cpp:38:3)'
-|   `-ConstantExpr 0x759110a610 <col:24> 'int'
+|-MaxFieldAlignmentAttr 0x7872d8aba0 <<invalid sloc>> Implicit 64
+|-CXXRecordDecl 0x7872d8ac68 <col:1, col:8> col:8 implicit struct UserStatsReceived_t
+|-EnumDecl 0x7872d8acf8 <line:107:3, col:29> col:3
+| `-EnumConstantDecl 0x7872d8ae00 <col:10, col:24> col:10 referenced k_iCallback 'UserStatsReceived_t::(unnamed enum at meta/__tests__/fixtures/steam_callback_structs.cpp:107:3)'
+|   `-ConstantExpr 0x7872d8ade0 <col:24> 'int'
 |     |-value: Int 1101
-|     `-IntegerLiteral 0x759110a5f0 <col:24> 'int' 1101
-|-FieldDecl 0x759110a698 <line:39:3, col:10> col:10 referenced m_nGameID 'uint64':'unsigned long long'
-|-FieldDecl 0x759110a730 <line:40:3, col:11> col:11 m_eResult 'EResult'
-`-FieldDecl 0x759110a7c0 <line:41:3, col:12> col:12 referenced m_steamIDUser 'CSteamID'
+|     `-IntegerLiteral 0x7872d8adc0 <col:24> 'int' 1101
+|-FieldDecl 0x7872d8ae68 <line:108:3, col:10> col:10 referenced m_nGameID 'uint64':'unsigned long long'
+|-FieldDecl 0x7872d8af00 <line:109:3, col:11> col:11 m_eResult 'EResult'
+`-FieldDecl 0x7872d8af90 <line:110:3, col:18> col:18 referenced m_steamIDUser 'CSteamIDLegacy'
 
 Layout: <CGRecordLayout
-  LLVMType:%struct.UserStatsReceived_t = type { i64, i32, %class.CSteamID }
-  NonVirtualBaseLLVMType:%struct.UserStatsReceived_t = type { i64, i32, %class.CSteamID }
+  LLVMType:%struct.UserStatsReceived_t = type { i64, i32, %class.CSteamIDLegacy }
+  NonVirtualBaseLLVMType:%struct.UserStatsReceived_t = type { i64, i32, %class.CSteamIDLegacy }
   IsZeroInitializable:1
   BitFields:[
 ]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyInvite_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyEnter_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 96, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyDataUpdate_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyChatUpdate_t
+
+Layout: <ASTRecordLayout
+  Size:256
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128, 192]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyChatMsg_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128, 160]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyMatchList_t
+
+Layout: <ASTRecordLayout
+  Size:32
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyKicked_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyCreated_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64]>
+
+*** Dumping AST Record Layout
+Type: class CSteamID
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct P2PSessionRequest_t
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct P2PSessionConnectFail_t
+
+Layout: <ASTRecordLayout
+  Size:72
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingIPAddr::IPv4MappedAddress
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 80, 96]>
+
+*** Dumping AST Record Layout
+Type: union SteamNetworkingIPAddr::(unnamed at meta/__tests__/fixtures/steam_callback_structs.cpp:122:3)
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingIPAddr
+
+Layout: <ASTRecordLayout
+  Size:144
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 128]>
+
+*** Dumping AST Record Layout
+Type: union SteamNetworkingIdentity::(unnamed at meta/__tests__/fixtures/steam_callback_structs.cpp:138:3)
+
+Layout: <ASTRecordLayout
+  Size:1024
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0, 0, 0, 0, 0, 0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingIdentity
+
+Layout: <ASTRecordLayout
+  Size:1088
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionInfo_t
+
+Layout: <ASTRecordLayout
+  Size:5568
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 1088, 1152, 1184, 1328, 1344, 1376, 1408, 1440, 1472, 2496, 3520, 3552]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionStatusChangedCallback_t
+
+Layout: <ASTRecordLayout
+  Size:5696
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 5632]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetAuthenticationStatus_t
+
+Layout: <ASTRecordLayout
+  Size:2080
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingMessagesSessionRequest_t
+
+Layout: <ASTRecordLayout
+  Size:1088
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingMessagesSessionFailed_t
+
+Layout: <ASTRecordLayout
+  Size:5568
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamRelayNetworkStatus_t
+
+Layout: <ASTRecordLayout
+  Size:2176
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 96, 128]>
+
+*** Dumping AST Record Layout
+Type: struct SteamAPICallCompleted_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 96]>
+
+*** Dumping AST Record Layout
+Type: struct GameLobbyJoinRequested_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64]>
+
+*** Dumping AST Record Layout
+Type: struct GameRichPresenceJoinRequested_t
+
+Layout: <ASTRecordLayout
+  Size:2112
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionRealTimeStatus_t
+
+Layout: <ASTRecordLayout
+  Size:960
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 448, 480]>
+
+*** Dumping AST Record Layout
+Type: struct P2PSessionState_t
+
+Layout: <ASTRecordLayout
+  Size:160
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 8, 16, 24, 32, 64, 96, 128]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingMessage_t
+
+Layout: <ASTRecordLayout
+  Size:1728
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 96, 128, 1216, 1280, 1344, 1408, 1472, 1536, 1568, 1600, 1664, 1680]>
+
+*** Dumping AST Record Layout
+Type: struct CallbackMsg_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 128]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkPingLocation_t
+
+Layout: <ASTRecordLayout
+  Size:4096
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: union SteamNetworkingConfigValue_t::(unnamed at meta/__tests__/fixtures/steam_callback_structs.cpp:346:3)
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0, 0, 0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingConfigValue_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionRealTimeLaneStatus_t
+
+Layout: <ASTRecordLayout
+  Size:512
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 96, 128, 192]>
+
+*** Dumping AST Record Layout
+Type: struct servernetadr_t
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 16, 32]>
+
+*** Dumping AST Record Layout
+Type: struct gameserveritem_t
+
+Layout: <ASTRecordLayout
+  Size:3040
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 96, 104, 112, 368, 624, 1152, 1184, 1216, 1248, 1280, 1288, 1312, 1344, 1376, 1888, 2912, 2976, 3008]>
 === triple: i686-pc-windows-msvc zig 0.16.0 ===
 
 *** Dumping AST Record Layout
@@ -266,7 +636,7 @@ Type: struct CSteamID::SteamID_t::SteamIDComponent_t
 
 Layout: <ASTRecordLayout
   Size:64
-  Alignment:32
+  Alignment:8
   BaseOffsets: []>
   VBaseOffsets: []>
   FieldOffsets: [0, 32, 52, 56]>
@@ -276,13 +646,33 @@ Type: union CSteamID::SteamID_t
 
 Layout: <ASTRecordLayout
   Size:64
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct CSteamIDLegacy::SteamID_t::SteamIDComponent_t
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 52, 56]>
+
+*** Dumping AST Record Layout
+Type: union CSteamIDLegacy::SteamID_t
+
+Layout: <ASTRecordLayout
+  Size:64
   Alignment:64
   BaseOffsets: []>
   VBaseOffsets: []>
   FieldOffsets: [0, 0]>
 
 *** Dumping AST Record Layout
-Type: class CSteamID
+Type: class CSteamIDLegacy
 
 Layout: <ASTRecordLayout
   Size:64
@@ -302,7 +692,7 @@ Layout: <ASTRecordLayout
   FieldOffsets: [0, 64, 128]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x75c90f3a78 <meta/__tests__/fixtures/steam_callback_structs.cpp:27:5, line:32:5> line:27:12 struct SteamIDComponent_t definition
+Record: CXXRecordDecl 0x782d17d2d8 <meta/__tests__/fixtures/steam_callback_structs.cpp:96:5, line:101:5> line:96:12 struct SteamIDComponent_t definition
 |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 | |-DefaultConstructor exists trivial
 | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -310,34 +700,34 @@ Record: CXXRecordDecl 0x75c90f3a78 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial
-|-MaxFieldAlignmentAttr 0x75c90f3b30 <<invalid sloc>> Implicit 64
-|-CXXRecordDecl 0x75c90f3bf8 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
-|-FieldDecl 0x75c90f3d40 <line:28:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
-| `-ConstantExpr 0x75c90f3d20 <col:30> 'int'
+|-MaxFieldAlignmentAttr 0x782d17d390 <<invalid sloc>> Implicit 64
+|-CXXRecordDecl 0x782d17d458 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
+|-FieldDecl 0x782d17d538 <line:97:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
+| `-ConstantExpr 0x782d17d518 <col:30> 'int'
 |   |-value: Int 32
-|   `-IntegerLiteral 0x75c90f3cf0 <col:30> 'int' 32
-|-FieldDecl 0x75c90f3de8 <line:29:7, col:42> col:20 m_unAccountInstance 'unsigned int'
-| `-ConstantExpr 0x75c90f3dc8 <col:42> 'int'
+|   `-IntegerLiteral 0x782d17d4e8 <col:30> 'int' 32
+|-FieldDecl 0x782d17d5e0 <line:98:7, col:42> col:20 m_unAccountInstance 'unsigned int'
+| `-ConstantExpr 0x782d17d5c0 <col:42> 'int'
 |   |-value: Int 20
-|   `-IntegerLiteral 0x75c90f3d90 <col:42> 'int' 20
-|-FieldDecl 0x75c90f3e90 <line:30:7, col:37> col:20 m_EAccountType 'unsigned int'
-| `-ConstantExpr 0x75c90f3e70 <col:37> 'int'
+|   `-IntegerLiteral 0x782d17d588 <col:42> 'int' 20
+|-FieldDecl 0x782d17d688 <line:99:7, col:37> col:20 m_EAccountType 'unsigned int'
+| `-ConstantExpr 0x782d17d668 <col:37> 'int'
 |   |-value: Int 4
-|   `-IntegerLiteral 0x75c90f3e38 <col:37> 'int' 4
-|-FieldDecl 0x75c90f3f38 <line:31:7, col:25> col:11 m_EUniverse 'int'
-| `-ConstantExpr 0x75c90f3f18 <col:25> 'int'
+|   `-IntegerLiteral 0x782d17d630 <col:37> 'int' 4
+|-FieldDecl 0x782d17d730 <line:100:7, col:25> col:11 m_EUniverse 'int'
+| `-ConstantExpr 0x782d17d710 <col:25> 'int'
 |   |-value: Int 8
-|   `-IntegerLiteral 0x75c90f3ee0 <col:25> 'int' 8
-|-CXXConstructorDecl 0x75c90f62d0 <line:27:12> col:12 implicit SteamIDComponent_t 'void () __attribute__((thiscall)) noexcept' inline default trivial
-|-CXXDestructorDecl 0x75c90f63b8 <col:12> col:12 implicit ~SteamIDComponent_t 'void () __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f63b8
-|-CXXConstructorDecl 0x75c90f6770 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f6770
-| `-ParmVarDecl 0x75c90f68a0 <col:12> col:12 'const SteamIDComponent_t &'
-`-CXXConstructorDecl 0x75c90f6980 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f6980
-  `-ParmVarDecl 0x75c90f6ab0 <col:12> col:12 'SteamIDComponent_t &&'
+|   `-IntegerLiteral 0x782d17d6d8 <col:25> 'int' 8
+|-CXXConstructorDecl 0x782d17dad0 <line:96:12> col:12 implicit SteamIDComponent_t 'void () __attribute__((thiscall)) noexcept' inline default trivial
+|-CXXDestructorDecl 0x782d17dbb8 <col:12> col:12 implicit ~SteamIDComponent_t 'void () __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17dbb8
+|-CXXConstructorDecl 0x782d17e000 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17e000
+| `-ParmVarDecl 0x782d17e130 <col:12> col:12 'const SteamIDComponent_t &'
+`-CXXConstructorDecl 0x782d17e210 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17e210
+  `-ParmVarDecl 0x782d17e340 <col:12> col:12 'SteamIDComponent_t &&'
 
 Layout: <CGRecordLayout
-  LLVMType:%"struct.CSteamID::SteamID_t::SteamIDComponent_t" = type { i32, i32 }
-  NonVirtualBaseLLVMType:%"struct.CSteamID::SteamID_t::SteamIDComponent_t" = type { i32, i32 }
+  LLVMType:%"struct.CSteamIDLegacy::SteamID_t::SteamIDComponent_t" = type { i32, i32 }
+  NonVirtualBaseLLVMType:%"struct.CSteamIDLegacy::SteamID_t::SteamIDComponent_t" = type { i32, i32 }
   IsZeroInitializable:1
   BitFields:[
     <CGBitFieldInfo Offset:0 Size:32 IsSigned:0 StorageSize:32 StorageOffset:0 VolatileOffset:0 VolatileStorageSize:0 VolatileStorageOffset:0>
@@ -347,7 +737,7 @@ Layout: <CGRecordLayout
 ]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x75c90f3870 <meta/__tests__/fixtures/steam_callback_structs.cpp:26:3, line:34:3> line:26:9 union SteamID_t definition
+Record: CXXRecordDecl 0x782d17d0d0 <meta/__tests__/fixtures/steam_callback_structs.cpp:95:3, line:103:3> line:95:9 union SteamID_t definition
 |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal has_variant_members
 | |-DefaultConstructor exists trivial
 | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -355,9 +745,9 @@ Record: CXXRecordDecl 0x75c90f3870 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial needs_implicit
-|-MaxFieldAlignmentAttr 0x75c90f3920 <<invalid sloc>> Implicit 64
-|-CXXRecordDecl 0x75c90f39e8 <col:3, col:9> col:9 implicit union SteamID_t
-|-CXXRecordDecl 0x75c90f3a78 <line:27:5, line:32:5> line:27:12 struct SteamIDComponent_t definition
+|-MaxFieldAlignmentAttr 0x782d17d180 <<invalid sloc>> Implicit 64
+|-CXXRecordDecl 0x782d17d248 <col:3, col:9> col:9 implicit union SteamID_t
+|-CXXRecordDecl 0x782d17d2d8 <line:96:5, line:101:5> line:96:12 struct SteamIDComponent_t definition
 | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 | | |-DefaultConstructor exists trivial
 | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -365,48 +755,48 @@ Record: CXXRecordDecl 0x75c90f3870 <meta/__tests__/fixtures/steam_callback_struc
 | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | | |-MoveAssignment exists simple trivial needs_implicit
 | | `-Destructor simple irrelevant trivial
-| |-MaxFieldAlignmentAttr 0x75c90f3b30 <<invalid sloc>> Implicit 64
-| |-CXXRecordDecl 0x75c90f3bf8 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
-| |-FieldDecl 0x75c90f3d40 <line:28:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
-| | `-ConstantExpr 0x75c90f3d20 <col:30> 'int'
+| |-MaxFieldAlignmentAttr 0x782d17d390 <<invalid sloc>> Implicit 64
+| |-CXXRecordDecl 0x782d17d458 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
+| |-FieldDecl 0x782d17d538 <line:97:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
+| | `-ConstantExpr 0x782d17d518 <col:30> 'int'
 | |   |-value: Int 32
-| |   `-IntegerLiteral 0x75c90f3cf0 <col:30> 'int' 32
-| |-FieldDecl 0x75c90f3de8 <line:29:7, col:42> col:20 m_unAccountInstance 'unsigned int'
-| | `-ConstantExpr 0x75c90f3dc8 <col:42> 'int'
+| |   `-IntegerLiteral 0x782d17d4e8 <col:30> 'int' 32
+| |-FieldDecl 0x782d17d5e0 <line:98:7, col:42> col:20 m_unAccountInstance 'unsigned int'
+| | `-ConstantExpr 0x782d17d5c0 <col:42> 'int'
 | |   |-value: Int 20
-| |   `-IntegerLiteral 0x75c90f3d90 <col:42> 'int' 20
-| |-FieldDecl 0x75c90f3e90 <line:30:7, col:37> col:20 m_EAccountType 'unsigned int'
-| | `-ConstantExpr 0x75c90f3e70 <col:37> 'int'
+| |   `-IntegerLiteral 0x782d17d588 <col:42> 'int' 20
+| |-FieldDecl 0x782d17d688 <line:99:7, col:37> col:20 m_EAccountType 'unsigned int'
+| | `-ConstantExpr 0x782d17d668 <col:37> 'int'
 | |   |-value: Int 4
-| |   `-IntegerLiteral 0x75c90f3e38 <col:37> 'int' 4
-| |-FieldDecl 0x75c90f3f38 <line:31:7, col:25> col:11 m_EUniverse 'int'
-| | `-ConstantExpr 0x75c90f3f18 <col:25> 'int'
+| |   `-IntegerLiteral 0x782d17d630 <col:37> 'int' 4
+| |-FieldDecl 0x782d17d730 <line:100:7, col:25> col:11 m_EUniverse 'int'
+| | `-ConstantExpr 0x782d17d710 <col:25> 'int'
 | |   |-value: Int 8
-| |   `-IntegerLiteral 0x75c90f3ee0 <col:25> 'int' 8
-| |-CXXConstructorDecl 0x75c90f62d0 <line:27:12> col:12 implicit SteamIDComponent_t 'void () __attribute__((thiscall)) noexcept' inline default trivial
-| |-CXXDestructorDecl 0x75c90f63b8 <col:12> col:12 implicit ~SteamIDComponent_t 'void () __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f63b8
-| |-CXXConstructorDecl 0x75c90f6770 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f6770
-| | `-ParmVarDecl 0x75c90f68a0 <col:12> col:12 'const SteamIDComponent_t &'
-| `-CXXConstructorDecl 0x75c90f6980 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f6980
-|   `-ParmVarDecl 0x75c90f6ab0 <col:12> col:12 'SteamIDComponent_t &&'
-|-FieldDecl 0x75c90f6000 <col:5, line:32:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamID::SteamID_t::SteamIDComponent_t'
-|-FieldDecl 0x75c90f6078 <line:33:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
-|-CXXConstructorDecl 0x75c90f61d0 <line:26:9> col:9 implicit used SteamID_t 'void () __attribute__((thiscall)) noexcept' inline default trivial
-| `-CompoundStmt 0x75c90f6d80 <col:9>
-|-CXXConstructorDecl 0x75c90f6540 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f6540
-| `-ParmVarDecl 0x75c90f6670 <col:9> col:9 'const SteamID_t &'
-`-CXXConstructorDecl 0x75c90f6ba0 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f6ba0
-  `-ParmVarDecl 0x75c90f6cd0 <col:9> col:9 'SteamID_t &&'
+| |   `-IntegerLiteral 0x782d17d6d8 <col:25> 'int' 8
+| |-CXXConstructorDecl 0x782d17dad0 <line:96:12> col:12 implicit SteamIDComponent_t 'void () __attribute__((thiscall)) noexcept' inline default trivial
+| |-CXXDestructorDecl 0x782d17dbb8 <col:12> col:12 implicit ~SteamIDComponent_t 'void () __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17dbb8
+| |-CXXConstructorDecl 0x782d17e000 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17e000
+| | `-ParmVarDecl 0x782d17e130 <col:12> col:12 'const SteamIDComponent_t &'
+| `-CXXConstructorDecl 0x782d17e210 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17e210
+|   `-ParmVarDecl 0x782d17e340 <col:12> col:12 'SteamIDComponent_t &&'
+|-FieldDecl 0x782d17d7f8 <col:5, line:101:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamIDLegacy::SteamID_t::SteamIDComponent_t'
+|-FieldDecl 0x782d17d870 <line:102:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
+|-CXXConstructorDecl 0x782d17d9d0 <line:95:9> col:9 implicit used SteamID_t 'void () __attribute__((thiscall)) noexcept' inline default trivial
+| `-CompoundStmt 0x782d17e5e0 <col:9>
+|-CXXConstructorDecl 0x782d17dd40 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17dd40
+| `-ParmVarDecl 0x782d17de70 <col:9> col:9 'const SteamID_t &'
+`-CXXConstructorDecl 0x782d17e430 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17e430
+  `-ParmVarDecl 0x782d17e560 <col:9> col:9 'SteamID_t &&'
 
 Layout: <CGRecordLayout
-  LLVMType:%"union.CSteamID::SteamID_t" = type { i64 }
-  NonVirtualBaseLLVMType:%"union.CSteamID::SteamID_t" = type { i64 }
+  LLVMType:%"union.CSteamIDLegacy::SteamID_t" = type { i64 }
+  NonVirtualBaseLLVMType:%"union.CSteamIDLegacy::SteamID_t" = type { i64 }
   IsZeroInitializable:1
   BitFields:[
 ]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x75c90f3308 <meta/__tests__/fixtures/steam_callback_structs.cpp:20:1, line:35:1> line:20:7 referenced class CSteamID definition
+Record: CXXRecordDecl 0x782d17cbb8 <meta/__tests__/fixtures/steam_callback_structs.cpp:89:1, line:104:1> line:89:7 referenced class CSteamIDLegacy definition
 |-DefinitionData pass_in_registers standard_layout trivially_copyable has_user_declared_ctor can_const_default_init
 | |-DefaultConstructor exists non_trivial user_provided
 | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -414,28 +804,28 @@ Record: CXXRecordDecl 0x75c90f3308 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial needs_implicit
-|-MaxFieldAlignmentAttr 0x75c90f33c0 <<invalid sloc>> Implicit 64
-|-CXXRecordDecl 0x75c90f3488 <col:1, col:7> col:7 implicit referenced class CSteamID
-|-AccessSpecDecl 0x75c90f3518 <line:21:2, col:8> col:2 public
-|-CXXConstructorDecl 0x75c90f35e0 <line:22:3, col:45> col:3 CSteamID 'void () __attribute__((thiscall))' implicit-inline
-| |-CXXCtorInitializer Field 0x75c90f6138 'm_steamid' 'union SteamID_t':'CSteamID::SteamID_t'
-| | `-CXXConstructExpr 0x75c90f6fd0 <col:3> 'union SteamID_t':'CSteamID::SteamID_t' 'void () __attribute__((thiscall)) noexcept'
-| `-CompoundStmt 0x75c90fd138 <col:14, col:45> FPEvalMethod=2
-|   `-BinaryOperator 0x75c90fd118 <col:16, col:42> 'uint64':'unsigned long long' lvalue '='
-|     |-MemberExpr 0x75c90fd0b0 <col:16, col:26> 'uint64':'unsigned long long' lvalue .m_unAll64Bits 0x75c90f6078
-|     | `-MemberExpr 0x75c90fd080 <col:16> 'union SteamID_t':'CSteamID::SteamID_t' lvalue ->m_steamid 0x75c90f6138
-|     |   `-CXXThisExpr 0x75c90fd070 <col:16> 'CSteamID *' implicit this
-|     `-ImplicitCastExpr 0x75c90fd100 <col:42> 'uint64':'unsigned long long' <IntegralCast>
-|       `-IntegerLiteral 0x75c90fd0e0 <col:42> 'int' 0
-|-CXXMethodDecl 0x75c90f37a0 <line:23:3, col:68> col:10 used ConvertToUint64 'uint64 () __attribute__((thiscall)) const' implicit-inline
-| `-CompoundStmt 0x75c90fd1f0 <col:34, col:68> FPEvalMethod=2
-|   `-ReturnStmt 0x75c90fd1e0 <col:36, col:53>
-|     `-ImplicitCastExpr 0x75c90fd1c8 <col:43, col:53> 'uint64':'unsigned long long' <LValueToRValue>
-|       `-MemberExpr 0x75c90fd198 <col:43, col:53> 'const uint64':'const unsigned long long' lvalue .m_unAll64Bits 0x75c90f6078
-|         `-MemberExpr 0x75c90fd168 <col:43> 'const union SteamID_t':'const CSteamID::SteamID_t' lvalue ->m_steamid 0x75c90f6138
-|           `-CXXThisExpr 0x75c90fd158 <col:43> 'const CSteamID *' implicit this
-|-AccessSpecDecl 0x75c90f3848 <line:25:2, col:9> col:2 private
-|-CXXRecordDecl 0x75c90f3870 <line:26:3, line:34:3> line:26:9 union SteamID_t definition
+|-MaxFieldAlignmentAttr 0x782d17cc70 <<invalid sloc>> Implicit 64
+|-CXXRecordDecl 0x782d17cd38 <col:1, col:7> col:7 implicit referenced class CSteamIDLegacy
+|-AccessSpecDecl 0x782d17cdc8 <line:90:2, col:8> col:2 public
+|-CXXConstructorDecl 0x782d17ce58 <line:91:3, col:51> col:3 CSteamIDLegacy 'void () __attribute__((thiscall))' implicit-inline
+| |-CXXCtorInitializer Field 0x782d17d938 'm_steamid' 'union SteamID_t':'CSteamIDLegacy::SteamID_t'
+| | `-CXXConstructExpr 0x782d17e830 <col:3> 'union SteamID_t':'CSteamIDLegacy::SteamID_t' 'void () __attribute__((thiscall)) noexcept'
+| `-CompoundStmt 0x782d17e990 <col:20, col:51> FPEvalMethod=2
+|   `-BinaryOperator 0x782d17e970 <col:22, col:48> 'uint64':'unsigned long long' lvalue '='
+|     |-MemberExpr 0x782d17e908 <col:22, col:32> 'uint64':'unsigned long long' lvalue .m_unAll64Bits 0x782d17d870
+|     | `-MemberExpr 0x782d17e8d8 <col:22> 'union SteamID_t':'CSteamIDLegacy::SteamID_t' lvalue ->m_steamid 0x782d17d938
+|     |   `-CXXThisExpr 0x782d17e8c8 <col:22> 'CSteamIDLegacy *' implicit this
+|     `-ImplicitCastExpr 0x782d17e958 <col:48> 'uint64':'unsigned long long' <IntegralCast>
+|       `-IntegerLiteral 0x782d17e938 <col:48> 'int' 0
+|-CXXMethodDecl 0x782d17d000 <line:92:3, col:68> col:10 used ConvertToUint64 'uint64 () __attribute__((thiscall)) const' implicit-inline
+| `-CompoundStmt 0x782d17ea48 <col:34, col:68> FPEvalMethod=2
+|   `-ReturnStmt 0x782d17ea38 <col:36, col:53>
+|     `-ImplicitCastExpr 0x782d17ea20 <col:43, col:53> 'uint64':'unsigned long long' <LValueToRValue>
+|       `-MemberExpr 0x782d17e9f0 <col:43, col:53> 'const uint64':'const unsigned long long' lvalue .m_unAll64Bits 0x782d17d870
+|         `-MemberExpr 0x782d17e9c0 <col:43> 'const union SteamID_t':'const CSteamIDLegacy::SteamID_t' lvalue ->m_steamid 0x782d17d938
+|           `-CXXThisExpr 0x782d17e9b0 <col:43> 'const CSteamIDLegacy *' implicit this
+|-AccessSpecDecl 0x782d17d0a8 <line:94:2, col:9> col:2 private
+|-CXXRecordDecl 0x782d17d0d0 <line:95:3, line:103:3> line:95:9 union SteamID_t definition
 | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal has_variant_members
 | | |-DefaultConstructor exists trivial
 | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -443,9 +833,9 @@ Record: CXXRecordDecl 0x75c90f3308 <meta/__tests__/fixtures/steam_callback_struc
 | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | | |-MoveAssignment exists simple trivial needs_implicit
 | | `-Destructor simple irrelevant trivial needs_implicit
-| |-MaxFieldAlignmentAttr 0x75c90f3920 <<invalid sloc>> Implicit 64
-| |-CXXRecordDecl 0x75c90f39e8 <col:3, col:9> col:9 implicit union SteamID_t
-| |-CXXRecordDecl 0x75c90f3a78 <line:27:5, line:32:5> line:27:12 struct SteamIDComponent_t definition
+| |-MaxFieldAlignmentAttr 0x782d17d180 <<invalid sloc>> Implicit 64
+| |-CXXRecordDecl 0x782d17d248 <col:3, col:9> col:9 implicit union SteamID_t
+| |-CXXRecordDecl 0x782d17d2d8 <line:96:5, line:101:5> line:96:12 struct SteamIDComponent_t definition
 | | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 | | | |-DefaultConstructor exists trivial
 | | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -453,49 +843,49 @@ Record: CXXRecordDecl 0x75c90f3308 <meta/__tests__/fixtures/steam_callback_struc
 | | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | | | |-MoveAssignment exists simple trivial needs_implicit
 | | | `-Destructor simple irrelevant trivial
-| | |-MaxFieldAlignmentAttr 0x75c90f3b30 <<invalid sloc>> Implicit 64
-| | |-CXXRecordDecl 0x75c90f3bf8 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
-| | |-FieldDecl 0x75c90f3d40 <line:28:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
-| | | `-ConstantExpr 0x75c90f3d20 <col:30> 'int'
+| | |-MaxFieldAlignmentAttr 0x782d17d390 <<invalid sloc>> Implicit 64
+| | |-CXXRecordDecl 0x782d17d458 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
+| | |-FieldDecl 0x782d17d538 <line:97:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
+| | | `-ConstantExpr 0x782d17d518 <col:30> 'int'
 | | |   |-value: Int 32
-| | |   `-IntegerLiteral 0x75c90f3cf0 <col:30> 'int' 32
-| | |-FieldDecl 0x75c90f3de8 <line:29:7, col:42> col:20 m_unAccountInstance 'unsigned int'
-| | | `-ConstantExpr 0x75c90f3dc8 <col:42> 'int'
+| | |   `-IntegerLiteral 0x782d17d4e8 <col:30> 'int' 32
+| | |-FieldDecl 0x782d17d5e0 <line:98:7, col:42> col:20 m_unAccountInstance 'unsigned int'
+| | | `-ConstantExpr 0x782d17d5c0 <col:42> 'int'
 | | |   |-value: Int 20
-| | |   `-IntegerLiteral 0x75c90f3d90 <col:42> 'int' 20
-| | |-FieldDecl 0x75c90f3e90 <line:30:7, col:37> col:20 m_EAccountType 'unsigned int'
-| | | `-ConstantExpr 0x75c90f3e70 <col:37> 'int'
+| | |   `-IntegerLiteral 0x782d17d588 <col:42> 'int' 20
+| | |-FieldDecl 0x782d17d688 <line:99:7, col:37> col:20 m_EAccountType 'unsigned int'
+| | | `-ConstantExpr 0x782d17d668 <col:37> 'int'
 | | |   |-value: Int 4
-| | |   `-IntegerLiteral 0x75c90f3e38 <col:37> 'int' 4
-| | |-FieldDecl 0x75c90f3f38 <line:31:7, col:25> col:11 m_EUniverse 'int'
-| | | `-ConstantExpr 0x75c90f3f18 <col:25> 'int'
+| | |   `-IntegerLiteral 0x782d17d630 <col:37> 'int' 4
+| | |-FieldDecl 0x782d17d730 <line:100:7, col:25> col:11 m_EUniverse 'int'
+| | | `-ConstantExpr 0x782d17d710 <col:25> 'int'
 | | |   |-value: Int 8
-| | |   `-IntegerLiteral 0x75c90f3ee0 <col:25> 'int' 8
-| | |-CXXConstructorDecl 0x75c90f62d0 <line:27:12> col:12 implicit SteamIDComponent_t 'void () __attribute__((thiscall)) noexcept' inline default trivial
-| | |-CXXDestructorDecl 0x75c90f63b8 <col:12> col:12 implicit ~SteamIDComponent_t 'void () __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f63b8
-| | |-CXXConstructorDecl 0x75c90f6770 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f6770
-| | | `-ParmVarDecl 0x75c90f68a0 <col:12> col:12 'const SteamIDComponent_t &'
-| | `-CXXConstructorDecl 0x75c90f6980 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f6980
-| |   `-ParmVarDecl 0x75c90f6ab0 <col:12> col:12 'SteamIDComponent_t &&'
-| |-FieldDecl 0x75c90f6000 <col:5, line:32:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamID::SteamID_t::SteamIDComponent_t'
-| |-FieldDecl 0x75c90f6078 <line:33:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
-| |-CXXConstructorDecl 0x75c90f61d0 <line:26:9> col:9 implicit used SteamID_t 'void () __attribute__((thiscall)) noexcept' inline default trivial
-| | `-CompoundStmt 0x75c90f6d80 <col:9>
-| |-CXXConstructorDecl 0x75c90f6540 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f6540
-| | `-ParmVarDecl 0x75c90f6670 <col:9> col:9 'const SteamID_t &'
-| `-CXXConstructorDecl 0x75c90f6ba0 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x75c90f6ba0
-|   `-ParmVarDecl 0x75c90f6cd0 <col:9> col:9 'SteamID_t &&'
-`-FieldDecl 0x75c90f6138 <col:3, line:34:5> col:5 referenced m_steamid 'union SteamID_t':'CSteamID::SteamID_t'
+| | |   `-IntegerLiteral 0x782d17d6d8 <col:25> 'int' 8
+| | |-CXXConstructorDecl 0x782d17dad0 <line:96:12> col:12 implicit SteamIDComponent_t 'void () __attribute__((thiscall)) noexcept' inline default trivial
+| | |-CXXDestructorDecl 0x782d17dbb8 <col:12> col:12 implicit ~SteamIDComponent_t 'void () __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17dbb8
+| | |-CXXConstructorDecl 0x782d17e000 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17e000
+| | | `-ParmVarDecl 0x782d17e130 <col:12> col:12 'const SteamIDComponent_t &'
+| | `-CXXConstructorDecl 0x782d17e210 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17e210
+| |   `-ParmVarDecl 0x782d17e340 <col:12> col:12 'SteamIDComponent_t &&'
+| |-FieldDecl 0x782d17d7f8 <col:5, line:101:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamIDLegacy::SteamID_t::SteamIDComponent_t'
+| |-FieldDecl 0x782d17d870 <line:102:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
+| |-CXXConstructorDecl 0x782d17d9d0 <line:95:9> col:9 implicit used SteamID_t 'void () __attribute__((thiscall)) noexcept' inline default trivial
+| | `-CompoundStmt 0x782d17e5e0 <col:9>
+| |-CXXConstructorDecl 0x782d17dd40 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17dd40
+| | `-ParmVarDecl 0x782d17de70 <col:9> col:9 'const SteamID_t &'
+| `-CXXConstructorDecl 0x782d17e430 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&) __attribute__((thiscall))' inline default trivial noexcept-unevaluated 0x782d17e430
+|   `-ParmVarDecl 0x782d17e560 <col:9> col:9 'SteamID_t &&'
+`-FieldDecl 0x782d17d938 <col:3, line:103:5> col:5 referenced m_steamid 'union SteamID_t':'CSteamIDLegacy::SteamID_t'
 
 Layout: <CGRecordLayout
-  LLVMType:%class.CSteamID = type { %"union.CSteamID::SteamID_t" }
-  NonVirtualBaseLLVMType:%class.CSteamID = type { %"union.CSteamID::SteamID_t" }
+  LLVMType:%class.CSteamIDLegacy = type { %"union.CSteamIDLegacy::SteamID_t" }
+  NonVirtualBaseLLVMType:%class.CSteamIDLegacy = type { %"union.CSteamIDLegacy::SteamID_t" }
   IsZeroInitializable:1
   BitFields:[
 ]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x75c90fd210 <meta/__tests__/fixtures/steam_callback_structs.cpp:37:1, line:42:1> line:37:8 referenced struct UserStatsReceived_t definition
+Record: CXXRecordDecl 0x782d17ea68 <meta/__tests__/fixtures/steam_callback_structs.cpp:106:1, line:111:1> line:106:8 referenced struct UserStatsReceived_t definition
 |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable
 | |-DefaultConstructor exists non_trivial needs_implicit
 | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -503,23 +893,373 @@ Record: CXXRecordDecl 0x75c90fd210 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial needs_implicit
-|-MaxFieldAlignmentAttr 0x75c90fd2c0 <<invalid sloc>> Implicit 64
-|-CXXRecordDecl 0x75c90fd388 <col:1, col:8> col:8 implicit struct UserStatsReceived_t
-|-EnumDecl 0x75c90fd418 <line:38:3, col:29> col:3
-| `-EnumConstantDecl 0x75c90fd520 <col:10, col:24> col:10 k_iCallback 'UserStatsReceived_t::(unnamed enum at meta/__tests__/fixtures/steam_callback_structs.cpp:38:3)'
-|   `-ConstantExpr 0x75c90fd500 <col:24> 'int'
+|-MaxFieldAlignmentAttr 0x782d17eb20 <<invalid sloc>> Implicit 64
+|-CXXRecordDecl 0x782d17ebe8 <col:1, col:8> col:8 implicit struct UserStatsReceived_t
+|-EnumDecl 0x782d17ec78 <line:107:3, col:29> col:3
+| `-EnumConstantDecl 0x782d17ed80 <col:10, col:24> col:10 referenced k_iCallback 'UserStatsReceived_t::(unnamed enum at meta/__tests__/fixtures/steam_callback_structs.cpp:107:3)'
+|   `-ConstantExpr 0x782d17ed60 <col:24> 'int'
 |     |-value: Int 1101
-|     `-IntegerLiteral 0x75c90fd4e0 <col:24> 'int' 1101
-|-FieldDecl 0x75c90fd588 <line:39:3, col:10> col:10 referenced m_nGameID 'uint64':'unsigned long long'
-|-FieldDecl 0x75c90fd620 <line:40:3, col:11> col:11 m_eResult 'EResult'
-`-FieldDecl 0x75c90fd6b0 <line:41:3, col:12> col:12 referenced m_steamIDUser 'CSteamID'
+|     `-IntegerLiteral 0x782d17ed40 <col:24> 'int' 1101
+|-FieldDecl 0x782d17ede8 <line:108:3, col:10> col:10 referenced m_nGameID 'uint64':'unsigned long long'
+|-FieldDecl 0x782d17ee80 <line:109:3, col:11> col:11 m_eResult 'EResult'
+`-FieldDecl 0x782d17ef10 <line:110:3, col:18> col:18 referenced m_steamIDUser 'CSteamIDLegacy'
 
 Layout: <CGRecordLayout
-  LLVMType:%struct.UserStatsReceived_t = type { i64, i32, %class.CSteamID }
-  NonVirtualBaseLLVMType:%struct.UserStatsReceived_t = type { i64, i32, %class.CSteamID }
+  LLVMType:%struct.UserStatsReceived_t = type { i64, i32, %class.CSteamIDLegacy }
+  NonVirtualBaseLLVMType:%struct.UserStatsReceived_t = type { i64, i32, %class.CSteamIDLegacy }
   IsZeroInitializable:1
   BitFields:[
 ]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyInvite_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyEnter_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 96, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyDataUpdate_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyChatUpdate_t
+
+Layout: <ASTRecordLayout
+  Size:256
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128, 192]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyChatMsg_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128, 160]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyMatchList_t
+
+Layout: <ASTRecordLayout
+  Size:32
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyKicked_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyCreated_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64]>
+
+*** Dumping AST Record Layout
+Type: class CSteamID
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct P2PSessionRequest_t
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct P2PSessionConnectFail_t
+
+Layout: <ASTRecordLayout
+  Size:72
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingIPAddr::IPv4MappedAddress
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 80, 96]>
+
+*** Dumping AST Record Layout
+Type: union SteamNetworkingIPAddr::(unnamed at meta/__tests__/fixtures/steam_callback_structs.cpp:122:3)
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingIPAddr
+
+Layout: <ASTRecordLayout
+  Size:144
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 128]>
+
+*** Dumping AST Record Layout
+Type: union SteamNetworkingIdentity::(unnamed at meta/__tests__/fixtures/steam_callback_structs.cpp:138:3)
+
+Layout: <ASTRecordLayout
+  Size:1024
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0, 0, 0, 0, 0, 0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingIdentity
+
+Layout: <ASTRecordLayout
+  Size:1088
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionInfo_t
+
+Layout: <ASTRecordLayout
+  Size:5568
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 1088, 1152, 1184, 1328, 1344, 1376, 1408, 1440, 1472, 2496, 3520, 3552]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionStatusChangedCallback_t
+
+Layout: <ASTRecordLayout
+  Size:5696
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 5632]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetAuthenticationStatus_t
+
+Layout: <ASTRecordLayout
+  Size:2080
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingMessagesSessionRequest_t
+
+Layout: <ASTRecordLayout
+  Size:1088
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingMessagesSessionFailed_t
+
+Layout: <ASTRecordLayout
+  Size:5568
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamRelayNetworkStatus_t
+
+Layout: <ASTRecordLayout
+  Size:2176
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 96, 128]>
+
+*** Dumping AST Record Layout
+Type: struct SteamAPICallCompleted_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 96]>
+
+*** Dumping AST Record Layout
+Type: struct GameLobbyJoinRequested_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64]>
+
+*** Dumping AST Record Layout
+Type: struct GameRichPresenceJoinRequested_t
+
+Layout: <ASTRecordLayout
+  Size:2112
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionRealTimeStatus_t
+
+Layout: <ASTRecordLayout
+  Size:960
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 448, 480]>
+
+*** Dumping AST Record Layout
+Type: struct P2PSessionState_t
+
+Layout: <ASTRecordLayout
+  Size:160
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 8, 16, 24, 32, 64, 96, 128]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingMessage_t
+
+Layout: <ASTRecordLayout
+  Size:1664
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 96, 1216, 1280, 1344, 1408, 1440, 1472, 1504, 1536, 1600, 1616]>
+
+*** Dumping AST Record Layout
+Type: struct CallbackMsg_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 96]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkPingLocation_t
+
+Layout: <ASTRecordLayout
+  Size:4096
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: union SteamNetworkingConfigValue_t::(unnamed at meta/__tests__/fixtures/steam_callback_structs.cpp:346:3)
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0, 0, 0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingConfigValue_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionRealTimeLaneStatus_t
+
+Layout: <ASTRecordLayout
+  Size:512
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 96, 128, 192]>
+
+*** Dumping AST Record Layout
+Type: struct servernetadr_t
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 16, 32]>
+
+*** Dumping AST Record Layout
+Type: struct gameserveritem_t
+
+Layout: <ASTRecordLayout
+  Size:3040
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 96, 104, 112, 368, 624, 1152, 1184, 1216, 1248, 1280, 1288, 1312, 1344, 1376, 1888, 2912, 2976, 3008]>
 === triple: arm64-apple-macosx zig 0.16.0 ===
 
 *** Dumping AST Record Layout
@@ -528,7 +1268,7 @@ Type: struct CSteamID::SteamID_t::SteamIDComponent_t
 Layout: <ASTRecordLayout
   Size:64
   DataSize:64
-  Alignment:32
+  Alignment:8
   BaseOffsets: []>
   VBaseOffsets: []>
   FieldOffsets: [0, 32, 52, 56]>
@@ -539,13 +1279,35 @@ Type: union CSteamID::SteamID_t
 Layout: <ASTRecordLayout
   Size:64
   DataSize:64
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct CSteamIDLegacy::SteamID_t::SteamIDComponent_t
+
+Layout: <ASTRecordLayout
+  Size:64
+  DataSize:64
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 52, 56]>
+
+*** Dumping AST Record Layout
+Type: union CSteamIDLegacy::SteamID_t
+
+Layout: <ASTRecordLayout
+  Size:64
+  DataSize:64
   Alignment:32
   BaseOffsets: []>
   VBaseOffsets: []>
   FieldOffsets: [0, 0]>
 
 *** Dumping AST Record Layout
-Type: class CSteamID
+Type: class CSteamIDLegacy
 
 Layout: <ASTRecordLayout
   Size:64
@@ -567,7 +1329,7 @@ Layout: <ASTRecordLayout
   FieldOffsets: [0, 64, 96]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x7c0517f978 <meta/__tests__/fixtures/steam_callback_structs.cpp:27:5, line:32:5> line:27:12 struct SteamIDComponent_t definition
+Record: CXXRecordDecl 0x765b5f8238 <meta/__tests__/fixtures/steam_callback_structs.cpp:96:5, line:101:5> line:96:12 struct SteamIDComponent_t definition
 |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 | |-DefaultConstructor exists trivial
 | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -575,34 +1337,34 @@ Record: CXXRecordDecl 0x7c0517f978 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial
-|-MaxFieldAlignmentAttr 0x7c0517fa30 <<invalid sloc>> Implicit 32
-|-CXXRecordDecl 0x7c0517faf8 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
-|-FieldDecl 0x7c0517fc40 <line:28:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
-| `-ConstantExpr 0x7c0517fc20 <col:30> 'int'
+|-MaxFieldAlignmentAttr 0x765b5f82f0 <<invalid sloc>> Implicit 32
+|-CXXRecordDecl 0x765b5f83b8 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
+|-FieldDecl 0x765b5f8498 <line:97:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
+| `-ConstantExpr 0x765b5f8478 <col:30> 'int'
 |   |-value: Int 32
-|   `-IntegerLiteral 0x7c0517fbf0 <col:30> 'int' 32
-|-FieldDecl 0x7c0517fce8 <line:29:7, col:42> col:20 m_unAccountInstance 'unsigned int'
-| `-ConstantExpr 0x7c0517fcc8 <col:42> 'int'
+|   `-IntegerLiteral 0x765b5f8448 <col:30> 'int' 32
+|-FieldDecl 0x765b5f8540 <line:98:7, col:42> col:20 m_unAccountInstance 'unsigned int'
+| `-ConstantExpr 0x765b5f8520 <col:42> 'int'
 |   |-value: Int 20
-|   `-IntegerLiteral 0x7c0517fc90 <col:42> 'int' 20
-|-FieldDecl 0x7c0517fd90 <line:30:7, col:37> col:20 m_EAccountType 'unsigned int'
-| `-ConstantExpr 0x7c0517fd70 <col:37> 'int'
+|   `-IntegerLiteral 0x765b5f84e8 <col:42> 'int' 20
+|-FieldDecl 0x765b5f85e8 <line:99:7, col:37> col:20 m_EAccountType 'unsigned int'
+| `-ConstantExpr 0x765b5f85c8 <col:37> 'int'
 |   |-value: Int 4
-|   `-IntegerLiteral 0x7c0517fd38 <col:37> 'int' 4
-|-FieldDecl 0x7c0517fe38 <line:31:7, col:25> col:11 m_EUniverse 'int'
-| `-ConstantExpr 0x7c0517fe18 <col:25> 'int'
+|   `-IntegerLiteral 0x765b5f8590 <col:37> 'int' 4
+|-FieldDecl 0x765b5f8690 <line:100:7, col:25> col:11 m_EUniverse 'int'
+| `-ConstantExpr 0x765b5f8670 <col:25> 'int'
 |   |-value: Int 8
-|   `-IntegerLiteral 0x7c0517fde0 <col:25> 'int' 8
-|-CXXConstructorDecl 0x7c051821f0 <line:27:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
-|-CXXDestructorDecl 0x7c051822d8 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x7c051822d8
-|-CXXConstructorDecl 0x7c05182690 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x7c05182690
-| `-ParmVarDecl 0x7c051827c0 <col:12> col:12 'const SteamIDComponent_t &'
-`-CXXConstructorDecl 0x7c051828a0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x7c051828a0
-  `-ParmVarDecl 0x7c051829d0 <col:12> col:12 'SteamIDComponent_t &&'
+|   `-IntegerLiteral 0x765b5f8638 <col:25> 'int' 8
+|-CXXConstructorDecl 0x765b5f8a30 <line:96:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
+|-CXXDestructorDecl 0x765b5f8b18 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x765b5f8b18
+|-CXXConstructorDecl 0x765b5f8ed0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x765b5f8ed0
+| `-ParmVarDecl 0x765b5f9000 <col:12> col:12 'const SteamIDComponent_t &'
+`-CXXConstructorDecl 0x765b5f90e0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x765b5f90e0
+  `-ParmVarDecl 0x765b5f9210 <col:12> col:12 'SteamIDComponent_t &&'
 
 Layout: <CGRecordLayout
-  LLVMType:%"struct.CSteamID::SteamID_t::SteamIDComponent_t" = type { i64 }
-  NonVirtualBaseLLVMType:%"struct.CSteamID::SteamID_t::SteamIDComponent_t" = type { i64 }
+  LLVMType:%"struct.CSteamIDLegacy::SteamID_t::SteamIDComponent_t" = type { i64 }
+  NonVirtualBaseLLVMType:%"struct.CSteamIDLegacy::SteamID_t::SteamIDComponent_t" = type { i64 }
   IsZeroInitializable:1
   BitFields:[
     <CGBitFieldInfo Offset:0 Size:32 IsSigned:0 StorageSize:64 StorageOffset:0 VolatileOffset:0 VolatileStorageSize:32 VolatileStorageOffset:0>
@@ -612,7 +1374,7 @@ Layout: <CGRecordLayout
 ]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x7c0517f770 <meta/__tests__/fixtures/steam_callback_structs.cpp:26:3, line:34:3> line:26:9 union SteamID_t definition
+Record: CXXRecordDecl 0x765b5f8028 <meta/__tests__/fixtures/steam_callback_structs.cpp:95:3, line:103:3> line:95:9 union SteamID_t definition
 |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal has_variant_members
 | |-DefaultConstructor exists trivial
 | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -620,9 +1382,9 @@ Record: CXXRecordDecl 0x7c0517f770 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial needs_implicit
-|-MaxFieldAlignmentAttr 0x7c0517f820 <<invalid sloc>> Implicit 32
-|-CXXRecordDecl 0x7c0517f8e8 <col:3, col:9> col:9 implicit union SteamID_t
-|-CXXRecordDecl 0x7c0517f978 <line:27:5, line:32:5> line:27:12 struct SteamIDComponent_t definition
+|-MaxFieldAlignmentAttr 0x765b5f80e0 <<invalid sloc>> Implicit 32
+|-CXXRecordDecl 0x765b5f81a8 <col:3, col:9> col:9 implicit union SteamID_t
+|-CXXRecordDecl 0x765b5f8238 <line:96:5, line:101:5> line:96:12 struct SteamIDComponent_t definition
 | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 | | |-DefaultConstructor exists trivial
 | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -630,48 +1392,48 @@ Record: CXXRecordDecl 0x7c0517f770 <meta/__tests__/fixtures/steam_callback_struc
 | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | | |-MoveAssignment exists simple trivial needs_implicit
 | | `-Destructor simple irrelevant trivial
-| |-MaxFieldAlignmentAttr 0x7c0517fa30 <<invalid sloc>> Implicit 32
-| |-CXXRecordDecl 0x7c0517faf8 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
-| |-FieldDecl 0x7c0517fc40 <line:28:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
-| | `-ConstantExpr 0x7c0517fc20 <col:30> 'int'
+| |-MaxFieldAlignmentAttr 0x765b5f82f0 <<invalid sloc>> Implicit 32
+| |-CXXRecordDecl 0x765b5f83b8 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
+| |-FieldDecl 0x765b5f8498 <line:97:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
+| | `-ConstantExpr 0x765b5f8478 <col:30> 'int'
 | |   |-value: Int 32
-| |   `-IntegerLiteral 0x7c0517fbf0 <col:30> 'int' 32
-| |-FieldDecl 0x7c0517fce8 <line:29:7, col:42> col:20 m_unAccountInstance 'unsigned int'
-| | `-ConstantExpr 0x7c0517fcc8 <col:42> 'int'
+| |   `-IntegerLiteral 0x765b5f8448 <col:30> 'int' 32
+| |-FieldDecl 0x765b5f8540 <line:98:7, col:42> col:20 m_unAccountInstance 'unsigned int'
+| | `-ConstantExpr 0x765b5f8520 <col:42> 'int'
 | |   |-value: Int 20
-| |   `-IntegerLiteral 0x7c0517fc90 <col:42> 'int' 20
-| |-FieldDecl 0x7c0517fd90 <line:30:7, col:37> col:20 m_EAccountType 'unsigned int'
-| | `-ConstantExpr 0x7c0517fd70 <col:37> 'int'
+| |   `-IntegerLiteral 0x765b5f84e8 <col:42> 'int' 20
+| |-FieldDecl 0x765b5f85e8 <line:99:7, col:37> col:20 m_EAccountType 'unsigned int'
+| | `-ConstantExpr 0x765b5f85c8 <col:37> 'int'
 | |   |-value: Int 4
-| |   `-IntegerLiteral 0x7c0517fd38 <col:37> 'int' 4
-| |-FieldDecl 0x7c0517fe38 <line:31:7, col:25> col:11 m_EUniverse 'int'
-| | `-ConstantExpr 0x7c0517fe18 <col:25> 'int'
+| |   `-IntegerLiteral 0x765b5f8590 <col:37> 'int' 4
+| |-FieldDecl 0x765b5f8690 <line:100:7, col:25> col:11 m_EUniverse 'int'
+| | `-ConstantExpr 0x765b5f8670 <col:25> 'int'
 | |   |-value: Int 8
-| |   `-IntegerLiteral 0x7c0517fde0 <col:25> 'int' 8
-| |-CXXConstructorDecl 0x7c051821f0 <line:27:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
-| |-CXXDestructorDecl 0x7c051822d8 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x7c051822d8
-| |-CXXConstructorDecl 0x7c05182690 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x7c05182690
-| | `-ParmVarDecl 0x7c051827c0 <col:12> col:12 'const SteamIDComponent_t &'
-| `-CXXConstructorDecl 0x7c051828a0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x7c051828a0
-|   `-ParmVarDecl 0x7c051829d0 <col:12> col:12 'SteamIDComponent_t &&'
-|-FieldDecl 0x7c0517fef8 <col:5, line:32:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamID::SteamID_t::SteamIDComponent_t'
-|-FieldDecl 0x7c0517ff70 <line:33:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
-|-CXXConstructorDecl 0x7c051820f0 <line:26:9> col:9 implicit used SteamID_t 'void () noexcept' inline default trivial
-| `-CompoundStmt 0x7c05182ca0 <col:9>
-|-CXXConstructorDecl 0x7c05182460 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &)' inline default trivial noexcept-unevaluated 0x7c05182460
-| `-ParmVarDecl 0x7c05182590 <col:9> col:9 'const SteamID_t &'
-`-CXXConstructorDecl 0x7c05182ac0 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&)' inline default trivial noexcept-unevaluated 0x7c05182ac0
-  `-ParmVarDecl 0x7c05182bf0 <col:9> col:9 'SteamID_t &&'
+| |   `-IntegerLiteral 0x765b5f8638 <col:25> 'int' 8
+| |-CXXConstructorDecl 0x765b5f8a30 <line:96:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
+| |-CXXDestructorDecl 0x765b5f8b18 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x765b5f8b18
+| |-CXXConstructorDecl 0x765b5f8ed0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x765b5f8ed0
+| | `-ParmVarDecl 0x765b5f9000 <col:12> col:12 'const SteamIDComponent_t &'
+| `-CXXConstructorDecl 0x765b5f90e0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x765b5f90e0
+|   `-ParmVarDecl 0x765b5f9210 <col:12> col:12 'SteamIDComponent_t &&'
+|-FieldDecl 0x765b5f8758 <col:5, line:101:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamIDLegacy::SteamID_t::SteamIDComponent_t'
+|-FieldDecl 0x765b5f87d0 <line:102:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
+|-CXXConstructorDecl 0x765b5f8930 <line:95:9> col:9 implicit used SteamID_t 'void () noexcept' inline default trivial
+| `-CompoundStmt 0x765b5f94b0 <col:9>
+|-CXXConstructorDecl 0x765b5f8ca0 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &)' inline default trivial noexcept-unevaluated 0x765b5f8ca0
+| `-ParmVarDecl 0x765b5f8dd0 <col:9> col:9 'const SteamID_t &'
+`-CXXConstructorDecl 0x765b5f9300 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&)' inline default trivial noexcept-unevaluated 0x765b5f9300
+  `-ParmVarDecl 0x765b5f9430 <col:9> col:9 'SteamID_t &&'
 
 Layout: <CGRecordLayout
-  LLVMType:%"union.CSteamID::SteamID_t" = type { %"struct.CSteamID::SteamID_t::SteamIDComponent_t" }
-  NonVirtualBaseLLVMType:%"union.CSteamID::SteamID_t" = type { %"struct.CSteamID::SteamID_t::SteamIDComponent_t" }
+  LLVMType:%"union.CSteamIDLegacy::SteamID_t" = type { %"struct.CSteamIDLegacy::SteamID_t::SteamIDComponent_t" }
+  NonVirtualBaseLLVMType:%"union.CSteamIDLegacy::SteamID_t" = type { %"struct.CSteamIDLegacy::SteamID_t::SteamIDComponent_t" }
   IsZeroInitializable:1
   BitFields:[
 ]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x7c0517f210 <meta/__tests__/fixtures/steam_callback_structs.cpp:20:1, line:35:1> line:20:7 referenced class CSteamID definition
+Record: CXXRecordDecl 0x765b5eeba8 <meta/__tests__/fixtures/steam_callback_structs.cpp:89:1, line:104:1> line:89:7 referenced class CSteamIDLegacy definition
 |-DefinitionData pass_in_registers standard_layout trivially_copyable has_user_declared_ctor can_const_default_init
 | |-DefaultConstructor exists non_trivial user_provided
 | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -679,28 +1441,28 @@ Record: CXXRecordDecl 0x7c0517f210 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial needs_implicit
-|-MaxFieldAlignmentAttr 0x7c0517f2c0 <<invalid sloc>> Implicit 32
-|-CXXRecordDecl 0x7c0517f388 <col:1, col:7> col:7 implicit referenced class CSteamID
-|-AccessSpecDecl 0x7c0517f418 <line:21:2, col:8> col:2 public
-|-CXXConstructorDecl 0x7c0517f4e0 <line:22:3, col:45> col:3 CSteamID 'void ()' implicit-inline
-| |-CXXCtorInitializer Field 0x7c05182058 'm_steamid' 'union SteamID_t':'CSteamID::SteamID_t'
-| | `-CXXConstructExpr 0x7c05182ef0 <col:3> 'union SteamID_t':'CSteamID::SteamID_t' 'void () noexcept'
-| `-CompoundStmt 0x7c05185058 <col:14, col:45>
-|   `-BinaryOperator 0x7c05185038 <col:16, col:42> 'uint64':'unsigned long long' lvalue '='
-|     |-MemberExpr 0x7c05182fc8 <col:16, col:26> 'uint64':'unsigned long long' lvalue .m_unAll64Bits 0x7c0517ff70
-|     | `-MemberExpr 0x7c05182f98 <col:16> 'union SteamID_t':'CSteamID::SteamID_t' lvalue ->m_steamid 0x7c05182058
-|     |   `-CXXThisExpr 0x7c05182f88 <col:16> 'CSteamID *' implicit this
-|     `-ImplicitCastExpr 0x7c05185020 <col:42> 'uint64':'unsigned long long' <IntegralCast>
-|       `-IntegerLiteral 0x7c05185000 <col:42> 'int' 0
-|-CXXMethodDecl 0x7c0517f6a0 <line:23:3, col:68> col:10 used ConvertToUint64 'uint64 () const' implicit-inline
-| `-CompoundStmt 0x7c05185108 <col:34, col:68>
-|   `-ReturnStmt 0x7c051850f8 <col:36, col:53>
-|     `-ImplicitCastExpr 0x7c051850e0 <col:43, col:53> 'uint64':'unsigned long long' <LValueToRValue>
-|       `-MemberExpr 0x7c051850b0 <col:43, col:53> 'const uint64':'const unsigned long long' lvalue .m_unAll64Bits 0x7c0517ff70
-|         `-MemberExpr 0x7c05185080 <col:43> 'const union SteamID_t':'const CSteamID::SteamID_t' lvalue ->m_steamid 0x7c05182058
-|           `-CXXThisExpr 0x7c05185070 <col:43> 'const CSteamID *' implicit this
-|-AccessSpecDecl 0x7c0517f748 <line:25:2, col:9> col:2 private
-|-CXXRecordDecl 0x7c0517f770 <line:26:3, line:34:3> line:26:9 union SteamID_t definition
+|-MaxFieldAlignmentAttr 0x765b5eec60 <<invalid sloc>> Implicit 32
+|-CXXRecordDecl 0x765b5eed28 <col:1, col:7> col:7 implicit referenced class CSteamIDLegacy
+|-AccessSpecDecl 0x765b5eedb8 <line:90:2, col:8> col:2 public
+|-CXXConstructorDecl 0x765b5eee48 <line:91:3, col:51> col:3 CSteamIDLegacy 'void ()' implicit-inline
+| |-CXXCtorInitializer Field 0x765b5f8898 'm_steamid' 'union SteamID_t':'CSteamIDLegacy::SteamID_t'
+| | `-CXXConstructExpr 0x765b5f9700 <col:3> 'union SteamID_t':'CSteamIDLegacy::SteamID_t' 'void () noexcept'
+| `-CompoundStmt 0x765b5f9860 <col:20, col:51>
+|   `-BinaryOperator 0x765b5f9840 <col:22, col:48> 'uint64':'unsigned long long' lvalue '='
+|     |-MemberExpr 0x765b5f97d8 <col:22, col:32> 'uint64':'unsigned long long' lvalue .m_unAll64Bits 0x765b5f87d0
+|     | `-MemberExpr 0x765b5f97a8 <col:22> 'union SteamID_t':'CSteamIDLegacy::SteamID_t' lvalue ->m_steamid 0x765b5f8898
+|     |   `-CXXThisExpr 0x765b5f9798 <col:22> 'CSteamIDLegacy *' implicit this
+|     `-ImplicitCastExpr 0x765b5f9828 <col:48> 'uint64':'unsigned long long' <IntegralCast>
+|       `-IntegerLiteral 0x765b5f9808 <col:48> 'int' 0
+|-CXXMethodDecl 0x765b5eef50 <line:92:3, col:68> col:10 used ConvertToUint64 'uint64 () const' implicit-inline
+| `-CompoundStmt 0x765b5f9910 <col:34, col:68>
+|   `-ReturnStmt 0x765b5f9900 <col:36, col:53>
+|     `-ImplicitCastExpr 0x765b5f98e8 <col:43, col:53> 'uint64':'unsigned long long' <LValueToRValue>
+|       `-MemberExpr 0x765b5f98b8 <col:43, col:53> 'const uint64':'const unsigned long long' lvalue .m_unAll64Bits 0x765b5f87d0
+|         `-MemberExpr 0x765b5f9888 <col:43> 'const union SteamID_t':'const CSteamIDLegacy::SteamID_t' lvalue ->m_steamid 0x765b5f8898
+|           `-CXXThisExpr 0x765b5f9878 <col:43> 'const CSteamIDLegacy *' implicit this
+|-AccessSpecDecl 0x765b5f8000 <line:94:2, col:9> col:2 private
+|-CXXRecordDecl 0x765b5f8028 <line:95:3, line:103:3> line:95:9 union SteamID_t definition
 | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal has_variant_members
 | | |-DefaultConstructor exists trivial
 | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -708,9 +1470,9 @@ Record: CXXRecordDecl 0x7c0517f210 <meta/__tests__/fixtures/steam_callback_struc
 | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | | |-MoveAssignment exists simple trivial needs_implicit
 | | `-Destructor simple irrelevant trivial needs_implicit
-| |-MaxFieldAlignmentAttr 0x7c0517f820 <<invalid sloc>> Implicit 32
-| |-CXXRecordDecl 0x7c0517f8e8 <col:3, col:9> col:9 implicit union SteamID_t
-| |-CXXRecordDecl 0x7c0517f978 <line:27:5, line:32:5> line:27:12 struct SteamIDComponent_t definition
+| |-MaxFieldAlignmentAttr 0x765b5f80e0 <<invalid sloc>> Implicit 32
+| |-CXXRecordDecl 0x765b5f81a8 <col:3, col:9> col:9 implicit union SteamID_t
+| |-CXXRecordDecl 0x765b5f8238 <line:96:5, line:101:5> line:96:12 struct SteamIDComponent_t definition
 | | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 | | | |-DefaultConstructor exists trivial
 | | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -718,49 +1480,49 @@ Record: CXXRecordDecl 0x7c0517f210 <meta/__tests__/fixtures/steam_callback_struc
 | | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | | | |-MoveAssignment exists simple trivial needs_implicit
 | | | `-Destructor simple irrelevant trivial
-| | |-MaxFieldAlignmentAttr 0x7c0517fa30 <<invalid sloc>> Implicit 32
-| | |-CXXRecordDecl 0x7c0517faf8 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
-| | |-FieldDecl 0x7c0517fc40 <line:28:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
-| | | `-ConstantExpr 0x7c0517fc20 <col:30> 'int'
+| | |-MaxFieldAlignmentAttr 0x765b5f82f0 <<invalid sloc>> Implicit 32
+| | |-CXXRecordDecl 0x765b5f83b8 <col:5, col:12> col:12 implicit struct SteamIDComponent_t
+| | |-FieldDecl 0x765b5f8498 <line:97:7, col:30> col:14 m_unAccountID 'uint32':'unsigned int'
+| | | `-ConstantExpr 0x765b5f8478 <col:30> 'int'
 | | |   |-value: Int 32
-| | |   `-IntegerLiteral 0x7c0517fbf0 <col:30> 'int' 32
-| | |-FieldDecl 0x7c0517fce8 <line:29:7, col:42> col:20 m_unAccountInstance 'unsigned int'
-| | | `-ConstantExpr 0x7c0517fcc8 <col:42> 'int'
+| | |   `-IntegerLiteral 0x765b5f8448 <col:30> 'int' 32
+| | |-FieldDecl 0x765b5f8540 <line:98:7, col:42> col:20 m_unAccountInstance 'unsigned int'
+| | | `-ConstantExpr 0x765b5f8520 <col:42> 'int'
 | | |   |-value: Int 20
-| | |   `-IntegerLiteral 0x7c0517fc90 <col:42> 'int' 20
-| | |-FieldDecl 0x7c0517fd90 <line:30:7, col:37> col:20 m_EAccountType 'unsigned int'
-| | | `-ConstantExpr 0x7c0517fd70 <col:37> 'int'
+| | |   `-IntegerLiteral 0x765b5f84e8 <col:42> 'int' 20
+| | |-FieldDecl 0x765b5f85e8 <line:99:7, col:37> col:20 m_EAccountType 'unsigned int'
+| | | `-ConstantExpr 0x765b5f85c8 <col:37> 'int'
 | | |   |-value: Int 4
-| | |   `-IntegerLiteral 0x7c0517fd38 <col:37> 'int' 4
-| | |-FieldDecl 0x7c0517fe38 <line:31:7, col:25> col:11 m_EUniverse 'int'
-| | | `-ConstantExpr 0x7c0517fe18 <col:25> 'int'
+| | |   `-IntegerLiteral 0x765b5f8590 <col:37> 'int' 4
+| | |-FieldDecl 0x765b5f8690 <line:100:7, col:25> col:11 m_EUniverse 'int'
+| | | `-ConstantExpr 0x765b5f8670 <col:25> 'int'
 | | |   |-value: Int 8
-| | |   `-IntegerLiteral 0x7c0517fde0 <col:25> 'int' 8
-| | |-CXXConstructorDecl 0x7c051821f0 <line:27:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
-| | |-CXXDestructorDecl 0x7c051822d8 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x7c051822d8
-| | |-CXXConstructorDecl 0x7c05182690 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x7c05182690
-| | | `-ParmVarDecl 0x7c051827c0 <col:12> col:12 'const SteamIDComponent_t &'
-| | `-CXXConstructorDecl 0x7c051828a0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x7c051828a0
-| |   `-ParmVarDecl 0x7c051829d0 <col:12> col:12 'SteamIDComponent_t &&'
-| |-FieldDecl 0x7c0517fef8 <col:5, line:32:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamID::SteamID_t::SteamIDComponent_t'
-| |-FieldDecl 0x7c0517ff70 <line:33:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
-| |-CXXConstructorDecl 0x7c051820f0 <line:26:9> col:9 implicit used SteamID_t 'void () noexcept' inline default trivial
-| | `-CompoundStmt 0x7c05182ca0 <col:9>
-| |-CXXConstructorDecl 0x7c05182460 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &)' inline default trivial noexcept-unevaluated 0x7c05182460
-| | `-ParmVarDecl 0x7c05182590 <col:9> col:9 'const SteamID_t &'
-| `-CXXConstructorDecl 0x7c05182ac0 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&)' inline default trivial noexcept-unevaluated 0x7c05182ac0
-|   `-ParmVarDecl 0x7c05182bf0 <col:9> col:9 'SteamID_t &&'
-`-FieldDecl 0x7c05182058 <col:3, line:34:5> col:5 referenced m_steamid 'union SteamID_t':'CSteamID::SteamID_t'
+| | |   `-IntegerLiteral 0x765b5f8638 <col:25> 'int' 8
+| | |-CXXConstructorDecl 0x765b5f8a30 <line:96:12> col:12 implicit SteamIDComponent_t 'void () noexcept' inline default trivial
+| | |-CXXDestructorDecl 0x765b5f8b18 <col:12> col:12 implicit ~SteamIDComponent_t 'void ()' inline default trivial noexcept-unevaluated 0x765b5f8b18
+| | |-CXXConstructorDecl 0x765b5f8ed0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (const SteamIDComponent_t &)' inline default trivial noexcept-unevaluated 0x765b5f8ed0
+| | | `-ParmVarDecl 0x765b5f9000 <col:12> col:12 'const SteamIDComponent_t &'
+| | `-CXXConstructorDecl 0x765b5f90e0 <col:12> col:12 implicit constexpr SteamIDComponent_t 'void (SteamIDComponent_t &&)' inline default trivial noexcept-unevaluated 0x765b5f90e0
+| |   `-ParmVarDecl 0x765b5f9210 <col:12> col:12 'SteamIDComponent_t &&'
+| |-FieldDecl 0x765b5f8758 <col:5, line:101:7> col:7 m_comp 'struct SteamIDComponent_t':'CSteamIDLegacy::SteamID_t::SteamIDComponent_t'
+| |-FieldDecl 0x765b5f87d0 <line:102:5, col:12> col:12 referenced m_unAll64Bits 'uint64':'unsigned long long'
+| |-CXXConstructorDecl 0x765b5f8930 <line:95:9> col:9 implicit used SteamID_t 'void () noexcept' inline default trivial
+| | `-CompoundStmt 0x765b5f94b0 <col:9>
+| |-CXXConstructorDecl 0x765b5f8ca0 <col:9> col:9 implicit constexpr SteamID_t 'void (const SteamID_t &)' inline default trivial noexcept-unevaluated 0x765b5f8ca0
+| | `-ParmVarDecl 0x765b5f8dd0 <col:9> col:9 'const SteamID_t &'
+| `-CXXConstructorDecl 0x765b5f9300 <col:9> col:9 implicit constexpr SteamID_t 'void (SteamID_t &&)' inline default trivial noexcept-unevaluated 0x765b5f9300
+|   `-ParmVarDecl 0x765b5f9430 <col:9> col:9 'SteamID_t &&'
+`-FieldDecl 0x765b5f8898 <col:3, line:103:5> col:5 referenced m_steamid 'union SteamID_t':'CSteamIDLegacy::SteamID_t'
 
 Layout: <CGRecordLayout
-  LLVMType:%class.CSteamID = type { %"union.CSteamID::SteamID_t" }
-  NonVirtualBaseLLVMType:%class.CSteamID = type { %"union.CSteamID::SteamID_t" }
+  LLVMType:%class.CSteamIDLegacy = type { %"union.CSteamIDLegacy::SteamID_t" }
+  NonVirtualBaseLLVMType:%class.CSteamIDLegacy = type { %"union.CSteamIDLegacy::SteamID_t" }
   IsZeroInitializable:1
   BitFields:[
 ]>
 
 *** Dumping IRgen Record Layout
-Record: CXXRecordDecl 0x7c05185120 <meta/__tests__/fixtures/steam_callback_structs.cpp:37:1, line:42:1> line:37:8 referenced struct UserStatsReceived_t definition
+Record: CXXRecordDecl 0x765b5f9928 <meta/__tests__/fixtures/steam_callback_structs.cpp:106:1, line:111:1> line:106:8 referenced struct UserStatsReceived_t definition
 |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable
 | |-DefaultConstructor exists non_trivial needs_implicit
 | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -768,21 +1530,406 @@ Record: CXXRecordDecl 0x7c05185120 <meta/__tests__/fixtures/steam_callback_struc
 | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 | |-MoveAssignment exists simple trivial needs_implicit
 | `-Destructor simple irrelevant trivial needs_implicit
-|-MaxFieldAlignmentAttr 0x7c051851d0 <<invalid sloc>> Implicit 32
-|-CXXRecordDecl 0x7c05185298 <col:1, col:8> col:8 implicit struct UserStatsReceived_t
-|-EnumDecl 0x7c05185328 <line:38:3, col:29> col:3
-| `-EnumConstantDecl 0x7c05185430 <col:10, col:24> col:10 k_iCallback 'UserStatsReceived_t::(unnamed enum at meta/__tests__/fixtures/steam_callback_structs.cpp:38:3)'
-|   `-ImplicitCastExpr 0x7c05185488 <col:24> 'unsigned int' <IntegralCast>
-|     `-ConstantExpr 0x7c05185410 <col:24> 'int'
+|-MaxFieldAlignmentAttr 0x765b5f99e0 <<invalid sloc>> Implicit 32
+|-CXXRecordDecl 0x765b5f9aa8 <col:1, col:8> col:8 implicit struct UserStatsReceived_t
+|-EnumDecl 0x765b5f9b38 <line:107:3, col:29> col:3
+| `-EnumConstantDecl 0x765b5f9c40 <col:10, col:24> col:10 referenced k_iCallback 'UserStatsReceived_t::(unnamed enum at meta/__tests__/fixtures/steam_callback_structs.cpp:107:3)'
+|   `-ImplicitCastExpr 0x765b5f9c98 <col:24> 'unsigned int' <IntegralCast>
+|     `-ConstantExpr 0x765b5f9c20 <col:24> 'int'
 |       |-value: Int 1101
-|       `-IntegerLiteral 0x7c051853f0 <col:24> 'int' 1101
-|-FieldDecl 0x7c051854b0 <line:39:3, col:10> col:10 referenced m_nGameID 'uint64':'unsigned long long'
-|-FieldDecl 0x7c05185540 <line:40:3, col:11> col:11 m_eResult 'EResult'
-`-FieldDecl 0x7c051855d0 <line:41:3, col:12> col:12 referenced m_steamIDUser 'CSteamID'
+|       `-IntegerLiteral 0x765b5f9c00 <col:24> 'int' 1101
+|-FieldDecl 0x765b5f9cc0 <line:108:3, col:10> col:10 referenced m_nGameID 'uint64':'unsigned long long'
+|-FieldDecl 0x765b5f9d50 <line:109:3, col:11> col:11 m_eResult 'EResult'
+`-FieldDecl 0x765b5f9de0 <line:110:3, col:18> col:18 referenced m_steamIDUser 'CSteamIDLegacy'
 
 Layout: <CGRecordLayout
-  LLVMType:%struct.UserStatsReceived_t = type <{ i64, i32, %class.CSteamID }>
-  NonVirtualBaseLLVMType:%struct.UserStatsReceived_t = type <{ i64, i32, %class.CSteamID }>
+  LLVMType:%struct.UserStatsReceived_t = type <{ i64, i32, %class.CSteamIDLegacy }>
+  NonVirtualBaseLLVMType:%struct.UserStatsReceived_t = type <{ i64, i32, %class.CSteamIDLegacy }>
   IsZeroInitializable:1
   BitFields:[
 ]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyInvite_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  DataSize:192
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyEnter_t
+
+Layout: <ASTRecordLayout
+  Size:160
+  DataSize:160
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 96, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyDataUpdate_t
+
+Layout: <ASTRecordLayout
+  Size:160
+  DataSize:160
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyChatUpdate_t
+
+Layout: <ASTRecordLayout
+  Size:224
+  DataSize:224
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128, 192]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyChatMsg_t
+
+Layout: <ASTRecordLayout
+  Size:192
+  DataSize:192
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128, 160]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyMatchList_t
+
+Layout: <ASTRecordLayout
+  Size:32
+  DataSize:32
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyKicked_t
+
+Layout: <ASTRecordLayout
+  Size:160
+  DataSize:160
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 128]>
+
+*** Dumping AST Record Layout
+Type: struct LobbyCreated_t
+
+Layout: <ASTRecordLayout
+  Size:96
+  DataSize:96
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32]>
+
+*** Dumping AST Record Layout
+Type: class CSteamID
+
+Layout: <ASTRecordLayout
+  Size:64
+  DataSize:64
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct P2PSessionRequest_t
+
+Layout: <ASTRecordLayout
+  Size:64
+  DataSize:64
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct P2PSessionConnectFail_t
+
+Layout: <ASTRecordLayout
+  Size:72
+  DataSize:72
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingIPAddr::IPv4MappedAddress
+
+Layout: <ASTRecordLayout
+  Size:128
+  DataSize:128
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 80, 96]>
+
+*** Dumping AST Record Layout
+Type: union SteamNetworkingIPAddr::(unnamed at meta/__tests__/fixtures/steam_callback_structs.cpp:122:3)
+
+Layout: <ASTRecordLayout
+  Size:128
+  DataSize:128
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingIPAddr
+
+Layout: <ASTRecordLayout
+  Size:144
+  DataSize:144
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 128]>
+
+*** Dumping AST Record Layout
+Type: union SteamNetworkingIdentity::(unnamed at meta/__tests__/fixtures/steam_callback_structs.cpp:138:3)
+
+Layout: <ASTRecordLayout
+  Size:1024
+  DataSize:1024
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0, 0, 0, 0, 0, 0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingIdentity
+
+Layout: <ASTRecordLayout
+  Size:1088
+  DataSize:1088
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionInfo_t
+
+Layout: <ASTRecordLayout
+  Size:5568
+  DataSize:5568
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 1088, 1152, 1184, 1328, 1344, 1376, 1408, 1440, 1472, 2496, 3520, 3552]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionStatusChangedCallback_t
+
+Layout: <ASTRecordLayout
+  Size:5632
+  DataSize:5632
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 5600]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetAuthenticationStatus_t
+
+Layout: <ASTRecordLayout
+  Size:2080
+  DataSize:2080
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingMessagesSessionRequest_t
+
+Layout: <ASTRecordLayout
+  Size:1088
+  DataSize:1088
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingMessagesSessionFailed_t
+
+Layout: <ASTRecordLayout
+  Size:5568
+  DataSize:5568
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamRelayNetworkStatus_t
+
+Layout: <ASTRecordLayout
+  Size:2176
+  DataSize:2176
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 96, 128]>
+
+*** Dumping AST Record Layout
+Type: struct SteamAPICallCompleted_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  DataSize:128
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 96]>
+
+*** Dumping AST Record Layout
+Type: struct GameLobbyJoinRequested_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  DataSize:128
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64]>
+
+*** Dumping AST Record Layout
+Type: struct GameRichPresenceJoinRequested_t
+
+Layout: <ASTRecordLayout
+  Size:2112
+  DataSize:2112
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionRealTimeStatus_t
+
+Layout: <ASTRecordLayout
+  Size:960
+  DataSize:960
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 448, 480]>
+
+*** Dumping AST Record Layout
+Type: struct P2PSessionState_t
+
+Layout: <ASTRecordLayout
+  Size:160
+  DataSize:160
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 8, 16, 24, 32, 64, 96, 128]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingMessage_t
+
+Layout: <ASTRecordLayout
+  Size:1728
+  DataSize:1728
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 96, 128, 1216, 1280, 1344, 1408, 1472, 1536, 1568, 1600, 1664, 1680]>
+
+*** Dumping AST Record Layout
+Type: struct CallbackMsg_t
+
+Layout: <ASTRecordLayout
+  Size:160
+  DataSize:160
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 128]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkPingLocation_t
+
+Layout: <ASTRecordLayout
+  Size:4096
+  DataSize:4096
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: union SteamNetworkingConfigValue_t::(unnamed at meta/__tests__/fixtures/steam_callback_structs.cpp:346:3)
+
+Layout: <ASTRecordLayout
+  Size:64
+  DataSize:64
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 0, 0, 0, 0]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetworkingConfigValue_t
+
+Layout: <ASTRecordLayout
+  Size:128
+  DataSize:128
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64]>
+
+*** Dumping AST Record Layout
+Type: struct SteamNetConnectionRealTimeLaneStatus_t
+
+Layout: <ASTRecordLayout
+  Size:512
+  DataSize:512
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 32, 64, 96, 128, 192]>
+
+*** Dumping AST Record Layout
+Type: struct servernetadr_t
+
+Layout: <ASTRecordLayout
+  Size:64
+  DataSize:64
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 16, 32]>
+
+*** Dumping AST Record Layout
+Type: struct gameserveritem_t
+
+Layout: <ASTRecordLayout
+  Size:3040
+  DataSize:3040
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0, 64, 96, 104, 112, 368, 624, 1152, 1184, 1216, 1248, 1280, 1288, 1312, 1344, 1376, 1888, 2912, 2976, 3008]>
