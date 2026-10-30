@@ -11,6 +11,7 @@ files:
 severity: medium
 platform: macos
 ready: live-gate
+status: "RESOLVED 2026-10-30 by quick 261029-thl (721c2fa01). Live gate passed."
 ---
 
 Two callers ask for a background open:
@@ -44,3 +45,12 @@ did. Keep the scheme allow-list check in front of any new path.
 
 Verify live on the Mac: from Console mode, press Play on a native Steam title and confirm there is no
 desktop-Space flash before the game window appears.
+
+## Resolved (2026-10-30)
+
+Quick 261029-thl (`721c2fa01`) fixed this in the sidecar, not in Rust. On darwin,
+`shell.openExternal` sends a `steam:` URL with `{ activate: false }` through a detached
+`/usr/bin/open -g` (`src/backend/platform/openDetached.ts`), skipping the Rust opener. Every other
+URL still goes through the Rust scheme allow-list. Windows and Linux are unchanged (macOS-only,
+like Electron). The operator reported the live gate as passed: pressing Play on a native Steam
+title from Console mode shows no desktop-Space flash.
