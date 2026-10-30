@@ -116,7 +116,12 @@ export const BARE_ACCESSOR_FAMILY: Readonly<Record<string, string>> = {
   SteamParentalSettings: 'SteamParentalSettings',
   SteamParties: 'SteamParties',
   SteamRemotePlay: 'SteamRemotePlay',
-  SteamTimeline: 'SteamTimeline'
+  SteamTimeline: 'SteamTimeline',
+  // Phase 58 (58-03, D-07): the multiplayer baseline manifests export these
+  // bare accessors, so the CR-02 family-spelling pin requires the keys.
+  SteamNetworkingSockets: 'SteamNetworkingSockets',
+  SteamNetworkingUtils: 'SteamNetworkingUtils',
+  SteamNetworkingMessages: 'SteamNetworkingMessages'
 }
 
 // Importing either of these means the game resolves Steamworks interfaces

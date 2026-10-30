@@ -8,7 +8,7 @@
  * Implements:
  *   - The flat SteamAPI_* exports (acceptance-set superset, R3 finding #9).
  *   - Per-interface __thiscall C++ vtables (spike 006's proven ABI mechanism)
- *     for: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, STEAMREMOTESTORAGE_INTERFACE_VERSION005, SteamMatchMaking009, SteamMatchMakingServers002, SteamNetworking005, STEAMREMOTESTORAGE_INTERFACE_VERSION010, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, STEAMREMOTESTORAGE_INTERFACE_VERSION013, SteamClient014, SteamNetworking006, STEAMREMOTESTORAGE_INTERFACE_VERSION016, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamInput006, SteamGameServer014, SteamGameServer015, SteamGameServerStats001, STEAMSCREENSHOTS_INTERFACE_VERSION003, SteamMatchGameSearch001, STEAMAPPLIST_INTERFACE_VERSION001, STEAMMUSIC_INTERFACE_VERSION001, STEAMMUSICREMOTE_INTERFACE_VERSION001, STEAMPARENTALSETTINGS_INTERFACE_VERSION001, SteamParties002, STEAMREMOTEPLAY_INTERFACE_VERSION001, STEAMREMOTEPLAY_INTERFACE_VERSION002, STEAMVIDEO_INTERFACE_V002, STEAMVIDEO_INTERFACE_V007, STEAMTIMELINE_INTERFACE_V001, STEAMHTTP_INTERFACE_VERSION003, STEAMUGC_INTERFACE_VERSION016, STEAMUGC_INTERFACE_VERSION017, STEAMUGC_INTERFACE_VERSION020, STEAMHTMLSURFACE_INTERFACE_VERSION_005, STEAMINVENTORY_INTERFACE_V003, SteamUtils009, SteamController006, SteamGameServer012, SteamController008, STEAMUGC_INTERFACE_VERSION010, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007, STEAMREMOTESTORAGE_INTERFACE_VERSION012, STEAMUGC_INTERFACE_VERSION007, STEAMHTTP_INTERFACE_VERSION002, STEAMSCREENSHOTS_INTERFACE_VERSION002, STEAMHTMLSURFACE_INTERFACE_VERSION_003, STEAMINVENTORY_INTERFACE_V001, STEAMVIDEO_INTERFACE_V001.
+ *     for: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, STEAMREMOTESTORAGE_INTERFACE_VERSION005, SteamMatchMaking009, SteamMatchMakingServers002, SteamNetworking005, STEAMREMOTESTORAGE_INTERFACE_VERSION010, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, STEAMREMOTESTORAGE_INTERFACE_VERSION013, SteamClient014, SteamNetworking006, STEAMREMOTESTORAGE_INTERFACE_VERSION016, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamInput006, SteamGameServer014, SteamGameServer015, SteamGameServerStats001, STEAMSCREENSHOTS_INTERFACE_VERSION003, SteamMatchGameSearch001, STEAMAPPLIST_INTERFACE_VERSION001, STEAMMUSIC_INTERFACE_VERSION001, STEAMMUSICREMOTE_INTERFACE_VERSION001, STEAMPARENTALSETTINGS_INTERFACE_VERSION001, SteamParties002, STEAMREMOTEPLAY_INTERFACE_VERSION001, STEAMREMOTEPLAY_INTERFACE_VERSION002, STEAMVIDEO_INTERFACE_V002, STEAMVIDEO_INTERFACE_V007, STEAMTIMELINE_INTERFACE_V001, STEAMHTTP_INTERFACE_VERSION003, STEAMUGC_INTERFACE_VERSION016, STEAMUGC_INTERFACE_VERSION017, STEAMUGC_INTERFACE_VERSION020, STEAMHTMLSURFACE_INTERFACE_VERSION_005, STEAMINVENTORY_INTERFACE_V003, SteamUtils009, SteamController006, SteamGameServer012, SteamController008, STEAMUGC_INTERFACE_VERSION010, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007, STEAMREMOTESTORAGE_INTERFACE_VERSION012, STEAMUGC_INTERFACE_VERSION007, STEAMHTTP_INTERFACE_VERSION002, STEAMSCREENSHOTS_INTERFACE_VERSION002, STEAMHTMLSURFACE_INTERFACE_VERSION_003, STEAMINVENTORY_INTERFACE_V001, STEAMVIDEO_INTERFACE_V001, SteamMatchMakingServers003, SteamNetworkingSockets013, SteamNetworkingUtils004, SteamNetworkingMessages002.
  *
  * ABI ground truth (24-RESEARCH.md Pattern 2): MSVC __thiscall -- `this` in
  * ECX, callee cleans the stack; ret N = summed non-`this` param widths (+4 for
@@ -30769,6 +30769,902 @@ struct FakeSTEAMVIDEO_INTERFACE_V001 { vfn *vptr; };
 static struct FakeSTEAMVIDEO_INTERFACE_V001 g_steamvideo_interface_v001_instance = { g_steamvideo_interface_v001_vtbl };
 #endif
 
+#if defined(__x86_64__)
+// === SteamMatchMakingServers003 (ordinal 69, family SteamMatchmakingServers) ===
+
+// slot 0: RequestInternetServerList(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2, uint32 _unknownArg3) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_RequestInternetServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "RequestInternetServerList", 0, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 1: RequestLANServerList(uint32 _unknownArg0, uint32 _unknownArg1) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_RequestLANServerList(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "RequestLANServerList", 1, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 2: RequestFriendsServerList(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2, uint32 _unknownArg3) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_RequestFriendsServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "RequestFriendsServerList", 2, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 3: RequestFavoritesServerList(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2, uint32 _unknownArg3) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_RequestFavoritesServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "RequestFavoritesServerList", 3, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 4: RequestHistoryServerList(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2, uint32 _unknownArg3) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_RequestHistoryServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "RequestHistoryServerList", 4, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 5: RequestSpectatorServerList(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2, uint32 _unknownArg3) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_RequestSpectatorServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "RequestSpectatorServerList", 5, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 6: ReleaseRequest(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_ReleaseRequest(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "ReleaseRequest", 6, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 7: GetServerDetails(uint32 _unknownArg0, uint32 _unknownArg1) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_GetServerDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "GetServerDetails", 7, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 8: CancelQuery(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_CancelQuery(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "CancelQuery", 8, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 9: RefreshQuery(void* hRequest) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_RefreshQuery(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "RefreshQuery", 9, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 10: IsRefreshing(void* hRequest) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamMatchMakingServers003_IsRefreshing(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "IsRefreshing", 10, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 11: GetServerCount(void* hRequest) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_SteamMatchMakingServers003_GetServerCount(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "GetServerCount", 11, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 12: RefreshServer(void* hRequest, int32 iServer) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_RefreshServer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "RefreshServer", 12, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 13: PingServer(uint32 unIP, uint32 usPort, w_ISteamMatchmakingPingResponse* pRequestServersResponse) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_SteamMatchMakingServers003_PingServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "PingServer", 13, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 14: PlayerDetails(uint32 unIP, uint32 usPort, w_ISteamMatchmakingPlayersResponse* pRequestServersResponse) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_SteamMatchMakingServers003_PlayerDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "PlayerDetails", 14, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 15: ServerRules(uint32 unIP, uint32 usPort, w_ISteamMatchmakingRulesResponse* pRequestServersResponse) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_SteamMatchMakingServers003_ServerRules(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "ServerRules", 15, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 16: ServerFriends(uint32 unIP, uint32 usPort, w_ISteamMatchmakingServerFriendsResponse* pRequestServersResponse) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_SteamMatchMakingServers003_ServerFriends(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "ServerFriends", 16, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 17: CancelServerQuery(int32 hServerQuery) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamMatchMakingServers003_CancelServerQuery(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "CancelServerQuery", 17, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+static vfn g_steammatchmakingservers003_vtbl[18] = {
+  (vfn)vt_SteamMatchMakingServers003_RequestInternetServerList, // slot 0
+  (vfn)vt_SteamMatchMakingServers003_RequestLANServerList, // slot 1
+  (vfn)vt_SteamMatchMakingServers003_RequestFriendsServerList, // slot 2
+  (vfn)vt_SteamMatchMakingServers003_RequestFavoritesServerList, // slot 3
+  (vfn)vt_SteamMatchMakingServers003_RequestHistoryServerList, // slot 4
+  (vfn)vt_SteamMatchMakingServers003_RequestSpectatorServerList, // slot 5
+  (vfn)vt_SteamMatchMakingServers003_ReleaseRequest, // slot 6
+  (vfn)vt_SteamMatchMakingServers003_GetServerDetails, // slot 7
+  (vfn)vt_SteamMatchMakingServers003_CancelQuery, // slot 8
+  (vfn)vt_SteamMatchMakingServers003_RefreshQuery, // slot 9
+  (vfn)vt_SteamMatchMakingServers003_IsRefreshing, // slot 10
+  (vfn)vt_SteamMatchMakingServers003_GetServerCount, // slot 11
+  (vfn)vt_SteamMatchMakingServers003_RefreshServer, // slot 12
+  (vfn)vt_SteamMatchMakingServers003_PingServer, // slot 13
+  (vfn)vt_SteamMatchMakingServers003_PlayerDetails, // slot 14
+  (vfn)vt_SteamMatchMakingServers003_ServerRules, // slot 15
+  (vfn)vt_SteamMatchMakingServers003_ServerFriends, // slot 16
+  (vfn)vt_SteamMatchMakingServers003_CancelServerQuery, // slot 17
+};
+struct FakeSteamMatchMakingServers003 { vfn *vptr; };
+static struct FakeSteamMatchMakingServers003 g_steammatchmakingservers003_instance = { g_steammatchmakingservers003_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamNetworkingSockets013 (ordinal 70, family SteamNetworkingSockets) ===
+
+// slot 0: CreateListenSocketIP(const SteamNetworkingIPAddr* localAddress, int32 nOptions, const SteamNetworkingConfigValue_t* pOptions) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_CreateListenSocketIP(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "CreateListenSocketIP", 0, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 1: ConnectByIPAddress(const SteamNetworkingIPAddr* address, int32 nOptions, const SteamNetworkingConfigValue_t* pOptions) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_ConnectByIPAddress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "ConnectByIPAddress", 1, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 2: CreateListenSocketP2P(int32 nLocalVirtualPort, int32 nOptions, const SteamNetworkingConfigValue_t* pOptions) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_CreateListenSocketP2P(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "CreateListenSocketP2P", 2, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 3: ConnectP2P(const SteamNetworkingIdentity_144* identityRemote, int32 nRemoteVirtualPort, int32 nOptions, const SteamNetworkingConfigValue_t* pOptions) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_ConnectP2P(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "ConnectP2P", 3, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 4: AcceptConnection(uint32 hConn) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_AcceptConnection(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "AcceptConnection", 4, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 5: CloseConnection(uint32 hPeer, int32 nReason, const char* pszDebug, bool bEnableLinger) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_CloseConnection(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "CloseConnection", 5, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 6: CloseListenSocket(uint32 hSocket) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_CloseListenSocket(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "CloseListenSocket", 6, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 7: SetConnectionUserData(uint32 hPeer, int64 nUserData) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_SetConnectionUserData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "SetConnectionUserData", 7, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 8: GetConnectionUserData(uint32 hPeer) -> int64 | __thiscall ret 4 (STUB)
+static int64_t THISCALL vt_SteamNetworkingSockets013_GetConnectionUserData(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetConnectionUserData", 8, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 9: SetConnectionName(uint32 hPeer, const char* pszName) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamNetworkingSockets013_SetConnectionName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "SetConnectionName", 9, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 10: GetConnectionName(uint32 hPeer, char* pszName, int32 nMaxLen) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_GetConnectionName(void *self, uint32_t hPeer, char * pszName, int32_t nMaxLen) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  if (pszName != NULL && nMaxLen > 0) pszName[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetConnectionName", 10, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 11: SendMessageToConnection(uint32 hConn, const void* pData, uint32 cbData, int32 nSendFlags, int64_t* pOutMessageNumber) -> uint32 | __thiscall ret 20 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_SendMessageToConnection(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "SendMessageToConnection", 11, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 12: SendMessages(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2, uint32 _unknownArg3) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamNetworkingSockets013_SendMessages(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "SendMessages", 12, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 13: FlushMessagesOnConnection(uint32 hConn) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_FlushMessagesOnConnection(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "FlushMessagesOnConnection", 13, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 14: ReceiveMessagesOnConnection(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamNetworkingSockets013_ReceiveMessagesOnConnection(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "ReceiveMessagesOnConnection", 14, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 15: GetConnectionInfo(uint32 hConn, SteamNetConnectionInfo_t_153a* pInfo) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_GetConnectionInfo(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetConnectionInfo", 15, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 16: GetConnectionRealTimeStatus(uint32 hConn, SteamNetConnectionRealTimeStatus_t_164* pStatus, int32 nLanes, SteamNetConnectionRealTimeLaneStatus_t* pLanes) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_GetConnectionRealTimeStatus(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetConnectionRealTimeStatus", 16, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 17: GetDetailedConnectionStatus(uint32 hConn, char* pszBuf, int32 cbBuf) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_SteamNetworkingSockets013_GetDetailedConnectionStatus(void *self, uint32_t hConn, char * pszBuf, int32_t cbBuf) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  if (pszBuf != NULL && cbBuf > 0) pszBuf[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetDetailedConnectionStatus", 17, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 18: GetListenSocketAddress(uint32 hSocket, SteamNetworkingIPAddr* address) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_GetListenSocketAddress(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetListenSocketAddress", 18, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 19: CreateSocketPair(uint32* pOutConnection1, uint32* pOutConnection2, bool bUseNetworkLoopback, const SteamNetworkingIdentity_144* pPeerIdentity1, const SteamNetworkingIdentity_144* pPeerIdentity2) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_CreateSocketPair(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "CreateSocketPair", 19, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 20: ConfigureConnectionLanes(uint32 hConn, int32 nNumLanes, const int32_t* pLanePriorities, const uint16_t* pLaneWeights) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_ConfigureConnectionLanes(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "ConfigureConnectionLanes", 20, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 21: GetIdentity(SteamNetworkingIdentity_144* pIdentity) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_GetIdentity(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetIdentity", 21, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 22: InitAuthentication() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_InitAuthentication(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "InitAuthentication", 22, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 23: GetAuthenticationStatus(SteamNetAuthenticationStatus_t* pDetails) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_GetAuthenticationStatus(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetAuthenticationStatus", 23, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 24: CreatePollGroup() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_CreatePollGroup(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "CreatePollGroup", 24, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 25: DestroyPollGroup(uint32 hPollGroup) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_DestroyPollGroup(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "DestroyPollGroup", 25, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 26: SetConnectionPollGroup(uint32 hConn, uint32 hPollGroup) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_SetConnectionPollGroup(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "SetConnectionPollGroup", 26, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 27: ReceiveMessagesOnPollGroup(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamNetworkingSockets013_ReceiveMessagesOnPollGroup(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "ReceiveMessagesOnPollGroup", 27, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 28: ReceivedRelayAuthTicket(const void* pvTicket, int32 cbTicket, SteamDatagramRelayAuthTicket* pOutParsedTicket) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_ReceivedRelayAuthTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "ReceivedRelayAuthTicket", 28, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 29: FindRelayAuthTicketForServer(const SteamNetworkingIdentity_144* identityGameServer, int32 nRemoteVirtualPort, SteamDatagramRelayAuthTicket* pOutParsedTicket) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_SteamNetworkingSockets013_FindRelayAuthTicketForServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "FindRelayAuthTicketForServer", 29, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 30: ConnectToHostedDedicatedServer(const SteamNetworkingIdentity_144* identityTarget, int32 nRemoteVirtualPort, int32 nOptions, const SteamNetworkingConfigValue_t* pOptions) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_ConnectToHostedDedicatedServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "ConnectToHostedDedicatedServer", 30, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 31: GetHostedDedicatedServerPort() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_GetHostedDedicatedServerPort(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetHostedDedicatedServerPort", 31, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 32: GetHostedDedicatedServerPOPID() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_GetHostedDedicatedServerPOPID(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetHostedDedicatedServerPOPID", 32, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 33: GetHostedDedicatedServerAddress(SteamDatagramHostedAddress* pRouting) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_GetHostedDedicatedServerAddress(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetHostedDedicatedServerAddress", 33, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 34: CreateHostedDedicatedServerListenSocket(int32 nLocalVirtualPort, int32 nOptions, const SteamNetworkingConfigValue_t* pOptions) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_CreateHostedDedicatedServerListenSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "CreateHostedDedicatedServerListenSocket", 34, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 35: GetGameCoordinatorServerLogin(SteamDatagramGameCoordinatorServerLogin* pLoginInfo, int32* pcbSignedBlob, void* pBlob) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_GetGameCoordinatorServerLogin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetGameCoordinatorServerLogin", 35, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 36: ConnectP2PCustomSignaling(void /*ISteamNetworkingConnectionSignaling*/* pSignaling, const SteamNetworkingIdentity_144* pPeerIdentity, int32 nRemoteVirtualPort, int32 nOptions, const SteamNetworkingConfigValue_t* pOptions) -> uint32 | __thiscall ret 20 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_ConnectP2PCustomSignaling(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "ConnectP2PCustomSignaling", 36, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 37: ReceivedP2PCustomSignal(const void* pMsg, int32 cbMsg, void /*ISteamNetworkingSignalingRecvContext*/* pContext) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_ReceivedP2PCustomSignal(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "ReceivedP2PCustomSignal", 37, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 38: GetCertificateRequest(int32* pcbBlob, void* pBlob, void* errMsg) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_GetCertificateRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetCertificateRequest", 38, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 39: SetCertificate(const void* pCertificate, int32 cbCertificate, void* errMsg) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_SetCertificate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "SetCertificate", 39, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 40: ResetIdentity(const SteamNetworkingIdentity_144* pIdentity) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamNetworkingSockets013_ResetIdentity(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "ResetIdentity", 40, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 41: RunCallbacks() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamNetworkingSockets013_RunCallbacks(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "RunCallbacks", 41, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 42: BeginAsyncRequestFakeIP(int32 nNumPorts) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamNetworkingSockets013_BeginAsyncRequestFakeIP(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "BeginAsyncRequestFakeIP", 42, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 43: GetFakeIP(int32 idxFirstPort, SteamNetworkingFakeIPResult_t* pInfo) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamNetworkingSockets013_GetFakeIP(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetFakeIP", 43, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 44: CreateListenSocketP2PFakeIP(int32 idxFakePort, int32 nOptions, const SteamNetworkingConfigValue_t* pOptions) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_CreateListenSocketP2PFakeIP(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "CreateListenSocketP2PFakeIP", 44, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 45: GetRemoteFakeIPForConnection(uint32 hConn, SteamNetworkingIPAddr* pOutAddr) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingSockets013_GetRemoteFakeIPForConnection(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "GetRemoteFakeIPForConnection", 45, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 46: CreateFakeUDPPort(int32 idxFakeServerPort) -> void /*ISteamNetworkingFakeUDPPort*/* | __thiscall ret 4 (STUB)
+static void * THISCALL vt_SteamNetworkingSockets013_CreateFakeUDPPort(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "CreateFakeUDPPort", 46, GAMELIB_STUBCALL_KIND_STUB);
+  return NULL;
+}
+
+// slot 47: destructor() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamNetworkingSockets013_destructor(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingSockets013", "destructor", 47, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+static vfn g_steamnetworkingsockets013_vtbl[48] = {
+  (vfn)vt_SteamNetworkingSockets013_CreateListenSocketIP, // slot 0
+  (vfn)vt_SteamNetworkingSockets013_ConnectByIPAddress, // slot 1
+  (vfn)vt_SteamNetworkingSockets013_CreateListenSocketP2P, // slot 2
+  (vfn)vt_SteamNetworkingSockets013_ConnectP2P, // slot 3
+  (vfn)vt_SteamNetworkingSockets013_AcceptConnection, // slot 4
+  (vfn)vt_SteamNetworkingSockets013_CloseConnection, // slot 5
+  (vfn)vt_SteamNetworkingSockets013_CloseListenSocket, // slot 6
+  (vfn)vt_SteamNetworkingSockets013_SetConnectionUserData, // slot 7
+  (vfn)vt_SteamNetworkingSockets013_GetConnectionUserData, // slot 8
+  (vfn)vt_SteamNetworkingSockets013_SetConnectionName, // slot 9
+  (vfn)vt_SteamNetworkingSockets013_GetConnectionName, // slot 10
+  (vfn)vt_SteamNetworkingSockets013_SendMessageToConnection, // slot 11
+  (vfn)vt_SteamNetworkingSockets013_SendMessages, // slot 12
+  (vfn)vt_SteamNetworkingSockets013_FlushMessagesOnConnection, // slot 13
+  (vfn)vt_SteamNetworkingSockets013_ReceiveMessagesOnConnection, // slot 14
+  (vfn)vt_SteamNetworkingSockets013_GetConnectionInfo, // slot 15
+  (vfn)vt_SteamNetworkingSockets013_GetConnectionRealTimeStatus, // slot 16
+  (vfn)vt_SteamNetworkingSockets013_GetDetailedConnectionStatus, // slot 17
+  (vfn)vt_SteamNetworkingSockets013_GetListenSocketAddress, // slot 18
+  (vfn)vt_SteamNetworkingSockets013_CreateSocketPair, // slot 19
+  (vfn)vt_SteamNetworkingSockets013_ConfigureConnectionLanes, // slot 20
+  (vfn)vt_SteamNetworkingSockets013_GetIdentity, // slot 21
+  (vfn)vt_SteamNetworkingSockets013_InitAuthentication, // slot 22
+  (vfn)vt_SteamNetworkingSockets013_GetAuthenticationStatus, // slot 23
+  (vfn)vt_SteamNetworkingSockets013_CreatePollGroup, // slot 24
+  (vfn)vt_SteamNetworkingSockets013_DestroyPollGroup, // slot 25
+  (vfn)vt_SteamNetworkingSockets013_SetConnectionPollGroup, // slot 26
+  (vfn)vt_SteamNetworkingSockets013_ReceiveMessagesOnPollGroup, // slot 27
+  (vfn)vt_SteamNetworkingSockets013_ReceivedRelayAuthTicket, // slot 28
+  (vfn)vt_SteamNetworkingSockets013_FindRelayAuthTicketForServer, // slot 29
+  (vfn)vt_SteamNetworkingSockets013_ConnectToHostedDedicatedServer, // slot 30
+  (vfn)vt_SteamNetworkingSockets013_GetHostedDedicatedServerPort, // slot 31
+  (vfn)vt_SteamNetworkingSockets013_GetHostedDedicatedServerPOPID, // slot 32
+  (vfn)vt_SteamNetworkingSockets013_GetHostedDedicatedServerAddress, // slot 33
+  (vfn)vt_SteamNetworkingSockets013_CreateHostedDedicatedServerListenSocket, // slot 34
+  (vfn)vt_SteamNetworkingSockets013_GetGameCoordinatorServerLogin, // slot 35
+  (vfn)vt_SteamNetworkingSockets013_ConnectP2PCustomSignaling, // slot 36
+  (vfn)vt_SteamNetworkingSockets013_ReceivedP2PCustomSignal, // slot 37
+  (vfn)vt_SteamNetworkingSockets013_GetCertificateRequest, // slot 38
+  (vfn)vt_SteamNetworkingSockets013_SetCertificate, // slot 39
+  (vfn)vt_SteamNetworkingSockets013_ResetIdentity, // slot 40
+  (vfn)vt_SteamNetworkingSockets013_RunCallbacks, // slot 41
+  (vfn)vt_SteamNetworkingSockets013_BeginAsyncRequestFakeIP, // slot 42
+  (vfn)vt_SteamNetworkingSockets013_GetFakeIP, // slot 43
+  (vfn)vt_SteamNetworkingSockets013_CreateListenSocketP2PFakeIP, // slot 44
+  (vfn)vt_SteamNetworkingSockets013_GetRemoteFakeIPForConnection, // slot 45
+  (vfn)vt_SteamNetworkingSockets013_CreateFakeUDPPort, // slot 46
+  (vfn)vt_SteamNetworkingSockets013_destructor, // slot 47
+};
+struct FakeSteamNetworkingSockets013 { vfn *vptr; };
+static struct FakeSteamNetworkingSockets013 g_steamnetworkingsockets013_instance = { g_steamnetworkingsockets013_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamNetworkingUtils004 (ordinal 71, family SteamNetworkingUtils) ===
+
+// slot 0: AllocateMessage(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamNetworkingUtils004_AllocateMessage(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "AllocateMessage", 0, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 1: GetRelayNetworkStatus(SteamRelayNetworkStatus_t* pDetails) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingUtils004_GetRelayNetworkStatus(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetRelayNetworkStatus", 1, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 2: GetLocalPingLocation(SteamNetworkPingLocation_t* result) -> float | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingUtils004_GetLocalPingLocation(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetLocalPingLocation", 2, GAMELIB_STUBCALL_KIND_STUB);
+  return 0.0f;
+}
+
+// slot 3: EstimatePingTimeBetweenTwoLocations(const SteamNetworkPingLocation_t* location1, const SteamNetworkPingLocation_t* location2) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "EstimatePingTimeBetweenTwoLocations", 3, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 4: EstimatePingTimeFromLocalHost(const SteamNetworkPingLocation_t* remoteLocation) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "EstimatePingTimeFromLocalHost", 4, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 5: ConvertPingLocationToString(const SteamNetworkPingLocation_t* location, char* pszBuf, int32 cchBufSize) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamNetworkingUtils004_ConvertPingLocationToString(void *self, void * location, char * pszBuf, int32_t cchBufSize) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  if (pszBuf != NULL && cchBufSize > 0) pszBuf[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "ConvertPingLocationToString", 5, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 6: ParsePingLocationString(const char* pszString, SteamNetworkPingLocation_t* result) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworkingUtils004_ParsePingLocationString(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "ParsePingLocationString", 6, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 7: CheckPingDataUpToDate(float flMaxAgeSeconds) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamNetworkingUtils004_CheckPingDataUpToDate(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "CheckPingDataUpToDate", 7, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 8: GetPingToDataCenter(uint32 popID, uint32* pViaRelayPoP) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamNetworkingUtils004_GetPingToDataCenter(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetPingToDataCenter", 8, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 9: GetDirectPingToPOP(uint32 popID) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_SteamNetworkingUtils004_GetDirectPingToPOP(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetDirectPingToPOP", 9, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 10: GetPOPCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_SteamNetworkingUtils004_GetPOPCount(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetPOPCount", 10, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 11: GetPOPList(uint32* list, int32 nListSz) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamNetworkingUtils004_GetPOPList(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetPOPList", 11, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 12: GetLocalTimestamp() -> int64 | __thiscall ret 0 (STUB)
+static int64_t THISCALL vt_SteamNetworkingUtils004_GetLocalTimestamp(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetLocalTimestamp", 12, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 13: SetDebugOutputFunction(uint32 eDetailLevel, void* pfnFunc) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamNetworkingUtils004_SetDebugOutputFunction(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SetDebugOutputFunction", 13, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 14: GetIPv4FakeIPType(uint32 nIPv4) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingUtils004_GetIPv4FakeIPType(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetIPv4FakeIPType", 14, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 15: GetRealIdentityForFakeIP(const SteamNetworkingIPAddr* fakeIP, SteamNetworkingIdentity_144* pOutRealIdentity) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingUtils004_GetRealIdentityForFakeIP(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetRealIdentityForFakeIP", 15, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 16: SetConfigValue(uint32 eValue, uint32 eScopeType, int32 scopeObj, uint32 eDataType, const void* pArg) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_SteamNetworkingUtils004_SetConfigValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SetConfigValue", 16, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 17: GetConfigValue(uint32 eValue, uint32 eScopeType, int32 scopeObj, uint32* pOutDataType, void* pResult, uint32* cbResult) -> uint32 | __thiscall ret 24 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingUtils004_GetConfigValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetConfigValue", 17, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 18: GetConfigValueInfo(uint32 eValue, uint32* pOutDataType, uint32* pOutScope) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamNetworkingUtils004_GetConfigValueInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetConfigValueInfo", 18, GAMELIB_STUBCALL_KIND_STUB);
+  return "";
+}
+
+// slot 19: IterateGenericEditableConfigValues(uint32 eCurrent, bool bEnumerateDevVars) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingUtils004_IterateGenericEditableConfigValues(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "IterateGenericEditableConfigValues", 19, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 20: SteamNetworkingIPAddr_ToString(const SteamNetworkingIPAddr* addr, char* buf, uint32 cbBuf, bool bWithPort) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIPAddr_ToString(void *self, void * addr, char * buf, uint32_t cbBuf, int bWithPort) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  if (buf != NULL && cbBuf > 0) buf[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SteamNetworkingIPAddr_ToString", 20, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 21: SteamNetworkingIPAddr_ParseString(SteamNetworkingIPAddr* pAddr, const char* pszStr) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIPAddr_ParseString(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SteamNetworkingIPAddr_ParseString", 21, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 22: SteamNetworkingIPAddr_GetFakeIPType(const SteamNetworkingIPAddr* addr) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIPAddr_GetFakeIPType(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SteamNetworkingIPAddr_GetFakeIPType", 22, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 23: SteamNetworkingIdentity_ToString(const SteamNetworkingIdentity_144* identity, char* buf, uint32 cbBuf) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIdentity_ToString(void *self, void * identity, char * buf, uint32_t cbBuf) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  if (buf != NULL && cbBuf > 0) buf[0] = '\0';
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SteamNetworkingIdentity_ToString", 23, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 24: SteamNetworkingIdentity_ParseString(SteamNetworkingIdentity_144* pIdentity, const char* pszStr) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIdentity_ParseString(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SteamNetworkingIdentity_ParseString", 24, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 25: destructor() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamNetworkingUtils004_destructor(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "destructor", 25, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+static vfn g_steamnetworkingutils004_vtbl[26] = {
+  (vfn)vt_SteamNetworkingUtils004_AllocateMessage, // slot 0
+  (vfn)vt_SteamNetworkingUtils004_GetRelayNetworkStatus, // slot 1
+  (vfn)vt_SteamNetworkingUtils004_GetLocalPingLocation, // slot 2
+  (vfn)vt_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations, // slot 3
+  (vfn)vt_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost, // slot 4
+  (vfn)vt_SteamNetworkingUtils004_ConvertPingLocationToString, // slot 5
+  (vfn)vt_SteamNetworkingUtils004_ParsePingLocationString, // slot 6
+  (vfn)vt_SteamNetworkingUtils004_CheckPingDataUpToDate, // slot 7
+  (vfn)vt_SteamNetworkingUtils004_GetPingToDataCenter, // slot 8
+  (vfn)vt_SteamNetworkingUtils004_GetDirectPingToPOP, // slot 9
+  (vfn)vt_SteamNetworkingUtils004_GetPOPCount, // slot 10
+  (vfn)vt_SteamNetworkingUtils004_GetPOPList, // slot 11
+  (vfn)vt_SteamNetworkingUtils004_GetLocalTimestamp, // slot 12
+  (vfn)vt_SteamNetworkingUtils004_SetDebugOutputFunction, // slot 13
+  (vfn)vt_SteamNetworkingUtils004_GetIPv4FakeIPType, // slot 14
+  (vfn)vt_SteamNetworkingUtils004_GetRealIdentityForFakeIP, // slot 15
+  (vfn)vt_SteamNetworkingUtils004_SetConfigValue, // slot 16
+  (vfn)vt_SteamNetworkingUtils004_GetConfigValue, // slot 17
+  (vfn)vt_SteamNetworkingUtils004_GetConfigValueInfo, // slot 18
+  (vfn)vt_SteamNetworkingUtils004_IterateGenericEditableConfigValues, // slot 19
+  (vfn)vt_SteamNetworkingUtils004_SteamNetworkingIPAddr_ToString, // slot 20
+  (vfn)vt_SteamNetworkingUtils004_SteamNetworkingIPAddr_ParseString, // slot 21
+  (vfn)vt_SteamNetworkingUtils004_SteamNetworkingIPAddr_GetFakeIPType, // slot 22
+  (vfn)vt_SteamNetworkingUtils004_SteamNetworkingIdentity_ToString, // slot 23
+  (vfn)vt_SteamNetworkingUtils004_SteamNetworkingIdentity_ParseString, // slot 24
+  (vfn)vt_SteamNetworkingUtils004_destructor, // slot 25
+};
+struct FakeSteamNetworkingUtils004 { vfn *vptr; };
+static struct FakeSteamNetworkingUtils004 g_steamnetworkingutils004_instance = { g_steamnetworkingutils004_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamNetworkingMessages002 (ordinal 72, family SteamNetworkingMessages) ===
+
+// slot 0: SendMessageToUser(const SteamNetworkingIdentity_144* identityRemote, const void* pubData, uint32 cubData, int32 nSendFlags, int32 nRemoteChannel) -> uint32 | __thiscall ret 20 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingMessages002_SendMessageToUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "SendMessageToUser", 0, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 1: ReceiveMessagesOnChannel(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamNetworkingMessages002_ReceiveMessagesOnChannel(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "ReceiveMessagesOnChannel", 1, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 2: AcceptSessionWithUser(const SteamNetworkingIdentity_144* identityRemote) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamNetworkingMessages002_AcceptSessionWithUser(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "AcceptSessionWithUser", 2, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 3: CloseSessionWithUser(const SteamNetworkingIdentity_144* identityRemote) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamNetworkingMessages002_CloseSessionWithUser(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "CloseSessionWithUser", 3, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 4: CloseChannelWithUser(const SteamNetworkingIdentity_144* identityRemote, int32 nLocalChannel) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworkingMessages002_CloseChannelWithUser(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "CloseChannelWithUser", 4, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 5: GetSessionConnectionInfo(const SteamNetworkingIdentity_144* identityRemote, SteamNetConnectionInfo_t_153a* pConnectionInfo, SteamNetConnectionRealTimeStatus_t* pQuickStatus) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamNetworkingMessages002_GetSessionConnectionInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "GetSessionConnectionInfo", 5, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+static vfn g_steamnetworkingmessages002_vtbl[6] = {
+  (vfn)vt_SteamNetworkingMessages002_SendMessageToUser, // slot 0
+  (vfn)vt_SteamNetworkingMessages002_ReceiveMessagesOnChannel, // slot 1
+  (vfn)vt_SteamNetworkingMessages002_AcceptSessionWithUser, // slot 2
+  (vfn)vt_SteamNetworkingMessages002_CloseSessionWithUser, // slot 3
+  (vfn)vt_SteamNetworkingMessages002_CloseChannelWithUser, // slot 4
+  (vfn)vt_SteamNetworkingMessages002_GetSessionConnectionInfo, // slot 5
+};
+struct FakeSteamNetworkingMessages002 { vfn *vptr; };
+static struct FakeSteamNetworkingMessages002 g_steamnetworkingmessages002_instance = { g_steamnetworkingmessages002_vtbl };
+#endif
+
 // === Legacy bare accessors (51-06 Task 2, selected per game via gamelib_bridge.cfg's iface.<Family>=<Version>) ===
 
 typedef struct { const char *version; const char *family; void *instance; } GIfaceTableEntry;
@@ -30965,6 +31861,18 @@ static const GIfaceTableEntry g_iface_table[] = {
 #if defined(__x86_64__)
   { "STEAMVIDEO_INTERFACE_V001", "SteamVideo", &g_steamvideo_interface_v001_instance },
 #endif
+#if defined(__x86_64__)
+  { "SteamMatchMakingServers003", "SteamMatchMakingServers", &g_steammatchmakingservers003_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamNetworkingSockets013", "SteamNetworkingSockets", &g_steamnetworkingsockets013_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamNetworkingUtils004", "SteamNetworkingUtils", &g_steamnetworkingutils004_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamNetworkingMessages002", "SteamNetworkingMessages", &g_steamnetworkingmessages002_instance },
+#endif
 };
 #define G_IFACE_TABLE_LEN (sizeof(g_iface_table) / sizeof(g_iface_table[0]))
 
@@ -31056,6 +31964,18 @@ void *SteamMusicRemote(void) {
 
 void *SteamNetworking(void) {
   return resolve_bare_iface("SteamNetworking");
+}
+
+void *SteamNetworkingMessages(void) {
+  return resolve_bare_iface("SteamNetworkingMessages");
+}
+
+void *SteamNetworkingSockets(void) {
+  return resolve_bare_iface("SteamNetworkingSockets");
+}
+
+void *SteamNetworkingUtils(void) {
+  return resolve_bare_iface("SteamNetworkingUtils");
 }
 
 void *SteamParentalSettings(void) {
@@ -36715,10 +37635,15 @@ bool SteamAPI_ISteamInventory_TriggerItemDrop(void *self, int32_t * a1, int32_t 
   return 0;
 }
 
-void SteamAPI_ISteamMatchmakingServers_CancelQuery(void *self, void * a1) {
+void SteamAPI_ISteamMatchmakingServers_CancelQuery(void *self, uint64_t a1) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, void *))vt[8])(self, (void *)a1);
+    return;
+  }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[8])(self, (uint32_t)(uint32_t)a1);
     return;
   }
   return;
@@ -36730,6 +37655,11 @@ void SteamAPI_ISteamMatchmakingServers_CancelServerQuery(void *self, int32_t a1)
     ((void (*)(void *, int32_t))vt[16])(self, (int32_t)a1);
     return;
   }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, int32_t))vt[17])(self, (int32_t)a1);
+    return;
+  }
   return;
 }
 
@@ -36738,19 +37668,32 @@ int32_t SteamAPI_ISteamMatchmakingServers_GetServerCount(void *self, void * a1) 
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *, void *))vt[11])(self, (void *)a1);
   }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, void *))vt[11])(self, (void *)a1);
+  }
   return 0;
 }
 
-void * SteamAPI_ISteamMatchmakingServers_GetServerDetails(void *self, void * a1, int32_t a2) {
+void * SteamAPI_ISteamMatchmakingServers_GetServerDetails(void *self, uint64_t a1, uint64_t a2) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
-    return (void *)((void * (*)(void *, void *, int32_t))vt[7])(self, (void *)a1, (int32_t)a2);
+    return (void *)((void * (*)(void *, void *, int32_t))vt[7])(self, (void *)a1, (int32_t)(uint32_t)a2);
+  }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t))vt[7])(self, (uint32_t)(uint32_t)a1, (uint32_t)(uint32_t)a2);
+    return 0;
   }
   return 0;
 }
 
 bool SteamAPI_ISteamMatchmakingServers_IsRefreshing(void *self, void * a1) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *))vt[10])(self, (void *)a1);
+  }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, void *))vt[10])(self, (void *)a1);
   }
@@ -36762,6 +37705,10 @@ int32_t SteamAPI_ISteamMatchmakingServers_PingServer(void *self, uint32_t a1, ui
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *, uint32_t, uint32_t, void *))vt[13])(self, (uint32_t)a1, (uint32_t)a2, (void *)a3);
   }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, uint32_t, uint32_t, void *))vt[13])(self, (uint32_t)a1, (uint32_t)a2, (void *)a3);
+  }
   return 0;
 }
 
@@ -36770,11 +37717,20 @@ int32_t SteamAPI_ISteamMatchmakingServers_PlayerDetails(void *self, uint32_t a1,
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *, uint32_t, uint32_t, void *))vt[14])(self, (uint32_t)a1, (uint32_t)a2, (void *)a3);
   }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, uint32_t, uint32_t, void *))vt[14])(self, (uint32_t)a1, (uint32_t)a2, (void *)a3);
+  }
   return 0;
 }
 
 void SteamAPI_ISteamMatchmakingServers_RefreshQuery(void *self, void * a1) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, void *))vt[9])(self, (void *)a1);
+    return;
+  }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, void *))vt[9])(self, (void *)a1);
     return;
@@ -36788,6 +37744,11 @@ void SteamAPI_ISteamMatchmakingServers_RefreshServer(void *self, void * a1, int3
     ((void (*)(void *, void *, int32_t))vt[12])(self, (void *)a1, (int32_t)a2);
     return;
   }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, void *, int32_t))vt[12])(self, (void *)a1, (int32_t)a2);
+    return;
+  }
   return;
 }
 
@@ -36797,59 +37758,106 @@ void SteamAPI_ISteamMatchmakingServers_ReleaseRequest(void *self, uint32_t a1) {
     ((void (*)(void *, uint32_t))vt[6])(self, (uint32_t)a1);
     return;
   }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[6])(self, (uint32_t)a1);
+    return;
+  }
   return;
 }
 
-void * SteamAPI_ISteamMatchmakingServers_RequestFavoritesServerList(void *self, uint32_t a1, void * a2, uint32_t a3, void * a4) {
+void * SteamAPI_ISteamMatchmakingServers_RequestFavoritesServerList(void *self, uint32_t a1, uint64_t a2, uint32_t a3, uint64_t a4) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
     return (void *)((void * (*)(void *, uint32_t, void *, uint32_t, void *))vt[3])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (void *)a4);
   }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t))vt[3])(self, (uint32_t)a1, (uint32_t)(uint32_t)a2, (uint32_t)a3, (uint32_t)(uint32_t)a4);
+    return 0;
+  }
   return 0;
 }
 
-void * SteamAPI_ISteamMatchmakingServers_RequestFriendsServerList(void *self, uint32_t a1, void * a2, uint32_t a3, void * a4) {
+void * SteamAPI_ISteamMatchmakingServers_RequestFriendsServerList(void *self, uint32_t a1, uint64_t a2, uint32_t a3, uint64_t a4) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
     return (void *)((void * (*)(void *, uint32_t, void *, uint32_t, void *))vt[2])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (void *)a4);
   }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t))vt[2])(self, (uint32_t)a1, (uint32_t)(uint32_t)a2, (uint32_t)a3, (uint32_t)(uint32_t)a4);
+    return 0;
+  }
   return 0;
 }
 
-void * SteamAPI_ISteamMatchmakingServers_RequestHistoryServerList(void *self, uint32_t a1, void * a2, uint32_t a3, void * a4) {
+void * SteamAPI_ISteamMatchmakingServers_RequestHistoryServerList(void *self, uint32_t a1, uint64_t a2, uint32_t a3, uint64_t a4) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
     return (void *)((void * (*)(void *, uint32_t, void *, uint32_t, void *))vt[4])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (void *)a4);
   }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t))vt[4])(self, (uint32_t)a1, (uint32_t)(uint32_t)a2, (uint32_t)a3, (uint32_t)(uint32_t)a4);
+    return 0;
+  }
   return 0;
 }
 
-void * SteamAPI_ISteamMatchmakingServers_RequestInternetServerList(void *self, uint32_t a1, void * a2, uint32_t a3, void * a4) {
+void * SteamAPI_ISteamMatchmakingServers_RequestInternetServerList(void *self, uint32_t a1, uint64_t a2, uint32_t a3, uint64_t a4) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
     return (void *)((void * (*)(void *, uint32_t, void *, uint32_t, void *))vt[0])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (void *)a4);
   }
-  return 0;
-}
-
-void * SteamAPI_ISteamMatchmakingServers_RequestLANServerList(void *self, uint32_t a1, void * a2) {
-  if (self == (void *)&g_steammatchmakingservers002_instance) {
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
     vfn *vt = *(vfn **)self;
-    return (void *)((void * (*)(void *, uint32_t, void *))vt[1])(self, (uint32_t)a1, (void *)a2);
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t))vt[0])(self, (uint32_t)a1, (uint32_t)(uint32_t)a2, (uint32_t)a3, (uint32_t)(uint32_t)a4);
+    return 0;
   }
   return 0;
 }
 
-void * SteamAPI_ISteamMatchmakingServers_RequestSpectatorServerList(void *self, uint32_t a1, void * a2, uint32_t a3, void * a4) {
+void * SteamAPI_ISteamMatchmakingServers_RequestLANServerList(void *self, uint32_t a1, uint64_t a2) {
+  if (self == (void *)&g_steammatchmakingservers002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (void *)((void * (*)(void *, uint32_t, void *))vt[1])(self, (uint32_t)a1, (void *)a2);
+  }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t))vt[1])(self, (uint32_t)a1, (uint32_t)(uint32_t)a2);
+    return 0;
+  }
+  return 0;
+}
+
+void * SteamAPI_ISteamMatchmakingServers_RequestSpectatorServerList(void *self, uint32_t a1, uint64_t a2, uint32_t a3, uint64_t a4) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
     return (void *)((void * (*)(void *, uint32_t, void *, uint32_t, void *))vt[5])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (void *)a4);
+  }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t))vt[5])(self, (uint32_t)a1, (uint32_t)(uint32_t)a2, (uint32_t)a3, (uint32_t)(uint32_t)a4);
+    return 0;
+  }
+  return 0;
+}
+
+int32_t SteamAPI_ISteamMatchmakingServers_ServerFriends(void *self, uint32_t a1, uint32_t a2, void * a3) {
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, uint32_t, uint32_t, void *))vt[16])(self, (uint32_t)a1, (uint32_t)a2, (void *)a3);
   }
   return 0;
 }
 
 int32_t SteamAPI_ISteamMatchmakingServers_ServerRules(void *self, uint32_t a1, uint32_t a2, void * a3) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, uint32_t, uint32_t, void *))vt[15])(self, (uint32_t)a1, (uint32_t)a2, (void *)a3);
+  }
+  if (self == (void *)&g_steammatchmakingservers003_instance) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *, uint32_t, uint32_t, void *))vt[15])(self, (uint32_t)a1, (uint32_t)a2, (void *)a3);
   }
@@ -37504,6 +38512,661 @@ void SteamAPI_ISteamMusic_SetVolume(void *self, float a1) {
   if (self == (void *)&g_steammusic_interface_version001_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, float))vt[7])(self, (float)a1);
+    return;
+  }
+  return;
+}
+
+bool SteamAPI_ISteamNetworkingMessages_AcceptSessionWithUser(void *self, void * a1) {
+  if (self == (void *)&g_steamnetworkingmessages002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *))vt[2])(self, (void *)a1);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingMessages_CloseChannelWithUser(void *self, void * a1, int32_t a2) {
+  if (self == (void *)&g_steamnetworkingmessages002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *, int32_t))vt[4])(self, (void *)a1, (int32_t)a2);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingMessages_CloseSessionWithUser(void *self, void * a1) {
+  if (self == (void *)&g_steamnetworkingmessages002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *))vt[3])(self, (void *)a1);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingMessages_GetSessionConnectionInfo(void *self, void * a1, void * a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingmessages002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, void *, void *))vt[5])(self, (void *)a1, (void *)a2, (void *)a3);
+  }
+  return 0;
+}
+
+void SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel(void *self, uint32_t a1, uint32_t a2, uint32_t a3) {
+  if (self == (void *)&g_steamnetworkingmessages002_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t))vt[1])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3);
+    return;
+  }
+  return;
+}
+
+uint32_t SteamAPI_ISteamNetworkingMessages_SendMessageToUser(void *self, void * a1, void * a2, uint32_t a3, int32_t a4, int32_t a5) {
+  if (self == (void *)&g_steamnetworkingmessages002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, void *, uint32_t, int32_t, int32_t))vt[0])(self, (void *)a1, (void *)a2, (uint32_t)a3, (int32_t)a4, (int32_t)a5);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_AcceptConnection(void *self, uint32_t a1) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t))vt[4])(self, (uint32_t)a1);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_BeginAsyncRequestFakeIP(void *self, int32_t a1) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t))vt[42])(self, (int32_t)a1);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_CloseConnection(void *self, uint32_t a1, int32_t a2, const char * a3, bool a4) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, int32_t, const char *, bool))vt[5])(self, (uint32_t)a1, (int32_t)a2, (const char *)a3, (bool)a4);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_CloseListenSocket(void *self, uint32_t a1) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t))vt[6])(self, (uint32_t)a1);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_ConfigureConnectionLanes(void *self, uint32_t a1, int32_t a2, void * a3, void * a4) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t, int32_t, void *, void *))vt[20])(self, (uint32_t)a1, (int32_t)a2, (void *)a3, (void *)a4);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_ConnectByIPAddress(void *self, void * a1, int32_t a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, int32_t, void *))vt[1])(self, (void *)a1, (int32_t)a2, (void *)a3);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_ConnectP2P(void *self, void * a1, int32_t a2, int32_t a3, void * a4) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, int32_t, int32_t, void *))vt[3])(self, (void *)a1, (int32_t)a2, (int32_t)a3, (void *)a4);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_ConnectP2PCustomSignaling(void *self, void * a1, void * a2, int32_t a3, int32_t a4, void * a5) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, void *, int32_t, int32_t, void *))vt[36])(self, (void *)a1, (void *)a2, (int32_t)a3, (int32_t)a4, (void *)a5);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_ConnectToHostedDedicatedServer(void *self, void * a1, int32_t a2, int32_t a3, void * a4) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, int32_t, int32_t, void *))vt[30])(self, (void *)a1, (int32_t)a2, (int32_t)a3, (void *)a4);
+  }
+  return 0;
+}
+
+void * SteamAPI_ISteamNetworkingSockets_CreateFakeUDPPort(void *self, int32_t a1) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (void *)((void * (*)(void *, int32_t))vt[46])(self, (int32_t)a1);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_CreateHostedDedicatedServerListenSocket(void *self, int32_t a1, int32_t a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, int32_t, int32_t, void *))vt[34])(self, (int32_t)a1, (int32_t)a2, (void *)a3);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_CreateListenSocketIP(void *self, void * a1, int32_t a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, int32_t, void *))vt[0])(self, (void *)a1, (int32_t)a2, (void *)a3);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_CreateListenSocketP2P(void *self, int32_t a1, int32_t a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, int32_t, int32_t, void *))vt[2])(self, (int32_t)a1, (int32_t)a2, (void *)a3);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_CreateListenSocketP2PFakeIP(void *self, int32_t a1, int32_t a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, int32_t, int32_t, void *))vt[44])(self, (int32_t)a1, (int32_t)a2, (void *)a3);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_CreatePollGroup(void *self) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[24])(self);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_CreateSocketPair(void *self, uint32_t * a1, uint32_t * a2, bool a3, void * a4, void * a5) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t *, uint32_t *, bool, void *, void *))vt[19])(self, (uint32_t *)a1, (uint32_t *)a2, (bool)a3, (void *)a4, (void *)a5);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_DestroyPollGroup(void *self, uint32_t a1) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t))vt[25])(self, (uint32_t)a1);
+  }
+  return 0;
+}
+
+int32_t SteamAPI_ISteamNetworkingSockets_FindRelayAuthTicketForServer(void *self, void * a1, int32_t a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, void *, int32_t, void *))vt[29])(self, (void *)a1, (int32_t)a2, (void *)a3);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_FlushMessagesOnConnection(void *self, uint32_t a1) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t))vt[13])(self, (uint32_t)a1);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_GetAuthenticationStatus(void *self, void * a1) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *))vt[23])(self, (void *)a1);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_GetCertificateRequest(void *self, int32_t * a1, void * a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, void *, void *))vt[38])(self, (int32_t *)a1, (void *)a2, (void *)a3);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_GetConnectionInfo(void *self, uint32_t a1, void * a2) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, void *))vt[15])(self, (uint32_t)a1, (void *)a2);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_GetConnectionName(void *self, uint32_t a1, char * a2, int32_t a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, char *, int32_t))vt[10])(self, (uint32_t)a1, (char *)a2, (int32_t)a3);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_GetConnectionRealTimeStatus(void *self, uint32_t a1, void * a2, int32_t a3, void * a4) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t, void *, int32_t, void *))vt[16])(self, (uint32_t)a1, (void *)a2, (int32_t)a3, (void *)a4);
+  }
+  return 0;
+}
+
+int64_t SteamAPI_ISteamNetworkingSockets_GetConnectionUserData(void *self, uint32_t a1) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int64_t)((int64_t (*)(void *, uint32_t))vt[8])(self, (uint32_t)a1);
+  }
+  return 0;
+}
+
+int32_t SteamAPI_ISteamNetworkingSockets_GetDetailedConnectionStatus(void *self, uint32_t a1, char * a2, int32_t a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, uint32_t, char *, int32_t))vt[17])(self, (uint32_t)a1, (char *)a2, (int32_t)a3);
+  }
+  return 0;
+}
+
+void SteamAPI_ISteamNetworkingSockets_GetFakeIP(void *self, int32_t a1, void * a2) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, int32_t, void *))vt[43])(self, (int32_t)a1, (void *)a2);
+    return;
+  }
+  return;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_GetGameCoordinatorServerLogin(void *self, void * a1, int32_t * a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, int32_t *, void *))vt[35])(self, (void *)a1, (int32_t *)a2, (void *)a3);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_GetHostedDedicatedServerAddress(void *self, void * a1) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *))vt[33])(self, (void *)a1);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_GetHostedDedicatedServerPOPID(void *self) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[32])(self);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_GetHostedDedicatedServerPort(void *self) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[31])(self);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_GetIdentity(void *self, void * a1) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *))vt[21])(self, (void *)a1);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_GetListenSocketAddress(void *self, uint32_t a1, void * a2) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, void *))vt[18])(self, (uint32_t)a1, (void *)a2);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_GetRemoteFakeIPForConnection(void *self, uint32_t a1, void * a2) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t, void *))vt[45])(self, (uint32_t)a1, (void *)a2);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_InitAuthentication(void *self) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[22])(self);
+  }
+  return 0;
+}
+
+void SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnConnection(void *self, uint32_t a1, uint32_t a2, uint32_t a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t))vt[14])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3);
+    return;
+  }
+  return;
+}
+
+void SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnPollGroup(void *self, uint32_t a1, uint32_t a2, uint32_t a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t))vt[27])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3);
+    return;
+  }
+  return;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_ReceivedP2PCustomSignal(void *self, void * a1, int32_t a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *, int32_t, void *))vt[37])(self, (void *)a1, (int32_t)a2, (void *)a3);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_ReceivedRelayAuthTicket(void *self, void * a1, int32_t a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *, int32_t, void *))vt[28])(self, (void *)a1, (int32_t)a2, (void *)a3);
+  }
+  return 0;
+}
+
+void SteamAPI_ISteamNetworkingSockets_ResetIdentity(void *self, void * a1) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, void *))vt[40])(self, (void *)a1);
+    return;
+  }
+  return;
+}
+
+void SteamAPI_ISteamNetworkingSockets_RunCallbacks(void *self) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *))vt[41])(self);
+    return;
+  }
+  return;
+}
+
+uint32_t SteamAPI_ISteamNetworkingSockets_SendMessageToConnection(void *self, uint32_t a1, void * a2, uint32_t a3, int32_t a4, void * a5) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t, void *, uint32_t, int32_t, void *))vt[11])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (int32_t)a4, (void *)a5);
+  }
+  return 0;
+}
+
+void SteamAPI_ISteamNetworkingSockets_SendMessages(void *self, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t))vt[12])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3, (uint32_t)a4);
+    return;
+  }
+  return;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_SetCertificate(void *self, void * a1, int32_t a2, void * a3) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *, int32_t, void *))vt[39])(self, (void *)a1, (int32_t)a2, (void *)a3);
+  }
+  return 0;
+}
+
+void SteamAPI_ISteamNetworkingSockets_SetConnectionName(void *self, uint32_t a1, const char * a2) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, const char *))vt[9])(self, (uint32_t)a1, (const char *)a2);
+    return;
+  }
+  return;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_SetConnectionPollGroup(void *self, uint32_t a1, uint32_t a2) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint32_t))vt[26])(self, (uint32_t)a1, (uint32_t)a2);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingSockets_SetConnectionUserData(void *self, uint32_t a1, int64_t a2) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, int64_t))vt[7])(self, (uint32_t)a1, (int64_t)a2);
+  }
+  return 0;
+}
+
+void SteamAPI_ISteamNetworkingSockets_destructor(void *self) {
+  if (self == (void *)&g_steamnetworkingsockets013_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *))vt[47])(self);
+    return;
+  }
+  return;
+}
+
+void SteamAPI_ISteamNetworkingUtils_AllocateMessage(void *self, uint32_t a1) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[0])(self, (uint32_t)a1);
+    return;
+  }
+  return;
+}
+
+bool SteamAPI_ISteamNetworkingUtils_CheckPingDataUpToDate(void *self, float a1) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, float))vt[7])(self, (float)a1);
+  }
+  return 0;
+}
+
+void SteamAPI_ISteamNetworkingUtils_ConvertPingLocationToString(void *self, void * a1, char * a2, int32_t a3) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, void *, char *, int32_t))vt[5])(self, (void *)a1, (char *)a2, (int32_t)a3);
+    return;
+  }
+  return;
+}
+
+int32_t SteamAPI_ISteamNetworkingUtils_EstimatePingTimeBetweenTwoLocations(void *self, void * a1, void * a2) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, void *, void *))vt[3])(self, (void *)a1, (void *)a2);
+  }
+  return 0;
+}
+
+int32_t SteamAPI_ISteamNetworkingUtils_EstimatePingTimeFromLocalHost(void *self, void * a1) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, void *))vt[4])(self, (void *)a1);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingUtils_GetConfigValue(void *self, uint32_t a1, uint32_t a2, int32_t a3, uint32_t * a4, void * a5, uint32_t * a6) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t, uint32_t, int32_t, uint32_t *, void *, uint32_t *))vt[17])(self, (uint32_t)a1, (uint32_t)a2, (int32_t)a3, (uint32_t *)a4, (void *)a5, (uint32_t *)a6);
+  }
+  return 0;
+}
+
+const char * SteamAPI_ISteamNetworkingUtils_GetConfigValueInfo(void *self, uint32_t a1, uint32_t * a2, uint32_t * a3) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (const char *)((const char * (*)(void *, uint32_t, uint32_t *, uint32_t *))vt[18])(self, (uint32_t)a1, (uint32_t *)a2, (uint32_t *)a3);
+  }
+  return 0;
+}
+
+int32_t SteamAPI_ISteamNetworkingUtils_GetDirectPingToPOP(void *self, uint32_t a1) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, uint32_t))vt[9])(self, (uint32_t)a1);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingUtils_GetIPv4FakeIPType(void *self, uint32_t a1) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t))vt[14])(self, (uint32_t)a1);
+  }
+  return 0;
+}
+
+float SteamAPI_ISteamNetworkingUtils_GetLocalPingLocation(void *self, void * a1) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (float)((float (*)(void *, void *))vt[2])(self, (void *)a1);
+  }
+  return 0;
+}
+
+int64_t SteamAPI_ISteamNetworkingUtils_GetLocalTimestamp(void *self) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int64_t)((int64_t (*)(void *))vt[12])(self);
+  }
+  return 0;
+}
+
+int32_t SteamAPI_ISteamNetworkingUtils_GetPOPCount(void *self) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *))vt[10])(self);
+  }
+  return 0;
+}
+
+int32_t SteamAPI_ISteamNetworkingUtils_GetPOPList(void *self, uint32_t * a1, int32_t a2) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, uint32_t *, int32_t))vt[11])(self, (uint32_t *)a1, (int32_t)a2);
+  }
+  return 0;
+}
+
+int32_t SteamAPI_ISteamNetworkingUtils_GetPingToDataCenter(void *self, uint32_t a1, uint32_t * a2) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, uint32_t, uint32_t *))vt[8])(self, (uint32_t)a1, (uint32_t *)a2);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingUtils_GetRealIdentityForFakeIP(void *self, void * a1, void * a2) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, void *))vt[15])(self, (void *)a1, (void *)a2);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingUtils_GetRelayNetworkStatus(void *self, void * a1) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *))vt[1])(self, (void *)a1);
+  }
+  return 0;
+}
+
+uint32_t SteamAPI_ISteamNetworkingUtils_IterateGenericEditableConfigValues(void *self, uint32_t a1, bool a2) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t, bool))vt[19])(self, (uint32_t)a1, (bool)a2);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingUtils_ParsePingLocationString(void *self, const char * a1, void * a2) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, const char *, void *))vt[6])(self, (const char *)a1, (void *)a2);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingUtils_SetConfigValue(void *self, uint32_t a1, uint32_t a2, int32_t a3, uint32_t a4, void * a5) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint32_t, int32_t, uint32_t, void *))vt[16])(self, (uint32_t)a1, (uint32_t)a2, (int32_t)a3, (uint32_t)a4, (void *)a5);
+  }
+  return 0;
+}
+
+void SteamAPI_ISteamNetworkingUtils_SetDebugOutputFunction(void *self, uint32_t a1, void * a2) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, void *))vt[13])(self, (uint32_t)a1, (void *)a2);
+    return;
+  }
+  return;
+}
+
+uint32_t SteamAPI_ISteamNetworkingUtils_SteamNetworkingIPAddr_GetFakeIPType(void *self, void * a1) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *))vt[22])(self, (void *)a1);
+  }
+  return 0;
+}
+
+bool SteamAPI_ISteamNetworkingUtils_SteamNetworkingIPAddr_ParseString(void *self, void * a1, const char * a2) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *, const char *))vt[21])(self, (void *)a1, (const char *)a2);
+  }
+  return 0;
+}
+
+void SteamAPI_ISteamNetworkingUtils_SteamNetworkingIPAddr_ToString(void *self, void * a1, char * a2, uint32_t a3, bool a4) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, void *, char *, uint32_t, bool))vt[20])(self, (void *)a1, (char *)a2, (uint32_t)a3, (bool)a4);
+    return;
+  }
+  return;
+}
+
+bool SteamAPI_ISteamNetworkingUtils_SteamNetworkingIdentity_ParseString(void *self, void * a1, const char * a2) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *, const char *))vt[24])(self, (void *)a1, (const char *)a2);
+  }
+  return 0;
+}
+
+void SteamAPI_ISteamNetworkingUtils_SteamNetworkingIdentity_ToString(void *self, void * a1, char * a2, uint32_t a3) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, void *, char *, uint32_t))vt[23])(self, (void *)a1, (char *)a2, (uint32_t)a3);
+    return;
+  }
+  return;
+}
+
+void SteamAPI_ISteamNetworkingUtils_destructor(void *self) {
+  if (self == (void *)&g_steamnetworkingutils004_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *))vt[25])(self);
     return;
   }
   return;
@@ -43280,6 +44943,7 @@ void *SteamAPI_SteamUserStats_v011(void) { return &g_steamuserstats_interface_ve
 #if defined(__i386__)
 void *SteamAPI_SteamRemoteStorage_v005(void) { return &g_steamremotestorage_interface_version005_instance; }
 #endif
+void *SteamAPI_SteamMatchmaking_v009(void) { return &g_steammatchmaking009_instance; }
 void *SteamAPI_SteamMatchMaking_v009(void) { return &g_steammatchmaking009_instance; }
 void *SteamAPI_SteamMatchMakingServers_v002(void) { return &g_steammatchmakingservers002_instance; }
 void *SteamAPI_SteamNetworking_v005(void) { return &g_steamnetworking005_instance; }
@@ -43444,4 +45108,16 @@ void *SteamAPI_STEAMINVENTORY_INTERFACE_V001(void) { return &g_steaminventory_in
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_STEAMVIDEO_INTERFACE_V001(void) { return &g_steamvideo_interface_v001_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamMatchmakingServers_v003(void) { return &g_steammatchmakingservers003_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamNetworkingSockets_SteamAPI_v013(void) { return &g_steamnetworkingsockets013_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamNetworkingUtils_SteamAPI_v004(void) { return &g_steamnetworkingutils004_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamNetworkingMessages_SteamAPI_v002(void) { return &g_steamnetworkingmessages002_instance; }
 #endif

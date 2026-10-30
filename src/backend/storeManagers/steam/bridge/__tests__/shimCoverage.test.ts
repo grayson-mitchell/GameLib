@@ -109,6 +109,14 @@ const servedFlatInterfaces = (): Set<string> =>
     [...SHIM64_SERVED_INTERFACE_VERSIONS.values()].map((v) => `I${v.family}`)
   )
 
+// 58-03: SteamNetworkingUtils004's Proton vtable has 26 slots; these two
+// SDK-165 flat names have no slot in it, so they stay unexported even though
+// the family is now served.
+const UTILS004_ABSENT_FLAT_NAMES: ReadonlySet<string> = new Set([
+  'SteamAPI_ISteamNetworkingUtils_InitRelayNetworkAccess',
+  'SteamAPI_ISteamNetworkingUtils_IsFakeIPv4'
+])
+
 describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-04, D-53-02)', () => {
   test('(a) every fixture name of a served family resolves to an export', () => {
     const served = servedFlatInterfaces()
@@ -116,6 +124,7 @@ describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-
       (n) =>
         isInterfaceMethodName(n) &&
         served.has(n.split('_')[1]) &&
+        !UTILS004_ABSENT_FLAT_NAMES.has(n) &&
         !SHIM64_EXPORTED_SYMBOLS.has(n)
     )
     expect(misses).toEqual([])
@@ -144,6 +153,7 @@ describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-
       .sort()
     const byFamily: Record<string, number> = {}
     for (const n of unexported) {
+      if (UTILS004_ABSENT_FLAT_NAMES.has(n)) continue
       if (isInterfaceMethodName(n)) {
         const family = n.split('_')[1]
         expect(served.has(family)).toBe(false)
@@ -157,10 +167,7 @@ describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-
     // the sampled titles' Init requests (all of them were here before).
     expect(byFamily).toEqual({
       ISteamNetworkingConnectionSignaling: 2,
-      ISteamNetworkingMessages: 6,
-      ISteamNetworkingSignalingRecvContext: 2,
-      ISteamNetworkingSockets: 47,
-      ISteamNetworkingUtils: 27
+      ISteamNetworkingSignalingRecvContext: 2
     })
   })
 
@@ -1439,5 +1446,34 @@ describe('quick 261026-mhg: classifyUnservableInterfaceVersions', () => {
       'SteamUserStats',
       'SteamUtils'
     ])
+  })
+})
+
+// Value measured on HEAD 9baa97e47, before 58-03 changed the export set.
+const PRE_58_03_SHIM_EXPORT_SET_VERSION = 'e5c8d97c6a2e'
+
+// 58-03 (D-07, D-11): the multiplayer current-version baseline is served on x64
+// only, as stubs until its wiring plans flip methods to wire.
+describe('58-03 multiplayer baseline served tables', () => {
+  const NEW_KEYS = [
+    'SteamMatchMakingServers003',
+    'SteamNetworkingSockets013',
+    'SteamNetworkingUtils004',
+    'SteamNetworkingMessages002'
+  ]
+  test('the four new versions are served on x64 as stubs and never on x86', () => {
+    for (const k of NEW_KEYS) {
+      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(k)?.mode).toBe('stub')
+      expect(SHIM_SERVED_INTERFACE_VERSIONS.has(k)).toBe(false)
+    }
+  })
+  test('the SDK spelling of the matchmaking accessor is exported beside the old one', () => {
+    for (const set of [SHIM64_EXPORTED_SYMBOLS]) {
+      expect(set.has('SteamAPI_SteamMatchmaking_v009')).toBe(true)
+      expect(set.has('SteamAPI_SteamMatchMaking_v009')).toBe(true)
+    }
+  })
+  test('SHIM_EXPORT_SET_VERSION moved off its pre-58-03 value', () => {
+    expect(SHIM_EXPORT_SET_VERSION).not.toBe(PRE_58_03_SHIM_EXPORT_SET_VERSION)
   })
 })

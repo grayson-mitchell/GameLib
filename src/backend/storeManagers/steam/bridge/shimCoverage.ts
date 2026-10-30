@@ -106,6 +106,8 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   // now exports for these families.
   'SteamAPI_SteamRemoteStorage_v005',
   'SteamAPI_SteamMatchMaking_v009',
+  // 58-03: the SDK/Steamworks.NET spelling (alias of the line above).
+  'SteamAPI_SteamMatchmaking_v009',
   'SteamAPI_SteamMatchMakingServers_v002',
   'SteamAPI_SteamNetworking_v005',
   'SteamAPI_SteamRemoteStorage_v010',
@@ -264,6 +266,21 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   // unavailable).
   ['SteamUser023', { family: 'SteamUser', mode: 'wire' }],
   ['SteamNetworking006', { family: 'SteamNetworking', mode: 'stub' }],
+  // 58-03 (D-07): current-version baseline for the multiplayer families, each
+  // extracted from its own Proton block, x64 only (D-11), stub until wired.
+  [
+    'SteamMatchMakingServers003',
+    { family: 'SteamMatchMakingServers', mode: 'stub' }
+  ],
+  [
+    'SteamNetworkingSockets013',
+    { family: 'SteamNetworkingSockets', mode: 'stub' }
+  ],
+  ['SteamNetworkingUtils004', { family: 'SteamNetworkingUtils', mode: 'stub' }],
+  [
+    'SteamNetworkingMessages002',
+    { family: 'SteamNetworkingMessages', mode: 'stub' }
+  ],
   [
     'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
     { family: 'SteamRemoteStorage', mode: 'stub' }

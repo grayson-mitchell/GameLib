@@ -32,6 +32,7 @@ SteamAPI_SteamFriends_v013
 SteamAPI_SteamApps_v005
 SteamAPI_SteamUserStats_v011
 SteamAPI_SteamRemoteStorage_v005
+SteamAPI_SteamMatchmaking_v009
 SteamAPI_SteamMatchMaking_v009
 SteamAPI_SteamMatchMakingServers_v002
 SteamAPI_SteamNetworking_v005

@@ -868,8 +868,9 @@ describe('shimGenerate', () => {
       status: 'ok',
       arch: 'x64',
       // 51-15: SHIM64_EXPORTED_SYMBOLS is now populated (D-51-13 GO) --
-      // SteamAPI_Init IS covered, but SteamNetworkingUtils (53-12 serves
-      // SteamHTTP; networking utils stays on the null object) is not, so this stays a real miss
+      // SteamAPI_Init IS covered, but the SteamNetworkingUtils bare accessor
+      // has no scanned version string here (58-03 serves the family as a
+      // stub, so it is now a version miss), so this stays a real miss
       // rather than silently becoming 'placed'.
       symbols: ['SteamAPI_Init', 'SteamNetworkingUtils']
     })
@@ -884,7 +885,7 @@ describe('shimGenerate', () => {
     if (result.status === 'placed-miss') {
       expect(result.verdict.arch).toBe('x64')
       expect(result.verdict.missingSymbols).toEqual(
-        expect.arrayContaining(['SteamNetworkingUtils'])
+        expect.arrayContaining(['SteamNetworkingUtils@unknown-version'])
       )
       expect(result.verdict.missingSymbols).not.toContain('SteamAPI_Init')
     }
@@ -1784,7 +1785,7 @@ describe('shimGenerate', () => {
       'SteamInternal_FindOrCreateUserInterface',
       'SteamInternal_ContextInit',
       'SteamInternal_CreateInterface',
-      'SteamAPI_ISteamNetworkingUtils_AllocateMessage'
+      'SteamAPI_ISteamGameCoordinator_SendMessage'
     ]
     const COVERED = [
       'SteamAPI_RestartAppIfNecessary',
@@ -1856,7 +1857,7 @@ describe('shimGenerate', () => {
         expect(result.verdict.status).toBe('miss')
         expect(result.verdict.arch).toBe('x64')
         expect(result.verdict.missingSymbols).toContain(
-          'SteamAPI_ISteamNetworkingUtils_AllocateMessage'
+          'SteamAPI_ISteamGameCoordinator_SendMessage'
         )
         expect(result.verdict.missingSymbols).toContain('SteamFriends016')
         expect(result.verdict.missingSymbols).not.toContain('SteamUser019')
@@ -1865,9 +1866,7 @@ describe('shimGenerate', () => {
       expect(existsSync(dll + BACKUP)).toBe(false)
       const warned = warnings()
       expect(warned).toHaveLength(1)
-      expect(warned[0]).toContain(
-        'SteamAPI_ISteamNetworkingUtils_AllocateMessage'
-      )
+      expect(warned[0]).toContain('SteamAPI_ISteamGameCoordinator_SendMessage')
       expect(warned[0]).toContain('SteamFriends016')
     })
 
@@ -2488,7 +2487,7 @@ describe('shimGenerate', () => {
         'SteamAPI_Init',
         'SteamAPI_ISteamUser_GetSteamID',
         'SteamAPI_ISteamUser_Bogus',
-        'SteamAPI_ISteamNetworkingSockets_CreateListenSocketIP'
+        'SteamAPI_ISteamGameCoordinator_SendMessage'
       ]
       const dll = monoTree(names, 'SteamUser023')
       nothingImported()
