@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Completed 56-34-PLAN.md (third live gate, Verdict PASS)
-last_updated: "2026-10-30T11:33:39.408Z"
-last_activity: 2026-10-30 -- Phase 58 planning complete
+last_updated: "2026-10-30T18:12:46.973Z"
+last_activity: 2026-10-30
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 166
-  completed_plans: 142
+  completed_plans: 143
   percent: 75
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 57 — opt in known fix sharing via relay
+**Current focus:** Phase 58 — steam-bridge-multiplayer
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -71,12 +71,12 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 57
-Plan: 0 of 0
+Phase: 58 (steam-bridge-multiplayer) — EXECUTING
+Plan: 2 of 24
 Status: Ready to execute
-Last activity: 2026-10-30 -- Phase 58 planning complete
+Last activity: 2026-10-30
 
-Progress: [██████████] 99%
+Progress: [█████████░] 86%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -206,6 +206,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 56 P26 | 2h20m | 4 tasks | 14 files |
 | Phase 56 P33 | ~1h | 3 tasks | 2 files |
 | Phase 56 P34 | ~3h | 4 tasks | 9 files |
+| Phase 58 P02 | 25min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -294,6 +295,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 56]: 56-05: ISteamClient_* and SetMinidumpSteamID calls do not count as game calls beyond init for DRM census
 - [Phase 56]: 56-09: stageDrmBottle carries own HKCU registry builder and path mapping; no steamClientSetup import
 - [Phase 56]: 56-17: Gap 7 root cause x64 cwd (98837f09b); Gap 9 trigger strict SteamPath check (5ff2dbd8c); winebus abort-spin residual
+- [Phase 58]: [58-02] CSteamID measured pack(1) per SDK; UserStatsReceived_t Windows steamID offset likely 12 not 16 (finding, unfixed)
 
 ### Pending Todos
 
@@ -536,7 +538,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-29T00:30:23.419Z
+Last session: 2026-10-30T18:12:41.785Z
 Stopped at: Completed 56-34-PLAN.md (third live gate, Verdict PASS)
 Resume file: None
 
