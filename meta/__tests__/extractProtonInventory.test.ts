@@ -221,7 +221,11 @@ describe('applyWirePolicy 58-06 passthrough', () => {
               sizeParam: 'widgetID',
               capBytes: 61440
             },
-            widgetID: { kind: 'value', structSize: 136 }
+            widgetID: {
+              kind: 'value',
+              structSize: 136,
+              countParam: 'widgetCount'
+            }
           }
         },
         GetWidgetID: { shimLocal: true }
@@ -234,6 +238,9 @@ describe('applyWirePolicy 58-06 passthrough', () => {
     expect(set.shimLocal).toBeUndefined()
     expect(set.params.find((p) => p.name === 'pchName')!.capBytes).toBe(61440)
     expect(set.params.find((p) => p.name === 'widgetID')!.structSize).toBe(136)
+    expect(set.params.find((p) => p.name === 'widgetID')!.countParam).toBe(
+      'widgetCount'
+    )
 
     // a shimLocal entry needs no helperFlat
     const local = wired.find((m) => m.name === 'GetWidgetID')!

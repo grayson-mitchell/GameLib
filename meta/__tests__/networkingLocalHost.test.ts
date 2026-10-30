@@ -39,7 +39,14 @@ const CASES = [
   'cb_no_lock_held',
   'utils_calls',
   'flat_inline',
-  'flat_vtable'
+  'flat_vtable',
+  'outmsg_decode_two',
+  'outmsg_rejects_lying_size',
+  'outmsg_rejects_n_over_max',
+  'outmsg_release_all',
+  'open_filters_options',
+  'open_bind_failure_closes',
+  'rt_status_and_lanes'
 ]
 
 function spawnArgv(

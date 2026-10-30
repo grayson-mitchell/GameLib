@@ -147,6 +147,21 @@ Response blob:
     out-buffers: [u8 present][structSize bytes]. The shim copies the bytes into
     the game pointer only when that pointer is non-NULL and present is 1.
 
+Messages (58-15):
+  - kind 'out-messages': nothing is sent (the sibling countParam is an
+    ordinary by-value param). The method's int32 return is the message count
+    n; the records follow it, n of them:
+      {u32 cbSize, u32 conn, u8 identity[136], i64 connUserData,
+       i64 usecTimeReceived, i64 messageNumber, i32 channel, i32 flags,
+       u16 lane, u16 pad, cbSize payload bytes}
+    (a 180-byte header, then the payload). The records total at most
+    WIRE_OUT_MESSAGES_MAX_BYTES. The shim decodes with gl_net_decode_messages:
+    every length is checked against the remaining frame bytes before
+    allocation; a malformed record ends decoding (earlier, complete records
+    stay valid); n greater than the game's count is rejected and nothing is
+    allocated. Each message is allocated on the Windows side with gl_msg_alloc,
+    so the game owns it and releases it through its own m_pfnRelease.
+
 Method modes:
   - shimLocal: the shim answers the method from its own SHIM_LOCAL_BODIES
     entry. It never produces a frame, so no Windows function pointer can reach
@@ -1481,6 +1496,233 @@ GL_NET_FN int gl_net_cb_intercept(int32_t id, void *param) {
 }
 #define GL_NET_CB_INTERCEPT(id, param) gl_net_cb_intercept((id), (param))
 #define GL_NET_CB_ANY() gl_net_cb_any()
+
+/* ---- ISteamNetworkingSockets 013 (58-15, x64 only) ----
+ * Received-message decode (out-messages), option filtering for the four
+ * connect/listen calls, real-time status with lanes, and lane configuration.
+ * Every length that arrives from the helper is checked against the bytes that
+ * really arrived before it is used, and no Mac pointer is ever stored. */
+#define GL_NET_SOCKETS_ORDINAL 70
+#define GL_NET_SLOT_S_CLOSECONN 5
+#define GL_NET_SLOT_S_CLOSELISTEN 6
+#define GL_NET_SLOT_S_RTSTATUS 16
+#define GL_NET_SLOT_S_LANES 20
+#define GL_NET_REC_HEADER 180
+#define GL_NET_OPEN_OPTIONS_MAX 32
+#define GL_NET_OPEN_REQ_MAX 8192
+#define GL_NET_OPEN_STRING_MAX 1024
+#define GL_NET_LANES_MAX 255
+#define GL_NET_RT_STATUS_BYTES 120
+#define GL_NET_RT_LANE_BYTES 64
+#define GL_NET_MSG_OFF_CONN 12
+#define GL_NET_MSG_OFF_IDENT 16
+#define GL_NET_MSG_OFF_CONNUD 152
+#define GL_NET_MSG_OFF_USEC 160
+#define GL_NET_MSG_OFF_MSGNUM 168
+#define GL_NET_MSG_OFF_CHANNEL 192
+#define GL_NET_MSG_OFF_FLAGS 196
+#define GL_NET_MSG_OFF_LANE 208
+
+/* Decodes the out-messages records. declared is the helper's count (the
+ * method's int32 return), nMax the game's own maximum. Returns how many
+ * messages were written to out; each is a game-owned pool message. A declared
+ * count past nMax allocates nothing. A malformed or short record ends
+ * decoding: the records before it stay valid, the failed one is freed. */
+GL_NET_FN int32_t gl_net_decode_messages(const uint8_t *p, uint32_t len, int32_t declared,
+                                         int32_t nMax, void **out) {
+  int32_t built = 0;
+  uint32_t off = 0;
+  if (out == NULL || p == NULL || nMax <= 0 || declared <= 0 || declared > nMax) return 0;
+  while (built < declared) {
+    uint32_t cb, rem = len - off;
+    uint8_t *m;
+    if (rem < GL_NET_REC_HEADER) break;
+    memcpy(&cb, p + off, 4);
+    if (cb > GL_NET_MSG_MAX_DATA || cb > rem - GL_NET_REC_HEADER) break;
+    m = (uint8_t *)gl_msg_alloc((int32_t)cb);
+    if (m == NULL) break;
+    memcpy(m + GL_NET_MSG_OFF_CONN, p + off + 4, 4);
+    memcpy(m + GL_NET_MSG_OFF_IDENT, p + off + 8, 136);
+    memcpy(m + GL_NET_MSG_OFF_CONNUD, p + off + 144, 8);
+    memcpy(m + GL_NET_MSG_OFF_USEC, p + off + 152, 8);
+    memcpy(m + GL_NET_MSG_OFF_MSGNUM, p + off + 160, 8);
+    memcpy(m + GL_NET_MSG_OFF_CHANNEL, p + off + 168, 4);
+    memcpy(m + GL_NET_MSG_OFF_FLAGS, p + off + 172, 4);
+    memcpy(m + GL_NET_MSG_OFF_LANE, p + off + 176, 2);
+    if (cb > 0) {
+      void *data;
+      memcpy(&data, m, sizeof data);
+      memcpy(data, p + off + GL_NET_REC_HEADER, cb);
+    }
+    out[built++] = m;
+    off += GL_NET_REC_HEADER + cb;
+  }
+  return built;
+}
+
+/* Closes a handle the shim could not finish binding (fail closed). */
+GL_NET_FN void gl_net_close_unbound(int32_t scope, uint32_t h) {
+  uint8_t req[16];
+  uint8_t resp[8];
+  uint32_t rlen = 0;
+  if (scope == GL_NET_SCOPE_LISTEN) {
+    gl_bridge_call_raw(GL_NET_SOCKETS_ORDINAL, GL_NET_SLOT_S_CLOSELISTEN, (const uint8_t *)&h, 4,
+                       resp, sizeof resp, &rlen);
+  } else {
+    uint32_t nilStr = 0xFFFFFFFFu;
+    int32_t reason = 1000, linger = 0;
+    memcpy(req, &h, 4);
+    memcpy(req + 4, &reason, 4);
+    memcpy(req + 8, &nilStr, 4);
+    memcpy(req + 12, &linger, 4);
+    gl_bridge_call_raw(GL_NET_SOCKETS_ORDINAL, GL_NET_SLOT_S_CLOSECONN, req, sizeof req, resp,
+                       sizeof resp, &rlen);
+  }
+}
+
+/* CreateListenSocketIP / ConnectByIPAddress / CreateListenSocketP2P /
+ * ConnectP2P. Request: [u8 op][struct bytes][i32 port][u32 nKept][kept
+ * options], each kept option [i32 e][i32 type][u32 len][bytes]. Ptr-typed
+ * options and Callback_* ids never cross: they are bound in the config store to
+ * the returned handle (scope LISTEN or CONNECTION). A string option is read
+ * here, in the game's own process, and sent as bytes. Anything not understood
+ * fails the call (handle 0) rather than being dropped silently. */
+GL_NET_FN uint32_t gl_net_open(uint8_t op, const void *st, int32_t port, int32_t nOptions,
+                               const void *pOptions, int32_t scope) {
+  static const uint32_t stLen[4] = {18, 18, 0, 136};
+  uint8_t req[GL_NET_OPEN_REQ_MAX];
+  uint8_t resp[8];
+  int32_t bind_e[GL_NET_OPEN_OPTIONS_MAX];
+  void *bind_fn[GL_NET_OPEN_OPTIONS_MAX];
+  uint32_t nbind = 0, nKept = 0, off = 1, keptOff, rlen = 0, h = 0, i;
+  if (op > 3 || nOptions < 0 || nOptions > GL_NET_OPEN_OPTIONS_MAX) return 0;
+  if (nOptions > 0 && pOptions == NULL) return 0;
+  if (stLen[op] > 0 && st == NULL) return 0;
+  req[0] = op;
+  if (stLen[op] > 0) {
+    memcpy(req + off, st, stLen[op]);
+    off += stLen[op];
+  }
+  memcpy(req + off, &port, 4);
+  off += 4;
+  keptOff = off;
+  off += 4;
+  for (i = 0; i < (uint32_t)nOptions; i++) {
+    const uint8_t *o = (const uint8_t *)pOptions + 16u * i;
+    int32_t e, type;
+    uint32_t len = 0;
+    const void *src = NULL;
+    memcpy(&e, o, 4);
+    memcpy(&type, o + 4, 4);
+    if (type == GL_NET_CFG_PTR) {
+      void *fn;
+      memcpy(&fn, o + 8, sizeof fn);
+      if (fn != NULL) {
+        bind_e[nbind] = e;
+        bind_fn[nbind] = fn;
+        nbind++;
+      }
+      continue;
+    }
+    if (gl_net_is_cb_id(e)) return 0;
+    if (type == GL_NET_CFG_INT32 || type == GL_NET_CFG_FLOAT) {
+      len = 4;
+      src = o + 8;
+    } else if (type == GL_NET_CFG_INT64) {
+      len = 8;
+      src = o + 8;
+    } else if (type == GL_NET_CFG_STRING) {
+      const char *s;
+      size_t sl;
+      memcpy(&s, o + 8, sizeof s);
+      if (s == NULL) return 0;
+      sl = strlen(s);
+      if (sl + 1 > GL_NET_OPEN_STRING_MAX) return 0;
+      len = (uint32_t)(sl + 1);
+      src = s;
+    } else {
+      return 0;
+    }
+    if (off + 12u + len > sizeof req) return 0;
+    memcpy(req + off, &e, 4);
+    memcpy(req + off + 4, &type, 4);
+    memcpy(req + off + 8, &len, 4);
+    memcpy(req + off + 12, src, len);
+    off += 12u + len;
+    nKept++;
+  }
+  memcpy(req + keptOff, &nKept, 4);
+  {
+    static const uint16_t slot[4] = {0, 1, 2, 3};
+    if (!gl_bridge_call_raw(GL_NET_SOCKETS_ORDINAL, slot[op], req, off, resp, sizeof resp, &rlen) ||
+        rlen != 4)
+      return 0;
+  }
+  memcpy(&h, resp, 4);
+  if (h == 0) return 0;
+  for (i = 0; i < nbind; i++) {
+    if (!gl_net_cfg_put(bind_e[i], scope, (int64_t)h, bind_fn[i])) {
+      uint32_t k;
+      for (k = 0; k < i; k++) gl_net_cfg_put(bind_e[k], scope, (int64_t)h, NULL);
+      gl_net_close_unbound(scope, h);
+      return 0;
+    }
+  }
+  return h;
+}
+
+/* GetConnectionRealTimeStatus: [u32 hConn][i32 nLanes] -> [i32 ret][u8 present]
+ * [120 bytes][u32 nl][nl x 64 bytes]. Lanes are asked for only when the game
+ * gave a lane array. */
+GL_NET_FN uint32_t gl_net_rt_status(uint32_t hConn, void *pStatus, int32_t nLanes, void *pLanes) {
+  uint8_t req[8];
+  uint8_t resp[5 + GL_NET_RT_STATUS_BYTES + 4 + GL_NET_LANES_MAX * GL_NET_RT_LANE_BYTES];
+  uint32_t rlen = 0, nl = 0, want = 0;
+  int32_t ret = 0;
+  if (pLanes != NULL && nLanes > 0) want = nLanes > GL_NET_LANES_MAX ? GL_NET_LANES_MAX : (uint32_t)nLanes;
+  memcpy(req, &hConn, 4);
+  memcpy(req + 4, &want, 4);
+  if (!gl_bridge_call_raw(GL_NET_SOCKETS_ORDINAL, GL_NET_SLOT_S_RTSTATUS, req, sizeof req, resp,
+                          sizeof resp, &rlen) ||
+      rlen < 5 + GL_NET_RT_STATUS_BYTES + 4)
+    return 0;
+  memcpy(&ret, resp, 4);
+  memcpy(&nl, resp + 5 + GL_NET_RT_STATUS_BYTES, 4);
+  if (nl > want || rlen != 5u + GL_NET_RT_STATUS_BYTES + 4u + nl * GL_NET_RT_LANE_BYTES) return 0;
+  if (resp[4] == 1 && pStatus != NULL) memcpy(pStatus, resp + 5, GL_NET_RT_STATUS_BYTES);
+  if (nl > 0) memcpy(pLanes, resp + 9 + GL_NET_RT_STATUS_BYTES, nl * GL_NET_RT_LANE_BYTES);
+  return (uint32_t)ret;
+}
+
+/* ConfigureConnectionLanes: [u32 hConn][i32 n][u8 hasPrio][u8 hasWeights]
+ * [n x i32][n x u16] -> [i32 EResult]. n is 1..255; anything else fails with
+ * k_EResultInvalidParam (2). */
+GL_NET_FN uint32_t gl_net_configure_lanes(uint32_t hConn, int32_t n, const void *prio,
+                                          const void *weights) {
+  uint8_t req[10 + GL_NET_LANES_MAX * 6];
+  uint8_t resp[4];
+  uint32_t rlen = 0, off = 10;
+  int32_t ret = 0;
+  if (n < 1 || n > GL_NET_LANES_MAX) return 2;
+  memcpy(req, &hConn, 4);
+  memcpy(req + 4, &n, 4);
+  req[8] = prio != NULL;
+  req[9] = weights != NULL;
+  if (prio != NULL) {
+    memcpy(req + off, prio, 4u * (uint32_t)n);
+    off += 4u * (uint32_t)n;
+  }
+  if (weights != NULL) {
+    memcpy(req + off, weights, 2u * (uint32_t)n);
+    off += 2u * (uint32_t)n;
+  }
+  if (!gl_bridge_call_raw(GL_NET_SOCKETS_ORDINAL, GL_NET_SLOT_S_LANES, req, off, resp, sizeof resp,
+                          &rlen) ||
+      rlen != 4)
+    return 2;
+  memcpy(&ret, resp, 4);
+  return (uint32_t)ret;
+}
 #endif
 
 /* ---- callback registry (generated by meta/gen_vtables.ts, P55-3) ---- */

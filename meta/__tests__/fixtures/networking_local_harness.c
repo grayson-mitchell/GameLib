@@ -699,6 +699,285 @@ static void case_flat_vtable(void) {
   PASS();
 }
 
+
+/* ---- 58-15: out-messages decode, option filtering, lanes ---- */
+static int g_live(void) { return g_allocs - g_frees; }
+
+/* one record: 180-byte header then payload */
+static uint32_t put_rec(uint8_t *dst, uint32_t cb, uint32_t conn, int32_t chan, int64_t num,
+                        uint8_t fill) {
+  uint16_t lane = 3;
+  memset(dst, 0, 180);
+  memcpy(dst, &cb, 4);
+  memcpy(dst + 4, &conn, 4);
+  memset(dst + 8, 0x5A, 136);
+  memcpy(dst + 160, &num, 8);
+  memcpy(dst + 168, &chan, 4);
+  memcpy(dst + 176, &lane, 2);
+  memset(dst + 180, fill, cb);
+  return 180 + cb;
+}
+
+static void case_outmsg_decode_two(void) {
+  uint8_t buf[180 + 5 + 180 + 1200];
+  void *out[4];
+  uint32_t off;
+  int32_t n;
+  uint8_t *m0, *m1;
+  int32_t cbs, chan;
+  uint32_t conn;
+  int64_t num;
+  uint8_t *data;
+  g_case = "outmsg_decode_two";
+  memset(out, 0, sizeof out);
+  off = put_rec(buf, 5, 77, 9, 1001, 0x11);
+  off += put_rec(buf + off, 1200, 78, 10, 1002, 0x22);
+  n = gl_net_decode_messages(buf, off, 2, 4, out);
+  CHECK(n == 2);
+  m0 = (uint8_t *)out[0];
+  m1 = (uint8_t *)out[1];
+  memcpy(&cbs, m0 + 8, 4);
+  CHECK(cbs == 5);
+  memcpy(&conn, m0 + 12, 4);
+  CHECK(conn == 77);
+  memcpy(&chan, m0 + 192, 4);
+  CHECK(chan == 9);
+  memcpy(&num, m0 + 168, 8);
+  CHECK(num == 1001);
+  CHECK(m0[16] == 0x5A && m0[16 + 135] == 0x5A);
+  memcpy(&data, m0, sizeof data);
+  CHECK(data[0] == 0x11 && data[4] == 0x11);
+  memcpy(&cbs, m1 + 8, 4);
+  CHECK(cbs == 1200);
+  memcpy(&data, m1, sizeof data);
+  CHECK(data[1199] == 0x22);
+  {
+    void (*rel)(void *);
+    memcpy(&rel, m1 + 184, sizeof rel);
+    CHECK(rel == gl_msg_release);
+  }
+  gl_msg_release_via_fn(out[0]);
+  gl_msg_release_via_fn(out[1]);
+  PASS();
+}
+
+static void case_outmsg_rejects_lying_size(void) {
+  uint8_t buf[180 + 4 + 180 + 64];
+  void *out[4];
+  uint32_t off, bad = 1000000;
+  int32_t n;
+  int before = g_live();
+  g_case = "outmsg_rejects_lying_size";
+  memset(out, 0, sizeof out);
+  off = put_rec(buf, 4, 1, 0, 1, 0x33);
+  put_rec(buf + off, 64, 2, 0, 2, 0x44);
+  memcpy(buf + off, &bad, 4); /* the second record claims far more than the frame holds */
+  n = gl_net_decode_messages(buf, off + 180 + 64, 2, 4, out);
+  CHECK(n == 1);
+  CHECK(out[1] == NULL);
+  CHECK(g_live() == before + 1); /* the failed record allocated nothing */
+  /* a record that claims more than the bytes left, by one */
+  off = put_rec(buf, 10, 1, 0, 1, 0x33);
+  n = gl_net_decode_messages(buf, off - 1, 1, 4, out);
+  CHECK(n == 0);
+  /* a frame shorter than one header */
+  n = gl_net_decode_messages(buf, 100, 1, 4, out);
+  CHECK(n == 0);
+  gl_msg_release_via_fn(out[0]);
+  CHECK(g_live() == before);
+  PASS();
+}
+
+static void case_outmsg_rejects_n_over_max(void) {
+  uint8_t buf[180 * 3];
+  void *out[2] = {NULL, NULL};
+  uint32_t off = 0;
+  int before = g_live();
+  g_case = "outmsg_rejects_n_over_max";
+  off += put_rec(buf + off, 0, 1, 0, 1, 0);
+  off += put_rec(buf + off, 0, 1, 0, 2, 0);
+  off += put_rec(buf + off, 0, 1, 0, 3, 0);
+  CHECK(gl_net_decode_messages(buf, off, 3, 2, out) == 0);
+  CHECK(out[0] == NULL && out[1] == NULL);
+  CHECK(g_live() == before);
+  CHECK(gl_net_decode_messages(buf, off, 0, 2, out) == 0);
+  CHECK(gl_net_decode_messages(buf, off, 2, 0, out) == 0);
+  CHECK(gl_net_decode_messages(buf, off, -1, 2, out) == 0);
+  CHECK(gl_net_decode_messages(buf, off, 2, 2, NULL) == 0);
+  PASS();
+}
+
+static void case_outmsg_release_all(void) {
+  uint8_t buf[(180 + 7) * 4];
+  void *out[4];
+  uint32_t off = 0;
+  int i;
+  int before = g_live();
+  g_case = "outmsg_release_all";
+  for (i = 0; i < 4; i++) off += put_rec(buf + off, 7, 5, i, i, (uint8_t)i);
+  CHECK(gl_net_decode_messages(buf, off, 4, 4, out) == 4);
+  CHECK(g_live() == before + 4);
+  for (i = 0; i < 4; i++) SteamAPI_SteamNetworkingMessage_t_Release(out[i]);
+  CHECK(g_live() == before);
+  PASS();
+}
+
+static void mkopt(uint8_t *o, int32_t e, int32_t type, const void *val, size_t n) {
+  memset(o, 0, 16);
+  memcpy(o, &e, 4);
+  memcpy(o + 4, &type, 4);
+  memcpy(o + 8, val, n);
+}
+
+static void case_open_filters_options(void) {
+  uint8_t opts[16 * 4];
+  uint8_t addr[18];
+  int32_t i32 = 5;
+  void *fn = (void *)0x1234;
+  const char *str = "hello";
+  uint32_t h = 41, nKept, len;
+  int32_t e, type, port;
+  g_case = "open_filters_options";
+  reset();
+  memset(addr, 7, sizeof addr);
+  mkopt(opts, 201, 5, &fn, sizeof fn);           /* Callback_ConnectionStatusChanged: bound */
+  mkopt(opts + 16, 23, 1, &i32, 4);               /* Int32: forwarded */
+  mkopt(opts + 32, 25, 4, &str, sizeof str);      /* String: forwarded as bytes */
+  mkopt(opts + 48, 99, 5, &fn, sizeof fn);        /* a plain Ptr: bound too */
+  memcpy(g_t_resp, &h, 4);
+  g_t_resplen = 4;
+  CHECK(gl_net_open(0, addr, 0, 4, opts, GL_NET_SCOPE_LISTEN) == 41);
+  CHECK(g_t_ordinal == 70 && g_t_slot == 0);
+  CHECK(g_t_req[0] == 0);
+  CHECK(memcmp(g_t_req + 1, addr, 18) == 0);
+  memcpy(&port, g_t_req + 19, 4);
+  CHECK(port == 0);
+  memcpy(&nKept, g_t_req + 23, 4);
+  CHECK(nKept == 2);
+  memcpy(&e, g_t_req + 27, 4);
+  memcpy(&type, g_t_req + 31, 4);
+  memcpy(&len, g_t_req + 35, 4);
+  CHECK(e == 23 && type == 1 && len == 4);
+  memcpy(&e, g_t_req + 43, 4);
+  CHECK(e == 25);
+  /* neither pointer value is anywhere in the request */
+  {
+    uint32_t k;
+    for (k = 0; k + sizeof fn <= g_t_reqlen; k++) CHECK(memcmp(g_t_req + k, &fn, sizeof fn) != 0);
+  }
+  CHECK(gl_net_cfg_get(201, GL_NET_SCOPE_LISTEN, 41) == fn);
+  CHECK(gl_net_cfg_get(99, GL_NET_SCOPE_LISTEN, 41) == fn);
+  CHECK(gl_net_cfg_get(201, GL_NET_SCOPE_CONNECTION, 41) == NULL);
+  /* a callback id carried as a non-Ptr type is refused and nothing is sent */
+  reset();
+  mkopt(opts, 202, 1, &i32, 4);
+  CHECK(gl_net_open(0, addr, 0, 1, opts, GL_NET_SCOPE_LISTEN) == 0);
+  CHECK(g_tcalls == 0);
+  /* a NULL string, an unknown type, too many options, NULL options */
+  {
+    const char *nul = NULL;
+    mkopt(opts, 30, 4, &nul, sizeof nul);
+    CHECK(gl_net_open(0, addr, 0, 1, opts, GL_NET_SCOPE_LISTEN) == 0);
+    mkopt(opts, 30, 9, &i32, 4);
+    CHECK(gl_net_open(0, addr, 0, 1, opts, GL_NET_SCOPE_LISTEN) == 0);
+    CHECK(gl_net_open(0, addr, 0, 33, opts, GL_NET_SCOPE_LISTEN) == 0);
+    CHECK(gl_net_open(0, addr, 0, 1, NULL, GL_NET_SCOPE_LISTEN) == 0);
+    CHECK(gl_net_open(0, NULL, 0, 0, NULL, GL_NET_SCOPE_LISTEN) == 0);
+    CHECK(gl_net_open(4, addr, 0, 0, NULL, GL_NET_SCOPE_LISTEN) == 0);
+    CHECK(g_tcalls == 0);
+  }
+  /* a rejected handle (0) binds nothing */
+  reset();
+  mkopt(opts, 201, 5, &fn, sizeof fn);
+  h = 0;
+  memcpy(g_t_resp, &h, 4);
+  g_t_resplen = 4;
+  CHECK(gl_net_open(2, NULL, 7, 1, opts, GL_NET_SCOPE_LISTEN) == 0);
+  CHECK(g_t_slot == 2);
+  CHECK(!gl_net_cb_any());
+  /* P2P connect sends the 136-byte identity and the virtual port; scope CONNECTION */
+  reset();
+  {
+    uint8_t id[136];
+    memset(id, 3, sizeof id);
+    h = 55;
+    memcpy(g_t_resp, &h, 4);
+    g_t_resplen = 4;
+    mkopt(opts, 201, 5, &fn, sizeof fn);
+    CHECK(gl_net_open(3, id, 9, 1, opts, GL_NET_SCOPE_CONNECTION) == 55);
+    CHECK(g_t_slot == 3 && g_t_reqlen == 1 + 136 + 4 + 4);
+    memcpy(&port, g_t_req + 137, 4);
+    CHECK(port == 9);
+    CHECK(gl_net_cfg_get(201, GL_NET_SCOPE_CONNECTION, 55) == fn);
+  }
+  PASS();
+}
+
+static void case_open_bind_failure_closes(void) {
+  uint8_t opts[16];
+  uint8_t addr[18];
+  void *fn = (void *)0x1234;
+  uint32_t h = 61;
+  int32_t i;
+  g_case = "open_bind_failure_closes";
+  reset();
+  memset(addr, 1, sizeof addr);
+  for (i = 0; i < 256; i++) CHECK(gl_net_cfg_put(300 + i, 1, 0, fn));
+  mkopt(opts, 201, 5, &fn, sizeof fn);
+  memcpy(g_t_resp, &h, 4);
+  g_t_resplen = 4;
+  CHECK(gl_net_open(0, addr, 0, 1, opts, GL_NET_SCOPE_LISTEN) == 0);
+  /* the last transport call closed the unbound listen socket (slot 6) */
+  CHECK(g_t_slot == 6 && g_t_reqlen == 4);
+  PASS();
+}
+
+static void case_rt_status_and_lanes(void) {
+  uint8_t status[120], lanes[128];
+  uint8_t prio[8];
+  uint16_t w[2] = {5, 6};
+  uint32_t nl = 2, want;
+  int32_t ret = 1;
+  g_case = "rt_status_and_lanes";
+  reset();
+  memset(status, 0, sizeof status);
+  memset(lanes, 0, sizeof lanes);
+  memcpy(g_t_resp, &ret, 4);
+  g_t_resp[4] = 1;
+  memset(g_t_resp + 5, 0x21, 120);
+  memcpy(g_t_resp + 125, &nl, 4);
+  memset(g_t_resp + 129, 0x42, 128);
+  g_t_resplen = 257;
+  CHECK(gl_net_rt_status(9, status, 2, lanes) == 1);
+  CHECK(g_t_slot == 16);
+  memcpy(&want, g_t_req + 4, 4);
+  CHECK(want == 2);
+  CHECK(status[0] == 0x21 && status[119] == 0x21);
+  CHECK(lanes[0] == 0x42 && lanes[127] == 0x42);
+  /* no lane array: no lanes are asked for */
+  g_t_resplen = 129;
+  memset(g_t_resp + 125, 0, 4);
+  CHECK(gl_net_rt_status(9, status, 2, NULL) == 1);
+  memcpy(&want, g_t_req + 4, 4);
+  CHECK(want == 0);
+  /* more lanes than asked for is refused */
+  memcpy(g_t_resp + 125, &nl, 4);
+  g_t_resplen = 257;
+  CHECK(gl_net_rt_status(9, status, 1, lanes) == 0);
+  /* lanes */
+  memset(prio, 0, sizeof prio);
+  prio[0] = 1;
+  ret = 1;
+  memcpy(g_t_resp, &ret, 4);
+  g_t_resplen = 4;
+  CHECK(gl_net_configure_lanes(9, 2, prio, w) == 1);
+  CHECK(g_t_slot == 20 && g_t_reqlen == 10 + 8 + 4);
+  CHECK(g_t_req[8] == 1 && g_t_req[9] == 1);
+  CHECK(gl_net_configure_lanes(9, 0, prio, w) == 2);
+  CHECK(gl_net_configure_lanes(9, 256, prio, w) == 2);
+  PASS();
+}
+
 int main(void) {
   pthread_mutexattr_t attr;
   pthread_mutexattr_init(&attr);
@@ -719,5 +998,12 @@ int main(void) {
   case_utils_calls();
   case_flat_inline();
   case_flat_vtable();
+  case_outmsg_decode_two();
+  case_outmsg_rejects_lying_size();
+  case_outmsg_rejects_n_over_max();
+  case_outmsg_release_all();
+  case_open_filters_options();
+  case_open_bind_failure_closes();
+  case_rt_status_and_lanes();
   return 0;
 }

@@ -4403,6 +4403,22 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       { name: 'cb', type: 'uint32' }
     ] as ParamSignature[]
   }
+  const recvMethod = {
+    name: 'Recv',
+    returns: 'int32',
+    helperFlat: 'SteamAPI_IGameLibWire_Recv',
+    helperCustom: 'gl_test_recv' as string | undefined,
+    params: [
+      { name: 'hConn', type: 'uint32' },
+      {
+        name: 'ppOut',
+        type: 'SteamNetworkingMessage_t**',
+        kind: 'out-messages',
+        countParam: 'nMax'
+      },
+      { name: 'nMax', type: 'int32' }
+    ] as ParamSignature[]
+  }
   const getMethod = {
     name: 'Get',
     returns: 'int32',
@@ -4465,6 +4481,63 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
         }
       ])
       expect(validateManifest(bogus).join('\n')).toMatch(/in-buffer.*lenParam/)
+    })
+
+    it('accepts out-messages with a typed pointer, an integer countParam and a helperCustom', () => {
+      expect(validateManifest(wireManifest([recvMethod]))).toEqual([])
+    })
+
+    it('rejects out-messages with a missing or non-integer countParam, a wrong type, a non-int32 return or no helperCustom', () => {
+      const bad = (m: Record<string, unknown>): string =>
+        validateManifest(
+          wireManifest([m as unknown as typeof recvMethod])
+        ).join('\n')
+      expect(
+        bad({
+          ...recvMethod,
+          params: [
+            recvMethod.params[0],
+            { ...recvMethod.params[1], countParam: undefined },
+            recvMethod.params[2]
+          ]
+        })
+      ).toMatch(/out-messages.*countParam/)
+      expect(
+        bad({
+          ...recvMethod,
+          params: [
+            recvMethod.params[0],
+            { ...recvMethod.params[1], countParam: 'nope' },
+            recvMethod.params[2]
+          ]
+        })
+      ).toMatch(/out-messages.*countParam/)
+      expect(
+        bad({
+          ...recvMethod,
+          params: [
+            recvMethod.params[0],
+            recvMethod.params[1],
+            { name: 'nMax', type: 'float' }
+          ]
+        })
+      ).toMatch(/out-messages.*countParam/)
+      expect(
+        bad({
+          ...recvMethod,
+          params: [
+            recvMethod.params[0],
+            { ...recvMethod.params[1], type: 'void**' },
+            recvMethod.params[2]
+          ]
+        })
+      ).toMatch(/must be of type SteamNetworkingMessage_t\*\*/)
+      expect(
+        bad({ ...recvMethod, returns: 'void', returnKind: 'void' })
+      ).toMatch(/must return int32/)
+      expect(bad({ ...recvMethod, helperCustom: undefined })).toMatch(
+        /needs a helperCustom/
+      )
     })
 
     it('accepts in-struct/out-struct on a struct with identical x64 and mac layouts', () => {
@@ -4645,6 +4718,21 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
         shim.indexOf('} else {', shim.indexOf('bufLen = 61440 + 1u;'))
       )
       expect(branch).not.toMatch(/pData,/)
+    })
+
+    it('out-messages decodes the records after the int32 count with the pool decoder and sends no bytes for the array', () => {
+      const shim = generateShimC([wireManifest([recvMethod])])
+      const fn = shim.slice(shim.indexOf('vt_GameLibWire001_Recv('))
+      const body = fn.slice(0, fn.indexOf('\n}\n'))
+      expect(body).toContain(
+        'result = gl_net_decode_messages(retbuf + respOff,'
+      )
+      expect(body).toContain('(int32_t)ret, (int32_t)nMax, (void **)ppOut)')
+      // only hConn and nMax travel in the request
+      expect(body).toContain('uint8_t argbuf[8]')
+      expect(body).toContain('static uint8_t retbuf[61444]')
+      expect(WIRE_LAYOUT_DOC).toMatch(/kind 'out-messages'/)
+      expect(WIRE_LAYOUT_DOC).toMatch(/remaining frame bytes before/)
     })
 
     it('a large in-buffer uses static buffers while g_bridge_lock is held', () => {

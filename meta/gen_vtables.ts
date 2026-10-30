@@ -86,6 +86,7 @@ export type ParamKind =
   | 'in-buffer'
   | 'in-struct'
   | 'out-struct'
+  | 'out-messages'
 
 export interface ParamSignature {
   name: string
@@ -114,6 +115,9 @@ export interface ParamSignature {
   /** For `kind: 'out-buffer'` only (58-06) -- per-param cap override, up to
    * WIRE_LARGE_MAX_BYTES. Absent means WIRE_OUT_BUFFER_MAX_BYTES. */
   capBytes?: number
+  /** For `kind: 'out-messages'` only (58-15) -- the name of the sibling
+   * by-value integer param that carries the game's maximum message count. */
+  countParam?: string
 }
 
 /** The generator-facing return-shape category (51-06): drives which
@@ -425,7 +429,8 @@ function validateStructParam(
   >
   // 58-14: Proton spells some struct types with a trailing SDK version
   // (SteamNetworkingIdentity_144); the measured layout is the unversioned one.
-  const baseName = name.replace(/_\d+$/, '')
+  // 58-15: and sometimes a letter (SteamNetConnectionInfo_t_153a).
+  const baseName = name.replace(/_\d+[a-z]?$/, '')
   const layoutName = Object.prototype.hasOwnProperty.call(layouts, name)
     ? name
     : baseName
@@ -717,6 +722,42 @@ export function validateManifest(
               `${methodCtx}: in-buffer param "${p.name}" lenParam "${p.lenParam ?? ''}" must name a sibling by-value integer param (int32/uint32/int64/uint64)`
             )
           }
+        } else if (kind === 'out-messages') {
+          // 58-15: the response carries the message count as the method's own
+          // int32 return, then the records; the game's array is the param.
+          if (p.type !== 'SteamNetworkingMessage_t**') {
+            errors.push(
+              `${methodCtx}: out-messages param "${p.name}" (type "${p.type}") must be of type SteamNetworkingMessage_t**`
+            )
+          }
+          const sib = method.params.find((q) => q.name === p.countParam)
+          if (
+            !p.countParam ||
+            !sib ||
+            (sib.kind ?? 'value') !== 'value' ||
+            !WIRE_LENGTH_TYPES.has(sib.type)
+          ) {
+            errors.push(
+              `${methodCtx}: out-messages param "${p.name}" countParam "${p.countParam ?? ''}" must name a sibling by-value integer param (int32/uint32/int64/uint64)`
+            )
+          }
+          if (method.returnKind !== 'int32') {
+            errors.push(
+              `${methodCtx}: out-messages method must return int32 (the message count)`
+            )
+          }
+          if (method.helperCustom === undefined) {
+            errors.push(
+              `${methodCtx}: out-messages needs a helperCustom function (the helper owns the Mac message copy, carry queue and release)`
+            )
+          }
+          if (
+            method.params.filter((q) => q.kind === 'out-messages').length > 1
+          ) {
+            errors.push(
+              `${methodCtx}: at most one out-messages param per method`
+            )
+          }
         } else if (kind === 'in-struct' || kind === 'out-struct') {
           if (!isPointerType) {
             errors.push(
@@ -832,6 +873,10 @@ export const WIRE_OUT_BUFFER_MAX_BYTES = 4096
  * params. */
 export const WIRE_LARGE_MAX_BYTES = 61440
 
+/** Max total record bytes an `out-messages` response may carry (58-15); the
+ * helper never encodes more and the shim stub sizes its buffer from it. */
+export const WIRE_OUT_MESSAGES_MAX_BYTES = WIRE_LARGE_MAX_BYTES
+
 /** Max bytes an `in-buffer` request field may carry (58-06). */
 export const WIRE_IN_BUFFER_MAX_BYTES = WIRE_LARGE_MAX_BYTES
 
@@ -879,7 +924,51 @@ export const SHIM_LOCAL_BODIES: Readonly<Record<string, string>> = {
   'SteamNetworkingUtils.SteamNetworkingIdentity_ToString':
     '  if (identity != NULL) gl_id_to_string((const gl_net_ident *)identity, buf, cbBuf);\n  else if (buf != NULL && cbBuf > 0) buf[0] = 0;',
   'SteamNetworkingUtils.SteamNetworkingIdentity_ParseString':
-    '  return pIdentity != NULL && gl_id_parse((gl_net_ident *)pIdentity, pszStr);'
+    '  return pIdentity != NULL && gl_id_parse((gl_net_ident *)pIdentity, pszStr);',
+  // 58-15: ISteamNetworkingSockets013. Parameter names are the manifest's own
+  // (set in wire-policy.json for the thunks Proton left anonymous).
+  'SteamNetworkingSockets.CreateListenSocketIP':
+    '  return gl_net_open(0, localAddress, 0, nOptions, pOptions, GL_NET_SCOPE_LISTEN);',
+  'SteamNetworkingSockets.ConnectByIPAddress':
+    '  return gl_net_open(1, address, 0, nOptions, pOptions, GL_NET_SCOPE_CONNECTION);',
+  'SteamNetworkingSockets.CreateListenSocketP2P':
+    '  return gl_net_open(2, NULL, nLocalVirtualPort, nOptions, pOptions, GL_NET_SCOPE_LISTEN);',
+  'SteamNetworkingSockets.ConnectP2P':
+    '  return gl_net_open(3, identityRemote, nRemoteVirtualPort, nOptions, pOptions, GL_NET_SCOPE_CONNECTION);',
+  'SteamNetworkingSockets.GetConnectionRealTimeStatus':
+    '  return gl_net_rt_status(hConn, pStatus, nLanes, pLanes);',
+  'SteamNetworkingSockets.ConfigureConnectionLanes':
+    '  return gl_net_configure_lanes(hConn, nNumLanes, pLanePriorities, pLaneWeights);',
+  // Sends each message through the wired SendMessageToConnection. A sent
+  // message is always released; a failed one only when the game asked for it.
+  'SteamNetworkingSockets.SendMessages':
+    '  int32_t i;\n' +
+    '  int del = (bDeleteFailedMessages & 0xff) != 0;\n' +
+    '  int64_t *res = (int64_t *)pOutMessageNumberOrResult;\n' +
+    '  uint8_t **msgs = (uint8_t **)pMessages;\n' +
+    '  if (nMessages <= 0 || msgs == NULL) return;\n' +
+    '  for (i = 0; i < nMessages; i++) {\n' +
+    '    uint8_t *m = msgs[i];\n' +
+    '    uint64_t num = 0;\n' +
+    '    uint32_t r, conn, cb;\n' +
+    '    int32_t flags;\n' +
+    '    void *data;\n' +
+    '    if (m == NULL) { if (res != NULL) res[i] = -2; continue; }\n' +
+    '    memcpy(&data, m, sizeof data);\n' +
+    '    memcpy(&cb, m + 8, 4);\n' +
+    '    memcpy(&conn, m + GL_NET_MSG_OFF_CONN, 4);\n' +
+    '    memcpy(&flags, m + GL_NET_MSG_OFF_FLAGS, 4);\n' +
+    '    r = vt_SteamNetworkingSockets013_SendMessageToConnection(self, conn, data, cb, flags, &num);\n' +
+    '    if (r == 1) {\n' +
+    '      if (res != NULL) res[i] = (int64_t)num;\n' +
+    '      gl_msg_release_via_fn(m);\n' +
+    '    } else {\n' +
+    '      if (res != NULL) res[i] = r != 0 ? -(int64_t)r : -2;\n' +
+    '      if (del) gl_msg_release_via_fn(m);\n' +
+    '    }\n' +
+    '  }',
+  'SteamNetworkingSockets.RunCallbacks':
+    '  gl_cb_run_callbacks();\n  gl_md_run_frame();'
 }
 
 /** Local variable names the generated wire stubs declare (58-14). */
@@ -998,6 +1087,21 @@ Response blob:
     out-buffers: [u8 present][structSize bytes]. The shim copies the bytes into
     the game pointer only when that pointer is non-NULL and present is 1.
 
+Messages (58-15):
+  - kind 'out-messages': nothing is sent (the sibling countParam is an
+    ordinary by-value param). The method's int32 return is the message count
+    n; the records follow it, n of them:
+      {u32 cbSize, u32 conn, u8 identity[136], i64 connUserData,
+       i64 usecTimeReceived, i64 messageNumber, i32 channel, i32 flags,
+       u16 lane, u16 pad, cbSize payload bytes}
+    (a 180-byte header, then the payload). The records total at most
+    WIRE_OUT_MESSAGES_MAX_BYTES. The shim decodes with gl_net_decode_messages:
+    every length is checked against the remaining frame bytes before
+    allocation; a malformed record ends decoding (earlier, complete records
+    stay valid); n greater than the game's count is rejected and nothing is
+    allocated. Each message is allocated on the Windows side with gl_msg_alloc,
+    so the game owns it and releases it through its own m_pfnRelease.
+
 Method modes:
   - shimLocal: the shim answers the method from its own SHIM_LOCAL_BODIES
     entry. It never produces a frame, so no Windows function pointer can reach
@@ -1015,7 +1119,8 @@ export const WIRE_LAYOUT_DOC = WIRE_LAYOUT_DOC_BASE + WIRE_LAYOUT_DOC_EXTENDED
 const NEW_WIRE_KINDS: ReadonlySet<string> = new Set([
   'in-buffer',
   'in-struct',
-  'out-struct'
+  'out-struct',
+  'out-messages'
 ])
 
 /** True when a method uses any 58-06 kind, cap override or mode. */
@@ -2104,6 +2209,233 @@ GL_NET_FN int gl_net_cb_intercept(int32_t id, void *param) {
 }
 #define GL_NET_CB_INTERCEPT(id, param) gl_net_cb_intercept((id), (param))
 #define GL_NET_CB_ANY() gl_net_cb_any()
+
+/* ---- ISteamNetworkingSockets 013 (58-15, x64 only) ----
+ * Received-message decode (out-messages), option filtering for the four
+ * connect/listen calls, real-time status with lanes, and lane configuration.
+ * Every length that arrives from the helper is checked against the bytes that
+ * really arrived before it is used, and no Mac pointer is ever stored. */
+#define GL_NET_SOCKETS_ORDINAL 70
+#define GL_NET_SLOT_S_CLOSECONN 5
+#define GL_NET_SLOT_S_CLOSELISTEN 6
+#define GL_NET_SLOT_S_RTSTATUS 16
+#define GL_NET_SLOT_S_LANES 20
+#define GL_NET_REC_HEADER 180
+#define GL_NET_OPEN_OPTIONS_MAX 32
+#define GL_NET_OPEN_REQ_MAX 8192
+#define GL_NET_OPEN_STRING_MAX 1024
+#define GL_NET_LANES_MAX 255
+#define GL_NET_RT_STATUS_BYTES 120
+#define GL_NET_RT_LANE_BYTES 64
+#define GL_NET_MSG_OFF_CONN 12
+#define GL_NET_MSG_OFF_IDENT 16
+#define GL_NET_MSG_OFF_CONNUD 152
+#define GL_NET_MSG_OFF_USEC 160
+#define GL_NET_MSG_OFF_MSGNUM 168
+#define GL_NET_MSG_OFF_CHANNEL 192
+#define GL_NET_MSG_OFF_FLAGS 196
+#define GL_NET_MSG_OFF_LANE 208
+
+/* Decodes the out-messages records. declared is the helper's count (the
+ * method's int32 return), nMax the game's own maximum. Returns how many
+ * messages were written to out; each is a game-owned pool message. A declared
+ * count past nMax allocates nothing. A malformed or short record ends
+ * decoding: the records before it stay valid, the failed one is freed. */
+GL_NET_FN int32_t gl_net_decode_messages(const uint8_t *p, uint32_t len, int32_t declared,
+                                         int32_t nMax, void **out) {
+  int32_t built = 0;
+  uint32_t off = 0;
+  if (out == NULL || p == NULL || nMax <= 0 || declared <= 0 || declared > nMax) return 0;
+  while (built < declared) {
+    uint32_t cb, rem = len - off;
+    uint8_t *m;
+    if (rem < GL_NET_REC_HEADER) break;
+    memcpy(&cb, p + off, 4);
+    if (cb > GL_NET_MSG_MAX_DATA || cb > rem - GL_NET_REC_HEADER) break;
+    m = (uint8_t *)gl_msg_alloc((int32_t)cb);
+    if (m == NULL) break;
+    memcpy(m + GL_NET_MSG_OFF_CONN, p + off + 4, 4);
+    memcpy(m + GL_NET_MSG_OFF_IDENT, p + off + 8, 136);
+    memcpy(m + GL_NET_MSG_OFF_CONNUD, p + off + 144, 8);
+    memcpy(m + GL_NET_MSG_OFF_USEC, p + off + 152, 8);
+    memcpy(m + GL_NET_MSG_OFF_MSGNUM, p + off + 160, 8);
+    memcpy(m + GL_NET_MSG_OFF_CHANNEL, p + off + 168, 4);
+    memcpy(m + GL_NET_MSG_OFF_FLAGS, p + off + 172, 4);
+    memcpy(m + GL_NET_MSG_OFF_LANE, p + off + 176, 2);
+    if (cb > 0) {
+      void *data;
+      memcpy(&data, m, sizeof data);
+      memcpy(data, p + off + GL_NET_REC_HEADER, cb);
+    }
+    out[built++] = m;
+    off += GL_NET_REC_HEADER + cb;
+  }
+  return built;
+}
+
+/* Closes a handle the shim could not finish binding (fail closed). */
+GL_NET_FN void gl_net_close_unbound(int32_t scope, uint32_t h) {
+  uint8_t req[16];
+  uint8_t resp[8];
+  uint32_t rlen = 0;
+  if (scope == GL_NET_SCOPE_LISTEN) {
+    gl_bridge_call_raw(GL_NET_SOCKETS_ORDINAL, GL_NET_SLOT_S_CLOSELISTEN, (const uint8_t *)&h, 4,
+                       resp, sizeof resp, &rlen);
+  } else {
+    uint32_t nilStr = 0xFFFFFFFFu;
+    int32_t reason = 1000, linger = 0;
+    memcpy(req, &h, 4);
+    memcpy(req + 4, &reason, 4);
+    memcpy(req + 8, &nilStr, 4);
+    memcpy(req + 12, &linger, 4);
+    gl_bridge_call_raw(GL_NET_SOCKETS_ORDINAL, GL_NET_SLOT_S_CLOSECONN, req, sizeof req, resp,
+                       sizeof resp, &rlen);
+  }
+}
+
+/* CreateListenSocketIP / ConnectByIPAddress / CreateListenSocketP2P /
+ * ConnectP2P. Request: [u8 op][struct bytes][i32 port][u32 nKept][kept
+ * options], each kept option [i32 e][i32 type][u32 len][bytes]. Ptr-typed
+ * options and Callback_* ids never cross: they are bound in the config store to
+ * the returned handle (scope LISTEN or CONNECTION). A string option is read
+ * here, in the game's own process, and sent as bytes. Anything not understood
+ * fails the call (handle 0) rather than being dropped silently. */
+GL_NET_FN uint32_t gl_net_open(uint8_t op, const void *st, int32_t port, int32_t nOptions,
+                               const void *pOptions, int32_t scope) {
+  static const uint32_t stLen[4] = {18, 18, 0, 136};
+  uint8_t req[GL_NET_OPEN_REQ_MAX];
+  uint8_t resp[8];
+  int32_t bind_e[GL_NET_OPEN_OPTIONS_MAX];
+  void *bind_fn[GL_NET_OPEN_OPTIONS_MAX];
+  uint32_t nbind = 0, nKept = 0, off = 1, keptOff, rlen = 0, h = 0, i;
+  if (op > 3 || nOptions < 0 || nOptions > GL_NET_OPEN_OPTIONS_MAX) return 0;
+  if (nOptions > 0 && pOptions == NULL) return 0;
+  if (stLen[op] > 0 && st == NULL) return 0;
+  req[0] = op;
+  if (stLen[op] > 0) {
+    memcpy(req + off, st, stLen[op]);
+    off += stLen[op];
+  }
+  memcpy(req + off, &port, 4);
+  off += 4;
+  keptOff = off;
+  off += 4;
+  for (i = 0; i < (uint32_t)nOptions; i++) {
+    const uint8_t *o = (const uint8_t *)pOptions + 16u * i;
+    int32_t e, type;
+    uint32_t len = 0;
+    const void *src = NULL;
+    memcpy(&e, o, 4);
+    memcpy(&type, o + 4, 4);
+    if (type == GL_NET_CFG_PTR) {
+      void *fn;
+      memcpy(&fn, o + 8, sizeof fn);
+      if (fn != NULL) {
+        bind_e[nbind] = e;
+        bind_fn[nbind] = fn;
+        nbind++;
+      }
+      continue;
+    }
+    if (gl_net_is_cb_id(e)) return 0;
+    if (type == GL_NET_CFG_INT32 || type == GL_NET_CFG_FLOAT) {
+      len = 4;
+      src = o + 8;
+    } else if (type == GL_NET_CFG_INT64) {
+      len = 8;
+      src = o + 8;
+    } else if (type == GL_NET_CFG_STRING) {
+      const char *s;
+      size_t sl;
+      memcpy(&s, o + 8, sizeof s);
+      if (s == NULL) return 0;
+      sl = strlen(s);
+      if (sl + 1 > GL_NET_OPEN_STRING_MAX) return 0;
+      len = (uint32_t)(sl + 1);
+      src = s;
+    } else {
+      return 0;
+    }
+    if (off + 12u + len > sizeof req) return 0;
+    memcpy(req + off, &e, 4);
+    memcpy(req + off + 4, &type, 4);
+    memcpy(req + off + 8, &len, 4);
+    memcpy(req + off + 12, src, len);
+    off += 12u + len;
+    nKept++;
+  }
+  memcpy(req + keptOff, &nKept, 4);
+  {
+    static const uint16_t slot[4] = {0, 1, 2, 3};
+    if (!gl_bridge_call_raw(GL_NET_SOCKETS_ORDINAL, slot[op], req, off, resp, sizeof resp, &rlen) ||
+        rlen != 4)
+      return 0;
+  }
+  memcpy(&h, resp, 4);
+  if (h == 0) return 0;
+  for (i = 0; i < nbind; i++) {
+    if (!gl_net_cfg_put(bind_e[i], scope, (int64_t)h, bind_fn[i])) {
+      uint32_t k;
+      for (k = 0; k < i; k++) gl_net_cfg_put(bind_e[k], scope, (int64_t)h, NULL);
+      gl_net_close_unbound(scope, h);
+      return 0;
+    }
+  }
+  return h;
+}
+
+/* GetConnectionRealTimeStatus: [u32 hConn][i32 nLanes] -> [i32 ret][u8 present]
+ * [120 bytes][u32 nl][nl x 64 bytes]. Lanes are asked for only when the game
+ * gave a lane array. */
+GL_NET_FN uint32_t gl_net_rt_status(uint32_t hConn, void *pStatus, int32_t nLanes, void *pLanes) {
+  uint8_t req[8];
+  uint8_t resp[5 + GL_NET_RT_STATUS_BYTES + 4 + GL_NET_LANES_MAX * GL_NET_RT_LANE_BYTES];
+  uint32_t rlen = 0, nl = 0, want = 0;
+  int32_t ret = 0;
+  if (pLanes != NULL && nLanes > 0) want = nLanes > GL_NET_LANES_MAX ? GL_NET_LANES_MAX : (uint32_t)nLanes;
+  memcpy(req, &hConn, 4);
+  memcpy(req + 4, &want, 4);
+  if (!gl_bridge_call_raw(GL_NET_SOCKETS_ORDINAL, GL_NET_SLOT_S_RTSTATUS, req, sizeof req, resp,
+                          sizeof resp, &rlen) ||
+      rlen < 5 + GL_NET_RT_STATUS_BYTES + 4)
+    return 0;
+  memcpy(&ret, resp, 4);
+  memcpy(&nl, resp + 5 + GL_NET_RT_STATUS_BYTES, 4);
+  if (nl > want || rlen != 5u + GL_NET_RT_STATUS_BYTES + 4u + nl * GL_NET_RT_LANE_BYTES) return 0;
+  if (resp[4] == 1 && pStatus != NULL) memcpy(pStatus, resp + 5, GL_NET_RT_STATUS_BYTES);
+  if (nl > 0) memcpy(pLanes, resp + 9 + GL_NET_RT_STATUS_BYTES, nl * GL_NET_RT_LANE_BYTES);
+  return (uint32_t)ret;
+}
+
+/* ConfigureConnectionLanes: [u32 hConn][i32 n][u8 hasPrio][u8 hasWeights]
+ * [n x i32][n x u16] -> [i32 EResult]. n is 1..255; anything else fails with
+ * k_EResultInvalidParam (2). */
+GL_NET_FN uint32_t gl_net_configure_lanes(uint32_t hConn, int32_t n, const void *prio,
+                                          const void *weights) {
+  uint8_t req[10 + GL_NET_LANES_MAX * 6];
+  uint8_t resp[4];
+  uint32_t rlen = 0, off = 10;
+  int32_t ret = 0;
+  if (n < 1 || n > GL_NET_LANES_MAX) return 2;
+  memcpy(req, &hConn, 4);
+  memcpy(req + 4, &n, 4);
+  req[8] = prio != NULL;
+  req[9] = weights != NULL;
+  if (prio != NULL) {
+    memcpy(req + off, prio, 4u * (uint32_t)n);
+    off += 4u * (uint32_t)n;
+  }
+  if (weights != NULL) {
+    memcpy(req + off, weights, 2u * (uint32_t)n);
+    off += 2u * (uint32_t)n;
+  }
+  if (!gl_bridge_call_raw(GL_NET_SOCKETS_ORDINAL, GL_NET_SLOT_S_LANES, req, off, resp, sizeof resp,
+                          &rlen) ||
+      rlen != 4)
+    return 2;
+  memcpy(&ret, resp, 4);
+  return (uint32_t)ret;
+}
 #endif
 `
 
@@ -3834,7 +4166,12 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
 function wireParamMaxWidth(p: ParamSignature): number {
   const kind = p.kind ?? 'value'
   if (kind === 'in-string') return 4 + WIRE_IN_STRING_MAX_BYTES
-  if (kind === 'out-value' || kind === 'null-in' || kind === 'out-struct')
+  if (
+    kind === 'out-value' ||
+    kind === 'null-in' ||
+    kind === 'out-struct' ||
+    kind === 'out-messages'
+  )
     return 0
   if (kind === 'out-buffer') return 4
   if (kind === 'in-buffer') return 4 + WIRE_IN_BUFFER_MAX_BYTES
@@ -3875,7 +4212,12 @@ function packArgsParts(method: MethodSignature): {
 } {
   const sendableParams = method.params.filter((p) => {
     const k = p.kind ?? 'value'
-    return k !== 'out-value' && k !== 'null-in' && k !== 'out-struct'
+    return (
+      k !== 'out-value' &&
+      k !== 'null-in' &&
+      k !== 'out-struct' &&
+      k !== 'out-messages'
+    )
   })
   if (sendableParams.length === 0) {
     return { maxTotal: 0, lines: [] }
@@ -4584,7 +4926,11 @@ function buildOutDecode(
   const outValueParams = method.params.filter((p) => p.kind === 'out-value')
   const outBufferParams = method.params.filter((p) => p.kind === 'out-buffer')
   const outStructParams = method.params.filter((p) => p.kind === 'out-struct')
+  const outMessagesParams = method.params.filter(
+    (p) => p.kind === 'out-messages'
+  )
   const extraMax =
+    outMessagesParams.length * WIRE_OUT_MESSAGES_MAX_BYTES +
     outValueParams.reduce(
       (sum, p) => sum + valueTypeWidth(p.valueType ?? 'int32'),
       0
@@ -4670,6 +5016,14 @@ function buildOutDecode(
       `      respOff += ${p.structSize};`,
       `    }`,
       `  }`
+    )
+  }
+  // 58-15: out-messages trails everything -- the int32 return is the count,
+  // the records follow. gl_net_decode_messages allocates each message with the
+  // Windows-side pool and never over-reads the frame.
+  for (const p of outMessagesParams) {
+    decodeLines.push(
+      `  result = gl_net_decode_messages(retbuf + respOff, retlen >= respOff ? retlen - respOff : 0, (int32_t)ret, (int32_t)${p.countParam}, (void **)${p.name});`
     )
   }
   for (const p of outValueParams) {
@@ -6333,7 +6687,8 @@ function wireMethodLayoutKey(method: MethodSignature): string {
           ? `len=${p.lenParam}`
           : '',
         p.structSize !== undefined ? `struct=${p.structSize}` : '',
-        p.capBytes !== undefined ? `cap=${p.capBytes}` : ''
+        p.capBytes !== undefined ? `cap=${p.capBytes}` : '',
+        p.countParam !== undefined ? `count=${p.countParam}` : ''
       ].filter(Boolean)
       return extra.length > 0 ? `${base}:${extra.join(':')}` : base
     })

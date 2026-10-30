@@ -91,6 +91,21 @@ Response blob:
     out-buffers: [u8 present][structSize bytes]. The shim copies the bytes into
     the game pointer only when that pointer is non-NULL and present is 1.
 
+Messages (58-15):
+  - kind 'out-messages': nothing is sent (the sibling countParam is an
+    ordinary by-value param). The method's int32 return is the message count
+    n; the records follow it, n of them:
+      {u32 cbSize, u32 conn, u8 identity[136], i64 connUserData,
+       i64 usecTimeReceived, i64 messageNumber, i32 channel, i32 flags,
+       u16 lane, u16 pad, cbSize payload bytes}
+    (a 180-byte header, then the payload). The records total at most
+    WIRE_OUT_MESSAGES_MAX_BYTES. The shim decodes with gl_net_decode_messages:
+    every length is checked against the remaining frame bytes before
+    allocation; a malformed record ends decoding (earlier, complete records
+    stay valid); n greater than the game's count is rejected and nothing is
+    allocated. Each message is allocated on the Windows side with gl_msg_alloc,
+    so the game owns it and releases it through its own m_pfnRelease.
+
 Method modes:
   - shimLocal: the shim answers the method from its own SHIM_LOCAL_BODIES
     entry. It never produces a frame, so no Windows function pointer can reach

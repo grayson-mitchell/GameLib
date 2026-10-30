@@ -101,6 +101,8 @@ export interface WirePolicyParamOverride {
   structSize?: number
   /** 58-06: out-buffer cap override (up to WIRE_LARGE_MAX_BYTES). */
   capBytes?: number
+  /** 58-15: out-messages -- the sibling integer param holding the max count. */
+  countParam?: string
 }
 
 export interface WirePolicyMethodEntry {
@@ -634,6 +636,8 @@ export function applyWirePolicy(
       if (override.structSize !== undefined)
         merged.structSize = override.structSize
       if (override.capBytes !== undefined) merged.capBytes = override.capBytes
+      if (override.countParam !== undefined)
+        merged.countParam = override.countParam
       return merged
     })
 
