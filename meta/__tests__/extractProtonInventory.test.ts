@@ -433,3 +433,34 @@ describe('preserveAccessorFields (58-12)', () => {
     expect(preserveAccessorFields(null, entry)).toEqual({})
   })
 })
+
+describe('applyWirePolicy 58-14 return and param type overrides', () => {
+  it('replaces a return type, a param type and a param name when the policy says so', () => {
+    const methods = parseProtonThunks(fixtureText, 'AbiFamily', 'AbiFamily002')
+    const policy: WirePolicy = {
+      AbiFamily: {
+        SetWidgetName: {
+          shimLocal: true,
+          returns: { type: 'void*', kind: 'pointer' },
+          params: {
+            widgetID: { kind: 'value', type: 'int32', name: 'cbWidget' }
+          }
+        }
+      }
+    }
+    const wired = applyWirePolicy(methods, 'AbiFamily', policy)
+    const set = wired.find((m) => m.name === 'SetWidgetName')!
+    expect(set.returns).toBe('void*')
+    expect(set.returnKind).toBe('pointer')
+    expect(set.params[0]).toEqual({
+      name: 'cbWidget',
+      type: 'int32',
+      kind: 'value'
+    })
+    // an unlisted method keeps Proton's parsed return untouched
+    const other = wired.find((m) => m.name === 'GetWidgetID')!
+    expect(other.returns).toBe(
+      methods.find((m) => m.name === 'GetWidgetID')!.returns
+    )
+  })
+})

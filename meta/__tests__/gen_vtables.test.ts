@@ -4615,7 +4615,8 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
         .filter(
           (m) =>
             m.interface !== 'SteamMatchMaking009' &&
-            m.interface !== 'SteamNetworking006'
+            m.interface !== 'SteamNetworking006' &&
+            m.interface !== 'SteamNetworkingUtils004'
         )
         .map((m) => ({
           ...m,
@@ -4819,15 +4820,22 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       expect(header).not.toContain('arg_pData_len')
     })
 
-    it('real manifests declare exactly the two 58-13 SteamNetworking006 custom prototypes', () => {
+    it('real manifests declare exactly the 58-13 SteamNetworking006 and 58-14 SteamNetworkingUtils004 custom prototypes', () => {
       const protos = [
         ...generateDispatchHeader(real).matchAll(
           /^int (gl_[a-z0-9_]+)\(void \*self,/gm
         )
       ].map((m) => m[1])
       expect(protos.sort()).toEqual([
+        'gl_net_check_ping_data',
+        'gl_net_convert_ping_location',
+        'gl_net_get_config_value',
+        'gl_net_get_config_value_info',
+        'gl_net_get_local_ping_location',
         'gl_net_get_p2p_session_state',
-        'gl_net_read_p2p_packet'
+        'gl_net_get_pop_list',
+        'gl_net_read_p2p_packet',
+        'gl_net_set_config_value'
       ])
     })
   })
@@ -5221,5 +5229,105 @@ describe('58-14 helper networking-utils handlers (source pins)', () => {
 
   it('logs no string from the NET or CBQ channels', () => {
     expect(helper).not.toMatch(/logts_f\("(NET|CBQ)",[^)]*%s/)
+  })
+})
+
+describe('58-14 SteamNetworkingUtils004 wire policy and served flip', () => {
+  const utils = real.find((m) => m.interface === 'SteamNetworkingUtils004')!
+  const header = generateDispatchHeader(real)
+  const shim = generateShimC(real)
+  const method = (name: string) => utils.methods.find((m) => m.name === name)!
+
+  it('every virtual but the destructor is wire; SetDebugOutputFunction and AllocateMessage are shim-local with no helper case', () => {
+    const wired = utils.methods.filter((m) => (m.mode ?? utils.mode) === 'wire')
+    expect(wired.map((m) => m.name)).not.toContain('destructor')
+    expect(wired).toHaveLength(utils.methods.length - 1)
+    for (const name of ['SetDebugOutputFunction', 'AllocateMessage']) {
+      expect(method(name).shimLocal).toBe(true)
+      expect(method(name).helperCustom).toBeUndefined()
+      expect(header).not.toContain(`SteamNetworkingUtils004.${name}`)
+    }
+    expect(method('AllocateMessage').returnKind).toBe('pointer')
+    expect(validateManifest(utils)).toEqual([])
+  })
+
+  it('SetConfigValue, GetConfigValue and GetPOPList combine shimLocal with helperCustom and keep their helper cases', () => {
+    for (const [name, fn] of [
+      ['SetConfigValue', 'gl_net_set_config_value'],
+      ['GetConfigValue', 'gl_net_get_config_value'],
+      ['GetPOPList', 'gl_net_get_pop_list']
+    ]) {
+      expect(method(name).shimLocal).toBe(true)
+      expect(method(name).helperCustom).toBe(fn)
+      expect(header).toContain(`SteamNetworkingUtils004.${name}`)
+      expect(header).toContain(`${fn}(g_bd_self_steamnetworkingutils004`)
+    }
+    // the shim body never packs those params: it reaches the helper itself
+    const setFn = shim.slice(
+      shim.indexOf('vt_SteamNetworkingUtils004_SetConfigValue(')
+    )
+    expect(setFn.slice(0, setFn.indexOf('\n}\n'))).toContain(
+      'gl_net_set_config_value('
+    )
+  })
+
+  it('struct and float methods use measured layouts or a custom handler', () => {
+    expect(method('GetRelayNetworkStatus').params[0]).toMatchObject({
+      kind: 'out-struct',
+      structSize: 272
+    })
+    expect(method('GetRealIdentityForFakeIP').params).toMatchObject([
+      { kind: 'in-struct', structSize: 18 },
+      { kind: 'out-struct', structSize: 136 }
+    ])
+    expect(method('GetLocalPingLocation').helperCustom).toBe(
+      'gl_net_get_local_ping_location'
+    )
+    expect(method('CheckPingDataUpToDate').helperCustom).toBe(
+      'gl_net_check_ping_data'
+    )
+  })
+
+  it('the five identity and address helpers are shim-local and share the networking block', () => {
+    for (const name of [
+      'SteamNetworkingIPAddr_ToString',
+      'SteamNetworkingIPAddr_ParseString',
+      'SteamNetworkingIPAddr_GetFakeIPType',
+      'SteamNetworkingIdentity_ToString',
+      'SteamNetworkingIdentity_ParseString'
+    ]) {
+      expect(method(name).shimLocal).toBe(true)
+      expect(header).not.toContain(`SteamNetworkingUtils004.${name}`)
+    }
+    expect(
+      SHIM_LOCAL_BODIES['SteamNetworkingUtils.SteamNetworkingIPAddr_ToString']
+    ).toContain('gl_ip_to_string(')
+  })
+
+  it('the x64 def exports the six SetGlobalCallback_* names and InitRelayNetworkAccess exactly once, none on x86', () => {
+    const x64 = generateDefFile(real, 'x64').split('\n')
+    const x86 = generateDefFile(real, 'x86').split('\n')
+    expect(
+      x64.filter((l) =>
+        l.startsWith('SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_')
+      )
+    ).toHaveLength(6)
+    expect(
+      x64.filter(
+        (l) => l === 'SteamAPI_ISteamNetworkingUtils_InitRelayNetworkAccess'
+      )
+    ).toHaveLength(1)
+    expect(x86.filter((l) => l.includes('ISteamNetworkingUtils'))).toEqual([])
+  })
+
+  it('a wire param named like a stub local is refused at validation', () => {
+    const bad: InterfaceManifestV2 = JSON.parse(JSON.stringify(utils))
+    const m = bad.methods.find((x) => x.name === 'ParsePingLocationString')!
+    m.params[1] = { ...m.params[1], name: 'result' }
+    expect(
+      validateManifest(bad).some((e) =>
+        /collides with a generated stub local/.test(e)
+      )
+    ).toBe(true)
   })
 })

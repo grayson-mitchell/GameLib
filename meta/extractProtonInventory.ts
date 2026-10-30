@@ -90,6 +90,10 @@ const ACCEPTANCE_VERSIONS_PATH = join(
 
 export interface WirePolicyParamOverride {
   kind: ParamKind
+  /** 58-14: replaces Proton's parsed C type (e.g. a pointer the thunk text hid). */
+  type?: string
+  /** 58-14: replaces Proton's parsed parameter name. */
+  name?: string
   valueType?: 'int32' | 'uint32' | 'uint16' | 'float' | 'bool' | 'uint64'
   sizeParam?: string
   lenParam?: string
@@ -117,6 +121,8 @@ export interface WirePolicyMethodEntry {
    * A version whose game-side signature has fewer params gets the difference
    * as `helperTrailingNullArgs` (NULL-filled helper-side, never sent). */
   helperNativeArgs?: number
+  /** 58-14: replaces a return type Proton's thunk text parsed as `void`. */
+  returns?: { type: string; kind: MethodSignature['returnKind'] }
   params?: Record<string, WirePolicyParamOverride>
   helperFallback?: number | boolean
 }
@@ -618,6 +624,8 @@ export function applyWirePolicy(
       const override = entry.params?.[p.name]
       if (!override) return p
       const merged: ParamSignature = { ...p, kind: override.kind }
+      if (override.type !== undefined) merged.type = override.type
+      if (override.name !== undefined) merged.name = override.name
       if (override.valueType !== undefined)
         merged.valueType = override.valueType
       if (override.sizeParam !== undefined)
@@ -630,6 +638,10 @@ export function applyWirePolicy(
     })
 
     const wired: MethodSignature = { ...method, mode: 'wire', params }
+    if (entry.returns !== undefined) {
+      wired.returns = entry.returns.type
+      wired.returnKind = entry.returns.kind
+    }
     if (entry.helperFlat !== undefined) wired.helperFlat = entry.helperFlat
     if (entry.shimLocal !== undefined) wired.shimLocal = entry.shimLocal
     if (entry.helperCustom !== undefined)

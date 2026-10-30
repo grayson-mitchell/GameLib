@@ -17,15 +17,18 @@
     {
       "slot": 0,
       "name": "AllocateMessage",
-      "returns": "void",
-      "returnKind": "void",
+      "returns": "void*",
+      "returnKind": "pointer",
       "stackBytes": 4,
       "params": [
         {
-          "name": "_unknownArg0",
-          "type": "uint32"
+          "name": "cbAllocateBuffer",
+          "type": "int32",
+          "kind": "value"
         }
-      ]
+      ],
+      "mode": "wire",
+      "shimLocal": true
     },
     {
       "slot": 1,
@@ -36,9 +39,13 @@
       "params": [
         {
           "name": "pDetails",
-          "type": "SteamRelayNetworkStatus_t*"
+          "type": "SteamRelayNetworkStatus_t*",
+          "kind": "out-struct",
+          "structSize": 272
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetRelayNetworkStatus"
     },
     {
       "slot": 2,
@@ -51,7 +58,11 @@
           "name": "result",
           "type": "SteamNetworkPingLocation_t*"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetLocalPingLocation",
+      "shimLocal": true,
+      "helperCustom": "gl_net_get_local_ping_location"
     },
     {
       "slot": 3,
@@ -62,13 +73,19 @@
       "params": [
         {
           "name": "location1",
-          "type": "const SteamNetworkPingLocation_t*"
+          "type": "const SteamNetworkPingLocation_t*",
+          "kind": "in-struct",
+          "structSize": 512
         },
         {
           "name": "location2",
-          "type": "const SteamNetworkPingLocation_t*"
+          "type": "const SteamNetworkPingLocation_t*",
+          "kind": "in-struct",
+          "structSize": 512
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_EstimatePingTimeBetweenTwoLocations"
     },
     {
       "slot": 4,
@@ -79,9 +96,13 @@
       "params": [
         {
           "name": "remoteLocation",
-          "type": "const SteamNetworkPingLocation_t*"
+          "type": "const SteamNetworkPingLocation_t*",
+          "kind": "in-struct",
+          "structSize": 512
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_EstimatePingTimeFromLocalHost"
     },
     {
       "slot": 5,
@@ -102,7 +123,11 @@
           "name": "cchBufSize",
           "type": "int32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_ConvertPingLocationToString",
+      "shimLocal": true,
+      "helperCustom": "gl_net_convert_ping_location"
     },
     {
       "slot": 6,
@@ -113,13 +138,18 @@
       "params": [
         {
           "name": "pszString",
-          "type": "const char*"
+          "type": "const char*",
+          "kind": "in-string"
         },
         {
-          "name": "result",
-          "type": "SteamNetworkPingLocation_t*"
+          "name": "pLocation",
+          "type": "SteamNetworkPingLocation_t*",
+          "kind": "out-struct",
+          "structSize": 512
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_ParsePingLocationString"
     },
     {
       "slot": 7,
@@ -132,7 +162,11 @@
           "name": "flMaxAgeSeconds",
           "type": "float"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_CheckPingDataUpToDate",
+      "shimLocal": true,
+      "helperCustom": "gl_net_check_ping_data"
     },
     {
       "slot": 8,
@@ -147,9 +181,13 @@
         },
         {
           "name": "pViaRelayPoP",
-          "type": "uint32*"
+          "type": "uint32*",
+          "kind": "out-value",
+          "valueType": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetPingToDataCenter"
     },
     {
       "slot": 9,
@@ -162,7 +200,9 @@
           "name": "popID",
           "type": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetDirectPingToPOP"
     },
     {
       "slot": 10,
@@ -170,7 +210,9 @@
       "returns": "int32",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetPOPCount"
     },
     {
       "slot": 11,
@@ -187,7 +229,11 @@
           "name": "nListSz",
           "type": "int32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetPOPList",
+      "shimLocal": true,
+      "helperCustom": "gl_net_get_pop_list"
     },
     {
       "slot": 12,
@@ -195,7 +241,9 @@
       "returns": "int64",
       "returnKind": "int64",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetLocalTimestamp"
     },
     {
       "slot": 13,
@@ -212,7 +260,9 @@
           "name": "pfnFunc",
           "type": "void*"
         }
-      ]
+      ],
+      "mode": "wire",
+      "shimLocal": true
     },
     {
       "slot": 14,
@@ -225,7 +275,9 @@
           "name": "nIPv4",
           "type": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetIPv4FakeIPType"
     },
     {
       "slot": 15,
@@ -236,13 +288,19 @@
       "params": [
         {
           "name": "fakeIP",
-          "type": "const SteamNetworkingIPAddr*"
+          "type": "const SteamNetworkingIPAddr*",
+          "kind": "in-struct",
+          "structSize": 18
         },
         {
           "name": "pOutRealIdentity",
-          "type": "SteamNetworkingIdentity_144*"
+          "type": "SteamNetworkingIdentity_144*",
+          "kind": "out-struct",
+          "structSize": 136
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetRealIdentityForFakeIP"
     },
     {
       "slot": 16,
@@ -271,7 +329,11 @@
           "name": "pArg",
           "type": "const void*"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_SetConfigValue",
+      "shimLocal": true,
+      "helperCustom": "gl_net_set_config_value"
     },
     {
       "slot": 17,
@@ -304,7 +366,11 @@
           "name": "cbResult",
           "type": "uint32*"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetConfigValue",
+      "shimLocal": true,
+      "helperCustom": "gl_net_get_config_value"
     },
     {
       "slot": 18,
@@ -325,7 +391,11 @@
           "name": "pOutScope",
           "type": "uint32*"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetConfigValueInfo",
+      "shimLocal": true,
+      "helperCustom": "gl_net_get_config_value_info"
     },
     {
       "slot": 19,
@@ -342,7 +412,9 @@
           "name": "bEnumerateDevVars",
           "type": "bool"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_IterateGenericEditableConfigValues"
     },
     {
       "slot": 20,
@@ -367,7 +439,9 @@
           "name": "bWithPort",
           "type": "bool"
         }
-      ]
+      ],
+      "mode": "wire",
+      "shimLocal": true
     },
     {
       "slot": 21,
@@ -384,7 +458,9 @@
           "name": "pszStr",
           "type": "const char*"
         }
-      ]
+      ],
+      "mode": "wire",
+      "shimLocal": true
     },
     {
       "slot": 22,
@@ -397,7 +473,9 @@
           "name": "addr",
           "type": "const SteamNetworkingIPAddr*"
         }
-      ]
+      ],
+      "mode": "wire",
+      "shimLocal": true
     },
     {
       "slot": 23,
@@ -418,7 +496,9 @@
           "name": "cbBuf",
           "type": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "shimLocal": true
     },
     {
       "slot": 24,
@@ -435,7 +515,9 @@
           "name": "pszStr",
           "type": "const char*"
         }
-      ]
+      ],
+      "mode": "wire",
+      "shimLocal": true
     },
     {
       "slot": 25,

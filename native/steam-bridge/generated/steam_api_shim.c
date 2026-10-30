@@ -168,7 +168,7 @@ Method modes:
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "7274b9e83bd4"
+#define BRIDGE_SHIM_TABLE_HASH "9efc829ff8b6"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -33843,202 +33843,319 @@ static struct FakeSteamNetworkingSockets013 g_steamnetworkingsockets013_instance
 #if defined(__x86_64__)
 // === SteamNetworkingUtils004 (ordinal 71, family SteamNetworkingUtils) ===
 
-// slot 0: AllocateMessage(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
-static void THISCALL vt_SteamNetworkingUtils004_AllocateMessage(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 0: AllocateMessage(int32 cbAllocateBuffer) -> void* | __thiscall ret 4
+static void * THISCALL vt_SteamNetworkingUtils004_AllocateMessage(void *self, int32_t cbAllocateBuffer) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "AllocateMessage", 0, GAMELIB_STUBCALL_KIND_STUB);
+  return gl_msg_alloc((int32_t)cbAllocateBuffer);
 }
 
-// slot 1: GetRelayNetworkStatus(SteamRelayNetworkStatus_t* pDetails) -> uint32 | __thiscall ret 4 (STUB)
-static uint32_t THISCALL vt_SteamNetworkingUtils004_GetRelayNetworkStatus(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 1: GetRelayNetworkStatus(SteamRelayNetworkStatus_t* pDetails) -> uint32 | __thiscall ret 4
+static uint32_t THISCALL vt_SteamNetworkingUtils004_GetRelayNetworkStatus(void *self, void * pDetails) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetRelayNetworkStatus", 1, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint32_t result = 0;
+  uint8_t argbuf[1];
+  uint8_t retbuf[277];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  int ok = bridge_transact(71, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    uint32_t ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+    if (retlen >= respOff + 1) {
+      uint8_t present_pDetails = retbuf[respOff]; respOff += 1;
+      if (present_pDetails == 1 && retlen >= respOff + 272) {
+        if (pDetails != NULL) memcpy(pDetails, retbuf + respOff, 272);
+        respOff += 272;
+      }
+    }
+  } else {
+  }
+  return result;
 }
 
-// slot 2: GetLocalPingLocation(SteamNetworkPingLocation_t* result) -> float | __thiscall ret 4 (STUB)
-static float THISCALL vt_SteamNetworkingUtils004_GetLocalPingLocation(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 2: GetLocalPingLocation(SteamNetworkPingLocation_t* result) -> float | __thiscall ret 4
+static float THISCALL vt_SteamNetworkingUtils004_GetLocalPingLocation(void *self, void * result) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetLocalPingLocation", 2, GAMELIB_STUBCALL_KIND_STUB);
-  return 0.0f;
+  return gl_net_get_local_ping_location(result);
 }
 
-// slot 3: EstimatePingTimeBetweenTwoLocations(const SteamNetworkPingLocation_t* location1, const SteamNetworkPingLocation_t* location2) -> int32 | __thiscall ret 8 (STUB)
-static int32_t THISCALL vt_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 3: EstimatePingTimeBetweenTwoLocations(const SteamNetworkPingLocation_t* location1, const SteamNetworkPingLocation_t* location2) -> int32 | __thiscall ret 8
+static int32_t THISCALL vt_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations(void *self, void * location1, void * location2) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "EstimatePingTimeBetweenTwoLocations", 3, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int32_t result = 0;
+  uint8_t argbuf[1026];
+  uint8_t retbuf[4];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  if (location1 == NULL) {
+    argbuf[argOff] = 0; argOff += 1;
+  } else {
+    argbuf[argOff] = 1; argOff += 1;
+    memcpy(argbuf + argOff, location1, 512); argOff += 512;
+  }
+  if (location2 == NULL) {
+    argbuf[argOff] = 0; argOff += 1;
+  } else {
+    argbuf[argOff] = 1; argOff += 1;
+    memcpy(argbuf + argOff, location2, 512); argOff += 512;
+  }
+  int ok = bridge_transact(71, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int32_t ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+  } else {
+  }
+  return result;
 }
 
-// slot 4: EstimatePingTimeFromLocalHost(const SteamNetworkPingLocation_t* remoteLocation) -> int32 | __thiscall ret 4 (STUB)
-static int32_t THISCALL vt_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 4: EstimatePingTimeFromLocalHost(const SteamNetworkPingLocation_t* remoteLocation) -> int32 | __thiscall ret 4
+static int32_t THISCALL vt_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost(void *self, void * remoteLocation) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "EstimatePingTimeFromLocalHost", 4, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int32_t result = 0;
+  uint8_t argbuf[513];
+  uint8_t retbuf[4];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  if (remoteLocation == NULL) {
+    argbuf[argOff] = 0; argOff += 1;
+  } else {
+    argbuf[argOff] = 1; argOff += 1;
+    memcpy(argbuf + argOff, remoteLocation, 512); argOff += 512;
+  }
+  int ok = bridge_transact(71, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int32_t ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+  } else {
+  }
+  return result;
 }
 
-// slot 5: ConvertPingLocationToString(const SteamNetworkPingLocation_t* location, char* pszBuf, int32 cchBufSize) -> void | __thiscall ret 12 (STUB)
+// slot 5: ConvertPingLocationToString(const SteamNetworkPingLocation_t* location, char* pszBuf, int32 cchBufSize) -> void | __thiscall ret 12
 static void THISCALL vt_SteamNetworkingUtils004_ConvertPingLocationToString(void *self, void * location, char * pszBuf, int32_t cchBufSize) {
-  static volatile LONG gamelib_sc[2];
   (void)self;
-  if (pszBuf != NULL && cchBufSize > 0) pszBuf[0] = '\0';
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "ConvertPingLocationToString", 5, GAMELIB_STUBCALL_KIND_STUB);
+  gl_net_convert_ping_location(location, pszBuf, (int32_t)cchBufSize);
 }
 
-// slot 6: ParsePingLocationString(const char* pszString, SteamNetworkPingLocation_t* result) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamNetworkingUtils004_ParsePingLocationString(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 6: ParsePingLocationString(const char* pszString, SteamNetworkPingLocation_t* pLocation) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamNetworkingUtils004_ParsePingLocationString(void *self, const char * pszString, void * pLocation) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "ParsePingLocationString", 6, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  uint8_t argbuf[4100];
+  uint8_t retbuf[517];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  {
+    uint32_t strLen;
+    if (pszString == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pszString);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pszString, strLen); argOff += strLen;
+      }
+    }
+  }
+  int ok = bridge_transact(71, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+    if (retlen >= respOff + 1) {
+      uint8_t present_pLocation = retbuf[respOff]; respOff += 1;
+      if (present_pLocation == 1 && retlen >= respOff + 512) {
+        if (pLocation != NULL) memcpy(pLocation, retbuf + respOff, 512);
+        respOff += 512;
+      }
+    }
+  } else {
+  }
+  return result;
 }
 
-// slot 7: CheckPingDataUpToDate(float flMaxAgeSeconds) -> bool | __thiscall ret 4 (STUB)
-static int THISCALL vt_SteamNetworkingUtils004_CheckPingDataUpToDate(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 7: CheckPingDataUpToDate(float flMaxAgeSeconds) -> bool | __thiscall ret 4
+static int THISCALL vt_SteamNetworkingUtils004_CheckPingDataUpToDate(void *self, float flMaxAgeSeconds) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "CheckPingDataUpToDate", 7, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  return gl_net_check_ping_data(flMaxAgeSeconds);
 }
 
-// slot 8: GetPingToDataCenter(uint32 popID, uint32* pViaRelayPoP) -> int32 | __thiscall ret 8 (STUB)
-static int32_t THISCALL vt_SteamNetworkingUtils004_GetPingToDataCenter(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 8: GetPingToDataCenter(uint32 popID, uint32* pViaRelayPoP) -> int32 | __thiscall ret 8
+static int32_t THISCALL vt_SteamNetworkingUtils004_GetPingToDataCenter(void *self, uint32_t popID, uint32_t * pViaRelayPoP) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetPingToDataCenter", 8, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &popID, 4); argOff += 4;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(71, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pViaRelayPoP != NULL) *pViaRelayPoP = 0;
+    return 0;
+  }
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pViaRelayPoP != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pViaRelayPoP = outVal;
+  }
+  respOff += 4;
+  return ret;
 }
 
-// slot 9: GetDirectPingToPOP(uint32 popID) -> int32 | __thiscall ret 4 (STUB)
-static int32_t THISCALL vt_SteamNetworkingUtils004_GetDirectPingToPOP(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 9: GetDirectPingToPOP(uint32 popID) -> int32 | __thiscall ret 4
+static int32_t THISCALL vt_SteamNetworkingUtils004_GetDirectPingToPOP(void *self, uint32_t popID) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetDirectPingToPOP", 9, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &popID, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(71, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 10: GetPOPCount() -> int32 | __thiscall ret 0 (STUB)
+// slot 10: GetPOPCount() -> int32 | __thiscall ret 0
 static int32_t THISCALL vt_SteamNetworkingUtils004_GetPOPCount(void *self) {
-  static volatile LONG gamelib_sc[2];
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetPOPCount", 10, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(71, 10, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 11: GetPOPList(uint32* list, int32 nListSz) -> int32 | __thiscall ret 8 (STUB)
-static int32_t THISCALL vt_SteamNetworkingUtils004_GetPOPList(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 11: GetPOPList(uint32* list, int32 nListSz) -> int32 | __thiscall ret 8
+static int32_t THISCALL vt_SteamNetworkingUtils004_GetPOPList(void *self, uint32_t * list, int32_t nListSz) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetPOPList", 11, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  return (uint32_t)gl_net_get_pop_list((uint32_t *)list, (int32_t)nListSz);
 }
 
-// slot 12: GetLocalTimestamp() -> int64 | __thiscall ret 0 (STUB)
+// slot 12: GetLocalTimestamp() -> int64 | __thiscall ret 0
 static int64_t THISCALL vt_SteamNetworkingUtils004_GetLocalTimestamp(void *self) {
-  static volatile LONG gamelib_sc[2];
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetLocalTimestamp", 12, GAMELIB_STUBCALL_KIND_STUB);
-  return 0LL;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(71, 12, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 8) return 0;
+  int64_t ret; memcpy(&ret, retbuf, 8);
+  return ret;
 }
 
-// slot 13: SetDebugOutputFunction(uint32 eDetailLevel, void* pfnFunc) -> void | __thiscall ret 8 (STUB)
-static void THISCALL vt_SteamNetworkingUtils004_SetDebugOutputFunction(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 13: SetDebugOutputFunction(uint32 eDetailLevel, void* pfnFunc) -> void | __thiscall ret 8
+static void THISCALL vt_SteamNetworkingUtils004_SetDebugOutputFunction(void *self, uint32_t eDetailLevel, void * pfnFunc) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SetDebugOutputFunction", 13, GAMELIB_STUBCALL_KIND_STUB);
+  gl_net_set_debug_output((int32_t)eDetailLevel, pfnFunc);
 }
 
-// slot 14: GetIPv4FakeIPType(uint32 nIPv4) -> uint32 | __thiscall ret 4 (STUB)
-static uint32_t THISCALL vt_SteamNetworkingUtils004_GetIPv4FakeIPType(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 14: GetIPv4FakeIPType(uint32 nIPv4) -> uint32 | __thiscall ret 4
+static uint32_t THISCALL vt_SteamNetworkingUtils004_GetIPv4FakeIPType(void *self, uint32_t nIPv4) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetIPv4FakeIPType", 14, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &nIPv4, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(71, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 15: GetRealIdentityForFakeIP(const SteamNetworkingIPAddr* fakeIP, SteamNetworkingIdentity_144* pOutRealIdentity) -> uint32 | __thiscall ret 8 (STUB)
-static uint32_t THISCALL vt_SteamNetworkingUtils004_GetRealIdentityForFakeIP(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 15: GetRealIdentityForFakeIP(const SteamNetworkingIPAddr* fakeIP, SteamNetworkingIdentity_144* pOutRealIdentity) -> uint32 | __thiscall ret 8
+static uint32_t THISCALL vt_SteamNetworkingUtils004_GetRealIdentityForFakeIP(void *self, void * fakeIP, void * pOutRealIdentity) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetRealIdentityForFakeIP", 15, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint32_t result = 0;
+  uint8_t argbuf[19];
+  uint8_t retbuf[141];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  if (fakeIP == NULL) {
+    argbuf[argOff] = 0; argOff += 1;
+  } else {
+    argbuf[argOff] = 1; argOff += 1;
+    memcpy(argbuf + argOff, fakeIP, 18); argOff += 18;
+  }
+  int ok = bridge_transact(71, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    uint32_t ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+    if (retlen >= respOff + 1) {
+      uint8_t present_pOutRealIdentity = retbuf[respOff]; respOff += 1;
+      if (present_pOutRealIdentity == 1 && retlen >= respOff + 136) {
+        if (pOutRealIdentity != NULL) memcpy(pOutRealIdentity, retbuf + respOff, 136);
+        respOff += 136;
+      }
+    }
+  } else {
+  }
+  return result;
 }
 
-// slot 16: SetConfigValue(uint32 eValue, uint32 eScopeType, int32 scopeObj, uint32 eDataType, const void* pArg) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_SteamNetworkingUtils004_SetConfigValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
-  static volatile LONG gamelib_sc[2];
+// slot 16: SetConfigValue(uint32 eValue, uint32 eScopeType, int32 scopeObj, uint32 eDataType, const void* pArg) -> bool | __thiscall ret 20
+static int THISCALL vt_SteamNetworkingUtils004_SetConfigValue(void *self, uint32_t eValue, uint32_t eScopeType, int32_t scopeObj, uint32_t eDataType, void * pArg) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SetConfigValue", 16, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  return gl_net_set_config_value((int32_t)eValue, (int32_t)eScopeType, (int64_t)(uint32_t)scopeObj, (int32_t)eDataType, pArg);
 }
 
-// slot 17: GetConfigValue(uint32 eValue, uint32 eScopeType, int32 scopeObj, uint32* pOutDataType, void* pResult, uint32* cbResult) -> uint32 | __thiscall ret 24 (STUB)
-static uint32_t THISCALL vt_SteamNetworkingUtils004_GetConfigValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
-  static volatile LONG gamelib_sc[2];
+// slot 17: GetConfigValue(uint32 eValue, uint32 eScopeType, int32 scopeObj, uint32* pOutDataType, void* pResult, uint32* cbResult) -> uint32 | __thiscall ret 24
+static uint32_t THISCALL vt_SteamNetworkingUtils004_GetConfigValue(void *self, uint32_t eValue, uint32_t eScopeType, int32_t scopeObj, uint32_t * pOutDataType, void * pResult, uint32_t * cbResult) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetConfigValue", 17, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  return (uint32_t)gl_net_get_config_value((int32_t)eValue, (int32_t)eScopeType, (int64_t)(uint32_t)scopeObj, (int32_t *)pOutDataType, pResult, (size_t *)cbResult);
 }
 
-// slot 18: GetConfigValueInfo(uint32 eValue, uint32* pOutDataType, uint32* pOutScope) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
-static const char * THISCALL vt_SteamNetworkingUtils004_GetConfigValueInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 18: GetConfigValueInfo(uint32 eValue, uint32* pOutDataType, uint32* pOutScope) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01)
+static const char * THISCALL vt_SteamNetworkingUtils004_GetConfigValueInfo(void *self, uint32_t eValue, uint32_t * pOutDataType, uint32_t * pOutScope) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "GetConfigValueInfo", 18, GAMELIB_STUBCALL_KIND_STUB);
-  return "";
+  return gl_net_get_config_value_info((int32_t)eValue, (int32_t *)pOutDataType, (int32_t *)pOutScope);
 }
 
-// slot 19: IterateGenericEditableConfigValues(uint32 eCurrent, bool bEnumerateDevVars) -> uint32 | __thiscall ret 8 (STUB)
-static uint32_t THISCALL vt_SteamNetworkingUtils004_IterateGenericEditableConfigValues(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 19: IterateGenericEditableConfigValues(uint32 eCurrent, bool bEnumerateDevVars) -> uint32 | __thiscall ret 8
+static uint32_t THISCALL vt_SteamNetworkingUtils004_IterateGenericEditableConfigValues(void *self, uint32_t eCurrent, int bEnumerateDevVars) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "IterateGenericEditableConfigValues", 19, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &eCurrent, 4); argOff += 4;
+  memcpy(argbuf + argOff, &bEnumerateDevVars, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(71, 19, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 20: SteamNetworkingIPAddr_ToString(const SteamNetworkingIPAddr* addr, char* buf, uint32 cbBuf, bool bWithPort) -> void | __thiscall ret 16 (STUB)
+// slot 20: SteamNetworkingIPAddr_ToString(const SteamNetworkingIPAddr* addr, char* buf, uint32 cbBuf, bool bWithPort) -> void | __thiscall ret 16
 static void THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIPAddr_ToString(void *self, void * addr, char * buf, uint32_t cbBuf, int bWithPort) {
-  static volatile LONG gamelib_sc[2];
   (void)self;
-  if (buf != NULL && cbBuf > 0) buf[0] = '\0';
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SteamNetworkingIPAddr_ToString", 20, GAMELIB_STUBCALL_KIND_STUB);
+  if (addr != NULL) gl_ip_to_string((const gl_net_ip *)addr, buf, cbBuf, (bWithPort & 0xff) != 0);
+  else if (buf != NULL && cbBuf > 0) buf[0] = 0;
 }
 
-// slot 21: SteamNetworkingIPAddr_ParseString(SteamNetworkingIPAddr* pAddr, const char* pszStr) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIPAddr_ParseString(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 21: SteamNetworkingIPAddr_ParseString(SteamNetworkingIPAddr* pAddr, const char* pszStr) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIPAddr_ParseString(void *self, void * pAddr, const char * pszStr) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SteamNetworkingIPAddr_ParseString", 21, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  return pAddr != NULL && gl_ip_parse((gl_net_ip *)pAddr, pszStr);
 }
 
-// slot 22: SteamNetworkingIPAddr_GetFakeIPType(const SteamNetworkingIPAddr* addr) -> uint32 | __thiscall ret 4 (STUB)
-static uint32_t THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIPAddr_GetFakeIPType(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 22: SteamNetworkingIPAddr_GetFakeIPType(const SteamNetworkingIPAddr* addr) -> uint32 | __thiscall ret 4
+static uint32_t THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIPAddr_GetFakeIPType(void *self, void * addr) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SteamNetworkingIPAddr_GetFakeIPType", 22, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  return addr != NULL ? (uint32_t)gl_ip_fake_type((const gl_net_ip *)addr) : 0;
 }
 
-// slot 23: SteamNetworkingIdentity_ToString(const SteamNetworkingIdentity_144* identity, char* buf, uint32 cbBuf) -> void | __thiscall ret 12 (STUB)
+// slot 23: SteamNetworkingIdentity_ToString(const SteamNetworkingIdentity_144* identity, char* buf, uint32 cbBuf) -> void | __thiscall ret 12
 static void THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIdentity_ToString(void *self, void * identity, char * buf, uint32_t cbBuf) {
-  static volatile LONG gamelib_sc[2];
   (void)self;
-  if (buf != NULL && cbBuf > 0) buf[0] = '\0';
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SteamNetworkingIdentity_ToString", 23, GAMELIB_STUBCALL_KIND_STUB);
+  if (identity != NULL) gl_id_to_string((const gl_net_ident *)identity, buf, cbBuf);
+  else if (buf != NULL && cbBuf > 0) buf[0] = 0;
 }
 
-// slot 24: SteamNetworkingIdentity_ParseString(SteamNetworkingIdentity_144* pIdentity, const char* pszStr) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIdentity_ParseString(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 24: SteamNetworkingIdentity_ParseString(SteamNetworkingIdentity_144* pIdentity, const char* pszStr) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamNetworkingUtils004_SteamNetworkingIdentity_ParseString(void *self, void * pIdentity, const char * pszStr) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingUtils004", "SteamNetworkingIdentity_ParseString", 24, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  return pIdentity != NULL && gl_id_parse((gl_net_ident *)pIdentity, pszStr);
 }
 
 // slot 25: destructor() -> void | __thiscall ret 0 (STUB)
@@ -41435,13 +41552,12 @@ void SteamAPI_ISteamNetworkingSockets_destructor(void *self) {
   return;
 }
 
-void SteamAPI_ISteamNetworkingUtils_AllocateMessage(void *self, uint32_t a1) {
+void * SteamAPI_ISteamNetworkingUtils_AllocateMessage(void *self, int32_t a1) {
   if (self == (void *)&g_steamnetworkingutils004_instance) {
     vfn *vt = *(vfn **)self;
-    ((void (*)(void *, uint32_t))vt[0])(self, (uint32_t)a1);
-    return;
+    return (void *)((void * (*)(void *, int32_t))vt[0])(self, (int32_t)a1);
   }
-  return;
+  return 0;
 }
 
 bool SteamAPI_ISteamNetworkingUtils_CheckPingDataUpToDate(void *self, float a1) {

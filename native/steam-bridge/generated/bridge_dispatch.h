@@ -5,7 +5,7 @@
  * native/steam-bridge/generated/steam_api_shim.c marshals the shim side
  * of. #include'd from native/steam-bridge/helper/bridge_helper.c.
  *
- * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, SteamMatchMaking009, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, SteamClient014, SteamNetworking006, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamUtils009, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007.
+ * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, SteamMatchMaking009, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, SteamClient014, SteamNetworking006, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamUtils009, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007, SteamNetworkingUtils004.
  */
 #ifndef GAMELIB_BRIDGE_DISPATCH_H
 #define GAMELIB_BRIDGE_DISPATCH_H
@@ -108,7 +108,7 @@ Method modes:
 // tuples BRIDGE_SHIM_TABLE_HASH (steam_api_shim.c) embeds -- a drift
 // between the two means the shim and this dispatch table disagree about
 // what is on the wire.
-#define BRIDGE_DISPATCH_TABLE_HASH "7274b9e83bd4"
+#define BRIDGE_DISPATCH_TABLE_HASH "9efc829ff8b6"
 
 // Response scratch -- bridge_dispatch() never writes past respCap, which
 // the caller (bridge_helper.c) sizes to this constant.
@@ -117,10 +117,31 @@ Method modes:
 typedef void *(*BDAccessorFn_t)(void);
 
 // 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_net_check_ping_data(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_net_convert_ping_location(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_net_get_config_value(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_net_get_config_value_info(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_net_get_local_ping_location(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
 int gl_net_get_p2p_session_state(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
 
 // 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_net_get_pop_list(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
 int gl_net_read_p2p_packet(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_net_set_config_value(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
 
 #define BD_ORDINAL_SteamUser023 1
 static BDAccessorFn_t g_bd_accessor_steamuser023;
@@ -209,6 +230,9 @@ static void *g_bd_self_steamutils007;
 #define BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 61
 static BDAccessorFn_t g_bd_accessor_steamapps_interface_version007;
 static void *g_bd_self_steamapps_interface_version007;
+#define BD_ORDINAL_SteamNetworkingUtils004 71
+static BDAccessorFn_t g_bd_accessor_steamnetworkingutils004;
+static void *g_bd_self_steamnetworkingutils004;
 
 #define BD_SLOT_SteamUser023_GetHSteamUser 0
 typedef int32_t (*BDFlatFn_SteamUser023_GetHSteamUser_t)(void *);
@@ -1332,6 +1356,60 @@ static BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner_t g_bd_flat_STEAMAPPS
 #define BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId 23
 typedef int32_t (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId_t)(void *);
 static BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId;
+#define BD_SLOT_SteamNetworkingUtils004_GetRelayNetworkStatus 1
+typedef uint32_t (*BDFlatFn_SteamNetworkingUtils004_GetRelayNetworkStatus_t)(void *, void *);
+static BDFlatFn_SteamNetworkingUtils004_GetRelayNetworkStatus_t g_bd_flat_SteamNetworkingUtils004_GetRelayNetworkStatus;
+#define BD_SLOT_SteamNetworkingUtils004_GetLocalPingLocation 2
+typedef float (*BDFlatFn_SteamNetworkingUtils004_GetLocalPingLocation_t)(void *, void *);
+static BDFlatFn_SteamNetworkingUtils004_GetLocalPingLocation_t g_bd_flat_SteamNetworkingUtils004_GetLocalPingLocation;
+#define BD_SLOT_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations 3
+typedef int32_t (*BDFlatFn_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations_t)(void *, const void *, const void *);
+static BDFlatFn_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations_t g_bd_flat_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations;
+#define BD_SLOT_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost 4
+typedef int32_t (*BDFlatFn_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost_t)(void *, const void *);
+static BDFlatFn_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost_t g_bd_flat_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost;
+#define BD_SLOT_SteamNetworkingUtils004_ConvertPingLocationToString 5
+typedef void (*BDFlatFn_SteamNetworkingUtils004_ConvertPingLocationToString_t)(void *, void *, char *, int32_t);
+static BDFlatFn_SteamNetworkingUtils004_ConvertPingLocationToString_t g_bd_flat_SteamNetworkingUtils004_ConvertPingLocationToString;
+#define BD_SLOT_SteamNetworkingUtils004_ParsePingLocationString 6
+typedef int (*BDFlatFn_SteamNetworkingUtils004_ParsePingLocationString_t)(void *, const char *, void *);
+static BDFlatFn_SteamNetworkingUtils004_ParsePingLocationString_t g_bd_flat_SteamNetworkingUtils004_ParsePingLocationString;
+#define BD_SLOT_SteamNetworkingUtils004_CheckPingDataUpToDate 7
+typedef int (*BDFlatFn_SteamNetworkingUtils004_CheckPingDataUpToDate_t)(void *, float);
+static BDFlatFn_SteamNetworkingUtils004_CheckPingDataUpToDate_t g_bd_flat_SteamNetworkingUtils004_CheckPingDataUpToDate;
+#define BD_SLOT_SteamNetworkingUtils004_GetPingToDataCenter 8
+typedef int32_t (*BDFlatFn_SteamNetworkingUtils004_GetPingToDataCenter_t)(void *, uint32_t, uint32_t *);
+static BDFlatFn_SteamNetworkingUtils004_GetPingToDataCenter_t g_bd_flat_SteamNetworkingUtils004_GetPingToDataCenter;
+#define BD_SLOT_SteamNetworkingUtils004_GetDirectPingToPOP 9
+typedef int32_t (*BDFlatFn_SteamNetworkingUtils004_GetDirectPingToPOP_t)(void *, uint32_t);
+static BDFlatFn_SteamNetworkingUtils004_GetDirectPingToPOP_t g_bd_flat_SteamNetworkingUtils004_GetDirectPingToPOP;
+#define BD_SLOT_SteamNetworkingUtils004_GetPOPCount 10
+typedef int32_t (*BDFlatFn_SteamNetworkingUtils004_GetPOPCount_t)(void *);
+static BDFlatFn_SteamNetworkingUtils004_GetPOPCount_t g_bd_flat_SteamNetworkingUtils004_GetPOPCount;
+#define BD_SLOT_SteamNetworkingUtils004_GetPOPList 11
+typedef int32_t (*BDFlatFn_SteamNetworkingUtils004_GetPOPList_t)(void *, uint32_t *, int32_t);
+static BDFlatFn_SteamNetworkingUtils004_GetPOPList_t g_bd_flat_SteamNetworkingUtils004_GetPOPList;
+#define BD_SLOT_SteamNetworkingUtils004_GetLocalTimestamp 12
+typedef int64_t (*BDFlatFn_SteamNetworkingUtils004_GetLocalTimestamp_t)(void *);
+static BDFlatFn_SteamNetworkingUtils004_GetLocalTimestamp_t g_bd_flat_SteamNetworkingUtils004_GetLocalTimestamp;
+#define BD_SLOT_SteamNetworkingUtils004_GetIPv4FakeIPType 14
+typedef uint32_t (*BDFlatFn_SteamNetworkingUtils004_GetIPv4FakeIPType_t)(void *, uint32_t);
+static BDFlatFn_SteamNetworkingUtils004_GetIPv4FakeIPType_t g_bd_flat_SteamNetworkingUtils004_GetIPv4FakeIPType;
+#define BD_SLOT_SteamNetworkingUtils004_GetRealIdentityForFakeIP 15
+typedef uint32_t (*BDFlatFn_SteamNetworkingUtils004_GetRealIdentityForFakeIP_t)(void *, const void *, void *);
+static BDFlatFn_SteamNetworkingUtils004_GetRealIdentityForFakeIP_t g_bd_flat_SteamNetworkingUtils004_GetRealIdentityForFakeIP;
+#define BD_SLOT_SteamNetworkingUtils004_SetConfigValue 16
+typedef int (*BDFlatFn_SteamNetworkingUtils004_SetConfigValue_t)(void *, uint32_t, uint32_t, int32_t, uint32_t, void *);
+static BDFlatFn_SteamNetworkingUtils004_SetConfigValue_t g_bd_flat_SteamNetworkingUtils004_SetConfigValue;
+#define BD_SLOT_SteamNetworkingUtils004_GetConfigValue 17
+typedef uint32_t (*BDFlatFn_SteamNetworkingUtils004_GetConfigValue_t)(void *, uint32_t, uint32_t, int32_t, uint32_t *, void *, uint32_t *);
+static BDFlatFn_SteamNetworkingUtils004_GetConfigValue_t g_bd_flat_SteamNetworkingUtils004_GetConfigValue;
+#define BD_SLOT_SteamNetworkingUtils004_GetConfigValueInfo 18
+typedef const char * (*BDFlatFn_SteamNetworkingUtils004_GetConfigValueInfo_t)(void *, uint32_t, uint32_t *, uint32_t *);
+static BDFlatFn_SteamNetworkingUtils004_GetConfigValueInfo_t g_bd_flat_SteamNetworkingUtils004_GetConfigValueInfo;
+#define BD_SLOT_SteamNetworkingUtils004_IterateGenericEditableConfigValues 19
+typedef uint32_t (*BDFlatFn_SteamNetworkingUtils004_IterateGenericEditableConfigValues_t)(void *, uint32_t, int);
+static BDFlatFn_SteamNetworkingUtils004_IterateGenericEditableConfigValues_t g_bd_flat_SteamNetworkingUtils004_IterateGenericEditableConfigValues;
 
 // D-51-04: identity-only mode -- set once by bridge_helper.c's argv
 // parsing (--identity-only/--report-appid), read by every dispatch case
@@ -1782,12 +1860,32 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_BIsAppInstalled = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_BIsAppInstalled_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsAppInstalled");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetAppOwner");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetAppBuildId");
+  g_bd_accessor_steamnetworkingutils004 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamNetworkingUtils_SteamAPI_v004");
+  g_bd_self_steamnetworkingutils004 = g_bd_accessor_steamnetworkingutils004 ? g_bd_accessor_steamnetworkingutils004() : NULL;
+  g_bd_flat_SteamNetworkingUtils004_GetRelayNetworkStatus = (BDFlatFn_SteamNetworkingUtils004_GetRelayNetworkStatus_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetRelayNetworkStatus");
+  g_bd_flat_SteamNetworkingUtils004_GetLocalPingLocation = (BDFlatFn_SteamNetworkingUtils004_GetLocalPingLocation_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetLocalPingLocation");
+  g_bd_flat_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations = (BDFlatFn_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_EstimatePingTimeBetweenTwoLocations");
+  g_bd_flat_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost = (BDFlatFn_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_EstimatePingTimeFromLocalHost");
+  g_bd_flat_SteamNetworkingUtils004_ConvertPingLocationToString = (BDFlatFn_SteamNetworkingUtils004_ConvertPingLocationToString_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_ConvertPingLocationToString");
+  g_bd_flat_SteamNetworkingUtils004_ParsePingLocationString = (BDFlatFn_SteamNetworkingUtils004_ParsePingLocationString_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_ParsePingLocationString");
+  g_bd_flat_SteamNetworkingUtils004_CheckPingDataUpToDate = (BDFlatFn_SteamNetworkingUtils004_CheckPingDataUpToDate_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_CheckPingDataUpToDate");
+  g_bd_flat_SteamNetworkingUtils004_GetPingToDataCenter = (BDFlatFn_SteamNetworkingUtils004_GetPingToDataCenter_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetPingToDataCenter");
+  g_bd_flat_SteamNetworkingUtils004_GetDirectPingToPOP = (BDFlatFn_SteamNetworkingUtils004_GetDirectPingToPOP_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetDirectPingToPOP");
+  g_bd_flat_SteamNetworkingUtils004_GetPOPCount = (BDFlatFn_SteamNetworkingUtils004_GetPOPCount_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetPOPCount");
+  g_bd_flat_SteamNetworkingUtils004_GetPOPList = (BDFlatFn_SteamNetworkingUtils004_GetPOPList_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetPOPList");
+  g_bd_flat_SteamNetworkingUtils004_GetLocalTimestamp = (BDFlatFn_SteamNetworkingUtils004_GetLocalTimestamp_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetLocalTimestamp");
+  g_bd_flat_SteamNetworkingUtils004_GetIPv4FakeIPType = (BDFlatFn_SteamNetworkingUtils004_GetIPv4FakeIPType_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetIPv4FakeIPType");
+  g_bd_flat_SteamNetworkingUtils004_GetRealIdentityForFakeIP = (BDFlatFn_SteamNetworkingUtils004_GetRealIdentityForFakeIP_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetRealIdentityForFakeIP");
+  g_bd_flat_SteamNetworkingUtils004_SetConfigValue = (BDFlatFn_SteamNetworkingUtils004_SetConfigValue_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_SetConfigValue");
+  g_bd_flat_SteamNetworkingUtils004_GetConfigValue = (BDFlatFn_SteamNetworkingUtils004_GetConfigValue_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetConfigValue");
+  g_bd_flat_SteamNetworkingUtils004_GetConfigValueInfo = (BDFlatFn_SteamNetworkingUtils004_GetConfigValueInfo_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetConfigValueInfo");
+  g_bd_flat_SteamNetworkingUtils004_IterateGenericEditableConfigValues = (BDFlatFn_SteamNetworkingUtils004_IterateGenericEditableConfigValues_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_IterateGenericEditableConfigValues");
   return 1;
 }
 
 // 53-06 (D-53-13): game-originated call trace tables. Not a wire tuple,
 // so BRIDGE_DISPATCH_TABLE_HASH is unaffected.
-#define BD_CALL_COUNT 374
+#define BD_CALL_COUNT 392
 static int bd_call_index(uint16_t ordinal, uint16_t slot) {
   switch (((uint32_t)ordinal << 16) | (uint32_t)slot) {
     case (((uint32_t)BD_ORDINAL_SteamUser023 << 16) | (uint32_t)BD_SLOT_SteamUser023_GetHSteamUser): return 0;
@@ -2164,6 +2262,24 @@ static int bd_call_index(uint16_t ordinal, uint16_t slot) {
     case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsAppInstalled): return 371;
     case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner): return 372;
     case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId): return 373;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetRelayNetworkStatus): return 374;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetLocalPingLocation): return 375;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations): return 376;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost): return 377;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_ConvertPingLocationToString): return 378;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_ParsePingLocationString): return 379;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_CheckPingDataUpToDate): return 380;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetPingToDataCenter): return 381;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetDirectPingToPOP): return 382;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetPOPCount): return 383;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetPOPList): return 384;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetLocalTimestamp): return 385;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetIPv4FakeIPType): return 386;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetRealIdentityForFakeIP): return 387;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_SetConfigValue): return 388;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetConfigValue): return 389;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetConfigValueInfo): return 390;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_IterateGenericEditableConfigValues): return 391;
     default: return -1;
   }
 }
@@ -2543,6 +2659,24 @@ static const char *bd_call_name(int idx) {
     case 371: return "STEAMAPPS_INTERFACE_VERSION007.BIsAppInstalled";
     case 372: return "STEAMAPPS_INTERFACE_VERSION007.GetAppOwner";
     case 373: return "STEAMAPPS_INTERFACE_VERSION007.GetAppBuildId";
+    case 374: return "SteamNetworkingUtils004.GetRelayNetworkStatus";
+    case 375: return "SteamNetworkingUtils004.GetLocalPingLocation";
+    case 376: return "SteamNetworkingUtils004.EstimatePingTimeBetweenTwoLocations";
+    case 377: return "SteamNetworkingUtils004.EstimatePingTimeFromLocalHost";
+    case 378: return "SteamNetworkingUtils004.ConvertPingLocationToString";
+    case 379: return "SteamNetworkingUtils004.ParsePingLocationString";
+    case 380: return "SteamNetworkingUtils004.CheckPingDataUpToDate";
+    case 381: return "SteamNetworkingUtils004.GetPingToDataCenter";
+    case 382: return "SteamNetworkingUtils004.GetDirectPingToPOP";
+    case 383: return "SteamNetworkingUtils004.GetPOPCount";
+    case 384: return "SteamNetworkingUtils004.GetPOPList";
+    case 385: return "SteamNetworkingUtils004.GetLocalTimestamp";
+    case 386: return "SteamNetworkingUtils004.GetIPv4FakeIPType";
+    case 387: return "SteamNetworkingUtils004.GetRealIdentityForFakeIP";
+    case 388: return "SteamNetworkingUtils004.SetConfigValue";
+    case 389: return "SteamNetworkingUtils004.GetConfigValue";
+    case 390: return "SteamNetworkingUtils004.GetConfigValueInfo";
+    case 391: return "SteamNetworkingUtils004.IterateGenericEditableConfigValues";
     default: return "";
   }
 }
@@ -8860,6 +8994,217 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
     case (((uint32_t)61) << 16 | 23u): { // STEAMAPPS_INTERFACE_VERSION007.GetAppBuildId
       if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId == NULL || g_bd_self_steamapps_interface_version007 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
       int32_t __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId(g_bd_self_steamapps_interface_version007);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)71) << 16 | 1u): { // SteamNetworkingUtils004.GetRelayNetworkStatus
+      if (g_bd_flat_SteamNetworkingUtils004_GetRelayNetworkStatus == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint8_t arg_pDetails_buf[272];
+      memset(arg_pDetails_buf, 0, 272);
+      uint32_t __ret = g_bd_flat_SteamNetworkingUtils004_GetRelayNetworkStatus(g_bd_self_steamnetworkingutils004, arg_pDetails_buf);
+      if (respCap < 277) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      uint32_t respEnd = 4;
+      resp[respEnd] = 1; memcpy(resp + respEnd + 1, arg_pDetails_buf, 272); respEnd += 1 + 272;
+      *respLen = respEnd;
+      return 0;
+    }
+    case (((uint32_t)71) << 16 | 2u): { // SteamNetworkingUtils004.GetLocalPingLocation
+      if (g_bd_flat_SteamNetworkingUtils004_GetLocalPingLocation == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_net_get_local_ping_location
+        if (gl_net_get_local_ping_location(g_bd_self_steamnetworkingutils004, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)71) << 16 | 3u): { // SteamNetworkingUtils004.EstimatePingTimeBetweenTwoLocations
+      if (g_bd_flat_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint8_t arg_location1_buf[512];
+      const void *arg_location1 = NULL;
+      uint32_t arg_location1_present = 0;
+      if (argLen < 0u + 1) { *respLen = 0; return 1; }
+      arg_location1_present = arg[0u];
+      if (arg_location1_present > 1) { *respLen = 0; return 1; }
+      if (arg_location1_present == 1) {
+        if ((uint64_t)argLen < (uint64_t)(0u) + 1u + 512u) { *respLen = 0; return 1; }
+        memcpy(arg_location1_buf, arg + 0u + 1, 512);
+        arg_location1 = arg_location1_buf;
+      }
+      uint8_t arg_location2_buf[512];
+      const void *arg_location2 = NULL;
+      uint32_t arg_location2_present = 0;
+      if (argLen < (0u + 1 + arg_location1_present * 512u) + 1) { *respLen = 0; return 1; }
+      arg_location2_present = arg[(0u + 1 + arg_location1_present * 512u)];
+      if (arg_location2_present > 1) { *respLen = 0; return 1; }
+      if (arg_location2_present == 1) {
+        if ((uint64_t)argLen < (uint64_t)((0u + 1 + arg_location1_present * 512u)) + 1u + 512u) { *respLen = 0; return 1; }
+        memcpy(arg_location2_buf, arg + (0u + 1 + arg_location1_present * 512u) + 1, 512);
+        arg_location2 = arg_location2_buf;
+      }
+      int32_t __ret = g_bd_flat_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations(g_bd_self_steamnetworkingutils004, arg_location1, arg_location2);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)71) << 16 | 4u): { // SteamNetworkingUtils004.EstimatePingTimeFromLocalHost
+      if (g_bd_flat_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint8_t arg_remoteLocation_buf[512];
+      const void *arg_remoteLocation = NULL;
+      uint32_t arg_remoteLocation_present = 0;
+      if (argLen < 0u + 1) { *respLen = 0; return 1; }
+      arg_remoteLocation_present = arg[0u];
+      if (arg_remoteLocation_present > 1) { *respLen = 0; return 1; }
+      if (arg_remoteLocation_present == 1) {
+        if ((uint64_t)argLen < (uint64_t)(0u) + 1u + 512u) { *respLen = 0; return 1; }
+        memcpy(arg_remoteLocation_buf, arg + 0u + 1, 512);
+        arg_remoteLocation = arg_remoteLocation_buf;
+      }
+      int32_t __ret = g_bd_flat_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost(g_bd_self_steamnetworkingutils004, arg_remoteLocation);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)71) << 16 | 5u): { // SteamNetworkingUtils004.ConvertPingLocationToString
+      if (g_bd_flat_SteamNetworkingUtils004_ConvertPingLocationToString == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_net_convert_ping_location
+        if (gl_net_convert_ping_location(g_bd_self_steamnetworkingutils004, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)71) << 16 | 6u): { // SteamNetworkingUtils004.ParsePingLocationString
+      if (g_bd_flat_SteamNetworkingUtils004_ParsePingLocationString == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_SteamNetworkingUtils004_ParsePingLocationString_pszString_buf[4096 + 1];
+      const char *arg_pszString = NULL;
+      uint32_t arg_pszString_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pszString_len, arg + 0u, 4);
+      if (arg_pszString_len != 0xFFFFFFFFu) {
+        if (arg_pszString_len > 4096 || argLen < 0u + 4 + arg_pszString_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamNetworkingUtils004_ParsePingLocationString_pszString_buf, arg + 0u + 4, arg_pszString_len);
+        g_bd_flat_SteamNetworkingUtils004_ParsePingLocationString_pszString_buf[arg_pszString_len] = '\0';
+        arg_pszString = g_bd_flat_SteamNetworkingUtils004_ParsePingLocationString_pszString_buf;
+      } else {
+        arg_pszString_len = 0;
+      }
+      uint8_t arg_pLocation_buf[512];
+      memset(arg_pLocation_buf, 0, 512);
+      int __ret = g_bd_flat_SteamNetworkingUtils004_ParsePingLocationString(g_bd_self_steamnetworkingutils004, arg_pszString, arg_pLocation_buf);
+      if (respCap < 517) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      uint32_t respEnd = 4;
+      resp[respEnd] = 1; memcpy(resp + respEnd + 1, arg_pLocation_buf, 512); respEnd += 1 + 512;
+      *respLen = respEnd;
+      return 0;
+    }
+    case (((uint32_t)71) << 16 | 7u): { // SteamNetworkingUtils004.CheckPingDataUpToDate
+      if (g_bd_flat_SteamNetworkingUtils004_CheckPingDataUpToDate == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_net_check_ping_data
+        if (gl_net_check_ping_data(g_bd_self_steamnetworkingutils004, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)71) << 16 | 8u): { // SteamNetworkingUtils004.GetPingToDataCenter
+      if (g_bd_flat_SteamNetworkingUtils004_GetPingToDataCenter == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_popID; memcpy(&arg_popID, arg + 0u, 4);
+      uint32_t arg_pViaRelayPoP = 0;
+      int32_t __ret = g_bd_flat_SteamNetworkingUtils004_GetPingToDataCenter(g_bd_self_steamnetworkingutils004, arg_popID, &arg_pViaRelayPoP);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pViaRelayPoP, 4);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)71) << 16 | 9u): { // SteamNetworkingUtils004.GetDirectPingToPOP
+      if (g_bd_flat_SteamNetworkingUtils004_GetDirectPingToPOP == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_popID; memcpy(&arg_popID, arg + 0u, 4);
+      int32_t __ret = g_bd_flat_SteamNetworkingUtils004_GetDirectPingToPOP(g_bd_self_steamnetworkingutils004, arg_popID);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)71) << 16 | 10u): { // SteamNetworkingUtils004.GetPOPCount
+      if (g_bd_flat_SteamNetworkingUtils004_GetPOPCount == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int32_t __ret = g_bd_flat_SteamNetworkingUtils004_GetPOPCount(g_bd_self_steamnetworkingutils004);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)71) << 16 | 11u): { // SteamNetworkingUtils004.GetPOPList
+      if (g_bd_flat_SteamNetworkingUtils004_GetPOPList == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_net_get_pop_list
+        if (gl_net_get_pop_list(g_bd_self_steamnetworkingutils004, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)71) << 16 | 12u): { // SteamNetworkingUtils004.GetLocalTimestamp
+      if (g_bd_flat_SteamNetworkingUtils004_GetLocalTimestamp == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int64_t __ret = g_bd_flat_SteamNetworkingUtils004_GetLocalTimestamp(g_bd_self_steamnetworkingutils004);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 8);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)71) << 16 | 14u): { // SteamNetworkingUtils004.GetIPv4FakeIPType
+      if (g_bd_flat_SteamNetworkingUtils004_GetIPv4FakeIPType == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_nIPv4; memcpy(&arg_nIPv4, arg + 0u, 4);
+      uint32_t __ret = g_bd_flat_SteamNetworkingUtils004_GetIPv4FakeIPType(g_bd_self_steamnetworkingutils004, arg_nIPv4);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)71) << 16 | 15u): { // SteamNetworkingUtils004.GetRealIdentityForFakeIP
+      if (g_bd_flat_SteamNetworkingUtils004_GetRealIdentityForFakeIP == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint8_t arg_fakeIP_buf[18];
+      const void *arg_fakeIP = NULL;
+      uint32_t arg_fakeIP_present = 0;
+      if (argLen < 0u + 1) { *respLen = 0; return 1; }
+      arg_fakeIP_present = arg[0u];
+      if (arg_fakeIP_present > 1) { *respLen = 0; return 1; }
+      if (arg_fakeIP_present == 1) {
+        if ((uint64_t)argLen < (uint64_t)(0u) + 1u + 18u) { *respLen = 0; return 1; }
+        memcpy(arg_fakeIP_buf, arg + 0u + 1, 18);
+        arg_fakeIP = arg_fakeIP_buf;
+      }
+      uint8_t arg_pOutRealIdentity_buf[136];
+      memset(arg_pOutRealIdentity_buf, 0, 136);
+      uint32_t __ret = g_bd_flat_SteamNetworkingUtils004_GetRealIdentityForFakeIP(g_bd_self_steamnetworkingutils004, arg_fakeIP, arg_pOutRealIdentity_buf);
+      if (respCap < 141) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      uint32_t respEnd = 4;
+      resp[respEnd] = 1; memcpy(resp + respEnd + 1, arg_pOutRealIdentity_buf, 136); respEnd += 1 + 136;
+      *respLen = respEnd;
+      return 0;
+    }
+    case (((uint32_t)71) << 16 | 16u): { // SteamNetworkingUtils004.SetConfigValue
+      if (g_bd_flat_SteamNetworkingUtils004_SetConfigValue == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_net_set_config_value
+        if (gl_net_set_config_value(g_bd_self_steamnetworkingutils004, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)71) << 16 | 17u): { // SteamNetworkingUtils004.GetConfigValue
+      if (g_bd_flat_SteamNetworkingUtils004_GetConfigValue == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_net_get_config_value
+        if (gl_net_get_config_value(g_bd_self_steamnetworkingutils004, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)71) << 16 | 18u): { // SteamNetworkingUtils004.GetConfigValueInfo
+      if (g_bd_flat_SteamNetworkingUtils004_GetConfigValueInfo == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_net_get_config_value_info
+        if (gl_net_get_config_value_info(g_bd_self_steamnetworkingutils004, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)71) << 16 | 19u): { // SteamNetworkingUtils004.IterateGenericEditableConfigValues
+      if (g_bd_flat_SteamNetworkingUtils004_IterateGenericEditableConfigValues == NULL || g_bd_self_steamnetworkingutils004 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_eCurrent; memcpy(&arg_eCurrent, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int arg_bEnumerateDevVars; memcpy(&arg_bEnumerateDevVars, arg + (0u + 4), 4);
+      uint32_t __ret = g_bd_flat_SteamNetworkingUtils004_IterateGenericEditableConfigValues(g_bd_self_steamnetworkingutils004, arg_eCurrent, arg_bEnumerateDevVars);
       if (respCap < 4) { *respLen = 0; return 1; }
       memcpy(resp, &__ret, 4);
       *respLen = 4;

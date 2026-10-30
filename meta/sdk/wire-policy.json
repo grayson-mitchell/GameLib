@@ -875,5 +875,155 @@
         }
       }
     }
+  },
+  "SteamNetworkingUtils": {
+    "AllocateMessage": {
+      "shimLocal": true,
+      "returns": {
+        "type": "void*",
+        "kind": "pointer"
+      },
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "int32",
+          "name": "cbAllocateBuffer"
+        }
+      }
+    },
+    "GetRelayNetworkStatus": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetRelayNetworkStatus",
+      "params": {
+        "pDetails": {
+          "kind": "out-struct",
+          "structSize": 272
+        }
+      }
+    },
+    "GetLocalPingLocation": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetLocalPingLocation",
+      "shimLocal": true,
+      "helperCustom": "gl_net_get_local_ping_location"
+    },
+    "EstimatePingTimeBetweenTwoLocations": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_EstimatePingTimeBetweenTwoLocations",
+      "params": {
+        "location1": {
+          "kind": "in-struct",
+          "structSize": 512
+        },
+        "location2": {
+          "kind": "in-struct",
+          "structSize": 512
+        }
+      }
+    },
+    "EstimatePingTimeFromLocalHost": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_EstimatePingTimeFromLocalHost",
+      "params": {
+        "remoteLocation": {
+          "kind": "in-struct",
+          "structSize": 512
+        }
+      }
+    },
+    "ConvertPingLocationToString": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_ConvertPingLocationToString",
+      "shimLocal": true,
+      "helperCustom": "gl_net_convert_ping_location"
+    },
+    "ParsePingLocationString": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_ParsePingLocationString",
+      "params": {
+        "pszString": {
+          "kind": "in-string"
+        },
+        "result": {
+          "kind": "out-struct",
+          "structSize": 512,
+          "name": "pLocation"
+        }
+      }
+    },
+    "CheckPingDataUpToDate": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_CheckPingDataUpToDate",
+      "shimLocal": true,
+      "helperCustom": "gl_net_check_ping_data"
+    },
+    "GetPingToDataCenter": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetPingToDataCenter",
+      "params": {
+        "pViaRelayPoP": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        }
+      }
+    },
+    "GetDirectPingToPOP": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetDirectPingToPOP"
+    },
+    "GetPOPCount": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetPOPCount"
+    },
+    "GetPOPList": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetPOPList",
+      "shimLocal": true,
+      "helperCustom": "gl_net_get_pop_list"
+    },
+    "GetLocalTimestamp": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetLocalTimestamp"
+    },
+    "SetDebugOutputFunction": {
+      "shimLocal": true
+    },
+    "GetIPv4FakeIPType": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetIPv4FakeIPType"
+    },
+    "GetRealIdentityForFakeIP": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetRealIdentityForFakeIP",
+      "params": {
+        "fakeIP": {
+          "kind": "in-struct",
+          "structSize": 18
+        },
+        "pOutRealIdentity": {
+          "kind": "out-struct",
+          "structSize": 136
+        }
+      }
+    },
+    "SetConfigValue": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_SetConfigValue",
+      "shimLocal": true,
+      "helperCustom": "gl_net_set_config_value"
+    },
+    "GetConfigValue": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetConfigValue",
+      "shimLocal": true,
+      "helperCustom": "gl_net_get_config_value"
+    },
+    "GetConfigValueInfo": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_GetConfigValueInfo",
+      "shimLocal": true,
+      "helperCustom": "gl_net_get_config_value_info"
+    },
+    "IterateGenericEditableConfigValues": {
+      "helperFlat": "SteamAPI_ISteamNetworkingUtils_IterateGenericEditableConfigValues"
+    },
+    "SteamNetworkingIPAddr_ToString": {
+      "shimLocal": true
+    },
+    "SteamNetworkingIPAddr_ParseString": {
+      "shimLocal": true
+    },
+    "SteamNetworkingIPAddr_GetFakeIPType": {
+      "shimLocal": true
+    },
+    "SteamNetworkingIdentity_ToString": {
+      "shimLocal": true
+    },
+    "SteamNetworkingIdentity_ParseString": {
+      "shimLocal": true
+    }
   }
 }

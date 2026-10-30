@@ -663,6 +663,13 @@ export function validateManifest(
       for (const p of method.shimLocal ? [] : method.params) {
         const kind = p.kind ?? 'value'
         const isPointerType = p.type.endsWith('*')
+        // 58-14: a param named like a stub local would shadow it and emit C
+        // that does not compile (or silently reads the wrong variable).
+        if (STUB_RESERVED_LOCALS.has(p.name)) {
+          errors.push(
+            `${methodCtx}: wire param name "${p.name}" collides with a generated stub local; rename it in wire-policy.json`
+          )
+        }
         if (kind === 'value') {
           if (isPointerType) {
             errors.push(
@@ -874,6 +881,21 @@ export const SHIM_LOCAL_BODIES: Readonly<Record<string, string>> = {
   'SteamNetworkingUtils.SteamNetworkingIdentity_ParseString':
     '  return pIdentity != NULL && gl_id_parse((gl_net_ident *)pIdentity, pszStr);'
 }
+
+/** Local variable names the generated wire stubs declare (58-14). */
+const STUB_RESERVED_LOCALS: ReadonlySet<string> = new Set([
+  'self',
+  'ret',
+  'result',
+  'ok',
+  'retbuf',
+  'retlen',
+  'argbuf',
+  'argOff',
+  'respOff',
+  'rawLen',
+  'strLen'
+])
 
 const HELPER_CUSTOM_NAME = /^gl_[a-z0-9_]{1,48}$/
 
