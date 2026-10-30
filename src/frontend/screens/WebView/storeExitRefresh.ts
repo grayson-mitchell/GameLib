@@ -9,14 +9,12 @@ import type { Runner } from 'common/types'
 
 export type StoreExitStoreKey = 'steam' | 'epic' | 'gog' | 'amazon'
 
-export type StoreExitRefreshOutcome =
+type StoreExitRefreshOutcome =
   | 'refreshed'
   | 'skipped-signed-out'
   | 'skipped-in-flight'
 
-export type SteamStoreExitRefreshOutcome = StoreExitRefreshOutcome
-
-export const STEAM_STORE_EXIT_REFRESH_ORIGIN = 'steam-store-exit'
+const STEAM_STORE_EXIT_REFRESH_ORIGIN = 'steam-store-exit'
 
 const STEAM_STORE_HOSTS = new Set([
   'store.steampowered.com',
@@ -124,7 +122,7 @@ function isAmazonPurchaseIntentUrl(url: string): boolean {
   return httpsSegments(url, AMAZON_HOSTS) !== null
 }
 
-export interface StoreExitRow {
+interface StoreExitRow {
   runner: Runner
   /** Key of `collectSignInInputs`. */
   signInKey: 'steam' | 'legendary' | 'gog' | 'nile'
@@ -178,14 +176,12 @@ export function resetStoreExitRefreshState(): void {
 
 export const resetSteamStoreExitRefreshState = resetStoreExitRefreshState
 
-export interface StoreExitRefreshDeps {
+interface StoreExitRefreshDeps {
   signInState: string
   refreshInFlight: boolean
   refreshLibrary: () => Promise<void>
   log: (line: string) => void
 }
-
-export type SteamStoreExitRefreshDeps = StoreExitRefreshDeps
 
 export function runStoreExitRefresh(
   store: StoreExitStoreKey,
