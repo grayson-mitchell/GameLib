@@ -171,7 +171,9 @@
           "name": "pbFailed",
           "type": "bool*"
         }
-      ]
+      ],
+      "mode": "wire",
+      "shimLocal": true
     },
     {
       "slot": 12,
@@ -213,7 +215,9 @@
           "name": "pbFailed",
           "type": "bool*"
         }
-      ]
+      ],
+      "mode": "wire",
+      "shimLocal": true
     },
     {
       "slot": 14,

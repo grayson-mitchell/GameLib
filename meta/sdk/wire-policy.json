@@ -48,6 +48,12 @@
     }
   },
   "SteamUtils": {
+    "IsAPICallCompleted": {
+      "shimLocal": true
+    },
+    "GetAPICallResult": {
+      "shimLocal": true
+    },
     "GetSecondsSinceAppActive": {
       "helperFlat": "SteamAPI_ISteamUtils_GetSecondsSinceAppActive"
     },

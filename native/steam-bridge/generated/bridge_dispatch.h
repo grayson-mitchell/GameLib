@@ -64,6 +64,40 @@ Response blob (per method):
     lenParam, min(that out-value, capacity)); the shim copies
     min(len, capacity) and NUL-terminates only when the param's own type
     is a NUL-terminated string type (e.g. 'char*').
+
+Extended kinds and modes (58-06):
+
+Request blob:
+  - kind 'in-buffer': [u32 len][len bytes]. len is the sibling lenParam's
+    value. A buffer longer than WIRE_IN_BUFFER_MAX_BYTES (= WIRE_LARGE_MAX_BYTES,
+    61440) is never truncated: it packs [u32 WIRE_IN_BUFFER_MAX_BYTES + 1] and
+    no bytes, which the helper refuses with STATUS_ERR before touching any
+    byte, so the game call returns its failure value. The helper also checks
+    len <= remaining request bytes before copying, and that len equals the
+    lenParam value.
+  - kind 'in-struct': [u8 present][structSize bytes if present]. present 0
+    means the game passed NULL and the helper passes NULL. Allowed only for a
+    struct whose x64 and mac layouts are byte-identical; any other struct fails
+    generation with 'needs repack'.
+  - kind 'out-struct': nothing is sent.
+  - kind 'out-buffer' with capBytes: the same [u32 capacity], capped at the
+    param's capBytes (up to WIRE_LARGE_MAX_BYTES) instead of
+    WIRE_OUT_BUFFER_MAX_BYTES.
+
+Response blob:
+  - then, for every 'out-struct' param in declaration order, after the
+    out-buffers: [u8 present][structSize bytes]. The shim copies the bytes into
+    the game pointer only when that pointer is non-NULL and present is 1.
+
+Method modes:
+  - shimLocal: the shim answers the method from its own SHIM_LOCAL_BODIES
+    entry. It never produces a frame, so no Windows function pointer can reach
+    the helper, and it has no helper dispatch case.
+  - helperCustom: the request uses the generic encoding above, but the
+    helper's named function (int fn(void *self, const uint8_t *args,
+    uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+    returns 0 for ok) produces the whole response blob, which must follow the
+    method's declared response layout.
 */
 #define BD_WIRE_IN_STRING_MAX_BYTES 4096
 #define BD_WIRE_OUT_BUFFER_MAX_BYTES 4096
