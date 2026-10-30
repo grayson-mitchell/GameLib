@@ -507,10 +507,10 @@ describeDarwinOnly(
           )
           expect(retired.status).toBe(STATUS_ERR)
 
-          // Unknown CONTROL slot (9 and 10 became real slots in quick k51).
+          // Unknown CONTROL slot (9 and 10 became real in quick k51, 11 in 58-07).
           const unknownSlot = await sendFrameOnSocket(
             socket,
-            encodeRequest(2, CONTROL_ORDINAL, 11)
+            encodeRequest(2, CONTROL_ORDINAL, 12)
           )
           expect(unknownSlot.status).toBe(STATUS_ERR)
         } finally {
@@ -1303,7 +1303,8 @@ describeDarwinOnly(
             [9, CONTROL_SLOT.reportNullSret, nullSretBlob],
             [10, CONTROL_SLOT.reportStubCall, stubCallBlob(0, 4, 'abcd', 'M')],
             [11, CONTROL_SLOT.requestCurrentStats, Buffer.alloc(0)],
-            [12, CONTROL_SLOT.reportCbDispatch, cbDispatchBlob(1101, 1, 0)]
+            [12, CONTROL_SLOT.reportCbDispatch, cbDispatchBlob(1101, 1, 0)],
+            [13, CONTROL_SLOT.drainCallResults, Buffer.alloc(0)]
           ] as const) {
             expect(
               (
@@ -1480,6 +1481,69 @@ describeDarwinOnly(
       }
     }, 30000)
 
+    test('58-07 DRAIN_CALL_RESULTS (slot 11): refused unauthenticated, argLen 0 only, empty reply when idle, slot 10 takes call-result ids, NET/CBQ formats carry no %s', async () => {
+      const h = await startAuthHelper('p58-cr-', authedEnv())
+      try {
+        const socket = await h.connect()
+        const slot11 = (id: number, blob = Buffer.alloc(0)) =>
+          encodeRequest(
+            id,
+            CONTROL_ORDINAL,
+            CONTROL_SLOT.drainCallResults,
+            blob
+          )
+        const slot10 = (id: number, cb: number) =>
+          encodeRequest(
+            id,
+            CONTROL_ORDINAL,
+            CONTROL_SLOT.reportCbDispatch,
+            cbDispatchBlob(cb, 1, 0)
+          )
+        try {
+          expect((await sendFrameOnSocket(socket, slot11(1))).status).toBe(
+            STATUS_ERR
+          )
+          await authenticate(socket)
+          const idle = await sendFrameOnSocket(socket, slot11(2))
+          expect(idle.status).toBe(STATUS_OK)
+          expect(Buffer.from(idle.retBlob).equals(Buffer.alloc(4))).toBe(true)
+          expect(
+            (await sendFrameOnSocket(socket, slot11(3, Buffer.alloc(4)))).status
+          ).toBe(STATUS_ERR)
+          expect((await sendFrameOnSocket(socket, slot10(4, 513))).status).toBe(
+            STATUS_OK
+          )
+          expect((await sendFrameOnSocket(socket, slot10(5, 504))).status).toBe(
+            STATUS_OK
+          )
+          expect(
+            (await sendFrameOnSocket(socket, slot10(6, 9999))).status
+          ).toBe(STATUS_ERR)
+        } finally {
+          socket.destroy()
+        }
+      } finally {
+        h.child.kill()
+      }
+    }, 30000)
+
+    test('58-07 source pins: NET and CBQ log formats are literal with no %s, slot 11 is defined, the unlisted observation is wired', () => {
+      const raw = readFileSync(HELPER_SOURCE_PATH, 'utf8')
+      const src = raw
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      expect(raw).toContain('#define CONTROL_SLOT_DRAIN_CALL_RESULTS 11')
+      const calls = [...src.matchAll(/logts(?:_f)?\("(?:NET|CBQ)",[^;]*;/g)]
+      expect(calls.length).toBeGreaterThan(0)
+      for (const call of calls) {
+        expect(call[0]).not.toMatch(/%s|%p|%llu|%lx/)
+        // The NET emitter assembles `msg` from closed literal word tables.
+        expect(call[0]).toMatch(/^logts(?:_f)?\("(?:NET|CBQ)", (?:"|msg\);$)/)
+      }
+      expect(src).toContain('CBQ", "unlisted iCallback=%d action=drop"')
+      expect(src).toContain('gl_cr_allowed_size(did)')
+    })
+
     test('k51 source pins: 1101 routed to gl_stats_on_observed before the generic offer, GetAPICallResult only under the pending-handle check and before FreeLastCallback, no SteamID/gameID in log formats', () => {
       const raw = readFileSync(HELPER_SOURCE_PATH, 'utf8')
       const src = raw
@@ -1498,7 +1562,12 @@ describeDarwinOnly(
       )
       const getResAt = pump.indexOf('g_md_get_api_call_result(')
       expect(getResAt).toBeGreaterThan(-1)
-      expect(pump.indexOf('g_md_get_api_call_result(', getResAt + 1)).toBe(-1)
+      // 58-07: a second fetch exists, only for a handle gl_cr_track recorded.
+      const crGetAt = pump.indexOf('g_md_get_api_call_result(', getResAt + 1)
+      expect(crGetAt).toBeGreaterThan(getResAt)
+      expect(pump.indexOf('g_md_get_api_call_result(', crGetAt + 1)).toBe(-1)
+      expect(pump.slice(getResAt, crGetAt)).toMatch(/gl_cr_lookup|crId/)
+      expect(crGetAt).toBeLessThan(pump.indexOf('g_md_free_last('))
       expect(pump.slice(0, getResAt)).toMatch(/g_stats\.pending_call/)
       expect(pump.slice(0, getResAt)).toMatch(/m_hAsyncCall/)
       expect(getResAt).toBeLessThan(pump.indexOf('g_md_free_last('))

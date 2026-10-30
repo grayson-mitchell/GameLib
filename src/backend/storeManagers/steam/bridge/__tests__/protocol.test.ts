@@ -457,3 +457,19 @@ describe('encodeHello (WR-03)', () => {
     expect(BRIDGE_SECRET_HEX_LEN).toBe(64)
   })
 })
+
+describe('protocol -- CONTROL_SLOT.drainCallResults (58-07)', () => {
+  it('is 11, equals the helper #define, and no slot is 3', () => {
+    expect(CONTROL_SLOT.drainCallResults).toBe(11)
+    expect(Object.values(CONTROL_SLOT)).not.toContain(3)
+    const root = join(__dirname, '..', '..', '..', '..', '..', '..')
+    const helper = readFileSync(
+      join(root, 'native/steam-bridge/helper/bridge_helper.c'),
+      'utf-8'
+    )
+    const helperValue = /#define CONTROL_SLOT_DRAIN_CALL_RESULTS (\d+)/.exec(
+      helper
+    )
+    expect(Number(helperValue![1])).toBe(CONTROL_SLOT.drainCallResults)
+  })
+})

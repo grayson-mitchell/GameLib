@@ -180,6 +180,7 @@
 // Phase 55: bounded allowlisted callback ring. A quoted include resolves
 // beside this file, so no extra -I flag is needed.
 #include "gamelib_cbqueue.h"
+#include "gamelib_callresult.h"
 
 // === Frame constants (MUST match src/backend/storeManagers/steam/bridge/protocol.ts) ===
 
@@ -221,6 +222,8 @@
 #define CONTROL_SLOT_REQUEST_CURRENT_STATS 9
 // quick 261027-k51: the shim reports each relayed callback it dispatched or held, logged as CBDISP.
 #define CONTROL_SLOT_REPORT_CB_DISPATCH 10
+// Phase 58 (58-07): the shim drains one completed call result (CreateLobby, JoinLobby, RequestLobbyList) per round trip.
+#define CONTROL_SLOT_DRAIN_CALL_RESULTS 11
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
@@ -273,6 +276,11 @@ static GetHSteamPipe_t g_get_hsteampipe;
 static int             g_manual_dispatch = 0;
 static int32_t         g_hpipe = 0;
 static gl_cbq_ring     g_cbq;
+static gl_cr_state     g_cr;
+// 58-07: latest join observed by the pump, awaiting the shim's slot-10 report.
+static struct { int valid; int32_t id; int path; } g_join_note;
+static unsigned g_net_logged = 0;
+static int g_net_cap_noted = 0;
 static unsigned        g_cbq_logged = 0;
 
 // quick 261027-k51: UserStatsReceived_t (1101) forwarding. Both exports are
@@ -534,6 +542,78 @@ static void gl_log_stats_obs(int from_callresult, int rc, int32_t result) {
   }
 }
 
+// Phase 58 (58-07, D-08 / M-05): NET evidence lines in the 58-05 grammar. Words
+// come from closed literal tables; the only runtime values are integers
+// (callback id, count). Never a SteamID, address, handle or payload (V7).
+#define NET_LOG_MAX 32
+static void gl_net_append(char *dst, size_t cap, const char *lit) {
+  size_t n = strlen(dst);
+  size_t l = strlen(lit);
+  if (n + l + 1 > cap) return;
+  memcpy(dst + n, lit, l + 1);
+}
+
+void gl_net_evidence(int game, int kind, int iface, int32_t cb, uint32_t n, int path) {
+  static const char *const k_kind[] = {"join", "send", "recv", "path", "oversize"};
+  static const char *const k_iface[] = {"Matchmaking", "Networking", "Sockets", "Messages"};
+  static const char *const k_path[] = {"unknown", "direct", "relayed"};
+  if (kind < 0 || kind > GL_NET_KIND_OVERSIZE || iface < 0 || iface > GL_NET_IFACE_MESSAGES ||
+      path < 0 || path > GL_NET_PATH_RELAYED || cb < 0 || cb > 99999)
+    return;
+  if (g_net_logged >= NET_LOG_MAX) {
+    if (!g_net_cap_noted) {
+      g_net_cap_noted = 1;
+      logts("NET", "cap of 32 reached; later lines are not logged");
+    }
+    return;
+  }
+  g_net_logged++;
+  char msg[160];
+  char num[16];
+  msg[0] = '\0';
+  gl_net_append(msg, sizeof msg, game ? "role=game kind=" : "role=helper kind=");
+  gl_net_append(msg, sizeof msg, k_kind[kind]);
+  gl_net_append(msg, sizeof msg, " iface=");
+  gl_net_append(msg, sizeof msg, k_iface[iface]);
+  gl_net_append(msg, sizeof msg, " cb=");
+  snprintf(num, sizeof num, "%d", (int)cb);
+  gl_net_append(msg, sizeof msg, num);
+  gl_net_append(msg, sizeof msg, " n=");
+  snprintf(num, sizeof num, "%u", (unsigned)n);
+  gl_net_append(msg, sizeof msg, num);
+  gl_net_append(msg, sizeof msg, " path=");
+  gl_net_append(msg, sizeof msg, k_path[path]);
+  logts("NET", msg);
+}
+
+int gl_helper_cr_track(uint64_t hCall, int32_t iCallback) {
+  return gl_cr_track(&g_cr, hCall, iCallback);
+}
+
+/* Records a join seen by the pump (latest wins); resolved by the shim's slot-10
+ * report for the same id. `mac` is the raw Mac buffer, size already checked. */
+static void gl_note_join_from_mac(int32_t id, const uint8_t *mac) {
+  if (id == GL_CBQ_ID_LOBBY_ENTER) {
+    int32_t resp;
+    memcpy(&resp, mac + GL_CBQ_LOBBYENTER_MAC_OFF_RESPONSE, 4);
+    if (resp == 1) {
+      g_join_note.valid = 1;
+      g_join_note.id = id;
+      g_join_note.path = GL_NET_PATH_UNKNOWN;
+    }
+  } else if (id == GL_CBQ_ID_NET_CONN_STATUS_CHANGED) {
+    int32_t state, old, flags;
+    memcpy(&state, mac + GL_CBQ_NETCONNSTATUS_MAC_OFF_ESTATE, 4);
+    memcpy(&old, mac + GL_CBQ_NETCONNSTATUS_MAC_OFF_OLDSTATE, 4);
+    memcpy(&flags, mac + GL_CBQ_NETCONNSTATUS_MAC_OFF_NFLAGS, 4);
+    if (state == 3 && old != 3) {
+      g_join_note.valid = 1;
+      g_join_note.id = id;
+      g_join_note.path = (flags & 16) ? GL_NET_PATH_RELAYED : GL_NET_PATH_UNKNOWN;
+    }
+  }
+}
+
 /* Runs one manual-dispatch frame and moves allowlisted callbacks into the
  * ring. Bounded to GL_CBQ_PUMP_MAX_MSGS messages. FreeLastCallback is ALWAYS
  * called after a true GetNextCallback (SDK contract). Never logs or copies
@@ -557,50 +637,82 @@ static void gl_manual_pump_into_ring(void) {
         memcpy(&result, msg.m_pubParam + 8, 4);
       int rc = gl_stats_on_observed(&g_stats, &g_cbq, msg.m_pubParam, msg.m_cubParam, g_appid_u64);
       gl_log_stats_obs(0, rc, result);
-    } else if (msg.m_iCallback == GL_CBQ_ID_API_CALL_COMPLETED &&
-               msg.m_pubParam != NULL &&
-               msg.m_cubParam == (int32_t)sizeof(gl_SteamAPICallCompleted_t) &&
-               g_stats.pending_call != 0 && g_md_get_api_call_result != NULL) {
-      gl_SteamAPICallCompleted_t done;
-      memcpy(&done, msg.m_pubParam, sizeof done);
-      if (done.m_hAsyncCall == g_stats.pending_call &&
-          done.m_iCallback == GL_CBQ_ID_USER_STATS_RECEIVED &&
-          done.m_cubParam == GL_CBQ_USR_MAC_SIZE) {
-        uint8_t buf[GL_CBQ_USR_MAC_SIZE];
-        bool failed = false;
-        memset(buf, 0, sizeof buf);
-        bool got = g_md_get_api_call_result(g_hpipe, done.m_hAsyncCall, buf,
-                                            (int)sizeof buf, GL_CBQ_ID_USER_STATS_RECEIVED, &failed);
-        if (got && !failed) {
-          int32_t result = 0;
-          memcpy(&result, buf + 8, 4);
-          int rc = gl_stats_on_observed(&g_stats, &g_cbq, buf, (int32_t)sizeof buf, g_appid_u64);
-          gl_log_stats_obs(1, rc, result);
-        } else {
-          if (g_cbq_stats_logged < 32) {
-            g_cbq_stats_logged++;
-            logts_f("CBQ", "stats iCallback=1101 src=callresult failed=1");
+    } else if (msg.m_iCallback == GL_CBQ_ID_API_CALL_COMPLETED) {
+      // 703 is handled wholly here: our own stats call, a tracked call result
+      // (58-07), or ignored. Never offered to the ring or counted as unlisted.
+      if (msg.m_pubParam != NULL && msg.m_cubParam == (int32_t)sizeof(gl_SteamAPICallCompleted_t) &&
+          g_md_get_api_call_result != NULL) {
+        gl_SteamAPICallCompleted_t done;
+        memcpy(&done, msg.m_pubParam, sizeof done);
+        int32_t crId = gl_cr_lookup(&g_cr, done.m_hAsyncCall);
+        if (g_stats.pending_call != 0 && done.m_hAsyncCall == g_stats.pending_call &&
+            done.m_iCallback == GL_CBQ_ID_USER_STATS_RECEIVED &&
+            done.m_cubParam == GL_CBQ_USR_MAC_SIZE) {
+          uint8_t buf[GL_CBQ_USR_MAC_SIZE];
+          bool failed = false;
+          memset(buf, 0, sizeof buf);
+          bool got = g_md_get_api_call_result(g_hpipe, done.m_hAsyncCall, buf,
+                                              (int)sizeof buf, GL_CBQ_ID_USER_STATS_RECEIVED, &failed);
+          if (got && !failed) {
+            int32_t result = 0;
+            memcpy(&result, buf + 8, 4);
+            int rc = gl_stats_on_observed(&g_stats, &g_cbq, buf, (int32_t)sizeof buf, g_appid_u64);
+            gl_log_stats_obs(1, rc, result);
+          } else {
+            if (g_cbq_stats_logged < 32) {
+              g_cbq_stats_logged++;
+              logts_f("CBQ", "stats iCallback=1101 src=callresult failed=1");
+            }
+            // Leave `pending` set so a broadcast 1101 still satisfies the request.
+            g_stats.pending_call = 0;
           }
-          // Leave `pending` set so a broadcast 1101 still satisfies the request.
-          g_stats.pending_call = 0;
+          gl_cbq_secure_zero(buf, sizeof buf);
+        } else if (crId != 0) {
+          // Fetch BEFORE the single unconditional free below, with the MAC size
+          // of the expected struct (a wrong size makes Steam refuse the fetch).
+          uint32_t macSize = gl_cr_mac_size(crId);
+          uint8_t buf[64];
+          bool failed = false;
+          memset(buf, 0, sizeof buf);
+          if (macSize == 0 || macSize > sizeof buf || done.m_iCallback != crId ||
+              done.m_cubParam != macSize) {
+            gl_cr_untrack(&g_cr, done.m_hAsyncCall);
+          } else {
+            bool got = g_md_get_api_call_result(g_hpipe, done.m_hAsyncCall, buf,
+                                                (int)macSize, crId, &failed);
+            if (got && !failed) {
+              if (gl_cr_complete(&g_cr, done.m_hAsyncCall, buf, macSize, 0))
+                gl_note_join_from_mac(crId, buf);
+            } else {
+              gl_cr_complete(&g_cr, done.m_hAsyncCall, NULL, 0, 1);
+            }
+          }
+          gl_cbq_secure_zero(buf, sizeof buf);
         }
-        gl_cbq_secure_zero(buf, sizeof buf);
       }
     } else {
-      int allowed = gl_cbq_allowed_size(msg.m_iCallback) != 0;
-      int queued = gl_cbq_offer(&g_cbq, msg.m_iCallback, msg.m_pubParam, msg.m_cubParam);
-      if (g_cbq_logged < 32) {
-        if (queued) {
-          int32_t eresult = 0;
-          memcpy(&eresult, msg.m_pubParam + 4, 4);
-          g_cbq_logged++;
-          logts_f("CBQ", "queued iCallback=%d result=%d cub=%d",
-                  (int)msg.m_iCallback, (int)eresult, (int)msg.m_cubParam);
-        } else if (allowed) {
-          g_cbq_logged++;
-          logts_f("CBQ", "dropped iCallback=%d cub=%d",
-                  (int)msg.m_iCallback, (int)msg.m_cubParam);
-        }
+      const gl_cbq_allow_row *row = gl_cbq_row(msg.m_iCallback);
+      int queued = 0;
+      if (row == NULL) {
+        if (gl_cbq_note_unlisted(msg.m_iCallback))
+          logts_f("CBQ", "unlisted iCallback=%d action=drop", (int)msg.m_iCallback);
+      } else if (msg.m_pubParam != NULL && msg.m_cubParam > 0 &&
+                 (uint32_t)msg.m_cubParam == row->macSize) {
+        // Repack Mac -> MSVC wire form before queueing (RESEARCH Pitfall 7).
+        uint8_t win[GL_CBQ_MAX_PARAM_BYTES];
+        gl_cbq_repack_fields(msg.m_pubParam, win, row);
+        queued = gl_cbq_offer(&g_cbq, msg.m_iCallback, win, (int32_t)row->winSize);
+        if (queued) gl_note_join_from_mac(msg.m_iCallback, msg.m_pubParam);
+        gl_cbq_secure_zero(win, sizeof win);
+      } else {
+        g_cbq.dropped_filtered++;
+      }
+      if (row != NULL && g_cbq_logged < 32) {
+        g_cbq_logged++;
+        if (queued)
+          logts_f("CBQ", "queued iCallback=%d cub=%d", (int)msg.m_iCallback, (int)row->winSize);
+        else
+          logts_f("CBQ", "dropped iCallback=%d cub=%d", (int)msg.m_iCallback, (int)msg.m_cubParam);
       }
     }
     g_md_free_last(g_hpipe);
@@ -1007,9 +1119,18 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       memcpy(&did, argBlob, 4);
       memcpy(&dn, argBlob + 4, 4);
       memcpy(&dheld, argBlob + 8, 4);
-      if (gl_cbq_allowed_size(did) == 0 || dn > CBDISP_MAX_TARGETS || dheld > 1) {
+      if ((gl_cbq_allowed_size(did) == 0 && gl_cr_allowed_size(did) == 0) || dn > CBDISP_MAX_TARGETS ||
+          dheld > 1) {
         send_response(fd, requestId, STATUS_ERR, NULL, 0);
         return;
+      }
+      // D-08: promote a pending join to role=game only when the shim says it
+      // dispatched the callback to at least one registered target.
+      if (g_join_note.valid && g_join_note.id == did) {
+        gl_net_evidence(dn >= 1, GL_NET_KIND_JOIN,
+                        did == GL_CBQ_ID_LOBBY_ENTER ? GL_NET_IFACE_MATCHMAKING : GL_NET_IFACE_SOCKETS,
+                        did, dn, g_join_note.path);
+        g_join_note.valid = 0;
       }
       if (g_cbdisp_logged >= CBDISP_LOG_MAX) {
         if (!g_cbdisp_cap_noted) {
@@ -1048,6 +1169,31 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
         send_response(fd, requestId, STATUS_OK, out, n);
       }
       gl_cbq_secure_zero(out, sizeof out);
+      return;
+    }
+    if (slot == CONTROL_SLOT_DRAIN_CALL_RESULTS) {
+      // Phase 58 (58-07, T-58-20/T-58-23): behind the auth gate above; argLen
+      // must be 0; one result per round trip; never sleeps; buffer zeroed.
+      if (argLen != 0 || g_bd_identity_only) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      uint8_t cout[GL_CR_DRAIN_RESP_MAX_BYTES];
+      uint32_t cn;
+      if (g_inited && g_manual_dispatch) {
+        gl_manual_pump_into_ring();
+        cn = gl_cr_pop(&g_cr, cout, sizeof cout);
+      } else {
+        uint32_t zero = 0;
+        memcpy(cout, &zero, 4);
+        cn = 4;
+      }
+      if (cn == 0) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+      } else {
+        send_response(fd, requestId, STATUS_OK, cout, cn);
+      }
+      gl_cbq_secure_zero(cout, sizeof cout);
       return;
     }
     send_response(fd, requestId, STATUS_ERR, NULL, 0); // unknown control slot

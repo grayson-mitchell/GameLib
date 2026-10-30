@@ -139,7 +139,13 @@ export const CONTROL_SLOT = {
   // quick 261027-k51: the shim reports each relayed callback it dispatched or
   // held ({i32 iCallback, u32 ndispatched, u32 held}); the helper logs
   // `CBDISP`. Nothing in the sidecar sends this.
-  reportCbDispatch: 10
+  reportCbDispatch: 10,
+  // Phase 58 (58-07): the shim's RunCallbacks/ManualDispatch pops one completed
+  // call result (CreateLobby, JoinLobby, RequestLobbyList) from the helper;
+  // reply [u32 count 0|1][u64 hAPICall][i32 iCallback][u32 ioFailure][u32 cub]
+  // [cub bytes]. Nothing in the sidecar sends this; an old helper answers
+  // STATUS_ERR.
+  drainCallResults: 11
 } as const
 
 /** Env var carrying the per-spawn secret backend -> helper (never argv). */

@@ -195,4 +195,9 @@ enum { GL_NET_PATH_UNKNOWN = 0, GL_NET_PATH_DIRECT, GL_NET_PATH_RELAYED };
 
 void gl_net_evidence(int game, int kind, int iface, int32_t cb, uint32_t n, int path);
 
+/* Called by the generated dispatch after a wire method returned a
+ * SteamAPICall_t: records the handle so the pump completes it. Returns 1 when
+ * tracked. Implemented by bridge_helper.c over its single gl_cr_state. */
+int gl_helper_cr_track(uint64_t hCall, int32_t iCallback);
+
 #endif /* GAMELIB_CALLRESULT_H */
