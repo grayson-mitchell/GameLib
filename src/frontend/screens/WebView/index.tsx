@@ -11,6 +11,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom'
 
 import ContextProvider from 'frontend/state/ContextProvider'
 import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
+import { rememberLastStore } from 'frontend/components/UI/NavShell/navTabs'
 import StoreEmbedControls from 'frontend/components/UI/StoreEmbedControls'
 import './index.css'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
@@ -64,6 +65,11 @@ export default function WebView() {
   // supposed to show, `runner` is set to a runner if we're supposed to show its
   // login prompt
   const { store, runner } = useParams()
+
+  // The Stores tab reopens on the storefront the user last visited.
+  useEffect(() => {
+    rememberLastStore(store)
+  }, [store])
 
   // Phase 34.4.1 Plan 09 (D-04, REQ-34.4.1-08), extended by Phase 34.5 Plan 26 (F-34.5-G6-02
   // layer 2, F-34.5-G6-03): drives the real per-runner OAuth capture for the four OAuth login

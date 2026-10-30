@@ -91,13 +91,32 @@ export interface NavStoreSessions {
   steam: { username?: string }
 }
 
+const LAST_STORE_KEY = 'last-store'
+const STORE_KEYS = ['epic', 'gog', 'amazon', 'steam']
+
+/**
+ * Records the storefront the user last opened, so the Stores tab returns to
+ * it instead of falling back to the cascade below. Written by `WebView` on
+ * every `/store/:store` mount. `localStorage`, not `sessionStorage`, so the
+ * choice survives a relaunch; unknown keys are ignored.
+ */
+export function rememberLastStore(store: string | undefined): void {
+  if (!store || !STORE_KEYS.includes(store)) {
+    return
+  }
+  try {
+    localStorage.setItem(LAST_STORE_KEY, store)
+  } catch {
+    // storage unavailable -- fall back to the cascade next time
+  }
+}
+
 /**
  * Ports the default-store cascade at `SidebarLinks/index.tsx:82-113`
- * unchanged, in the same branch order, including the trailing
- * `sessionStorage.getItem('last-store')` override that wins over every
- * branch (REQ-34.10-11 -- the cascade carries over unchanged).
+ * unchanged, in the same branch order, followed by the `last-store`
+ * override (written by `rememberLastStore`) that wins over every branch.
  *
- * `sessionStorage` is read here, inside the function, not at module scope,
+ * `localStorage` is read here, inside the function, not at module scope,
  * so tests can stub it.
  */
 export function resolveDefaultStore(sessions: NavStoreSessions): string {
@@ -122,9 +141,14 @@ export function resolveDefaultStore(sessions: NavStoreSessions): string {
     defaultStore = 'steam'
   }
 
-  // if we have a stored last-url, default to the `/last-url` route
-  const lastStore = sessionStorage.getItem('last-store')
-  if (lastStore) {
+  // the store the user last opened wins over the cascade
+  let lastStore: string | null = null
+  try {
+    lastStore = localStorage.getItem(LAST_STORE_KEY)
+  } catch {
+    lastStore = null
+  }
+  if (lastStore && STORE_KEYS.includes(lastStore)) {
     defaultStore = lastStore
   }
 

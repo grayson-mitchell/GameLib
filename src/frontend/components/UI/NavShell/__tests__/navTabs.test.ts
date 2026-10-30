@@ -3,7 +3,7 @@
  *
  * Plain exported functions -- no React, no hook mocking. No jsdom is
  * installed in this project (see src/frontend/jest.config.js docstring), so
- * `sessionStorage` is stubbed on `globalThis` the way
+ * `localStorage` is stubbed on `globalThis` the way
  * SidebarLinks/__tests__/index.test.tsx does. Never `render(`, `screen.` or
  * `userEvent` here -- the `Frontend` jest project is `testEnvironment:
  * 'node'`.
@@ -12,10 +12,11 @@ import {
   NAV_TAB_IDS,
   NAV_TAB_INDEX,
   resolveActiveTab,
+  rememberLastStore,
   resolveDefaultStore,
   type NavStoreSessions
 } from '../navTabs'
-;(globalThis as unknown as { sessionStorage: Storage }).sessionStorage = {
+;(globalThis as unknown as { localStorage: Storage }).localStorage = {
   getItem: jest.fn().mockReturnValue(null),
   setItem: jest.fn(),
   removeItem: jest.fn(),
@@ -24,9 +25,9 @@ import {
   length: 0
 }
 
-function getSessionStorageMock() {
-  return (globalThis as unknown as { sessionStorage: Storage })
-    .sessionStorage as unknown as { getItem: jest.Mock }
+function getLocalStorageMock() {
+  return (globalThis as unknown as { localStorage: Storage })
+    .localStorage as unknown as { getItem: jest.Mock }
 }
 
 function makeSessions(
@@ -43,7 +44,7 @@ function makeSessions(
 
 describe('navTabs', () => {
   beforeEach(() => {
-    getSessionStorageMock().getItem.mockReturnValue(null)
+    getLocalStorageMock().getItem.mockReturnValue(null)
   })
 
   describe('NAV_TAB_IDS / NAV_TAB_INDEX', () => {
@@ -177,16 +178,42 @@ describe('navTabs', () => {
       ).toBe('steam')
     })
 
-    it("a non-null sessionStorage 'last-store' value overrides the otherwise-'epic' result", () => {
-      getSessionStorageMock().getItem.mockReturnValue('gog')
+    it("a non-null localStorage 'last-store' value overrides the otherwise-'epic' result", () => {
+      getLocalStorageMock().getItem.mockReturnValue('gog')
       expect(resolveDefaultStore(makeSessions())).toBe('gog')
     })
 
-    it("a non-null sessionStorage 'last-store' value overrides every other branch too", () => {
-      getSessionStorageMock().getItem.mockReturnValue('epic')
+    it("a non-null localStorage 'last-store' value overrides every other branch too", () => {
+      getLocalStorageMock().getItem.mockReturnValue('epic')
       expect(
         resolveDefaultStore(makeSessions({ amazon: { user_id: '123' } }))
       ).toBe('epic')
+    })
+
+    it("ignores a stored 'last-store' value that is not a known store", () => {
+      getLocalStorageMock().getItem.mockReturnValue('bogus')
+      expect(
+        resolveDefaultStore(makeSessions({ gog: { username: 'gog-user' } }))
+      ).toBe('gog')
+    })
+  })
+
+  describe('rememberLastStore', () => {
+    const setItem = () =>
+      (globalThis as unknown as { localStorage: { setItem: jest.Mock } })
+        .localStorage.setItem
+
+    beforeEach(() => setItem().mockClear())
+
+    it("writes a known store under 'last-store'", () => {
+      rememberLastStore('steam')
+      expect(setItem()).toHaveBeenCalledWith('last-store', 'steam')
+    })
+
+    it('ignores undefined and unknown stores', () => {
+      rememberLastStore(undefined)
+      rememberLastStore('bogus')
+      expect(setItem()).not.toHaveBeenCalled()
     })
   })
 })

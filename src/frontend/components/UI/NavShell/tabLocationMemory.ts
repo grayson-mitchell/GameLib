@@ -16,7 +16,7 @@ import { NAV_TAB_IDS, resolveActiveTab } from './navTabs'
  *   login flow.
  * - The lit tab goes to its root, otherwise the strip would offer no way
  *   out of a remembered game page.
- * - Independent of the dead `last-store` sessionStorage read in
+ * - Independent of the `last-store` localStorage override in
  *   `resolveDefaultStore` and of the localStorage `last-url-*` embed
  *   persistence, both deliberately untouched.
  */
