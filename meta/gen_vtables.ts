@@ -50,6 +50,7 @@ import {
 import { join } from 'node:path'
 
 import {
+  CALLBACK_LAYOUTS,
   MSVC_CCALLBACKBASE_OFFSETS,
   MSVC_CCALLBACKBASE_VSLOT_RUN_1ARG,
   STEAM_CALLBACK_FLAG_GAMESERVER,
@@ -81,6 +82,9 @@ export type ParamKind =
   | 'out-value'
   | 'out-buffer'
   | 'null-in'
+  | 'in-buffer'
+  | 'in-struct'
+  | 'out-struct'
 
 export interface ParamSignature {
   name: string
@@ -98,8 +102,17 @@ export interface ParamSignature {
   /** For `kind: 'out-buffer'` only (53-14) -- optional name of a sibling
    * `out-value` param that reports how many bytes the callee actually
    * produced (e.g. GetAuthSessionTicket's `pcbTicket`). The helper sends
-   * min(that value, capacity) bytes instead of the whole capacity. */
+   * min(that value, capacity) bytes instead of the whole capacity.
+   * For `kind: 'in-buffer'` (58-06) -- the name of the sibling integer
+   * by-value param that carries the buffer's byte length. */
   lenParam?: string
+  /** For `kind: 'in-struct' | 'out-struct'` (58-06) -- the exact byte size of
+   * the struct. Must equal the measured x64 size in CALLBACK_LAYOUTS, and the
+   * struct's x64 and mac layouts must be byte-identical. */
+  structSize?: number
+  /** For `kind: 'out-buffer'` only (58-06) -- per-param cap override, up to
+   * WIRE_LARGE_MAX_BYTES. Absent means WIRE_OUT_BUFFER_MAX_BYTES. */
+  capBytes?: number
 }
 
 /** The generator-facing return-shape category (51-06): drives which
@@ -176,6 +189,12 @@ export interface MethodSignature {
    * GetAuthSessionTicket vs the 1.59+ 5-arg flat function, whose last arg is
    * a SteamNetworkingIdentity*). Never sent on the wire. */
   helperTrailingNullArgs?: number
+  /** 58-06: answered by a named shim-side body (SHIM_LOCAL_BODIES) and never
+   * crosses the wire, so no Windows function pointer can reach the helper. */
+  shimLocal?: boolean
+  /** 58-06: name of a hand-written helper function (`^gl_[a-z0-9_]{1,48}$`)
+   * that replaces the generic decode/encode for this one method. */
+  helperCustom?: string
   /**
    * Free-form note. Used to flag a synthetic ABI-exercise slot that is NOT a
    * real Steamworks method (e.g. the sret-exercise slot) so a reviewer never
@@ -338,6 +357,79 @@ export function computeRetN(method: MethodSignature): number {
 const MIN_ORDINAL = 1
 const MAX_ORDINAL = 0xfffe
 
+/** Integer by-value types an `in-buffer` lenParam may have. */
+const WIRE_LENGTH_TYPES: ReadonlySet<string> = new Set([
+  'int32',
+  'uint32',
+  'int64',
+  'uint64'
+])
+
+/** 58-06 (Pitfall 2): an in-struct/out-struct is raw-copied between the
+ * Windows game and the Mac helper, so it is allowed only for a struct whose
+ * measured x64 and mac layouts are byte-identical in size and every field
+ * offset (and x86 too, when the manifest also targets x86). Anything else
+ * needs a deliberate repack and fails generation. */
+function validateStructParam(
+  manifest: InterfaceManifestV2,
+  methodCtx: string,
+  p: ParamSignature,
+  kind: string
+): string[] {
+  const name = p.type
+    .replace(/\bconst\b/g, '')
+    .replace(/\*/g, '')
+    .trim()
+  const layouts = CALLBACK_LAYOUTS as Readonly<
+    Record<
+      string,
+      {
+        x64: { size: number; fields: Readonly<Record<string, number>> }
+        x86: { size: number; fields: Readonly<Record<string, number>> }
+        mac: { size: number; fields: Readonly<Record<string, number>> }
+      }
+    >
+  >
+  const entry = Object.prototype.hasOwnProperty.call(layouts, name)
+    ? layouts[name]
+    : undefined
+  const where = `${methodCtx}: ${kind} param "${p.name}" (struct "${name}")`
+  if (entry === undefined) {
+    return [`${where} has no measured layout in CALLBACK_LAYOUTS`]
+  }
+  const errs: string[] = []
+  if (!Number.isInteger(p.structSize) || (p.structSize ?? 0) <= 0) {
+    errs.push(`${where} requires a positive integer structSize`)
+  } else if (p.structSize !== entry.x64.size) {
+    errs.push(
+      `${where} structSize ${p.structSize} differs from the measured x64 size ${entry.x64.size}`
+    )
+  }
+  const same = (
+    a: { size: number; fields: Readonly<Record<string, number>> },
+    b: { size: number; fields: Readonly<Record<string, number>> }
+  ): boolean => {
+    const ak = Object.keys(a.fields)
+    const bk = Object.keys(b.fields)
+    return (
+      a.size === b.size &&
+      ak.length === bk.length &&
+      ak.every((k) => a.fields[k] === b.fields[k])
+    )
+  }
+  if (!same(entry.x64, entry.mac)) {
+    errs.push(
+      `${where} needs repack: x64 and mac layouts differ (x64 ${entry.x64.size} bytes, mac ${entry.mac.size} bytes)`
+    )
+  }
+  if (manifest.arches.includes('x86') && !same(entry.x64, entry.x86)) {
+    errs.push(
+      `${where} needs repack: x86 and x64 layouts differ (x86 ${entry.x86.size} bytes, x64 ${entry.x64.size} bytes)`
+    )
+  }
+  return errs
+}
+
 /**
  * Structural validation for a single manifest. `allManifests` (defaulting
  * to `[manifest]`, so a single-arg call is always safe) supplies the full
@@ -451,6 +543,33 @@ export function validateManifest(
       )
     }
 
+    if (method.helperCustom !== undefined) {
+      if (!HELPER_CUSTOM_NAME.test(method.helperCustom)) {
+        errors.push(
+          `${methodCtx}: helperCustom "${method.helperCustom}" must match ${HELPER_CUSTOM_NAME}`
+        )
+      }
+      if (!method.helperFlat) {
+        errors.push(
+          `${methodCtx}: helperCustom methods must still declare helperFlat (the custom function may use it)`
+        )
+      }
+      if (method.shimLocal) {
+        errors.push(
+          `${methodCtx}: shimLocal and helperCustom are mutually exclusive`
+        )
+      }
+    }
+    if (method.shimLocal) {
+      if (
+        SHIM_LOCAL_BODIES[`${manifest.family}.${method.name}`] === undefined
+      ) {
+        errors.push(
+          `${methodCtx}: shimLocal method has no SHIM_LOCAL_BODIES entry "${manifest.family}.${method.name}"`
+        )
+      }
+    }
+
     const methodMode = method.mode ?? manifest.mode
     if (methodMode === 'wire') {
       const retN = computeRetN(method)
@@ -494,6 +613,42 @@ export function validateManifest(
           if (!/^const SteamNetworkingIdentity\w*\*$/.test(p.type)) {
             errors.push(
               `${methodCtx}: null-in param "${p.name}" (type "${p.type}") is only allowed for const SteamNetworkingIdentity-family pointers`
+            )
+          }
+        } else if (kind === 'in-buffer') {
+          if (!isPointerType) {
+            errors.push(
+              `${methodCtx}: in-buffer param "${p.name}" (type "${p.type}") must be a pointer`
+            )
+          }
+          const sib = method.params.find((q) => q.name === p.lenParam)
+          if (
+            !p.lenParam ||
+            !sib ||
+            (sib.kind ?? 'value') !== 'value' ||
+            !WIRE_LENGTH_TYPES.has(sib.type)
+          ) {
+            errors.push(
+              `${methodCtx}: in-buffer param "${p.name}" lenParam "${p.lenParam ?? ''}" must name a sibling by-value integer param (int32/uint32/int64/uint64)`
+            )
+          }
+        } else if (kind === 'in-struct' || kind === 'out-struct') {
+          if (!isPointerType) {
+            errors.push(
+              `${methodCtx}: ${kind} param "${p.name}" (type "${p.type}") must be a pointer`
+            )
+          }
+          errors.push(...validateStructParam(manifest, methodCtx, p, kind))
+        }
+        if (p.capBytes !== undefined) {
+          if (
+            kind !== 'out-buffer' ||
+            !Number.isInteger(p.capBytes) ||
+            p.capBytes < 1 ||
+            p.capBytes > WIRE_LARGE_MAX_BYTES
+          ) {
+            errors.push(
+              `${methodCtx}: capBytes on param "${p.name}" is only valid on an out-buffer as an integer 1..${WIRE_LARGE_MAX_BYTES} (got ${String(p.capBytes)}, kind ${kind})`
             )
           }
         }
@@ -578,6 +733,28 @@ export const WIRE_IN_STRING_MAX_BYTES = 4096
  * declared `sizeParam` capacity. */
 export const WIRE_OUT_BUFFER_MAX_BYTES = 4096
 
+/** Max bytes an `in-buffer` request field, or an `out-buffer` carrying a
+ * `capBytes` override, may hold. Leaves headroom under protocol.ts's
+ * MAX_FRAME_BYTES (65536) for the frame header and the method's other
+ * params. */
+export const WIRE_LARGE_MAX_BYTES = 61440
+
+/** Max bytes an `in-buffer` request field may carry (58-06). */
+export const WIRE_IN_BUFFER_MAX_BYTES = WIRE_LARGE_MAX_BYTES
+
+/** A request or response above this many bytes goes through a static buffer
+ * used only while g_bridge_lock is held (58-06, T-58-19); at or below it the
+ * stub keeps a plain stack array. */
+const WIRE_STACK_BUFFER_MAX_BYTES = 4096 + 64
+
+/** 58-06: shim-local method bodies, keyed `<Family>.<Method>`. The value is
+ * C statement text (the inside of the function braces) taking the method's own
+ * C parameters after `self`. A `shimLocal` method with no entry here fails
+ * generation. Empty today: wiring plans 58-12..58-21 add entries. */
+export const SHIM_LOCAL_BODIES: Readonly<Record<string, string>> = {}
+
+const HELPER_CUSTOM_NAME = /^gl_[a-z0-9_]{1,48}$/
+
 function valueTypeWidth(valueType: string): number {
   return valueType === 'uint64' ? 8 : 4
 }
@@ -606,7 +783,7 @@ function valueTypeCType(valueType: string): string {
  * generated shim header so a reader never has to cross-reference this
  * source file to understand what is on the wire.
  */
-export const WIRE_LAYOUT_DOC = `Wire marshaling layout (51-06 Task 3; 51-10 mirrors this exactly):
+const WIRE_LAYOUT_DOC_BASE = `Wire marshaling layout (51-06 Task 3; 51-10 mirrors this exactly):
 
 Request blob (per method, params in manifest declaration order):
   - no kind, or kind 'value': paramWidth(type) raw bytes, host byte order.
@@ -637,6 +814,76 @@ Response blob (per method):
     min(len, capacity) and NUL-terminates only when the param's own type
     is a NUL-terminated string type (e.g. 'char*').
 `
+
+/**
+ * 58-06: the request/response kinds added for the matchmaking and networking
+ * families. Kept apart from the base text so a generated file only carries the
+ * paragraphs when some manifest actually uses one of the new kinds or modes
+ * (the committed shim and dispatch header stay byte-identical until then).
+ */
+const WIRE_LAYOUT_DOC_EXTENDED = `
+Extended kinds and modes (58-06):
+
+Request blob:
+  - kind 'in-buffer': [u32 len][len bytes]. len is the sibling lenParam's
+    value. A buffer longer than WIRE_IN_BUFFER_MAX_BYTES (= WIRE_LARGE_MAX_BYTES,
+    61440) is never truncated: it packs [u32 WIRE_IN_BUFFER_MAX_BYTES + 1] and
+    no bytes, which the helper refuses with STATUS_ERR before touching any
+    byte, so the game call returns its failure value. The helper also checks
+    len <= remaining request bytes before copying, and that len equals the
+    lenParam value.
+  - kind 'in-struct': [u8 present][structSize bytes if present]. present 0
+    means the game passed NULL and the helper passes NULL. Allowed only for a
+    struct whose x64 and mac layouts are byte-identical; any other struct fails
+    generation with 'needs repack'.
+  - kind 'out-struct': nothing is sent.
+  - kind 'out-buffer' with capBytes: the same [u32 capacity], capped at the
+    param's capBytes (up to WIRE_LARGE_MAX_BYTES) instead of
+    WIRE_OUT_BUFFER_MAX_BYTES.
+
+Response blob:
+  - then, for every 'out-struct' param in declaration order, after the
+    out-buffers: [u8 present][structSize bytes]. The shim copies the bytes into
+    the game pointer only when that pointer is non-NULL and present is 1.
+
+Method modes:
+  - shimLocal: the shim answers the method from its own SHIM_LOCAL_BODIES
+    entry. It never produces a frame, so no Windows function pointer can reach
+    the helper, and it has no helper dispatch case.
+  - helperCustom: the request uses the generic encoding above, but the
+    helper's named function (int fn(void *self, const uint8_t *args,
+    uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+    returns 0 for ok) produces the whole response blob, which must follow the
+    method's declared response layout.
+`
+
+/** The full wire layout text, including the 58-06 extended kinds. */
+export const WIRE_LAYOUT_DOC = WIRE_LAYOUT_DOC_BASE + WIRE_LAYOUT_DOC_EXTENDED
+
+const NEW_WIRE_KINDS: ReadonlySet<string> = new Set([
+  'in-buffer',
+  'in-struct',
+  'out-struct'
+])
+
+/** True when a method uses any 58-06 kind, cap override or mode. */
+function usesExtendedWire(method: MethodSignature): boolean {
+  return (
+    method.shimLocal === true ||
+    method.helperCustom !== undefined ||
+    method.params.some(
+      (p) => NEW_WIRE_KINDS.has(p.kind ?? 'value') || p.capBytes !== undefined
+    )
+  )
+}
+
+/** The layout text embedded in the generated files: the extended paragraphs
+ * appear only when some manifest uses them. */
+function wireLayoutDocFor(manifests: InterfaceManifest[]): string {
+  return manifests.some((m) => m.methods.some(usesExtendedWire))
+    ? WIRE_LAYOUT_DOC
+    : WIRE_LAYOUT_DOC_BASE
+}
 
 /** "SteamUser023" -> "SteamUser_v023"; "SteamFriends018" -> "SteamFriends_v018" */
 export function toVersionedAccessorSuffix(interfaceName: string): string {
@@ -1470,8 +1717,11 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
 function wireParamMaxWidth(p: ParamSignature): number {
   const kind = p.kind ?? 'value'
   if (kind === 'in-string') return 4 + WIRE_IN_STRING_MAX_BYTES
-  if (kind === 'out-value' || kind === 'null-in') return 0
+  if (kind === 'out-value' || kind === 'null-in' || kind === 'out-struct')
+    return 0
   if (kind === 'out-buffer') return 4
+  if (kind === 'in-buffer') return 4 + WIRE_IN_BUFFER_MAX_BYTES
+  if (kind === 'in-struct') return 1 + (p.structSize ?? 0)
   return paramWidth(p.type)
 }
 
@@ -1486,22 +1736,39 @@ function packArgsBlock(method: MethodSignature): {
   decl: string
   lenExpr: string
 } {
+  const parts = packArgsParts(method)
+  if (parts.maxTotal === 0) {
+    return { decl: '  const uint8_t *argbuf = NULL;', lenExpr: '0' }
+  }
+  return {
+    decl: [
+      `  uint8_t argbuf[${parts.maxTotal}];`,
+      `  uint32_t argOff = 0;`,
+      ...parts.lines
+    ].join('\n'),
+    lenExpr: 'argOff'
+  }
+}
+
+/** The pack statements alone (no `argbuf`/`argOff` declarations), so a caller
+ * that needs the buffer static and the lock held can place them itself. */
+function packArgsParts(method: MethodSignature): {
+  maxTotal: number
+  lines: string[]
+} {
   const sendableParams = method.params.filter((p) => {
     const k = p.kind ?? 'value'
-    return k !== 'out-value' && k !== 'null-in'
+    return k !== 'out-value' && k !== 'null-in' && k !== 'out-struct'
   })
   if (sendableParams.length === 0) {
-    return { decl: '  const uint8_t *argbuf = NULL;', lenExpr: '0' }
+    return { maxTotal: 0, lines: [] }
   }
 
   const maxTotal = sendableParams.reduce(
     (sum, p) => sum + wireParamMaxWidth(p),
     0
   )
-  const lines: string[] = [
-    `  uint8_t argbuf[${maxTotal}];`,
-    `  uint32_t argOff = 0;`
-  ]
+  const lines: string[] = []
   for (const p of sendableParams) {
     const kind = p.kind ?? 'value'
     if (kind === 'in-string') {
@@ -1529,10 +1796,40 @@ function packArgsBlock(method: MethodSignature): {
         `  }`
       )
     } else if (kind === 'out-buffer') {
+      const capLimit =
+        p.capBytes !== undefined
+          ? String(p.capBytes)
+          : 'WIRE_OUT_BUFFER_MAX_BYTES'
       lines.push(
         `  uint32_t cap_${p.name} = (${p.sizeParam} < 0) ? 0u : (uint32_t)${p.sizeParam}; // negative size -> capacity 0 (53-14, T-53-56)`,
-        `  if (cap_${p.name} > WIRE_OUT_BUFFER_MAX_BYTES) cap_${p.name} = WIRE_OUT_BUFFER_MAX_BYTES;`,
+        `  if (cap_${p.name} > ${capLimit}) cap_${p.name} = ${capLimit};`,
         `  memcpy(argbuf + argOff, &cap_${p.name}, 4); argOff += 4;`
+      )
+    } else if (kind === 'in-buffer') {
+      lines.push(
+        `  {`,
+        `    uint32_t bufLen;`,
+        `    int64_t rawLen = (int64_t)${p.lenParam};`,
+        `    if (rawLen < 0 || rawLen > ${WIRE_IN_BUFFER_MAX_BYTES} || (${p.name} == NULL && rawLen > 0)) {`,
+        `      // 58-06 Pitfall 4: never truncate -- send the over-limit marker with no`,
+        `      // bytes; the helper refuses it and this method returns its failure value.`,
+        `      bufLen = ${WIRE_IN_BUFFER_MAX_BYTES} + 1u;`,
+        `      memcpy(argbuf + argOff, &bufLen, 4); argOff += 4;`,
+        `    } else {`,
+        `      bufLen = (uint32_t)rawLen;`,
+        `      memcpy(argbuf + argOff, &bufLen, 4); argOff += 4;`,
+        `      if (bufLen > 0) { memcpy(argbuf + argOff, ${p.name}, bufLen); argOff += bufLen; }`,
+        `    }`,
+        `  }`
+      )
+    } else if (kind === 'in-struct') {
+      lines.push(
+        `  if (${p.name} == NULL) {`,
+        `    argbuf[argOff] = 0; argOff += 1;`,
+        `  } else {`,
+        `    argbuf[argOff] = 1; argOff += 1;`,
+        `    memcpy(argbuf + argOff, ${p.name}, ${p.structSize}); argOff += ${p.structSize};`,
+        `  }`
       )
     } else {
       const width = paramWidth(p.type)
@@ -1541,7 +1838,7 @@ function packArgsBlock(method: MethodSignature): {
       )
     }
   }
-  return { decl: lines.join('\n'), lenExpr: 'argOff' }
+  return { maxTotal, lines }
 }
 
 /**
@@ -2158,6 +2455,193 @@ function emitSteamClientForwardedLookup(
   )
 }
 
+/**
+ * The response-side decode shared by the generic stub path and the 58-06
+ * extended path: out-values, then out-buffers, then out-structs, per
+ * WIRE_LAYOUT_DOC. `respOff` starts after the base return value.
+ */
+function buildOutDecode(
+  method: MethodSignature,
+  retWidth: number
+): { retBufSize: number; failZeroLines: string[]; decodeLines: string[] } {
+  const outValueParams = method.params.filter((p) => p.kind === 'out-value')
+  const outBufferParams = method.params.filter((p) => p.kind === 'out-buffer')
+  const outStructParams = method.params.filter((p) => p.kind === 'out-struct')
+  const extraMax =
+    outValueParams.reduce(
+      (sum, p) => sum + valueTypeWidth(p.valueType ?? 'int32'),
+      0
+    ) +
+    outBufferParams.reduce(
+      (sum, p) => sum + 4 + (p.capBytes ?? WIRE_OUT_BUFFER_MAX_BYTES),
+      0
+    ) +
+    outStructParams.reduce((sum, p) => sum + 1 + (p.structSize ?? 0), 0)
+  const retBufSize = retWidth + extraMax
+
+  // 53-14: on a transport failure every out-value the caller handed us is
+  // zeroed (a stale/garbage length must never be read as a real one).
+  const failZeroLines = outValueParams.map(
+    (p) => `    if (${p.name} != NULL) *${p.name} = 0;`
+  )
+  const decodeLines: string[] = [`  uint32_t respOff = ${retWidth};`]
+  // 53-17 WR-02: an out-value that is some out-buffer's lenParam is stored only
+  // after the buffer decode, as min(declared, bytes actually copied).
+  const lenOwner = new Map<string, string>()
+  for (const p of outBufferParams) {
+    if (p.lenParam !== undefined) lenOwner.set(p.lenParam, p.name)
+  }
+  for (const p of outBufferParams) {
+    decodeLines.push(`  uint32_t copied_${p.name} = 0;`)
+  }
+  for (const p of outValueParams) {
+    const valueType = p.valueType ?? 'int32'
+    const width = valueTypeWidth(valueType)
+    const ct = valueTypeCType(valueType)
+    if (lenOwner.has(p.name)) {
+      decodeLines.push(
+        `  ${ct} lenVal_${p.name} = 0;`,
+        `  if (retlen >= respOff + ${width}) memcpy(&lenVal_${p.name}, retbuf + respOff, ${width});`,
+        `  respOff += ${width};`
+      )
+      continue
+    }
+    decodeLines.push(
+      `  if (${p.name} != NULL && retlen >= respOff + ${width}) {`,
+      `    ${ct} outVal; memcpy(&outVal, retbuf + respOff, ${width});`,
+      `    *${p.name} = outVal;`,
+      `  }`,
+      `  respOff += ${width};`
+    )
+  }
+  for (const p of outBufferParams) {
+    const nulTerminate = p.type === 'char*'
+    const capLimit =
+      p.capBytes !== undefined
+        ? String(p.capBytes)
+        : 'WIRE_OUT_BUFFER_MAX_BYTES'
+    decodeLines.push(
+      `  if (retlen >= respOff + 4) {`,
+      `    uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;`,
+      `    uint32_t copyLen = declLen;`,
+      `    if (copyLen > ${capLimit}) copyLen = ${capLimit};`,
+      `    if (copyLen > cap_${p.name}) copyLen = cap_${p.name}; // never write past the caller's own capacity (53-14, T-53-56)`,
+      ...(nulTerminate
+        ? [
+            `    if (copyLen >= cap_${p.name}) copyLen = cap_${p.name} ? cap_${p.name} - 1 : 0; // room for the NUL (53-17 WR-03)`
+          ]
+        : []),
+      `    if (${p.name} != NULL && retlen >= respOff + copyLen) {`,
+      `      memcpy(${p.name}, retbuf + respOff, copyLen);`,
+      `      copied_${p.name} = copyLen;`,
+      ...(nulTerminate
+        ? [`      if (cap_${p.name} > 0) ${p.name}[copyLen] = '\\0';`]
+        : []),
+      `    }`,
+      `    respOff += declLen;`,
+      `  }`
+    )
+  }
+  // 58-06: out-struct trails the out-buffers -- [u8 present][structSize
+  // bytes]; copied only into a non-NULL game pointer when present is 1.
+  for (const p of outStructParams) {
+    decodeLines.push(
+      `  if (retlen >= respOff + 1) {`,
+      `    uint8_t present_${p.name} = retbuf[respOff]; respOff += 1;`,
+      `    if (present_${p.name} == 1 && retlen >= respOff + ${p.structSize}) {`,
+      `      if (${p.name} != NULL) memcpy(${p.name}, retbuf + respOff, ${p.structSize});`,
+      `      respOff += ${p.structSize};`,
+      `    }`,
+      `  }`
+    )
+  }
+  for (const p of outValueParams) {
+    const owner = lenOwner.get(p.name)
+    if (owner === undefined) continue
+    decodeLines.push(
+      `  if (${p.name} != NULL) *${p.name} = (lenVal_${p.name} < copied_${owner}) ? lenVal_${p.name} : copied_${owner};`
+    )
+  }
+
+  return { retBufSize, failZeroLines, decodeLines }
+}
+
+/** True when a wire method's params need the 58-06 stub emitter. */
+function needsExtendedStub(method: MethodSignature): boolean {
+  return method.params.some(
+    (p) => NEW_WIRE_KINDS.has(p.kind ?? 'value') || p.capBytes !== undefined
+  )
+}
+
+/**
+ * 58-06: shim stub for a wire method that uses in-buffer, in-struct,
+ * out-struct or an out-buffer capBytes override. A request or response over
+ * WIRE_STACK_BUFFER_MAX_BYTES uses static buffers and holds g_bridge_lock
+ * across pack, transact and decode, so there is exactly one in-flight large
+ * buffer and no per-call allocation of a game-chosen size (T-58-19). Smaller
+ * ones keep plain stack arrays and the normal bridge_transact.
+ */
+function emitExtendedWireStub(
+  manifest: InterfaceManifest,
+  method: MethodSignature,
+  header: string,
+  funcName: string,
+  signatureParams: string,
+  sretOrString: boolean
+): string {
+  const ctx = `${manifest.interface}.${method.name}`
+  if (sretOrString) {
+    throw new Error(
+      `emitVtableStub: ${ctx} uses in-buffer/in-struct/out-struct/capBytes with a sret or string return -- unsupported (58-06)`
+    )
+  }
+  if (manifest.family === STEAM_CLIENT_FAMILY) {
+    throw new Error(
+      `emitVtableStub: ${ctx} -- the 58-06 kinds are not supported on the SteamClient family`
+    )
+  }
+  const isVoid = method.returnKind === 'void'
+  const returnType = isVoid ? 'void' : cType(method.returns)
+  const retWidth = isVoid ? 0 : is64BitRegisterReturn(method) ? 8 : 4
+  const pack = packArgsParts(method)
+  const { retBufSize, failZeroLines, decodeLines } = buildOutDecode(
+    method,
+    retWidth
+  )
+  const large =
+    pack.maxTotal > WIRE_STACK_BUFFER_MAX_BYTES ||
+    retBufSize > WIRE_STACK_BUFFER_MAX_BYTES
+  const storage = large ? 'static ' : ''
+  const call = large
+    ? `bridge_transact_locked(${manifest.ordinal}, ${method.slot}, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)`
+    : `bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)`
+  const lines: string[] = [
+    header + `static ${returnType} THISCALL ${funcName}(${signatureParams}) {`,
+    `  (void)self;`
+  ]
+  if (!isVoid) lines.push(`  ${returnType} result = 0;`)
+  lines.push(
+    `  ${storage}uint8_t argbuf[${Math.max(pack.maxTotal, 1)}];`,
+    `  ${storage}uint8_t retbuf[${Math.max(retBufSize, 1)}];`,
+    `  uint32_t argOff = 0; uint32_t retlen = 0;`
+  )
+  if (large) lines.push(`  AcquireSRWLockExclusive(&g_bridge_lock);`)
+  lines.push(...pack.lines)
+  lines.push(`  int ok = ${call};`)
+  lines.push(isVoid ? `  if (ok) {` : `  if (ok && retlen >= ${retWidth}) {`)
+  if (!isVoid) {
+    lines.push(
+      `    ${returnType} ret; memcpy(&ret, retbuf, ${retWidth});`,
+      `    result = ret;`
+    )
+  }
+  lines.push(...decodeLines.map((l) => `  ${l}`))
+  lines.push(`  } else {`, ...failZeroLines.map((l) => l.slice(0)), `  }`)
+  if (large) lines.push(`  ReleaseSRWLockExclusive(&g_bridge_lock);`)
+  lines.push(isVoid ? `  return;` : `  return result;`, `}`)
+  return lines.join('\n') + '\n'
+}
+
 function emitVtableStub(
   manifest: InterfaceManifest,
   method: MethodSignature
@@ -2189,6 +2673,32 @@ function emitVtableStub(
   const header =
     `// slot ${method.slot}: ${method.name}(${descParams}) -> ${method.returns} ` +
     `| __thiscall ret ${retN}${sretDesc}${stringDesc}${stubDesc}${fallbackDesc}\n${noteLine}`
+
+  // 58-06: a shimLocal method is answered by its named SHIM_LOCAL_BODIES
+  // entry and never crosses the wire.
+  if (method.shimLocal) {
+    const key = `${manifest.family}.${method.name}`
+    const body = SHIM_LOCAL_BODIES[key]
+    if (body === undefined) {
+      throw new Error(
+        `emitVtableStub: shimLocal method ${manifest.interface}.${method.name} has no SHIM_LOCAL_BODIES entry "${key}"`
+      )
+    }
+    const localReturn = sret
+      ? 'void *'
+      : stringReturn
+        ? 'const char *'
+        : method.returnKind === 'void'
+          ? 'void'
+          : cType(method.returns)
+    return (
+      header +
+      `static ${localReturn} THISCALL ${funcName}(${signatureParams}) {\n` +
+      `  (void)self;\n` +
+      `${body}\n` +
+      `}\n`
+    )
+  }
 
   // 51-15: the modern-SDK lookup family -- checked FIRST (ahead of
   // helperFallback/stub/wire) because an ISteamClient GetISteamXxx
@@ -2241,6 +2751,17 @@ function emitVtableStub(
 
   if (methodMode === 'stub') {
     return emitStubBody(manifest, method, header, funcName, sret, stringReturn)
+  }
+
+  if (needsExtendedStub(method)) {
+    return emitExtendedWireStub(
+      manifest,
+      method,
+      header,
+      funcName,
+      signatureParams,
+      sret || stringReturn
+    )
   }
 
   const { decl: argBufDecl, lenExpr: argLenExpr } = packArgsBlock(method)
@@ -2342,80 +2863,10 @@ function emitVtableStub(
     )
   }
 
-  const extraMax =
-    outValueParams.reduce(
-      (sum, p) => sum + valueTypeWidth(p.valueType ?? 'int32'),
-      0
-    ) +
-    outBufferParams.length * (4 + WIRE_OUT_BUFFER_MAX_BYTES)
-  const retBufSize = retWidth + extraMax
-
-  // 53-14: on a transport failure every out-value the caller handed us is
-  // zeroed (a stale/garbage length must never be read as a real one).
-  const failZeroLines = outValueParams.map(
-    (p) => `    if (${p.name} != NULL) *${p.name} = 0;`
+  const { retBufSize, failZeroLines, decodeLines } = buildOutDecode(
+    method,
+    retWidth
   )
-  const decodeLines: string[] = [`  uint32_t respOff = ${retWidth};`]
-  // 53-17 WR-02: an out-value that is some out-buffer's lenParam is stored only
-  // after the buffer decode, as min(declared, bytes actually copied).
-  const lenOwner = new Map<string, string>()
-  for (const p of outBufferParams) {
-    if (p.lenParam !== undefined) lenOwner.set(p.lenParam, p.name)
-  }
-  for (const p of outBufferParams) {
-    decodeLines.push(`  uint32_t copied_${p.name} = 0;`)
-  }
-  for (const p of outValueParams) {
-    const valueType = p.valueType ?? 'int32'
-    const width = valueTypeWidth(valueType)
-    const ct = valueTypeCType(valueType)
-    if (lenOwner.has(p.name)) {
-      decodeLines.push(
-        `  ${ct} lenVal_${p.name} = 0;`,
-        `  if (retlen >= respOff + ${width}) memcpy(&lenVal_${p.name}, retbuf + respOff, ${width});`,
-        `  respOff += ${width};`
-      )
-      continue
-    }
-    decodeLines.push(
-      `  if (${p.name} != NULL && retlen >= respOff + ${width}) {`,
-      `    ${ct} outVal; memcpy(&outVal, retbuf + respOff, ${width});`,
-      `    *${p.name} = outVal;`,
-      `  }`,
-      `  respOff += ${width};`
-    )
-  }
-  for (const p of outBufferParams) {
-    const nulTerminate = p.type === 'char*'
-    decodeLines.push(
-      `  if (retlen >= respOff + 4) {`,
-      `    uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;`,
-      `    uint32_t copyLen = declLen;`,
-      `    if (copyLen > WIRE_OUT_BUFFER_MAX_BYTES) copyLen = WIRE_OUT_BUFFER_MAX_BYTES;`,
-      `    if (copyLen > cap_${p.name}) copyLen = cap_${p.name}; // never write past the caller's own capacity (53-14, T-53-56)`,
-      ...(nulTerminate
-        ? [
-            `    if (copyLen >= cap_${p.name}) copyLen = cap_${p.name} ? cap_${p.name} - 1 : 0; // room for the NUL (53-17 WR-03)`
-          ]
-        : []),
-      `    if (${p.name} != NULL && retlen >= respOff + copyLen) {`,
-      `      memcpy(${p.name}, retbuf + respOff, copyLen);`,
-      `      copied_${p.name} = copyLen;`,
-      ...(nulTerminate
-        ? [`      if (cap_${p.name} > 0) ${p.name}[copyLen] = '\\0';`]
-        : []),
-      `    }`,
-      `    respOff += declLen;`,
-      `  }`
-    )
-  }
-  for (const p of outValueParams) {
-    const owner = lenOwner.get(p.name)
-    if (owner === undefined) continue
-    decodeLines.push(
-      `  if (${p.name} != NULL) *${p.name} = (lenVal_${p.name} < copied_${owner}) ? lenVal_${p.name} : copied_${owner};`
-    )
-  }
 
   return (
     header +
@@ -3150,7 +3601,7 @@ export function generateShimC(
 #define STRING_RETURN_WIRE_BYTES ${STRING_RETURN_WIRE_BYTES}
 
 /*
-${WIRE_LAYOUT_DOC}
+${wireLayoutDocFor(manifests)}
 */
 #define WIRE_IN_STRING_MAX_BYTES ${WIRE_IN_STRING_MAX_BYTES}
 #define WIRE_OUT_BUFFER_MAX_BYTES ${WIRE_OUT_BUFFER_MAX_BYTES}
@@ -3726,7 +4177,12 @@ function isWireDispatchMethod(
   method: MethodSignature
 ): boolean {
   const mode = method.mode ?? manifest.mode
-  return mode === 'wire' && method.helperFallback === undefined
+  return (
+    mode === 'wire' &&
+    method.helperFallback === undefined &&
+    // 58-06: a shimLocal method never produces a frame, so it has no helper case
+    method.shimLocal !== true
+  )
 }
 
 /**
@@ -3739,12 +4195,23 @@ function isWireDispatchMethod(
  */
 function wireMethodLayoutKey(method: MethodSignature): string {
   const paramsDesc = method.params
-    .map(
-      (p) =>
-        `${p.name}:${p.type}:${p.kind ?? 'value'}:${p.valueType ?? ''}:${p.sizeParam ?? ''}`
-    )
+    .map((p) => {
+      const base = `${p.name}:${p.type}:${p.kind ?? 'value'}:${p.valueType ?? ''}:${p.sizeParam ?? ''}`
+      // 58-06: the extra layout fields join the key only when present, so a
+      // method that uses none of them hashes exactly as it did before.
+      const extra = [
+        NEW_WIRE_KINDS.has(p.kind ?? 'value') && p.lenParam !== undefined
+          ? `len=${p.lenParam}`
+          : '',
+        p.structSize !== undefined ? `struct=${p.structSize}` : '',
+        p.capBytes !== undefined ? `cap=${p.capBytes}` : ''
+      ].filter(Boolean)
+      return extra.length > 0 ? `${base}:${extra.join(':')}` : base
+    })
     .join(',')
-  return `${method.returnKind}:${method.structSize ?? ''}:${paramsDesc}`
+  const custom =
+    method.helperCustom !== undefined ? `:custom=${method.helperCustom}` : ''
+  return `${method.returnKind}:${method.structSize ?? ''}:${paramsDesc}${custom}`
 }
 
 /**
@@ -3785,6 +4252,38 @@ export function computeWireTableHash(manifests: InterfaceManifest[]): string {
  * (protocol.ts). Exported so a test can pin the emitted `#define` against
  * this single source of truth rather than a repeated literal. */
 export const BRIDGE_DISPATCH_RESP_SCRATCH_BYTES = 4096
+
+/**
+ * 58-06: the helper's response scratch size for a manifest set -- at least
+ * BRIDGE_DISPATCH_RESP_SCRATCH_BYTES, and large enough for the biggest
+ * response a method with an out-struct or an out-buffer `capBytes` override
+ * can produce. Methods without either clamp to the scratch (53-14) and do not
+ * raise it, so today's manifests keep the minimum.
+ */
+export function computeDispatchRespScratchBytes(
+  manifests: InterfaceManifestV2[]
+): number {
+  let max = BRIDGE_DISPATCH_RESP_SCRATCH_BYTES
+  for (const manifest of manifests) {
+    for (const method of manifest.methods) {
+      if (!isWireDispatchMethod(manifest, method)) continue
+      if (method.helperCustom !== undefined) continue
+      const big = method.params.some(
+        (p) => p.kind === 'out-struct' || p.capBytes !== undefined
+      )
+      if (!big) continue
+      let need = dispatchReturnWidth(method, manifest) ?? 0
+      for (const p of method.params) {
+        const k = p.kind ?? 'value'
+        if (k === 'out-value') need += valueTypeWidth(p.valueType ?? 'int32')
+        else if (k === 'out-buffer') need += 4 + (p.capBytes ?? 0)
+        else if (k === 'out-struct') need += 1 + (p.structSize ?? 0)
+      }
+      max = Math.max(max, need)
+    }
+  }
+  return max
+}
 
 /** Max bytes `GetPersonaName`'s (and any future string-returning dispatch
  * method's) helper-side encode will copy out of the native flat accessor's
@@ -3974,6 +4473,9 @@ function assertDispatchable(
       `generateDispatchHeader: ${manifest.interface} has a dispatch-eligible wire method (${method.name}) but no manifest-level helperInterface -- every manifest with at least one dispatch-eligible wire method must declare the Mac dylib accessor it resolves through (51-10)`
     )
   }
+  // 58-06: a helperCustom function produces the whole response blob itself,
+  // so the generic return-shape and out-param limits below do not apply.
+  if (method.helperCustom !== undefined) return
   if (
     method.returnKind !== 'string' &&
     dispatchReturnWidth(method, manifest) === null
@@ -3988,7 +4490,7 @@ function assertDispatchable(
   }
   const hasOutValue = method.params.some((p) => {
     const k = p.kind ?? 'value'
-    return k === 'out-value' || k === 'out-buffer'
+    return k === 'out-value' || k === 'out-buffer' || k === 'out-struct'
   })
   if (
     hasOutValue &&
@@ -4098,9 +4600,23 @@ function emitDispatchCase(
     )
   }
 
+  // 58-06: a helperCustom method hands the raw request blob to its named
+  // helper function, which produces the whole response blob. It returns 0 for
+  // ok; anything else (or a length past respCap) is a STATUS_ERR.
+  if (method.helperCustom !== undefined) {
+    lines.push(
+      `      { uint32_t customLen = 0; // helperCustom ${method.helperCustom}`,
+      `        if (${method.helperCustom}(${selfVar}, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }`,
+      `        *respLen = customLen; return 0; }`,
+      `    }`
+    )
+    return lines.join('\n')
+  }
+
   // --- request decode (value / in-string only -- assertDispatchable above
   // refuses out-value/out-buffer) ---
   const decls: string[] = []
+  const lenChecks: string[] = []
   const callArgs: string[] = [selfVar]
   let offsetExpr = '0u'
 
@@ -4113,6 +4629,57 @@ function emitDispatchCase(
       callArgs.push('NULL')
       continue
     }
+    if (kind === 'in-buffer') {
+      // 58-06 (T-58-16): the declared length is checked against the cap and
+      // against the bytes actually remaining BEFORE any copy; an oversize
+      // length (the shim's cap+1 marker) is refused, never truncated.
+      const bufName = `${flatVar}_${p.name}_buf`
+      decls.push(
+        `      static uint8_t ${bufName}[${WIRE_IN_BUFFER_MAX_BYTES}];`,
+        `      uint32_t ${varName}_len = 0;`,
+        `      if (argLen < ${offsetExpr} + 4) { *respLen = 0; return 1; }`,
+        `      memcpy(&${varName}_len, arg + ${offsetExpr}, 4);`,
+        `      if (${varName}_len > ${WIRE_IN_BUFFER_MAX_BYTES} || (uint64_t)argLen < (uint64_t)(${offsetExpr}) + 4u + ${varName}_len) { *respLen = 0; return 1; } // in-buffer past cap or argLen -- T-58-16`,
+        `      memcpy(${bufName}, arg + ${offsetExpr} + 4, ${varName}_len);`,
+        `      const void *${varName} = ${bufName};`
+      )
+      lenChecks.push(
+        `      if ((int64_t)arg_${p.lenParam} != (int64_t)${varName}_len) { *respLen = 0; return 1; } // lenParam must equal the bytes sent -- T-58-16`
+      )
+      callArgs.push(varName)
+      offsetExpr = `(${offsetExpr} + 4 + ${varName}_len)`
+      continue
+    }
+    if (kind === 'in-struct') {
+      const size = p.structSize ?? 0
+      decls.push(
+        `      uint8_t ${varName}_buf[${size}];`,
+        `      const void *${varName} = NULL;`,
+        `      uint32_t ${varName}_present = 0;`,
+        `      if (argLen < ${offsetExpr} + 1) { *respLen = 0; return 1; }`,
+        `      ${varName}_present = arg[${offsetExpr}];`,
+        `      if (${varName}_present > 1) { *respLen = 0; return 1; }`,
+        `      if (${varName}_present == 1) {`,
+        `        if ((uint64_t)argLen < (uint64_t)(${offsetExpr}) + 1u + ${size}u) { *respLen = 0; return 1; }`,
+        `        memcpy(${varName}_buf, arg + ${offsetExpr} + 1, ${size});`,
+        `        ${varName} = ${varName}_buf;`,
+        `      }`
+      )
+      callArgs.push(varName)
+      offsetExpr = `(${offsetExpr} + 1 + ${varName}_present * ${size}u)`
+      continue
+    }
+    if (kind === 'out-struct') {
+      // 58-06: nothing is read from the request; the native call fills a
+      // zeroed helper-owned buffer and the response carries [u8 1][bytes].
+      const size = p.structSize ?? 0
+      decls.push(
+        `      uint8_t ${varName}_buf[${size}];`,
+        `      memset(${varName}_buf, 0, ${size});`
+      )
+      callArgs.push(`${varName}_buf`)
+      continue
+    }
     if (kind === 'out-buffer') {
       // 53-14: request carries [u32 capacity] (WIRE_LAYOUT_DOC). The data
       // lives in a helper-owned static buffer -- the game's pointer is never
@@ -4120,17 +4687,29 @@ function emitDispatchCase(
       // the response scratch can still carry after the fixed fields.
       const bufName = `${flatVar}_${p.name}_buf`
       const capName = `cap_${p.name}`
+      // 58-06: a capBytes override sizes this one buffer; otherwise the
+      // shared macro, so existing output is unchanged.
+      const capLimit =
+        p.capBytes !== undefined
+          ? String(p.capBytes)
+          : 'BD_WIRE_OUT_BUFFER_MAX_BYTES'
       const outValueWidth = method.params
         .filter((q) => (q.kind ?? 'value') === 'out-value')
         .reduce((sum, q) => sum + valueTypeWidth(q.valueType ?? 'int32'), 0)
+      const outStructWidth = method.params
+        .filter((q) => (q.kind ?? 'value') === 'out-struct')
+        .reduce((sum, q) => sum + 1 + (q.structSize ?? 0), 0)
       const fixed =
-        (dispatchReturnWidth(method, manifest) ?? 0) + outValueWidth + 4
+        (dispatchReturnWidth(method, manifest) ?? 0) +
+        outValueWidth +
+        outStructWidth +
+        4
       decls.push(
-        `      static uint8_t ${bufName}[BD_WIRE_OUT_BUFFER_MAX_BYTES];`,
+        `      static uint8_t ${bufName}[${capLimit}];`,
         `      uint32_t ${capName} = 0;`,
         `      if (argLen < ${offsetExpr} + 4) { *respLen = 0; return 1; }`,
         `      memcpy(&${capName}, arg + ${offsetExpr}, 4);`,
-        `      if (${capName} > BD_WIRE_OUT_BUFFER_MAX_BYTES) ${capName} = BD_WIRE_OUT_BUFFER_MAX_BYTES;`,
+        `      if (${capName} > ${capLimit}) ${capName} = ${capLimit};`,
         `      if (respCap < ${fixed}) { *respLen = 0; return 1; }`,
         `      if (${capName} > respCap - ${fixed}) ${capName} = (uint32_t)(respCap - ${fixed}); // response must fit the scratch`,
         `      memset(${bufName}, 0, ${capName}); // no earlier call's bytes cross into the game (53-17 WR-04)`
@@ -4188,6 +4767,7 @@ function emitDispatchCase(
     }
   }
   lines.push(...decls)
+  lines.push(...lenChecks)
 
   // 53-14: the native size argument can never exceed the clamped capacity of
   // the helper-owned buffer it describes (a hostile/negative wire value is
@@ -4239,7 +4819,14 @@ function emitDispatchCase(
     const outBufferParams = method.params.filter(
       (p) => (p.kind ?? 'value') === 'out-buffer'
     )
-    if (outValueParams.length === 0 && outBufferParams.length === 0) {
+    const outStructParams = method.params.filter(
+      (p) => (p.kind ?? 'value') === 'out-struct'
+    )
+    if (
+      outValueParams.length === 0 &&
+      outBufferParams.length === 0 &&
+      outStructParams.length === 0
+    ) {
       lines.push(
         `      ${returnType} __ret = ${callExpr};`,
         ...fwdIntLog,
@@ -4259,7 +4846,8 @@ function emitDispatchCase(
       )
       const totalWidth =
         extraWidths.reduce((sum, w) => sum + w, width!) +
-        (outBufferParams.length > 0 ? 4 : 0)
+        (outBufferParams.length > 0 ? 4 : 0) +
+        outStructParams.reduce((sum, p) => sum + 1 + (p.structSize ?? 0), 0)
       lines.push(
         `      ${returnType} __ret = ${callExpr};`,
         ...fwdIntLog,
@@ -4288,7 +4876,19 @@ function emitDispatchCase(
           `      memcpy(resp + ${offset} + 4, ${bufName}, outLen_${p.name});`
         )
       }
-      if (outBufferParams.length > 0) {
+      if (outStructParams.length > 0) {
+        // 58-06: out-structs trail the out-buffers -- [u8 1][structSize bytes].
+        const last = outBufferParams[0]
+        lines.push(
+          `      uint32_t respEnd = ${offset}${last ? ` + 4 + outLen_${last.name}` : ''};`
+        )
+        for (const p of outStructParams) {
+          lines.push(
+            `      resp[respEnd] = 1; memcpy(resp + respEnd + 1, arg_${p.name}_buf, ${p.structSize}); respEnd += 1 + ${p.structSize};`
+          )
+        }
+        lines.push(`      *respLen = respEnd;`, `      return 0;`)
+      } else if (outBufferParams.length > 0) {
         const last = outBufferParams[0]
         lines.push(
           `      *respLen = ${offset} + 4 + outLen_${last.name};`,
@@ -4336,6 +4936,27 @@ export function generateDispatchHeader(
 
   const accessorTypedefs = `typedef void *(*BDAccessorFn_t)(void);\n`
 
+  // 58-06: one prototype per distinct helperCustom function, emitted only
+  // when some manifest uses one so the helper compiles without any defined.
+  const customNames = [
+    ...new Set(
+      dispatchManifests.flatMap((m) =>
+        m.methods
+          .filter((method) => isWireDispatchMethod(m, method))
+          .flatMap((method) =>
+            method.helperCustom !== undefined ? [method.helperCustom] : []
+          )
+      )
+    )
+  ].sort()
+  const customPrototypes = customNames
+    .map(
+      (name) =>
+        `// 58-06: hand-written in bridge_helper.c; returns 0 for ok.\n` +
+        `int ${name}(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);\n\n`
+    )
+    .join('')
+
   const selfDecls = dispatchManifests
     .map((m) => {
       const ordinalDefine = `#define BD_ORDINAL_${m.interface} ${m.ordinal}`
@@ -4358,11 +4979,13 @@ export function generateDispatchHeader(
           // 53-14: a null-in param and every helperTrailingNullArgs slot
           // are `const void *` on the native 1.59+ flat signature.
           const realParams = [
-            ...method.params.map((p) =>
-              (p.kind ?? 'value') === 'null-in'
-                ? 'const void *'
-                : dispatchCType(p.type)
-            ),
+            ...method.params.map((p) => {
+              const k = p.kind ?? 'value'
+              if (k === 'null-in' || k === 'in-buffer' || k === 'in-struct')
+                return 'const void *'
+              if (k === 'out-struct') return 'void *'
+              return dispatchCType(p.type)
+            }),
             ...Array.from(
               { length: method.helperTrailingNullArgs ?? 0 },
               () => 'const void *'
@@ -4487,7 +5110,7 @@ export function generateDispatchHeader(
     `  }\n` +
     `  out[i] = '\\0';\n` +
     `}\n\n` +
-    `/*\n${WIRE_LAYOUT_DOC}*/\n` +
+    `/*\n${wireLayoutDocFor(manifests)}*/\n` +
     `#define BD_WIRE_IN_STRING_MAX_BYTES ${WIRE_IN_STRING_MAX_BYTES}\n` +
     `#define BD_WIRE_OUT_BUFFER_MAX_BYTES ${WIRE_OUT_BUFFER_MAX_BYTES}\n\n` +
     `// Digest of the SAME sorted (interface, ordinal, slot, layout) wire-method\n` +
@@ -4497,8 +5120,9 @@ export function generateDispatchHeader(
     `#define BRIDGE_DISPATCH_TABLE_HASH "${computeWireTableHash(manifests)}"\n\n` +
     `// Response scratch -- bridge_dispatch() never writes past respCap, which\n` +
     `// the caller (bridge_helper.c) sizes to this constant.\n` +
-    `#define BRIDGE_DISPATCH_RESP_SCRATCH_BYTES ${BRIDGE_DISPATCH_RESP_SCRATCH_BYTES}\n\n` +
+    `#define BRIDGE_DISPATCH_RESP_SCRATCH_BYTES ${computeDispatchRespScratchBytes(manifests)}\n\n` +
     `${accessorTypedefs}\n` +
+    customPrototypes +
     `${selfDecls}\n` +
     `${flatTypedefsAndDecls}\n` +
     `// D-51-04: identity-only mode -- set once by bridge_helper.c's argv\n` +

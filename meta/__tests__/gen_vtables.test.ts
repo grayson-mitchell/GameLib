@@ -36,7 +36,14 @@ import {
   emitStringReturnDecode,
   emitStringReturnEncodeLines,
   WIRE_LAYOUT_DOC,
+  WIRE_LARGE_MAX_BYTES,
+  WIRE_IN_BUFFER_MAX_BYTES,
+  SHIM_LOCAL_BODIES,
+  computeDispatchRespScratchBytes,
+  BRIDGE_DISPATCH_RESP_SCRATCH_BYTES,
   X64_NULL_OBJECT_SLOTS,
+  type MethodSignature,
+  type ParamSignature,
   type InterfaceManifestV2,
   type NullSretInventory
 } from '../gen_vtables'
@@ -4221,5 +4228,434 @@ describe('58-03 flatAccessorAliases', () => {
     expect(validateManifest(dupSelf, [dupSelf]).join('\n')).toMatch(
       /own export/
     )
+  })
+})
+
+describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes, shimLocal, helperCustom)', () => {
+  function wireManifest(
+    methods: Array<
+      Omit<MethodSignature, 'slot' | 'stackBytes' | 'returnKind'> & {
+        returnKind?: MethodSignature['returnKind']
+      }
+    >,
+    arches: InterfaceManifestV2['arches'] = ['x64']
+  ): InterfaceManifestV2 {
+    return {
+      schemaVersion: 2,
+      interface: 'GameLibWire001',
+      family: 'GameLibWire',
+      ordinal: 9100,
+      arches,
+      mode: 'wire',
+      complete: false,
+      helperInterface: 'SteamAPI_GameLibWire_v001',
+      source: { kind: 'synthetic', ref: '58-06 unit test', file: 'n/a' },
+      methods: methods.map((m, slot) => {
+        const withKind = {
+          returnKind: 'int32',
+          ...m,
+          slot
+        } as MethodSignature
+        return { ...withKind, stackBytes: computeRetN(withKind) }
+      })
+    }
+  }
+
+  const sendMethod = {
+    name: 'Send',
+    returns: 'int32',
+    helperFlat: 'SteamAPI_IGameLibWire_Send',
+    params: [
+      {
+        name: 'pData',
+        type: 'const void*',
+        kind: 'in-buffer',
+        lenParam: 'cb'
+      },
+      { name: 'cb', type: 'uint32' }
+    ] as ParamSignature[]
+  }
+  const getMethod = {
+    name: 'Get',
+    returns: 'int32',
+    helperFlat: 'SteamAPI_IGameLibWire_Get',
+    params: [
+      {
+        name: 'pInfo',
+        type: 'SteamNetConnectionInfo_t*',
+        kind: 'out-struct',
+        structSize: 696
+      }
+    ] as ParamSignature[]
+  }
+  const connectMethod = {
+    name: 'Connect',
+    returns: 'int32',
+    helperFlat: 'SteamAPI_IGameLibWire_Connect',
+    params: [
+      {
+        name: 'id',
+        type: 'const SteamNetworkingIdentity*',
+        kind: 'in-struct',
+        structSize: 136
+      }
+    ] as ParamSignature[]
+  }
+
+  describe('validateManifest', () => {
+    it('accepts in-buffer with an integer sibling lenParam', () => {
+      expect(validateManifest(wireManifest([sendMethod]))).toEqual([])
+    })
+
+    it('rejects in-buffer with a missing or non-integer lenParam', () => {
+      const missing = wireManifest([
+        {
+          ...sendMethod,
+          params: [
+            { ...sendMethod.params[0], lenParam: undefined },
+            sendMethod.params[1]
+          ]
+        }
+      ])
+      expect(validateManifest(missing).join('\n')).toMatch(
+        /in-buffer.*lenParam/
+      )
+      const floaty = wireManifest([
+        {
+          ...sendMethod,
+          params: [sendMethod.params[0], { name: 'cb', type: 'float' }]
+        }
+      ])
+      expect(validateManifest(floaty).join('\n')).toMatch(/in-buffer.*lenParam/)
+      const bogus = wireManifest([
+        {
+          ...sendMethod,
+          params: [
+            { ...sendMethod.params[0], lenParam: 'nope' },
+            sendMethod.params[1]
+          ]
+        }
+      ])
+      expect(validateManifest(bogus).join('\n')).toMatch(/in-buffer.*lenParam/)
+    })
+
+    it('accepts in-struct/out-struct on a struct with identical x64 and mac layouts', () => {
+      expect(validateManifest(wireManifest([connectMethod]))).toEqual([])
+      expect(validateManifest(wireManifest([getMethod]))).toEqual([])
+    })
+
+    it('rejects a struct whose x64 and mac layouts differ with "needs repack"', () => {
+      const bad = wireManifest([
+        {
+          ...connectMethod,
+          params: [
+            {
+              name: 'p',
+              type: 'const LobbyEnter_t*',
+              kind: 'in-struct',
+              structSize: 24
+            }
+          ]
+        }
+      ])
+      expect(validateManifest(bad).join('\n')).toMatch(/needs repack/)
+    })
+
+    it('rejects a struct absent from CALLBACK_LAYOUTS, or with the wrong structSize', () => {
+      const unknown = wireManifest([
+        {
+          ...getMethod,
+          params: [
+            { name: 'p', type: 'Nope_t*', kind: 'out-struct', structSize: 8 }
+          ]
+        }
+      ])
+      expect(validateManifest(unknown).join('\n')).toMatch(/CALLBACK_LAYOUTS/)
+      const wrongSize = wireManifest([
+        {
+          ...getMethod,
+          params: [{ ...getMethod.params[0], structSize: 100 }]
+        }
+      ])
+      expect(validateManifest(wrongSize).join('\n')).toMatch(
+        /measured x64 size 696/
+      )
+    })
+
+    it('requires x86 identity too when the manifest also targets x86', () => {
+      const x86Diff = wireManifest(
+        [
+          {
+            ...getMethod,
+            params: [
+              {
+                name: 'p',
+                type: 'SteamNetworkingMessage_t*',
+                kind: 'out-struct',
+                structSize: 216
+              }
+            ]
+          }
+        ],
+        ['x86', 'x64']
+      )
+      expect(validateManifest(x86Diff).join('\n')).toMatch(/needs repack/)
+      const x64Only = wireManifest([
+        {
+          ...getMethod,
+          params: [
+            {
+              name: 'p',
+              type: 'SteamNetworkingMessage_t*',
+              kind: 'out-struct',
+              structSize: 216
+            }
+          ]
+        }
+      ])
+      expect(validateManifest(x64Only)).toEqual([])
+    })
+
+    it('caps an out-buffer capBytes override at WIRE_LARGE_MAX_BYTES', () => {
+      const withCap = (capBytes: number) =>
+        wireManifest([
+          {
+            name: 'Recv',
+            returns: 'int32',
+            helperFlat: 'SteamAPI_IGameLibWire_Recv',
+            params: [
+              {
+                name: 'pBuf',
+                type: 'char*',
+                kind: 'out-buffer',
+                sizeParam: 'cb',
+                capBytes
+              },
+              { name: 'cb', type: 'int32' }
+            ]
+          }
+        ])
+      expect(WIRE_LARGE_MAX_BYTES).toBe(61440)
+      expect(WIRE_IN_BUFFER_MAX_BYTES).toBe(WIRE_LARGE_MAX_BYTES)
+      expect(validateManifest(withCap(61440))).toEqual([])
+      expect(validateManifest(withCap(61441)).join('\n')).toMatch(/capBytes/)
+    })
+
+    it('rejects shimLocal without a body, and a malformed or flat-less helperCustom', () => {
+      const local = wireManifest([
+        { ...sendMethod, shimLocal: true, helperFlat: undefined }
+      ])
+      expect(validateManifest(local).join('\n')).toMatch(/SHIM_LOCAL_BODIES/)
+      expect(() => generateShimC([local])).toThrow(/SHIM_LOCAL_BODIES/)
+
+      const badName = wireManifest([
+        { ...sendMethod, helperCustom: 'Bad-Name' }
+      ])
+      expect(validateManifest(badName).join('\n')).toMatch(/helperCustom/)
+      const noFlat = wireManifest([
+        { ...sendMethod, helperCustom: 'gl_send', helperFlat: undefined }
+      ])
+      expect(validateManifest(noFlat).join('\n')).toMatch(/helperFlat/)
+      const ok = wireManifest([{ ...sendMethod, helperCustom: 'gl_send' }])
+      expect(validateManifest(ok)).toEqual([])
+    })
+  })
+
+  describe('WIRE_LAYOUT_DOC pins', () => {
+    it('documents every new kind and mode', () => {
+      expect(WIRE_LAYOUT_DOC).toMatch(
+        /kind 'in-buffer': \[u32 len\]\[len bytes\]/
+      )
+      expect(WIRE_LAYOUT_DOC).toMatch(/WIRE_IN_BUFFER_MAX_BYTES \+ 1\]/)
+      expect(WIRE_LAYOUT_DOC).toMatch(/never truncated/)
+      expect(WIRE_LAYOUT_DOC).toMatch(
+        /kind 'in-struct': \[u8 present\]\[structSize bytes/
+      )
+      expect(WIRE_LAYOUT_DOC).toMatch(/helper passes NULL/)
+      expect(WIRE_LAYOUT_DOC).toMatch(/'out-struct' param in declaration order/)
+      expect(WIRE_LAYOUT_DOC).toMatch(/non-NULL and present is 1/)
+      expect(WIRE_LAYOUT_DOC).toMatch(/capBytes/)
+      expect(WIRE_LAYOUT_DOC).toMatch(/shimLocal: the shim answers/)
+      expect(WIRE_LAYOUT_DOC).toMatch(
+        /helperCustom: the request uses the generic/
+      )
+      expect(WIRE_LAYOUT_DOC).toMatch(/needs repack/)
+    })
+
+    it('real manifests embed the base text only; a manifest using the new kinds embeds all of it', () => {
+      expect(generateDispatchHeader(real)).not.toMatch(
+        /Extended kinds and modes/
+      )
+      const header = generateDispatchHeader([wireManifest([sendMethod])])
+      expect(header).toContain('Extended kinds and modes (58-06)')
+      expect(generateShimC([wireManifest([sendMethod])])).toContain(
+        'Extended kinds and modes (58-06)'
+      )
+    })
+  })
+
+  describe('shim encode', () => {
+    it('in-buffer sends [u32 len][bytes] within the cap and the cap+1 marker with no bytes beyond it', () => {
+      const shim = generateShimC([wireManifest([sendMethod])])
+      expect(shim).toContain('rawLen > 61440')
+      expect(shim).toContain('bufLen = 61440 + 1u;')
+      expect(shim).toContain('memcpy(argbuf + argOff, pData, bufLen)')
+      // the over-limit branch must not copy bytes
+      const branch = shim.slice(
+        shim.indexOf('bufLen = 61440 + 1u;'),
+        shim.indexOf('} else {', shim.indexOf('bufLen = 61440 + 1u;'))
+      )
+      expect(branch).not.toMatch(/pData,/)
+    })
+
+    it('a large in-buffer uses static buffers while g_bridge_lock is held', () => {
+      const shim = generateShimC([wireManifest([sendMethod])])
+      const fn = shim.slice(shim.indexOf('vt_GameLibWire001_Send('))
+      const body = fn.slice(0, fn.indexOf('\n}\n'))
+      expect(body).toContain('static uint8_t argbuf[')
+      expect(body).toContain('static uint8_t retbuf[')
+      const acquire = body.indexOf('AcquireSRWLockExclusive(&g_bridge_lock)')
+      const transact = body.indexOf('bridge_transact_locked(')
+      const release = body.indexOf('ReleaseSRWLockExclusive(&g_bridge_lock)')
+      expect(acquire).toBeGreaterThan(-1)
+      expect(acquire).toBeLessThan(body.indexOf('memcpy(argbuf'))
+      expect(transact).toBeGreaterThan(acquire)
+      expect(release).toBeGreaterThan(transact)
+    })
+
+    it('out-struct writes into the game pointer only when non-NULL and present==1', () => {
+      const shim = generateShimC([wireManifest([getMethod])])
+      expect(shim).toContain('uint8_t present_pInfo = retbuf[respOff]')
+      expect(shim).toContain(
+        'if (present_pInfo == 1 && retlen >= respOff + 696)'
+      )
+      expect(shim).toContain(
+        'if (pInfo != NULL) memcpy(pInfo, retbuf + respOff, 696)'
+      )
+    })
+
+    it('in-struct sends present=0 for NULL', () => {
+      const shim = generateShimC([wireManifest([connectMethod])])
+      expect(shim).toContain('if (id == NULL) {')
+      expect(shim).toContain('argbuf[argOff] = 0; argOff += 1;')
+      expect(shim).toContain('memcpy(argbuf + argOff, id, 136)')
+    })
+
+    it('shimLocal emits the SHIM_LOCAL_BODIES body and no helper case', () => {
+      const bodies = SHIM_LOCAL_BODIES as Record<string, string>
+      bodies['GameLibWire.Send'] = '  (void)pData; (void)cb;\n  return 42;'
+      try {
+        const m = wireManifest([{ ...sendMethod, shimLocal: true }, getMethod])
+        expect(validateManifest(m)).toEqual([])
+        const shim = generateShimC([m])
+        const fn = shim.slice(shim.indexOf('vt_GameLibWire001_Send('))
+        expect(fn.slice(0, fn.indexOf('\n}\n'))).toContain('return 42;')
+        expect(fn.slice(0, fn.indexOf('\n}\n'))).not.toContain(
+          'bridge_transact'
+        )
+        const header = generateDispatchHeader([m])
+        expect(header).not.toContain('GameLibWire001.Send')
+        expect(header).toContain('GameLibWire001.Get')
+      } finally {
+        delete bodies['GameLibWire.Send']
+      }
+    })
+  })
+
+  describe('helper decode (bridge_dispatch.h)', () => {
+    it('in-buffer refuses len > cap before touching bytes, checks remaining bytes, and pins lenParam', () => {
+      const header = generateDispatchHeader([wireManifest([sendMethod])])
+      expect(header).toContain('arg_pData_len > 61440')
+      expect(header).toContain(
+        '(uint64_t)argLen < (uint64_t)(0u) + 4u + arg_pData_len'
+      )
+      const check = header.indexOf('arg_pData_len > 61440')
+      expect(header).toContain('(int64_t)arg_cb != (int64_t)arg_pData_len')
+      // the refusal precedes the byte copy
+      const copy = header.indexOf('_pData_buf, arg +')
+      expect(check).toBeLessThan(copy)
+    })
+
+    it('in-struct passes NULL when present is 0', () => {
+      const header = generateDispatchHeader([wireManifest([connectMethod])])
+      expect(header).toContain('const void *arg_id = NULL;')
+      expect(header).toContain('if (arg_id_present == 1) {')
+    })
+
+    it('out-struct appends [u8 1][bytes] and the scratch grows to hold it', () => {
+      const m = wireManifest([getMethod])
+      const header = generateDispatchHeader([m])
+      expect(header).toContain(
+        'resp[respEnd] = 1; memcpy(resp + respEnd + 1, arg_pInfo_buf, 696)'
+      )
+      expect(computeDispatchRespScratchBytes([m])).toBe(
+        BRIDGE_DISPATCH_RESP_SCRATCH_BYTES
+      )
+    })
+
+    it('BRIDGE_DISPATCH_RESP_SCRATCH_BYTES is max(4096, the largest capBytes response)', () => {
+      const recv = (capBytes: number) =>
+        wireManifest([
+          {
+            name: 'Recv',
+            returns: 'int32',
+            helperFlat: 'SteamAPI_IGameLibWire_Recv',
+            params: [
+              {
+                name: 'pBuf',
+                type: 'char*',
+                kind: 'out-buffer',
+                sizeParam: 'cb',
+                capBytes
+              },
+              { name: 'cb', type: 'int32' }
+            ]
+          }
+        ])
+      expect(computeDispatchRespScratchBytes(real)).toBe(4096)
+      expect(computeDispatchRespScratchBytes([recv(61440)])).toBe(4 + 4 + 61440)
+      const header = generateDispatchHeader([recv(61440)])
+      expect(header).toContain(
+        '#define BRIDGE_DISPATCH_RESP_SCRATCH_BYTES 61448'
+      )
+      expect(header).toContain('static uint8_t')
+      expect(header).toContain('[61440];')
+      expect(header).toContain('cap_pBuf > 61440')
+    })
+
+    it('helperCustom calls the named function and emits no generic decode for the method', () => {
+      const m = wireManifest([{ ...sendMethod, helperCustom: 'gl_send_blob' }])
+      const header = generateDispatchHeader([m])
+      expect(header).toContain(
+        'int gl_send_blob(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);'
+      )
+      expect(header).toContain('gl_send_blob(')
+      expect(header).toContain('arg, argLen, resp, respCap, &customLen')
+      expect(header).not.toContain('arg_pData_len')
+    })
+
+    it('real manifests declare no custom prototype', () => {
+      expect(generateDispatchHeader(real)).not.toMatch(
+        /hand-written in bridge_helper/
+      )
+    })
+  })
+
+  it('the committed generated files are exactly what the committed manifests regenerate (nothing uses the new kinds yet)', () => {
+    const inventory = realInventory
+    const shim = readFileSync(
+      join(
+        __dirname,
+        '..',
+        '..',
+        'native',
+        'steam-bridge',
+        'generated',
+        'bridge_dispatch.h'
+      ),
+      'utf-8'
+    )
+    expect(generateDispatchHeader(real)).toBe(shim)
+    expect(inventory).toBeDefined()
   })
 })
