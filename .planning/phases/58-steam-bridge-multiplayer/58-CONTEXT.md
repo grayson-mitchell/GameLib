@@ -110,7 +110,8 @@ session the peer hosts.
 - **D-14 (D-02 outcome):** TCP-mode test title is **Schedule I: Free Sample (3205720)**. Its
   `.bind`, architecture, imports and networking stack are unmeasured at research time; plan 58-01
   measures them after the operator installs it. If it turns out SteamStub-wrapped, x86, or not on
-  Steam networking, fall back to Shift At Midnight Multiplayer Demo (4050060).
+  Steam networking, 58-01 stops for the operator to re-pick (Shift At Midnight Multiplayer Demo
+  4050060 is the research backup, not yet approved).
 - **D-15 (D-03 outcome):** DRM-mode test title is **Raft (648800)**; the second account buys a copy.
 - **D-16 (D-12 outcome):** `bridge-allowlist.json` already has `knownBad: []` (Hoard lifted in
   quick 261026-ous, `90ebe6db7`), so D-12 is a **no-op**. Plans record it; no task removes an
