@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
-import { isSteamPurchaseIntentUrl } from './steamStoreExitRefresh'
+import { isSteamPurchaseIntentUrl } from './storeExitRefresh'
 import { readWebviewZoomFactor, scaleRectForZoom } from './storeEmbedZoom'
 
 // Dispatched on `window` by `applyFramelessDecorations` (`src/preload/api/tauriWindowChrome.ts`,

@@ -26,7 +26,7 @@ import { useStoreEmbedHost } from './useStoreEmbedHost'
 import {
   runSteamStoreExitRefresh,
   STEAM_STORE_EXIT_REFRESH_ORIGIN
-} from './steamStoreExitRefresh'
+} from './storeExitRefresh'
 import type { OAuthRunner } from 'common/types/oauthLogin'
 import {
   isLoginPathname,
