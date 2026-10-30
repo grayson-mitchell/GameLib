@@ -354,7 +354,7 @@ export default function WebView() {
   const signInState = resolveSignInState(signInInputs.legendary)
   const steamSignInState = resolveSignInState(signInInputs.steam)
   // Quick 261030-qqh: leaving the Steam store after an app/cart/checkout page runs the same
-  // Steam-scoped refresh the Redeem-key dialog runs, behind sign-in/in-flight/throttle gates.
+  // Steam-scoped refresh the Redeem-key dialog runs, behind sign-in and in-flight gates.
   const onSteamStoreExit = () => {
     runSteamStoreExitRefresh({
       signInState: steamSignInState,

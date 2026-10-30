@@ -1,8 +1,7 @@
 import {
   isSteamPurchaseIntentUrl,
   runSteamStoreExitRefresh,
-  resetSteamStoreExitRefreshState,
-  STEAM_STORE_EXIT_REFRESH_THROTTLE_MS
+  resetSteamStoreExitRefreshState
 } from '../steamStoreExitRefresh'
 
 describe('isSteamPurchaseIntentUrl', () => {
@@ -35,21 +34,17 @@ describe('isSteamPurchaseIntentUrl', () => {
 })
 
 describe('runSteamStoreExitRefresh', () => {
-  let t = 1_000_000
-  const now = () => t
   const log = jest.fn()
   const mk = (over: Record<string, unknown> = {}) => ({
     signInState: 'connected',
     refreshInFlight: false,
     refreshLibrary: jest.fn().mockResolvedValue(undefined),
     log,
-    now,
     ...over
   })
 
   beforeEach(() => {
     resetSteamStoreExitRefreshState()
-    t = 1_000_000
     log.mockClear()
   })
 
@@ -65,7 +60,7 @@ describe('runSteamStoreExitRefresh', () => {
     expect(d.refreshLibrary).toHaveBeenCalledTimes(1)
   })
 
-  it('in-flight skips without consuming the throttle window', () => {
+  it('a caller-reported in-flight refresh skips, and the next exit refreshes', () => {
     const a = mk({ refreshInFlight: true })
     expect(runSteamStoreExitRefresh(a)).toBe('skipped-in-flight')
     expect(a.refreshLibrary).not.toHaveBeenCalled()
@@ -73,14 +68,13 @@ describe('runSteamStoreExitRefresh', () => {
     expect(runSteamStoreExitRefresh(b)).toBe('refreshed')
   })
 
-  it('throttles within the window and refreshes at the boundary', async () => {
+  it('back-to-back exits each refresh once the previous one has settled (no time throttle)', async () => {
     expect(runSteamStoreExitRefresh(mk())).toBe('refreshed')
     await Promise.resolve()
     await Promise.resolve()
-    t += 1000
-    expect(runSteamStoreExitRefresh(mk())).toBe('skipped-throttled')
-    t += STEAM_STORE_EXIT_REFRESH_THROTTLE_MS
-    expect(runSteamStoreExitRefresh(mk())).toBe('refreshed')
+    const second = mk()
+    expect(runSteamStoreExitRefresh(second)).toBe('refreshed')
+    expect(second.refreshLibrary).toHaveBeenCalledTimes(1)
   })
 
   it('skips while the previous auto refresh is unresolved, then recovers after resolve or reject', async () => {
@@ -89,7 +83,6 @@ describe('runSteamStoreExitRefresh', () => {
     expect(
       runSteamStoreExitRefresh(mk({ refreshLibrary: () => pending }))
     ).toBe('refreshed')
-    t += STEAM_STORE_EXIT_REFRESH_THROTTLE_MS * 2
     expect(runSteamStoreExitRefresh(mk())).toBe('skipped-in-flight')
     resolve()
     await pending
@@ -102,7 +95,6 @@ describe('runSteamStoreExitRefresh', () => {
     await Promise.resolve()
     await Promise.resolve()
     await Promise.resolve()
-    t += STEAM_STORE_EXIT_REFRESH_THROTTLE_MS
     expect(runSteamStoreExitRefresh(mk())).toBe('refreshed')
   })
 

@@ -178,10 +178,15 @@ export default function Header({ list, totalGames }: Props) {
   // would silently lose this spinner entirely (a real, if pre-existing and
   // mislabeled, feedback regression) — checking whether ANY runner is mid
   // scoped-refresh preserves the exact same "something is syncing" signal.
+  const anyScopedRefresh = Object.values(refreshingByRunner).some(Boolean)
   const isSteamSyncing =
     (refreshing && refreshingInTheBackground) ||
     steamMetadataSyncing ||
-    Object.values(refreshingByRunner).some(Boolean)
+    anyScopedRefresh
+  // Quick 261030-qqh: a scoped refresh (store exit, redeem, login) spins the
+  // Refresh button itself, the same feedback a manual Refresh gives, instead
+  // of lighting the separate sync spinner beside it.
+  const refreshButtonSpinning = refreshing || anyScopedRefresh
 
   const showStaleIndicator =
     connectivity.status !== 'online' && syncedAt !== null
@@ -452,7 +457,7 @@ export default function Header({ list, totalGames }: Props) {
           )}
           <button
             className={classNames('Header__utilityButton', {
-              active: refreshing
+              active: refreshButtonSpinning
             })}
             title={t('generic.library.refresh', 'Refresh Library')}
             onClick={async () =>
@@ -463,13 +468,13 @@ export default function Header({ list, totalGames }: Props) {
             }
           >
             <FontAwesomeIcon
-              className={classNames({ ['fa-spin']: refreshing })}
+              className={classNames({ ['fa-spin']: refreshButtonSpinning })}
               data-tour="library-refresh"
               icon={faSyncAlt}
             />
           </button>
           {/*
-            `!refreshing` is load-bearing, not a tidy-up. This spinner and
+            `!refreshButtonSpinning` is load-bearing, not a tidy-up. This spinner and
             the refresh button above render the SAME faSyncAlt glyph, and
             `isSteamSyncing`'s first arm is `refreshing && refreshingInThe-
             Background`, so a refresh click lit both and the operator saw
@@ -478,10 +483,11 @@ export default function Header({ list, totalGames }: Props) {
             All three signals survive the gate -- exactly one spinner in
             every state, and none lost:
               - global refresh          -> the BUTTON spins (this hidden)
+              - scoped per-runner refresh -> the BUTTON spins (this hidden;
+                quick 261030-qqh, previously this one)
               - background metadata sync, no foreground refresh -> this one
-              - scoped per-runner refresh                       -> this one
 
-            That last case is why `isSteamSyncing` itself must NOT be
+            The scoped case is why `isSteamSyncing` itself must NOT be
             simplified and none of its three OR arms removed: a
             single-runner login/logout refresh never flips the two global
             flags, it writes `refreshingByRunner` (see the comment on the
@@ -489,7 +495,7 @@ export default function Header({ list, totalGames }: Props) {
             the RENDER is safe; narrowing the CONDITION would silently drop
             that feedback again.
           */}
-          {isSteamSyncing && !refreshing && (
+          {isSteamSyncing && !refreshButtonSpinning && (
             <FontAwesomeIcon
               icon={faSyncAlt}
               className="steamSyncSpinner"

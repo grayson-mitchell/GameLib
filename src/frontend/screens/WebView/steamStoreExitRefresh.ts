@@ -6,13 +6,11 @@
  */
 
 export const STEAM_STORE_EXIT_REFRESH_ORIGIN = 'steam-store-exit'
-export const STEAM_STORE_EXIT_REFRESH_THROTTLE_MS = 2 * 60 * 1000
 
 export type SteamStoreExitRefreshOutcome =
   | 'refreshed'
   | 'skipped-signed-out'
   | 'skipped-in-flight'
-  | 'skipped-throttled'
 
 const STEAM_STORE_HOSTS = new Set([
   'store.steampowered.com',
@@ -39,11 +37,9 @@ export function isSteamPurchaseIntentUrl(url: string): boolean {
   )
 }
 
-let lastAutoRefreshAt: number | null = null
 let autoRefreshInFlight = false
 
 export function resetSteamStoreExitRefreshState(): void {
-  lastAutoRefreshAt = null
   autoRefreshInFlight = false
 }
 
@@ -52,13 +48,11 @@ export interface SteamStoreExitRefreshDeps {
   refreshInFlight: boolean
   refreshLibrary: () => Promise<void>
   log: (line: string) => void
-  now?: () => number
 }
 
 export function runSteamStoreExitRefresh(
   deps: SteamStoreExitRefreshDeps
 ): SteamStoreExitRefreshOutcome {
-  const now = (deps.now ?? Date.now)()
   const emit = (outcome: SteamStoreExitRefreshOutcome) => {
     deps.log(
       `[steamStoreExitRefresh] origin=${STEAM_STORE_EXIT_REFRESH_ORIGIN} outcome=${outcome}`
@@ -72,14 +66,9 @@ export function runSteamStoreExitRefresh(
   if (deps.refreshInFlight || autoRefreshInFlight) {
     return emit('skipped-in-flight')
   }
-  if (
-    lastAutoRefreshAt !== null &&
-    now - lastAutoRefreshAt < STEAM_STORE_EXIT_REFRESH_THROTTLE_MS
-  ) {
-    return emit('skipped-throttled')
-  }
-
-  lastAutoRefreshAt = now
+  // No time throttle: the 261030-qqh live test showed a 2-minute window
+  // swallowing the one exit that followed a grant. The in-flight guard above
+  // is what stops refreshes stacking.
   autoRefreshInFlight = true
   const clear = () => {
     autoRefreshInFlight = false
