@@ -4690,7 +4690,8 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
             m.interface !== 'SteamMatchMaking009' &&
             m.interface !== 'SteamNetworking006' &&
             m.interface !== 'SteamNetworkingUtils004' &&
-            m.interface !== 'SteamNetworkingSockets013'
+            m.interface !== 'SteamNetworkingSockets013' &&
+            m.interface !== 'SteamNetworkingMessages002'
         )
         .map((m) => ({
           ...m,
@@ -4927,8 +4928,10 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
         'gl_net_get_pop_list',
         'gl_net_read_p2p_packet',
         'gl_net_receive_messages',
+        'gl_net_receive_messages_ch',
         'gl_net_receive_messages_pg',
         'gl_net_rt_status',
+        'gl_net_session_info',
         'gl_net_set_config_value',
         'gl_net_sockets_open'
       ])
@@ -5549,5 +5552,48 @@ describe('58-15 SteamNetworkingSockets013 wire policy and served flip', () => {
       if (m.shimLocal && m.helperCustom === undefined) continue
       expect(m.helperFlat).toBe(`SteamAPI_ISteamNetworkingSockets_${m.name}`)
     }
+  })
+})
+
+describe('58-16 SteamNetworkingMessages002 wire policy', () => {
+  const messages = real.find(
+    (m) => m.interface === 'SteamNetworkingMessages002'
+  )!
+  const header = generateDispatchHeader(real)
+  const method = (name: string) =>
+    messages.methods.find((m) => m.name === name)!
+
+  it('validates and wires all six methods to SteamAPI_ISteamNetworkingMessages_ exports', () => {
+    expect(validateManifest(messages)).toEqual([])
+    expect(messages.methods).toHaveLength(6)
+    for (const m of messages.methods) {
+      expect(m.mode ?? messages.mode).toBe('wire')
+      expect(m.helperFlat).toBe(`SteamAPI_ISteamNetworkingMessages_${m.name}`)
+    }
+  })
+
+  it('ReceiveMessagesOnChannel is an out-messages custom receive; send logs send/Messages', () => {
+    const recv = method('ReceiveMessagesOnChannel')
+    expect(recv.helperCustom).toBe('gl_net_receive_messages_ch')
+    expect(recv.returnKind).toBe('int32')
+    expect(recv.params.map((p) => p.kind)).toEqual([
+      'value',
+      'out-messages',
+      'value'
+    ])
+    expect(recv.params[1].countParam).toBe('nMaxMessages')
+    expect(method('SendMessageToUser').evidence).toEqual({
+      kind: 'send',
+      iface: 'Messages'
+    })
+    expect(method('GetSessionConnectionInfo').helperCustom).toBe(
+      'gl_net_session_info'
+    )
+    expect(header).toContain('gl_net_receive_messages_ch')
+  })
+
+  it('no method auto-accepts a session on the helper side', () => {
+    expect(method('AcceptSessionWithUser').helperCustom).toBeUndefined()
+    expect(method('AcceptSessionWithUser').params[0].kind).toBe('in-struct')
   })
 })

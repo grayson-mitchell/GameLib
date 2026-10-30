@@ -942,7 +942,7 @@ typedef struct {
 
 typedef struct {
   int used;
-  int which; /* 0 = connection, 1 = poll group */
+  int which; /* 0 = connection, 1 = poll group, 2 = Messages channel (58-16) */
   uint32_t handle;
   uint32_t head;
   uint32_t count;
@@ -953,6 +953,7 @@ typedef struct {
 static gl_nets_queue g_nets_queue[GL_NETS_QUEUE_HANDLES];
 static uint32_t g_nets_evict = 0;
 static int g_nets_path_seen[2];
+static int g_netm_path_seen[2];
 
 static void *gl_nets_sym(const char *name) {
   return g_dylib_handle != NULL ? dlsym(g_dylib_handle, name) : NULL;
@@ -993,7 +994,8 @@ static gl_nets_queue *gl_nets_queue_find(int which, uint32_t handle, int create)
 /* Drops the oldest record of a full queue, logged as an oversize line. */
 static void gl_nets_queue_drop_oldest(gl_nets_queue *s) {
   gl_nets_rec *r = &s->q[s->head];
-  gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_SOCKETS, 0, r->size, GL_NET_PATH_UNKNOWN);
+  gl_net_evidence(1, GL_NET_KIND_OVERSIZE, s->which == 2 ? GL_NET_IFACE_MESSAGES : GL_NET_IFACE_SOCKETS, 0,
+                  r->size, GL_NET_PATH_UNKNOWN);
   s->bytes -= r->size;
   gl_nets_rec_free(r);
   s->head = (s->head + 1) % GL_NETS_QUEUE_RECORDS;
@@ -1041,8 +1043,9 @@ static void gl_nets_release(void *msg) {
 static int gl_nets_receive(int which, void *self, const uint8_t *args, uint32_t argLen,
                            uint8_t *resp, uint32_t respCap, uint32_t *respLen) {
   typedef int (*Recv_t)(void *, uint32_t, void **, int);
-  static Recv_t fn[2];
+  static Recv_t fn[3];
   uint32_t handle, off = 4, limit;
+  const int iface = which == 2 ? GL_NET_IFACE_MESSAGES : iface;
   int32_t nMax, n = 0;
   gl_nets_queue *slot;
   *respLen = 0;
@@ -1051,8 +1054,9 @@ static int gl_nets_receive(int which, void *self, const uint8_t *args, uint32_t 
   memcpy(&handle, args, 4);
   memcpy(&nMax, args + 4, 4);
   if (fn[which] == NULL)
-    fn[which] = (Recv_t)gl_nets_sym(which == 0 ? "SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnConnection"
-                                               : "SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnPollGroup");
+    fn[which] = (Recv_t)gl_nets_sym(which == 0   ? "SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnConnection"
+                                    : which == 1 ? "SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnPollGroup"
+                                                 : "SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel");
   if (fn[which] == NULL) return 1;
   limit = respCap < 4u + GL_NETS_RECORDS_MAX ? respCap : 4u + GL_NETS_RECORDS_MAX;
   slot = gl_nets_queue_find(which, handle, 0);
@@ -1086,7 +1090,7 @@ static int gl_nets_receive(int which, void *self, const uint8_t *args, uint32_t 
       memcpy(&cb, m + 8, 4);
       memcpy(&data, m, sizeof data);
       if (cb < 0 || (cb > 0 && data == NULL) || (uint32_t)cb > GL_NETS_RECORDS_MAX - GL_NETS_REC_HEADER) {
-        gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_SOCKETS, 0, cb < 0 ? 0u : (uint32_t)cb,
+        gl_net_evidence(1, GL_NET_KIND_OVERSIZE, iface, 0, cb < 0 ? 0u : (uint32_t)cb,
                         GL_NET_PATH_UNKNOWN);
         gl_nets_release((void *)m);
         continue;
@@ -1100,7 +1104,7 @@ static int gl_nets_receive(int which, void *self, const uint8_t *args, uint32_t 
         uint8_t *copy = (uint8_t *)malloc(size);
         queueing = 1;
         if (copy == NULL) {
-          gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_SOCKETS, 0, size, GL_NET_PATH_UNKNOWN);
+          gl_net_evidence(1, GL_NET_KIND_OVERSIZE, iface, 0, size, GL_NET_PATH_UNKNOWN);
         } else {
           gl_nets_encode(copy, m, (uint32_t)cb, data);
           if (slot == NULL) slot = gl_nets_queue_find(which, handle, 1);
@@ -1112,7 +1116,7 @@ static int gl_nets_receive(int which, void *self, const uint8_t *args, uint32_t 
   }
   memcpy(resp, &n, 4);
   *respLen = off;
-  if (n > 0) gl_net_evidence(1, GL_NET_KIND_RECV, GL_NET_IFACE_SOCKETS, 0, (uint32_t)n, GL_NET_PATH_UNKNOWN);
+  if (n > 0) gl_net_evidence(1, GL_NET_KIND_RECV, iface, 0, (uint32_t)n, GL_NET_PATH_UNKNOWN);
   return 0;
 }
 
@@ -1124,6 +1128,48 @@ int gl_net_receive_messages(void *self, const uint8_t *args, uint32_t argLen, ui
 int gl_net_receive_messages_pg(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
                                uint32_t respCap, uint32_t *respLen) {
   return gl_nets_receive(1, self, args, argLen, resp, respCap, respLen);
+}
+
+/* ReceiveMessagesOnChannel. Request [u32 nLocalChannel][i32 nMaxMessages]; same
+ * response and carry queue as the Sockets variants, keyed by channel. */
+int gl_net_receive_messages_ch(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                               uint32_t respCap, uint32_t *respLen) {
+  return gl_nets_receive(2, self, args, argLen, resp, respCap, respLen);
+}
+
+/* GetSessionConnectionInfo. Request [u8 present][136 identity]. Response [i32 ret]
+ * [u8 1][696 SteamNetConnectionInfo_t][u8 1][120 SteamNetConnectionRealTimeStatus_t].
+ * Logs kind=path from m_nFlags & 16 once per direct/relayed. No identity logged. */
+int gl_net_session_info(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                        uint32_t respCap, uint32_t *respLen) {
+  typedef int (*Sess_t)(void *, const void *, void *, void *);
+  static Sess_t fn = NULL;
+  int32_t ret, flags;
+  int relayed;
+  uint8_t info[GL_NETS_INFO_BYTES];
+  uint8_t status[GL_NETS_RT_BYTES];
+  *respLen = 0;
+  if (args == NULL || resp == NULL || argLen != 137 || args[0] != 1) return 1;
+  if (respCap < 4u + 1u + GL_NETS_INFO_BYTES + 1u + GL_NETS_RT_BYTES || self == NULL) return 1;
+  if (fn == NULL) fn = (Sess_t)gl_nets_sym("SteamAPI_ISteamNetworkingMessages_GetSessionConnectionInfo");
+  if (fn == NULL) return 1;
+  memset(info, 0, sizeof info);
+  memset(status, 0, sizeof status);
+  ret = fn(self, args + 1, info, status);
+  memcpy(resp, &ret, 4);
+  resp[4] = 1;
+  memcpy(resp + 5, info, sizeof info);
+  resp[5 + GL_NETS_INFO_BYTES] = 1;
+  memcpy(resp + 6 + GL_NETS_INFO_BYTES, status, sizeof status);
+  *respLen = 6u + GL_NETS_INFO_BYTES + GL_NETS_RT_BYTES;
+  memcpy(&flags, info + GL_NETS_INFO_OFF_FLAGS, 4);
+  relayed = (flags & GL_NETS_INFO_FLAG_RELAYED) != 0;
+  if (ret != 0 && !g_netm_path_seen[relayed]) {
+    g_netm_path_seen[relayed] = 1;
+    gl_net_evidence(1, GL_NET_KIND_PATH, GL_NET_IFACE_MESSAGES, 0, 0,
+                    relayed ? GL_NET_PATH_RELAYED : GL_NET_PATH_DIRECT);
+  }
+  return 0;
 }
 
 /* Logs the connection path once per kind, from m_nFlags & 16 (relayed). */

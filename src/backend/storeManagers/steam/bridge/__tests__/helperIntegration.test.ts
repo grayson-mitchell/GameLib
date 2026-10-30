@@ -1971,11 +1971,10 @@ describeDarwinOnly(
         src.indexOf('static void gl_nets_queue_drop_oldest('),
         src.indexOf('static void gl_nets_queue_push(')
       )
-      expect(drop).toContain(
-        'gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_SOCKETS'
-      )
+      expect(drop).toContain('gl_net_evidence(1, GL_NET_KIND_OVERSIZE')
+      expect(drop).toContain('GL_NET_IFACE_SOCKETS')
       expect(src).toContain(
-        'gl_net_evidence(1, GL_NET_KIND_RECV, GL_NET_IFACE_SOCKETS'
+        'gl_net_evidence(1, GL_NET_KIND_RECV, iface, 0, (uint32_t)n'
       )
     })
 
@@ -2037,6 +2036,75 @@ describeDarwinOnly(
             const res = await sendFrameOnSocket(
               socket,
               encodeRequest(id++, SOCKETS_013_ORDINAL, slot, Buffer.from(blob))
+            )
+            expect(res.status).toBe(STATUS_ERR)
+          }
+          expect(
+            (await sendFrameOnSocket(socket, encodeControl(99, 'health')))
+              .status
+          ).toBe(STATUS_OK)
+        } finally {
+          socket.destroy()
+        }
+      } finally {
+        h.child.kill()
+      }
+    }, 15000)
+
+    // 58-16 (T-58-52, T-58-53, T-58-54)
+    test('58-16 source pin: the channel receive shares gl_nets_receive, keys its carry queue with a distinct kind (2) and logs iface=Messages', () => {
+      const src = strippedHelper()
+      const ch = src.slice(src.indexOf('int gl_net_receive_messages_ch('))
+      expect(ch.slice(0, ch.indexOf('\n}\n'))).toContain(
+        'gl_nets_receive(2, self'
+      )
+      const body = src.slice(
+        src.indexOf('static int gl_nets_receive('),
+        src.indexOf('int gl_net_receive_messages(')
+      )
+      expect(body).toContain(
+        'SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel'
+      )
+      expect(body).toContain('which == 2 ? GL_NET_IFACE_MESSAGES')
+      expect(body).toContain('gl_nets_queue_find(which, handle, 0)')
+      expect(src).toContain('s->which == 2 ? GL_NET_IFACE_MESSAGES')
+    })
+
+    test('58-16 source pin: gl_net_session_info logs path from m_nFlags & 16 under iface=Messages and never auto-accepts a session', () => {
+      const src = strippedHelper()
+      const fn = src.slice(src.indexOf('int gl_net_session_info('))
+      const body = fn.slice(0, fn.indexOf('\n}\n'))
+      expect(body).toContain('(flags & GL_NETS_INFO_FLAG_RELAYED) != 0')
+      expect(body).toContain('GL_NET_KIND_PATH, GL_NET_IFACE_MESSAGES')
+      expect(body).toContain('argLen != 137')
+      expect(src).not.toContain(
+        'ISteamNetworkingMessages_AcceptSessionWithUser'
+      )
+      expect(src).not.toMatch(/logts(?:_f)?\("(NET|CBQ)",[^;]*%s/)
+    })
+
+    test('58-16: an authenticated Messages002 ReceiveMessagesOnChannel with nMaxMessages 100000 or a truncated blob, and a short GetSessionConnectionInfo blob, are answered STATUS_ERR and the helper stays up', async () => {
+      const h = await startAuthHelper('p58-16-messages-', authedEnv())
+      try {
+        const socket = await h.connect()
+        try {
+          await authenticate(socket)
+          const MESSAGES_002_ORDINAL = 72
+          const RECEIVE_SLOT = 1
+          const SESSION_INFO_SLOT = 5
+          const hugeMax = Buffer.alloc(8)
+          hugeMax.writeInt32LE(3, 0)
+          hugeMax.writeInt32LE(100000, 4)
+          let id = 1
+          const frames: Array<[number, Buffer]> = [
+            [RECEIVE_SLOT, hugeMax],
+            [RECEIVE_SLOT, hugeMax.subarray(0, 5)],
+            [SESSION_INFO_SLOT, Buffer.alloc(10)]
+          ]
+          for (const [slot, blob] of frames) {
+            const res = await sendFrameOnSocket(
+              socket,
+              encodeRequest(id++, MESSAGES_002_ORDINAL, slot, Buffer.from(blob))
             )
             expect(res.status).toBe(STATUS_ERR)
           }

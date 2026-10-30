@@ -1283,5 +1283,95 @@
     "RunCallbacks": {
       "shimLocal": true
     }
+  },
+  "SteamNetworkingMessages": {
+    "SendMessageToUser": {
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_SendMessageToUser",
+      "params": {
+        "identityRemote": {
+          "kind": "in-struct",
+          "structSize": 136
+        },
+        "pubData": {
+          "kind": "in-buffer",
+          "lenParam": "cubData"
+        }
+      },
+      "evidence": {
+        "kind": "send",
+        "iface": "Messages"
+      }
+    },
+    "ReceiveMessagesOnChannel": {
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel",
+      "helperCustom": "gl_net_receive_messages_ch",
+      "returns": {
+        "type": "int32",
+        "kind": "int32"
+      },
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "int32",
+          "name": "nLocalChannel"
+        },
+        "_unknownArg1": {
+          "kind": "out-messages",
+          "type": "SteamNetworkingMessage_t**",
+          "name": "ppOutMessages",
+          "countParam": "nMaxMessages"
+        },
+        "_unknownArg2": {
+          "kind": "value",
+          "type": "int32",
+          "name": "nMaxMessages"
+        }
+      }
+    },
+    "AcceptSessionWithUser": {
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_AcceptSessionWithUser",
+      "params": {
+        "identityRemote": {
+          "kind": "in-struct",
+          "structSize": 136
+        }
+      }
+    },
+    "CloseSessionWithUser": {
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_CloseSessionWithUser",
+      "params": {
+        "identityRemote": {
+          "kind": "in-struct",
+          "structSize": 136
+        }
+      }
+    },
+    "CloseChannelWithUser": {
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_CloseChannelWithUser",
+      "params": {
+        "identityRemote": {
+          "kind": "in-struct",
+          "structSize": 136
+        }
+      }
+    },
+    "GetSessionConnectionInfo": {
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_GetSessionConnectionInfo",
+      "helperCustom": "gl_net_session_info",
+      "params": {
+        "identityRemote": {
+          "kind": "in-struct",
+          "structSize": 136
+        },
+        "pConnectionInfo": {
+          "kind": "out-struct",
+          "structSize": 696
+        },
+        "pQuickStatus": {
+          "kind": "out-struct",
+          "structSize": 120
+        }
+      }
+    }
   }
 }

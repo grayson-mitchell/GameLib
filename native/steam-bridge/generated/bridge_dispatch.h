@@ -5,7 +5,7 @@
  * native/steam-bridge/generated/steam_api_shim.c marshals the shim side
  * of. #include'd from native/steam-bridge/helper/bridge_helper.c.
  *
- * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, SteamMatchMaking009, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, SteamClient014, SteamNetworking006, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamUtils009, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007, SteamNetworkingSockets013, SteamNetworkingUtils004.
+ * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, SteamMatchMaking009, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, SteamClient014, SteamNetworking006, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamUtils009, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007, SteamNetworkingSockets013, SteamNetworkingUtils004, SteamNetworkingMessages002.
  */
 #ifndef GAMELIB_BRIDGE_DISPATCH_H
 #define GAMELIB_BRIDGE_DISPATCH_H
@@ -123,7 +123,7 @@ Method modes:
 // tuples BRIDGE_SHIM_TABLE_HASH (steam_api_shim.c) embeds -- a drift
 // between the two means the shim and this dispatch table disagree about
 // what is on the wire.
-#define BRIDGE_DISPATCH_TABLE_HASH "62e468de86e2"
+#define BRIDGE_DISPATCH_TABLE_HASH "c34666e40dc9"
 
 // Response scratch -- bridge_dispatch() never writes past respCap, which
 // the caller (bridge_helper.c) sizes to this constant.
@@ -165,10 +165,16 @@ int gl_net_read_p2p_packet(void *self, const uint8_t *args, uint32_t argLen, uin
 int gl_net_receive_messages(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
 
 // 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_net_receive_messages_ch(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
 int gl_net_receive_messages_pg(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
 
 // 58-06: hand-written in bridge_helper.c; returns 0 for ok.
 int gl_net_rt_status(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_net_session_info(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
 
 // 58-06: hand-written in bridge_helper.c; returns 0 for ok.
 int gl_net_set_config_value(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
@@ -269,6 +275,9 @@ static void *g_bd_self_steamnetworkingsockets013;
 #define BD_ORDINAL_SteamNetworkingUtils004 71
 static BDAccessorFn_t g_bd_accessor_steamnetworkingutils004;
 static void *g_bd_self_steamnetworkingutils004;
+#define BD_ORDINAL_SteamNetworkingMessages002 72
+static BDAccessorFn_t g_bd_accessor_steamnetworkingmessages002;
+static void *g_bd_self_steamnetworkingmessages002;
 
 #define BD_SLOT_SteamUser023_GetHSteamUser 0
 typedef int32_t (*BDFlatFn_SteamUser023_GetHSteamUser_t)(void *);
@@ -1530,6 +1539,24 @@ static BDFlatFn_SteamNetworkingUtils004_GetConfigValueInfo_t g_bd_flat_SteamNetw
 #define BD_SLOT_SteamNetworkingUtils004_IterateGenericEditableConfigValues 19
 typedef uint32_t (*BDFlatFn_SteamNetworkingUtils004_IterateGenericEditableConfigValues_t)(void *, uint32_t, int);
 static BDFlatFn_SteamNetworkingUtils004_IterateGenericEditableConfigValues_t g_bd_flat_SteamNetworkingUtils004_IterateGenericEditableConfigValues;
+#define BD_SLOT_SteamNetworkingMessages002_SendMessageToUser 0
+typedef uint32_t (*BDFlatFn_SteamNetworkingMessages002_SendMessageToUser_t)(void *, const void *, const void *, uint32_t, int32_t, int32_t);
+static BDFlatFn_SteamNetworkingMessages002_SendMessageToUser_t g_bd_flat_SteamNetworkingMessages002_SendMessageToUser;
+#define BD_SLOT_SteamNetworkingMessages002_ReceiveMessagesOnChannel 1
+typedef int32_t (*BDFlatFn_SteamNetworkingMessages002_ReceiveMessagesOnChannel_t)(void *, int32_t, void *, int32_t);
+static BDFlatFn_SteamNetworkingMessages002_ReceiveMessagesOnChannel_t g_bd_flat_SteamNetworkingMessages002_ReceiveMessagesOnChannel;
+#define BD_SLOT_SteamNetworkingMessages002_AcceptSessionWithUser 2
+typedef int (*BDFlatFn_SteamNetworkingMessages002_AcceptSessionWithUser_t)(void *, const void *);
+static BDFlatFn_SteamNetworkingMessages002_AcceptSessionWithUser_t g_bd_flat_SteamNetworkingMessages002_AcceptSessionWithUser;
+#define BD_SLOT_SteamNetworkingMessages002_CloseSessionWithUser 3
+typedef int (*BDFlatFn_SteamNetworkingMessages002_CloseSessionWithUser_t)(void *, const void *);
+static BDFlatFn_SteamNetworkingMessages002_CloseSessionWithUser_t g_bd_flat_SteamNetworkingMessages002_CloseSessionWithUser;
+#define BD_SLOT_SteamNetworkingMessages002_CloseChannelWithUser 4
+typedef int (*BDFlatFn_SteamNetworkingMessages002_CloseChannelWithUser_t)(void *, const void *, int32_t);
+static BDFlatFn_SteamNetworkingMessages002_CloseChannelWithUser_t g_bd_flat_SteamNetworkingMessages002_CloseChannelWithUser;
+#define BD_SLOT_SteamNetworkingMessages002_GetSessionConnectionInfo 5
+typedef uint32_t (*BDFlatFn_SteamNetworkingMessages002_GetSessionConnectionInfo_t)(void *, const void *, void *, void *);
+static BDFlatFn_SteamNetworkingMessages002_GetSessionConnectionInfo_t g_bd_flat_SteamNetworkingMessages002_GetSessionConnectionInfo;
 
 // D-51-04: identity-only mode -- set once by bridge_helper.c's argv
 // parsing (--identity-only/--report-appid), read by every dispatch case
@@ -2030,12 +2057,20 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamNetworkingUtils004_GetConfigValue = (BDFlatFn_SteamNetworkingUtils004_GetConfigValue_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetConfigValue");
   g_bd_flat_SteamNetworkingUtils004_GetConfigValueInfo = (BDFlatFn_SteamNetworkingUtils004_GetConfigValueInfo_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetConfigValueInfo");
   g_bd_flat_SteamNetworkingUtils004_IterateGenericEditableConfigValues = (BDFlatFn_SteamNetworkingUtils004_IterateGenericEditableConfigValues_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_IterateGenericEditableConfigValues");
+  g_bd_accessor_steamnetworkingmessages002 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamNetworkingMessages_SteamAPI_v002");
+  g_bd_self_steamnetworkingmessages002 = g_bd_accessor_steamnetworkingmessages002 ? g_bd_accessor_steamnetworkingmessages002() : NULL;
+  g_bd_flat_SteamNetworkingMessages002_SendMessageToUser = (BDFlatFn_SteamNetworkingMessages002_SendMessageToUser_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingMessages_SendMessageToUser");
+  g_bd_flat_SteamNetworkingMessages002_ReceiveMessagesOnChannel = (BDFlatFn_SteamNetworkingMessages002_ReceiveMessagesOnChannel_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel");
+  g_bd_flat_SteamNetworkingMessages002_AcceptSessionWithUser = (BDFlatFn_SteamNetworkingMessages002_AcceptSessionWithUser_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingMessages_AcceptSessionWithUser");
+  g_bd_flat_SteamNetworkingMessages002_CloseSessionWithUser = (BDFlatFn_SteamNetworkingMessages002_CloseSessionWithUser_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingMessages_CloseSessionWithUser");
+  g_bd_flat_SteamNetworkingMessages002_CloseChannelWithUser = (BDFlatFn_SteamNetworkingMessages002_CloseChannelWithUser_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingMessages_CloseChannelWithUser");
+  g_bd_flat_SteamNetworkingMessages002_GetSessionConnectionInfo = (BDFlatFn_SteamNetworkingMessages002_GetSessionConnectionInfo_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingMessages_GetSessionConnectionInfo");
   return 1;
 }
 
 // 53-06 (D-53-13): game-originated call trace tables. Not a wire tuple,
 // so BRIDGE_DISPATCH_TABLE_HASH is unaffected.
-#define BD_CALL_COUNT 420
+#define BD_CALL_COUNT 426
 static int bd_call_index(uint16_t ordinal, uint16_t slot) {
   switch (((uint32_t)ordinal << 16) | (uint32_t)slot) {
     case (((uint32_t)BD_ORDINAL_SteamUser023 << 16) | (uint32_t)BD_SLOT_SteamUser023_GetHSteamUser): return 0;
@@ -2458,6 +2493,12 @@ static int bd_call_index(uint16_t ordinal, uint16_t slot) {
     case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetConfigValue): return 417;
     case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetConfigValueInfo): return 418;
     case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_IterateGenericEditableConfigValues): return 419;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_SendMessageToUser): return 420;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_ReceiveMessagesOnChannel): return 421;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_AcceptSessionWithUser): return 422;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_CloseSessionWithUser): return 423;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_CloseChannelWithUser): return 424;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_GetSessionConnectionInfo): return 425;
     default: return -1;
   }
 }
@@ -2883,6 +2924,12 @@ static const char *bd_call_name(int idx) {
     case 417: return "SteamNetworkingUtils004.GetConfigValue";
     case 418: return "SteamNetworkingUtils004.GetConfigValueInfo";
     case 419: return "SteamNetworkingUtils004.IterateGenericEditableConfigValues";
+    case 420: return "SteamNetworkingMessages002.SendMessageToUser";
+    case 421: return "SteamNetworkingMessages002.ReceiveMessagesOnChannel";
+    case 422: return "SteamNetworkingMessages002.AcceptSessionWithUser";
+    case 423: return "SteamNetworkingMessages002.CloseSessionWithUser";
+    case 424: return "SteamNetworkingMessages002.CloseChannelWithUser";
+    case 425: return "SteamNetworkingMessages002.GetSessionConnectionInfo";
     default: return "";
   }
 }
@@ -9770,6 +9817,112 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
       memcpy(resp, &__ret, 4);
       *respLen = 4;
       return 0;
+    }
+    case (((uint32_t)72) << 16 | 0u): { // SteamNetworkingMessages002.SendMessageToUser
+      if (g_bd_flat_SteamNetworkingMessages002_SendMessageToUser == NULL || g_bd_self_steamnetworkingmessages002 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint8_t arg_identityRemote_buf[136];
+      const void *arg_identityRemote = NULL;
+      uint32_t arg_identityRemote_present = 0;
+      if (argLen < 0u + 1) { *respLen = 0; return 1; }
+      arg_identityRemote_present = arg[0u];
+      if (arg_identityRemote_present > 1) { *respLen = 0; return 1; }
+      if (arg_identityRemote_present == 1) {
+        if ((uint64_t)argLen < (uint64_t)(0u) + 1u + 136u) { *respLen = 0; return 1; }
+        memcpy(arg_identityRemote_buf, arg + 0u + 1, 136);
+        arg_identityRemote = arg_identityRemote_buf;
+      }
+      static uint8_t g_bd_flat_SteamNetworkingMessages002_SendMessageToUser_pubData_buf[61440];
+      uint32_t arg_pubData_len = 0;
+      if (argLen < (0u + 1 + arg_identityRemote_present * 136u) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pubData_len, arg + (0u + 1 + arg_identityRemote_present * 136u), 4);
+      if (arg_pubData_len > 61440) { gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_MESSAGES, 0, arg_pubData_len, GL_NET_PATH_UNKNOWN); *respLen = 0; return 1; } // oversize refusal is NET evidence -- 58-10
+      if (arg_pubData_len > 61440 || (uint64_t)argLen < (uint64_t)((0u + 1 + arg_identityRemote_present * 136u)) + 4u + arg_pubData_len) { *respLen = 0; return 1; } // in-buffer past cap or argLen -- T-58-16
+      memcpy(g_bd_flat_SteamNetworkingMessages002_SendMessageToUser_pubData_buf, arg + (0u + 1 + arg_identityRemote_present * 136u) + 4, arg_pubData_len);
+      const void *arg_pubData = g_bd_flat_SteamNetworkingMessages002_SendMessageToUser_pubData_buf;
+      if (argLen < ((0u + 1 + arg_identityRemote_present * 136u) + 4 + arg_pubData_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_cubData; memcpy(&arg_cubData, arg + ((0u + 1 + arg_identityRemote_present * 136u) + 4 + arg_pubData_len), 4);
+      if (argLen < (((0u + 1 + arg_identityRemote_present * 136u) + 4 + arg_pubData_len) + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_nSendFlags; memcpy(&arg_nSendFlags, arg + (((0u + 1 + arg_identityRemote_present * 136u) + 4 + arg_pubData_len) + 4), 4);
+      if (argLen < ((((0u + 1 + arg_identityRemote_present * 136u) + 4 + arg_pubData_len) + 4) + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_nRemoteChannel; memcpy(&arg_nRemoteChannel, arg + ((((0u + 1 + arg_identityRemote_present * 136u) + 4 + arg_pubData_len) + 4) + 4), 4);
+      if ((int64_t)arg_cubData != (int64_t)arg_pubData_len) { *respLen = 0; return 1; } // lenParam must equal the bytes sent -- T-58-16
+      uint32_t __ret = g_bd_flat_SteamNetworkingMessages002_SendMessageToUser(g_bd_self_steamnetworkingmessages002, arg_identityRemote, arg_pubData, arg_cubData, arg_nSendFlags, arg_nRemoteChannel);
+      if (__ret > 0) gl_net_evidence(1, GL_NET_KIND_SEND, GL_NET_IFACE_MESSAGES, 0, (uint32_t)__ret, GL_NET_PATH_UNKNOWN);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)72) << 16 | 1u): { // SteamNetworkingMessages002.ReceiveMessagesOnChannel
+      if (g_bd_flat_SteamNetworkingMessages002_ReceiveMessagesOnChannel == NULL || g_bd_self_steamnetworkingmessages002 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_net_receive_messages_ch
+        if (gl_net_receive_messages_ch(g_bd_self_steamnetworkingmessages002, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)72) << 16 | 2u): { // SteamNetworkingMessages002.AcceptSessionWithUser
+      if (g_bd_flat_SteamNetworkingMessages002_AcceptSessionWithUser == NULL || g_bd_self_steamnetworkingmessages002 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint8_t arg_identityRemote_buf[136];
+      const void *arg_identityRemote = NULL;
+      uint32_t arg_identityRemote_present = 0;
+      if (argLen < 0u + 1) { *respLen = 0; return 1; }
+      arg_identityRemote_present = arg[0u];
+      if (arg_identityRemote_present > 1) { *respLen = 0; return 1; }
+      if (arg_identityRemote_present == 1) {
+        if ((uint64_t)argLen < (uint64_t)(0u) + 1u + 136u) { *respLen = 0; return 1; }
+        memcpy(arg_identityRemote_buf, arg + 0u + 1, 136);
+        arg_identityRemote = arg_identityRemote_buf;
+      }
+      int __ret = g_bd_flat_SteamNetworkingMessages002_AcceptSessionWithUser(g_bd_self_steamnetworkingmessages002, arg_identityRemote);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)72) << 16 | 3u): { // SteamNetworkingMessages002.CloseSessionWithUser
+      if (g_bd_flat_SteamNetworkingMessages002_CloseSessionWithUser == NULL || g_bd_self_steamnetworkingmessages002 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint8_t arg_identityRemote_buf[136];
+      const void *arg_identityRemote = NULL;
+      uint32_t arg_identityRemote_present = 0;
+      if (argLen < 0u + 1) { *respLen = 0; return 1; }
+      arg_identityRemote_present = arg[0u];
+      if (arg_identityRemote_present > 1) { *respLen = 0; return 1; }
+      if (arg_identityRemote_present == 1) {
+        if ((uint64_t)argLen < (uint64_t)(0u) + 1u + 136u) { *respLen = 0; return 1; }
+        memcpy(arg_identityRemote_buf, arg + 0u + 1, 136);
+        arg_identityRemote = arg_identityRemote_buf;
+      }
+      int __ret = g_bd_flat_SteamNetworkingMessages002_CloseSessionWithUser(g_bd_self_steamnetworkingmessages002, arg_identityRemote);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)72) << 16 | 4u): { // SteamNetworkingMessages002.CloseChannelWithUser
+      if (g_bd_flat_SteamNetworkingMessages002_CloseChannelWithUser == NULL || g_bd_self_steamnetworkingmessages002 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint8_t arg_identityRemote_buf[136];
+      const void *arg_identityRemote = NULL;
+      uint32_t arg_identityRemote_present = 0;
+      if (argLen < 0u + 1) { *respLen = 0; return 1; }
+      arg_identityRemote_present = arg[0u];
+      if (arg_identityRemote_present > 1) { *respLen = 0; return 1; }
+      if (arg_identityRemote_present == 1) {
+        if ((uint64_t)argLen < (uint64_t)(0u) + 1u + 136u) { *respLen = 0; return 1; }
+        memcpy(arg_identityRemote_buf, arg + 0u + 1, 136);
+        arg_identityRemote = arg_identityRemote_buf;
+      }
+      if (argLen < (0u + 1 + arg_identityRemote_present * 136u) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_nLocalChannel; memcpy(&arg_nLocalChannel, arg + (0u + 1 + arg_identityRemote_present * 136u), 4);
+      int __ret = g_bd_flat_SteamNetworkingMessages002_CloseChannelWithUser(g_bd_self_steamnetworkingmessages002, arg_identityRemote, arg_nLocalChannel);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)72) << 16 | 5u): { // SteamNetworkingMessages002.GetSessionConnectionInfo
+      if (g_bd_flat_SteamNetworkingMessages002_GetSessionConnectionInfo == NULL || g_bd_self_steamnetworkingmessages002 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_net_session_info
+        if (gl_net_session_info(g_bd_self_steamnetworkingmessages002, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
     }
     default:
       return 1; // T-51-23: unknown (ordinal, slot) pair -- never read

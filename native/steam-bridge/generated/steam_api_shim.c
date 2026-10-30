@@ -183,7 +183,7 @@ Method modes:
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "62e468de86e2"
+#define BRIDGE_SHIM_TABLE_HASH "c34666e40dc9"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -34765,51 +34765,175 @@ static struct FakeSteamNetworkingUtils004 g_steamnetworkingutils004_instance = {
 #if defined(__x86_64__)
 // === SteamNetworkingMessages002 (ordinal 72, family SteamNetworkingMessages) ===
 
-// slot 0: SendMessageToUser(const SteamNetworkingIdentity_144* identityRemote, const void* pubData, uint32 cubData, int32 nSendFlags, int32 nRemoteChannel) -> uint32 | __thiscall ret 20 (STUB)
-static uint32_t THISCALL vt_SteamNetworkingMessages002_SendMessageToUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
-  static volatile LONG gamelib_sc[2];
+// slot 0: SendMessageToUser(const SteamNetworkingIdentity_144* identityRemote, const void* pubData, uint32 cubData, int32 nSendFlags, int32 nRemoteChannel) -> uint32 | __thiscall ret 20
+static uint32_t THISCALL vt_SteamNetworkingMessages002_SendMessageToUser(void *self, void * identityRemote, void * pubData, uint32_t cubData, int32_t nSendFlags, int32_t nRemoteChannel) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "SendMessageToUser", 0, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint32_t result = 0;
+  static uint8_t argbuf[61593];
+  static uint8_t retbuf[4];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  AcquireSRWLockExclusive(&g_bridge_lock);
+  if (identityRemote == NULL) {
+    argbuf[argOff] = 0; argOff += 1;
+  } else {
+    argbuf[argOff] = 1; argOff += 1;
+    memcpy(argbuf + argOff, identityRemote, 136); argOff += 136;
+  }
+  {
+    uint32_t bufLen;
+    int64_t rawLen = (int64_t)cubData;
+    if (rawLen < 0 || rawLen > 61440 || (pubData == NULL && rawLen > 0)) {
+      // 58-06 Pitfall 4: never truncate -- send the over-limit marker with no
+      // bytes; the helper refuses it and this method returns its failure value.
+      bufLen = 61440 + 1u;
+      memcpy(argbuf + argOff, &bufLen, 4); argOff += 4;
+    } else {
+      bufLen = (uint32_t)rawLen;
+      memcpy(argbuf + argOff, &bufLen, 4); argOff += 4;
+      if (bufLen > 0) { memcpy(argbuf + argOff, pubData, bufLen); argOff += bufLen; }
+    }
+  }
+  memcpy(argbuf + argOff, &cubData, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nSendFlags, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nRemoteChannel, 4); argOff += 4;
+  int ok = bridge_transact_locked(72, 0, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    uint32_t ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+  } else {
+  }
+  ReleaseSRWLockExclusive(&g_bridge_lock);
+  return result;
 }
 
-// slot 1: ReceiveMessagesOnChannel(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2) -> void | __thiscall ret 12 (STUB)
-static void THISCALL vt_SteamNetworkingMessages002_ReceiveMessagesOnChannel(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 1: ReceiveMessagesOnChannel(int32 nLocalChannel, SteamNetworkingMessage_t** ppOutMessages, int32 nMaxMessages) -> int32 | __thiscall ret 12
+static int32_t THISCALL vt_SteamNetworkingMessages002_ReceiveMessagesOnChannel(void *self, int32_t nLocalChannel, void * ppOutMessages, int32_t nMaxMessages) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "ReceiveMessagesOnChannel", 1, GAMELIB_STUBCALL_KIND_STUB);
+  int32_t result = 0;
+  static uint8_t argbuf[8];
+  static uint8_t retbuf[61444];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  AcquireSRWLockExclusive(&g_bridge_lock);
+  memcpy(argbuf + argOff, &nLocalChannel, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nMaxMessages, 4); argOff += 4;
+  int ok = bridge_transact_locked(72, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int32_t ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+    result = gl_net_decode_messages(retbuf + respOff, retlen >= respOff ? retlen - respOff : 0, (int32_t)ret, (int32_t)nMaxMessages, (void **)ppOutMessages);
+  } else {
+  }
+  ReleaseSRWLockExclusive(&g_bridge_lock);
+  return result;
 }
 
-// slot 2: AcceptSessionWithUser(const SteamNetworkingIdentity_144* identityRemote) -> bool | __thiscall ret 4 (STUB)
-static int THISCALL vt_SteamNetworkingMessages002_AcceptSessionWithUser(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 2: AcceptSessionWithUser(const SteamNetworkingIdentity_144* identityRemote) -> bool | __thiscall ret 4
+static int THISCALL vt_SteamNetworkingMessages002_AcceptSessionWithUser(void *self, void * identityRemote) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "AcceptSessionWithUser", 2, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  uint8_t argbuf[137];
+  uint8_t retbuf[4];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  if (identityRemote == NULL) {
+    argbuf[argOff] = 0; argOff += 1;
+  } else {
+    argbuf[argOff] = 1; argOff += 1;
+    memcpy(argbuf + argOff, identityRemote, 136); argOff += 136;
+  }
+  int ok = bridge_transact(72, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+  } else {
+  }
+  return result;
 }
 
-// slot 3: CloseSessionWithUser(const SteamNetworkingIdentity_144* identityRemote) -> bool | __thiscall ret 4 (STUB)
-static int THISCALL vt_SteamNetworkingMessages002_CloseSessionWithUser(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 3: CloseSessionWithUser(const SteamNetworkingIdentity_144* identityRemote) -> bool | __thiscall ret 4
+static int THISCALL vt_SteamNetworkingMessages002_CloseSessionWithUser(void *self, void * identityRemote) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "CloseSessionWithUser", 3, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  uint8_t argbuf[137];
+  uint8_t retbuf[4];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  if (identityRemote == NULL) {
+    argbuf[argOff] = 0; argOff += 1;
+  } else {
+    argbuf[argOff] = 1; argOff += 1;
+    memcpy(argbuf + argOff, identityRemote, 136); argOff += 136;
+  }
+  int ok = bridge_transact(72, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+  } else {
+  }
+  return result;
 }
 
-// slot 4: CloseChannelWithUser(const SteamNetworkingIdentity_144* identityRemote, int32 nLocalChannel) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamNetworkingMessages002_CloseChannelWithUser(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 4: CloseChannelWithUser(const SteamNetworkingIdentity_144* identityRemote, int32 nLocalChannel) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamNetworkingMessages002_CloseChannelWithUser(void *self, void * identityRemote, int32_t nLocalChannel) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "CloseChannelWithUser", 4, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  uint8_t argbuf[141];
+  uint8_t retbuf[4];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  if (identityRemote == NULL) {
+    argbuf[argOff] = 0; argOff += 1;
+  } else {
+    argbuf[argOff] = 1; argOff += 1;
+    memcpy(argbuf + argOff, identityRemote, 136); argOff += 136;
+  }
+  memcpy(argbuf + argOff, &nLocalChannel, 4); argOff += 4;
+  int ok = bridge_transact(72, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+  } else {
+  }
+  return result;
 }
 
-// slot 5: GetSessionConnectionInfo(const SteamNetworkingIdentity_144* identityRemote, SteamNetConnectionInfo_t_153a* pConnectionInfo, SteamNetConnectionRealTimeStatus_t* pQuickStatus) -> uint32 | __thiscall ret 12 (STUB)
-static uint32_t THISCALL vt_SteamNetworkingMessages002_GetSessionConnectionInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 5: GetSessionConnectionInfo(const SteamNetworkingIdentity_144* identityRemote, SteamNetConnectionInfo_t_153a* pConnectionInfo, SteamNetConnectionRealTimeStatus_t* pQuickStatus) -> uint32 | __thiscall ret 12
+static uint32_t THISCALL vt_SteamNetworkingMessages002_GetSessionConnectionInfo(void *self, void * identityRemote, void * pConnectionInfo, void * pQuickStatus) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamNetworkingMessages002", "GetSessionConnectionInfo", 5, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint32_t result = 0;
+  uint8_t argbuf[137];
+  uint8_t retbuf[822];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  if (identityRemote == NULL) {
+    argbuf[argOff] = 0; argOff += 1;
+  } else {
+    argbuf[argOff] = 1; argOff += 1;
+    memcpy(argbuf + argOff, identityRemote, 136); argOff += 136;
+  }
+  int ok = bridge_transact(72, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    uint32_t ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+    if (retlen >= respOff + 1) {
+      uint8_t present_pConnectionInfo = retbuf[respOff]; respOff += 1;
+      if (present_pConnectionInfo == 1 && retlen >= respOff + 696) {
+        if (pConnectionInfo != NULL) memcpy(pConnectionInfo, retbuf + respOff, 696);
+        respOff += 696;
+      }
+    }
+    if (retlen >= respOff + 1) {
+      uint8_t present_pQuickStatus = retbuf[respOff]; respOff += 1;
+      if (present_pQuickStatus == 1 && retlen >= respOff + 120) {
+        if (pQuickStatus != NULL) memcpy(pQuickStatus, retbuf + respOff, 120);
+        respOff += 120;
+      }
+    }
+  } else {
+  }
+  return result;
 }
 
 static vfn g_steamnetworkingmessages002_vtbl[6] = {
@@ -41708,13 +41832,12 @@ uint32_t SteamAPI_ISteamNetworkingMessages_GetSessionConnectionInfo(void *self, 
   return 0;
 }
 
-void SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel(void *self, uint32_t a1, uint32_t a2, uint32_t a3) {
+int32_t SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel(void *self, int32_t a1, void * a2, int32_t a3) {
   if (self == (void *)&g_steamnetworkingmessages002_instance) {
     vfn *vt = *(vfn **)self;
-    ((void (*)(void *, uint32_t, uint32_t, uint32_t))vt[1])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3);
-    return;
+    return (int32_t)((int32_t (*)(void *, int32_t, void *, int32_t))vt[1])(self, (int32_t)a1, (void *)a2, (int32_t)a3);
   }
-  return;
+  return 0;
 }
 
 uint32_t SteamAPI_ISteamNetworkingMessages_SendMessageToUser(void *self, void * a1, void * a2, uint32_t a3, int32_t a4, int32_t a5) {

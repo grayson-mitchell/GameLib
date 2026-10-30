@@ -23,11 +23,15 @@
       "params": [
         {
           "name": "identityRemote",
-          "type": "const SteamNetworkingIdentity_144*"
+          "type": "const SteamNetworkingIdentity_144*",
+          "kind": "in-struct",
+          "structSize": 136
         },
         {
           "name": "pubData",
-          "type": "const void*"
+          "type": "const void*",
+          "kind": "in-buffer",
+          "lenParam": "cubData"
         },
         {
           "name": "cubData",
@@ -41,28 +45,41 @@
           "name": "nRemoteChannel",
           "type": "int32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_SendMessageToUser",
+      "evidence": {
+        "kind": "send",
+        "iface": "Messages"
+      }
     },
     {
       "slot": 1,
       "name": "ReceiveMessagesOnChannel",
-      "returns": "void",
-      "returnKind": "void",
+      "returns": "int32",
+      "returnKind": "int32",
       "stackBytes": 12,
       "params": [
         {
-          "name": "_unknownArg0",
-          "type": "uint32"
+          "name": "nLocalChannel",
+          "type": "int32",
+          "kind": "value"
         },
         {
-          "name": "_unknownArg1",
-          "type": "uint32"
+          "name": "ppOutMessages",
+          "type": "SteamNetworkingMessage_t**",
+          "kind": "out-messages",
+          "countParam": "nMaxMessages"
         },
         {
-          "name": "_unknownArg2",
-          "type": "uint32"
+          "name": "nMaxMessages",
+          "type": "int32",
+          "kind": "value"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel",
+      "helperCustom": "gl_net_receive_messages_ch"
     },
     {
       "slot": 2,
@@ -73,9 +90,13 @@
       "params": [
         {
           "name": "identityRemote",
-          "type": "const SteamNetworkingIdentity_144*"
+          "type": "const SteamNetworkingIdentity_144*",
+          "kind": "in-struct",
+          "structSize": 136
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_AcceptSessionWithUser"
     },
     {
       "slot": 3,
@@ -86,9 +107,13 @@
       "params": [
         {
           "name": "identityRemote",
-          "type": "const SteamNetworkingIdentity_144*"
+          "type": "const SteamNetworkingIdentity_144*",
+          "kind": "in-struct",
+          "structSize": 136
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_CloseSessionWithUser"
     },
     {
       "slot": 4,
@@ -99,13 +124,17 @@
       "params": [
         {
           "name": "identityRemote",
-          "type": "const SteamNetworkingIdentity_144*"
+          "type": "const SteamNetworkingIdentity_144*",
+          "kind": "in-struct",
+          "structSize": 136
         },
         {
           "name": "nLocalChannel",
           "type": "int32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_CloseChannelWithUser"
     },
     {
       "slot": 5,
@@ -116,17 +145,26 @@
       "params": [
         {
           "name": "identityRemote",
-          "type": "const SteamNetworkingIdentity_144*"
+          "type": "const SteamNetworkingIdentity_144*",
+          "kind": "in-struct",
+          "structSize": 136
         },
         {
           "name": "pConnectionInfo",
-          "type": "SteamNetConnectionInfo_t_153a*"
+          "type": "SteamNetConnectionInfo_t_153a*",
+          "kind": "out-struct",
+          "structSize": 696
         },
         {
           "name": "pQuickStatus",
-          "type": "SteamNetConnectionRealTimeStatus_t*"
+          "type": "SteamNetConnectionRealTimeStatus_t*",
+          "kind": "out-struct",
+          "structSize": 120
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamNetworkingMessages_GetSessionConnectionInfo",
+      "helperCustom": "gl_net_session_info"
     }
   ]
 }
