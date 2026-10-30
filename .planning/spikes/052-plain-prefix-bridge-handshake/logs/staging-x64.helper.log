@@ -1,0 +1,9 @@
+[2026-10-30T22:46:35Z] LISTEN 127.0.0.1:50569 appid=480 mode=full
+[S_API] SteamAPI_Init(): Loaded '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamclient.dylib' OK.
+Setting breakpad minidump AppID = 480
+SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561197995867096 [API loaded no]
+[2026-10-30T22:46:35Z] INIT   manual dispatch ready
+[2026-10-30T22:46:35Z] INIT   SteamAPI ready (single InitFlat call, real appid=480)
+[2026-10-30T22:46:35Z] READY  init=ok appid=480
+[2026-10-30T22:46:36Z] AUTH   refused unauthenticated frame ordinal=65535 slot=2 secret=required
+[2026-10-30T22:46:36Z] AUTH   refused unauthenticated frame ordinal=65535 slot=2 secret=required

@@ -1,0 +1,14 @@
+2026-10-30T22:40:54.637Z [cx-x32] rc=5 port=50516 | arch=x86 init=1 steamuser=non-null | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T22:42:24.776Z [cx-x64] rc=142 port=50522 | arch=x64 init=1 steamuser=non-null | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T22:45:05.730Z [cx-x32] rc=0 port=50535 | arch=x86 init=1 steamuser=non-null bloggedon=0 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T22:45:06.842Z [cx-x64] rc=0 port=50539 | arch=x64 init=1 steamuser=non-null bloggedon=0 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T22:45:38.707Z [staging] wineboot -i rc=0 in 26s; system.reg=no
+2026-10-30T22:45:47.828Z [staging-x32] rc=0 port=50544 | arch=x86 init=1 steamuser=non-null bloggedon=0 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T22:45:49.017Z [staging-x64] rc=0 port=50548 | arch=x64 init=1 steamuser=non-null bloggedon=0 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T22:46:32.106Z [dxmt] wineboot -i rc=0 in 21s; system.reg=yes #arch=win64
+2026-10-30T22:46:33.412Z [dxmt-x32] rc=0 port=50558 | arch=x86 init=1 steamuser=non-null bloggedon=0 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T22:46:34.472Z [dxmt-x64] rc=0 port=50562 | arch=x64 init=1 steamuser=non-null bloggedon=0 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T22:46:35.524Z [staging-x32-badsecret] rc=0 port=50565 | arch=x86 init=0 steamuser=null result=FAIL | helper: 
+2026-10-30T22:46:36.400Z [staging-x64-badsecret] rc=0 port=50569 | arch=x64 init=0 steamuser=null result=FAIL | helper: 
+2026-10-30T22:46:52.239Z [staging-x32-badsecret] rc=0 port=50574 | arch=x86 init=0 steamuser=null result=FAIL | helper: INIT   ma;INIT   SteamAPI ready (si;AUTH   refused u;AUTH   refused u;
+2026-10-30T22:46:53.148Z [staging-x64-badsecret] rc=0 port=50579 | arch=x64 init=0 steamuser=null result=FAIL | helper: INIT   ma;INIT   SteamAPI ready (si;AUTH   refused u;AUTH   refused u;
