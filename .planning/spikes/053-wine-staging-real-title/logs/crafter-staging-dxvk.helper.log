@@ -1,0 +1,36 @@
+[2026-10-30T23:02:38Z] LISTEN 127.0.0.1:50644 appid=1284190 mode=full
+[S_API] SteamAPI_Init(): Loaded '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamclient.dylib' OK.
+Setting breakpad minidump AppID = 1284190
+SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561197995867096 [API loaded no]
+[2026-10-30T23:02:38Z] INIT   manual dispatch ready
+[2026-10-30T23:02:38Z] INIT   SteamAPI ready (single InitFlat call, real appid=1284190)
+[2026-10-30T23:02:38Z] READY  init=ok appid=1284190
+[2026-10-30T23:02:45Z] HELLO  shim attached appid=1284190
+[2026-10-30T23:02:45Z] GINIT  fn=SteamAPI_Init ret=1 ok=1 session=1
+[2026-10-30T23:02:45Z] STUBCALL SteamClient020.SetWarningMessageHook slot=22 kind=stub
+[2026-10-30T23:02:45Z] STUBCALL SteamUtils010.IsSteamRunningOnSteamDeck slot=34 kind=stub
+[2026-10-30T23:02:48Z] CBQ    queued iCallback=1281 cub=272
+[2026-10-30T23:02:48Z] CBQ    queued iCallback=1222 cub=260
+[2026-10-30T23:02:48Z] CBQ    queued iCallback=1281 cub=272
+[2026-10-30T23:02:48Z] CBQ    unlisted iCallback=1040044 action=drop
+[2026-10-30T23:02:48Z] CBQ    unlisted iCallback=1270006 action=drop
+[2026-10-30T23:02:48Z] CBQ    unlisted iCallback=1270009 action=drop
+[2026-10-30T23:02:48Z] CBQ    unlisted iCallback=336 action=drop
+[2026-10-30T23:02:48Z] CBQ    unlisted iCallback=304 action=drop
+[2026-10-30T23:02:48Z] CBQ    unlisted iCallback=1040011 action=drop
+[2026-10-30T23:02:48Z] CBQ    unlisted iCallback=1040015 action=drop
+[2026-10-30T23:02:48Z] CBDISP iCallback=1281 targets=1 held=0
+[2026-10-30T23:02:48Z] CBDISP iCallback=1222 targets=1 held=0
+[2026-10-30T23:02:48Z] CBDISP iCallback=1281 targets=1 held=0
+[2026-10-30T23:02:49Z] CALL   STEAMAPPS_INTERFACE_VERSION008.BIsDlcInstalled
+[2026-10-30T23:02:49Z] STUBCALL STEAMAPPS_INTERFACE_VERSION008.GetLaunchCommandLine slot=26 kind=stub
+[2026-10-30T23:02:50Z] CBQ    queued iCallback=1281 cub=272
+[2026-10-30T23:02:50Z] CBQ    queued iCallback=1222 cub=260
+[2026-10-30T23:02:50Z] CBDISP iCallback=1281 targets=1 held=0
+[2026-10-30T23:02:50Z] CBDISP iCallback=1222 targets=1 held=0
+[2026-10-30T23:02:54Z] CBQ    queued iCallback=1281 cub=272
+[2026-10-30T23:02:54Z] CBDISP iCallback=1281 targets=1 held=0
+[2026-10-30T23:03:21Z] STUBCALL STEAMAPPS_INTERFACE_VERSION008.GetCurrentBetaName slot=15 kind=stub
+[2026-10-30T23:03:30Z] CALL   SteamUser023.GetSteamID
+[2026-10-30T23:03:30Z] CALL   SteamFriends017.GetPersonaName
+[2026-10-30T23:05:39Z] STUBCALL SteamFriends017.SetRichPresence slot=43 kind=stub

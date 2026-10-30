@@ -1,0 +1,15 @@
+shadow tree: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/053-wine-staging-real-title/../052-plain-prefix-bridge-handshake/prefixes/staging/drive_c/Program Files (x86)/Steam/steamapps/common/Avernum 6 (real dirs: [''])
+2026-10-30T22:50:00.527Z [avernum6-staging] launch engine=staging port=50607 shim=4a99c1e1c774 -- play briefly, then quit the game
+2026-10-30T22:57:46.543Z [avernum6-staging] exit rc=0 after 466s | HELLO=1 CALL=0 GINIT=yes | Player.log= | VERDICT=verified 
+shadow tree: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/053-wine-staging-real-title/../052-plain-prefix-bridge-handshake/prefixes/dxmt/drive_c/Program Files (x86)/Steam/steamapps/common/Avernum 6 (real dirs: [''])
+2026-10-30T22:58:01.029Z [avernum6-dxmt] launch engine=dxmt port=50624 shim=4a99c1e1c774 -- play briefly, then quit the game
+2026-10-30T22:58:58.294Z [avernum6-dxmt] exit rc=0 after 57s | HELLO=1 CALL=0 GINIT=yes | Player.log= | VERDICT=verified 
+shadow tree: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/053-wine-staging-real-title/../052-plain-prefix-bridge-handshake/prefixes/staging/drive_c/Program Files (x86)/Steam/steamapps/common/The Planet Crafter (real dirs: ['', 'Planet Crafter_Data', 'Planet Crafter_Data/Plugins', 'Planet Crafter_Data/Plugins/x86_64'])
+2026-10-30T22:59:09.308Z [crafter-staging] launch engine=staging port=50629 shim=e74e21fd8195 -- play briefly, then quit the game
+2026-10-30T23:00:29.480Z [crafter-staging] exit rc=1 after 80s | HELLO=0 CALL=0 GINIT= | Player.log=yes | VERDICT=unverified no HELLO
+shadow tree: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/053-wine-staging-real-title/../052-plain-prefix-bridge-handshake/prefixes/dxmt/drive_c/Program Files (x86)/Steam/steamapps/common/The Planet Crafter (real dirs: ['', 'Planet Crafter_Data', 'Planet Crafter_Data/Plugins', 'Planet Crafter_Data/Plugins/x86_64'])
+2026-10-30T23:00:42.082Z [crafter-dxmt] launch engine=dxmt port=50635 shim=e74e21fd8195 -- play briefly, then quit the game
+2026-10-30T23:00:52.633Z [crafter-dxmt] exit rc=3 after 10s | HELLO=0 CALL=0 GINIT= | Player.log=yes | VERDICT=unverified no HELLO
+shadow tree: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/053-wine-staging-real-title/../052-plain-prefix-bridge-handshake/prefixes/staging-dxvk/drive_c/Program Files (x86)/Steam/steamapps/common/The Planet Crafter (real dirs: ['', 'Planet Crafter_Data', 'Planet Crafter_Data/Plugins', 'Planet Crafter_Data/Plugins/x86_64'])
+2026-10-30T23:02:38.315Z [crafter-staging-dxvk] launch engine=staging-dxvk port=50644 shim=e74e21fd8195 -- play briefly, then quit the game
+2026-10-30T23:05:42.168Z [crafter-staging-dxvk] exit rc=0 after 184s | HELLO=1 CALL=3 GINIT=yes | Player.log=yes | VERDICT=verified 

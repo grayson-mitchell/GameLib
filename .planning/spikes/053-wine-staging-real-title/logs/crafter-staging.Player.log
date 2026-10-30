@@ -1,0 +1,25 @@
+Mono path[0] = 'C:/Program Files (x86)/Steam/steamapps/common/The Planet Crafter/Planet Crafter_Data/Managed'
+Mono config path = 'C:/Program Files (x86)/Steam/steamapps/common/The Planet Crafter/MonoBleedingEdge/etc'
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.3.2f1 (a9779f353c9b)
+[Subsystems] Discovering subsystems at path C:/Program Files (x86)/Steam/steamapps/common/The Planet Crafter/Planet Crafter_Data/UnitySubsystems
+[D3D12 Device Filter] Vendor Name: NVIDIA
+[D3D12 Device Filter] Device Name: NVIDIA GeForce 6800
+[D3D12 Device Filter] Driver Version: 0.0.0.0
+[D3D12 Device Filter] Feature Level: 11.0
+[D3D12 Device Filter] Graphics Memory: 79626 MB
+[D3D12 Device Filter] Processor Count: 30
+[D3D12 Device Filter] Device Type: Discrete
+[D3D12 Device Filter] D3D12 API denied by user filter: {"Feature Level Comparator": Less Than"Feature Level": "12.1", "Device Type:": Do Not Care}
+GfxDevice: creating device client; kGfxThreadingModeClientWorkerJobs
+d3d11: failed to create device and context (80004005).
+GfxDevice: creating device client; kGfxThreadingModeClientWorkerJobs
+d3d11: failed to create device and context (80004005).
+Failed to initialize graphics.
+Make sure you have DirectX 11 installed, have up to date
+drivers for your graphics card and have not disabled
+3D acceleration in display settings.
+InitializeEngineGraphics failed
+PlayerInitEngineGraphics: InitializeEngineGraphics failed
