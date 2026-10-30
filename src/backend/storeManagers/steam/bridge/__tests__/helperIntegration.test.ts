@@ -1921,5 +1921,135 @@ describeDarwinOnly(
       const fb = src.slice(src.indexOf('static void gl_p2p_fallback_accept'))
       expect(fb.slice(0, fb.indexOf('\n}\n'))).not.toMatch(/logts_f/)
     })
+
+    const strippedHelper = (): string =>
+      readFileSync(HELPER_SOURCE_PATH, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+
+    // 58-15 (T-58-48, T-58-51): the carry queue holds copies, and every Mac
+    // message is Released inside the call that received it.
+    test('58-15 source pin: gl_net_receive_messages Releases each Mac message in the same call and the carry queue holds only copied records', () => {
+      const src = strippedHelper()
+      const rec = src.slice(
+        src.indexOf('typedef struct {\n  uint8_t *rec;'),
+        src.indexOf('} gl_nets_rec;')
+      )
+      expect(rec).toContain('uint8_t *rec;')
+      expect(rec).toContain('uint32_t size;')
+      expect(rec).not.toMatch(/void \*|msg/)
+      const start = src.indexOf('static int gl_nets_receive(')
+      const end = src.indexOf('int gl_net_receive_messages(')
+      expect(start).toBeGreaterThan(-1)
+      expect(end).toBeGreaterThan(start)
+      const body = src.slice(start, end)
+      const recvAt = body.indexOf('got = fn[which](')
+      const loop = body.slice(recvAt, body.indexOf('memcpy(resp, &n, 4);'))
+      // the oversize/invalid branch and the normal path each Release the message
+      expect(loop.match(/gl_nets_release\(\(void \*\)m\);/g)).toHaveLength(2)
+      // only a malloc'd copy is queued, never the Mac message
+      expect(loop).toContain('gl_nets_queue_push(slot, copy, size);')
+      expect(loop).not.toMatch(/gl_nets_queue_push\(slot, \(?m\b/)
+      // the release is the last statement of the loop body
+      const lastRelease = loop.lastIndexOf('gl_nets_release((void *)m);')
+      expect(loop.slice(lastRelease)).toMatch(/^[^;]*;\s*}\s*}\s*$/)
+      expect(src).toContain('dlsym(g_dylib_handle, name)')
+      expect(body).toContain('ReceiveMessagesOnConnection')
+      expect(body).toContain('ReceiveMessagesOnPollGroup')
+    })
+
+    test('58-15 source pin: the carry queue is 256 records x 32 handles, the batch is min(nMaxMessages, 64) and the oversize line is logged on drop', () => {
+      const src = strippedHelper()
+      expect(src).toContain('#define GL_NETS_QUEUE_RECORDS 256')
+      expect(src).toContain('#define GL_NETS_QUEUE_HANDLES 32')
+      expect(src).toContain('#define GL_NETS_BATCH_MAX 64')
+      expect(src).toContain('#define GL_NETS_RECORDS_MAX 61440u')
+      expect(src).toContain(
+        'int want = nMax - n > GL_NETS_BATCH_MAX ? GL_NETS_BATCH_MAX : (int)(nMax - n);'
+      )
+      const drop = src.slice(
+        src.indexOf('static void gl_nets_queue_drop_oldest('),
+        src.indexOf('static void gl_nets_queue_push(')
+      )
+      expect(drop).toContain(
+        'gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_SOCKETS'
+      )
+      expect(src).toContain(
+        'gl_net_evidence(1, GL_NET_KIND_RECV, GL_NET_IFACE_SOCKETS'
+      )
+    })
+
+    test('58-15 source pin: gl_net_sockets_open refuses option type 5 and ids 201-207 and length-checks every kept option', () => {
+      const src = strippedHelper()
+      const start = src.indexOf('int gl_net_sockets_open(')
+      expect(start).toBeGreaterThan(-1)
+      const body = src.slice(start)
+      const refuse = body.indexOf('type == 5 || (e >= 201 && e <= 207)')
+      const lenCheck = body.indexOf('len > argLen - off')
+      const firstRead = body.indexOf('memcpy(cfg[i] + 8')
+      expect(refuse).toBeGreaterThan(-1)
+      expect(lenCheck).toBeGreaterThan(refuse)
+      expect(firstRead).toBeGreaterThan(lenCheck)
+      expect(body).toContain('if (argLen - off < 12u) return 1;')
+      expect(body).toContain('if (off != argLen) return 1;')
+      expect(body).toContain('if (nKept > GL_NETS_OPEN_OPTIONS_MAX) return 1;')
+      expect(body).toContain('if (op > 3) return 1;')
+    })
+
+    test('58-15 source pin: connection-info path is logged from m_nFlags & 16 only', () => {
+      const src = strippedHelper()
+      expect(src).toContain('#define GL_NETS_INFO_OFF_FLAGS 440')
+      expect(src).toContain('#define GL_NETS_INFO_FLAG_RELAYED 16')
+      const fn = src.slice(src.indexOf('void gl_net_conn_info_path('))
+      const body = fn.slice(0, fn.indexOf('\n}\n'))
+      expect(body).toContain('(flags & GL_NETS_INFO_FLAG_RELAYED) != 0')
+      expect(body).toContain('GL_NET_KIND_PATH')
+      expect(src).not.toMatch(/logts(?:_f)?\("(NET|CBQ)",[^;]*%s/)
+    })
+
+    // 58-15: with no Steam session every dispatch is STATUS_ERR, so these prove
+    // the helper survives a malformed Sockets013 blob (an unknown op byte, a
+    // truncated receive request, nMaxMessages far past the cap) and keeps serving.
+    test('58-15: an authenticated Sockets013 open with an unknown op byte, and a receive with nMaxMessages 100000 or a truncated blob, are answered STATUS_ERR and the helper stays up', async () => {
+      const h = await startAuthHelper('p58-15-sockets-', authedEnv())
+      try {
+        const socket = await h.connect()
+        try {
+          await authenticate(socket)
+          const SOCKETS_013_ORDINAL = 70
+          const OPEN_SLOTS = [0, 1, 2, 3]
+          const RECEIVE_CONN_SLOT = 14
+          const RECEIVE_PG_SLOT = 27
+          const unknownOp = Buffer.alloc(40)
+          unknownOp[0] = 9
+          const hugeMax = Buffer.alloc(8)
+          hugeMax.writeUInt32LE(7, 0)
+          hugeMax.writeInt32LE(100000, 4)
+          let id = 1
+          const frames: Array<[number, Buffer]> = [
+            ...OPEN_SLOTS.map((slot): [number, Buffer] => [slot, unknownOp]),
+            [RECEIVE_CONN_SLOT, hugeMax],
+            [RECEIVE_PG_SLOT, hugeMax],
+            [RECEIVE_CONN_SLOT, hugeMax.subarray(0, 5)],
+            [RECEIVE_PG_SLOT, Buffer.alloc(0)]
+          ]
+          for (const [slot, blob] of frames) {
+            const res = await sendFrameOnSocket(
+              socket,
+              encodeRequest(id++, SOCKETS_013_ORDINAL, slot, Buffer.from(blob))
+            )
+            expect(res.status).toBe(STATUS_ERR)
+          }
+          expect(
+            (await sendFrameOnSocket(socket, encodeControl(99, 'health')))
+              .status
+          ).toBe(STATUS_OK)
+        } finally {
+          socket.destroy()
+        }
+      } finally {
+        h.child.kill()
+      }
+    }, 15000)
   }
 )

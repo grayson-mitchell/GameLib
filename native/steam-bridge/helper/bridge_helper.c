@@ -910,6 +910,407 @@ int gl_net_get_config_value_info(void *self, const uint8_t *args, uint32_t argLe
   return 0;
 }
 
+/* === 58-15: ISteamNetworkingSockets 013 helpers ============================ */
+/* helperCustom functions for the Sockets013 wire. Each resolves its Mac symbol
+ * with dlsym on the one dylib handle at first use. The dispatch thread is the
+ * only caller, so the carry queue needs no lock. Payloads and identities are
+ * never logged: the only runtime values in a NET line are integer counts. */
+
+#define GL_NETS_BATCH_MAX 64
+#define GL_NETS_RECORDS_MAX 61440u
+#define GL_NETS_REC_HEADER 180u
+#define GL_NETS_QUEUE_RECORDS 256
+#define GL_NETS_QUEUE_HANDLES 32
+#define GL_NETS_QUEUE_BYTES (1u << 20)
+#define GL_NETS_MSG_OFF_RELEASE 184
+#define GL_NETS_OPEN_OPTIONS_MAX 32
+#define GL_NETS_OPEN_STRING_MAX 1024
+#define GL_NETS_LANES_MAX 255
+#define GL_NETS_INFO_BYTES 696
+#define GL_NETS_INFO_OFF_FLAGS 440
+#define GL_NETS_INFO_FLAG_RELAYED 16
+#define GL_NETS_RT_BYTES 120
+#define GL_NETS_RT_LANE_BYTES 64
+
+/* A carry-queue record: a malloc'd COPY (header then payload). No Mac pointer
+ * is ever stored here; every Mac message is Released inside the call that
+ * received it. */
+typedef struct {
+  uint8_t *rec;
+  uint32_t size;
+} gl_nets_rec;
+
+typedef struct {
+  int used;
+  int which; /* 0 = connection, 1 = poll group */
+  uint32_t handle;
+  uint32_t head;
+  uint32_t count;
+  uint32_t bytes;
+  gl_nets_rec q[GL_NETS_QUEUE_RECORDS];
+} gl_nets_queue;
+
+static gl_nets_queue g_nets_queue[GL_NETS_QUEUE_HANDLES];
+static uint32_t g_nets_evict = 0;
+static int g_nets_path_seen[2];
+
+static void *gl_nets_sym(const char *name) {
+  return g_dylib_handle != NULL ? dlsym(g_dylib_handle, name) : NULL;
+}
+
+static void gl_nets_rec_free(gl_nets_rec *r) {
+  if (r->rec != NULL) {
+    gl_cbq_secure_zero(r->rec, r->size);
+    free(r->rec);
+  }
+  r->rec = NULL;
+  r->size = 0;
+}
+
+static void gl_nets_queue_clear(gl_nets_queue *s) {
+  for (uint32_t i = 0; i < s->count; i++) gl_nets_rec_free(&s->q[(s->head + i) % GL_NETS_QUEUE_RECORDS]);
+  memset(s, 0, sizeof *s);
+}
+
+static gl_nets_queue *gl_nets_queue_find(int which, uint32_t handle, int create) {
+  gl_nets_queue *free_slot = NULL;
+  for (int i = 0; i < GL_NETS_QUEUE_HANDLES; i++) {
+    gl_nets_queue *s = &g_nets_queue[i];
+    if (s->used && s->which == which && s->handle == handle) return s;
+    if (!s->used && free_slot == NULL) free_slot = s;
+  }
+  if (!create) return NULL;
+  if (free_slot == NULL) {
+    free_slot = &g_nets_queue[g_nets_evict++ % GL_NETS_QUEUE_HANDLES];
+    gl_nets_queue_clear(free_slot);
+  }
+  free_slot->used = 1;
+  free_slot->which = which;
+  free_slot->handle = handle;
+  return free_slot;
+}
+
+/* Drops the oldest record of a full queue, logged as an oversize line. */
+static void gl_nets_queue_drop_oldest(gl_nets_queue *s) {
+  gl_nets_rec *r = &s->q[s->head];
+  gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_SOCKETS, 0, r->size, GL_NET_PATH_UNKNOWN);
+  s->bytes -= r->size;
+  gl_nets_rec_free(r);
+  s->head = (s->head + 1) % GL_NETS_QUEUE_RECORDS;
+  s->count--;
+}
+
+/* Takes ownership of rec (malloc'd). */
+static void gl_nets_queue_push(gl_nets_queue *s, uint8_t *rec, uint32_t size) {
+  while (s->count > 0 && (s->count >= GL_NETS_QUEUE_RECORDS || s->bytes + size > GL_NETS_QUEUE_BYTES))
+    gl_nets_queue_drop_oldest(s);
+  gl_nets_rec *r = &s->q[(s->head + s->count) % GL_NETS_QUEUE_RECORDS];
+  r->rec = rec;
+  r->size = size;
+  s->count++;
+  s->bytes += size;
+}
+
+/* Copies one Mac message into the out-messages record layout. */
+static void gl_nets_encode(uint8_t *dst, const uint8_t *msg, uint32_t cb, const uint8_t *data) {
+  memset(dst, 0, GL_NETS_REC_HEADER);
+  memcpy(dst, &cb, 4);
+  memcpy(dst + 4, msg + 12, 4);
+  memcpy(dst + 8, msg + 16, 136);
+  memcpy(dst + 144, msg + 152, 8);
+  memcpy(dst + 152, msg + 160, 8);
+  memcpy(dst + 160, msg + 168, 8);
+  memcpy(dst + 168, msg + 192, 4);
+  memcpy(dst + 172, msg + 196, 4);
+  memcpy(dst + 176, msg + 208, 2);
+  if (cb > 0) memcpy(dst + GL_NETS_REC_HEADER, data, cb);
+}
+
+static void gl_nets_release(void *msg) {
+  void (*rel)(void *);
+  memcpy(&rel, (const uint8_t *)msg + GL_NETS_MSG_OFF_RELEASE, sizeof rel);
+  if (rel != NULL) rel(msg);
+}
+
+/* Fail-closed, loss-free receive (Pitfalls 3-5). Request: [u32 handle]
+ * [i32 nMaxMessages]. Response: [i32 n] then n records (out-messages). At most
+ * min(nMaxMessages, 64) Mac messages are taken per call; each is copied and
+ * Released at once. Whatever does not fit in 61440 record bytes waits in the
+ * per-handle carry queue and is returned first next time. A single message too
+ * big for any response is dropped with an oversize line, never truncated. */
+static int gl_nets_receive(int which, void *self, const uint8_t *args, uint32_t argLen,
+                           uint8_t *resp, uint32_t respCap, uint32_t *respLen) {
+  typedef int (*Recv_t)(void *, uint32_t, void **, int);
+  static Recv_t fn[2];
+  uint32_t handle, off = 4, limit;
+  int32_t nMax, n = 0;
+  gl_nets_queue *slot;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || argLen != 8 || respCap < 4) return 1;
+  if (self == NULL) return 1;
+  memcpy(&handle, args, 4);
+  memcpy(&nMax, args + 4, 4);
+  if (fn[which] == NULL)
+    fn[which] = (Recv_t)gl_nets_sym(which == 0 ? "SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnConnection"
+                                               : "SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnPollGroup");
+  if (fn[which] == NULL) return 1;
+  limit = respCap < 4u + GL_NETS_RECORDS_MAX ? respCap : 4u + GL_NETS_RECORDS_MAX;
+  slot = gl_nets_queue_find(which, handle, 0);
+  /* 1. what an earlier call could not fit */
+  while (slot != NULL && slot->count > 0 && n < nMax) {
+    gl_nets_rec *r = &slot->q[slot->head];
+    if (off + r->size > limit) break;
+    memcpy(resp + off, r->rec, r->size);
+    off += r->size;
+    n++;
+    slot->bytes -= r->size;
+    gl_nets_rec_free(r);
+    slot->head = (slot->head + 1) % GL_NETS_QUEUE_RECORDS;
+    slot->count--;
+  }
+  /* 2. new Mac messages, only once the queue is empty so order is kept */
+  if (n < nMax && (slot == NULL || slot->count == 0)) {
+    int want = nMax - n > GL_NETS_BATCH_MAX ? GL_NETS_BATCH_MAX : (int)(nMax - n);
+    void *msgs[GL_NETS_BATCH_MAX];
+    int got, queueing = 0;
+    memset(msgs, 0, sizeof msgs);
+    got = fn[which](self, handle, msgs, want);
+    if (got < 0) got = 0;
+    if (got > want) got = want;
+    for (int i = 0; i < got; i++) {
+      const uint8_t *m = (const uint8_t *)msgs[i];
+      int32_t cb;
+      const uint8_t *data;
+      uint32_t size;
+      if (m == NULL) continue;
+      memcpy(&cb, m + 8, 4);
+      memcpy(&data, m, sizeof data);
+      if (cb < 0 || (cb > 0 && data == NULL) || (uint32_t)cb > GL_NETS_RECORDS_MAX - GL_NETS_REC_HEADER) {
+        gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_SOCKETS, 0, cb < 0 ? 0u : (uint32_t)cb,
+                        GL_NET_PATH_UNKNOWN);
+        gl_nets_release((void *)m);
+        continue;
+      }
+      size = GL_NETS_REC_HEADER + (uint32_t)cb;
+      if (!queueing && off + size <= limit) {
+        gl_nets_encode(resp + off, m, (uint32_t)cb, data);
+        off += size;
+        n++;
+      } else {
+        uint8_t *copy = (uint8_t *)malloc(size);
+        queueing = 1;
+        if (copy == NULL) {
+          gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_SOCKETS, 0, size, GL_NET_PATH_UNKNOWN);
+        } else {
+          gl_nets_encode(copy, m, (uint32_t)cb, data);
+          if (slot == NULL) slot = gl_nets_queue_find(which, handle, 1);
+          gl_nets_queue_push(slot, copy, size);
+        }
+      }
+      gl_nets_release((void *)m);
+    }
+  }
+  memcpy(resp, &n, 4);
+  *respLen = off;
+  if (n > 0) gl_net_evidence(1, GL_NET_KIND_RECV, GL_NET_IFACE_SOCKETS, 0, (uint32_t)n, GL_NET_PATH_UNKNOWN);
+  return 0;
+}
+
+int gl_net_receive_messages(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                            uint32_t respCap, uint32_t *respLen) {
+  return gl_nets_receive(0, self, args, argLen, resp, respCap, respLen);
+}
+
+int gl_net_receive_messages_pg(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                               uint32_t respCap, uint32_t *respLen) {
+  return gl_nets_receive(1, self, args, argLen, resp, respCap, respLen);
+}
+
+/* Logs the connection path once per kind, from m_nFlags & 16 (relayed). */
+void gl_net_conn_info_path(const uint8_t *info) {
+  int32_t flags;
+  int relayed;
+  memcpy(&flags, info + GL_NETS_INFO_OFF_FLAGS, 4);
+  relayed = (flags & GL_NETS_INFO_FLAG_RELAYED) != 0;
+  if (g_nets_path_seen[relayed]) return;
+  g_nets_path_seen[relayed] = 1;
+  gl_net_evidence(1, GL_NET_KIND_PATH, GL_NET_IFACE_SOCKETS, 0, 0,
+                  relayed ? GL_NET_PATH_RELAYED : GL_NET_PATH_DIRECT);
+}
+
+/* GetConnectionInfo. Request [u32 hConn]. Response [i32 ret][u8 present]
+ * [696 bytes SteamNetConnectionInfo_t]. */
+int gl_net_get_connection_info(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                               uint32_t respCap, uint32_t *respLen) {
+  typedef int (*Info_t)(void *, uint32_t, void *);
+  static Info_t fn = NULL;
+  uint32_t hConn;
+  int32_t ret;
+  uint8_t info[GL_NETS_INFO_BYTES];
+  *respLen = 0;
+  if (args == NULL || resp == NULL || argLen != 4 || respCap < 5u + GL_NETS_INFO_BYTES) return 1;
+  if (self == NULL) return 1;
+  memcpy(&hConn, args, 4);
+  if (fn == NULL) fn = (Info_t)gl_nets_sym("SteamAPI_ISteamNetworkingSockets_GetConnectionInfo");
+  if (fn == NULL) return 1;
+  memset(info, 0, sizeof info);
+  ret = fn(self, hConn, info) & 0xff;
+  memcpy(resp, &ret, 4);
+  resp[4] = 1;
+  memcpy(resp + 5, info, sizeof info);
+  *respLen = 5u + GL_NETS_INFO_BYTES;
+  if (ret) gl_net_conn_info_path(info);
+  return 0;
+}
+
+/* GetConnectionRealTimeStatus. Request [u32 hConn][u32 nLanes]. Response
+ * [i32 ret][u8 present][120 bytes][u32 nl][nl x 64 bytes]. */
+int gl_net_rt_status(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                     uint32_t respCap, uint32_t *respLen) {
+  typedef int (*Rt_t)(void *, uint32_t, void *, int, void *);
+  static Rt_t fn = NULL;
+  uint32_t hConn, nLanes;
+  int32_t ret;
+  uint8_t status[GL_NETS_RT_BYTES];
+  static uint8_t lanes[GL_NETS_LANES_MAX * GL_NETS_RT_LANE_BYTES];
+  *respLen = 0;
+  if (args == NULL || resp == NULL || argLen != 8) return 1;
+  memcpy(&hConn, args, 4);
+  memcpy(&nLanes, args + 4, 4);
+  if (nLanes > GL_NETS_LANES_MAX) return 1;
+  if (respCap < 9u + GL_NETS_RT_BYTES + nLanes * GL_NETS_RT_LANE_BYTES) return 1;
+  if (self == NULL) return 1;
+  if (fn == NULL) fn = (Rt_t)gl_nets_sym("SteamAPI_ISteamNetworkingSockets_GetConnectionRealTimeStatus");
+  if (fn == NULL) return 1;
+  memset(status, 0, sizeof status);
+  memset(lanes, 0, nLanes * GL_NETS_RT_LANE_BYTES);
+  ret = fn(self, hConn, status, (int)nLanes, nLanes != 0 ? lanes : NULL);
+  memcpy(resp, &ret, 4);
+  resp[4] = 1;
+  memcpy(resp + 5, status, sizeof status);
+  memcpy(resp + 5 + GL_NETS_RT_BYTES, &nLanes, 4);
+  memcpy(resp + 9 + GL_NETS_RT_BYTES, lanes, nLanes * GL_NETS_RT_LANE_BYTES);
+  *respLen = 9u + GL_NETS_RT_BYTES + nLanes * GL_NETS_RT_LANE_BYTES;
+  return 0;
+}
+
+/* ConfigureConnectionLanes. Request [u32 hConn][i32 n][u8 hasPrio][u8 hasWeights]
+ * [n x i32][n x u16]. Response [i32 EResult]. */
+int gl_net_configure_lanes(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                           uint32_t respCap, uint32_t *respLen) {
+  typedef int (*Lanes_t)(void *, uint32_t, int, const int32_t *, const uint16_t *);
+  static Lanes_t fn = NULL;
+  uint32_t hConn, off = 10;
+  int32_t n, ret;
+  int32_t prio[GL_NETS_LANES_MAX];
+  uint16_t weights[GL_NETS_LANES_MAX];
+  int hasPrio, hasWeights;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || respCap < 4 || argLen < 10) return 1;
+  memcpy(&hConn, args, 4);
+  memcpy(&n, args + 4, 4);
+  hasPrio = args[8];
+  hasWeights = args[9];
+  if (n < 1 || n > GL_NETS_LANES_MAX || hasPrio > 1 || hasWeights > 1) return 1;
+  if (argLen != 10u + (hasPrio ? 4u * (uint32_t)n : 0u) + (hasWeights ? 2u * (uint32_t)n : 0u)) return 1;
+  if (hasPrio) {
+    memcpy(prio, args + off, 4u * (uint32_t)n);
+    off += 4u * (uint32_t)n;
+  }
+  if (hasWeights) memcpy(weights, args + off, 2u * (uint32_t)n);
+  if (self == NULL) return 1;
+  if (fn == NULL) fn = (Lanes_t)gl_nets_sym("SteamAPI_ISteamNetworkingSockets_ConfigureConnectionLanes");
+  if (fn == NULL) return 1;
+  ret = fn(self, hConn, n, hasPrio ? prio : NULL, hasWeights ? weights : NULL);
+  memcpy(resp, &ret, 4);
+  *respLen = 4;
+  return 0;
+}
+
+/* CreateListenSocketIP / ConnectByIPAddress / CreateListenSocketP2P /
+ * ConnectP2P. Request [u8 op][struct bytes][i32 port][u32 nKept][kept options],
+ * each kept option [i32 e][i32 type][u32 len][bytes]. Response [u32 handle].
+ * Option data type 5 (Ptr) and ids 201-207 are refused before any value is
+ * read, and every kept option is length-checked before it is used (T-58-50). */
+int gl_net_sockets_open(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                        uint32_t respCap, uint32_t *respLen) {
+  typedef uint32_t (*Addr_t)(void *, const void *, int, const void *);
+  typedef uint32_t (*P2pListen_t)(void *, int, int, const void *);
+  typedef uint32_t (*P2pConnect_t)(void *, const void *, int, int, const void *);
+  static void *fns[4];
+  static const char *const names[4] = {
+      "SteamAPI_ISteamNetworkingSockets_CreateListenSocketIP",
+      "SteamAPI_ISteamNetworkingSockets_ConnectByIPAddress",
+      "SteamAPI_ISteamNetworkingSockets_CreateListenSocketP2P",
+      "SteamAPI_ISteamNetworkingSockets_ConnectP2P"};
+  static const uint32_t stLen[4] = {18, 18, 0, 136};
+  uint8_t cfg[GL_NETS_OPEN_OPTIONS_MAX][16];
+  char strs[GL_NETS_OPEN_OPTIONS_MAX][GL_NETS_OPEN_STRING_MAX];
+  uint32_t off, nKept, handle = 0;
+  int32_t port;
+  uint8_t op;
+  const uint8_t *st;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || respCap < 4 || argLen < 1) return 1;
+  op = args[0];
+  if (op > 3) return 1;
+  if (argLen < 1u + stLen[op] + 8u) return 1;
+  st = args + 1;
+  off = 1u + stLen[op];
+  memcpy(&port, args + off, 4);
+  memcpy(&nKept, args + off + 4, 4);
+  off += 8;
+  if (nKept > GL_NETS_OPEN_OPTIONS_MAX) return 1;
+  memset(cfg, 0, sizeof cfg);
+  for (uint32_t i = 0; i < nKept; i++) {
+    int32_t e, type;
+    uint32_t len;
+    if (argLen - off < 12u) return 1;
+    memcpy(&e, args + off, 4);
+    memcpy(&type, args + off + 4, 4);
+    memcpy(&len, args + off + 8, 4);
+    off += 12;
+    if (type == 5 || (e >= 201 && e <= 207)) return 1;
+    if (len > argLen - off) return 1;
+    if (type == 1 || type == 3) {
+      if (len != 4) return 1;
+      memcpy(cfg[i] + 8, args + off, 4);
+    } else if (type == 2) {
+      if (len != 8) return 1;
+      memcpy(cfg[i] + 8, args + off, 8);
+    } else if (type == 4) {
+      const char *sp = strs[i];
+      if (len < 1 || len > GL_NETS_OPEN_STRING_MAX || args[off + len - 1] != 0) return 1;
+      memcpy(strs[i], args + off, len);
+      memcpy(cfg[i] + 8, &sp, sizeof sp);
+    } else {
+      return 1;
+    }
+    memcpy(cfg[i], &e, 4);
+    memcpy(cfg[i] + 4, &type, 4);
+    off += len;
+  }
+  if (off != argLen) return 1;
+  if (self == NULL) return 1;
+  if (fns[op] == NULL) fns[op] = gl_nets_sym(names[op]);
+  if (fns[op] == NULL) return 1;
+  switch (op) {
+    case 0:
+    case 1:
+      handle = ((Addr_t)fns[op])(self, st, (int)nKept, nKept != 0 ? cfg : NULL);
+      break;
+    case 2:
+      handle = ((P2pListen_t)fns[op])(self, port, (int)nKept, nKept != 0 ? cfg : NULL);
+      break;
+    default:
+      handle = ((P2pConnect_t)fns[op])(self, st, port, (int)nKept, nKept != 0 ? cfg : NULL);
+      break;
+  }
+  memcpy(resp, &handle, 4);
+  *respLen = 4;
+  return 0;
+}
+
 /* M-04 fallback: the shim reported a 1202 with no listener (ndispatched 0,
  * held 0), so accept the remote ourselves, once per remote. Helper-originated:
  * logged as src=helper and never counted as evidence. */
