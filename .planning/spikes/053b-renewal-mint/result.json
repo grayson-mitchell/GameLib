@@ -1,0 +1,8 @@
+{
+  "subject": 3205720,
+  "mint": {
+    "cmWebsocketRenew": "AccessDenied (eresult 15)",
+    "webApiFormRenew": "status 200 x-eresult 15 body {\"response\":{}}",
+    "newRefreshTokenIssued": false
+  }
+}

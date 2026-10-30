@@ -1,0 +1,5 @@
+2026-10-30T23:50:32.053Z +     20ms [snapshot] steam_osx {"pid":"98746"}
+2026-10-30T23:50:41.194Z +   9160ms [token] refresh token read from Keychain {"prefix":"eyA","length":493}
+2026-10-30T23:50:41.195Z +   9161ms [backup] old refresh token backed up {"path":"/Users/graysonmitchell/.gamelib-spike053b-refresh-token.bak"}
+2026-10-30T23:50:43.153Z +  11119ms [token] access-token mint attempts {"cmWebsocketRenew":"AccessDenied (eresult 15)","webApiFormRenew":"status 200 x-eresult 15 body {\"response\":{}}","newRefreshTokenIssued":false}
+2026-10-30T23:50:43.153Z +  11119ms [verdict] MINT_FAILED: no access token even with renewal allowed. >>> OPERATOR: is Friends still signed in?
