@@ -530,6 +530,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261030-sqq | Humble Keys: owned-on-Steam rows withheld Activate (D-60) with no explanation — the `gift-only` branch of `renderKeyAction` omitted `ownedBadge`. Now renders "Owned on Steam" there and in `claim-and-gift`, so an owned row with no action at all also says so; `resolveKeyScenario` unchanged. Found live during the Phase 26 redeem UAT. | 2026-10-30 | d0a66c8ef | HumbleKeyRow jest 107/107 (6 new, 4 red-first), mutation proof per badge line, codecheck, scoped eslint/prettier. Not live-checked in the app. | [261030-sqq-humble-gift-only-rows-show-owned-on-stea](./quick/261030-sqq-humble-gift-only-rows-show-owned-on-stea/) |
 | fast | Dev-vault todo closed by design: the plaintext dev secret vault stays disposable in `os.tmpdir()`. Durable `~` storage would put the Steam refresh token in Time Machine backups, and 261029-s5l plus PC12 already cover a lost token. No code change. | 2026-10-30 | — | Done | — |
 | fast | Library grid tiles centered: `.gameList` `justify-content` start → center, so window-resize slack splits on both sides. Not live-tested. | 2026-10-30 | `ffb623ea2` | Done | — |
+| fast | Focus-row strips centred with the grid: viewport moves in by the grid's slack at both ends, track sizes from that box. Headers stay at the strip start. Not live-tested. | 2026-10-30 | `f6756354e` | Done | — |
 
 ## Session Continuity
 
