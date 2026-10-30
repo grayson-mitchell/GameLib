@@ -29,3 +29,12 @@ Not diagnosed. Hypotheses to check, not conclusions:
 (`/gsd-spike`): find out what remote install needs and whether GameLib should support, hide or
 reroute it to its own Install. Read `Skill("spike-findings-gamelib")` first: the login-webview and
 cookie surface is already documented there.
+
+## Resolution (2026-10-30)
+
+Closed as not a GameLib defect. The control is Steam's own post-purchase "Remotely Install -
+<device> | <OS>" offer: it sends the install to another signed-in Steam client (live: "Remotely
+Install - BigRazer | PC", the user's Windows gaming PC) and behaves the same in any browser. The
+embed's store session is signed in (an owned game's page shows the in-library banner), and the
+10-28 sign-in prompt was not reproduced. Debug session:
+`.planning/debug/resolved/steam-remote-install-sign-in.md`.
