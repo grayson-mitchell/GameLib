@@ -10,6 +10,7 @@ import { readFileSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 
 import {
+  ALLOWED_PROTON_REFS,
   applyWirePolicy,
   buildNullSretInventory,
   classifyProtonReturn,
@@ -17,6 +18,8 @@ import {
   manifestFilenameFor,
   mapProtonCType,
   parseProtonThunks,
+  LSTEAMCLIENT_PROTON_SHA,
+  parseArgvProtonRef,
   PINNED_PROTON_SHA,
   resolveOrdinal,
   splitProtonParam,
@@ -346,5 +349,25 @@ describe('buildNullSretInventory (synthetic fixture, D-09)', () => {
     const inv = buildNullSretInventory({ AbiFamily: fixtureText })
     const keys = Object.keys(inv.versions)
     expect(keys).toEqual([...keys].sort())
+  })
+})
+
+describe('parseArgvProtonRef (58-03, T-58-06)', () => {
+  it('defaults to the proton_9.0 pin', () => {
+    expect(parseArgvProtonRef([])).toBe(PINNED_PROTON_SHA)
+  })
+  it('accepts the lsteamclient pin', () => {
+    expect(parseArgvProtonRef(['--proton-ref', LSTEAMCLIENT_PROTON_SHA])).toBe(
+      LSTEAMCLIENT_PROTON_SHA
+    )
+    expect(ALLOWED_PROTON_REFS).toEqual([
+      PINNED_PROTON_SHA,
+      LSTEAMCLIENT_PROTON_SHA
+    ])
+  })
+  it('rejects unlisted refs and branch names', () => {
+    expect(() => parseArgvProtonRef(['--proton-ref', 'proton_9.0'])).toThrow()
+    expect(() => parseArgvProtonRef(['--proton-ref', 'a'.repeat(40)])).toThrow()
+    expect(() => parseArgvProtonRef(['--proton-ref'])).toThrow()
   })
 })

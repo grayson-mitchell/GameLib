@@ -1,0 +1,449 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamNetworkingUtils004",
+  "family": "SteamNetworkingUtils",
+  "ordinal": 71,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "helperInterface": "SteamAPI_SteamNetworkingUtils_SteamAPI_v004",
+  "flatAccessor": "SteamAPI_SteamNetworkingUtils_SteamAPI_v004",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamNetworkingUtils.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "AllocateMessage",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "GetRelayNetworkStatus",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pDetails",
+          "type": "SteamRelayNetworkStatus_t*"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "GetLocalPingLocation",
+      "returns": "float",
+      "returnKind": "float",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "result",
+          "type": "SteamNetworkPingLocation_t*"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "EstimatePingTimeBetweenTwoLocations",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "location1",
+          "type": "const SteamNetworkPingLocation_t*"
+        },
+        {
+          "name": "location2",
+          "type": "const SteamNetworkPingLocation_t*"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "EstimatePingTimeFromLocalHost",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "remoteLocation",
+          "type": "const SteamNetworkPingLocation_t*"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "ConvertPingLocationToString",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "location",
+          "type": "const SteamNetworkPingLocation_t*"
+        },
+        {
+          "name": "pszBuf",
+          "type": "char*"
+        },
+        {
+          "name": "cchBufSize",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "ParsePingLocationString",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pszString",
+          "type": "const char*"
+        },
+        {
+          "name": "result",
+          "type": "SteamNetworkPingLocation_t*"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "CheckPingDataUpToDate",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "flMaxAgeSeconds",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "GetPingToDataCenter",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "popID",
+          "type": "uint32"
+        },
+        {
+          "name": "pViaRelayPoP",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "GetDirectPingToPOP",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "popID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "GetPOPCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 11,
+      "name": "GetPOPList",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "list",
+          "type": "uint32*"
+        },
+        {
+          "name": "nListSz",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "GetLocalTimestamp",
+      "returns": "int64",
+      "returnKind": "int64",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 13,
+      "name": "SetDebugOutputFunction",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "eDetailLevel",
+          "type": "uint32"
+        },
+        {
+          "name": "pfnFunc",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "GetIPv4FakeIPType",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nIPv4",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "GetRealIdentityForFakeIP",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "fakeIP",
+          "type": "const SteamNetworkingIPAddr*"
+        },
+        {
+          "name": "pOutRealIdentity",
+          "type": "SteamNetworkingIdentity_144*"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "SetConfigValue",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "eValue",
+          "type": "uint32"
+        },
+        {
+          "name": "eScopeType",
+          "type": "uint32"
+        },
+        {
+          "name": "scopeObj",
+          "type": "int32"
+        },
+        {
+          "name": "eDataType",
+          "type": "uint32"
+        },
+        {
+          "name": "pArg",
+          "type": "const void*"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "GetConfigValue",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "eValue",
+          "type": "uint32"
+        },
+        {
+          "name": "eScopeType",
+          "type": "uint32"
+        },
+        {
+          "name": "scopeObj",
+          "type": "int32"
+        },
+        {
+          "name": "pOutDataType",
+          "type": "uint32*"
+        },
+        {
+          "name": "pResult",
+          "type": "void*"
+        },
+        {
+          "name": "cbResult",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "GetConfigValueInfo",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "eValue",
+          "type": "uint32"
+        },
+        {
+          "name": "pOutDataType",
+          "type": "uint32*"
+        },
+        {
+          "name": "pOutScope",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "IterateGenericEditableConfigValues",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "eCurrent",
+          "type": "uint32"
+        },
+        {
+          "name": "bEnumerateDevVars",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "SteamNetworkingIPAddr_ToString",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "addr",
+          "type": "const SteamNetworkingIPAddr*"
+        },
+        {
+          "name": "buf",
+          "type": "char*"
+        },
+        {
+          "name": "cbBuf",
+          "type": "uint32"
+        },
+        {
+          "name": "bWithPort",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "SteamNetworkingIPAddr_ParseString",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pAddr",
+          "type": "SteamNetworkingIPAddr*"
+        },
+        {
+          "name": "pszStr",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "SteamNetworkingIPAddr_GetFakeIPType",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "addr",
+          "type": "const SteamNetworkingIPAddr*"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "SteamNetworkingIdentity_ToString",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "identity",
+          "type": "const SteamNetworkingIdentity_144*"
+        },
+        {
+          "name": "buf",
+          "type": "char*"
+        },
+        {
+          "name": "cbBuf",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "SteamNetworkingIdentity_ParseString",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pIdentity",
+          "type": "SteamNetworkingIdentity_144*"
+        },
+        {
+          "name": "pszStr",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "destructor",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    }
+  ]
+}

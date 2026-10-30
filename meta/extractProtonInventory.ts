@@ -63,6 +63,18 @@ import type {
 // exactly as a tag would be, and never re-resolved at generation time).
 export const PINNED_PROTON_SHA = '2c620c0fd7c2c424f6bd91898602bdc4d4260468'
 
+// Phase 56 lsteamclient pin (native/steam-bridge/steamclient-layer/lsteamclient/PINS.md).
+// proton_9.0@2c620c0f lacks SteamNetworkingSockets013 and SteamMatchMakingServers003
+// (measured 2026-10-30), so those two versions are extracted from this ref (58-03, D-07).
+export const LSTEAMCLIENT_PROTON_SHA =
+  '164e0ccd2ea2b1ec2e5d08dc97f65b184c2539ca'
+
+/** Only full 40-hex SHAs listed here may be fetched; never a branch name (T-58-06). */
+export const ALLOWED_PROTON_REFS: readonly string[] = [
+  PINNED_PROTON_SHA,
+  LSTEAMCLIENT_PROTON_SHA
+]
+
 const SDK_DIR = join('meta', 'sdk')
 const ORDINALS_PATH = join(SDK_DIR, 'ordinals.json')
 const WIRE_POLICY_PATH = join(SDK_DIR, 'wire-policy.json')
@@ -99,6 +111,9 @@ export interface AcceptanceVersionEntry {
   family: string
   arches: ArchToken[]
   titles: string[]
+  /** Optional overrides so a re-run reproduces the hand-set accessor names. */
+  helperInterface?: string
+  flatAccessor?: string
 }
 
 export type AcceptanceVersions = Record<string, AcceptanceVersionEntry>
@@ -600,6 +615,18 @@ function parseArgvVersions(argv: string[]): string[] | null {
     .filter(Boolean)
 }
 
+export function parseArgvProtonRef(argv: string[]): string {
+  const idx = argv.indexOf('--proton-ref')
+  if (idx === -1) return PINNED_PROTON_SHA
+  const value = argv[idx + 1]
+  if (!value || !ALLOWED_PROTON_REFS.includes(value)) {
+    throw new Error(
+      `--proton-ref must be one of ${ALLOWED_PROTON_REFS.join(', ')} (got ${value ?? '<missing>'})`
+    )
+  }
+  return value
+}
+
 function loadJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, 'utf-8')) as T
 }
@@ -760,8 +787,16 @@ function protonFileFor(family: string): string {
   return `lsteamclient/winI${family}.c`
 }
 
-async function fetchProtonSource(family: string): Promise<string> {
-  const url = `https://raw.githubusercontent.com/ValveSoftware/Proton/${PINNED_PROTON_SHA}/${protonFileFor(family)}`
+async function fetchProtonSource(
+  family: string,
+  ref: string = PINNED_PROTON_SHA
+): Promise<string> {
+  if (!ALLOWED_PROTON_REFS.includes(ref)) {
+    throw new Error(
+      `fetchProtonSource: ref ${ref} is not in ALLOWED_PROTON_REFS`
+    )
+  }
+  const url = `https://raw.githubusercontent.com/ValveSoftware/Proton/${ref}/${protonFileFor(family)}`
   const response = await fetch(url, {
     headers: { 'User-Agent': 'GameLibProtonInventoryExtractor/1.0' }
   })
@@ -810,6 +845,7 @@ export async function main(): Promise<void> {
     )
     return
   }
+  const protonRef = parseArgvProtonRef(argv)
   const acceptanceVersions = loadAcceptanceVersions()
   const requestedVersions =
     parseArgvVersions(argv) ?? Object.keys(acceptanceVersions)
@@ -833,7 +869,7 @@ export async function main(): Promise<void> {
     const { family, arches } = entry
 
     if (!sourceCache.has(family)) {
-      sourceCache.set(family, fetchProtonSource(family))
+      sourceCache.set(family, fetchProtonSource(family, protonRef))
     }
     const text = await sourceCache.get(family)!
 
@@ -849,10 +885,13 @@ export async function main(): Promise<void> {
       arches,
       mode: 'stub',
       complete: true,
-      flatAccessor: computeFlatAccessor(version, family),
+      ...(entry.helperInterface !== undefined
+        ? { helperInterface: entry.helperInterface }
+        : {}),
+      flatAccessor: entry.flatAccessor ?? computeFlatAccessor(version, family),
       source: {
         kind: 'proton-lsteamclient',
-        ref: PINNED_PROTON_SHA,
+        ref: protonRef,
         file: protonFileFor(family)
       },
       methods

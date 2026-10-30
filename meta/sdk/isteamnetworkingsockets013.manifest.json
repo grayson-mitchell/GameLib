@@ -1,0 +1,880 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamNetworkingSockets013",
+  "family": "SteamNetworkingSockets",
+  "ordinal": 70,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "helperInterface": "SteamAPI_SteamNetworkingSockets_SteamAPI_v013",
+  "flatAccessor": "SteamAPI_SteamNetworkingSockets_SteamAPI_v013",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "164e0ccd2ea2b1ec2e5d08dc97f65b184c2539ca",
+    "file": "lsteamclient/winISteamNetworkingSockets.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "CreateListenSocketIP",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "localAddress",
+          "type": "const SteamNetworkingIPAddr*"
+        },
+        {
+          "name": "nOptions",
+          "type": "int32"
+        },
+        {
+          "name": "pOptions",
+          "type": "const SteamNetworkingConfigValue_t*"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "ConnectByIPAddress",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "address",
+          "type": "const SteamNetworkingIPAddr*"
+        },
+        {
+          "name": "nOptions",
+          "type": "int32"
+        },
+        {
+          "name": "pOptions",
+          "type": "const SteamNetworkingConfigValue_t*"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "CreateListenSocketP2P",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nLocalVirtualPort",
+          "type": "int32"
+        },
+        {
+          "name": "nOptions",
+          "type": "int32"
+        },
+        {
+          "name": "pOptions",
+          "type": "const SteamNetworkingConfigValue_t*"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "ConnectP2P",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "identityRemote",
+          "type": "const SteamNetworkingIdentity_144*"
+        },
+        {
+          "name": "nRemoteVirtualPort",
+          "type": "int32"
+        },
+        {
+          "name": "nOptions",
+          "type": "int32"
+        },
+        {
+          "name": "pOptions",
+          "type": "const SteamNetworkingConfigValue_t*"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "AcceptConnection",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hConn",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "CloseConnection",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "hPeer",
+          "type": "uint32"
+        },
+        {
+          "name": "nReason",
+          "type": "int32"
+        },
+        {
+          "name": "pszDebug",
+          "type": "const char*"
+        },
+        {
+          "name": "bEnableLinger",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "CloseListenSocket",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hSocket",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "SetConnectionUserData",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hPeer",
+          "type": "uint32"
+        },
+        {
+          "name": "nUserData",
+          "type": "int64"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "GetConnectionUserData",
+      "returns": "int64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hPeer",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "SetConnectionName",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hPeer",
+          "type": "uint32"
+        },
+        {
+          "name": "pszName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "GetConnectionName",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hPeer",
+          "type": "uint32"
+        },
+        {
+          "name": "pszName",
+          "type": "char*"
+        },
+        {
+          "name": "nMaxLen",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "SendMessageToConnection",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "hConn",
+          "type": "uint32"
+        },
+        {
+          "name": "pData",
+          "type": "const void*"
+        },
+        {
+          "name": "cbData",
+          "type": "uint32"
+        },
+        {
+          "name": "nSendFlags",
+          "type": "int32"
+        },
+        {
+          "name": "pOutMessageNumber",
+          "type": "int64_t*"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "SendMessages",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg2",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg3",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "FlushMessagesOnConnection",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hConn",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "ReceiveMessagesOnConnection",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg2",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "GetConnectionInfo",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hConn",
+          "type": "uint32"
+        },
+        {
+          "name": "pInfo",
+          "type": "SteamNetConnectionInfo_t_153a*"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "GetConnectionRealTimeStatus",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "hConn",
+          "type": "uint32"
+        },
+        {
+          "name": "pStatus",
+          "type": "SteamNetConnectionRealTimeStatus_t_164*"
+        },
+        {
+          "name": "nLanes",
+          "type": "int32"
+        },
+        {
+          "name": "pLanes",
+          "type": "SteamNetConnectionRealTimeLaneStatus_t*"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "GetDetailedConnectionStatus",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hConn",
+          "type": "uint32"
+        },
+        {
+          "name": "pszBuf",
+          "type": "char*"
+        },
+        {
+          "name": "cbBuf",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "GetListenSocketAddress",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hSocket",
+          "type": "uint32"
+        },
+        {
+          "name": "address",
+          "type": "SteamNetworkingIPAddr*"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "CreateSocketPair",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "pOutConnection1",
+          "type": "uint32*"
+        },
+        {
+          "name": "pOutConnection2",
+          "type": "uint32*"
+        },
+        {
+          "name": "bUseNetworkLoopback",
+          "type": "bool"
+        },
+        {
+          "name": "pPeerIdentity1",
+          "type": "const SteamNetworkingIdentity_144*"
+        },
+        {
+          "name": "pPeerIdentity2",
+          "type": "const SteamNetworkingIdentity_144*"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "ConfigureConnectionLanes",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "hConn",
+          "type": "uint32"
+        },
+        {
+          "name": "nNumLanes",
+          "type": "int32"
+        },
+        {
+          "name": "pLanePriorities",
+          "type": "const int32_t*"
+        },
+        {
+          "name": "pLaneWeights",
+          "type": "const uint16_t*"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "GetIdentity",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pIdentity",
+          "type": "SteamNetworkingIdentity_144*"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "InitAuthentication",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 23,
+      "name": "GetAuthenticationStatus",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pDetails",
+          "type": "SteamNetAuthenticationStatus_t*"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "CreatePollGroup",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 25,
+      "name": "DestroyPollGroup",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hPollGroup",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 26,
+      "name": "SetConnectionPollGroup",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hConn",
+          "type": "uint32"
+        },
+        {
+          "name": "hPollGroup",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 27,
+      "name": "ReceiveMessagesOnPollGroup",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg2",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 28,
+      "name": "ReceivedRelayAuthTicket",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pvTicket",
+          "type": "const void*"
+        },
+        {
+          "name": "cbTicket",
+          "type": "int32"
+        },
+        {
+          "name": "pOutParsedTicket",
+          "type": "SteamDatagramRelayAuthTicket*"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "FindRelayAuthTicketForServer",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "identityGameServer",
+          "type": "const SteamNetworkingIdentity_144*"
+        },
+        {
+          "name": "nRemoteVirtualPort",
+          "type": "int32"
+        },
+        {
+          "name": "pOutParsedTicket",
+          "type": "SteamDatagramRelayAuthTicket*"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "ConnectToHostedDedicatedServer",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "identityTarget",
+          "type": "const SteamNetworkingIdentity_144*"
+        },
+        {
+          "name": "nRemoteVirtualPort",
+          "type": "int32"
+        },
+        {
+          "name": "nOptions",
+          "type": "int32"
+        },
+        {
+          "name": "pOptions",
+          "type": "const SteamNetworkingConfigValue_t*"
+        }
+      ]
+    },
+    {
+      "slot": 31,
+      "name": "GetHostedDedicatedServerPort",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 32,
+      "name": "GetHostedDedicatedServerPOPID",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 33,
+      "name": "GetHostedDedicatedServerAddress",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pRouting",
+          "type": "SteamDatagramHostedAddress*"
+        }
+      ]
+    },
+    {
+      "slot": 34,
+      "name": "CreateHostedDedicatedServerListenSocket",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nLocalVirtualPort",
+          "type": "int32"
+        },
+        {
+          "name": "nOptions",
+          "type": "int32"
+        },
+        {
+          "name": "pOptions",
+          "type": "const SteamNetworkingConfigValue_t*"
+        }
+      ]
+    },
+    {
+      "slot": 35,
+      "name": "GetGameCoordinatorServerLogin",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pLoginInfo",
+          "type": "SteamDatagramGameCoordinatorServerLogin*"
+        },
+        {
+          "name": "pcbSignedBlob",
+          "type": "int32*"
+        },
+        {
+          "name": "pBlob",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 36,
+      "name": "ConnectP2PCustomSignaling",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "pSignaling",
+          "type": "void /*ISteamNetworkingConnectionSignaling*/*"
+        },
+        {
+          "name": "pPeerIdentity",
+          "type": "const SteamNetworkingIdentity_144*"
+        },
+        {
+          "name": "nRemoteVirtualPort",
+          "type": "int32"
+        },
+        {
+          "name": "nOptions",
+          "type": "int32"
+        },
+        {
+          "name": "pOptions",
+          "type": "const SteamNetworkingConfigValue_t*"
+        }
+      ]
+    },
+    {
+      "slot": 37,
+      "name": "ReceivedP2PCustomSignal",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pMsg",
+          "type": "const void*"
+        },
+        {
+          "name": "cbMsg",
+          "type": "int32"
+        },
+        {
+          "name": "pContext",
+          "type": "void /*ISteamNetworkingSignalingRecvContext*/*"
+        }
+      ]
+    },
+    {
+      "slot": 38,
+      "name": "GetCertificateRequest",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pcbBlob",
+          "type": "int32*"
+        },
+        {
+          "name": "pBlob",
+          "type": "void*"
+        },
+        {
+          "name": "errMsg",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 39,
+      "name": "SetCertificate",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pCertificate",
+          "type": "const void*"
+        },
+        {
+          "name": "cbCertificate",
+          "type": "int32"
+        },
+        {
+          "name": "errMsg",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 40,
+      "name": "ResetIdentity",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pIdentity",
+          "type": "const SteamNetworkingIdentity_144*"
+        }
+      ]
+    },
+    {
+      "slot": 41,
+      "name": "RunCallbacks",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 42,
+      "name": "BeginAsyncRequestFakeIP",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nNumPorts",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 43,
+      "name": "GetFakeIP",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "idxFirstPort",
+          "type": "int32"
+        },
+        {
+          "name": "pInfo",
+          "type": "SteamNetworkingFakeIPResult_t*"
+        }
+      ]
+    },
+    {
+      "slot": 44,
+      "name": "CreateListenSocketP2PFakeIP",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "idxFakePort",
+          "type": "int32"
+        },
+        {
+          "name": "nOptions",
+          "type": "int32"
+        },
+        {
+          "name": "pOptions",
+          "type": "const SteamNetworkingConfigValue_t*"
+        }
+      ]
+    },
+    {
+      "slot": 45,
+      "name": "GetRemoteFakeIPForConnection",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hConn",
+          "type": "uint32"
+        },
+        {
+          "name": "pOutAddr",
+          "type": "SteamNetworkingIPAddr*"
+        }
+      ]
+    },
+    {
+      "slot": 46,
+      "name": "CreateFakeUDPPort",
+      "returns": "void /*ISteamNetworkingFakeUDPPort*/*",
+      "returnKind": "pointer",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "idxFakeServerPort",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 47,
+      "name": "destructor",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    }
+  ]
+}

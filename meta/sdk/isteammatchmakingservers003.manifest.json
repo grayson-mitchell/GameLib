@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamMatchMakingServers003",
+  "family": "SteamMatchmakingServers",
+  "ordinal": 69,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "helperInterface": "SteamAPI_SteamMatchmakingServers_v003",
+  "flatAccessor": "SteamAPI_SteamMatchmakingServers_v003",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "164e0ccd2ea2b1ec2e5d08dc97f65b184c2539ca",
+    "file": "lsteamclient/winISteamMatchmakingServers.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "RequestInternetServerList",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg2",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg3",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "RequestLANServerList",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "RequestFriendsServerList",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg2",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg3",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "RequestFavoritesServerList",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg2",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg3",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "RequestHistoryServerList",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg2",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg3",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "RequestSpectatorServerList",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg2",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg3",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "ReleaseRequest",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "GetServerDetails",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "CancelQuery",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "RefreshQuery",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "IsRefreshing",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "GetServerCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "RefreshServer",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "void*"
+        },
+        {
+          "name": "iServer",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "PingServer",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unIP",
+          "type": "uint32"
+        },
+        {
+          "name": "usPort",
+          "type": "uint32"
+        },
+        {
+          "name": "pRequestServersResponse",
+          "type": "w_ISteamMatchmakingPingResponse*"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "PlayerDetails",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unIP",
+          "type": "uint32"
+        },
+        {
+          "name": "usPort",
+          "type": "uint32"
+        },
+        {
+          "name": "pRequestServersResponse",
+          "type": "w_ISteamMatchmakingPlayersResponse*"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "ServerRules",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unIP",
+          "type": "uint32"
+        },
+        {
+          "name": "usPort",
+          "type": "uint32"
+        },
+        {
+          "name": "pRequestServersResponse",
+          "type": "w_ISteamMatchmakingRulesResponse*"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "ServerFriends",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unIP",
+          "type": "uint32"
+        },
+        {
+          "name": "usPort",
+          "type": "uint32"
+        },
+        {
+          "name": "pRequestServersResponse",
+          "type": "w_ISteamMatchmakingServerFriendsResponse*"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "CancelServerQuery",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hServerQuery",
+          "type": "int32"
+        }
+      ]
+    }
+  ]
+}

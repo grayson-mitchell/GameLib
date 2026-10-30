@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamNetworkingMessages002",
+  "family": "SteamNetworkingMessages",
+  "ordinal": 72,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "helperInterface": "SteamAPI_SteamNetworkingMessages_SteamAPI_v002",
+  "flatAccessor": "SteamAPI_SteamNetworkingMessages_SteamAPI_v002",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamNetworkingMessages.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "SendMessageToUser",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "identityRemote",
+          "type": "const SteamNetworkingIdentity_144*"
+        },
+        {
+          "name": "pubData",
+          "type": "const void*"
+        },
+        {
+          "name": "cubData",
+          "type": "uint32"
+        },
+        {
+          "name": "nSendFlags",
+          "type": "int32"
+        },
+        {
+          "name": "nRemoteChannel",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "ReceiveMessagesOnChannel",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg2",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "AcceptSessionWithUser",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "identityRemote",
+          "type": "const SteamNetworkingIdentity_144*"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "CloseSessionWithUser",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "identityRemote",
+          "type": "const SteamNetworkingIdentity_144*"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "CloseChannelWithUser",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "identityRemote",
+          "type": "const SteamNetworkingIdentity_144*"
+        },
+        {
+          "name": "nLocalChannel",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "GetSessionConnectionInfo",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "identityRemote",
+          "type": "const SteamNetworkingIdentity_144*"
+        },
+        {
+          "name": "pConnectionInfo",
+          "type": "SteamNetConnectionInfo_t_153a*"
+        },
+        {
+          "name": "pQuickStatus",
+          "type": "SteamNetConnectionRealTimeStatus_t*"
+        }
+      ]
+    }
+  ]
+}
