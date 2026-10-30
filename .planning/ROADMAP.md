@@ -682,7 +682,7 @@ Plans:
 **Goal:** A Steam multiplayer title run through the macOS native bridge can host, find and join an online session with a second Steam account. Today it cannot in either bridge mode. In the TCP shim mode, the default for every ordinary title, `SteamMatchMaking009`, `SteamMatchMakingServers002` and `SteamNetworking005`/`006` are served as `mode: 'stub'` and answer "unavailable" (`bridge/shimCoverage.ts`, 51-14 sub-decision 1). `ISteamNetworkingSockets`/`ISteamNetworkingUtils`/`ISteamNetworkingMessages`, which modern games use for relay P2P, are not served at all. The roadmap's earlier rule that P2P join stays out of scope (24-SPEC) is lifted by this phase. The work in that mode: wire the matchmaking families (lobby create/list/join/data, server browser) and the networking families through the helper to the real `libsteam_api.dylib`; deliver their callbacks and call results the way quick 261027-k51 delivered `UserStatsReceived_t` (lobby `LobbyCreated_t`/`LobbyEnter_t`/`LobbyMatchList_t`, `P2PSessionRequest_t`, `SteamNetConnectionStatusChangedCallback_t`); and handle `InitRelayNetworkAccess()` and accepting incoming sessions, the known-hard join gap. In the `lsteamclient` steamclient-layer DRM mode (Phase 56, SteamStub titles only), networking already reaches the genuine Mac `steamclient.dylib`. There the work is proving it live, and deciding whether 56-02's omitted `serialized005.patch` must be carried. Anti-cheat titles (EAC, BattlEye) are out of scope: their Wine support is developer-opt-in and Linux-targeted. Open for discuss-phase: which titles serve as the measured test set (one lobby-based TCP-mode title, one SteamStub co-op title), whether the second account is a second Mac or a Windows/Linux peer, and which interface versions the test titles actually import. Done when: on this Mac, one TCP-mode title and one DRM-mode title each host a session that a second account joins and plays in, with the join visible in the bridge trace.
 **Requirements**: M-01..M-07 (defined in 58-RESEARCH.md)
 **Depends on:** Phase 51 (interface families and stub manifests), Phase 56 (DRM mode)
-**Plans:** 9/24 plans executed
+**Plans:** 10/24 plans executed
 
 Plans:
 **Wave 1**
@@ -714,7 +714,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 58-13-PLAN.md — ISteamNetworking 006 legacy P2P, fail-closed reads, incoming accept
+- [x] 58-13-PLAN.md — ISteamNetworking 006 legacy P2P, fail-closed reads, incoming accept
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
