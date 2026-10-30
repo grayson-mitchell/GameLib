@@ -1,0 +1,9 @@
+update-timestamp: 1784047440
+cxbottle.conf sha: 6788e332fa43
+system.reg: 2bdb49168c4d lines=84543 #arch=win64
+user.reg: 196cbaec634c lines=1301 #arch=win64
+userdef.reg: 25a33c8785db lines=64 #arch=win64
+system32 files: 826  syswow64 files: 866
+dosdevices: c:->../drive_c d:->/Volumes/Steam d::->/dev/rdisk7s1 e:->/Volumes/Claude e::->/dev/rdisk6s1 f:->/Volumes/Alchemy f::->/dev/rdisk5s1 g:->/Volumes/VS g::->/dev/rdisk4s1 h:->/Volumes/Discord h::->/dev/rdisk8s1 y:->/Users/graysonmitchell z:->/ 
+users: Public crossover 
+windows version (HKLM CurrentVersion): "CurrentBuild"="19045" 
