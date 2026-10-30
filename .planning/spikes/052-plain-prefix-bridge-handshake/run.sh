@@ -4,7 +4,7 @@
 # helper stderr + probe.txt. Engines:
 #   cx      -- positive control: APFS clone of a CrossOver bridge bottle, CX_BOTTLE + bin/wine
 #   staging -- fresh WINEPREFIX made by Wine-Staging's own `wineboot -i` (no cxbottle anywhere)
-# Usage: [BAD_SECRET=1] ./run.sh [engine...]   (engines: cx staging dxmt; default: cx staging).
+# Usage: [BAD_SECRET=1] ./run.sh [engine...]   (engines: cx staging dxmt gptk; default: cx staging).
 # BAD_SECRET=1 is the negative control: the cfg carries a secret the helper did not issue. Real bridge bottles are never touched.
 set -uo pipefail
 cd "$(dirname "$0")"; SPIKE="$PWD"; R="$SPIKE/../../.."
@@ -13,6 +13,7 @@ CX="/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
 BOTTLES="$HOME/Library/Application Support/CrossOver/Bottles"
 CXCLONE="GameLibSpike052"
 STAGING_WINE="$HOME/Library/Application Support/gamelib/tools/wine/Wine-Staging-macOS-latest/Contents/Resources/wine/bin"
+GPTK_WINE="$HOME/Library/Application Support/gamelib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin"
 DXMT_WINE="${STAGING_WINE/Wine-Staging-macOS-latest/Wine-Staging-macOS-latest-DXMT}"
 mkdir -p logs state prefixes
 ts() { perl -MTime::HiRes=time -MPOSIX=strftime -e '$t=time; printf "%s.%03dZ", strftime("%Y-%m-%dT%H:%M:%S", gmtime $t), ($t-int $t)*1000'; }
@@ -24,20 +25,22 @@ prep_cx() {
   DRIVE="$BOTTLES/$CXCLONE/drive_c"
   WINE=( env CX_BOTTLE="$CXCLONE" "$CX/wine" ); KILL=( env WINEPREFIX="$BOTTLES/$CXCLONE" "$CX/wineserver" -k )
 }
-prep_plain() { # <engine label> <wine bin dir> -- fresh WINEPREFIX via the engine's own wineboot -i
-  local eng="$1" wbin="$2" prefix="$SPIKE/prefixes/$1"
+prep_plain() { # <engine label> <wine bin dir> [wine exe name] [extra env...] -- fresh WINEPREFIX via the engine's own wineboot -i
+  local eng="$1" wbin="$2" wexe="${3:-wine}" prefix="$SPIKE/prefixes/$1"; shift 3 2>/dev/null || shift $#; local xenv=( "$@" )
   if [ ! -f "$prefix/system.reg" ]; then
     local t0=$SECONDS
-    WINEPREFIX="$prefix" WINEDLLOVERRIDES="mscoree,mshtml=" T 300 "$wbin/wine" wineboot -i > "logs/$eng-wineboot.out" 2>&1
+    WINEPREFIX="$prefix" WINEDLLOVERRIDES="mscoree,mshtml=" T 300 "$wbin/$wexe" wineboot -i > "logs/$eng-wineboot.out" 2>&1
     local rc=$?
     WINEPREFIX="$prefix" "$wbin/wineserver" -w   # system.reg is only flushed when the wineserver exits
     ev "$eng" "wineboot -i rc=$rc in $((SECONDS-t0))s; system.reg=$([ -f "$prefix/system.reg" ] && echo yes || echo no) $(grep -m1 '#arch' "$prefix/system.reg" 2>/dev/null)"
   fi
   DRIVE="$prefix/drive_c"
-  WINE=( env WINEPREFIX="$prefix" WINEDEBUG=-all "$wbin/wine" ); KILL=( env WINEPREFIX="$prefix" "$wbin/wineserver" -k )
+  WINE=( env WINEPREFIX="$prefix" WINEDEBUG=-all ${xenv[@]+"${xenv[@]}"} "$wbin/$wexe" ); KILL=( env WINEPREFIX="$prefix" "$wbin/wineserver" -k )
 }
 prep_staging() { prep_plain staging "$STAGING_WINE"; }
 prep_dxmt() { prep_plain dxmt "$DXMT_WINE"; }
+# GPTK (spike 054): wine64 only; launcher.ts env for `toolkit` with msync on (config.ts:379) = WINEMSYNC + WINEESYNC
+prep_gptk() { prep_plain gptk "$GPTK_WINE" wine64 WINEMSYNC=1 WINEESYNC=1; }
 
 run_case() { # <engine> <arch 32|64>
   local eng="$1" a="$2" label="$1-x$2"; [ -n "${BAD_SECRET:-}" ] && label="$label-badsecret"

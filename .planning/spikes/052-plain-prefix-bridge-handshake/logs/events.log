@@ -12,3 +12,10 @@
 2026-10-30T22:46:36.400Z [staging-x64-badsecret] rc=0 port=50569 | arch=x64 init=0 steamuser=null result=FAIL | helper: 
 2026-10-30T22:46:52.239Z [staging-x32-badsecret] rc=0 port=50574 | arch=x86 init=0 steamuser=null result=FAIL | helper: INIT   ma;INIT   SteamAPI ready (si;AUTH   refused u;AUTH   refused u;
 2026-10-30T22:46:53.148Z [staging-x64-badsecret] rc=0 port=50579 | arch=x64 init=0 steamuser=null result=FAIL | helper: INIT   ma;INIT   SteamAPI ready (si;AUTH   refused u;AUTH   refused u;
+2026-10-30T23:12:19.154Z [gptk] wineboot -i rc=0 in 25s; system.reg=yes #arch=win64
+2026-10-30T23:12:20.766Z [gptk-x32] rc=0 port=50676 | arch=x86 init=1 steamuser=non-null bloggedon=1 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T23:12:22.349Z [gptk-x64] rc=0 port=50680 | arch=x64 init=1 steamuser=non-null bloggedon=1 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T23:12:30.284Z [staging-x32] rc=0 port=50683 | arch=x86 init=1 steamuser=non-null bloggedon=1 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T23:12:31.119Z [staging-x64] rc=0 port=50687 | arch=x64 init=1 steamuser=non-null bloggedon=1 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T23:12:32.406Z [cx-x32] rc=0 port=50690 | arch=x86 init=1 steamuser=non-null bloggedon=1 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;
+2026-10-30T23:12:33.511Z [cx-x64] rc=0 port=50693 | arch=x64 init=1 steamuser=non-null bloggedon=1 steamid=76561197995867096 result=OK | helper: INIT   ma;INIT   SteamAPI ready (si;HELLO  shim attached appid=480;INIT  f;

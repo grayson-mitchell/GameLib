@@ -1,6 +1,6 @@
 arch=x64
 init=1
 steamuser=non-null
-bloggedon=0
+bloggedon=1
 steamid=76561197995867096
 result=OK

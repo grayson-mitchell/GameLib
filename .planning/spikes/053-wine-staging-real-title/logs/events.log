@@ -13,3 +13,9 @@ shadow tree: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/053-wine-s
 shadow tree: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/053-wine-staging-real-title/../052-plain-prefix-bridge-handshake/prefixes/staging-dxvk/drive_c/Program Files (x86)/Steam/steamapps/common/The Planet Crafter (real dirs: ['', 'Planet Crafter_Data', 'Planet Crafter_Data/Plugins', 'Planet Crafter_Data/Plugins/x86_64'])
 2026-10-30T23:02:38.315Z [crafter-staging-dxvk] launch engine=staging-dxvk port=50644 shim=e74e21fd8195 -- play briefly, then quit the game
 2026-10-30T23:05:42.168Z [crafter-staging-dxvk] exit rc=0 after 184s | HELLO=1 CALL=3 GINIT=yes | Player.log=yes | VERDICT=verified 
+shadow tree: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/053-wine-staging-real-title/../052-plain-prefix-bridge-handshake/prefixes/gptk/drive_c/Program Files (x86)/Steam/steamapps/common/The Planet Crafter (real dirs: ['', 'Planet Crafter_Data', 'Planet Crafter_Data/Plugins', 'Planet Crafter_Data/Plugins/x86_64'])
+2026-10-30T23:12:48.801Z [crafter-gptk] launch engine=gptk port=50696 shim=e74e21fd8195 -- play briefly, then quit the game
+2026-10-30T23:13:03.394Z [crafter-gptk] exit rc=1 after 15s | HELLO=0 CALL=0 GINIT= | Player.log= | VERDICT=unverified no HELLO
+shadow tree: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/053-wine-staging-real-title/../052-plain-prefix-bridge-handshake/prefixes/gptk/drive_c/Program Files (x86)/Steam/steamapps/common/Avernum 6 (real dirs: [''])
+2026-10-30T23:13:33.194Z [avernum6-gptk] launch engine=gptk port=50707 shim=4a99c1e1c774 -- play briefly, then quit the game
+2026-10-30T23:13:35.612Z [avernum6-gptk] exit rc=1 after 2s | HELLO=1 CALL=0 GINIT=yes | Player.log= | VERDICT=verified 

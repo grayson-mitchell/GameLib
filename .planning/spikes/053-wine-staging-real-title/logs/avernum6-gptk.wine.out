@@ -1,0 +1,2 @@
+esync: up and running.
+Assertion failed: (end <= pages_vprot_size << pages_vprot_shift), function alloc_pages_vprot, file virtual.c, line 1032.

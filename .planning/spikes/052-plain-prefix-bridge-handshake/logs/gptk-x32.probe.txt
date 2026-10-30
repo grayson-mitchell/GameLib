@@ -1,0 +1,6 @@
+arch=x86
+init=1
+steamuser=non-null
+bloggedon=1
+steamid=76561197995867096
+result=OK

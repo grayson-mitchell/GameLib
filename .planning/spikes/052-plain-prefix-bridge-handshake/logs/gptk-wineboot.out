@@ -1,0 +1,15 @@
+wine: created the configuration directory '/Users/graysonmitchell/Projects/GameLib/.planning/spikes/052-plain-prefix-bridge-handshake/prefixes/gptk'
+002c:fixme:actctx:parse_depend_manifests Could not find dependent assembly L"Microsoft.Windows.Common-Controls" (6.0.0.0)
+002c:fixme:shell:create_link failed to connect to mount manager
+002c:fixme:shell:create_link failed to connect to mount manager
+00dc:err:setupapi:SetupDefaultQueueCallbackW copy error 1812 L"@C:\\windows\\system32\\drivers\\wineusb.sys,-1" -> L"C:\\windows\\inf\\wineusb.inf"
+00f4:fixme:module:dlopen_32on64_opengl32 loaded "/Users/graysonmitchell/Library/Application Support/gamelib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/lib/wine/x86_32on64-unix/opengl32.dll.so" early @ 0x77954000
+00fc:fixme:module:dlopen_32on64_opengl32 loaded "/Users/graysonmitchell/Library/Application Support/gamelib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/lib/wine/x86_32on64-unix/opengl32.dll.so" early @ 0x77954000
+wine: configuration in L"/Users/graysonmitchell/Projects/GameLib/.planning/spikes/052-plain-prefix-bridge-handshake/prefixes/gptk" has been updated.
+0150:err:rpc:I_RpcReceive we got fault packet with status 0x1c010003
+0144:fixme:service:scmdatabase_autostart_services Auto-start service L"MountMgr" failed to start: 1053
+0144:fixme:service:scmdatabase_autostart_services Auto-start service L"winebus" failed to start: 1115
+0144:fixme:service:scmdatabase_autostart_services Auto-start service L"PlugPlay" failed to start: 1115
+0144:fixme:service:scmdatabase_autostart_services Auto-start service L"EventLog" failed to start: 1115
+0144:fixme:service:scmdatabase_autostart_services Auto-start service L"nsiproxy" failed to start: 1115
+0144:fixme:service:scmdatabase_autostart_services Auto-start service L"NDIS" failed to start: 1115

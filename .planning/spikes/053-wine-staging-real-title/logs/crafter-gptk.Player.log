@@ -1,0 +1,165 @@
+Mono path[0] = 'C:/Program Files (x86)/Steam/steamapps/common/The Planet Crafter/Planet Crafter_Data/Managed'
+Mono config path = 'C:/Program Files (x86)/Steam/steamapps/common/The Planet Crafter/MonoBleedingEdge/etc'
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.3.2f1 (a9779f353c9b)
+[Subsystems] Discovering subsystems at path C:/Program Files (x86)/Steam/steamapps/common/The Planet Crafter/Planet Crafter_Data/UnitySubsystems
+[D3D12 Device Filter] Vendor Name: ATI
+[D3D12 Device Filter] Device Name: AMD Compatibility Mode
+[D3D12 Device Filter] Driver Version: 65535.65535.65535.65535
+[D3D12 Device Filter] Feature Level: 12.2
+[D3D12 Device Filter] Graphics Memory: 79626 MB
+[D3D12 Device Filter] Processor Count: 4
+[D3D12 Device Filter] Device Type: Discrete
+[D3D12 Device Filter] D3D12 API denied by user filter: {"Processor Count Comparator": Less Than Or Equal To"Processor Count": "4", "Device Type:": Do Not Care}
+GfxDevice: creating device client; kGfxThreadingModeClientWorkerJobs
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: AMD Compatibility Mode (ID=0x66af)
+    Vendor:   ATI
+    VRAM:     79626 MB
+    Driver:   65535.65535.65535.65535
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.311 seconds
+- Finished resetting the current domain, in  0.006 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Dedicated video D3D11 device multithread protection failed (error: 0x80004002). Will use software video decoding.
+UniTask PlayerLoop manually initialized: False
+<RI> Initializing input.
+Crash!!!
+SymInit: Symbol-SearchPath: '.;C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter;C:/Program Files (x86)/Steam/steamapps/common/The Planet Crafter/Planet Crafter_Data/Plugins\x86_64;C:/Program Files (x86)/Steam/steamapps/common/The Planet Crafter/Planet Crafter_Data/Plugins;C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter;C:\windows;C:\windows\system32;', symOptions: 534, UserName: 'crossover'
+OS-Version: 10.0.0
+C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter.exe:Planet Crafter.exe (0000000140000000), size: 684032 (result: 0), SymType: '-deferred-', PDB: 'C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter.exe', fileVersion: 6000.3.2.30623
+C:\windows\system32\ntdll.dll:ntdll.dll (0000000170000000), size: 737280 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\ntdll.dll', fileVersion: 6.1.7601.24059
+C:\windows\system32\kernel32.dll:kernel32.dll (000000007B600000), size: 413696 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\kernel32.dll', fileVersion: 10.0.19043.1466
+C:\windows\system32\kernelbase.dll:kernelbase.dll (000000007B000000), size: 2514944 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\kernelbase.dll'
+C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\UnityPlayer.dll:UnityPlayer.dll (0000000180000000), size: 37117952 (result: 0), SymType: '-deferred-', PDB: 'C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\UnityPlayer.dll', fileVersion: 6000.3.2.30623
+C:\windows\system32\USER32.dll:USER32.dll (000000023D820000), size: 2084864 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\USER32.dll', fileVersion: 5.1.2600.2180
+C:\windows\system32\advapi32.dll:advapi32.dll (0000000330260000), size: 278528 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\advapi32.dll', fileVersion: 10.0.10240.16384
+C:\windows\system32\msvcrt.dll:msvcrt.dll (00000001C8DB0000), size: 770048 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\msvcrt.dll', fileVersion: 7.0.2600.2180
+C:\windows\system32\sechost.dll:sechost.dll (000000032A700000), size: 184320 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\sechost.dll'
+C:\windows\system32\ucrtbase.dll:ucrtbase.dll (00000003AF670000), size: 954368 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\ucrtbase.dll', fileVersion: 10.0.14393.2247
+C:\windows\system32\gdi32.dll:gdi32.dll (000000026B4C0000), size: 589824 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\gdi32.dll', fileVersion: 10.0.0.0
+C:\windows\system32\win32u.dll:win32u.dll (0000000077980000), size: 1798144 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\win32u.dll'
+C:\windows\system32\version.dll:version.dll (00000002F1FA0000), size: 57344 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\version.dll', fileVersion: 5.1.2600.2180
+C:\windows\system32\ole32.dll:ole32.dll (00000002E8F10000), size: 1216512 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\ole32.dll', fileVersion: 10.0.0.0
+C:\windows\system32\combase.dll:combase.dll (0000000327020000), size: 364544 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\combase.dll'
+C:\windows\system32\rpcrt4.dll:rpcrt4.dll (0000000231AE0000), size: 589824 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\rpcrt4.dll', fileVersion: 5.1.2600.2180
+C:\windows\system32\SHLWAPI.dll:SHLWAPI.dll (00000002E3540000), size: 368640 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\SHLWAPI.dll', fileVersion: 6.0.2800.1692
+C:\windows\system32\shcore.dll:shcore.dll (00000003126F0000), size: 110592 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\shcore.dll'
+C:\windows\system32\SETUPAPI.dll:SETUPAPI.dll (000000021A7E0000), size: 565248 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\SETUPAPI.dll'
+C:\windows\system32\SHELL32.dll:SHELL32.dll (00000001C69E0000), size: 9744384 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\SHELL32.dll', fileVersion: 6.0.2900.6242
+C:\windows\system32\OPENGL32.dll:OPENGL32.dll (0000000077D70000), size: 1404928 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\OPENGL32.dll', fileVersion: 5.1.2600.2082
+C:\windows\system32\WINMM.dll:WINMM.dll (00000003B8F00000), size: 827392 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\WINMM.dll'
+C:\windows\system32\msacm32.dll:msacm32.dll (00000001C8B40000), size: 155648 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\msacm32.dll'
+C:\windows\system32\OLEAUT32.dll:OLEAUT32.dll (00000002739C0000), size: 1339392 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\OLEAUT32.dll', fileVersion: 6.0.6001.18000
+C:\windows\system32\IMM32.dll:IMM32.dll (00000003AFD00000), size: 110592 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\IMM32.dll', fileVersion: 5.1.2600.2180
+C:\windows\system32\IPHLPAPI.DLL:IPHLPAPI.DLL (0000000240030000), size: 212992 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\IPHLPAPI.DLL', fileVersion: 5.1.2600.2180
+C:\windows\system32\dnsapi.dll:dnsapi.dll (000000029CFC0000), size: 90112 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\dnsapi.dll', fileVersion: 5.2.3790.4318
+C:\windows\system32\nsi.dll:nsi.dll (000000028DFA0000), size: 53248 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\nsi.dll'
+C:\windows\system32\WINHTTP.dll:WINHTTP.dll (0000000358120000), size: 307200 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\WINHTTP.dll', fileVersion: 5.1.2600.2180
+C:\windows\system32\jsproxy.dll:jsproxy.dll (0000000346BA0000), size: 135168 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\jsproxy.dll'
+C:\windows\system32\ws2_32.dll:ws2_32.dll (00000001EC2B0000), size: 163840 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\ws2_32.dll', fileVersion: 5.1.2600.5512
+C:\windows\system32\bcrypt.dll:bcrypt.dll (00000002D4D40000), size: 98304 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\bcrypt.dll', fileVersion: 6.0.6000.16386
+C:\windows\system32\HID.DLL:HID.DLL (00000001F51E0000), size: 73728 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\HID.DLL', fileVersion: 10.0.0.0
+C:\windows\system32\d3d11.dll:d3d11.dll (0000000000440000), size: 110592 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\d3d11.dll'
+C:\windows\system32\dxgi.dll:dxgi.dll (0000000000460000), size: 16867328 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\dxgi.dll'
+C:\windows\system32\UIAutomationCore.DLL:UIAutomationCore.DLL (0000000330A70000), size: 73728 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\UIAutomationCore.DLL'
+C:\windows\system32\CRYPT32.dll:CRYPT32.dll (00000001DD3F0000), size: 962560 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\CRYPT32.dll', fileVersion: 5.131.2600.1243
+C:\windows\system32\dwmapi.dll:dwmapi.dll (000000025D740000), size: 61440 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\dwmapi.dll', fileVersion: 6.0.6000.16386
+C:\windows\system32\winemac.drv:winemac.drv (000000007B7C0000), size: 610304 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\winemac.drv', fileVersion: 10.0.0.0
+C:\windows\system32\uxtheme.dll:uxtheme.dll (00000002F7230000), size: 237568 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\uxtheme.dll', fileVersion: 10.0.0.0
+C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\MonoBleedingEdge\EmbedRuntime\mono-2.0-bdwgc.dll:mono-2.0-bdwgc.dll (0000000062DC0000), size: 10756096 (result: 0), SymType: '-deferred-', PDB: 'C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\MonoBleedingEdge\EmbedRuntime\mono-2.0-bdwgc.dll'
+C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter_Data\Plugins\x86_64\PartyXboxLive.dll:PartyXboxLive.dll (0000000067220000), size: 1134592 (result: 0), SymType: '-deferred-', PDB: 'C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter_Data\Plugins\x86_64\PartyXboxLive.dll', fileVersion: 1.2.2502.26002
+C:\windows\system32\api-ms-win-core-psm-appnotify-l1-1-0.dll:api-ms-win-core-psm-appnotify-l1-1-0.dll (000000022C2B0000), size: 32768 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\api-ms-win-core-psm-appnotify-l1-1-0.dll'
+C:\windows\system32\VCRUNTIME140.dll:VCRUNTIME140.dll (000000026ED50000), size: 49152 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\VCRUNTIME140.dll'
+C:\windows\system32\MSVCP140.dll:MSVCP140.dll (0000000360E10000), size: 978944 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\MSVCP140.dll'
+C:\windows\system32\concrt140.dll:concrt140.dll (00000003871C0000), size: 180224 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\concrt140.dll'
+C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter_Data\Plugins\x86_64\PartyWin.dll:PartyWin.dll (0000000067340000), size: 3452928 (result: 0), SymType: '-deferred-', PDB: 'C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter_Data\Plugins\x86_64\PartyWin.dll', fileVersion: 1.10.2411.13006
+C:\windows\system32\SspiCli.dll:SspiCli.dll (00000002A0070000), size: 53248 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\SspiCli.dll'
+C:\windows\system32\secur32.dll:secur32.dll (0000000201CF0000), size: 143360 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\secur32.dll'
+C:\windows\system32\Kerberos.dll:Kerberos.dll (0000000274A50000), size: 57344 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\Kerberos.dll'
+C:\windows\system32\d3d12.dll:d3d12.dll (00000000676E0000), size: 110592 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\d3d12.dll'
+C:\windows\system32\mmdevapi.dll:mmdevapi.dll (0000000336850000), size: 176128 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\mmdevapi.dll'
+C:\windows\system32\winecoreaudio.drv:winecoreaudio.drv (0000000067900000), size: 163840 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\winecoreaudio.drv'
+C:\windows\system32\dbghelp.dll:dbghelp.dll (000000010A4D0000), size: 569344 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\dbghelp.dll', fileVersion: 6.1.7601.17514
+
+========== OUTPUTTING STACK TRACE ==================
+
+0x000000017002F018 (ntdll) RtlInt64ToUnicodeString
+0x0000000180A4E281 (unityplayer) UnityMain2
+0x0000000180A5FC88 (unityplayer) UnityMain2
+SymInit: Symbol-SearchPath: '.;C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter;C:/Program Files (x86)/Steam/steamapps/common/The Planet Crafter/Planet Crafter_Data/Plugins\x86_64;C:/Program Files (x86)/Steam/steamapps/common/The Planet Crafter/Planet Crafter_Data/Plugins;C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter;C:\windows;C:\windows\system32;', symOptions: 534, UserName: 'crossover'
+OS-Version: 10.0.0
+C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter.exe:Planet Crafter.exe (0000000140000000), size: 684032 (result: 0), SymType: '-deferred-', PDB: 'C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter.exe', fileVersion: 6000.3.2.30623
+C:\windows\system32\ntdll.dll:ntdll.dll (0000000170000000), size: 737280 (result: 0), SymType: '-exported-', PDB: 'C:\windows\system32\ntdll.dll', fileVersion: 6.1.7601.24059
+C:\windows\system32\kernel32.dll:kernel32.dll (000000007B600000), size: 413696 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\kernel32.dll', fileVersion: 10.0.19043.1466
+C:\windows\system32\kernelbase.dll:kernelbase.dll (000000007B000000), size: 2514944 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\kernelbase.dll'
+C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\UnityPlayer.dll:UnityPlayer.dll (0000000180000000), size: 37117952 (result: 0), SymType: '-exported-', PDB: 'C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\UnityPlayer.dll', fileVersion: 6000.3.2.30623
+C:\windows\system32\USER32.dll:USER32.dll (000000023D820000), size: 2084864 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\USER32.dll', fileVersion: 5.1.2600.2180
+C:\windows\system32\advapi32.dll:advapi32.dll (0000000330260000), size: 278528 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\advapi32.dll', fileVersion: 10.0.10240.16384
+C:\windows\system32\msvcrt.dll:msvcrt.dll (00000001C8DB0000), size: 770048 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\msvcrt.dll', fileVersion: 7.0.2600.2180
+C:\windows\system32\sechost.dll:sechost.dll (000000032A700000), size: 184320 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\sechost.dll'
+C:\windows\system32\ucrtbase.dll:ucrtbase.dll (00000003AF670000), size: 954368 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\ucrtbase.dll', fileVersion: 10.0.14393.2247
+C:\windows\system32\gdi32.dll:gdi32.dll (000000026B4C0000), size: 589824 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\gdi32.dll', fileVersion: 10.0.0.0
+C:\windows\system32\win32u.dll:win32u.dll (0000000077980000), size: 1798144 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\win32u.dll'
+C:\windows\system32\version.dll:version.dll (00000002F1FA0000), size: 57344 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\version.dll', fileVersion: 5.1.2600.2180
+C:\windows\system32\ole32.dll:ole32.dll (00000002E8F10000), size: 1216512 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\ole32.dll', fileVersion: 10.0.0.0
+C:\windows\system32\combase.dll:combase.dll (0000000327020000), size: 364544 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\combase.dll'
+C:\windows\system32\rpcrt4.dll:rpcrt4.dll (0000000231AE0000), size: 589824 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\rpcrt4.dll', fileVersion: 5.1.2600.2180
+C:\windows\system32\SHLWAPI.dll:SHLWAPI.dll (00000002E3540000), size: 368640 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\SHLWAPI.dll', fileVersion: 6.0.2800.1692
+C:\windows\system32\shcore.dll:shcore.dll (00000003126F0000), size: 110592 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\shcore.dll'
+C:\windows\system32\SETUPAPI.dll:SETUPAPI.dll (000000021A7E0000), size: 565248 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\SETUPAPI.dll'
+C:\windows\system32\SHELL32.dll:SHELL32.dll (00000001C69E0000), size: 9744384 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\SHELL32.dll', fileVersion: 6.0.2900.6242
+C:\windows\system32\OPENGL32.dll:OPENGL32.dll (0000000077D70000), size: 1404928 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\OPENGL32.dll', fileVersion: 5.1.2600.2082
+C:\windows\system32\WINMM.dll:WINMM.dll (00000003B8F00000), size: 827392 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\WINMM.dll'
+C:\windows\system32\msacm32.dll:msacm32.dll (00000001C8B40000), size: 155648 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\msacm32.dll'
+C:\windows\system32\OLEAUT32.dll:OLEAUT32.dll (00000002739C0000), size: 1339392 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\OLEAUT32.dll', fileVersion: 6.0.6001.18000
+C:\windows\system32\IMM32.dll:IMM32.dll (00000003AFD00000), size: 110592 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\IMM32.dll', fileVersion: 5.1.2600.2180
+C:\windows\system32\IPHLPAPI.DLL:IPHLPAPI.DLL (0000000240030000), size: 212992 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\IPHLPAPI.DLL', fileVersion: 5.1.2600.2180
+C:\windows\system32\dnsapi.dll:dnsapi.dll (000000029CFC0000), size: 90112 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\dnsapi.dll', fileVersion: 5.2.3790.4318
+C:\windows\system32\nsi.dll:nsi.dll (000000028DFA0000), size: 53248 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\nsi.dll'
+C:\windows\system32\WINHTTP.dll:WINHTTP.dll (0000000358120000), size: 307200 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\WINHTTP.dll', fileVersion: 5.1.2600.2180
+C:\windows\system32\jsproxy.dll:jsproxy.dll (0000000346BA0000), size: 135168 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\jsproxy.dll'
+C:\windows\system32\ws2_32.dll:ws2_32.dll (00000001EC2B0000), size: 163840 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\ws2_32.dll', fileVersion: 5.1.2600.5512
+C:\windows\system32\bcrypt.dll:bcrypt.dll (00000002D4D40000), size: 98304 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\bcrypt.dll', fileVersion: 6.0.6000.16386
+C:\windows\system32\HID.DLL:HID.DLL (00000001F51E0000), size: 73728 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\HID.DLL', fileVersion: 10.0.0.0
+C:\windows\system32\d3d11.dll:d3d11.dll (0000000000440000), size: 110592 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\d3d11.dll'
+C:\windows\system32\dxgi.dll:dxgi.dll (0000000000460000), size: 16867328 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\dxgi.dll'
+C:\windows\system32\UIAutomationCore.DLL:UIAutomationCore.DLL (0000000330A70000), size: 73728 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\UIAutomationCore.DLL'
+C:\windows\system32\CRYPT32.dll:CRYPT32.dll (00000001DD3F0000), size: 962560 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\CRYPT32.dll', fileVersion: 5.131.2600.1243
+C:\windows\system32\dwmapi.dll:dwmapi.dll (000000025D740000), size: 61440 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\dwmapi.dll', fileVersion: 6.0.6000.16386
+C:\windows\system32\winemac.drv:winemac.drv (000000007B7C0000), size: 610304 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\winemac.drv', fileVersion: 10.0.0.0
+C:\windows\system32\uxtheme.dll:uxtheme.dll (00000002F7230000), size: 237568 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\uxtheme.dll', fileVersion: 10.0.0.0
+C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\MonoBleedingEdge\EmbedRuntime\mono-2.0-bdwgc.dll:mono-2.0-bdwgc.dll (0000000062DC0000), size: 10756096 (result: 0), SymType: '-deferred-', PDB: 'C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\MonoBleedingEdge\EmbedRuntime\mono-2.0-bdwgc.dll'
+C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter_Data\Plugins\x86_64\PartyXboxLive.dll:PartyXboxLive.dll (0000000067220000), size: 1134592 (result: 0), SymType: '-deferred-', PDB: 'C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter_Data\Plugins\x86_64\PartyXboxLive.dll', fileVersion: 1.2.2502.26002
+C:\windows\system32\api-ms-win-core-psm-appnotify-l1-1-0.dll:api-ms-win-core-psm-appnotify-l1-1-0.dll (000000022C2B0000), size: 32768 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\api-ms-win-core-psm-appnotify-l1-1-0.dll'
+C:\windows\system32\VCRUNTIME140.dll:VCRUNTIME140.dll (000000026ED50000), size: 49152 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\VCRUNTIME140.dll'
+C:\windows\system32\MSVCP140.dll:MSVCP140.dll (0000000360E10000), size: 978944 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\MSVCP140.dll'
+C:\windows\system32\concrt140.dll:concrt140.dll (00000003871C0000), size: 180224 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\concrt140.dll'
+C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter_Data\Plugins\x86_64\PartyWin.dll:PartyWin.dll (0000000067340000), size: 3452928 (result: 0), SymType: '-deferred-', PDB: 'C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter_Data\Plugins\x86_64\PartyWin.dll', fileVersion: 1.10.2411.13006
+C:\windows\system32\SspiCli.dll:SspiCli.dll (00000002A0070000), size: 53248 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\SspiCli.dll'
+C:\windows\system32\secur32.dll:secur32.dll (0000000201CF0000), size: 143360 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\secur32.dll'
+C:\windows\system32\Kerberos.dll:Kerberos.dll (0000000274A50000), size: 57344 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\Kerberos.dll'
+C:\windows\system32\d3d12.dll:d3d12.dll (00000000676E0000), size: 110592 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\d3d12.dll'
+C:\windows\system32\mmdevapi.dll:mmdevapi.dll (0000000336850000), size: 176128 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\mmdevapi.dll'
+C:\windows\system32\winecoreaudio.drv:winecoreaudio.drv (0000000067900000), size: 163840 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\winecoreaudio.drv'
+C:\windows\system32\dbghelp.dll:dbghelp.dll (000000010A4D0000), size: 569344 (result: 0), SymType: '-deferred-', PDB: 'C:\windows\system32\dbghelp.dll', fileVersion: 6.1.7601.17514
+  ERROR: SymGetSymFromAddr64, GetLastError: 'No more files.' (Address: 000000018080C090)
+0x000000018080C090 (unityplayer) (function-name not available)
+0x000000018080C5EB (unityplayer) UnityMain2
+  ERROR: SymGetSymFromAddr64, GetLastError: 'Invalid handle.' (Address: 00000001400011F6)
+0x00000001400011F6 (planet crafter) (function-name not available)
+0x000000007B630619 (kernel32) BaseThreadInitThunk
+0x000000017006EAC4 (ntdll) RtlUserThreadStart
+
+========== END OF STACKTRACE ===========
+
+A crash has been intercepted by the crash handler. For call stack and other details, see the latest crash report generated in:
+ * C:/users/crossover/Temp/MijuGames/Planet Crafter/Crashes

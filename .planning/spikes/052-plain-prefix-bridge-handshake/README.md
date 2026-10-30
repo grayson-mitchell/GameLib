@@ -104,8 +104,12 @@ control and negative control all behaving as on CrossOver.
 | dxmt-x32 / dxmt-x64 | 1 | yes | 76561197995867096 | fresh prefix, `-DXMT` engine |
 | staging-x32/x64 badsecret | 0 | **no** | — | `AUTH refused`, fail-closed |
 
-`bloggedon=0` in **every** case, CrossOver included — a baseline quirk of the identity path with
-appid 480, not an engine difference. Worth a look in 053 with a real appid.
+`bloggedon=0` in **every** case, CrossOver included — not an engine difference. **Resolved in
+054 (2026-10-31):** an immediate re-run of staging + cx returned `bloggedon=1` everywhere; it
+tracks Mac Steam's logon state at the time of the run.
+
+**Addendum (054):** `./run.sh gptk` adds a GPTK 3.0-3 engine (`wine64`, `WINEMSYNC=1
+WINEESYNC=1` per `launcher.ts`) — PASS both arches (x86 via wine32on64).
 
 **What this does NOT prove:** a real game. The probe has no graphics, no game-side Steam-init
 log, no `steam_appid` beyond 480, no shared redists. That is spike 053.
