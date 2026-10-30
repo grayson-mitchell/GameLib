@@ -38,3 +38,23 @@ See how its library update is wired and reuse it.
 Verify live with a free-to-own app ("Add to Library" goes through the same license grant), so the
 gate needs no second paid purchase. Confirm which path that free grant actually takes before you
 rely on it.
+
+## Status (2026-10-30, quick 261030-qqh)
+
+Probe:
+- A free-to-own "Add to Library" in the embed loads no page.
+- Steam's store JS sends the grant as the `Checkout.AddFreeLicense#1` (ICheckoutService) XHR.
+- So `on_page_load` can't see the grant, and the receipt-URL candidate was rejected.
+
+Built (`4be6400bd`, `e34ad8668`):
+- Leaving the Steam store embed runs the Steam library refresh (`origin: 'steam-store-exit'`).
+- It only runs after the visit loaded a store app, cart or checkout page.
+- It runs at most once every 2 minutes, never while a refresh is running, and never when signed
+  out.
+
+Live gate (open):
+1. Restart `tauri dev`.
+2. Add a free-to-own game in the store, then leave the store.
+3. The game should appear without a manual Refresh, and the log should show
+   `origin=steam-store-exit`.
+4. Note whether the macOS Go Offline dialog appears.
