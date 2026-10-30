@@ -133,6 +133,26 @@ question requires otherwise.
   Make an import lib with `zig dlltool -m i386 -d <def> -l lib.a`: `zig cc -shared` names its own import lib
   after the first source file and drops it in the cwd. macOS has no `timeout`; use
   `perl -e 'alarm shift; exec @ARGV' <secs> <cmd>`.
+- **Engine-matrix spikes (bridge line, 052–055):** one harness, an `<engine>` argument, the same
+  probe or title under each Wine. Run the **CrossOver clone as the positive control first** — in
+  052 both probe bugs (legacy `SteamUser()` accessor; `GetSteamID` is MSVC **sret**, see
+  `vt_SteamUser023_GetSteamID(self, sretOut)`) showed up on CrossOver, so they were never
+  mistaken for engine faults. Plain prefixes come from the engine's own `wineboot -i` with
+  `WINEDLLOVERRIDES="mscoree,mshtml="`; wait for `wineserver -w` before reading `system.reg`
+  (it is flushed only on exit). Real titles run from a **shadow tree** (`053/shadow.py`) inside
+  the plain prefix, and the harness applies `meta/bridgeCensus.ts`'s own verdict rules (HELLO,
+  anchored `GINIT ok=1 session=1`, `NOVER`, Player.log markers) so every run lands one judged
+  line in `logs/events.log`. Mirror `launcher.ts`'s per-engine env (`WINEMSYNC` for `-DXMT`;
+  `WINEMSYNC`+`WINEESYNC` for `toolkit`) and production's DXVK install before calling a graphics
+  failure an engine verdict. *(052–055.)*
+- **Don't hardcode the prefix's Windows user.** Wine-Staging uses `users/$USER`; GPTK and
+  CrossOver use `users/crossover`. Discover `drive_c/users/*/AppData` (054's harness bug).
+  `USER=crossover` (not `WINEUSERNAME`) makes Wine-Staging reuse a CrossOver profile. *(054/055.)*
+- **Cap or summarise wine stdout before committing.** A DXVK-macOS run wrote a 3.37 GB
+  `wine.out` in 184 s of MoltenVK warnings. Commit a head + `uniq -c` excerpt and keep the raw
+  file in the gitignored `state/`. Always `du -sh logs/` before a spike commit. *(053.)*
+- **`grep` calls the 48 k-line generated `steam_api_shim.c` a binary file** and prints only
+  "Binary file matches" — use `grep -a`. *(052.)*
 - **Login-UX spikes (019–022):** the shared fixture is spike 019's DummyStore
   (`019-dummy-oauth-store/store-server.mjs`, zero-dep Node ESM, port 17940) — an OAuth 2.0
   auth-code-grant provider with a hot-editable login form. Scripted flows against it MUST run
