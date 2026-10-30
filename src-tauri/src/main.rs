@@ -6157,6 +6157,11 @@ struct StoreEmbedState {
     /// link clicked inside the embed, or `store_embed_navigate`) leaves this false, so it
     /// pushes normally.
     suppress_next_push: bool,
+    /// The `storeKey` whose pages `history` holds (quick 261030-ts4). Steam, GOG and Amazon
+    /// share this one reused webview, and a store switch only `navigate()`s it, so without this
+    /// Back on `/store/gog` walked into the Amazon pages visited before the switch (live
+    /// 2026-10-30). `select_store()` drops the history when the key changes.
+    store_key: Option<String>,
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
@@ -6217,6 +6222,19 @@ impl StoreEmbedState {
         // D-21: a teardown must not leave events describing a history that no longer exists --
         // the next embed would drain them and render another session's host in its chrome.
         self.pending_nav_events.clear();
+        self.store_key = None;
+    }
+
+    /// PURE: called by `store_embed_open` before it loads `store_key`'s URL. A different store
+    /// starts a fresh history, so Back never crosses into another store's pages; reopening the
+    /// same store keeps it. Returns whether the history was dropped.
+    fn select_store(&mut self, store_key: &str) -> bool {
+        if self.store_key.as_deref() == Some(store_key) {
+            return false;
+        }
+        self.clear();
+        self.store_key = Some(store_key.to_string());
+        true
     }
 
     /// PURE: derived from the cursor, never stored as an independent flag that could drift
@@ -6521,9 +6539,14 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
             }
         }
     }
-    // `store_key` is consulted above only under `#[cfg(target_os = "macos")]` -- referenced here
-    // unconditionally so Linux/Windows builds don't warn on an otherwise-unused binding.
-    let _ = &store_key;
+    // Quick 261030-ts4: a switch to a different store drops the shared history BEFORE the new
+    // URL loads, so its `on_page_load` Finished push becomes the first entry (Back disabled).
+    // The macOS Epic surface returned above keeps its own native history and is unaffected.
+    if let Ok(mut state) = store_embed_state().lock() {
+        state.select_store(&store_key);
+    } else {
+        eprintln!("[shell] WARN: store_embed history registry poisoned -- continuing");
+    }
 
     if let Some(existing) = app.get_webview(STORE_EMBED_LABEL) {
         // 260930-blh (2026-09-30, Linux) + 261001-svm (2026-10-01, macOS), both live-measured:
@@ -18647,6 +18670,43 @@ mod tests {
         state.push("https://a.example/".to_string());
         state.clear();
         assert!(state.take_nav_events().is_empty());
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_select_store_drops_history_only_on_a_store_switch() {
+        // Live 2026-10-30: Back on /store/gog walked into the Amazon pages visited before the
+        // switch, because the one reused embed kept a single history across stores.
+        let mut state = StoreEmbedState::default();
+        assert!(state.select_store("amazon"));
+        state.push("https://gaming.amazon.com/".to_string());
+        state.push("https://gaming.amazon.com/home".to_string());
+
+        assert!(
+            !state.select_store("amazon"),
+            "reopening the same store keeps its history"
+        );
+        assert!(state.can_go_back());
+
+        assert!(state.select_store("gog"));
+        assert!(!state.can_go_back());
+        assert_eq!(state.current_url(), None);
+        state.push("https://www.gog.com/en/".to_string());
+        assert!(
+            !state.can_go_back(),
+            "the new store's first page has nothing behind it"
+        );
+        assert_eq!(state.go_back(), None);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_clear_forgets_the_selected_store() {
+        // store_embed_close clears; the next open of the same store is a fresh session.
+        let mut state = StoreEmbedState::default();
+        state.select_store("steam");
+        state.clear();
+        assert!(state.select_store("steam"));
     }
 
     // ---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----
