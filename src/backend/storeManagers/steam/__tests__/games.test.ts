@@ -4831,48 +4831,41 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
 
-  it('bottle-eligible + provisioned: install() calls tellBottledSteamToInstall + bottle-scoped startInstallPolling, NOT shell.openExternal', async () => {
+  it('bottle-eligible + provisioned: install() routes to installBottleNative (depot download into the bottle), NOT shell.openExternal or a bottled-Steam dispatch', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
       is_mac_native: false
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
 
     const game = new SteamGame(APP_ID)
+    const installBottleNative = jest
+      .spyOn(game as any, 'installBottleNative')
+      .mockResolvedValue({ status: 'done' } as any)
     const result = await game.install({} as any)
 
+    expect(installBottleNative).toHaveBeenCalledTimes(1)
     expect(shellOpenExternal).not.toHaveBeenCalled()
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-      source: 'bottle',
-      delegatedToSteamClient: true
-    })
-    expect(startInstallPollingSpy).toHaveBeenCalledTimes(1)
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(result).toEqual({ status: 'done' })
   })
 
-  it('WR-01: bottle-eligible dispatch ERROR — install() returns the error and does NOT start the ACF poller (no false "installing")', async () => {
+  it('quick 261030-o77: a bottle depot-install error is returned as-is (no poller started by install(), no bottled-Steam fallback)', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
       is_mac_native: false
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'error',
-      error: 'boom'
-    })
 
     const game = new SteamGame(APP_ID)
+    jest
+      .spyOn(game as any, 'installBottleNative')
+      .mockResolvedValue({ status: 'error', error: 'boom' } as any)
     const result = await game.install({} as any)
 
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
-    // A failed dispatch must NOT spawn the ~60s bottle poller.
-    expect(startInstallPollingSpy).not.toHaveBeenCalledWith(APP_ID, {
-      source: 'bottle'
-    })
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(startInstallPollingSpy).not.toHaveBeenCalled()
     expect(result).toEqual({ status: 'error', error: 'boom' })
   })
 
@@ -5040,23 +5033,45 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     expect(shellOpenExternal).not.toHaveBeenCalled()
   })
 
-  it('opt-in OFF + bottle-eligible + ready: install() takes the legacy tellBottledSteamToInstall path unchanged (D-13 safety valve)', async () => {
+  it('quick 261030-o77: opt-in OFF + bottle-eligible + ready: install() still depot-downloads into the bottle (the toggle does not apply to the bottle route)', async () => {
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
     const game = new SteamGame(APP_ID)
     const result = await game.install({} as any)
 
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
-    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      targetSteamappsDir: BOTTLE_STEAMAPPS_DIR,
+      installdir: RESOLVED_TARGET.installdir,
+      os: 'windows',
+      signal: 'mock-signal'
+    })
     expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
       source: 'bottle',
-      delegatedToSteamClient: true
+      isNativeHandoff: true,
+      skippedDepots: []
     })
     expect(result).toEqual({ status: 'done' })
+  })
+
+  it('quick 261030-o77: opt-in OFF + mac-native (not bottle-eligible): still takes steam://install', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      delegatedToSteamClient: true
+    })
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
   })
 
   it('opt-in ON + bottle-eligible but NOT ready: install() requests guided setup and never attempts a depot download', async () => {
@@ -5127,6 +5142,12 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(isBridgeBottleReady as jest.Mock).mockReset()
     ;(provisionBridgeBottle as jest.Mock).mockReset()
     ;(removePerGameBridgeBottle as jest.Mock).mockReset()
+    // quick 261030-o77: the bottled fallback now always runs installBottleNative
+    // (GameLib's own depot download into the Phase 17 bottle), which reads the
+    // bottle settings.
+    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'GameLibSteam'
+    })
     ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
       wineCrossoverBottle: 'GameLibSteamBridge'
     })
@@ -5799,9 +5820,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       status: 'error',
       error: 'depot download failed'
     })
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
 
     const game = new SteamGame(APP_ID)
     const firstResult = await game.install({} as any)
@@ -5815,7 +5833,13 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     // the bottled fallback — the failure was never cleared.
     const secondGame = new SteamGame(APP_ID)
     const secondResult = await secondGame.install({} as any)
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    expect(downloadSteamDepots).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({
+        os: 'windows',
+        targetSteamappsDir: '/mock/bottle/steamapps'
+      })
+    )
     expect(secondResult).toEqual({ status: 'done' })
   })
 
@@ -5829,9 +5853,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       'drm-wrapped'
     )
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
 
     const game = new SteamGame(APP_ID)
     const result = await game.install({} as any)
@@ -5857,9 +5878,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
     ;(knownFixSaysCeg as jest.Mock).mockReturnValue(true)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
 
     const game = new SteamGame(APP_ID)
     const result = await game.install({} as any)
@@ -6019,7 +6037,13 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       await new SteamGame(APP_ID).install({} as any)
 
       expect(noticeCalls()).toEqual([])
-      expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+      expect(downloadSteamDepots).toHaveBeenCalledWith(
+        APP_ID,
+        expect.objectContaining({
+          os: 'windows',
+          targetSteamappsDir: '/mock/bottle/steamapps'
+        })
+      )
     })
   })
 
@@ -6087,7 +6111,13 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           'steamBridgeRouteNotice',
           expect.anything()
         )
-        expect(tellBottledSteamToInstall).toHaveBeenCalledWith(badAppId)
+        expect(downloadSteamDepots).toHaveBeenCalledWith(
+          badAppId,
+          expect.objectContaining({
+            os: 'windows',
+            targetSteamappsDir: '/mock/bottle/steamapps'
+          })
+        )
       })
     }
   )
@@ -6571,15 +6601,18 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       bridge: { noticeAcknowledgedFor: 'known-bad' }
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
 
     const game = new SteamGame(APP_ID)
     await game.install({} as any)
 
     expect(isBridgeBottleReady).not.toHaveBeenCalled()
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    expect(downloadSteamDepots).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({
+        os: 'windows',
+        targetSteamappsDir: '/mock/bottle/steamapps'
+      })
+    )
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
       'steamBridgeRouteNotice',
       expect.anything()
@@ -6595,9 +6628,6 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
 
     markBridgeFailedThisSession(FALLBACK_TEST_APP_ID)
 
@@ -6605,8 +6635,19 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const result = await game.install({} as any)
 
     expect(provisionBridgeBottle).not.toHaveBeenCalled()
-    expect(downloadSteamDepots).not.toHaveBeenCalled()
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(FALLBACK_TEST_APP_ID)
+    // The bottled fallback downloads into the Phase 17 bottle, never the
+    // bridge bottle (no depot download targets the bridge steamapps dir).
+    expect(downloadSteamDepots).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ targetSteamappsDir: BRIDGE_STEAMAPPS_DIR })
+    )
+    expect(downloadSteamDepots).toHaveBeenCalledWith(
+      FALLBACK_TEST_APP_ID,
+      expect.objectContaining({
+        os: 'windows',
+        targetSteamappsDir: '/mock/bottle/steamapps'
+      })
+    )
     expect(result).toEqual({ status: 'done' })
   })
 
@@ -6619,16 +6660,24 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       bridge: { userRoute: 'bottle' }
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
 
     const game = new SteamGame(APP_ID)
     const result = await game.install({} as any)
 
     expect(isBridgeBottleReady).not.toHaveBeenCalled()
-    expect(downloadSteamDepots).not.toHaveBeenCalled()
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    // The bottled fallback downloads into the Phase 17 bottle, never the
+    // bridge bottle (no depot download targets the bridge steamapps dir).
+    expect(downloadSteamDepots).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ targetSteamappsDir: BRIDGE_STEAMAPPS_DIR })
+    )
+    expect(downloadSteamDepots).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({
+        os: 'windows',
+        targetSteamappsDir: '/mock/bottle/steamapps'
+      })
+    )
     expect(result).toEqual({ status: 'done' })
   })
 
@@ -6737,7 +6786,6 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     | 'bridge'
     | 'deferred-to-setup'
     | 'bottle-native'
-    | 'bottle-dispatch'
     | 'native-depot'
     | 'native-protocol'
 
@@ -6753,8 +6801,6 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
       bridge: terminals.installBridgeGame.mock.calls.length > 0,
       'bottle-native': terminals.installBottleNative.mock.calls.length > 0,
       'native-depot': terminals.installNative.mock.calls.length > 0,
-      'bottle-dispatch':
-        (tellBottledSteamToInstall as jest.Mock).mock.calls.length > 0,
       'native-protocol': shellOpenExternal.mock.calls.some(
         (call) => call[0] === `steam://install/${APP_ID}`
       ),
@@ -6842,19 +6888,12 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
 
     const game = new SteamGame(APP_ID)
     const terminals = spyOnAllTerminals(game)
     await game.install(PRODUCTION_ARGS)
 
-    assertExactlyOneRoute('bottle-dispatch', terminals)
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-      source: 'bottle',
-      delegatedToSteamClient: true
-    })
+    assertExactlyOneRoute('bottle-native', terminals)
   })
 
   it('B4: macOS bottle-eligible, un-provisioned — defers to guided setup', async () => {
@@ -6934,9 +6973,6 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
 
     const game = new SteamGame(APP_ID)
     const terminals = spyOnAllTerminals(game)
@@ -6945,12 +6981,8 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     // Contrast with B1 above — the identical fixture minus the override,
     // which routes 'native-protocol'. F1 and B1 differ in exactly one key:
     // proof the override is the operative input, not the fixture shape.
-    assertExactlyOneRoute('bottle-dispatch', terminals)
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-      source: 'bottle',
-      delegatedToSteamClient: true
-    })
+    assertExactlyOneRoute('bottle-native', terminals)
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
   })
 
   it('F2: D-15 preserved on the forced path — un-provisioned bottle still defers to guided setup', async () => {
@@ -7000,9 +7032,6 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
 
     const game = new SteamGame(APP_ID)
     const terminals = spyOnAllTerminals(game)
@@ -7010,7 +7039,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
 
     // The override is an OR; it can never remove a game from the bottle
     // path — this is byte-identical to B3's outcome.
-    assertExactlyOneRoute('bottle-dispatch', terminals)
+    assertExactlyOneRoute('bottle-native', terminals)
   })
 
   // ── Containment: a hostile or malformed override cannot reach the bottle ─
@@ -7116,15 +7145,12 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     // confirmed-not-native titles and the bridge spawns a separate process.
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
 
     const game = new SteamGame(APP_ID)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
-    assertExactlyOneRoute('bottle-dispatch', terminals)
+    assertExactlyOneRoute('bottle-native', terminals)
     expect(terminals.installBridgeGame).not.toHaveBeenCalled()
   })
 })
@@ -7579,7 +7605,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ).toBe(false)
     })
 
-    it('W1: dispatch terminal (bottled-Steam client accepts) persists the flag AND survives neighboring fields', async () => {
+    it('W1: bottle-native terminal (depot install completes) persists the flag AND survives neighboring fields', async () => {
       mockStatefulMetadataStore({
         art_cover: 'https://cdn/570/header.jpg',
         art_square: 'https://cdn/570/library_600x900.jpg',
@@ -7590,11 +7616,11 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
-      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-        status: 'done'
-      })
 
       const game = new SteamGame(APP_ID)
+      jest
+        .spyOn(game as any, 'installBottleNative')
+        .mockResolvedValue({ status: 'done' } as any)
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
       const stored = steamMetadataStore.get(APP_ID) as unknown as Record<
@@ -7687,7 +7713,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ).not.toBe(true)
     })
 
-    it('W5: a rejected bottled-Steam dispatch persists nothing (the WR-01 guard returns first)', async () => {
+    it('W5: a failed bottle-native install persists nothing (the flag is written only on a completed install)', async () => {
       mockStatefulMetadataStore({
         platformsCaptured: true,
         is_mac_native: true,
@@ -7695,12 +7721,11 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
-      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-        status: 'error',
-        error: 'nope'
-      })
 
       const game = new SteamGame(APP_ID)
+      jest
+        .spyOn(game as any, 'installBottleNative')
+        .mockResolvedValue({ status: 'error', error: 'nope' } as any)
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
       expect(
@@ -7726,14 +7751,14 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
-      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-        status: 'done'
-      })
 
       const game = new SteamGame(APP_ID)
+      const installBottleNative = jest
+        .spyOn(game as any, 'installBottleNative')
+        .mockResolvedValue({ status: 'done' } as any)
       await game.install(PRODUCTION_ARGS)
 
-      expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+      expect(installBottleNative).toHaveBeenCalledTimes(1)
       expect(
         (
           steamMetadataStore.get(APP_ID) as {
@@ -10006,9 +10031,9 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
     })
     dialogShowMessageBox.mockResolvedValue({ response: 0 })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
+    const installBottleNative = jest
+      .spyOn(SteamGame.prototype as any, 'installBottleNative')
+      .mockResolvedValue({ status: 'done' } as any)
 
     await libraryModule.promptI386Recovery(APP_ID)
 
@@ -10023,7 +10048,8 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
     )
     // install(): routes through the bottle (mac_arch:'32' → isBottleEligible())
     expect(shellOpenExternal).not.toHaveBeenCalled()
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    expect(installBottleNative).toHaveBeenCalledTimes(1)
+    installBottleNative.mockRestore()
   })
 
   it('cancelled dialog — neither forceUninstall() nor install() is invoked, mac_arch 32 stays cached', async () => {

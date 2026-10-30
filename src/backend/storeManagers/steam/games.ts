@@ -100,7 +100,6 @@ import {
 } from './macSteamAdoption'
 import {
   isBottleReady,
-  tellBottledSteamToInstall,
   tellBottledSteamToLaunch,
   getSteamBottleSettings,
   getBottleSteamappsDir,
@@ -1882,81 +1881,29 @@ export default class SteamGame implements Game {
         return { status: 'done', deferredToSetup: true }
       }
 
-      // D-15/SNI-08 opt-in: depot-download the WINDOWS depot directly into
-      // the bottle's OWN steamapps/ filesystem path — the SAME depot.ts
-      // mechanism the (non-bottle-eligible) native opt-in branch below uses,
-      // just with the write target swapped to the bottle's steamapps dir and
-      // os hard-coded 'windows' (bottled Steam is a Windows Steam client,
-      // never the host's macOS depot). No Wine dispatch for the download
-      // itself — tellBottledSteamToInstall/dispatchToBottledSteam are never
-      // called on this path (that mechanism stays reserved for guided
-      // setup/launch/uninstall). OFF preserves the legacy
-      // tellBottledSteamToInstall dispatch below byte-for-byte (D-13).
-      if (isSteamNativeInstallEnabled()) {
-        // D-17 (34.13-14): persist the forced verdict ONLY when this specific
-        // install was forced (never for a game that was already ordinarily
-        // bottle-eligible — that game needs no flag, and writing one would
-        // make the cache lie about how it got there) AND the depot download
-        // actually completed. installDepotDownload() is the shared engine —
-        // "successful" here means it reported status:'done' and finalized
-        // the ACF, not merely that it was dispatched.
-        const bottleNativeResult = await this.installBottleNative(args)
-        if (
-          bottleNativeResult.status === 'done' &&
-          !bottleNativeResult.deferredToSetup
-        ) {
-          // debug/steam-bottle-uninstall-reverts: persisted for EVERY
-          // committed installBottleNative() completion (not gated on
-          // forceWindowsViaBottle like the D-17 flag below) — uninstall()
-          // needs to know the bottled Steam client never authored/adopted
-          // this manifest regardless of whether this specific install was
-          // an explicit override or an ordinary bottle-eligible install.
-          if (forceWindowsViaBottle) {
-            markForcedWindowsViaBottle(this.appId)
-          }
-        }
-        return bottleNativeResult
-      }
-
-      logInfo(
-        `SteamGame: delegating install for appId ${this.appId} via the bottled Steam client`,
-        LogPrefix.Steam
-      )
-      const result = await tellBottledSteamToInstall(this.appId)
-
-      // WR-01 (17-17): only start the bottle ACF poller when the dispatch
-      // actually succeeded. A failed dispatch used to still spawn the poller,
-      // producing ~60s of false "installing" state; surface the error instead
-      // with no poller.
-      if (result.status !== 'done') {
-        return { status: 'error', error: result.error }
-      }
-
+      // quick 261030-o77: every bottle-route install (bottle-eligible or
+      // forced Windows-via-bottle) always uses GameLib's own depot installer:
+      // depot-download the WINDOWS depot directly into the bottle's OWN
+      // steamapps/ filesystem path — the SAME depot.ts mechanism the
+      // (non-bottle-eligible) native opt-in branch below uses, just with the
+      // write target swapped to the bottle's steamapps dir and os hard-coded
+      // 'windows'. The enableSteamNativeInstall toggle does not apply here
+      // (it only chooses between depot and steam://install for mac-native
+      // titles): bottled Windows Steam cannot download or adopt installs.
+      //
       // D-17 (34.13-14): persist the forced verdict ONLY when this specific
-      // install was forced. "Successful" here means the bottled Steam
-      // client ACCEPTED the install dispatch (the WR-01 guard above already
-      // returned on rejection) — not that the download has finished. From
-      // here the bits are committed to land in the bottle and the
-      // bottle-scoped poller below owns the outcome. The fail-safe direction
-      // is deliberately asymmetric: a flag set while a download later fails
-      // still routes launch()/uninstall() at the bottle where the partial
-      // bits actually are (recoverable — Task 3's uninstall path clears it),
-      // whereas an unset flag routes at a host Steam client that has
-      // nothing (the T-34.13-06-06 defect this plan closes).
-      if (forceWindowsViaBottle) {
-        markForcedWindowsViaBottle(this.appId)
+      // install was forced (never for a game that was already ordinarily
+      // bottle-eligible) AND the depot download actually completed.
+      const bottleNativeResult = await this.installBottleNative(args)
+      if (
+        bottleNativeResult.status === 'done' &&
+        !bottleNativeResult.deferredToSetup
+      ) {
+        if (forceWindowsViaBottle) {
+          markForcedWindowsViaBottle(this.appId)
+        }
       }
-
-      // Start bottle-scoped ACF polling (D-07) — the bottle's own steamapps
-      // root is distinct from the native root (RESEARCH.md Pitfall 2).
-      // quick 261024-exo: the bottled Steam client owns this download, so the
-      // poller waits for its manifest well past the 60 s non-delegated grace.
-      startInstallPolling(this.appId, {
-        source: 'bottle',
-        delegatedToSteamClient: true
-      })
-
-      return { status: 'done' }
+      return bottleNativeResult
     }
 
     // D-13 opt-in: route a (non-bottle-eligible) native install through the
@@ -2090,8 +2037,7 @@ export default class SteamGame implements Game {
    * never the host's macOS depot — RESEARCH Pattern 4). The bottle-scoped ACF
    * poller (startInstallPolling(appId,{source:'bottle'}), Plan 08) is reused
    * unchanged so the bottled Windows Steam client's own verify pass
-   * (StateFlags 1026 -> 4) is reflected in the UI exactly like the legacy
-   * tellBottledSteamToInstall path.
+   * (StateFlags 1026 -> 4) is reflected in the UI.
    */
   /**
    * 51-REVIEW WR-08: true when an interrupted native download for this appId
@@ -3100,8 +3046,8 @@ export default class SteamGame implements Game {
     // poll will observe is GameLib's OWN finished-handoff write, genuinely
     // waiting for a Steam restart — never a Steam-driven active download.
     // Do NOT copy this flag to the OFF-path startInstallPolling calls above
-    // in install() (steam://install handoff / tellBottledSteamToInstall) —
-    // those hand the ENTIRE download off to Steam, so a 1026 seen there is
+    // in install() (the steam://install handoff) —
+    // that hands the ENTIRE download off to Steam, so a 1026 seen there is
     // Steam's own ordinary active-download state, not a handoff.
     //
     // 23.2-04 (D-06/D-07): thread outcome.skippedDepots through the same
