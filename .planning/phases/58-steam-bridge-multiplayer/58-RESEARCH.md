@@ -441,16 +441,13 @@ Leave `classifyBridgeEvidence` (`bridgeCensus.ts:1110`) untouched: it is the str
 | A8 | `lsof -nP -iUDP` shows a LAN peer vs relay address on this Mac | Trace format | Weaker direct/relayed record; fall back to the in-game/info flags |
 | A9 | Local Network permission applies to the helper/Wine process | Pitfall 8 | A silent connect failure on a LAN is mis-diagnosed |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **D-12 target.**
-   - Known: no `p2p-required` entry exists; Hoard was lifted in 261026-ous.
-   - Unclear: whether the operator wants a different title listed first, or D-12 recorded as "nothing to change".
-   - Recommendation: record as no-op unless the operator names an entry; keep the category and its tests.
-2. **Raise payload caps now or fail closed?** Recommendation: fail closed first (Pitfall 4); raise on evidence.
-3. **Which TCP free title?** Cannot be settled without installing. Recommendation: approve Schedule I: Free Sample, with 58-01 as the measure-and-confirm gate and Shift At Midnight as automatic backup.
-4. **Does Mac Steam post `GameLobbyJoinRequested_t` to the helper's pipe when the peer invites from the friends list?** Cannot be known without a live run; the D-05 peer-hosts direction depends on it unless the title has a code or browse join. Recommendation: make this the first thing 58-01 measures live, before wiring any friends family.
-5. **Spacewar:** worth a one-hour check as a deterministic smoke harness if installable; not a gate title.
+1. **D-12 target.** RESOLVED by D-16 (operator, 2026-10-30): `knownBad` is already `[]` (Hoard lifted in quick 261026-ous, `90ebe6db7`), so D-12 is a recorded no-op; no entry is removed and the `p2p-required` category stays. 58-24 pins both facts in `allowlist.test.ts`.
+2. **Raise payload caps now or fail closed?** RESOLVED by the fail-closed rule (Pitfall 4): ship within the existing 64 KiB frame with a 61440-byte per-field cap (`WIRE_LARGE_MAX_BYTES`, 58-06); oversize is refused and logged `NET kind=oversize`, never truncated (58-13, 58-15, 58-16). Caps are raised only if a live gate records an oversize line (58-23 item 5 turns any count above 0 into a Gap).
+3. **Which TCP free title?** RESOLVED by D-14: Schedule I: Free Sample (3205720), measured and confirmed by 58-01 (stop rule: `.bind`, x86, anti-cheat or no Steam networking stops for an operator re-pick; Shift At Midnight 4050060 is the unapproved research backup).
+4. **Does Mac Steam post `GameLobbyJoinRequested_t` to the helper's pipe on a friends-list invite?** RESOLVED as settled live, not at research time: 58-17 (re-measure on the wired bridge) Task 1 has the peer invite the main account from the PC's friends list while Schedule I runs through the bridge; the 58-07 unlisted-id log (`CBQ unlisted iCallback=333`) or, once relayed by 58-18, the CBDISP line records whether it arrives. 58-23 (TCP gate, direction B) confirms it on the scored join.
+5. **Spacewar (480) as a smoke harness:** DROPPED. It is not a gate title, its installability is unverified (A7), and the host-compiled harnesses (cbqueue, callbackRegistryHost, networkingLocalHost) plus the two live gates already cover what a smoke harness would. No plan uses it.
 
 ## Environment Availability
 

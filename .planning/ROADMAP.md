@@ -680,9 +680,87 @@ Plans:
 ### Phase 58: Steam bridge multiplayer
 
 **Goal:** A Steam multiplayer title run through the macOS native bridge can host, find and join an online session with a second Steam account. Today it cannot in either bridge mode. In the TCP shim mode, the default for every ordinary title, `SteamMatchMaking009`, `SteamMatchMakingServers002` and `SteamNetworking005`/`006` are served as `mode: 'stub'` and answer "unavailable" (`bridge/shimCoverage.ts`, 51-14 sub-decision 1). `ISteamNetworkingSockets`/`ISteamNetworkingUtils`/`ISteamNetworkingMessages`, which modern games use for relay P2P, are not served at all. The roadmap's earlier rule that P2P join stays out of scope (24-SPEC) is lifted by this phase. The work in that mode: wire the matchmaking families (lobby create/list/join/data, server browser) and the networking families through the helper to the real `libsteam_api.dylib`; deliver their callbacks and call results the way quick 261027-k51 delivered `UserStatsReceived_t` (lobby `LobbyCreated_t`/`LobbyEnter_t`/`LobbyMatchList_t`, `P2PSessionRequest_t`, `SteamNetConnectionStatusChangedCallback_t`); and handle `InitRelayNetworkAccess()` and accepting incoming sessions, the known-hard join gap. In the `lsteamclient` steamclient-layer DRM mode (Phase 56, SteamStub titles only), networking already reaches the genuine Mac `steamclient.dylib`. There the work is proving it live, and deciding whether 56-02's omitted `serialized005.patch` must be carried. Anti-cheat titles (EAC, BattlEye) are out of scope: their Wine support is developer-opt-in and Linux-targeted. Open for discuss-phase: which titles serve as the measured test set (one lobby-based TCP-mode title, one SteamStub co-op title), whether the second account is a second Mac or a Windows/Linux peer, and which interface versions the test titles actually import. Done when: on this Mac, one TCP-mode title and one DRM-mode title each host a session that a second account joins and plays in, with the join visible in the bridge trace.
-**Requirements**: TBD
+**Requirements**: M-01..M-07 (defined in 58-RESEARCH.md)
 **Depends on:** Phase 51 (interface families and stub manifests), Phase 56 (DRM mode)
-**Plans:** 0 plans
+**Plans:** 24 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 58 to break down)
+**Wave 1**
+
+- [ ] 58-01-PLAN.md — operator installs and measures Schedule I (3205720), two-account preflight, D-14 stop rule
+- [ ] 58-02-PLAN.md — measured MSVC/Mac layouts for every relayed callback and networking struct
+- [ ] 58-03-PLAN.md — D-07 baseline manifests (MMServers003, Sockets013, Utils004, Messages002), helperInterface, SDK flat accessor spellings
+- [ ] 58-04-PLAN.md — DRM trace blocks 6-7 (`event=callback`), drmTrace grammar, local component build
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 58-05-PLAN.md — NET line grammar and `classifyMultiplayerEvidence` (D-08), `bridge-census --multiplayer`
+- [ ] 58-06-PLAN.md — generator kinds: in-buffer, in/out-struct, capBytes, shimLocal, helperCustom
+- [ ] 58-07-PLAN.md — helper callback relay rows, call-result completion, CONTROL slot 11, NET emitter
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 58-08-PLAN.md — Raft join-signal pre-measure, DRM live-gate contract, publish p58 component (author)
+- [ ] 58-10-PLAN.md — shim relay rows and CCallResult registry; callResult/evidence policy hooks
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 58-09-PLAN.md — Raft DRM live gate run, serialized005 decision (runner)
+- [ ] 58-11-PLAN.md — shim ManualDispatch (Steamworks.NET/Facepunch) and API-call polling
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 58-12-PLAN.md — ISteamMatchmaking 009 wired; D-13 behaviour pinned
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 58-13-PLAN.md — ISteamNetworking 006 legacy P2P, fail-closed reads, incoming accept
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 58-14-PLAN.md — ISteamNetworkingUtils 004, identity/IPAddr helpers, message pool, config callbacks, InitRelayNetworkAccess
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 58-15-PLAN.md — ISteamNetworkingSockets 013 with out-messages and carry queue
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 58-16-PLAN.md — ISteamNetworkingMessages 002
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 58-17-PLAN.md — re-measure Schedule I on the wired bridge; regenerate D-09 / older-version rows
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 58-18-PLAN.md — title-measured older versions and D-09 invite/friends needs
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
+- [ ] 58-19-PLAN.md — SteamGameServer* wired if measured (D-10), escalation to replan if oversized
+
+**Wave 13** *(blocked on Wave 12 completion)*
+
+- [ ] 58-20-PLAN.md — ISteamMatchmakingServers 003 baseline + helper response-object relay (CONTROL slot 12)
+
+**Wave 14** *(blocked on Wave 13 completion)*
+
+- [ ] 58-21-PLAN.md — shim server-browser dispatch, request methods wired, MMServers003 served `wire`
+
+**Wave 15** *(blocked on Wave 14 completion)*
+
+- [ ] 58-22-PLAN.md — TCP live-gate contract (author)
+
+**Wave 16** *(blocked on Wave 15 completion)*
+
+- [ ] 58-23-PLAN.md — TCP live gate run (runner)
+
+**Wave 17** *(blocked on Wave 16 completion)*
+
+- [ ] 58-24-PLAN.md — D-12/D-16 no-op pin, serialized005 record, STATE/ROADMAP closeout
+
+**Cross-cutting constraints:**
+
+- FAIL routing: a `Verdict: FAIL` (or any item left `issue`/`blocked`) routes to gap-closure planning with `/gsd-plan-phase 58 --gaps`; the SUMMARY says so in its first line, and the phase is not marked done
+- Precondition: halt unless 58-01-TITLES.md has `Verdict: PROCEED`
