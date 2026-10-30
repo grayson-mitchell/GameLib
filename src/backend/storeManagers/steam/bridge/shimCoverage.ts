@@ -199,7 +199,10 @@ export const SHIM_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
     'STEAMREMOTESTORAGE_INTERFACE_VERSION005',
     { family: 'SteamRemoteStorage', mode: 'stub' }
   ],
-  ['SteamMatchMaking009', { family: 'SteamMatchMaking', mode: 'stub' }],
+  // D-07 / 58-12: lobbies are wired to the real Mac Steam. D-11: this
+  // manifest is shared, so the x86 shim is wired too, but x86 is not
+  // live-verified.
+  ['SteamMatchMaking009', { family: 'SteamMatchMaking', mode: 'wire' }],
   [
     'SteamMatchMakingServers002',
     { family: 'SteamMatchMakingServers', mode: 'stub' }
@@ -253,7 +256,8 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   // The three shared stub manifests (51-14), arches widened to x64 this
   // plan -- same stub behavior, arch-neutral (P2P join stays out of
   // scope, 24-SPEC).
-  ['SteamMatchMaking009', { family: 'SteamMatchMaking', mode: 'stub' }],
+  // D-07 / 58-12: wired (see the x86 entry; same shared manifest).
+  ['SteamMatchMaking009', { family: 'SteamMatchMaking', mode: 'wire' }],
   [
     'SteamMatchMakingServers002',
     { family: 'SteamMatchMakingServers', mode: 'stub' }

@@ -314,14 +314,21 @@ describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK (51-1
     ).toBe('stub')
   })
 
-  test('the three shared stub manifests (51-14, widened to x64 this plan) stay stub on x64', () => {
+  test('MMServers002 and Networking005 stay stub on x64; SteamMatchMaking009 is wire (58-12, D-07)', () => {
     for (const version of [
-      'SteamMatchMaking009',
       'SteamMatchMakingServers002',
       'SteamNetworking005'
     ]) {
       expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(version)?.mode).toBe('stub')
     }
+    expect(SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamMatchMaking009')).toEqual(
+      { family: 'SteamMatchMaking', mode: 'wire' }
+    )
+    // D-11: the shared manifest is wired on x86 too (not live-verified).
+    expect(SHIM_SERVED_INTERFACE_VERSIONS.get('SteamMatchMaking009')).toEqual({
+      family: 'SteamMatchMaking',
+      mode: 'wire'
+    })
   })
 
   test('SHIM_X64_NULL_OBJECT_FALLBACK is true (D-51-13 GO)', () => {
@@ -600,7 +607,6 @@ describe('evaluateShimCoverage (51-14 Task 2 acceptance check -- XCOM: Enemy Unk
 
     expect(result.missingSymbols).toEqual([])
     expect([...result.stubbedInterfaces].sort()).toEqual([
-      'SteamMatchMaking',
       'SteamMatchMakingServers',
       'SteamNetworking',
       'SteamRemoteStorage'
@@ -650,7 +656,6 @@ describe('evaluateShimCoverage (Hoard: 63000) -- 51-14: the second/last-group fa
 
     expect(result.missingSymbols).toEqual([])
     expect([...result.stubbedInterfaces].sort()).toEqual([
-      'SteamMatchMaking',
       'SteamNetworking',
       'SteamRemoteStorage'
     ])
@@ -1475,5 +1480,75 @@ describe('58-03 multiplayer baseline served tables', () => {
   })
   test('SHIM_EXPORT_SET_VERSION moved off its pre-58-03 value', () => {
     expect(SHIM_EXPORT_SET_VERSION).not.toBe(PRE_58_03_SHIM_EXPORT_SET_VERSION)
+  })
+})
+
+// 58-12 (D-13): the stub notice keeps its code and copy; only the verdict moves.
+describe('58-12 SteamMatchMaking009 coverage verdicts (D-13)', () => {
+  const symbols = ['SteamInternal_CreateInterface', 'SteamAPI_RunCallbacks']
+  const base = { arch: 'x64' as const, symbols, versionProblems: [] }
+
+  test('an import set with MatchMaking009 and wired-only others reports no stubbed family', () => {
+    const r = evaluateShimCoverage({
+      ...base,
+      requiredInterfaceVersions: {
+        SteamUser: 'SteamUser023',
+        SteamMatchMaking: 'SteamMatchMaking009'
+      }
+    })
+    expect(r.stubbedInterfaces).toEqual([])
+    expect(r.missingSymbols).toEqual([])
+  })
+
+  test('an import set with SteamNetworking005 still reports SteamNetworking stubbed', () => {
+    const r = evaluateShimCoverage({
+      ...base,
+      requiredInterfaceVersions: {
+        SteamMatchMaking: 'SteamMatchMaking009',
+        SteamNetworking: 'SteamNetworking005'
+      }
+    })
+    expect(r.stubbedInterfaces).toEqual(['SteamNetworking'])
+  })
+
+  test('x86 reports the same verdict for MatchMaking009', () => {
+    const r = evaluateShimCoverage({
+      arch: 'x86',
+      symbols: ['SteamAPI_Init'],
+      versionProblems: [],
+      requiredInterfaceVersions: { SteamMatchMaking: 'SteamMatchMaking009' }
+    })
+    expect(r.stubbedInterfaces).toEqual([])
+  })
+
+  test('a persisted verdict whose only stub was MatchMaking009 is now covered', () => {
+    for (const arch of ['x86', 'x64'] as const) {
+      expect(
+        isScanVerdictNowCovered({
+          arch,
+          missingSymbols: ['SteamMatchMaking009']
+        })
+      ).toBe(true)
+      expect(isScanVerdictNowCovered({ arch, missingSymbols: [] })).toBe(true)
+    }
+  })
+
+  test('served mode is part of the export-set version', () => {
+    const inputs = {
+      x86ExportedSymbols: SHIM_EXPORTED_SYMBOLS,
+      x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
+      x86ServedVersions: SHIM_SERVED_INTERFACE_VERSIONS,
+      x64ServedVersions: SHIM64_SERVED_INTERFACE_VERSIONS,
+      x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
+    }
+    expect(computeExportSetVersion(inputs)).toBe(SHIM_EXPORT_SET_VERSION)
+    const stubbed = new Map(SHIM64_SERVED_INTERFACE_VERSIONS)
+    stubbed.set('SteamMatchMaking009', {
+      family: 'SteamMatchMaking',
+      mode: 'stub'
+    })
+    expect(
+      computeExportSetVersion({ ...inputs, x64ServedVersions: stubbed })
+    ).not.toBe(SHIM_EXPORT_SET_VERSION)
   })
 })

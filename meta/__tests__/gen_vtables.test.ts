@@ -4959,7 +4959,7 @@ describe('58-12 SteamMatchMaking009 wire', () => {
   const mm = real.find((m) => m.interface === 'SteamMatchMaking009')!
   const method = (name: string) => mm.methods.find((x) => x.name === name)!
   const header = generateDispatchHeader(real)
-  const shim = generateShimC(real, 'x64')
+  const shim = generateShimC(real)
 
   it('wires all 38 methods with a helperFlat', () => {
     expect(mm.methods).toHaveLength(38)
