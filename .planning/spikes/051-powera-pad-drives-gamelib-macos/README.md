@@ -3,7 +3,7 @@ spike: 051
 name: powera-pad-drives-gamelib-macos
 type: standard
 validates: "Given GameLib (tauri dev, WKWebView) on macOS with the PowerA Advantage Wired Controller for Nintendo Switch 2 (20d6:a720) plugged in, when the window is focused and the pad's buttons/sticks are used, then WKWebView's Gamepad API exposes the pad ([GAMEPAD] connect line in gamelib.log) and GameLib's controller navigation responds to it"
-verdict: PARTIAL
+verdict: VALIDATED
 related: []
 tags: [gamepad, macos, wkwebview, powera, controller-mode]
 ---
@@ -88,9 +88,26 @@ Home 12, Capture 13). Nothing has been measured under WKWebView.
     which hid the second stick. Fixed to per-axis throttling, then both sticks recorded.
 
 
+- Live 5 — prototype wired into GameLib (uncommitted app code): `src-tauri/src/macos_native_gamepad.rs`
+  (gilrs reader thread, emits `native_gamepad` on change, shaped like Chromium raw HID: id
+  `"<name> (Vendor: xxxx Product: yyyy)"`, `buttons[usage-1]`, `axes[usage-0x30]` with gilrs's macOS Y
+  reversal undone, hat at axes[9] as `dir*2/7-1`, neutral 3.28571 — unit-tested against the measured
+  values) + `src/preload/api/tauriNativeGamepad.ts` (merges native pads into `navigator.getGamepads()` at
+  slot 8+, dispatches `gamepadconnected`/`gamepaddisconnected`, skips ids WebKit already reports),
+  installed from `tauriAttach.ts` on macOS. `gamepad.ts` / `nintendo.ts` untouched.
+  First boot logged `[GAMEPAD] … mapping="" buttons=3 axes=10`: gilrs state only holds buttons that
+  have produced an event. Padded to 17 (`MIN_BUTTONS`); after restart `[GAMEPAD] id="PowerA Advantage
+  Wired Controller for Nintendo Switch 2 (Vendor: 20d6 Product: a720)" mapping="" buttons=17 axes=10` —
+  byte-identical to the Windows/WebView2 triple from 260925-ms5.
+  User: "yes gamepad is working" — focus moves, A/B act in the library.
+  Observed issue (likely NOT pad-specific): at the lowest visible tile, Down moves focus to the left
+  panel instead of scrolling. Down/focus moves are computed by `tauriGamepadInput.ts` (WKWebView has no
+  spatial navigation); suspect next row not rendered/considered or scroll container not handled.
+  Discriminator not yet run: does the keyboard Down arrow do the same?
+
 ## Results
 
-**PARTIAL.** The question "can the pad drive GameLib on macOS" splits in two:
+**VALIDATED (via the native route).** The question "can the pad drive GameLib on macOS" splits in two:
 
 - **Via the existing path (WKWebView Gamepad API): INVALIDATED.** Neither GameLib nor Safari
   exposes the pad; WebKit on macOS does not surface 20d6:a720 to `navigator.getGamepads()`, even
@@ -99,8 +116,10 @@ Home 12, Capture 13). Nothing has been measured under WKWebView.
   name/VID/PID/SDL GUID and delivers every control (17 buttons, hat, 4 full-range axes). Its default
   button names are wrong for this pad (no SDL mapping), so GameLib must apply its own per-pad map —
   the Windows-measured indices hold exactly (usage = index + 1).
-- **Not yet shown:** GameLib's UI actually responding. That needs the Tauri shell to run gilrs and
-  push state/events to the frontend in place of (or merged with) `navigator.getGamepads()` on macOS.
+- **GameLib driven: VALIDATED.** A gilrs thread in the Tauri shell + a renderer shim that merges native
+  pads into `navigator.getGamepads()` makes controller mode work with this pad, with the existing
+  Nintendo raw-HID layout unchanged (Live 5). Follow-up: Down at the bottom tile jumps to the left panel
+  instead of scrolling (probably `tauriGamepadInput.ts`, not the pad).
 
 Signal for the build: on macOS, GameLib's controller mode needs a native gamepad source (gilrs in
 `src-tauri`) bridged to `frontend/helpers/gamepad.ts`; the browser API alone is not enough for pads
