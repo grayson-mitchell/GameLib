@@ -532,6 +532,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | fast | Dev-vault todo closed by design: the plaintext dev secret vault stays disposable in `os.tmpdir()`. Durable `~` storage would put the Steam refresh token in Time Machine backups, and 261029-s5l plus PC12 already cover a lost token. No code change. | 2026-10-30 | — | Done | — |
 | fast | Library grid tiles centered: `.gameList` `justify-content` start → center, so window-resize slack splits on both sides. Not live-tested. | 2026-10-30 | `ffb623ea2` | Done | — |
 | fast | Focus-row strips centred with the grid: viewport moves in by the grid's slack at both ends, track sizes from that box. Headers stay at the strip start. Not live-tested. | 2026-10-30 | `f6756354e` | Done | — |
+| fast | Focus-row titles pad in by the grid's centring slack, so they start over the first card and ellipsize at the grid end. Not live-tested. | 2026-10-30 | `cad735311` | Done | — |
 
 ## Session Continuity
 
