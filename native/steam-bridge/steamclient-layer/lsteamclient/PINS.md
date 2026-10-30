@@ -36,12 +36,14 @@ and never committed.
 | `unix_steam_input_manual.cpp` | `3f9e3390a9c4b060a367a312d61f84fc3690141ef34811484b3c21481d7583a7` |
 
 - `unixlib.cpp` and `unix_steam_input_manual.cpp` are committed byte-for-byte.
-- GameLib `steamclient_main.c` sha256 (as committed): `b59c4e88e55dd4330d3b9a5b0fc9901391f189550d5b05b01c41ab71b8d989e1`.
+- GameLib `steamclient_main.c` sha256 (as committed): `a748be08e1927a1e2fc33b551f2f8f282ce0dd2ad0fc27b33a67125c44821a78`.
 - Strip rule: deleting every block from a line whose trimmed content is
   `/* GAMELIB-DRM-TRACE BEGIN (Phase 56 D-15/D-16) */` through the line whose trimmed content is
   `/* GAMELIB-DRM-TRACE END */`, marker lines included, reproduces the upstream bytes exactly. There
-  are exactly five blocks (provenance, trace helpers, DllMain hook, steamclient_call hook,
-  CreateInterface hook).
+  are exactly seven blocks (provenance, trace helpers, DllMain hook, steamclient_call hook,
+  CreateInterface hook, BGetCallback hook, GetAPICallResult hook). Blocks 6 and 7 (Phase 58 D-08)
+  write `event=callback id=<n>` only for the closed callback id set {333, 337, 504, 505, 506, 510,
+  513, 1202, 1203, 1221, 1251, 1252, 1281}, plus `resp=` on 504 and `state=` on 1221.
 - Known deviation: upstream `fetch.sh` also copies
   `steamworks_sdk_165x/isteamnetworkingsocketsserialized.h` and applies `serialized005.patch`
   (NotProton commit `1893a3a`, 2026-10-17). It adds `SteamNetworkingSocketsSerialized005`, which none

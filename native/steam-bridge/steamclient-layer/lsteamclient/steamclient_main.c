@@ -254,6 +254,75 @@ static void gamelib_trace_call(const char *name)
     }
     LeaveCriticalSection( &gamelib_trace_cs );
 }
+
+/* Phase 58 D-08: join-signal callbacks the game drains. Only an integer id from a closed set is
+ * written, plus one enum integer for 504 and 1221. No SteamID, handle or other payload byte is
+ * ever formatted. payload/cub are the Windows-side buffer; a size too small to hold the enum
+ * means the value is omitted. */
+static const int32_t gamelib_trace_callback_ids[] =
+{
+    333, 337, 504, 505, 506, 510, 513, 1202, 1203, 1221, 1251, 1252, 1281
+};
+
+static void gamelib_trace_callback(int32_t id, const void *payload, uint32_t cub)
+{
+    char buf[512], key[32];
+    UINT64 hash = 14695981039346656037ULL;
+    BOOL known = FALSE, have_detail = FALSE;
+    int32_t detail = 0;
+    unsigned int i, slot, n;
+    int out, klen;
+
+    if (!gamelib_trace_enabled) return;
+    for (i = 0; i < ARRAY_SIZE(gamelib_trace_callback_ids); i++)
+        if (gamelib_trace_callback_ids[i] == id) known = TRUE;
+    if (!known) return;
+
+    if (id == 504 && payload)
+    {
+        size_t off = offsetof( struct LobbyEnter_t, m_EChatRoomEnterResponse );
+        if (cub >= off + 4) { detail = (int32_t)*(const uint32_t *)((const char *)payload + off); have_detail = TRUE; }
+    }
+    else if (id == 1221 && payload)
+    {
+        size_t off = offsetof( struct w64_SteamNetConnectionStatusChangedCallback_t_153a, m_info.m_eState );
+        if (cub >= off + 4) { detail = (int32_t)*(const uint32_t *)((const char *)payload + off); have_detail = TRUE; }
+    }
+    if (have_detail && (detail < -99 || detail > 999)) have_detail = FALSE;
+
+    klen = snprintf( key, sizeof(key), "cb:%d:%d", id, have_detail ? detail : -1000 );
+    if (klen <= 0 || (size_t)klen >= sizeof(key)) return;
+    for (n = 0; n < (unsigned int)klen; n++) hash = (hash ^ (unsigned char)key[n]) * 1099511628211ULL;
+    if (!hash) hash = 1;
+    if (gamelib_trace_seen( hash )) return;
+
+    EnterCriticalSection( &gamelib_trace_cs );
+    if (!gamelib_trace_seen( hash ) && gamelib_trace_enabled && gamelib_trace_lines < GAMELIB_TRACE_MAX_LINES)
+    {
+        slot = (unsigned int)(hash % GAMELIB_TRACE_SLOTS);
+        for (n = 0; n < GAMELIB_TRACE_SLOTS; n++)
+        {
+            unsigned int s = (slot + n) % GAMELIB_TRACE_SLOTS;
+            if (!gamelib_trace_hashes[s])
+            {
+                gamelib_trace_hashes[s] = hash;
+                LeaveCriticalSection( &gamelib_trace_cs );
+                if (have_detail && id == 504)
+                    out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=callback id=%d resp=%d\n",
+                                    gamelib_trace_appid, (unsigned long)GetCurrentProcessId(), gamelib_trace_role, id, detail );
+                else if (have_detail && id == 1221)
+                    out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=callback id=%d state=%d\n",
+                                    gamelib_trace_appid, (unsigned long)GetCurrentProcessId(), gamelib_trace_role, id, detail );
+                else
+                    out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=callback id=%d\n",
+                                    gamelib_trace_appid, (unsigned long)GetCurrentProcessId(), gamelib_trace_role, id );
+                if (out > 0 && (size_t)out < sizeof(buf)) gamelib_trace_write( buf, out );
+                return;
+            }
+        }
+    }
+    LeaveCriticalSection( &gamelib_trace_cs );
+}
 /* GAMELIB-DRM-TRACE END */
 
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
@@ -743,6 +812,10 @@ next_event:
     if (!(win_msg->m_pubParam = HeapAlloc( GetProcessHeap(), 0, win_msg->m_cubParam ))) return FALSE;
     last_callback_data = win_msg->m_pubParam;
     STEAMCLIENT_CALL( steamclient_callback_message_receive, &receive_params );
+    /* GAMELIB-DRM-TRACE BEGIN (Phase 56 D-15/D-16) */
+    /* Phase 58 D-08: the game drained a broadcast callback; log its id if in the closed set. */
+    gamelib_trace_callback( win_msg->m_iCallback, win_msg->m_pubParam, win_msg->m_cubParam );
+    /* GAMELIB-DRM-TRACE END */
 
     if (win_msg->m_iCallback == 0x14b) /* GameOverlayActivated_t::k_iCallback */
     {
@@ -789,6 +862,10 @@ int8_t CDECL Steam_GetAPICallResult( int32_t pipe, uint64_t call, void *w_callba
 
     if (!load_steamclient()) return FALSE;
     STEAMCLIENT_CALL( steamclient_Steam_GetAPICallResult, &params );
+    /* GAMELIB-DRM-TRACE BEGIN (Phase 56 D-15/D-16) */
+    /* Phase 58 D-08: a call result the game fetched; log the expected callback id only on success. */
+    if (params._ret) gamelib_trace_callback( id, w_callback, (uint32_t)w_callback_len );
+    /* GAMELIB-DRM-TRACE END */
     return params._ret;
 }
 

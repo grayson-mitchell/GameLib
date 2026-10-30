@@ -89,6 +89,10 @@ describe('stripGameLibTraceBlocks', () => {
       LSTEAMCLIENT_PINS.overlay['steamclient_main.c']
     )
   })
+  it('holds exactly seven trace blocks', () => {
+    const text = readFileSync(join(OVERLAY, 'steamclient_main.c'), 'utf8')
+    expect(text.split('\n').filter((l) => l.trim() === B)).toHaveLength(7)
+  })
   it('removes a balanced block', () => {
     expect(stripGameLibTraceBlocks(`a\n  ${B}\nx\n  ${E}\nb\n`)).toBe('a\nb\n')
   })
