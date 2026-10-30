@@ -859,9 +859,25 @@ describe('FocusRowStrip/index.css -- track end clip is the grid whole-column ext
     .replace(/\s+/g, ' ')
     .replace(/\( /g, '(')
 
-  it('declares an inline-size built from round(down, ...)', () => {
-    expect(inlineSize).toContain('round(down,')
-    expect(inlineSize).toContain('var(--focus-row-card-width, 156px)')
+  // The viewport's centring margins (the second, round()-based pair) carry the
+  // grid's whole-column extent; the track only adds its padding to that box.
+  const centring = (prop: string) =>
+    [...viewport.matchAll(new RegExp(`(?:^|[\\s;])${prop}:\\s*([^;]+);`, 'g'))]
+      .map((m) => m[1].replace(/\s+/g, ' ').replace(/\( /g, '('))
+      .find((v) => v.includes('round(down,')) ?? ''
+
+  it('declares an inline-size of the viewport box plus 15px, floored at one card', () => {
+    expect(inlineSize).toBe(
+      'max(calc(var(--focus-row-card-width, 156px) + 30px), calc(100% + 15px) )'
+    )
+  })
+
+  it('the viewport centring margins derive the grid column count from round(down, ...) at the library tile width', () => {
+    for (const prop of ['margin-inline-start', 'margin-inline-end']) {
+      const value = centring(prop)
+      expect(value).toContain('round(down,')
+      expect(value).toContain('var(--library-tile-css-width, 156px)')
+    }
   })
 
   it('its gap text is the list gap and the grid grid-gap, read from the parsed files', () => {
@@ -869,7 +885,8 @@ describe('FocusRowStrip/index.css -- track end clip is the grid whole-column ext
     const gridGap = grid.match(/grid-gap:\s*([^;]+);/)?.[1]?.trim()
     expect(listGap).toBeDefined()
     expect(listGap).toBe(gridGap)
-    expect(inlineSize).toContain(listGap as string)
+    expect(centring('margin-inline-start')).toContain(listGap as string)
+    expect(centring('margin-inline-end')).toContain(listGap as string)
   })
 
   it('its 15px bleed is the list padding-inline and the viewport start bleed', () => {
@@ -879,7 +896,30 @@ describe('FocusRowStrip/index.css -- track end clip is the grid whole-column ext
       ?.trim()
     expect(pad).toBe('15px')
     expect(bleed).toBe(pad)
-    expect(inlineSize).toContain(`100% - ${pad}`)
+    expect(inlineSize).toContain(`100% + ${pad}`)
+    expect(centring('margin-inline-start')).toMatch(
+      new RegExp(`\\) - ${pad} \\)$`)
+    )
+  })
+
+  it('centring: the first strip card sits on the centred grid column 1 and the track clips at the grid end', () => {
+    const GAP = 24
+    for (const w of [140, 156, 188, 320]) {
+      const pitch = w + GAP
+      for (let C = w; C <= 2400; C++) {
+        const n = Math.floor((C + GAP) / pitch)
+        const G = Math.max(w, n * pitch - GAP)
+        const gridStart = Math.max(0, (C - G) / 2)
+        const L = Math.max(0, (C - G) / 2)
+        const viewportStart = L - 15
+        const viewportWidth = C - viewportStart - L
+        const track = Math.max(w + 30, viewportWidth + 15)
+        // list padding puts card 1 15px into the track
+        expect(viewportStart + 15).toBeCloseTo(gridStart, 6)
+        // track = n columns plus 15px ring room each side
+        expect(track).toBeCloseTo(G + 30, 6)
+      }
+    }
   })
 
   describe('arithmetic sweep (real pageScrollDelta / canScrollForward)', () => {
