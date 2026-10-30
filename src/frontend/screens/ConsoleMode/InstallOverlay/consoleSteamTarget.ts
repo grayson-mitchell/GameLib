@@ -30,7 +30,8 @@ type ConsoleSteamVerdict =
 
 /**
  * Sequence: fetch `listSteamLibraryTargets()` (fail-open to `[]` on
- * rejection — native install OFF returns `[]` server-side too, so an empty
+ * rejection — native install OFF returns `[]` server-side too for a mac-native
+ * title (a bottle-routed title always gets targets), so an empty
  * list ALSO means "GameLib controls no local target", the delegated
  * `steam://install` path D-24 structurally cannot fire on); if empty, `ok`
  * with no `checkDiskSpace` call at all (a check with no subject). Otherwise
@@ -44,10 +45,12 @@ type ConsoleSteamVerdict =
  * not a failed one) — Console Mode is a couch surface with no keyboard, so a
  * misbehaving probe must never be able to wedge its only install path.
  */
-export async function probeSteamQuickInstallTarget(): Promise<ConsoleSteamVerdict> {
+export async function probeSteamQuickInstallTarget(
+  appName?: string
+): Promise<ConsoleSteamVerdict> {
   let libraries: SteamInstallLibraryTarget[] = []
   try {
-    libraries = await window.api.listSteamLibraryTargets()
+    libraries = await window.api.listSteamLibraryTargets(appName)
   } catch {
     libraries = []
   }

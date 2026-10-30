@@ -226,6 +226,13 @@ describe('probeSteamQuickInstallTarget (D-29 inheriting D-24)', () => {
     expect(checkDiskSpace).not.toHaveBeenCalled()
   })
 
+  it('A1b (quick 261030-o77): the appName is forwarded to listSteamLibraryTargets', async () => {
+    const listSteamLibraryTargets = jest.fn().mockResolvedValue([])
+    stubWindowApi({ listSteamLibraryTargets })
+    await probeSteamQuickInstallTarget('570')
+    expect(listSteamLibraryTargets).toHaveBeenCalledWith('570')
+  })
+
   it('A2: 1 valid library -> ok', async () => {
     stubWindowApi({
       listSteamLibraryTargets: jest.fn().mockResolvedValue(makeTargets(1)),

@@ -37,9 +37,10 @@
  *   - `checkGameUpdates` -> the shared `checkGameUpdates` function
  *     (`backend/utils/checkGameUpdates.ts`) reused UNCHANGED, all runners
  *     (D-12, follows D-05b).
- *   - `listSteamLibraryTargets` -> mirrors Electron's own gate
- *     (`main.ts`'s `isSteamNativeInstallEnabled() ? listSteamLibraryTargets()
- *     : []`) exactly. This is the ACTUAL minimum read-gate the install
+ *   - `listSteamLibraryTargets` -> `isSteamNativeInstallEnabled() ||
+ *     bottle-eligible(appName) ? listSteamLibraryTargets() : []` (quick
+ *     261030-o77: the toggle only scopes mac-native titles; a bottle-routed
+ *     title always uses GameLib's depot installer). This is the ACTUAL minimum read-gate the install
  *     button depends on (30-RESEARCH Q6) — NOT any of `DownloadDialog`'s six
  *     channels, which never mount for `runner === 'steam'`. 34.13-08
  *     retired the auto-open trigger model this paragraph originally
@@ -127,6 +128,7 @@ import { uninstallGameCallback } from '../utils/uninstaller'
 import { checkGameUpdates } from '../utils/checkGameUpdates'
 import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
 import { isSteamNativeInstallEnabled } from '../storeManagers/steam/nativeInstallSetting'
+import { getSteamBottleEligibilityVerdict } from '../storeManagers/steam/installFormIpc'
 import { addToQueue } from '../downloadmanager/downloadqueue'
 import { resolveGameTitle } from '../downloadmanager/utils'
 // Plan 34.6-06 (REQ-34.6-04): byte-equivalent port of moveInstall/importGame
@@ -264,8 +266,25 @@ export function registerInstallFlows(): void {
 
   ipcMain.handle('checkGameUpdates', checkGameUpdates)
 
-  ipcMain.handle('listSteamLibraryTargets', async () =>
-    isSteamNativeInstallEnabled() ? listSteamLibraryTargets() : []
+  // quick 261030-o77: the enableSteamNativeInstall toggle only governs
+  // mac-native titles (depot installer vs steam://install). A bottle-routed
+  // title always uses GameLib's depot installer, so it gets library targets
+  // regardless of the toggle. The renderer passes the optional appName; the
+  // verdict is backend-authoritative. An empty list stays the frontend's one
+  // OFF signal (T-o77-01: shape-check the renderer value, fail to []).
+  ipcMain.handle(
+    'listSteamLibraryTargets',
+    async (_event: unknown, ...args: unknown[]) => {
+      if (isSteamNativeInstallEnabled()) return listSteamLibraryTargets()
+      const appName = args[0]
+      if (typeof appName !== 'string' || !/^\d+$/.test(appName)) return []
+      try {
+        const verdict = await getSteamBottleEligibilityVerdict(appName)
+        return verdict.eligible ? listSteamLibraryTargets() : []
+      } catch {
+        return []
+      }
+    }
   )
 
   // T-34.5-C6-49-03 (Tampering, mitigate — RE-DISPOSITIONED, gap plan 34.6-18,

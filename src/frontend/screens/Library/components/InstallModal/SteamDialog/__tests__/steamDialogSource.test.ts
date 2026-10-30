@@ -1142,7 +1142,9 @@ describe('261029-s5l sign-in gate', () => {
     expect(stripped).toContain(
       'disabled={eligibilityPending || submitting || signInRequired}'
     )
-    expect(stripped).toMatch(/const signInRequired =\s*nativeInstallOn &&/)
+    expect(stripped).toMatch(
+      /const signInRequired =\s*\(nativeInstallOn \|\| gating\.wineSection\) &&/
+    )
   })
 })
 

@@ -1,7 +1,8 @@
 /**
  * D-13 opt-in setting — the single backend read seam for whether GameLib is
- * allowed to depot-download Steam games in-process instead of delegating to
- * `steam://install`. Reads the same `enableSteamNativeInstall` GlobalConfig
+ * allowed to depot-download MAC-NATIVE Steam games in-process instead of
+ * delegating to `steam://install`. Bottle-routed (non-native) titles always
+ * use GameLib's depot installer regardless of this setting (quick 261030-o77). Reads the same `enableSteamNativeInstall` GlobalConfig
  * key the frontend toggle (EnableSteamNativeInstall.tsx) writes via
  * `useSetting`. Defaults to ON when unset (quick 261024-exo); an explicit
  * persisted false is respected, and the `steam://install` path remains the

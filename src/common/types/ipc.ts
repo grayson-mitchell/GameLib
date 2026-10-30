@@ -308,11 +308,13 @@ interface AsyncIPCFunctions {
   getSteamInstallSize: (appId: string) => Promise<string>
   // Phase 21 (21-09), D-09: registered Steam libraries for the multi-library
   // install-location override picker (D-08 — registered folders only, never
-  // an arbitrary filesystem browse). Gated server-side on the D-13 opt-in
-  // (see main.ts) — returns [] when native install is OFF.
-  listSteamLibraryTargets: () => Promise<
-    { path: string; steamappsDir: string; isPrimary: boolean }[]
-  >
+  // an arbitrary filesystem browse). Gated server-side on the D-13 opt-in —
+  // returns [] when native install is OFF, EXCEPT for a bottle-routed title:
+  // pass its `appName` and the backend answers with targets regardless of the
+  // toggle (quick 261030-o77: the toggle only scopes mac-native titles).
+  listSteamLibraryTargets: (
+    appName?: string
+  ) => Promise<{ path: string; steamappsDir: string; isPrimary: boolean }[]>
   // Phase 17 (17-04): provisions the dedicated Steam CrossOver bottle
   // (create via the locked cxbottle mechanism, fetch + non-silently run
   // SteamSetup.exe, D-02). Bottled-Steam auth stays opaque (D-04) — this

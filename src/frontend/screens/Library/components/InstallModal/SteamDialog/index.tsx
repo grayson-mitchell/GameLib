@@ -213,8 +213,11 @@ export default function SteamDialog({
   const navigate = useNavigate()
   // Quick 261029-s5l (todo 2026-10-29): GameLib-native installs need GameLib's
   // own Steam token. Delegated installs (native OFF) never do, so never gate.
+  // quick 261030-o77: a bottle-routed install (wine section shown, including a
+  // mac-native title forced to Windows via bottle) ALWAYS uses GameLib's depot
+  // installer, so it needs the token even when the toggle's library list is [].
   const signInRequired =
-    nativeInstallOn &&
+    (nativeInstallOn || gating.wineSection) &&
     steamInstallNeedsSignIn(
       resolveSteamInstallSignInState(steam?.username, signInProbeOutcomes)
     )

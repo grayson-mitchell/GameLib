@@ -326,6 +326,16 @@ describe('Group S: sign-in gate', () => {
     expect(installMock).toHaveBeenCalledTimes(1)
   })
 
+  it('G4: quick install passes appName to listSteamLibraryTargets, so a bottle-routed title (toggle OFF) reaches the sign-in gate', async () => {
+    armSteamStore(latched)
+    listSteamLibraryTargetsMock.mockResolvedValue(makeTargets(1))
+    await startSteamQuickInstall('570', makeGameInfo())
+
+    expect(listSteamLibraryTargetsMock).toHaveBeenCalledWith('570')
+    expect(installMock).not.toHaveBeenCalled()
+    expect(useInstallGameModal.getState().isOpen).toBe(true)
+  })
+
   it('G3: native path, flag unset -> installs as before', async () => {
     armSteamStore({ userData: { username: 'tester' } })
     listSteamLibraryTargetsMock.mockResolvedValue(makeTargets(1))

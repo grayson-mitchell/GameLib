@@ -33,7 +33,7 @@ const EnableSteamNativeInstall = () => {
       <InfoIcon
         text={t(
           'help.steam_native_install',
-          'Downloads Steam games in GameLib with real progress and cancel. When off, Steam handles installs. Newer path — Steam still verifies and owns updates.'
+          'Downloads Steam games in GameLib with real progress and cancel. When off, Steam installs games that have a Mac version. Games without one always download in GameLib.'
         )}
       />
     </div>

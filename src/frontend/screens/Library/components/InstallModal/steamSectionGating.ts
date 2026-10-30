@@ -104,9 +104,9 @@ export interface SteamSectionGatingInput {
   nativeInstallOn: boolean
   /**
    * `listSteamLibraryTargets()`'s result length. Already gate-adjusted to
-   * `0` by both IPC handler wrappers (`main.ts:913-914`,
-   * `installFlowRegistration.ts:189-190`) when `nativeInstallOn` is
-   * `false`, so `nativeInstallOn && libraryCount > 1` is *today* redundant
+   * `0` by the IPC handler (`installFlowRegistration.ts`) when native install
+   * is OFF for a mac-native title (a bottle-routed title always gets targets,
+   * quick 261030-o77), so `nativeInstallOn && libraryCount > 1` is *today* redundant
    * with `libraryCount > 1` alone -- kept as an independent input anyway
    * per `34.13-RESEARCH.md` Q5's own recommendation, so a future relocation
    * of that backend gate cannot silently sprout a library dropdown.
@@ -190,9 +190,9 @@ export function resolveSteamSectionGating(
   const effectiveBottleRequired = isMac && input.bottleRequired
 
   // Step 3: whether a real library choice exists. Both conjuncts are kept
-  // even though the backend IPC gate (`main.ts:913-914`,
-  // `installFlowRegistration.ts:189-190`) already zeroes the list when
-  // native install is OFF, making `nativeInstallOn` redundant with
+  // even though the backend IPC gate (`installFlowRegistration.ts`) already
+  // zeroes the list when native install is OFF for a mac-native title (quick
+  // 261030-o77), making `nativeInstallOn` redundant with
   // `libraryCount > 1` alone today -- 34.13-RESEARCH.md Q5's own
   // recommendation, so a future relocation of that backend gate cannot
   // silently sprout a library dropdown here.

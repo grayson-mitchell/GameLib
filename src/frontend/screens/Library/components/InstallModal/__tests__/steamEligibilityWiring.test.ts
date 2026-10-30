@@ -290,7 +290,7 @@ describe('Group B: the loading row is mounted, in the right slot, behind the rig
     // The rejection handler must reach 'failed'. Bounded to the `.catch(`
     // that follows the fetch, so a `'failed'` written anywhere else in the
     // file cannot satisfy this.
-    const fetchIdx = flat.indexOf('.listSteamLibraryTargets()')
+    const fetchIdx = flat.indexOf('.listSteamLibraryTargets(appName)')
     expect(fetchIdx).toBeGreaterThan(-1)
     const catchIdx = flat.indexOf('.catch(', fetchIdx)
     expect(catchIdx).toBeGreaterThan(fetchIdx)
@@ -324,7 +324,7 @@ describe('Group B: the loading row is mounted, in the right slot, behind the rig
     const flat = rejectToPending.replace(/\s+/g, ' ')
     const catchIdx = flat.indexOf(
       '.catch(',
-      flat.indexOf('.listSteamLibraryTargets()')
+      flat.indexOf('.listSteamLibraryTargets(appName)')
     )
     expect(flat.slice(catchIdx, catchIdx + 400)).not.toContain(
       "setLibraryFetch({ phase: 'failed' })"

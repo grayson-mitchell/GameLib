@@ -231,8 +231,10 @@ export function evaluateQuickInstallTarget(
  *
  * Both awaits below are individually guarded — a rejected
  * `listSteamLibraryTargets` yields an empty list (server-gated on
- * `isSteamNativeInstallEnabled()`, so an empty list ALSO means "GameLib
- * controls no local target" — the delegated `steam://install` shape, and
+ * `isSteamNativeInstallEnabled()` for mac-native titles only, so an empty list
+ * ALSO means "GameLib controls no local target" — the delegated
+ * `steam://install` shape; a bottle-routed title always gets targets (quick
+ * 261030-o77), so it reaches the sign-in pre-check below — and
  * D-24 structurally cannot fire there, UI-SPEC §"D-24 Degrade-into-Options
  * Contract", "When this applies"); a rejected `checkDiskSpace` yields
  * `undefined`, which `evaluateQuickInstallTarget` treats as fail-open. So
@@ -245,15 +247,15 @@ export const startSteamQuickInstall = async (
 ) => {
   let libraries: SteamInstallLibraryTarget[] = []
   try {
-    libraries = await window.api.listSteamLibraryTargets()
+    libraries = await window.api.listSteamLibraryTargets(appName)
   } catch {
     libraries = []
   }
 
   const target = resolveQuickInstallTarget(libraries)
   if (!target) {
-    // 0 libraries: either native install is OFF, or the backend has nothing
-    // registered. Either way GameLib controls no local target — delegate to
+    // 0 libraries: either native install is OFF for a mac-native title, or the
+    // backend has nothing registered. Either way GameLib controls no local target — delegate to
     // steam://install with no path, exactly like today's zero-friction path.
     installSteamGame(appName, gameInfo).catch(
       logSteamInstallDispatchFailure(appName)

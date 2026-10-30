@@ -124,7 +124,7 @@ export default function InstallOverlay({
     if (game.runner !== 'steam') return
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
-    void probeSteamQuickInstallTarget().then((verdict) => {
+    void probeSteamQuickInstallTarget(game.app_name).then((verdict) => {
       if (cancelled) return
       if (!verdict.ok) {
         setSteamBlocked(verdict.degrade)

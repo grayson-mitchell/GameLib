@@ -152,6 +152,14 @@ jest.mock('backend/config', () => ({
   }
 }))
 
+// ── installFormIpc — quick 261030-o77: the toggle-OFF listSteamLibraryTargets
+// path asks the backend-authoritative bottle-eligibility verdict. Only that one
+// export is controllable; everything else stays real. ────────────────────────
+jest.mock('../../storeManagers/steam/installFormIpc', () => ({
+  ...jest.requireActual('../../storeManagers/steam/installFormIpc'),
+  getSteamBottleEligibilityVerdict: jest.fn()
+}))
+
 // ── SteamGame — the deepest boundary this plan's install/uninstall/updateGame
 // channels touch. Mocked so a real `install` invoke never reaches the real
 // depot-download orchestrator, PICS, or the filesystem. Mock fns are exposed
@@ -216,6 +224,7 @@ import { startSidecar, writeInvoke } from './helpers/sidecarHarness'
 import i18next from 'i18next'
 import { getSteamLibraries, writeConfig } from 'backend/utils'
 import { GlobalConfig } from 'backend/config'
+import { getSteamBottleEligibilityVerdict } from '../../storeManagers/steam/installFormIpc'
 import { libraryManagerMap } from 'backend/storeManagers'
 import SteamGame from '../../storeManagers/steam/games'
 import { handlerRegistry, listenerRegistry } from '../../platform'
@@ -357,6 +366,74 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
         isPrimary: true
       }
     ])
+  })
+
+  describe('quick 261030-o77: listSteamLibraryTargets with the toggle OFF', () => {
+    const invokeTargets = async (args: unknown[]) => {
+      jest.mocked(getSteamLibraries).mockResolvedValue(['/fake/steam/library'])
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'targets-o77', 'listSteamLibraryTargets', args)
+      await flush()
+      return (
+        frames.find((frame) => frame.id === 'targets-o77') as
+          | { ok: boolean; result: unknown[] }
+          | undefined
+      )?.result
+    }
+
+    beforeEach(() => {
+      mockSettings({ enableSteamNativeInstall: false, autoUpdateGames: false })
+      jest.mocked(getSteamBottleEligibilityVerdict).mockReset()
+    })
+
+    it('a bottle-eligible appName gets the library targets', async () => {
+      jest
+        .mocked(getSteamBottleEligibilityVerdict)
+        .mockResolvedValue({ eligible: true } as never)
+      const result = await invokeTargets(['570'])
+      expect(getSteamBottleEligibilityVerdict).toHaveBeenCalledWith('570')
+      expect(result).toEqual([
+        {
+          path: '/fake/steam/library',
+          steamappsDir: '/fake/steam/library/steamapps',
+          isPrimary: true
+        }
+      ])
+    })
+
+    it('a mac-native (not bottle-eligible) appName gets []', async () => {
+      jest
+        .mocked(getSteamBottleEligibilityVerdict)
+        .mockResolvedValue({ eligible: false } as never)
+      expect(await invokeTargets(['570'])).toEqual([])
+    })
+
+    it('no appName gets [] without asking the verdict', async () => {
+      expect(await invokeTargets([])).toEqual([])
+      expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
+    })
+
+    it.each([[123], [''], ['12; rm -rf /'], ['abc'], [null]])(
+      'a malformed appName (%p) gets [] without asking the verdict',
+      async (bad) => {
+        expect(await invokeTargets([bad])).toEqual([])
+        expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
+      }
+    )
+
+    it('a throwing verdict fails to []', async () => {
+      jest
+        .mocked(getSteamBottleEligibilityVerdict)
+        .mockRejectedValue(new Error('boom'))
+      expect(await invokeTargets(['570'])).toEqual([])
+    })
+
+    it('toggle ON still returns targets for any appName without asking the verdict', async () => {
+      mockSettings({ enableSteamNativeInstall: true, autoUpdateGames: false })
+      const result = await invokeTargets(['570'])
+      expect(result).toHaveLength(1)
+      expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
+    })
   })
 
   // REMOVED (Phase 32 Plan 02, D-01): this suite used to cover Test 2/3,

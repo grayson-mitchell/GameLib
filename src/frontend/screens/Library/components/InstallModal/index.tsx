@@ -375,16 +375,17 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
     // in flight.
     setLibraryFetch({ phase: 'pending' })
     window.api
-      .listSteamLibraryTargets()
+      .listSteamLibraryTargets(appName)
       .then((libraries) => {
         if (cancelled) return
         setLibraryFetch({ phase: 'ok', targets: libraries })
       })
       .catch(() => {
         if (cancelled) return
-        // A resolved `[]` is the ordinary "native install OFF" signal
-        // (both IPC handlers are server-gated on
-        // `isSteamNativeInstallEnabled()`) and must NOT be logged as an
+        // A resolved `[]` is the ordinary "native install OFF" signal for a
+        // mac-native title (the handler is server-gated on
+        // `isSteamNativeInstallEnabled()`; a bottle-routed title always gets
+        // targets, quick 261030-o77) and must NOT be logged as an
         // error -- only a genuine REJECTION is logged, so the anomaly is
         // diagnosable rather than silent.
         window.api.logError(
@@ -412,9 +413,10 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // (`initialEligibilityState`), not re-derived here.
   // Hoisted (34.13 review WR-04) so the resolver input and `SteamDialog`'s
   // content-light copy selection read ONE expression, not two copies of it.
-  // Both IPC handlers are server-gated on `isSteamNativeInstallEnabled()`
-  // and return `[]` when native install is OFF, so a non-empty list IS the
-  // ON signal -- RESEARCH.md Pitfall 4 forbids a second settings read.
+  // The handler is server-gated on `isSteamNativeInstallEnabled()` for
+  // mac-native titles only (a bottle-routed title always gets targets, quick
+  // 261030-o77), so a non-empty list IS the "GameLib installs this" signal --
+  // RESEARCH.md Pitfall 4 forbids a second settings read.
   // (34.13 review B-WR-02: reads the derived list, so an UNSETTLED fetch is
   // `false` here exactly as an empty settled one is -- the difference is
   // carried by `steamLibrariesSettled` and consumed only by
@@ -440,8 +442,8 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
         // Group E (34.14) E3 gate exists to catch.
         hasWindowsDepot: windowsDepotOffered,
         bottleRequired: eligibility.bottleRequired,
-        // Both IPC handlers are already gated on
-        // `isSteamNativeInstallEnabled()` and return `[]` when native
+        // The handler is gated on `isSteamNativeInstallEnabled()` for
+        // mac-native titles only and returns `[]` there when native
         // install is OFF, so the empty array IS the OFF signal --
         // RESEARCH.md Pitfall 4 forbids a second settings read to detect
         // it, and 34.13-05's matrix renders OFF and ON-with-<=1-library
