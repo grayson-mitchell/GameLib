@@ -1460,12 +1460,10 @@ describe('58-03 multiplayer baseline served tables', () => {
     'SteamNetworkingUtils004',
     'SteamNetworkingMessages002'
   ]
-  test('the four new versions are served on x64 (Utils004 wired by 58-14, Sockets013 by 58-15, the rest stubs) and never on x86', () => {
+  test('the four new versions are served on x64 (Utils004 wired by 58-14, Sockets013 by 58-15, Messages002 by 58-16, MatchMakingServers003 a stub) and never on x86', () => {
     for (const k of NEW_KEYS) {
       expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(k)?.mode).toBe(
-        k === 'SteamNetworkingUtils004' || k === 'SteamNetworkingSockets013'
-          ? 'wire'
-          : 'stub'
+        k === 'SteamMatchMakingServers003' ? 'stub' : 'wire'
       )
       expect(SHIM_SERVED_INTERFACE_VERSIONS.has(k)).toBe(false)
     }

@@ -292,9 +292,11 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   // answered shim-side from the identity, message-pool and config-store
   // block); SetDebugOutputFunction is stored locally and never forwarded.
   ['SteamNetworkingUtils004', { family: 'SteamNetworkingUtils', mode: 'wire' }],
+  // D-07 / 58-16: all six virtuals are wired; ReceiveMessagesOnChannel shares
+  // the 58-15 out-messages kind and carry queue.
   [
     'SteamNetworkingMessages002',
-    { family: 'SteamNetworkingMessages', mode: 'stub' }
+    { family: 'SteamNetworkingMessages', mode: 'wire' }
   ],
   [
     'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
