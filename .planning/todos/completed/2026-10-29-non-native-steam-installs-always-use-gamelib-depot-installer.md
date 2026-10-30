@@ -6,6 +6,7 @@ severity: medium
 platform: macos
 ready: live-gate
 found_by: "operator request 2026-10-29"
+status: "RESOLVED 2026-10-30 by quick 261030-o77 (cb97d3d45, 43384ffa7, 9f12d0a5c). Both live gates passed: WazHack forced-Windows and Fallout 2 installed and launched through the bottle with no finish handoff."
 files:
   - src/backend/storeManagers/steam/games.ts
   - src/backend/storeManagers/steam/nativeInstallSetting.ts
@@ -160,3 +161,15 @@ Two live gates are still open, which is why this todo stays `ready: live-gate`:
    without its own verify or adoption. If it doesn't, file a launch todo.
 
 Close this todo when both pass.
+
+## Resolved (2026-10-30, operator live test)
+
+Both live gates passed on the operator's Mac:
+
+1. **WazHack (264160), forced to Windows via the bottle:** reached installed with no "Start Steam to
+   finish" button.
+2. **Launch through bottled Steam:** it launched. The first open took a very long time, but it
+   passed.
+3. **Fallout 2, a Windows-only title:** installed and launched.
+
+Open observation, not filed: the slow first launch of WazHack in the bottle.
