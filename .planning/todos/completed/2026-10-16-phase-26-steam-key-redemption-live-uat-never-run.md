@@ -8,6 +8,7 @@ files:
 severity: medium
 platform: any
 ready: human
+status: "RESOLVED 2026-10-30: all 5 live UAT items passed (26-HUMAN-UAT.md). Side finding fixed by quick 261030-sqq (d0a66c8ef)."
 resolves_phase: null
 parked: 2026-10-16
 parked_by: operator
