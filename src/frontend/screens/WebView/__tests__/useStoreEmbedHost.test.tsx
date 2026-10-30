@@ -1709,7 +1709,10 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(mockApi.storeEmbedNavigate).not.toHaveBeenCalled()
   })
 
-  it('39. darwin: a switch between two Tauri-embed stores (gog -> steam) still navigates, no re-open', () => {
+  // Quick 261030-ts4 reversed this test's old expectation (a same-surface switch navigated): Rust
+  // drops the shared embed's Back history only in `store_embed_open`, so a navigate here left
+  // Back on GOG walking into Amazon's pages (live 2026-10-30).
+  it('39. darwin: a switch between two Tauri-embed stores (gog -> steam) re-opens with the new storeKey, never navigates', () => {
     const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
     const gog: MountOptions = {
       slotRef: ref,
@@ -1722,9 +1725,32 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     jest.advanceTimersByTime(40)
     reinvoke({ ...gog, startUrl: STEAM_URL, storeKey: 'steam' })
 
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(2)
+    expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
+      STEAM_URL,
+      { x: 0, y: 0, w: 100, h: 100 },
+      'steam'
+    )
+    expect(mockApi.storeEmbedNavigate).not.toHaveBeenCalled()
+  })
+
+  it('39b. a start-URL change within the same store still navigates, no re-open', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const gog: MountOptions = {
+      slotRef: ref,
+      startUrl: GOG_URL,
+      storeKey: 'gog',
+      platform: 'darwin'
+    }
+
+    mount(gog)
+    jest.advanceTimersByTime(40)
+    reinvoke({ ...gog, startUrl: 'https://www.gog.com/en/' })
+
     expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
-    expect(mockApi.storeEmbedNavigate).toHaveBeenCalledTimes(1)
-    expect(mockApi.storeEmbedNavigate).toHaveBeenCalledWith(STEAM_URL)
+    expect(mockApi.storeEmbedNavigate).toHaveBeenCalledWith(
+      'https://www.gog.com/en/'
+    )
   })
 
   it('40. darwin: after a surface-switch re-open, later bounds still flow through the same observer', () => {

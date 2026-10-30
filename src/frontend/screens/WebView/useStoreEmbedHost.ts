@@ -445,6 +445,10 @@ export function useStoreEmbedHost({
   // open/bounds effect below (which owns the slot element and the throttle state), null while no
   // slot is attached.
   const openedSurfaceRef = useRef<StoreEmbedSurface | null>(null)
+  // Quick 261030-ts4: the storeKey the last `storeEmbedOpen` carried. Any store switch, not only
+  // a surface-crossing one, re-opens, because Rust drops the shared embed's Back history only in
+  // `store_embed_open` (on a storeKey change); a navigate kept it, so Back on GOG went to Amazon.
+  const openedStoreKeyRef = useRef<string | null>(null)
   const reopenRef = useRef<(() => void) | null>(null)
   // The open branch in `flush()` reads the CURRENT render's values, not the ones captured when
   // the slot attached: since finding 1 it can also run later, from a store switch, while the
@@ -486,6 +490,7 @@ export function useStoreEmbedHost({
           openArgsRef.current
         openedRef.current = true
         openedSurfaceRef.current = embedSurfaceFor(storeKey, platform)
+        openedStoreKeyRef.current = storeKey
         // CR-02: seed here so a slot that arrives AFTER a start-url change (e.g. cold start on
         // `/store/epic`, then navigate to `/store/gog` before the slot ever attached) opens
         // directly at the then-current `startUrl` and is not ALSO immediately re-navigated to
@@ -724,8 +729,20 @@ export function useStoreEmbedHost({
     // currently selected, so a navigate here loaded Epic into the Tauri webview (Turnstile-
     // challenged every time, spike 024) or GOG into the raw Epic view, and never deselected
     // either. Only `store_embed_open` routes by storeKey, hides the other surface and shows the
-    // target. A same-surface switch (gog -> steam) still navigates, below.
-    if (openedSurfaceRef.current !== embedSurfaceFor(storeKey, platform)) {
+    // target. Quick 261030-ts4 widens this to a plain same-surface switch between configured
+    // stores (gog -> steam), so Rust starts the new store on a fresh Back history
+    // (`openedStoreKeyRef`). Not on a return from a refused target or while suppressed: an open
+    // SHOWS the embed, and those two paths own visibility below (properties 15/16). The wiki
+    // (no configured store) and a start-URL change within one store still navigate.
+    const storeSwitch =
+      resolvedTarget !== null &&
+      !refusedTargetRef.current &&
+      !suppressed &&
+      openedStoreKeyRef.current !== storeKey
+    if (
+      openedSurfaceRef.current !== embedSurfaceFor(storeKey, platform) ||
+      storeSwitch
+    ) {
       refusedTargetRef.current = false
       const reopen = reopenRef.current
       if (reopen) {
