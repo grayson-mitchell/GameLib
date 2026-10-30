@@ -23,10 +23,8 @@ import EpicLauncherBlockedNotice from './components/EpicLauncherBlockedNotice'
 import { useTauriOAuthLogin } from './useTauriOAuthLogin'
 import type { OAuthLoginCompletionPayload } from './useTauriOAuthLogin'
 import { useStoreEmbedHost } from './useStoreEmbedHost'
-import {
-  runSteamStoreExitRefresh,
-  STEAM_STORE_EXIT_REFRESH_ORIGIN
-} from './storeExitRefresh'
+import { runStoreExitRefresh, STORE_EXIT_ROWS } from './storeExitRefresh'
+import type { StoreExitStoreKey } from './storeExitRefresh'
 import type { OAuthRunner } from 'common/types/oauthLogin'
 import {
   isLoginPathname,
@@ -358,18 +356,15 @@ export default function WebView() {
     signInProbeOutcomes
   )
   const signInState = resolveSignInState(signInInputs.legendary)
-  const steamSignInState = resolveSignInState(signInInputs.steam)
-  // Quick 261030-qqh: leaving the Steam store after an app/cart/checkout page runs the same
-  // Steam-scoped refresh the Redeem-key dialog runs, behind sign-in and in-flight gates.
-  const onSteamStoreExit = () => {
-    runSteamStoreExitRefresh({
-      signInState: steamSignInState,
-      refreshInFlight: refreshing || refreshingByRunner?.steam === true,
+  // Quick 261030-qqh / 261030-ts4: leaving the Steam, Epic, GOG or Amazon store after an armed
+  // page runs that runner's scoped library refresh, behind sign-in and in-flight gates.
+  const onStoreExit = (exited: StoreExitStoreKey) => {
+    const row = STORE_EXIT_ROWS[exited]
+    runStoreExitRefresh(exited, {
+      signInState: resolveSignInState(signInInputs[row.signInKey]),
+      refreshInFlight: refreshing || refreshingByRunner?.[row.runner] === true,
       refreshLibrary: () =>
-        refreshLibrary({
-          library: 'steam',
-          origin: STEAM_STORE_EXIT_REFRESH_ORIGIN
-        }),
+        refreshLibrary({ library: row.runner, origin: row.origin }),
       log: (line) => window.api.logInfo(line)
     })
   }
@@ -380,7 +375,7 @@ export default function WebView() {
     isStoreRoute,
     platform,
     signInState,
-    onSteamStoreExit
+    onStoreExit
   })
   const embedSuppressed = useStoreEmbedSuppressed()
 

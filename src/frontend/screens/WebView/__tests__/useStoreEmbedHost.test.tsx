@@ -318,6 +318,8 @@ interface MountOptions {
   signInState?: string
   /** Quick 261030-qqh: the Steam store-exit callback under test. */
   onSteamStoreExit?: () => void
+  /** Quick 261030-ts4: the generalised store-exit callback under test. */
+  onStoreExit?: (storeKey: string) => void
 }
 
 function invoke(options: MountOptions): StoreEmbedHostState {
@@ -339,7 +341,13 @@ function invoke(options: MountOptions): StoreEmbedHostState {
     isStoreRoute: options.isStoreRoute ?? true,
     platform: options.platform ?? 'linux',
     signInState: options.signInState ?? 'connected',
-    onSteamStoreExit: options.onSteamStoreExit
+    onStoreExit:
+      options.onSteamStoreExit || options.onStoreExit
+        ? (key) => {
+            if (key === 'steam') options.onSteamStoreExit?.()
+            options.onStoreExit?.(key)
+          }
+        : undefined
   })
 }
 
@@ -2247,5 +2255,129 @@ describe('useStoreEmbedHost steam store-exit trigger (quick 261030-qqh)', () => 
     reinvoke(options)
     reinvoke(gog)
     expect(onSteamStoreExit).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('useStoreEmbedHost store exit (epic/gog/amazon, quick 261030-ts4)', () => {
+  const ev = (url: string) => ({
+    url,
+    host: new URL(url).host,
+    canGoBack: true,
+    canGoForward: false
+  })
+  const GOG = {
+    storeKey: 'gog',
+    startUrl: 'https://www.gog.com/'
+  }
+
+  const drain = async (events: ReturnType<typeof ev>[]) => {
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce(events)
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+  }
+
+  beforeEach(() => {
+    suppressionContextValue = {
+      suppressed: false,
+      acquire: jest.fn(),
+      release: jest.fn()
+    }
+    MockResizeObserver.instances = []
+    windowListeners.clear()
+    fakeLocalStorage.clear()
+    resetStoreEmbedSignInBaselines()
+    mockApi.storeEmbedOpen.mockResolvedValue(okStatus)
+    mockApi.storeEmbedHide.mockResolvedValue(okStatus)
+    mockApi.storeEmbedShow.mockResolvedValue(okStatus)
+    mockApi.storeEmbedClose.mockResolvedValue(okStatus)
+    mockApi.storeEmbedBack.mockResolvedValue(okStatus)
+    mockApi.storeEmbedNavigate.mockResolvedValue(okStatus)
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValue([])
+  })
+
+  afterEach(() => {
+    jest.clearAllTimers()
+  })
+
+  it('gog: a game page then unmount fires onStoreExit("gog") once', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onStoreExit = jest.fn()
+    mount({ slotRef: ref, ...GOG, onStoreExit })
+    await drain([ev('https://www.gog.com/en/game/foo')])
+    harness().__unmount()
+    expect(onStoreExit).toHaveBeenCalledTimes(1)
+    expect(onStoreExit).toHaveBeenCalledWith('gog')
+  })
+
+  it('gog: catalog browsing does not fire', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onStoreExit = jest.fn()
+    mount({ slotRef: ref, ...GOG, onStoreExit })
+    await drain([ev('https://www.gog.com/en/games')])
+    harness().__unmount()
+    expect(onStoreExit).not.toHaveBeenCalled()
+  })
+
+  it('epic (darwin raw surface): a product page then unmount fires once', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onStoreExit = jest.fn()
+    mount({
+      slotRef: ref,
+      storeKey: 'epic',
+      startUrl: 'https://store.epicgames.com/en-US/',
+      platform: 'darwin',
+      onStoreExit
+    })
+    await drain([ev('https://store.epicgames.com/en-US/p/x')])
+    harness().__unmount()
+    expect(onStoreExit).toHaveBeenCalledTimes(1)
+    expect(onStoreExit).toHaveBeenCalledWith('epic')
+  })
+
+  it('amazon: switching to gog fires amazon once; later gog unmount adds nothing', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onStoreExit = jest.fn()
+    const options: MountOptions = {
+      slotRef: ref,
+      storeKey: 'amazon',
+      startUrl: 'https://gaming.amazon.com',
+      onStoreExit
+    }
+    mount(options)
+    await drain([ev('https://gaming.amazon.com/home')])
+    reinvoke({ ...options, ...GOG })
+    expect(onStoreExit).toHaveBeenCalledTimes(1)
+    expect(onStoreExit).toHaveBeenCalledWith('amazon')
+    harness().__unmount()
+    expect(onStoreExit).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['humble', 'wiki'])('%s never fires', async (storeKey) => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onStoreExit = jest.fn()
+    mount({
+      slotRef: ref,
+      storeKey,
+      startUrl: 'https://example.com/',
+      onStoreExit
+    })
+    await drain([
+      ev('https://www.gog.com/en/game/foo'),
+      ev('https://store.steampowered.com/app/1/'),
+      ev('https://gaming.amazon.com/home')
+    ])
+    harness().__unmount()
+    expect(onStoreExit).not.toHaveBeenCalled()
+  })
+
+  it('beforeunload then unmount on an armed gog session fires nothing', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onStoreExit = jest.fn()
+    mount({ slotRef: ref, ...GOG, onStoreExit })
+    await drain([ev('https://www.gog.com/en/game/foo')])
+    dispatchWindowEvent('beforeunload')
+    harness().__unmount()
+    expect(onStoreExit).not.toHaveBeenCalled()
   })
 })

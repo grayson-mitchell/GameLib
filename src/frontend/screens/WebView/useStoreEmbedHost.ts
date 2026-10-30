@@ -2,7 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
-import { isSteamPurchaseIntentUrl } from './storeExitRefresh'
+import {
+  isPurchaseIntentUrlFor,
+  isStoreExitStoreKey,
+  type StoreExitStoreKey
+} from './storeExitRefresh'
 import { readWebviewZoomFactor, scaleRectForZoom } from './storeEmbedZoom'
 
 // Dispatched on `window` by `applyFramelessDecorations` (`src/preload/api/tauriWindowChrome.ts`,
@@ -174,11 +178,12 @@ interface UseStoreEmbedHostOptions {
    */
   signInState: string
   /**
-   * Quick 261030-qqh: called when the user leaves a Steam store session in which the main frame
-   * loaded an app, cart or checkout page (route leave or a switch to another store). Never on
-   * app teardown, never on suppression. Optional: omitting it changes no behaviour.
+   * Quick 261030-qqh (Steam), generalised by 261030-ts4 to Epic, GOG and Amazon: called with the
+   * PREVIOUS storeKey when the user leaves a store session in which the main frame loaded a page
+   * that store's purchase-intent predicate accepts (route leave or a switch to another store).
+   * Never on app teardown, never on suppression. Optional: omitting it changes no behaviour.
    */
-  onSteamStoreExit?: () => void
+  onStoreExit?: (storeKey: StoreExitStoreKey) => void
 }
 
 export interface StoreEmbedHostState {
@@ -223,18 +228,21 @@ export function useStoreEmbedHost({
   isStoreRoute,
   platform,
   signInState,
-  onSteamStoreExit
+  onStoreExit
 }: UseStoreEmbedHostOptions): StoreEmbedHostState {
   // Quick 261030-qqh: latest values for closures that outlive a render (the `[]`-deps drain and
   // the firing cleanup below).
-  const onSteamStoreExitRef = useRef(onSteamStoreExit)
-  onSteamStoreExitRef.current = onSteamStoreExit
+  const onStoreExitRef = useRef(onStoreExit)
+  onStoreExitRef.current = onStoreExit
   const storeKeyRef = useRef(storeKey)
   storeKeyRef.current = storeKey
-  const steamPurchaseIntentArmedRef = useRef(false)
+  // Quick 261030-ts4: the macOS raw Epic WKWebView feeds this same drain
+  // (main.rs `store_embed_take_nav_events` returns `macos_epic_embed::take_nav_events()` when
+  // selected), so no Epic-specific arming branch is needed.
+  const purchaseIntentArmedRef = useRef(false)
   const noteVisitedUrl = (url: string) => {
-    if (storeKeyRef.current === 'steam' && isSteamPurchaseIntentUrl(url)) {
-      steamPurchaseIntentArmedRef.current = true
+    if (isPurchaseIntentUrlFor(storeKeyRef.current, url)) {
+      purchaseIntentArmedRef.current = true
     }
   }
   const noteVisitedUrlRef = useRef(noteVisitedUrl)
@@ -817,18 +825,19 @@ export function useStoreEmbedHost({
   // ── ROUTE LIFECYCLE — hide on leave, close only at app teardown (D-21) ─────────────────────
   const tearingDownRef = useRef(false)
 
-  // Quick 261030-qqh: fire the Steam store-exit callback. The cleanup of an effect keyed on
+  // Quick 261030-qqh: fire the store-exit callback (all four stores, 261030-ts4). The cleanup of an effect keyed on
   // `[storeKey]` runs on a store switch (`store/:store` is one route, so no unmount) AND on
   // unmount (route leave), with the PREVIOUS storeKey in its closure -- one lifecycle point for
   // both "leaving" shapes. Deliberately NOT the suppression hide (a modal is not leaving).
   useEffect(() => {
-    if (storeKey === 'steam') steamPurchaseIntentArmedRef.current = false
+    purchaseIntentArmedRef.current = false
     return () => {
-      if (storeKey !== 'steam') return
-      const armed = steamPurchaseIntentArmedRef.current
-      steamPurchaseIntentArmedRef.current = false
+      const armed = purchaseIntentArmedRef.current
+      purchaseIntentArmedRef.current = false
       if (tearingDownRef.current) return
-      if (armed) onSteamStoreExitRef.current?.()
+      if (armed && isStoreExitStoreKey(storeKey)) {
+        onStoreExitRef.current?.(storeKey)
+      }
     }
   }, [storeKey])
 
