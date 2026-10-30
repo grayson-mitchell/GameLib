@@ -1,18 +1,37 @@
 ---
 created: 2026-10-30
-title: "Refresh the library when leaving the in-app Epic, GOG and Amazon stores after a purchase, as Steam now does"
+title: "Live-verify the Amazon store-exit library refresh (Epic, GOG done in 261030-ts4)"
 area: store-embed
 files:
-  - src/frontend/screens/WebView/steamStoreExitRefresh.ts
+  - src/frontend/screens/WebView/storeExitRefresh.ts
   - src/frontend/screens/WebView/useStoreEmbedHost.ts
   - src/frontend/screens/WebView/index.tsx
   - src/frontend/state/GlobalState.tsx
   - src-tauri/src/macos_epic_embed.rs
   - src-tauri/src/main.rs
-severity: medium
+severity: minor
 platform: macos
-ready: live-gate
+ready: human
 ---
+
+## Status (2026-10-30, after quick 261030-ts4)
+
+Shipped in 261030-ts4 (`3213dea8a`): Steam's mechanism is now the per-store table in
+`src/frontend/screens/WebView/storeExitRefresh.ts`, covering Epic, GOG and Amazon. The live gate
+passed for GOG, Epic (macOS raw WKWebView) and the Steam regression.
+
+**What remains is Amazon only.** It was not run: claiming a Prime Gaming game needs a Prime
+subscription, so this needs a person with one (`ready: human`). Check:
+
+- Claim a free game in `/store/amazon`, leave the store, and confirm
+  `[amazonStoreExitRefresh] origin=amazon-store-exit outcome=refreshed` in `gamelib.log`.
+- Note the host the embed actually shows (`gaming.amazon.com` or a redirect host). The row arms
+  on any `gaming.amazon.com` page; a redirect host is added only after it is measured.
+- F3: note whether the title appears from that one refresh, or only after a second Refresh.
+  `nile/library.ts` starts `refreshNile()` without awaiting it, so one refresh may publish the
+  pre-sync list. If so, file that separately: a manual Refresh behaves the same.
+
+Close this todo when the Amazon check passes. The original text follows for context.
 
 ## Problem
 

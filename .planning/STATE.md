@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 57
 Plan: 0 of 0
 Status: Ready to plan
-Last activity: 2026-10-30 - Completed quick task 261030-qqh: refresh the Steam library when leaving the in-app Steam store
+Last activity: 2026-10-30 - Completed quick task 261030-ts4: store-exit library refresh for Epic, GOG and Amazon; per-store embed Back history
 
 Progress: [██████████] 99%
 
@@ -468,6 +468,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261029-n4v | The Games search and alphabet letter are now kept for the session in an in-memory store (`Library/librarySessionSearch.ts`), with no storage key, so D-22 still holds; clear-all still clears them. Each app tab returns to its last location for the session (`NavShell/tabLocationMemory.ts`), and clicking the tab you are on goes to its root. Game pages belong to Games. Todo closed. | 2026-10-29 | 931051f98 | jest 126/126 on touched suites, codecheck/prettier clean; live PASS 3/3 (operator, tauri dev) | [261029-n4v-keep-games-search-across-game-page-round](./quick/261029-n4v-keep-games-search-across-game-page-round/) |
 | fast-261029 | **Tightened the close condition on the packaged-app-renders-blank todo; still parked `ready: blocked`.** Counts only release builds containing the fix (cycle runs from v0.8.0, tagged 2026-10-28) and only an unrecovered `ROOT-EMPTIED` (no re-mount by `after-emptied`). Records why dev-build hits are excluded: 11 measured 2026-10-29 were Vite module-import failures recovered to `first=pre`. | 2026-10-29 | — | Docs only (this commit). planning-gates 12/12; the todo path is prettier-ignored, so the formatter check proves nothing. | — |
 | fast-261030 | Stores tab reopens the last-visited store instead of Epic — `WebView` writes `last-store` (localStorage) on each `/store/:store` visit; `resolveDefaultStore` validates it. | 2026-10-30 | 13cc28c1b | ✅ | — |
+| 261030-ts4 | Leaving the in-app Epic, GOG or Amazon store now refreshes that store's library, as Steam does: `steamStoreExitRefresh.ts` generalised to a per-store table (`storeExitRefresh.ts`); Epic arms through the macOS raw-WKWebView nav drain, Amazon arms on any `gaming.amazon.com` page. Gate follow-up: embed Back no longer crosses stores — each store keeps its own parked history and a store switch re-opens (pre-existing defect). | 2026-10-30 | 3213dea8a | WebView jest 23 suites/550, cargo store_embed 42, codecheck, scoped eslint/prettier/rustfmt. Live gate PASSED for GOG, Epic, Steam and the Back fix (92788de94); Amazon not run (needs Prime), left on the todo. | [261030-ts4-store-exit-library-refresh-epic-gog-amazon](./quick/261030-ts4-store-exit-library-refresh-epic-gog-amazon/) |
 
 ## Deferred Items
 
