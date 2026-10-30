@@ -399,6 +399,14 @@ const FIXTURE_DIFF_LINES = [
  * `meta/i18nForkTouchedFiles.json` regenerated with
  * `pnpm gen-i18n-gate-scope`, `generatedAt` restored.
  * DECLARED_UNSCANNED_DEBT needs no edit.
+ *
+ * 2026-10-31 (quick 261031-bst): fork-touched 293 -> 293, scope 247 -> 246.
+ * Removing custom themes and Custom CSS deleted
+ * `screens/Settings/components/CustomCSS.tsx`; a deleted file drops out of
+ * both lists. `screens/WebView/storeExitRefresh.ts` (quick 261030-qqh,
+ * committed without the artifact) joins fork-touched, net zero.
+ * `meta/i18nForkTouchedFiles.json` regenerated with
+ * `pnpm gen-i18n-gate-scope`, `generatedAt` restored.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -455,7 +463,12 @@ const DECLARED_UNSCANNED_DEBT = [
   // assumed: t()=0, <Trans>=0, useTranslation=0, so it carries no translatable
   // surface for the blocking gate to scan and is parked here rather than
   // promoted into `meta/i18nGateScope.json`.
-  'src/frontend/screens/Login/components/OAuthLogin/index.tsx'
+  'src/frontend/screens/Login/components/OAuthLogin/index.tsx',
+  // 2026-10-31 (quick 261031-bst): quick 261030-qqh created `storeExitRefresh.ts`
+  // without refreshing the artifact. Measured with `scanScope({ extraFiles })`:
+  // 3 findings, all log-line text (lines 193/216/220), so it is parked here rather
+  // than promoted into `meta/i18nGateScope.json`.
+  'src/frontend/screens/WebView/storeExitRefresh.ts'
 ]
 
 /**
@@ -1159,8 +1172,8 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 247-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 293-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(247)
+  it('A0 fixture sanity: the seeded scope is the REAL 246-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 293-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(246)
     expect(forkTouchedSnapshot.files.length).toBe(293)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
@@ -1202,7 +1215,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 247 -> 293 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 246 -> 293 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
