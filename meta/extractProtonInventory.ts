@@ -106,6 +106,13 @@ export interface WirePolicyMethodEntry {
   shimLocal?: boolean
   /** 58-06: hand-written helper function replacing the generic decode. */
   helperCustom?: string
+  /** 58-10: the method returns a SteamAPICall_t completing as this callback id. */
+  callResult?: number
+  /** 58-10: a successful call is NET send/recv evidence. */
+  evidence?: {
+    kind: 'send' | 'recv'
+    iface: 'Matchmaking' | 'Networking' | 'Sockets' | 'Messages'
+  }
   /** 53-14: arity (excluding self) of the Mac Steam's native flat function.
    * A version whose game-side signature has fewer params gets the difference
    * as `helperTrailingNullArgs` (NULL-filled helper-side, never sent). */
@@ -605,6 +612,8 @@ export function applyWirePolicy(
     if (entry.shimLocal !== undefined) wired.shimLocal = entry.shimLocal
     if (entry.helperCustom !== undefined)
       wired.helperCustom = entry.helperCustom
+    if (entry.callResult !== undefined) wired.callResult = entry.callResult
+    if (entry.evidence !== undefined) wired.evidence = entry.evidence
     if (entry.helperNativeArgs !== undefined) {
       const missing = entry.helperNativeArgs - params.length
       if (missing > 0) wired.helperTrailingNullArgs = missing

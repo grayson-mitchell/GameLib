@@ -80,6 +80,9 @@ const HELPER_SOURCE_PATH = join(
 // the including file's own directory, then -I paths in order -- without
 // this flag the #include would fail to resolve at all.
 const HELPER_INCLUDE_DIR = join('native', 'steam-bridge', 'generated')
+// 58-10: bridge_dispatch.h #includes gamelib_callresult.h, which lives beside
+// bridge_helper.c, not beside the generated header.
+const HELPER_HEADERS_DIR = join('native', 'steam-bridge', 'helper')
 const SHIM_SOURCE_PATH = join(
   'native',
   'steam-bridge',
@@ -352,6 +355,8 @@ export function buildHelperCompileArgv(arch: string = resolveBridgeArch()): {
       machoArchFlag(arch),
       '-I',
       HELPER_INCLUDE_DIR,
+      '-I',
+      HELPER_HEADERS_DIR,
       '-o',
       helperOutputPath(arch),
       HELPER_SOURCE_PATH

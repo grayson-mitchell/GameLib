@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "gamelib_callresult.h"
 
 // Phase 52: bridge_helper.c defines logts() after #including this header.
 static void logts(const char *cat, const char *msg);

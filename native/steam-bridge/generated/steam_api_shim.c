@@ -70,6 +70,8 @@
 #define BRIDGE_CONTROL_SLOT_REQUEST_CURRENT_STATS 9
 // quick 261027-k51: each relayed callback the registry dispatched or held is reported (the helper logs CBDISP); an old helper answers STATUS_ERR, which is harmless.
 #define BRIDGE_CONTROL_SLOT_REPORT_CB_DISPATCH 10
+// Phase 58 (58-10): SteamAPI_RunCallbacks drains one completed call result at a time ([u32 count][u64 h][i32 id][u32 failed][u32 cub][bytes]); an old helper answers STATUS_ERR, which bridge_transact reports as 0 and the registry treats as empty.
+#define BRIDGE_CONTROL_SLOT_DRAIN_CALL_RESULTS 11
 #define GAMELIB_STUBCALL_KIND_STUB 0
 #define GAMELIB_STUBCALL_KIND_FALLBACK 1
 #define GAMELIB_STUBCALL_KIND_OFFPATH 2
@@ -526,6 +528,9 @@ static uint32_t gl_cb_now_ms(void) { return (uint32_t)GetTickCount(); }
 static int gl_cb_transport_drain(uint8_t *buf, uint32_t cap, uint32_t *lenOut) {
   return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS, NULL, 0, buf, cap, lenOut);
 }
+static int gl_cb_transport_drain_cr(uint8_t *buf, uint32_t cap, uint32_t *lenOut) {
+  return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALL_RESULTS, NULL, 0, buf, cap, lenOut);
+}
 /* quick 261027-k51: report one relayed callback the registry dispatched or held
  * (the helper logs CBDISP). Capped at 16 reports per process; the registry
  * calls this with no lock held. The result is ignored. */
@@ -547,6 +552,11 @@ static void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched, uint32_t hel
 #define GL_CB_DRAIN_BACKOFF_MS 1000
 #define GL_CB_DRAIN_RESP_MAX_BYTES 2584
 #define GL_CB_HELD_MAX_BYTES 64
+#define GL_CR_REGISTRY_CAPACITY 64
+#define GL_CR_HELD_SLOTS 16
+#define GL_CR_HELD_EXPIRY_MS 10000
+#define GL_CR_HELD_MAX_BYTES 24
+#define GL_CR_DRAIN_RESP_MAX_BYTES 2596
 #define GL_CB_FLAG_REGISTERED 0x01
 #define GL_CB_FLAG_GAMESERVER 0x02
 /* MEASURED, not assumed: vtable slot of CCallbackBase::Run(void*). MSVC
@@ -554,6 +564,8 @@ static void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched, uint32_t hel
  * Source: meta/msvcCallbackLayout.ts, checked against the committed dump
  * meta/__tests__/fixtures/msvc_ccallbackbase.layout.txt. */
 #define GL_CB_VSLOT_RUN_1ARG 1
+/* vtable slot of CCallbackBase::Run(void*, bool, SteamAPICall_t). */
+#define GL_CB_VSLOT_RUN_3ARG 0
 #if defined(__i386__)
 #define GL_CB_FLAGS_OFF 4
 #define GL_CB_ICALLBACK_OFF 8
@@ -563,6 +575,9 @@ static void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched, uint32_t hel
 #endif
 
 typedef void (THISCALL *gl_cb_run1_fn)(void *self, void *pvParam);
+/* bIOFailure is an int: MSVC passes a bool as a full word on x86 and in a
+ * register on x64, and the callee reads only the low byte. */
+typedef void (THISCALL *gl_cb_run3_fn)(void *self, void *pvParam, int bIOFailure, uint64_t hCall);
 
 typedef struct {
   void *cb;
@@ -577,7 +592,20 @@ typedef struct {
 
 static const gl_cb_relay_row gl_cb_relay_table[] = {
   {168, 2572u, 0},
-  {1101, 24u, 1}
+  {1101, 24u, 1},
+  {503, 24u, 0},
+  {504, 24u, 0},
+  {505, 24u, 0},
+  {506, 32u, 0},
+  {507, 24u, 0},
+  {512, 24u, 0},
+  {1202, 8u, 0},
+  {1203, 9u, 0},
+  {1221, 712u, 0},
+  {1222, 260u, 0},
+  {1251, 136u, 0},
+  {1252, 696u, 0},
+  {1281, 272u, 0},
 };
 #define GL_CB_RELAY_ROWS ((uint32_t)(sizeof(gl_cb_relay_table) / sizeof(gl_cb_relay_table[0])))
 
@@ -589,6 +617,46 @@ typedef struct {
 } gl_cb_held_entry;
 
 static gl_cb_held_entry gl_cb_held[GL_CB_RELAY_ROWS];
+
+/* ---- call results (58-10): CCallResult pairs and early arrivals ---- */
+typedef struct {
+  int32_t id;
+  uint32_t size;
+} gl_cr_row;
+
+static const gl_cr_row gl_cr_table[] = {
+  {513, 16u},
+  {510, 4u},
+  {504, 24u},
+};
+#define GL_CR_ROWS ((uint32_t)(sizeof(gl_cr_table) / sizeof(gl_cr_table[0])))
+
+typedef struct {
+  void *cb;
+  uint64_t h;
+} gl_cr_entry;
+
+/* A result that arrived before its CCallResult registered. Never 168: only
+ * ids in gl_cr_table are accepted at all. */
+typedef struct {
+  int valid;
+  uint64_t h;
+  int32_t id;
+  uint32_t failed;
+  uint32_t cub;
+  uint32_t born_ms;
+  uint8_t bytes[GL_CR_HELD_MAX_BYTES];
+} gl_cr_held_entry;
+
+static gl_cr_entry gl_cr_entries[GL_CR_REGISTRY_CAPACITY];
+static uint32_t gl_cr_count;
+static gl_cr_held_entry gl_cr_held[GL_CR_HELD_SLOTS];
+static uint32_t gl_cr_held_count;
+static uint32_t gl_cr_overflow;
+static uint32_t gl_cr_held_overflow;
+static uint32_t gl_cr_held_expired;
+static uint32_t gl_cr_fail_count;
+static uint32_t gl_cr_last_fail_ms;
 
 static gl_cb_entry gl_cb_entries[GL_CB_REGISTRY_CAPACITY];
 static uint32_t gl_cb_count;
@@ -681,11 +749,218 @@ static void gl_cb_unregister(void *cb) {
   GL_CB_UNLOCK();
 }
 
+/* Secure zero: the compiler may not elide it. */
+static void gl_cb_zero(void *p, uint32_t n) {
+  volatile uint8_t *zp = (volatile uint8_t *)p;
+  uint32_t zi;
+  for (zi = 0; zi < n; zi++) zp[zi] = 0;
+}
+
+static uint32_t gl_cr_size(int32_t id) {
+  uint32_t i;
+  for (i = 0; i < GL_CR_ROWS; i++) {
+    if (gl_cr_table[i].id == id) return gl_cr_table[i].size;
+  }
+  return 0;
+}
+
+/* Caller holds the lock. Returns index or -1. */
+static int gl_cr_find(void *cb, uint64_t h) {
+  uint32_t i;
+  for (i = 0; i < gl_cr_count; i++) {
+    if (gl_cr_entries[i].cb == cb && gl_cr_entries[i].h == h) return (int)i;
+  }
+  return -1;
+}
+
+/* Caller holds the lock. Returns the first entry for h, or -1. */
+static int gl_cr_find_handle(uint64_t h) {
+  uint32_t i;
+  for (i = 0; i < gl_cr_count; i++) {
+    if (gl_cr_entries[i].h == h) return (int)i;
+  }
+  return -1;
+}
+
+static void gl_cr_register(void *cb, uint64_t h) {
+  if (!cb) return;
+  GL_CB_LOCK();
+  if (gl_cr_find(cb, h) >= 0) {
+    /* the same pair again: nothing to add */
+  } else if (gl_cr_count >= GL_CR_REGISTRY_CAPACITY) {
+    gl_cr_overflow++;
+  } else {
+    gl_cr_entries[gl_cr_count].cb = cb;
+    gl_cr_entries[gl_cr_count].h = h;
+    gl_cr_count++;
+  }
+  GL_CB_UNLOCK();
+}
+
+static void gl_cr_unregister(void *cb, uint64_t h) {
+  int idx;
+  if (!cb) return;
+  GL_CB_LOCK();
+  /* same in-flight rule as gl_cb_unregister (55 WR-01) */
+  while (gl_cb_dispatching == cb && gl_cb_run_tid != GL_CB_THREAD_ID()) {
+    GL_CB_UNLOCK();
+    GL_CB_YIELD();
+    GL_CB_LOCK();
+  }
+  idx = gl_cr_find(cb, h);
+  if (idx >= 0) {
+    gl_cr_count--;
+    gl_cr_entries[idx] = gl_cr_entries[gl_cr_count];
+    gl_cb_zero(&gl_cr_entries[gl_cr_count], (uint32_t)sizeof(gl_cr_entries[0]));
+  }
+  GL_CB_UNLOCK();
+}
+
+/* Called with NO lock held. Finds the CCallResult registered for h and calls
+ * Run(pvParam, bIOFailure, hCall) on it. Returns 1 when delivered (and the
+ * pair removed), 0 when no pair is registered for h. */
+static int gl_cr_deliver(uint64_t h, int32_t id, uint32_t failed, void *param) {
+  void *cb;
+  int idx;
+  GL_CB_LOCK();
+  idx = gl_cr_find_handle(h);
+  if (idx < 0) {
+    GL_CB_UNLOCK();
+    return 0;
+  }
+  cb = gl_cr_entries[idx].cb;
+  gl_cb_dispatching = cb;
+  GL_CB_UNLOCK();
+
+  {
+    void **vtbl = *(void ***)cb;
+    ((gl_cb_run3_fn)vtbl[GL_CB_VSLOT_RUN_3ARG])(cb, param, failed ? 1 : 0, h);
+  }
+
+  GL_CB_LOCK();
+  gl_cb_dispatching = NULL;
+  idx = gl_cr_find(cb, h);
+  if (idx >= 0) {
+    gl_cr_count--;
+    gl_cr_entries[idx] = gl_cr_entries[gl_cr_count];
+    gl_cb_zero(&gl_cr_entries[gl_cr_count], (uint32_t)sizeof(gl_cr_entries[0]));
+  }
+  GL_CB_UNLOCK();
+  gl_cb_report_dispatch(id, 1, 0);
+  return 1;
+}
+
+/* Keeps one early result. Called with NO lock held. A full table drops the
+ * newest and counts it; the table never grows. */
+static void gl_cr_hold(uint64_t h, int32_t id, uint32_t failed, uint32_t cub,
+                       const uint8_t *bytes, uint32_t now) {
+  uint32_t i;
+  int slot = -1;
+  GL_CB_LOCK();
+  for (i = 0; i < GL_CR_HELD_SLOTS; i++) {
+    if (gl_cr_held[i].valid && gl_cr_held[i].h == h) { slot = (int)i; break; }
+  }
+  if (slot < 0) {
+    for (i = 0; i < GL_CR_HELD_SLOTS; i++) {
+      if (!gl_cr_held[i].valid) { slot = (int)i; break; }
+    }
+  }
+  if (slot < 0 || cub > GL_CR_HELD_MAX_BYTES) {
+    gl_cr_held_overflow++;
+    GL_CB_UNLOCK();
+    return;
+  }
+  if (!gl_cr_held[slot].valid) gl_cr_held_count++;
+  gl_cb_zero(&gl_cr_held[slot], (uint32_t)sizeof(gl_cr_held[slot]));
+  gl_cr_held[slot].valid = 1;
+  gl_cr_held[slot].h = h;
+  gl_cr_held[slot].id = id;
+  gl_cr_held[slot].failed = failed;
+  gl_cr_held[slot].cub = cub;
+  gl_cr_held[slot].born_ms = now;
+  memcpy(gl_cr_held[slot].bytes, bytes, cub);
+  GL_CB_UNLOCK();
+  gl_cb_report_dispatch(id, 0, 1);
+}
+
+/* Expires old held results (zeroing them) and retries the rest against the
+ * current registrations. Called with NO lock held. */
+static void gl_cr_retry_held(uint32_t now) {
+  uint32_t i;
+  for (i = 0; i < GL_CR_HELD_SLOTS; i++) {
+    gl_cr_held_entry h;
+    GL_CB_LOCK();
+    if (!gl_cr_held[i].valid) {
+      GL_CB_UNLOCK();
+      continue;
+    }
+    if ((uint32_t)(now - gl_cr_held[i].born_ms) >= GL_CR_HELD_EXPIRY_MS) {
+      gl_cb_zero(&gl_cr_held[i], (uint32_t)sizeof(gl_cr_held[i]));
+      gl_cr_held_count--;
+      gl_cr_held_expired++;
+      GL_CB_UNLOCK();
+      continue;
+    }
+    if (gl_cr_find_handle(gl_cr_held[i].h) < 0) {
+      GL_CB_UNLOCK();
+      continue;
+    }
+    h = gl_cr_held[i];
+    GL_CB_UNLOCK();
+    if (gl_cr_deliver(h.h, h.id, h.failed, h.bytes)) {
+      GL_CB_LOCK();
+      if (gl_cr_held[i].valid && gl_cr_held[i].h == h.h) {
+        gl_cb_zero(&gl_cr_held[i], (uint32_t)sizeof(gl_cr_held[i]));
+        gl_cr_held_count--;
+      }
+      GL_CB_UNLOCK();
+    }
+    gl_cb_zero(&h, (uint32_t)sizeof(h));
+  }
+}
+
+/* One slot-11 pull. Called with NO lock held. Returns 1 to keep draining. */
+static int gl_cr_pull_one(uint8_t *buf, uint32_t now) {
+  uint32_t len = 0;
+  uint32_t count, failed, cub, size;
+  uint64_t h;
+  int32_t id;
+  int ok = gl_cb_transport_drain_cr(buf, GL_CR_DRAIN_RESP_MAX_BYTES, &len);
+  if (!ok) {
+    GL_CB_LOCK();
+    gl_cr_fail_count++;
+    gl_cr_last_fail_ms = now;
+    GL_CB_UNLOCK();
+    return 0;
+  }
+  GL_CB_LOCK();
+  gl_cr_fail_count = 0;
+  GL_CB_UNLOCK();
+  if (len > GL_CR_DRAIN_RESP_MAX_BYTES || len < 4) return 0;
+  memcpy(&count, buf, 4);
+  if (count != 1) return 0;
+  if (len < 24) return 0;
+  memcpy(&h, buf + 4, 8);
+  memcpy(&id, buf + 12, 4);
+  memcpy(&failed, buf + 16, 4);
+  memcpy(&cub, buf + 20, 4);
+  size = gl_cr_size(id);
+  if (!size || cub != size || failed > 1) return 0;
+  if (len != 24u + cub) return 0;
+  if (!gl_cr_deliver(h, id, failed, buf + 24)) {
+    gl_cr_hold(h, id, failed, cub, buf + 24, now);
+  }
+  return 1;
+}
+
 /* Empties the table only; never touches game object memory. */
 static void gl_cb_clear_all(void) {
   GL_CB_LOCK();
   gl_cb_count = 0;
   gl_cb_relay_count = 0;
+  gl_cr_count = 0;
+  gl_cb_zero(gl_cr_held, (uint32_t)sizeof(gl_cr_held));
+  gl_cr_held_count = 0;
   GL_CB_UNLOCK();
 }
 
@@ -739,14 +1014,16 @@ static void gl_cb_run_callbacks(void) {
   uint32_t now;
   uint32_t iter;
   uint32_t hi;
-  volatile uint8_t *zp;
-  uint32_t zi;
+  int do_bcast, do_cr;
 
   GL_CB_LOCK();
-  if (gl_cb_running || gl_cb_relay_count == 0) {
+  if (gl_cb_running ||
+      (gl_cb_relay_count == 0 && gl_cr_count == 0 && gl_cr_held_count == 0)) {
     GL_CB_UNLOCK();
     return;
   }
+  do_bcast = gl_cb_relay_count != 0;
+  do_cr = gl_cr_count != 0 || gl_cr_held_count != 0;
   now = gl_cb_now_ms();
   interval = gl_cb_fail_count >= GL_CB_DRAIN_FAIL_BACKOFF_AFTER
                  ? GL_CB_DRAIN_BACKOFF_MS
@@ -763,7 +1040,7 @@ static void gl_cb_run_callbacks(void) {
 
   /* quick k51: a held message (arrived before its listener) is retried first,
    * before any new drain. Cleared only once it reached at least one target. */
-  for (hi = 0; hi < GL_CB_RELAY_ROWS; hi++) {
+  for (hi = 0; do_bcast && hi < GL_CB_RELAY_ROWS; hi++) {
     uint8_t hbuf[GL_CB_HELD_MAX_BYTES];
     int32_t hid;
     int hvalid;
@@ -785,7 +1062,7 @@ static void gl_cb_run_callbacks(void) {
     memset(hbuf, 0, sizeof(hbuf));
   }
 
-  for (iter = 0; iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
+  for (iter = 0; do_bcast && iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
     uint32_t len = 0;
     uint32_t count, cub, size, ndispatched;
     int32_t id;
@@ -831,8 +1108,26 @@ static void gl_cb_run_callbacks(void) {
     }
   }
 
-  zp = buf;
-  for (zi = 0; zi < GL_CB_DRAIN_RESP_MAX_BYTES; zi++) zp[zi] = 0;
+  gl_cb_zero(buf, GL_CB_DRAIN_RESP_MAX_BYTES);
+
+  /* 58-10: call results. Held early arrivals are expired and retried first,
+   * then up to GL_CB_DRAIN_MAX_PER_RUN slot-11 pulls. A helper that does not
+   * know slot 11 fails every pull; that backs off on its own counter. */
+  if (do_cr) {
+    int crskip;
+    gl_cr_retry_held(now);
+    GL_CB_LOCK();
+    crskip = gl_cr_fail_count >= GL_CB_DRAIN_FAIL_BACKOFF_AFTER &&
+             (uint32_t)(now - gl_cr_last_fail_ms) < GL_CB_DRAIN_BACKOFF_MS;
+    GL_CB_UNLOCK();
+    for (iter = 0; !crskip && iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
+      uint8_t crbuf[GL_CR_DRAIN_RESP_MAX_BYTES];
+      int more = gl_cr_pull_one(crbuf, now);
+      gl_cb_zero(crbuf, GL_CR_DRAIN_RESP_MAX_BYTES);
+      if (!more) break;
+    }
+  }
+
   GL_CB_LOCK();
   gl_cb_running = 0;
   GL_CB_UNLOCK();
@@ -32047,8 +32342,8 @@ int SteamAPI_IsSteamRunning(void) { return 1; }
 void SteamAPI_RunCallbacks(void) { gl_cb_run_callbacks(); }
 void SteamAPI_RegisterCallback(void *pCallback, int iCallback) { gl_cb_register(pCallback, iCallback); }
 void SteamAPI_UnregisterCallback(void *pCallback) { gl_cb_unregister(pCallback); }
-void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }
-void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }
+void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { gl_cr_register(pCallback, hAPICall); }
+void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { gl_cr_unregister(pCallback, hAPICall); }
 
 // === Modern-SDK lookup family (51-15, Win64 only -- D-51-13) ===
 

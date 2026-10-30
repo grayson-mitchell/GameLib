@@ -129,6 +129,31 @@ export type ReturnKind =
   | 'string'
   | 'class'
 
+/** The four interface words of the helper's NET evidence grammar (58-05). */
+export type NetEvidenceIface =
+  | 'Matchmaking'
+  | 'Networking'
+  | 'Sockets'
+  | 'Messages'
+
+const NET_EVIDENCE_IFACES: ReadonlySet<string> = new Set([
+  'Matchmaking',
+  'Networking',
+  'Sockets',
+  'Messages'
+])
+
+/** Interface family -> NET iface used to log an in-buffer oversize refusal
+ * (58-10). Families not listed emit no NET call. */
+const FAMILY_NET_IFACE: Readonly<Record<string, NetEvidenceIface>> = {
+  SteamMatchmaking: 'Matchmaking',
+  SteamMatchmakingServers: 'Matchmaking',
+  SteamNetworking: 'Networking',
+  SteamNetworkingSockets: 'Sockets',
+  SteamNetworkingUtils: 'Sockets',
+  SteamNetworkingMessages: 'Messages'
+}
+
 const KNOWN_RETURN_KINDS: ReadonlySet<string> = new Set([
   'void',
   'int32',
@@ -196,6 +221,13 @@ export interface MethodSignature {
   /** 58-06: name of a hand-written helper function (`^gl_[a-z0-9_]{1,48}$`)
    * that replaces the generic decode/encode for this one method. */
   helperCustom?: string
+  /** 58-10: the method returns a SteamAPICall_t (int64) that completes as this
+   * callback id (a CALL_RESULT_TABLE id); the helper dispatch records the
+   * handle with gl_helper_cr_track after a nonzero return. */
+  callResult?: number
+  /** 58-10: a successful call is NET evidence of a send or receive on one of
+   * the four networking interfaces (closed enums, no payload ever logged). */
+  evidence?: { kind: 'send' | 'recv'; iface: NetEvidenceIface }
   /**
    * Free-form note. Used to flag a synthetic ABI-exercise slot that is NOT a
    * real Steamworks method (e.g. the sret-exercise slot) so a reviewer never
@@ -569,6 +601,45 @@ export function validateManifest(
           `${methodCtx}: shimLocal method has no SHIM_LOCAL_BODIES entry "${manifest.family}.${method.name}"`
         )
       }
+    }
+
+    if (method.callResult !== undefined) {
+      if (!CALL_RESULT_TABLE.some((r) => r.id === method.callResult)) {
+        errors.push(
+          `${methodCtx}: callResult ${String(method.callResult)} is not a CALL_RESULT_TABLE id`
+        )
+      }
+      if (method.returnKind !== 'int64') {
+        errors.push(
+          `${methodCtx}: callResult requires returnKind 'int64' (a SteamAPICall_t), got '${method.returnKind}'`
+        )
+      }
+    }
+    if (method.evidence !== undefined) {
+      const ev = method.evidence as { kind?: unknown; iface?: unknown }
+      if (ev.kind !== 'send' && ev.kind !== 'recv') {
+        errors.push(
+          `${methodCtx}: evidence.kind must be 'send' or 'recv', got ${JSON.stringify(ev.kind)}`
+        )
+      }
+      if (typeof ev.iface !== 'string' || !NET_EVIDENCE_IFACES.has(ev.iface)) {
+        errors.push(
+          `${methodCtx}: evidence.iface must be one of Matchmaking, Networking, Sockets, Messages, got ${JSON.stringify(ev.iface)}`
+        )
+      }
+      if (method.returnKind !== 'int32') {
+        errors.push(
+          `${methodCtx}: evidence requires an int32 or bool return, got '${method.returnKind}'`
+        )
+      }
+    }
+    if (
+      method.helperCustom !== undefined &&
+      (method.callResult !== undefined || method.evidence !== undefined)
+    ) {
+      errors.push(
+        `${methodCtx}: callResult/evidence cannot be combined with helperCustom (the custom function owns the whole reply)`
+      )
     }
 
     const methodMode = method.mode ?? manifest.mode
@@ -4898,6 +4969,42 @@ function fwdLogLine(fwdName: string, tail: string): string {
   return `      logts("FWD", "${fwdName} " ${tail});`
 }
 
+/** GameLib-authored helper header declaring gl_helper_cr_track and
+ * gl_net_evidence (never a vendored Valve header; D-09). */
+const HELPER_CALLRESULT_HEADER = 'gamelib_callresult.h'
+
+function netIfaceEnum(iface: NetEvidenceIface): string {
+  return `GL_NET_IFACE_${iface.toUpperCase()}`
+}
+
+/** Helper hook calls that follow `__ret = <native call>` (58-10): record a
+ * returned SteamAPICall_t, and log send/recv NET evidence for a successful
+ * networking call. Empty for a method that declares neither. */
+function emitPolicyHooks(method: MethodSignature): string[] {
+  const out: string[] = []
+  if (method.callResult !== undefined) {
+    out.push(
+      `      if (__ret != 0) gl_helper_cr_track((uint64_t)__ret, ${method.callResult});`
+    )
+  }
+  if (method.evidence !== undefined) {
+    const inBuf = method.params.find((p) => p.kind === 'in-buffer')
+    const kind = `GL_NET_KIND_${method.evidence.kind.toUpperCase()}`
+    const iface = netIfaceEnum(method.evidence.iface)
+    if (method.returns === 'bool') {
+      const n = inBuf ? `arg_${inBuf.name}_len` : '1u'
+      out.push(
+        `      if (__ret) gl_net_evidence(1, ${kind}, ${iface}, 0, ${n}, GL_NET_PATH_UNKNOWN);`
+      )
+    } else {
+      out.push(
+        `      if (__ret > 0) gl_net_evidence(1, ${kind}, ${iface}, 0, (uint32_t)__ret, GL_NET_PATH_UNKNOWN);`
+      )
+    }
+  }
+  return out
+}
+
 /**
  * Emits ONE dispatch-table case: the identity-only app-scoped-family gate
  * (T-51-25), the SteamUtils.GetAppID identity-only special case (D-51-04),
@@ -4977,6 +5084,7 @@ function emitDispatchCase(
 
   // --- request decode (value / in-string only -- assertDispatchable above
   // refuses out-value/out-buffer) ---
+  const oversizeIface = FAMILY_NET_IFACE[manifest.family]
   const decls: string[] = []
   const lenChecks: string[] = []
   const callArgs: string[] = [selfVar]
@@ -5001,6 +5109,11 @@ function emitDispatchCase(
         `      uint32_t ${varName}_len = 0;`,
         `      if (argLen < ${offsetExpr} + 4) { *respLen = 0; return 1; }`,
         `      memcpy(&${varName}_len, arg + ${offsetExpr}, 4);`,
+        ...(oversizeIface !== undefined
+          ? [
+              `      if (${varName}_len > ${WIRE_IN_BUFFER_MAX_BYTES}) { gl_net_evidence(1, GL_NET_KIND_OVERSIZE, ${netIfaceEnum(oversizeIface)}, 0, ${varName}_len, GL_NET_PATH_UNKNOWN); *respLen = 0; return 1; } // oversize refusal is NET evidence -- 58-10`
+            ]
+          : []),
         `      if (${varName}_len > ${WIRE_IN_BUFFER_MAX_BYTES} || (uint64_t)argLen < (uint64_t)(${offsetExpr}) + 4u + ${varName}_len) { *respLen = 0; return 1; } // in-buffer past cap or argLen -- T-58-16`,
         `      memcpy(${bufName}, arg + ${offsetExpr} + 4, ${varName}_len);`,
         `      const void *${varName} = ${bufName};`
@@ -5192,6 +5305,7 @@ function emitDispatchCase(
       lines.push(
         `      ${returnType} __ret = ${callExpr};`,
         ...fwdIntLog,
+        ...emitPolicyHooks(method),
         `      if (respCap < ${width}) { *respLen = 0; return 1; }`,
         `      memcpy(resp, &__ret, ${width});`,
         `      *respLen = ${width};`,
@@ -5213,6 +5327,7 @@ function emitDispatchCase(
       lines.push(
         `      ${returnType} __ret = ${callExpr};`,
         ...fwdIntLog,
+        ...emitPolicyHooks(method),
         `      if (respCap < ${totalWidth}) { *respLen = 0; return 1; }`,
         `      memcpy(resp, &__ret, ${width});`
       )
@@ -5456,7 +5571,8 @@ export function generateDispatchHeader(
     `#include <dlfcn.h>\n` +
     `#include <stdint.h>\n` +
     `#include <stdio.h>\n` +
-    `#include <string.h>\n\n` +
+    `#include <string.h>\n` +
+    `#include "${HELPER_CALLRESULT_HEADER}"\n\n` +
     `// Phase 52: bridge_helper.c defines logts() after #including this header.\n` +
     `static void logts(const char *cat, const char *msg);\n\n` +
     `// Phase 52 (T-52-04): game-controlled strings reach the FWD log only\n` +

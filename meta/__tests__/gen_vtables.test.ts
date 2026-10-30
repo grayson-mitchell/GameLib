@@ -4733,3 +4733,158 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
     expect(inventory).toBeDefined()
   })
 })
+
+describe('58-10 callResult and evidence policy fields', () => {
+  function netManifest(
+    methods: Array<
+      Omit<MethodSignature, 'slot' | 'stackBytes' | 'returnKind'> & {
+        returnKind?: MethodSignature['returnKind']
+      }
+    >,
+    family = 'SteamNetworkingMessages'
+  ): InterfaceManifestV2 {
+    return {
+      schemaVersion: 2,
+      interface: `${family}002`,
+      family,
+      ordinal: 9101,
+      arches: ['x64'],
+      mode: 'wire',
+      complete: false,
+      helperInterface: 'SteamAPI_GameLibNet_v002',
+      source: { kind: 'synthetic', ref: '58-10 unit test', file: 'n/a' },
+      methods: methods.map((m, slot) => {
+        const withKind = {
+          returnKind: 'int32',
+          ...m,
+          slot
+        } as MethodSignature
+        return { ...withKind, stackBytes: computeRetN(withKind) }
+      })
+    }
+  }
+
+  const createLobby = {
+    name: 'CreateLobby',
+    returns: 'uint64',
+    returnKind: 'int64' as const,
+    helperFlat: 'SteamAPI_ISteamMatchmaking_CreateLobby',
+    callResult: 513,
+    params: [{ name: 'eType', type: 'int32' }] as ParamSignature[]
+  }
+  const sendBool = {
+    name: 'SendP2P',
+    returns: 'bool',
+    helperFlat: 'SteamAPI_ISteamNetworking_SendP2PPacket',
+    evidence: { kind: 'send' as const, iface: 'Networking' as const },
+    params: [
+      {
+        name: 'pData',
+        type: 'const void*',
+        kind: 'in-buffer',
+        lenParam: 'cb'
+      },
+      { name: 'cb', type: 'uint32' }
+    ] as ParamSignature[]
+  }
+  const recvInt = {
+    name: 'ReceiveMessages',
+    returns: 'int32',
+    helperFlat: 'SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel',
+    evidence: { kind: 'recv' as const, iface: 'Messages' as const },
+    params: [{ name: 'nChannel', type: 'int32' }] as ParamSignature[]
+  }
+  const sendBare = {
+    name: 'Poke',
+    returns: 'bool',
+    helperFlat: 'SteamAPI_ISteamNetworking_Poke',
+    evidence: { kind: 'send' as const, iface: 'Networking' as const },
+    params: [{ name: 'a', type: 'int32' }] as ParamSignature[]
+  }
+
+  it('callResult tracks the handle after a nonzero return', () => {
+    const header = generateDispatchHeader([
+      netManifest([createLobby], 'SteamMatchmaking')
+    ])
+    expect(header).toContain(
+      'if (__ret != 0) gl_helper_cr_track((uint64_t)__ret, 513);'
+    )
+    expect(header.indexOf('__ret = ')).toBeLessThan(
+      header.indexOf('gl_helper_cr_track((uint64_t)__ret')
+    )
+  })
+
+  it('evidence on a bool return fires on success with the in-buffer length', () => {
+    const header = generateDispatchHeader([
+      netManifest([sendBool], 'SteamNetworking')
+    ])
+    expect(header).toContain(
+      'if (__ret) gl_net_evidence(1, GL_NET_KIND_SEND, GL_NET_IFACE_NETWORKING, 0, arg_pData_len, GL_NET_PATH_UNKNOWN);'
+    )
+    const bare = generateDispatchHeader([
+      netManifest([sendBare], 'SteamNetworking')
+    ])
+    expect(bare).toContain(
+      'if (__ret) gl_net_evidence(1, GL_NET_KIND_SEND, GL_NET_IFACE_NETWORKING, 0, 1u, GL_NET_PATH_UNKNOWN);'
+    )
+  })
+
+  it('evidence on an int return fires only for a positive count', () => {
+    const header = generateDispatchHeader([netManifest([recvInt])])
+    expect(header).toContain(
+      'if (__ret > 0) gl_net_evidence(1, GL_NET_KIND_RECV, GL_NET_IFACE_MESSAGES, 0, (uint32_t)__ret, GL_NET_PATH_UNKNOWN);'
+    )
+  })
+
+  it('an in-buffer oversize refusal logs NET OVERSIZE for a networking family only', () => {
+    const noEvidence = { ...sendBool, evidence: undefined }
+    const net = generateDispatchHeader([
+      netManifest([noEvidence], 'SteamNetworking')
+    ])
+    const oversize = net.indexOf(
+      'if (arg_pData_len > 61440) { gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_NETWORKING, 0, arg_pData_len, GL_NET_PATH_UNKNOWN); *respLen = 0; return 1; }'
+    )
+    expect(oversize).toBeGreaterThan(-1)
+    // the NET call precedes the generic refusal and the byte copy
+    expect(oversize).toBeLessThan(net.indexOf('_pData_buf, arg +'))
+    const other = generateDispatchHeader([
+      netManifest([noEvidence], 'SteamUtils')
+    ])
+    expect(other).not.toContain('GL_NET_KIND_OVERSIZE')
+  })
+
+  it('validation rejects a bad callResult or evidence', () => {
+    expect(
+      validateManifest(
+        netManifest([{ ...createLobby, returnKind: 'int32' }])
+      ).join('\n')
+    ).toMatch(/callResult requires returnKind 'int64'/)
+    expect(
+      validateManifest(netManifest([{ ...createLobby, callResult: 168 }])).join(
+        '\n'
+      )
+    ).toMatch(/callResult 168 is not a CALL_RESULT_TABLE id/)
+    const badKind = {
+      ...recvInt,
+      evidence: { kind: 'poll', iface: 'Messages' }
+    } as unknown as typeof recvInt
+    expect(validateManifest(netManifest([badKind])).join('\n')).toMatch(
+      /evidence\.kind must be 'send' or 'recv'/
+    )
+    const badIface = {
+      ...recvInt,
+      evidence: { kind: 'recv', iface: 'Lobby' }
+    } as unknown as typeof recvInt
+    expect(validateManifest(netManifest([badIface])).join('\n')).toMatch(
+      /evidence\.iface must be one of/
+    )
+    expect(validateManifest(netManifest([createLobby])).join('\n')).not.toMatch(
+      /callResult/
+    )
+  })
+
+  it('the dispatch header includes the call-result hook header once', () => {
+    const header = generateDispatchHeader(loadAllManifests())
+    expect(header.split('#include "gamelib_callresult.h"').length - 1).toBe(1)
+  })
+})
