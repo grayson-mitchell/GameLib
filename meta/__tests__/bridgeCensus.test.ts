@@ -1231,31 +1231,16 @@ describe('D-53-12 census shares the install scan', () => {
   }
 
   it('judges a Mono row on lifecycle plus served-family names and counts the unserved families (D-53-04)', () => {
-    // 58-03: SteamNetworkingUtils004 is now served, but its Proton vtable has
-    // no slot for these two SDK-165 names, so they are genuinely unexported.
-    // Pinned below as a missing-symbols finding rather than silently dropped.
-    const utils004Absent = [
-      'SteamAPI_ISteamNetworkingUtils_InitRelayNetworkAccess',
-      'SteamAPI_ISteamNetworkingUtils_IsFakeIPv4'
-    ]
-    const withAbsent = classifyCensusTitle({
-      ...base,
-      runtimeLoadedDll: 'steam_api64.dll',
-      managed: {
-        kind: 'mono',
-        symbols: flatFixture.names,
-        versionStrings: ['SteamClient020', 'SteamUser021'],
-        assemblies: 3
-      },
-      exe: noStatic
-    })
-    expect(withAbsent.class).toBe('missing-symbols')
+    // 58-14: SteamNetworkingUtils004 is served and the two SDK-165 flat-only
+    // names its Proton vtable has no slot for (InitRelayNetworkAccess,
+    // IsFakeIPv4) are now exported by the shim, so the full measured set
+    // resolves.
     const row = classifyCensusTitle({
       ...base,
       runtimeLoadedDll: 'steam_api64.dll',
       managed: {
         kind: 'mono',
-        symbols: flatFixture.names.filter((n) => !utils004Absent.includes(n)),
+        symbols: flatFixture.names,
         versionStrings: ['SteamClient020', 'SteamUser021'],
         assemblies: 3
       },

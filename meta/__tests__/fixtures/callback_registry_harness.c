@@ -158,6 +158,24 @@ static void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched,
   g_nrep++;
 }
 
+/* 58-14: the networking function-pointer hook. Inert (id 0, any 0) except in
+ * the net_intercept_* cases. Asserts the registry lock is NOT held. */
+static int32_t g_net_icept_id;
+static int g_net_icept_calls;
+static int g_net_any;
+static int h_icept(int32_t id, void *param) {
+  int r;
+  (void)param;
+  if (id != g_net_icept_id) return 0;
+  r = pthread_mutex_trylock(&g_reg);
+  CHECK(r == 0); /* net_intercept: registry lock must NOT be held */
+  pthread_mutex_unlock(&g_reg);
+  g_net_icept_calls++;
+  return 1;
+}
+#define GL_NET_CB_INTERCEPT(id, param) h_icept((id), (param))
+#define GL_NET_CB_ANY() g_net_any
+
 #include "gl_cb_registry.c"
 
 typedef struct fobj {
@@ -791,6 +809,66 @@ static void case_relay_1221_dispatch(void) {
   PASS();
 }
 
+static void case_net_intercept_registry(void) {
+  g_case = "net_intercept_registry";
+  reset();
+  g_net_any = 1;
+  g_net_icept_id = 1221;
+  g_net_icept_calls = 0;
+  /* no CCallback registered at all: a stored function pointer alone drains */
+  push_msg(1221, 1, 712, 712);
+  gl_cb_run_callbacks();
+  CHECK(g_tcalls >= 1); /* drained although no CCallback is registered */
+  CHECK(g_net_icept_calls == 1);
+  CHECK(g_nrep == 1 && g_rep[0].id == 1221 && g_rep[0].nd == 1 && g_rep[0].held == 0);
+  /* a registered CCallback for the same id is bypassed: the function wins */
+  gl_cb_register(&objA, 1221);
+  push_msg(1221, 1, 712, 712);
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(g_net_icept_calls == 2);
+  CHECK(objA.calls == 0);
+  /* another id still reaches its CCallback */
+  gl_cb_register(&objB, 1222);
+  push_msg(1222, 1, 260, 260);
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(objB.calls == 1);
+  CHECK(g_net_icept_calls == 2);
+  /* without the hook (any 0, no listener) nothing is pulled */
+  g_net_any = 0;
+  g_net_icept_id = 0;
+  gl_cb_clear_all();
+  g_tcalls = 0;
+  push_msg(1221, 1, 712, 712);
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(g_tcalls == 0);
+  PASS();
+}
+
+static void case_net_intercept_md(void) {
+  uint8_t raw[24];
+  g_case = "net_intercept_md";
+  reset();
+  g_net_any = 0;
+  g_net_icept_id = 1281;
+  g_net_icept_calls = 0;
+  gl_md_init();
+  push_msg(1281, 1, 272, 272);
+  gl_md_run_frame();
+  CHECK(g_net_icept_calls == 1);
+  CHECK(gl_md_get_next(raw) == 0); /* consumed, never queued */
+  CHECK(g_nrep == 1 && g_rep[0].id == 1281 && g_rep[0].nd == 1);
+  push_msg(1221, 1, 712, 712);
+  g_now += 31;
+  gl_md_run_frame();
+  CHECK(g_net_icept_calls == 1);
+  CHECK(gl_md_get_next(raw) == 1); /* an unmatched id is queued as before */
+  g_net_icept_id = 0;
+  PASS();
+}
+
 static void case_cr_register_complete(void) {
   uint8_t want[16];
   g_case = "cr_register_complete";
@@ -1266,6 +1344,8 @@ int main(void) {
   case_report_hook_unlocked();
   case_relay_504_dispatch();
   case_relay_1221_dispatch();
+  case_net_intercept_registry();
+  case_net_intercept_md();
   case_cr_register_complete();
   case_cr_failed_passed();
   case_cr_late_register_hold();

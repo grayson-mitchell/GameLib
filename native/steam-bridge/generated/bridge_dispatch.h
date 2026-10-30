@@ -319,13 +319,13 @@ static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat_2_t g_bd_flat_STEAMU
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat_t)(void *, const char *, int32_t *);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat_2 3
-typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat_2_t)(void *, const char *, uint32_t);
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat_2_t)(void *, const char *, float);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat_2_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat_2;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat 4
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat_t)(void *, const char *, int32_t);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION010_UpdateAvgRateStat 5
-typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_UpdateAvgRateStat_t)(void *, const char *, uint32_t, double);
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_UpdateAvgRateStat_t)(void *, const char *, float, double);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_UpdateAvgRateStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION010_UpdateAvgRateStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievement 6
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievement_t)(void *, const char *, int *);
@@ -403,13 +403,13 @@ static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat_2_t g_bd_flat_STEAMU
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat_t)(void *, const char *, int32_t *);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat_2 3
-typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat_2_t)(void *, const char *, uint32_t);
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat_2_t)(void *, const char *, float);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat_2_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat_2;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat 4
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat_t)(void *, const char *, int32_t);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION011_UpdateAvgRateStat 5
-typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_UpdateAvgRateStat_t)(void *, const char *, uint32_t, double);
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_UpdateAvgRateStat_t)(void *, const char *, float, double);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_UpdateAvgRateStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_UpdateAvgRateStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievement 6
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievement_t)(void *, const char *, int *);
@@ -1129,13 +1129,13 @@ static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2_t g_bd_flat_STEAMU
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_t)(void *, const char *, int32_t *);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2 3
-typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2_t)(void *, const char *, uint32_t);
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2_t)(void *, const char *, float);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat 4
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_t)(void *, const char *, int32_t);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat 5
-typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat_t)(void *, const char *, uint32_t, double);
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat_t)(void *, const char *, float, double);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement 6
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement_t)(void *, const char *, int *);
@@ -1174,13 +1174,13 @@ static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2_t g_bd_flat_STEAMU
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_t)(void *, const char *, int32_t *);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2 2
-typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2_t)(void *, const char *, uint32_t);
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2_t)(void *, const char *, float);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat 3
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_t)(void *, const char *, int32_t);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat 4
-typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat_t)(void *, const char *, uint32_t, double);
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat_t)(void *, const char *, float, double);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat;
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement 5
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement_t)(void *, const char *, int *);
@@ -2961,7 +2961,7 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
         arg_pchName_len = 0;
       }
       if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_fData; memcpy(&arg_fData, arg + (0u + 4 + arg_pchName_len), 4);
+      float arg_fData; memcpy(&arg_fData, arg + (0u + 4 + arg_pchName_len), 4);
       int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION010_SetStat_2(g_bd_self_steamuserstats_interface_version010, arg_pchName, arg_fData);
       if (respCap < 4) { *respLen = 0; return 1; }
       memcpy(resp, &__ret, 4);
@@ -3009,7 +3009,7 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
         arg_pchName_len = 0;
       }
       if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_flCountThisSession; memcpy(&arg_flCountThisSession, arg + (0u + 4 + arg_pchName_len), 4);
+      float arg_flCountThisSession; memcpy(&arg_flCountThisSession, arg + (0u + 4 + arg_pchName_len), 4);
       if (argLen < ((0u + 4 + arg_pchName_len) + 4) + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
       double arg_dSessionLength; memcpy(&arg_dSessionLength, arg + ((0u + 4 + arg_pchName_len) + 4), 8);
       int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION010_UpdateAvgRateStat(g_bd_self_steamuserstats_interface_version010, arg_pchName, arg_flCountThisSession, arg_dSessionLength);
@@ -3408,7 +3408,7 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
         arg_pchName_len = 0;
       }
       if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_fData; memcpy(&arg_fData, arg + (0u + 4 + arg_pchName_len), 4);
+      float arg_fData; memcpy(&arg_fData, arg + (0u + 4 + arg_pchName_len), 4);
       int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_SetStat_2(g_bd_self_steamuserstats_interface_version011, arg_pchName, arg_fData);
       if (respCap < 4) { *respLen = 0; return 1; }
       memcpy(resp, &__ret, 4);
@@ -3456,7 +3456,7 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
         arg_pchName_len = 0;
       }
       if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_flCountThisSession; memcpy(&arg_flCountThisSession, arg + (0u + 4 + arg_pchName_len), 4);
+      float arg_flCountThisSession; memcpy(&arg_flCountThisSession, arg + (0u + 4 + arg_pchName_len), 4);
       if (argLen < ((0u + 4 + arg_pchName_len) + 4) + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
       double arg_dSessionLength; memcpy(&arg_dSessionLength, arg + ((0u + 4 + arg_pchName_len) + 4), 8);
       int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_UpdateAvgRateStat(g_bd_self_steamuserstats_interface_version011, arg_pchName, arg_flCountThisSession, arg_dSessionLength);
@@ -7902,7 +7902,7 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
         arg_pchName_len = 0;
       }
       if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_fData; memcpy(&arg_fData, arg + (0u + 4 + arg_pchName_len), 4);
+      float arg_fData; memcpy(&arg_fData, arg + (0u + 4 + arg_pchName_len), 4);
       int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2(g_bd_self_steamuserstats_interface_version012, arg_pchName, arg_fData);
       if (respCap < 4) { *respLen = 0; return 1; }
       memcpy(resp, &__ret, 4);
@@ -7950,7 +7950,7 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
         arg_pchName_len = 0;
       }
       if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_flCountThisSession; memcpy(&arg_flCountThisSession, arg + (0u + 4 + arg_pchName_len), 4);
+      float arg_flCountThisSession; memcpy(&arg_flCountThisSession, arg + (0u + 4 + arg_pchName_len), 4);
       if (argLen < ((0u + 4 + arg_pchName_len) + 4) + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
       double arg_dSessionLength; memcpy(&arg_dSessionLength, arg + ((0u + 4 + arg_pchName_len) + 4), 8);
       int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat(g_bd_self_steamuserstats_interface_version012, arg_pchName, arg_flCountThisSession, arg_dSessionLength);
@@ -8227,7 +8227,7 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
         arg_pchName_len = 0;
       }
       if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_fData; memcpy(&arg_fData, arg + (0u + 4 + arg_pchName_len), 4);
+      float arg_fData; memcpy(&arg_fData, arg + (0u + 4 + arg_pchName_len), 4);
       int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2(g_bd_self_steamuserstats_interface_version013, arg_pchName, arg_fData);
       if (respCap < 4) { *respLen = 0; return 1; }
       memcpy(resp, &__ret, 4);
@@ -8275,7 +8275,7 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
         arg_pchName_len = 0;
       }
       if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_flCountThisSession; memcpy(&arg_flCountThisSession, arg + (0u + 4 + arg_pchName_len), 4);
+      float arg_flCountThisSession; memcpy(&arg_flCountThisSession, arg + (0u + 4 + arg_pchName_len), 4);
       if (argLen < ((0u + 4 + arg_pchName_len) + 4) + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
       double arg_dSessionLength; memcpy(&arg_dSessionLength, arg + ((0u + 4 + arg_pchName_len) + 4), 8);
       int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat(g_bd_self_steamuserstats_interface_version013, arg_pchName, arg_flCountThisSession, arg_dSessionLength);

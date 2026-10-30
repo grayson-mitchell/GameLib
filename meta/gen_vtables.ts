@@ -423,8 +423,14 @@ function validateStructParam(
       }
     >
   >
-  const entry = Object.prototype.hasOwnProperty.call(layouts, name)
-    ? layouts[name]
+  // 58-14: Proton spells some struct types with a trailing SDK version
+  // (SteamNetworkingIdentity_144); the measured layout is the unversioned one.
+  const baseName = name.replace(/_\d+$/, '')
+  const layoutName = Object.prototype.hasOwnProperty.call(layouts, name)
+    ? name
+    : baseName
+  const entry = Object.prototype.hasOwnProperty.call(layouts, layoutName)
+    ? layouts[layoutName]
     : undefined
   const where = `${methodCtx}: ${kind} param "${p.name}" (struct "${name}")`
   if (entry === undefined) {
@@ -587,11 +593,9 @@ export function validateManifest(
           `${methodCtx}: helperCustom methods must still declare helperFlat (the custom function may use it)`
         )
       }
-      if (method.shimLocal) {
-        errors.push(
-          `${methodCtx}: shimLocal and helperCustom are mutually exclusive`
-        )
-      }
+      // 58-14: shimLocal with helperCustom is allowed -- the shim emits its
+      // own body (which may forward through gl_bridge_call_raw) and the helper
+      // still emits the custom case for that (ordinal, slot).
     }
     if (method.shimLocal) {
       if (
@@ -747,6 +751,10 @@ function cType(type: string): string {
       return 'int64_t'
     case 'double':
       return 'double'
+    // 58-14: a float travels in an XMM register on Win64, so a float param or
+    // return must be declared float (not the uint32_t fallback below).
+    case 'float':
+      return 'float'
     case 'bool':
       return 'int'
     case 'int32':
@@ -835,7 +843,36 @@ export const SHIM_LOCAL_BODIES: Readonly<Record<string, string>> = {
   'SteamUtils.IsAPICallCompleted':
     '  return gl_md_is_api_call_completed(hSteamAPICall, (uint8_t *)pbFailed);',
   'SteamUtils.GetAPICallResult':
-    '  return gl_md_get_api_call_result(hSteamAPICall, pCallback, cubCallback, iCallbackExpected, (uint8_t *)pbFailed);'
+    '  return gl_md_get_api_call_result(hSteamAPICall, pCallback, cubCallback, iCallbackExpected, (uint8_t *)pbFailed);',
+  // 58-14: ISteamNetworkingUtils004. Parameter names are the manifest's own.
+  'SteamNetworkingUtils.AllocateMessage':
+    '  return gl_msg_alloc((int32_t)cbAllocateBuffer);',
+  'SteamNetworkingUtils.GetLocalPingLocation':
+    '  return gl_net_get_local_ping_location(result);',
+  'SteamNetworkingUtils.ConvertPingLocationToString':
+    '  gl_net_convert_ping_location(location, pszBuf, (int32_t)cchBufSize);',
+  'SteamNetworkingUtils.CheckPingDataUpToDate':
+    '  return gl_net_check_ping_data(flMaxAgeSeconds);',
+  'SteamNetworkingUtils.GetPOPList':
+    '  return (uint32_t)gl_net_get_pop_list((uint32_t *)list, (int32_t)nListSz);',
+  'SteamNetworkingUtils.SetDebugOutputFunction':
+    '  gl_net_set_debug_output((int32_t)eDetailLevel, pfnFunc);',
+  'SteamNetworkingUtils.SetConfigValue':
+    '  return gl_net_set_config_value((int32_t)eValue, (int32_t)eScopeType, (int64_t)(uint32_t)scopeObj, (int32_t)eDataType, pArg);',
+  'SteamNetworkingUtils.GetConfigValue':
+    '  return (uint32_t)gl_net_get_config_value((int32_t)eValue, (int32_t)eScopeType, (int64_t)(uint32_t)scopeObj, (int32_t *)pOutDataType, pResult, (size_t *)cbResult);',
+  'SteamNetworkingUtils.GetConfigValueInfo':
+    '  return gl_net_get_config_value_info((int32_t)eValue, (int32_t *)pOutDataType, (int32_t *)pOutScope);',
+  'SteamNetworkingUtils.SteamNetworkingIPAddr_ToString':
+    '  if (addr != NULL) gl_ip_to_string((const gl_net_ip *)addr, buf, cbBuf, (bWithPort & 0xff) != 0);\n  else if (buf != NULL && cbBuf > 0) buf[0] = 0;',
+  'SteamNetworkingUtils.SteamNetworkingIPAddr_ParseString':
+    '  return pAddr != NULL && gl_ip_parse((gl_net_ip *)pAddr, pszStr);',
+  'SteamNetworkingUtils.SteamNetworkingIPAddr_GetFakeIPType':
+    '  return addr != NULL ? (uint32_t)gl_ip_fake_type((const gl_net_ip *)addr) : 0;',
+  'SteamNetworkingUtils.SteamNetworkingIdentity_ToString':
+    '  if (identity != NULL) gl_id_to_string((const gl_net_ident *)identity, buf, cbBuf);\n  else if (buf != NULL && cbBuf > 0) buf[0] = 0;',
+  'SteamNetworkingUtils.SteamNetworkingIdentity_ParseString':
+    '  return pIdentity != NULL && gl_id_parse((gl_net_ident *)pIdentity, pszStr);'
 }
 
 const HELPER_CUSTOM_NAME = /^gl_[a-z0-9_]{1,48}$/
@@ -1093,53 +1130,12 @@ const GAMESERVER_FLAT_STUB_BODIES: Record<
 // (`T` = a `char *buf, size_t cap` pair after `self`; `L` = an `int *cbLen`
 // out-length). The five SteamAPI_ManualDispatch_* names are not in this table:
 // 58-11 gives them real bodies (MANUAL_DISPATCH_EXPORT_BODIES below).
-const LIFECYCLE_NOOP_SPECS: Readonly<Record<string, string>> = {
+export const LIFECYCLE_NOOP_SPECS: Readonly<Record<string, string>> = {
   SteamAPI_GetSteamInstallPath: 'S',
   SteamAPI_ReleaseCurrentThreadMemory: 'V',
   SteamAPI_SetBreakpadAppID: 'V',
   SteamAPI_SetMiniDumpComment: 'V',
   SteamAPI_SetTryCatchCallbacks: 'V',
-  SteamAPI_SteamNetworkingIPAddr_Clear: 'V',
-  SteamAPI_SteamNetworkingIPAddr_GetFakeIPType: 'I',
-  SteamAPI_SteamNetworkingIPAddr_GetIPv4: 'U',
-  SteamAPI_SteamNetworkingIPAddr_IsEqualTo: 'B',
-  SteamAPI_SteamNetworkingIPAddr_IsFakeIP: 'B',
-  SteamAPI_SteamNetworkingIPAddr_IsIPv4: 'B',
-  SteamAPI_SteamNetworkingIPAddr_IsIPv6AllZeros: 'B',
-  SteamAPI_SteamNetworkingIPAddr_IsLocalHost: 'B',
-  SteamAPI_SteamNetworkingIPAddr_ParseString: 'B',
-  SteamAPI_SteamNetworkingIPAddr_SetIPv4: 'V',
-  SteamAPI_SteamNetworkingIPAddr_SetIPv6: 'V',
-  SteamAPI_SteamNetworkingIPAddr_SetIPv6LocalHost: 'V',
-  SteamAPI_SteamNetworkingIPAddr_ToString: 'T',
-  SteamAPI_SteamNetworkingIdentity_Clear: 'V',
-  SteamAPI_SteamNetworkingIdentity_GetFakeIPType: 'I',
-  SteamAPI_SteamNetworkingIdentity_GetGenericBytes: 'L',
-  SteamAPI_SteamNetworkingIdentity_GetGenericString: 'S',
-  SteamAPI_SteamNetworkingIdentity_GetIPAddr: 'P',
-  SteamAPI_SteamNetworkingIdentity_GetIPv4: 'U',
-  SteamAPI_SteamNetworkingIdentity_GetPSNID: 'Q',
-  SteamAPI_SteamNetworkingIdentity_GetStadiaID: 'Q',
-  SteamAPI_SteamNetworkingIdentity_GetSteamID: 'Q',
-  SteamAPI_SteamNetworkingIdentity_GetSteamID64: 'Q',
-  SteamAPI_SteamNetworkingIdentity_GetXboxPairwiseID: 'S',
-  SteamAPI_SteamNetworkingIdentity_IsEqualTo: 'B',
-  SteamAPI_SteamNetworkingIdentity_IsFakeIP: 'B',
-  SteamAPI_SteamNetworkingIdentity_IsInvalid: 'B',
-  SteamAPI_SteamNetworkingIdentity_IsLocalHost: 'B',
-  SteamAPI_SteamNetworkingIdentity_ParseString: 'B',
-  SteamAPI_SteamNetworkingIdentity_SetGenericBytes: 'B',
-  SteamAPI_SteamNetworkingIdentity_SetGenericString: 'B',
-  SteamAPI_SteamNetworkingIdentity_SetIPAddr: 'V',
-  SteamAPI_SteamNetworkingIdentity_SetIPv4Addr: 'V',
-  SteamAPI_SteamNetworkingIdentity_SetLocalHost: 'V',
-  SteamAPI_SteamNetworkingIdentity_SetPSNID: 'V',
-  SteamAPI_SteamNetworkingIdentity_SetStadiaID: 'V',
-  SteamAPI_SteamNetworkingIdentity_SetSteamID: 'V',
-  SteamAPI_SteamNetworkingIdentity_SetSteamID64: 'V',
-  SteamAPI_SteamNetworkingIdentity_SetXboxPairwiseID: 'B',
-  SteamAPI_SteamNetworkingIdentity_ToString: 'T',
-  SteamAPI_SteamNetworkingMessage_t_Release: 'V',
   SteamAPI_UseBreakpadCrashHandler: 'V',
   SteamAPI_WriteMiniDump: 'V',
   SteamGameServerClient: 'P',
@@ -1179,9 +1175,1217 @@ export const MANUAL_DISPATCH_EXPORT_BODIES: Readonly<Record<string, string>> = {
     '}'
 }
 
+/**
+ * 58-14: the shim-local networking C block (identity and address helpers,
+ * message pool, config store). x64 only; emitted into the shim just before
+ * the callback registry so the registry's delivery paths can call
+ * gl_net_cb_intercept. Compiled on the host by networkingLocalHost.test.ts.
+ */
+export const NETWORKING_LOCAL_C = String.raw`/* ---- networking value types, message pool and config store (58-14, x64 only) ----
+ * GameLib-authored C implementing the semantics of the Steamworks inline
+ * networking structs on the Windows side, so the game never needs a Mac
+ * pointer or a round trip for them (D-09: written from behaviour, no vendored
+ * header text). Struct layouts are the measured ones (meta/msvcCallbackLayout.ts):
+ * SteamNetworkingIPAddr 18 bytes, SteamNetworkingIdentity 136 bytes,
+ * SteamNetworkingMessage_t 216 bytes with m_pfnFreeData at 176 and m_pfnRelease
+ * at 184.
+ *
+ * Message ownership (Proton networking_message_pool precedent): a message is
+ * allocated here, in Windows-process memory, with its own m_pfnRelease; no Mac
+ * pointer is ever stored in one. Release frees the block exactly once.
+ *
+ * Config store: a Ptr-typed value or any Callback_* config id (201..207) is
+ * kept here (bounded 256 entries) and NEVER sent to the helper, so a Windows
+ * function pointer can not reach the Mac process (T-58-44). A stored callback
+ * is invoked by the registry delivery path on the game's own thread, with no
+ * lock held. Int32/Int64/Float/String values are forwarded to the helper. */
+#if !defined(__i386__)
+#define GL_NET_FN static __attribute__((unused))
+#ifndef GL_NET_ALLOC
+#define GL_NET_ALLOC(n) calloc(1, (n))
+#define GL_NET_FREE(p) free(p)
+#endif
+
+#define GL_NET_UTILS_ORDINAL 71
+#define GL_NET_SLOT_GETLOCALPING 2
+#define GL_NET_SLOT_CONVERTPING 5
+#define GL_NET_SLOT_CHECKPING 7
+#define GL_NET_SLOT_GETPOPLIST 11
+#define GL_NET_SLOT_SETCONFIG 16
+#define GL_NET_SLOT_GETCONFIG 17
+#define GL_NET_SLOT_GETCONFIGINFO 18
+#define GL_NET_CFG_INT32 1
+#define GL_NET_CFG_INT64 2
+#define GL_NET_CFG_FLOAT 3
+#define GL_NET_CFG_STRING 4
+#define GL_NET_CFG_PTR 5
+#define GL_NET_CFG_STRING_MAX 4096
+#define GL_NET_CFG_GET_MAX 4096
+#define GL_NET_CFG_STORE_MAX 256
+#define GL_NET_CFG_CB_FIRST 201
+#define GL_NET_CFG_CB_LAST 207
+#define GL_NET_SCOPE_GLOBAL 1
+#define GL_NET_SCOPE_LISTEN 3
+#define GL_NET_SCOPE_CONNECTION 4
+#define GL_NET_MSG_BYTES 216
+#define GL_NET_MSG_OFF_FREEDATA 176
+#define GL_NET_MSG_OFF_RELEASE 184
+#define GL_NET_MSG_MAX_DATA (1u << 20)
+#define GL_NET_PING_LOC_BYTES 512
+#define GL_NET_POP_MAX 256
+#define GL_NET_NAME_MAX 128
+
+typedef struct {
+  uint8_t b[16];
+  uint16_t port;
+} gl_net_ip;
+
+typedef struct {
+  int32_t type;
+  int32_t cb;
+  union {
+    uint64_t u64;
+    uint8_t raw[128];
+    gl_net_ip ip;
+  } d;
+} gl_net_ident;
+
+_Static_assert(sizeof(gl_net_ip) == 18, "SteamNetworkingIPAddr is 18 bytes");
+_Static_assert(sizeof(gl_net_ident) == 136, "SteamNetworkingIdentity is 136 bytes");
+
+/* ---- bounded string writer ---- */
+typedef struct {
+  char *buf;
+  size_t cap;
+  size_t len;
+} gl_net_w;
+
+GL_NET_FN void gl_net_w_init(gl_net_w *w, char *buf, size_t cap) {
+  w->buf = buf;
+  w->cap = buf != NULL ? cap : 0;
+  w->len = 0;
+}
+GL_NET_FN void gl_net_w_ch(gl_net_w *w, char c) {
+  if (w->len + 1 < w->cap) w->buf[w->len] = c;
+  w->len++;
+}
+GL_NET_FN void gl_net_w_str(gl_net_w *w, const char *s) {
+  while (*s) gl_net_w_ch(w, *s++);
+}
+GL_NET_FN void gl_net_w_u64(gl_net_w *w, uint64_t v) {
+  char t[24];
+  int n = 0;
+  if (v == 0) t[n++] = '0';
+  while (v) {
+    t[n++] = (char)('0' + (int)(v % 10u));
+    v /= 10u;
+  }
+  while (n) gl_net_w_ch(w, t[--n]);
+}
+GL_NET_FN void gl_net_w_hex(gl_net_w *w, uint64_t v, int pad2) {
+  static const char dig[] = "0123456789abcdef";
+  char t[20];
+  int n = 0;
+  if (v == 0) t[n++] = '0';
+  while (v) {
+    t[n++] = dig[v & 15u];
+    v >>= 4;
+  }
+  if (pad2 && n < 2) t[n++] = '0';
+  while (n) gl_net_w_ch(w, t[--n]);
+}
+GL_NET_FN void gl_net_w_fin(gl_net_w *w) {
+  if (w->cap > 0) w->buf[w->len < w->cap ? w->len : w->cap - 1] = 0;
+}
+
+/* ---- IPv4 / IPv6 address ---- */
+GL_NET_FN int gl_ip_is_v4(const gl_net_ip *a) {
+  size_t i;
+  for (i = 0; i < 10; i++)
+    if (a->b[i]) return 0;
+  return a->b[10] == 0xff && a->b[11] == 0xff;
+}
+GL_NET_FN uint32_t gl_ip_get_v4(const gl_net_ip *a) {
+  if (!gl_ip_is_v4(a)) return 0;
+  return ((uint32_t)a->b[12] << 24) | ((uint32_t)a->b[13] << 16) |
+         ((uint32_t)a->b[14] << 8) | (uint32_t)a->b[15];
+}
+GL_NET_FN void gl_ip_set_v4(gl_net_ip *a, uint32_t ip, uint16_t port) {
+  memset(a->b, 0, 10);
+  a->b[10] = 0xff;
+  a->b[11] = 0xff;
+  a->b[12] = (uint8_t)(ip >> 24);
+  a->b[13] = (uint8_t)(ip >> 16);
+  a->b[14] = (uint8_t)(ip >> 8);
+  a->b[15] = (uint8_t)ip;
+  a->port = port;
+}
+GL_NET_FN void gl_ip_set_v6(gl_net_ip *a, const uint8_t *ipv6, uint16_t port) {
+  if (ipv6 != NULL) memcpy(a->b, ipv6, 16);
+  a->port = port;
+}
+GL_NET_FN void gl_ip_set_v6_localhost(gl_net_ip *a, uint16_t port) {
+  memset(a->b, 0, 16);
+  a->b[15] = 1;
+  a->port = port;
+}
+GL_NET_FN int gl_ip_is_v6_allzeros(const gl_net_ip *a) {
+  size_t i;
+  for (i = 0; i < 16; i++)
+    if (a->b[i]) return 0;
+  return 1;
+}
+GL_NET_FN int gl_ip_is_localhost(const gl_net_ip *a) {
+  size_t i;
+  int v6 = a->b[15] == 1;
+  for (i = 0; i < 15; i++)
+    if (a->b[i]) v6 = 0;
+  return v6 || gl_ip_get_v4(a) == 0x7f000001u;
+}
+GL_NET_FN int gl_ip_equal(const gl_net_ip *a, const gl_net_ip *b) {
+  return memcmp(a->b, b->b, 16) == 0 && a->port == b->port;
+}
+/* 0 invalid, 1 not fake, 2 global fake, 3 local fake. Only the link-local
+ * 169.254.0.0/16 block is treated as a Steam fake-IP range. */
+GL_NET_FN int32_t gl_ip_fake_type(const gl_net_ip *a) {
+  if (gl_ip_is_v4(a) && a->b[12] == 169 && a->b[13] == 254) return 2;
+  return 1;
+}
+
+GL_NET_FN void gl_ip_write(const gl_net_ip *a, int withPort, gl_net_w *w) {
+  if (gl_ip_is_v4(a)) {
+    int i;
+    for (i = 12; i < 16; i++) {
+      gl_net_w_u64(w, a->b[i]);
+      if (i < 15) gl_net_w_ch(w, '.');
+    }
+    if (withPort) {
+      gl_net_w_ch(w, ':');
+      gl_net_w_u64(w, a->port);
+    }
+    return;
+  }
+  {
+    uint16_t g[8];
+    int i, bestAt = -1, bestLen = 0, runAt = -1, runLen = 0;
+    for (i = 0; i < 8; i++)
+      g[i] = (uint16_t)(((uint16_t)a->b[2 * i] << 8) | a->b[2 * i + 1]);
+    for (i = 0; i < 8; i++) {
+      if (g[i] == 0) {
+        if (runAt < 0) {
+          runAt = i;
+          runLen = 0;
+        }
+        runLen++;
+        if (runLen > bestLen) {
+          bestLen = runLen;
+          bestAt = runAt;
+        }
+      } else {
+        runAt = -1;
+      }
+    }
+    if (bestLen < 2) {
+      bestAt = -1;
+      bestLen = 0;
+    }
+    if (withPort) gl_net_w_ch(w, '[');
+    for (i = 0; i < 8; i++) {
+      if (i == bestAt) {
+        gl_net_w_str(w, "::");
+        i += bestLen - 1;
+        continue;
+      }
+      if (i > 0 && i != bestAt + bestLen) gl_net_w_ch(w, ':');
+      gl_net_w_hex(w, g[i], 0);
+    }
+    if (withPort) {
+      gl_net_w_str(w, "]:");
+      gl_net_w_u64(w, a->port);
+    }
+  }
+}
+GL_NET_FN void gl_ip_to_string(const gl_net_ip *a, char *buf, size_t cap, int withPort) {
+  gl_net_w w;
+  gl_net_w_init(&w, buf, cap);
+  gl_ip_write(a, withPort, &w);
+  gl_net_w_fin(&w);
+}
+
+GL_NET_FN int gl_net_hexval(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return -1;
+}
+GL_NET_FN int gl_ip_parse_v4(const char *s, size_t n, uint8_t out[4]) {
+  size_t i = 0;
+  int part = 0;
+  while (part < 4) {
+    uint32_t v = 0;
+    int digits = 0;
+    while (i < n && s[i] >= '0' && s[i] <= '9' && digits < 4) {
+      v = v * 10u + (uint32_t)(s[i] - '0');
+      i++;
+      digits++;
+    }
+    if (digits == 0 || digits > 3 || v > 255u) return 0;
+    out[part++] = (uint8_t)v;
+    if (part < 4) {
+      if (i >= n || s[i] != '.') return 0;
+      i++;
+    }
+  }
+  return i == n;
+}
+GL_NET_FN int gl_ip_parse_port(const char *s, size_t n, uint16_t *out) {
+  uint32_t v = 0;
+  size_t i;
+  if (n == 0 || n > 5) return 0;
+  for (i = 0; i < n; i++) {
+    if (s[i] < '0' || s[i] > '9') return 0;
+    v = v * 10u + (uint32_t)(s[i] - '0');
+  }
+  if (v > 65535u) return 0;
+  *out = (uint16_t)v;
+  return 1;
+}
+GL_NET_FN int gl_ip_parse_v6(const char *s, size_t n, uint8_t out[16]) {
+  uint16_t g[8];
+  int ng = 0, gap = -1, k, tail;
+  size_t i = 0;
+  memset(g, 0, sizeof g);
+  if (n >= 2 && s[0] == ':' && s[1] == ':') {
+    gap = 0;
+    i = 2;
+    if (i == n) {
+      memset(out, 0, 16);
+      return 1;
+    }
+  } else if (n > 0 && s[0] == ':') {
+    return 0;
+  }
+  while (i < n) {
+    uint32_t v = 0;
+    int d = 0, h;
+    while (i < n && (h = gl_net_hexval(s[i])) >= 0 && d < 5) {
+      v = v * 16u + (uint32_t)h;
+      i++;
+      d++;
+    }
+    if (d == 0 || d > 4 || ng >= 8) return 0;
+    g[ng++] = (uint16_t)v;
+    if (i == n) break;
+    if (s[i] != ':') return 0;
+    i++;
+    if (i < n && s[i] == ':') {
+      if (gap >= 0) return 0;
+      gap = ng;
+      i++;
+      if (i == n) break;
+    } else if (i == n) {
+      return 0;
+    }
+  }
+  if (gap < 0) {
+    if (ng != 8) return 0;
+    for (k = 0; k < 8; k++) {
+      out[2 * k] = (uint8_t)(g[k] >> 8);
+      out[2 * k + 1] = (uint8_t)g[k];
+    }
+    return 1;
+  }
+  if (ng > 7) return 0;
+  {
+    uint16_t full[8];
+    memset(full, 0, sizeof full);
+    for (k = 0; k < gap; k++) full[k] = g[k];
+    tail = ng - gap;
+    for (k = 0; k < tail; k++) full[8 - tail + k] = g[gap + k];
+    for (k = 0; k < 8; k++) {
+      out[2 * k] = (uint8_t)(full[k] >> 8);
+      out[2 * k + 1] = (uint8_t)full[k];
+    }
+  }
+  return 1;
+}
+/* "a.b.c.d", "a.b.c.d:port", "[v6]:port" or a bare IPv6. A missing port is 0.
+ * The address is cleared first; false leaves it cleared. */
+GL_NET_FN int gl_ip_parse(gl_net_ip *a, const char *s) {
+  size_t n, colons = 0, i;
+  uint8_t v4[4];
+  uint16_t port = 0;
+  memset(a, 0, sizeof *a);
+  if (s == NULL) return 0;
+  n = strlen(s);
+  if (n == 0 || n > 64) return 0;
+  for (i = 0; i < n; i++)
+    if (s[i] == ':') colons++;
+  if (s[0] == '[') {
+    size_t close = 1;
+    uint8_t v6[16];
+    while (close < n && s[close] != ']') close++;
+    if (close >= n) return 0;
+    if (!gl_ip_parse_v6(s + 1, close - 1, v6)) return 0;
+    if (close + 1 < n) {
+      if (s[close + 1] != ':' || !gl_ip_parse_port(s + close + 2, n - close - 2, &port)) return 0;
+    }
+    gl_ip_set_v6(a, v6, port);
+    return 1;
+  }
+  if (colons == 0 || (colons == 1 && strchr(s, '.') != NULL)) {
+    size_t addrLen = n;
+    if (colons == 1) {
+      const char *c = strchr(s, ':');
+      addrLen = (size_t)(c - s);
+      if (!gl_ip_parse_port(c + 1, n - addrLen - 1, &port)) return 0;
+    }
+    if (!gl_ip_parse_v4(s, addrLen, v4)) return 0;
+    gl_ip_set_v4(a, ((uint32_t)v4[0] << 24) | ((uint32_t)v4[1] << 16) | ((uint32_t)v4[2] << 8) | v4[3], port);
+    return 1;
+  }
+  {
+    uint8_t v6[16];
+    if (!gl_ip_parse_v6(s, n, v6)) return 0;
+    gl_ip_set_v6(a, v6, 0);
+    return 1;
+  }
+}
+
+/* ---- identity ---- */
+GL_NET_FN void gl_id_clear(gl_net_ident *id) { memset(id, 0, sizeof *id); }
+GL_NET_FN void gl_id_set_u64(gl_net_ident *id, int32_t type, uint64_t v) {
+  gl_id_clear(id);
+  id->type = type;
+  id->cb = 8;
+  id->d.u64 = v;
+}
+GL_NET_FN uint64_t gl_id_get_u64(const gl_net_ident *id, int32_t type) {
+  return id->type == type ? id->d.u64 : 0;
+}
+GL_NET_FN int gl_id_set_string(gl_net_ident *id, int32_t type, const char *s, size_t maxLen, size_t minLen) {
+  size_t l;
+  if (s == NULL) return 0;
+  l = strlen(s);
+  if (l < minLen || l >= maxLen) return 0;
+  gl_id_clear(id);
+  id->type = type;
+  id->cb = (int32_t)(l + 1);
+  memcpy(id->d.raw, s, l + 1);
+  return 1;
+}
+GL_NET_FN int gl_id_set_bytes(gl_net_ident *id, const void *data, uint32_t cbLen) {
+  if (cbLen > 32 || (data == NULL && cbLen > 0)) return 0;
+  gl_id_clear(id);
+  id->type = 3;
+  id->cb = (int32_t)cbLen;
+  if (cbLen > 0) memcpy(id->d.raw, data, cbLen);
+  return 1;
+}
+GL_NET_FN void gl_id_set_ip(gl_net_ident *id, const gl_net_ip *addr) {
+  gl_net_ip copy;
+  if (addr == NULL) {
+    gl_id_clear(id);
+    return;
+  }
+  copy = *addr;
+  gl_id_clear(id);
+  id->type = 1;
+  id->cb = (int32_t)sizeof(gl_net_ip);
+  id->d.ip = copy;
+}
+GL_NET_FN void gl_id_set_ipv4(gl_net_ident *id, uint32_t ip, uint16_t port) {
+  gl_id_clear(id);
+  id->type = 1;
+  id->cb = (int32_t)sizeof(gl_net_ip);
+  gl_ip_set_v4(&id->d.ip, ip, port);
+}
+GL_NET_FN void gl_id_set_localhost(gl_net_ident *id) {
+  gl_id_clear(id);
+  id->type = 1;
+  id->cb = (int32_t)sizeof(gl_net_ip);
+  gl_ip_set_v6_localhost(&id->d.ip, 0);
+}
+GL_NET_FN int gl_id_equal(const gl_net_ident *a, const gl_net_ident *b) {
+  if (a->type != b->type || a->cb != b->cb) return 0;
+  if (a->cb < 0 || a->cb > 128) return 0;
+  return memcmp(&a->d, &b->d, (size_t)a->cb) == 0;
+}
+GL_NET_FN int32_t gl_id_fake_type(const gl_net_ident *id) {
+  return id->type == 1 ? gl_ip_fake_type(&id->d.ip) : 0;
+}
+
+GL_NET_FN void gl_id_to_string(const gl_net_ident *id, char *buf, size_t cap) {
+  gl_net_w w;
+  int i;
+  gl_net_w_init(&w, buf, cap);
+  switch (id->type) {
+    case 16:
+      gl_net_w_str(&w, "steamid:");
+      gl_net_w_u64(&w, id->d.u64);
+      break;
+    case 1:
+      gl_net_w_str(&w, "ip:");
+      gl_ip_write(&id->d.ip, 1, &w);
+      break;
+    case 2:
+      gl_net_w_str(&w, "str:");
+      for (i = 0; i < 32 && id->d.raw[i]; i++) gl_net_w_ch(&w, (char)id->d.raw[i]);
+      break;
+    case 3:
+      gl_net_w_str(&w, "gen:");
+      for (i = 0; i < id->cb && i < 32; i++) gl_net_w_hex(&w, id->d.raw[i], 1);
+      break;
+    case 17:
+      gl_net_w_str(&w, "xboxpairwiseid:");
+      for (i = 0; i < 33 && id->d.raw[i]; i++) gl_net_w_ch(&w, (char)id->d.raw[i]);
+      break;
+    case 18:
+      gl_net_w_str(&w, "psn:");
+      gl_net_w_hex(&w, id->d.u64, 0);
+      break;
+    case 19:
+      gl_net_w_str(&w, "stadia:");
+      gl_net_w_hex(&w, id->d.u64, 0);
+      break;
+    case 4:
+      for (i = 0; i < 127 && id->d.raw[i]; i++) gl_net_w_ch(&w, (char)id->d.raw[i]);
+      break;
+    default:
+      gl_net_w_str(&w, "invalid");
+      break;
+  }
+  gl_net_w_fin(&w);
+}
+
+GL_NET_FN size_t gl_net_prefix(const char *s, const char *prefix) {
+  size_t n = strlen(prefix);
+  return strncmp(s, prefix, n) == 0 ? n : 0;
+}
+GL_NET_FN int gl_net_parse_dec(const char *s, uint64_t *out) {
+  uint64_t v = 0;
+  size_t i;
+  if (s[0] == 0) return 0;
+  for (i = 0; s[i]; i++) {
+    uint64_t d;
+    if (s[i] < '0' || s[i] > '9') return 0;
+    d = (uint64_t)(s[i] - '0');
+    if (v > (UINT64_MAX - d) / 10u) return 0;
+    v = v * 10u + d;
+  }
+  *out = v;
+  return 1;
+}
+GL_NET_FN int gl_net_parse_hex64(const char *s, uint64_t *out) {
+  uint64_t v = 0;
+  size_t i;
+  if (s[0] == 0 || strlen(s) > 16) return 0;
+  for (i = 0; s[i]; i++) {
+    int h = gl_net_hexval(s[i]);
+    if (h < 0) return 0;
+    v = (v << 4) | (uint64_t)h;
+  }
+  *out = v;
+  return 1;
+}
+/* Parses the ToString format. An unrecognised but well-formed "type:data"
+ * becomes UnknownType (true); malformed text clears the identity (false). */
+GL_NET_FN int gl_id_parse(gl_net_ident *id, const char *s) {
+  size_t n, p, i;
+  uint64_t v;
+  gl_id_clear(id);
+  if (s == NULL) return 0;
+  n = strlen(s);
+  if (n == 0 || n > 127) return 0;
+  if ((p = gl_net_prefix(s, "steamid:")) != 0) {
+    if (!gl_net_parse_dec(s + p, &v)) return 0;
+    gl_id_set_u64(id, 16, v);
+    return 1;
+  }
+  if ((p = gl_net_prefix(s, "ip:")) != 0) {
+    gl_net_ip a;
+    if (!gl_ip_parse(&a, s + p)) return 0;
+    gl_id_set_ip(id, &a);
+    return 1;
+  }
+  if ((p = gl_net_prefix(s, "str:")) != 0) return gl_id_set_string(id, 2, s + p, 32, 0);
+  if ((p = gl_net_prefix(s, "xboxpairwiseid:")) != 0) return gl_id_set_string(id, 17, s + p, 33, 1);
+  if ((p = gl_net_prefix(s, "gen:")) != 0) {
+    uint8_t b[32];
+    size_t hl = n - p, k;
+    if (hl % 2 != 0 || hl / 2 > 32) return 0;
+    for (k = 0; k < hl / 2; k++) {
+      int hi = gl_net_hexval(s[p + 2 * k]);
+      int lo = gl_net_hexval(s[p + 2 * k + 1]);
+      if (hi < 0 || lo < 0) return 0;
+      b[k] = (uint8_t)((hi << 4) | lo);
+    }
+    return gl_id_set_bytes(id, b, (uint32_t)(hl / 2));
+  }
+  if ((p = gl_net_prefix(s, "psn:")) != 0) {
+    if (!gl_net_parse_hex64(s + p, &v)) return 0;
+    gl_id_set_u64(id, 18, v);
+    return 1;
+  }
+  if ((p = gl_net_prefix(s, "stadia:")) != 0) {
+    if (!gl_net_parse_hex64(s + p, &v)) return 0;
+    gl_id_set_u64(id, 19, v);
+    return 1;
+  }
+  for (i = 0; i < n && s[i] != ':'; i++) {
+    char c = s[i];
+    if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_')) return 0;
+  }
+  if (i == 0 || i >= n || i > 31) return 0;
+  for (i = 0; i < n; i++)
+    if ((unsigned char)s[i] < 0x20 || (unsigned char)s[i] > 0x7e) return 0;
+  id->type = 4;
+  id->cb = (int32_t)(n + 1);
+  memcpy(id->d.raw, s, n + 1);
+  return 1;
+}
+
+/* ---- message pool (AllocateMessage / Release) ---- */
+GL_NET_FN void gl_msg_release(void *msg) {
+  uint8_t *m = (uint8_t *)msg;
+  void (*freeData)(void *);
+  if (m == NULL) return;
+  memcpy(&freeData, m + GL_NET_MSG_OFF_FREEDATA, sizeof freeData);
+  if (freeData != NULL) freeData(m);
+  GL_NET_FREE(m);
+}
+/* One block: the 216-byte message followed by cb data bytes. m_pData points
+ * into the block and m_pfnFreeData stays NULL, so Release frees it all at
+ * once. AllocateMessage(0) leaves m_pData NULL. NULL for a negative or
+ * oversize request. */
+GL_NET_FN void *gl_msg_alloc(int32_t cb) {
+  uint8_t *m;
+  void (*rel)(void *) = gl_msg_release;
+  if (cb < 0 || (uint32_t)cb > GL_NET_MSG_MAX_DATA) return NULL;
+  m = (uint8_t *)GL_NET_ALLOC((size_t)GL_NET_MSG_BYTES + (size_t)cb);
+  if (m == NULL) return NULL;
+  if (cb > 0) {
+    void *data = m + GL_NET_MSG_BYTES;
+    memcpy(m, &data, sizeof data);
+  }
+  memcpy(m + 8, &cb, 4);
+  memcpy(m + GL_NET_MSG_OFF_RELEASE, &rel, sizeof rel);
+  return m;
+}
+/* SteamAPI_SteamNetworkingMessage_t_Release: calls the message's own
+ * m_pfnRelease, exactly as the SDK inline does. */
+GL_NET_FN void gl_msg_release_via_fn(void *msg) {
+  void (*rel)(void *);
+  if (msg == NULL) return;
+  memcpy(&rel, (uint8_t *)msg + GL_NET_MSG_OFF_RELEASE, sizeof rel);
+  if (rel != NULL) rel(msg);
+}
+
+/* ---- transport ---- */
+GL_NET_FN int gl_bridge_call_raw(uint16_t ordinal, uint16_t slot, const uint8_t *req,
+                                 uint32_t reqLen, uint8_t *resp, uint32_t respCap,
+                                 uint32_t *respLen) {
+  uint32_t n = 0;
+  int ok = bridge_transact(ordinal, slot, req, reqLen, resp, respCap, &n);
+  if (respLen != NULL) *respLen = ok ? n : 0;
+  return ok;
+}
+
+/* ---- config store ---- */
+typedef struct {
+  int32_t e;
+  int32_t scope;
+  int64_t obj;
+  void *fn;
+} gl_net_cfg_ent;
+
+static gl_net_cfg_ent gl_net_cfg[GL_NET_CFG_STORE_MAX];
+static uint32_t gl_net_cfg_n;
+static volatile int32_t gl_net_cb_count; /* stored callback pointers; read lock-free */
+static void *gl_net_dbg_fn;
+static int32_t gl_net_dbg_level;
+static char gl_net_name_buf[GL_NET_NAME_MAX];
+
+GL_NET_FN int gl_net_is_cb_id(int32_t e) {
+  return e >= GL_NET_CFG_CB_FIRST && e <= GL_NET_CFG_CB_LAST;
+}
+/* Caller holds the lock. */
+GL_NET_FN int gl_net_cfg_find(int32_t e, int32_t scope, int64_t obj) {
+  uint32_t i;
+  for (i = 0; i < gl_net_cfg_n; i++)
+    if (gl_net_cfg[i].e == e && gl_net_cfg[i].scope == scope && gl_net_cfg[i].obj == obj)
+      return (int)i;
+  return -1;
+}
+GL_NET_FN int gl_net_cfg_put(int32_t e, int32_t scope, int64_t obj, void *fn) {
+  int idx;
+  int ok = 1;
+  GL_CB_LOCK();
+  idx = gl_net_cfg_find(e, scope, obj);
+  if (fn == NULL) {
+    if (idx >= 0) {
+      if (gl_net_is_cb_id(e)) gl_net_cb_count--;
+      gl_net_cfg_n--;
+      gl_net_cfg[idx] = gl_net_cfg[gl_net_cfg_n];
+      memset(&gl_net_cfg[gl_net_cfg_n], 0, sizeof gl_net_cfg[0]);
+    }
+  } else if (idx >= 0) {
+    gl_net_cfg[idx].fn = fn;
+  } else if (gl_net_cfg_n >= GL_NET_CFG_STORE_MAX) {
+    ok = 0;
+  } else {
+    gl_net_cfg[gl_net_cfg_n].e = e;
+    gl_net_cfg[gl_net_cfg_n].scope = scope;
+    gl_net_cfg[gl_net_cfg_n].obj = obj;
+    gl_net_cfg[gl_net_cfg_n].fn = fn;
+    gl_net_cfg_n++;
+    if (gl_net_is_cb_id(e)) gl_net_cb_count++;
+  }
+  GL_CB_UNLOCK();
+  return ok;
+}
+GL_NET_FN void *gl_net_cfg_get(int32_t e, int32_t scope, int64_t obj) {
+  void *fn = NULL;
+  int idx;
+  GL_CB_LOCK();
+  idx = gl_net_cfg_find(e, scope, obj);
+  if (idx >= 0) fn = gl_net_cfg[idx].fn;
+  GL_CB_UNLOCK();
+  return fn;
+}
+/* Lock-free by design: the registry reads it while holding its own lock. */
+GL_NET_FN int gl_net_cb_any(void) { return gl_net_cb_count > 0; }
+
+GL_NET_FN void gl_net_set_debug_output(int32_t level, void *fn) {
+  GL_CB_LOCK();
+  gl_net_dbg_level = level;
+  gl_net_dbg_fn = fn;
+  GL_CB_UNLOCK();
+}
+
+/* ISteamNetworkingUtils::SetConfigValue. Ptr values and Callback_* ids stay
+ * here; typed scalars and strings go to the helper as
+ * [i32 eValue][i32 scope][i64 obj][i32 type][u32 len][len bytes]. A missing
+ * value (pArg NULL) is sent with len 0 (reset to inherited). */
+GL_NET_FN int gl_net_set_config_value(int32_t e, int32_t scope, int64_t obj, int32_t type,
+                                      const void *pArg) {
+  uint8_t req[24 + GL_NET_CFG_STRING_MAX];
+  uint8_t resp[8];
+  uint32_t rlen = 0, len = 0;
+  int32_t ret = 0;
+  if (scope < 1 || scope > 4) return 0;
+  if (type == GL_NET_CFG_PTR || gl_net_is_cb_id(e)) {
+    void *fn = NULL;
+    if (type != GL_NET_CFG_PTR) return 0;
+    if (pArg != NULL) memcpy(&fn, pArg, sizeof fn);
+    return gl_net_cfg_put(e, scope, obj, fn);
+  }
+  if (type < GL_NET_CFG_INT32 || type > GL_NET_CFG_STRING) return 0;
+  if (pArg != NULL) {
+    if (type == GL_NET_CFG_INT32 || type == GL_NET_CFG_FLOAT) {
+      len = 4;
+    } else if (type == GL_NET_CFG_INT64) {
+      len = 8;
+    } else {
+      size_t sl = strlen((const char *)pArg);
+      if (sl + 1 > GL_NET_CFG_STRING_MAX) return 0;
+      len = (uint32_t)(sl + 1);
+    }
+  }
+  memcpy(req, &e, 4);
+  memcpy(req + 4, &scope, 4);
+  memcpy(req + 8, &obj, 8);
+  memcpy(req + 16, &type, 4);
+  memcpy(req + 20, &len, 4);
+  if (len > 0) memcpy(req + 24, pArg, len);
+  if (!gl_bridge_call_raw(GL_NET_UTILS_ORDINAL, GL_NET_SLOT_SETCONFIG, req, 24 + len, resp,
+                          sizeof resp, &rlen) ||
+      rlen < 4)
+    return 0;
+  memcpy(&ret, resp, 4);
+  return ret != 0;
+}
+
+/* ISteamNetworkingUtils::GetConfigValue. Result codes: -1 bad value, -2 bad
+ * scope object, -3 buffer too small, 1 ok, 2 ok inherited. A Ptr or callback
+ * value is answered from the store only; a helper reply of type Ptr is
+ * refused so a Mac pointer is never handed to the game. */
+GL_NET_FN int32_t gl_net_get_config_value(int32_t e, int32_t scope, int64_t obj,
+                                          int32_t *pOutType, void *pResult, size_t *cbResult) {
+  if (scope < 1 || scope > 4) return -1;
+  if (gl_net_is_cb_id(e)) {
+    void *fn = gl_net_cfg_get(e, scope, obj);
+    int32_t ret = 1;
+    if (fn == NULL && scope != GL_NET_SCOPE_GLOBAL) {
+      fn = gl_net_cfg_get(e, GL_NET_SCOPE_GLOBAL, 0);
+      ret = 2;
+    }
+    if (pOutType != NULL) *pOutType = GL_NET_CFG_PTR;
+    if (cbResult != NULL) {
+      if (pResult != NULL && *cbResult < sizeof(void *)) {
+        *cbResult = sizeof(void *);
+        return -3;
+      }
+      *cbResult = sizeof(void *);
+    }
+    if (pResult != NULL && cbResult != NULL) memcpy(pResult, &fn, sizeof fn);
+    return ret;
+  }
+  {
+    uint8_t req[20];
+    uint8_t resp[20 + GL_NET_CFG_GET_MAX];
+    uint32_t rlen = 0, cap = 0, n = 0;
+    int32_t ret = 0, type = 0;
+    uint64_t needed = 0;
+    if (pResult != NULL && cbResult != NULL) {
+      cap = *cbResult > GL_NET_CFG_GET_MAX ? GL_NET_CFG_GET_MAX : (uint32_t)*cbResult;
+    }
+    memcpy(req, &e, 4);
+    memcpy(req + 4, &scope, 4);
+    memcpy(req + 8, &obj, 8);
+    memcpy(req + 16, &cap, 4);
+    if (!gl_bridge_call_raw(GL_NET_UTILS_ORDINAL, GL_NET_SLOT_GETCONFIG, req, sizeof req, resp,
+                            sizeof resp, &rlen) ||
+        rlen < 20)
+      return -1;
+    memcpy(&ret, resp, 4);
+    memcpy(&type, resp + 4, 4);
+    memcpy(&needed, resp + 8, 8);
+    memcpy(&n, resp + 16, 4);
+    if (type == GL_NET_CFG_PTR || n > cap || rlen != 20u + n) return -1;
+    if (pOutType != NULL) *pOutType = type;
+    if (cbResult != NULL) *cbResult = (size_t)needed;
+    if (n > 0 && pResult != NULL) memcpy(pResult, resp + 20, n);
+    return ret;
+  }
+}
+
+/* GetPOPList: [i32 nListSz] -> [i32 ret][u32 n][n x u32]. Returns the total
+ * POP count; fills at most min(nListSz, 256, n) entries. */
+GL_NET_FN int32_t gl_net_get_pop_list(uint32_t *list, int32_t nListSz) {
+  uint8_t resp[8 + 4 * GL_NET_POP_MAX];
+  uint32_t rlen = 0, n = 0, i;
+  int32_t ret = 0, want = nListSz;
+  if (list == NULL || want < 0) want = 0;
+  if (want > GL_NET_POP_MAX) want = GL_NET_POP_MAX;
+  if (!gl_bridge_call_raw(GL_NET_UTILS_ORDINAL, GL_NET_SLOT_GETPOPLIST, (const uint8_t *)&want, 4,
+                          resp, sizeof resp, &rlen) ||
+      rlen < 8)
+    return 0;
+  memcpy(&ret, resp, 4);
+  memcpy(&n, resp + 4, 4);
+  if (n > (uint32_t)want || rlen != 8u + 4u * n) return 0;
+  for (i = 0; i < n; i++) memcpy(&list[i], resp + 8 + 4 * i, 4);
+  return ret;
+}
+
+/* GetLocalPingLocation: [] -> [f32 ret][u8 present][512 bytes]. -1 on failure. */
+GL_NET_FN float gl_net_get_local_ping_location(void *result) {
+  uint8_t resp[5 + GL_NET_PING_LOC_BYTES];
+  uint32_t rlen = 0;
+  float ret = -1.0f;
+  if (!gl_bridge_call_raw(GL_NET_UTILS_ORDINAL, GL_NET_SLOT_GETLOCALPING, NULL, 0, resp,
+                          sizeof resp, &rlen) ||
+      rlen != sizeof resp)
+    return -1.0f;
+  memcpy(&ret, resp, 4);
+  if (resp[4] == 1 && result != NULL) memcpy(result, resp + 5, GL_NET_PING_LOC_BYTES);
+  return ret;
+}
+
+/* CheckPingDataUpToDate: [f32] -> [i32 ret]. */
+GL_NET_FN int gl_net_check_ping_data(float flMaxAgeSeconds) {
+  uint8_t resp[4];
+  uint32_t rlen = 0;
+  int32_t ret = 0;
+  if (!gl_bridge_call_raw(GL_NET_UTILS_ORDINAL, GL_NET_SLOT_CHECKPING, (const uint8_t *)&flMaxAgeSeconds,
+                          4, resp, sizeof resp, &rlen) ||
+      rlen < 4)
+    return 0;
+  memcpy(&ret, resp, 4);
+  return ret != 0;
+}
+
+/* ConvertPingLocationToString: [512 bytes][i32 cap] -> [u32 len][bytes]. */
+GL_NET_FN void gl_net_convert_ping_location(const void *location, char *buf, int32_t cap) {
+  uint8_t req[GL_NET_PING_LOC_BYTES + 4];
+  uint8_t resp[4 + 1024];
+  uint32_t rlen = 0, n = 0;
+  int32_t want;
+  if (buf == NULL || cap <= 0) return;
+  buf[0] = 0;
+  if (location == NULL) return;
+  want = cap > 1024 ? 1024 : cap;
+  memcpy(req, location, GL_NET_PING_LOC_BYTES);
+  memcpy(req + GL_NET_PING_LOC_BYTES, &want, 4);
+  if (!gl_bridge_call_raw(GL_NET_UTILS_ORDINAL, GL_NET_SLOT_CONVERTPING, req, sizeof req, resp,
+                          sizeof resp, &rlen) ||
+      rlen < 4)
+    return;
+  memcpy(&n, resp, 4);
+  if (n >= (uint32_t)want || rlen != 4u + n) return;
+  memcpy(buf, resp + 4, n);
+  buf[n] = 0;
+}
+
+/* GetConfigValueInfo: [i32 eValue] -> [u32 nameLen][name][i32 type][i32 scope].
+ * The name lives in a shim-owned static buffer; NULL for an unknown value. */
+GL_NET_FN const char *gl_net_get_config_value_info(int32_t e, int32_t *pOutType, int32_t *pOutScope) {
+  uint8_t resp[4 + GL_NET_NAME_MAX + 8];
+  uint32_t rlen = 0, n = 0;
+  int32_t type = 0, scope = 0;
+  if (!gl_bridge_call_raw(GL_NET_UTILS_ORDINAL, GL_NET_SLOT_GETCONFIGINFO, (const uint8_t *)&e, 4,
+                          resp, sizeof resp, &rlen) ||
+      rlen < 12)
+    return NULL;
+  memcpy(&n, resp, 4);
+  if (n == 0 || n >= GL_NET_NAME_MAX || rlen != 4u + n + 8u) return NULL;
+  memcpy(&type, resp + 4 + n, 4);
+  memcpy(&scope, resp + 8 + n, 4);
+  memcpy(gl_net_name_buf, resp + 4, n);
+  gl_net_name_buf[n] = 0;
+  if (pOutType != NULL) *pOutType = type;
+  if (pOutScope != NULL) *pOutScope = scope;
+  return gl_net_name_buf;
+}
+
+/* Stored callback for a relayed networking callback id: per connection first
+ * (1221 also tries the listen socket), then global. NULL when none. */
+GL_NET_FN void *gl_net_cb_fn_for(int32_t id, const void *payload) {
+  int32_t cfg;
+  void *fn = NULL;
+  switch (id) {
+    case 1221: cfg = 201; break;
+    case 1222: cfg = 202; break;
+    case 1281: cfg = 203; break;
+    case 1251: cfg = 204; break;
+    case 1252: cfg = 205; break;
+    default: return NULL;
+  }
+  if (id == 1221 && payload != NULL) {
+    uint32_t hConn, hListen;
+    memcpy(&hConn, payload, 4);
+    memcpy(&hListen, (const uint8_t *)payload + 152, 4);
+    if (hConn != 0) fn = gl_net_cfg_get(cfg, GL_NET_SCOPE_CONNECTION, (int64_t)hConn);
+    if (fn == NULL && hListen != 0) fn = gl_net_cfg_get(cfg, GL_NET_SCOPE_LISTEN, (int64_t)hListen);
+  }
+  if (fn == NULL) fn = gl_net_cfg_get(cfg, GL_NET_SCOPE_GLOBAL, 0);
+  return fn;
+}
+/* Called by the registry delivery paths with NO lock held. Returns 1 when a
+ * stored Windows function consumed the callback. */
+GL_NET_FN int gl_net_cb_intercept(int32_t id, void *param) {
+  void *fn = gl_net_cb_fn_for(id, param);
+  if (fn == NULL) return 0;
+  ((void (*)(void *))fn)(param);
+  return 1;
+}
+#define GL_NET_CB_INTERCEPT(id, param) gl_net_cb_intercept((id), (param))
+#define GL_NET_CB_ANY() gl_net_cb_any()
+#endif
+`
+
+/**
+ * 58-14: real bodies for the flat `SteamAPI_SteamNetworkingIdentity_*`,
+ * `SteamAPI_SteamNetworkingIPAddr_*` and `SteamAPI_SteamNetworkingMessage_t_Release`
+ * exports, replacing the earlier no-ops. Export names are unchanged. Each is a
+ * thin wrapper over NETWORKING_LOCAL_C. `bool` returns are an int; `bool`
+ * arguments are masked to their low byte because Win64 leaves the rest of the
+ * register unspecified.
+ */
+export const NETWORKING_LOCAL_EXPORT_BODIES: Readonly<Record<string, string>> =
+  {
+    SteamAPI_SteamNetworkingIPAddr_Clear:
+      'void SteamAPI_SteamNetworkingIPAddr_Clear(void *self) {\n' +
+      '  if (self != NULL) memset(self, 0, sizeof(gl_net_ip));\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_GetFakeIPType:
+      'int SteamAPI_SteamNetworkingIPAddr_GetFakeIPType(void *self) {\n' +
+      '  return self != NULL ? (int)gl_ip_fake_type((const gl_net_ip *)self) : 0;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_GetIPv4:
+      'uint32_t SteamAPI_SteamNetworkingIPAddr_GetIPv4(void *self) {\n' +
+      '  return self != NULL ? gl_ip_get_v4((const gl_net_ip *)self) : 0;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_IsEqualTo:
+      'int SteamAPI_SteamNetworkingIPAddr_IsEqualTo(void *self, const void *x) {\n' +
+      '  return self != NULL && x != NULL && gl_ip_equal((const gl_net_ip *)self, (const gl_net_ip *)x);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_IsFakeIP:
+      'int SteamAPI_SteamNetworkingIPAddr_IsFakeIP(void *self) {\n' +
+      '  return self != NULL && gl_ip_fake_type((const gl_net_ip *)self) > 1;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_IsIPv4:
+      'int SteamAPI_SteamNetworkingIPAddr_IsIPv4(void *self) {\n' +
+      '  return self != NULL && gl_ip_is_v4((const gl_net_ip *)self);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_IsIPv6AllZeros:
+      'int SteamAPI_SteamNetworkingIPAddr_IsIPv6AllZeros(void *self) {\n' +
+      '  return self != NULL && gl_ip_is_v6_allzeros((const gl_net_ip *)self);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_IsLocalHost:
+      'int SteamAPI_SteamNetworkingIPAddr_IsLocalHost(void *self) {\n' +
+      '  return self != NULL && gl_ip_is_localhost((const gl_net_ip *)self);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_ParseString:
+      'int SteamAPI_SteamNetworkingIPAddr_ParseString(void *self, const char *pszStr) {\n' +
+      '  return self != NULL && gl_ip_parse((gl_net_ip *)self, pszStr);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_SetIPv4:
+      'void SteamAPI_SteamNetworkingIPAddr_SetIPv4(void *self, uint32_t nIP, uint16_t nPort) {\n' +
+      '  if (self != NULL) gl_ip_set_v4((gl_net_ip *)self, nIP, nPort);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_SetIPv6:
+      'void SteamAPI_SteamNetworkingIPAddr_SetIPv6(void *self, const uint8_t *ipv6, uint16_t nPort) {\n' +
+      '  if (self != NULL) gl_ip_set_v6((gl_net_ip *)self, ipv6, nPort);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_SetIPv6LocalHost:
+      'void SteamAPI_SteamNetworkingIPAddr_SetIPv6LocalHost(void *self, uint16_t nPort) {\n' +
+      '  if (self != NULL) gl_ip_set_v6_localhost((gl_net_ip *)self, nPort);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIPAddr_ToString:
+      'void SteamAPI_SteamNetworkingIPAddr_ToString(void *self, char *buf, uint32_t cbBuf, int bWithPort) {\n' +
+      '  if (self != NULL) gl_ip_to_string((const gl_net_ip *)self, buf, cbBuf, (bWithPort & 0xff) != 0);\n' +
+      '  else if (buf != NULL && cbBuf > 0) buf[0] = 0;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_Clear:
+      'void SteamAPI_SteamNetworkingIdentity_Clear(void *self) {\n' +
+      '  if (self != NULL) gl_id_clear((gl_net_ident *)self);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_GetFakeIPType:
+      'int SteamAPI_SteamNetworkingIdentity_GetFakeIPType(void *self) {\n' +
+      '  return self != NULL ? (int)gl_id_fake_type((const gl_net_ident *)self) : 0;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_GetGenericBytes:
+      'const uint8_t *SteamAPI_SteamNetworkingIdentity_GetGenericBytes(void *self, int *cbLen) {\n' +
+      '  const gl_net_ident *id = (const gl_net_ident *)self;\n' +
+      '  if (id == NULL || id->type != 3) return NULL;\n' +
+      '  if (cbLen != NULL) *cbLen = id->cb;\n' +
+      '  return id->d.raw;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_GetGenericString:
+      'const char *SteamAPI_SteamNetworkingIdentity_GetGenericString(void *self) {\n' +
+      '  const gl_net_ident *id = (const gl_net_ident *)self;\n' +
+      '  return (id != NULL && id->type == 2) ? (const char *)id->d.raw : NULL;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_GetIPAddr:
+      'const void *SteamAPI_SteamNetworkingIdentity_GetIPAddr(void *self) {\n' +
+      '  const gl_net_ident *id = (const gl_net_ident *)self;\n' +
+      '  return (id != NULL && id->type == 1) ? (const void *)&id->d.ip : NULL;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_GetIPv4:
+      'uint32_t SteamAPI_SteamNetworkingIdentity_GetIPv4(void *self) {\n' +
+      '  const gl_net_ident *id = (const gl_net_ident *)self;\n' +
+      '  return (id != NULL && id->type == 1) ? gl_ip_get_v4(&id->d.ip) : 0;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_GetPSNID:
+      'uint64_t SteamAPI_SteamNetworkingIdentity_GetPSNID(void *self) {\n' +
+      '  return self != NULL ? gl_id_get_u64((const gl_net_ident *)self, 18) : 0;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_GetStadiaID:
+      'uint64_t SteamAPI_SteamNetworkingIdentity_GetStadiaID(void *self) {\n' +
+      '  return self != NULL ? gl_id_get_u64((const gl_net_ident *)self, 19) : 0;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_GetSteamID:
+      'uint64_t SteamAPI_SteamNetworkingIdentity_GetSteamID(void *self) {\n' +
+      '  return self != NULL ? gl_id_get_u64((const gl_net_ident *)self, 16) : 0;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_GetSteamID64:
+      'uint64_t SteamAPI_SteamNetworkingIdentity_GetSteamID64(void *self) {\n' +
+      '  return self != NULL ? gl_id_get_u64((const gl_net_ident *)self, 16) : 0;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_GetXboxPairwiseID:
+      'const char *SteamAPI_SteamNetworkingIdentity_GetXboxPairwiseID(void *self) {\n' +
+      '  const gl_net_ident *id = (const gl_net_ident *)self;\n' +
+      '  return (id != NULL && id->type == 17) ? (const char *)id->d.raw : NULL;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_IsEqualTo:
+      'int SteamAPI_SteamNetworkingIdentity_IsEqualTo(void *self, const void *x) {\n' +
+      '  return self != NULL && x != NULL && gl_id_equal((const gl_net_ident *)self, (const gl_net_ident *)x);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_IsFakeIP:
+      'int SteamAPI_SteamNetworkingIdentity_IsFakeIP(void *self) {\n' +
+      '  return self != NULL && gl_id_fake_type((const gl_net_ident *)self) > 1;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_IsInvalid:
+      'int SteamAPI_SteamNetworkingIdentity_IsInvalid(void *self) {\n' +
+      '  return self == NULL || ((const gl_net_ident *)self)->type == 0;\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_IsLocalHost:
+      'int SteamAPI_SteamNetworkingIdentity_IsLocalHost(void *self) {\n' +
+      '  const gl_net_ident *id = (const gl_net_ident *)self;\n' +
+      '  return id != NULL && id->type == 1 && gl_ip_is_localhost(&id->d.ip);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_ParseString:
+      'int SteamAPI_SteamNetworkingIdentity_ParseString(void *self, const char *pszStr) {\n' +
+      '  return self != NULL && gl_id_parse((gl_net_ident *)self, pszStr);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_SetGenericBytes:
+      'int SteamAPI_SteamNetworkingIdentity_SetGenericBytes(void *self, const void *data, uint32_t cbLen) {\n' +
+      '  return self != NULL && gl_id_set_bytes((gl_net_ident *)self, data, cbLen);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_SetGenericString:
+      'int SteamAPI_SteamNetworkingIdentity_SetGenericString(void *self, const char *pszString) {\n' +
+      '  return self != NULL && gl_id_set_string((gl_net_ident *)self, 2, pszString, 32, 0);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_SetIPAddr:
+      'void SteamAPI_SteamNetworkingIdentity_SetIPAddr(void *self, const void *addr) {\n' +
+      '  if (self != NULL) gl_id_set_ip((gl_net_ident *)self, (const gl_net_ip *)addr);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_SetIPv4Addr:
+      'void SteamAPI_SteamNetworkingIdentity_SetIPv4Addr(void *self, uint32_t nIPv4, uint16_t nPort) {\n' +
+      '  if (self != NULL) gl_id_set_ipv4((gl_net_ident *)self, nIPv4, nPort);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_SetLocalHost:
+      'void SteamAPI_SteamNetworkingIdentity_SetLocalHost(void *self) {\n' +
+      '  if (self != NULL) gl_id_set_localhost((gl_net_ident *)self);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_SetPSNID:
+      'void SteamAPI_SteamNetworkingIdentity_SetPSNID(void *self, uint64_t id) {\n' +
+      '  if (self != NULL) gl_id_set_u64((gl_net_ident *)self, 18, id);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_SetStadiaID:
+      'void SteamAPI_SteamNetworkingIdentity_SetStadiaID(void *self, uint64_t id) {\n' +
+      '  if (self != NULL) gl_id_set_u64((gl_net_ident *)self, 19, id);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_SetSteamID:
+      'void SteamAPI_SteamNetworkingIdentity_SetSteamID(void *self, uint64_t steamID) {\n' +
+      '  if (self != NULL) gl_id_set_u64((gl_net_ident *)self, 16, steamID);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_SetSteamID64:
+      'void SteamAPI_SteamNetworkingIdentity_SetSteamID64(void *self, uint64_t steamID) {\n' +
+      '  if (self != NULL) gl_id_set_u64((gl_net_ident *)self, 16, steamID);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_SetXboxPairwiseID:
+      'int SteamAPI_SteamNetworkingIdentity_SetXboxPairwiseID(void *self, const char *pszString) {\n' +
+      '  return self != NULL && gl_id_set_string((gl_net_ident *)self, 17, pszString, 33, 1);\n' +
+      '}',
+    SteamAPI_SteamNetworkingIdentity_ToString:
+      'void SteamAPI_SteamNetworkingIdentity_ToString(void *self, char *buf, uint32_t cbBuf) {\n' +
+      '  if (self != NULL) gl_id_to_string((const gl_net_ident *)self, buf, cbBuf);\n' +
+      '  else if (buf != NULL && cbBuf > 0) buf[0] = 0;\n' +
+      '}',
+    SteamAPI_SteamNetworkingMessage_t_Release:
+      'void SteamAPI_SteamNetworkingMessage_t_Release(void *self) {\n' +
+      '  gl_msg_release_via_fn(self);\n' +
+      '}'
+  }
+
+/**
+ * 58-14: the SDK's flat-only ISteamNetworkingUtils helpers (the inlines in the
+ * SDK header, which have no virtual slot). Each is routed exactly as the
+ * inline defines it: InitRelayNetworkAccess calls the wired
+ * CheckPingDataUpToDate slot (7) with 1e10f, IsFakeIPv4 is
+ * GetIPv4FakeIPType (slot 14) greater than NotFake (1), and every Set* helper
+ * ends in the shim-local SetConfigValue. `self` is the game's utils object and
+ * is only dereferenced for the two vtable calls.
+ */
+export const NETWORKING_UTILS_FLAT_INLINE: Readonly<Record<string, string>> = {
+  SteamAPI_ISteamNetworkingUtils_InitRelayNetworkAccess:
+    'void SteamAPI_ISteamNetworkingUtils_InitRelayNetworkAccess(void *self) {\n' +
+    '  void **vt;\n' +
+    '  if (self == NULL) return;\n' +
+    '  vt = *(void ***)self;\n' +
+    '  if (vt == NULL || vt[7] == NULL) return;\n' +
+    '  (void)((int (*)(void *, float))vt[7])(self, 1e10f);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_IsFakeIPv4:
+    'int SteamAPI_ISteamNetworkingUtils_IsFakeIPv4(void *self, uint32_t nIPv4) {\n' +
+    '  void **vt;\n' +
+    '  if (self == NULL) return 0;\n' +
+    '  vt = *(void ***)self;\n' +
+    '  if (vt == NULL || vt[14] == NULL) return 0;\n' +
+    '  return ((int (*)(void *, uint32_t))vt[14])(self, nIPv4) > 1;\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetGlobalConfigValueInt32:
+    'int SteamAPI_ISteamNetworkingUtils_SetGlobalConfigValueInt32(void *self, int eValue, int32_t val) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(eValue, 1, 0, 1, &val);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetGlobalConfigValueFloat:
+    'int SteamAPI_ISteamNetworkingUtils_SetGlobalConfigValueFloat(void *self, int eValue, float val) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(eValue, 1, 0, 3, &val);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetGlobalConfigValueString:
+    'int SteamAPI_ISteamNetworkingUtils_SetGlobalConfigValueString(void *self, int eValue, const char *val) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(eValue, 1, 0, 4, val);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetGlobalConfigValuePtr:
+    'int SteamAPI_ISteamNetworkingUtils_SetGlobalConfigValuePtr(void *self, int eValue, void *val) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(eValue, 1, 0, 5, &val);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetConnectionConfigValueInt32:
+    'int SteamAPI_ISteamNetworkingUtils_SetConnectionConfigValueInt32(void *self, uint32_t hConn, int eValue, int32_t val) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(eValue, 4, (int64_t)hConn, 1, &val);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetConnectionConfigValueFloat:
+    'int SteamAPI_ISteamNetworkingUtils_SetConnectionConfigValueFloat(void *self, uint32_t hConn, int eValue, float val) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(eValue, 4, (int64_t)hConn, 3, &val);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetConnectionConfigValueString:
+    'int SteamAPI_ISteamNetworkingUtils_SetConnectionConfigValueString(void *self, uint32_t hConn, int eValue, const char *val) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(eValue, 4, (int64_t)hConn, 4, val);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetConfigValueStruct:
+    'int SteamAPI_ISteamNetworkingUtils_SetConfigValueStruct(void *self, const void *opt, int eScopeType, intptr_t scopeObj) {\n' +
+    '  const uint8_t *o = (const uint8_t *)opt;\n' +
+    '  int32_t e, type;\n' +
+    '  (void)self;\n' +
+    '  if (o == NULL) return 0;\n' +
+    '  memcpy(&e, o, 4);\n' +
+    '  memcpy(&type, o + 4, 4);\n' +
+    '  if (type == 4) {\n' +
+    '    const char *str;\n' +
+    '    memcpy(&str, o + 8, sizeof str);\n' +
+    '    return gl_net_set_config_value(e, eScopeType, (int64_t)scopeObj, type, str);\n' +
+    '  }\n' +
+    '  return gl_net_set_config_value(e, eScopeType, (int64_t)scopeObj, type, o + 8);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_SteamNetConnectionStatusChanged:
+    'int SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_SteamNetConnectionStatusChanged(void *self, void *fnCallback) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(201, 1, 0, 5, &fnCallback);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_SteamNetAuthenticationStatusChanged:
+    'int SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_SteamNetAuthenticationStatusChanged(void *self, void *fnCallback) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(202, 1, 0, 5, &fnCallback);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_SteamRelayNetworkStatusChanged:
+    'int SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_SteamRelayNetworkStatusChanged(void *self, void *fnCallback) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(203, 1, 0, 5, &fnCallback);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_MessagesSessionRequest:
+    'int SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_MessagesSessionRequest(void *self, void *fnCallback) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(204, 1, 0, 5, &fnCallback);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_MessagesSessionFailed:
+    'int SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_MessagesSessionFailed(void *self, void *fnCallback) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(205, 1, 0, 5, &fnCallback);\n' +
+    '}',
+  SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_FakeIPResult:
+    'int SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_FakeIPResult(void *self, void *fnCallback) {\n' +
+    '  (void)self;\n' +
+    '  return gl_net_set_config_value(207, 1, 0, 5, &fnCallback);\n' +
+    '}'
+}
+
+export const NETWORKING_UTILS_FLAT_INLINE_NAMES: readonly string[] =
+  Object.keys(NETWORKING_UTILS_FLAT_INLINE).sort()
+
 export const LIFECYCLE_NOOP_EXPORTS: readonly string[] = [
   ...Object.keys(LIFECYCLE_NOOP_SPECS),
-  ...Object.keys(MANUAL_DISPATCH_EXPORT_BODIES)
+  ...Object.keys(MANUAL_DISPATCH_EXPORT_BODIES),
+  ...Object.keys(NETWORKING_LOCAL_EXPORT_BODIES)
 ].sort()
 
 // quick 261025-t7i: Unclaimed World (284100) loads CSteamworks64.dll
@@ -1264,6 +2468,7 @@ export const LIFECYCLE_NOOP_EXPORT_BODIES: Readonly<Record<string, string>> =
     LIFECYCLE_NOOP_EXPORTS.map((name) => [
       name,
       MANUAL_DISPATCH_EXPORT_BODIES[name] ??
+        NETWORKING_LOCAL_EXPORT_BODIES[name] ??
         lifecycleNoopBody(name, LIFECYCLE_NOOP_SPECS[name])
     ])
   )
@@ -1433,6 +2638,17 @@ export function generateCallbackRegistryC(): string {
     '\n'
   )
   return `/* ---- callback registry (generated by meta/gen_vtables.ts, P55-3) ---- */
+/* 58-14: networking callbacks the game registered as plain function pointers
+ * (SetGlobalCallback_*) are consumed here instead of being posted to a
+ * CCallback. The 64-bit shim defines both macros before this text; every
+ * other build keeps these inert defaults. GL_NET_CB_ANY must not take the
+ * registry lock (it is read while the lock is held). */
+#ifndef GL_NET_CB_INTERCEPT
+#define GL_NET_CB_INTERCEPT(id, param) 0
+#endif
+#ifndef GL_NET_CB_ANY
+#define GL_NET_CB_ANY() 0
+#endif
 #define GL_CB_REGISTRY_CAPACITY ${CALLBACK_REGISTRY_CAPACITY}
 #define GL_CB_DRAIN_MIN_INTERVAL_MS ${CALLBACK_DRAIN_MIN_INTERVAL_MS}
 #define GL_CB_DRAIN_MAX_PER_RUN ${CALLBACK_DRAIN_MAX_PER_RUN}
@@ -2127,6 +3343,11 @@ static void gl_md_run_frame(void) {
     size = gl_cb_relay_size(id);
     if (!size || cub != size) break;
     if (len != 12u + cub) break;
+    /* 58-14: a stored function pointer consumes it instead of the FIFO. */
+    if (GL_NET_CB_INTERCEPT(id, buf + 12)) {
+      gl_cb_report_dispatch(id, 1, 0);
+      continue;
+    }
     GL_CB_LOCK();
     pr = gl_md_push_locked(id, buf + 12, cub, &dropped_id);
     GL_CB_UNLOCK();
@@ -2243,6 +3464,9 @@ static uint32_t gl_cb_deliver(int32_t id, void *param) {
   uint32_t ndispatched = 0;
   uint32_t i;
 
+  /* 58-14: a stored function pointer (no lock held) consumes the callback. */
+  if (GL_NET_CB_INTERCEPT(id, param)) return 1;
+
   GL_CB_LOCK();
   for (i = 0; i < gl_cb_count; i++) {
     if (gl_cb_entries[i].iCallback == id &&
@@ -2281,11 +3505,12 @@ static void gl_cb_run_callbacks(void) {
 
   GL_CB_LOCK();
   if (gl_cb_running || gl_md_enabled ||
-      (gl_cb_relay_count == 0 && gl_cr_count == 0 && gl_cr_held_count == 0)) {
+      (gl_cb_relay_count == 0 && gl_cr_count == 0 && gl_cr_held_count == 0 &&
+       !GL_NET_CB_ANY())) {
     GL_CB_UNLOCK();
     return;
   }
-  do_bcast = gl_cb_relay_count != 0;
+  do_bcast = gl_cb_relay_count != 0 || GL_NET_CB_ANY();
   do_cr = gl_cr_count != 0 || gl_cr_held_count != 0;
   now = gl_cb_now_ms();
   interval = gl_cb_fail_count >= GL_CB_DRAIN_FAIL_BACKOFF_AFTER
@@ -4897,6 +6122,7 @@ static void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched, uint32_t hel
   memcpy(req + 8, &held, 4);
   (void)bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_CB_DISPATCH, req, 12, retbuf, sizeof(retbuf), &retlen);
 }
+${NETWORKING_LOCAL_C}
 ${generateCallbackRegistryC()}
 
 typedef void *vfn;
@@ -4997,6 +6223,10 @@ static void *resolve_iface_by_exact_version(const char *version);
     LIFECYCLE_NOOP_EXPORTS.map(
       (name) => LIFECYCLE_NOOP_EXPORT_BODIES[name]
     ).join('\n') +
+    `\n// 58-14: the SDK's flat-only ISteamNetworkingUtils inline helpers.\n` +
+    NETWORKING_UTILS_FLAT_INLINE_NAMES.map(
+      (name) => NETWORKING_UTILS_FLAT_INLINE[name]
+    ).join('\n') +
     `\n#endif\n` +
     // quick 261025-t7i: x64-only legacy CSteamworks64 exports.
     `#if defined(__x86_64__)\n` +
@@ -5055,8 +6285,10 @@ function isWireDispatchMethod(
   return (
     mode === 'wire' &&
     method.helperFallback === undefined &&
-    // 58-06: a shimLocal method never produces a frame, so it has no helper case
-    method.shimLocal !== true
+    // 58-06: a shimLocal method never produces a generic frame, so it has no
+    // helper case -- unless (58-14) it also names a helperCustom function,
+    // which the shim body reaches through gl_bridge_call_raw.
+    (method.shimLocal !== true || method.helperCustom !== undefined)
   )
 }
 
@@ -6245,6 +7477,7 @@ function defExportNames(
           ...MODERN_LOOKUP_FLAT_EXPORTS,
           ...emitFlatExports(manifests).names,
           ...LIFECYCLE_NOOP_EXPORTS,
+          ...NETWORKING_UTILS_FLAT_INLINE_NAMES,
           ...LEGACY_CSTEAMWORKS_X64_EXPORTS
         ]
       : []

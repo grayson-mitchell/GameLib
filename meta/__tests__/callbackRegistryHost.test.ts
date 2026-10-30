@@ -40,6 +40,8 @@ const CASES = [
   'report_hook_unlocked',
   'relay_504_dispatch',
   'relay_1221_dispatch',
+  'net_intercept_registry',
+  'net_intercept_md',
   'cr_register_complete',
   'cr_failed_passed',
   'cr_late_register_hold',

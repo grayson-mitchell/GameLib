@@ -109,14 +109,6 @@ const servedFlatInterfaces = (): Set<string> =>
     [...SHIM64_SERVED_INTERFACE_VERSIONS.values()].map((v) => `I${v.family}`)
   )
 
-// 58-03: SteamNetworkingUtils004's Proton vtable has 26 slots; these two
-// SDK-165 flat names have no slot in it, so they stay unexported even though
-// the family is now served.
-const UTILS004_ABSENT_FLAT_NAMES: ReadonlySet<string> = new Set([
-  'SteamAPI_ISteamNetworkingUtils_InitRelayNetworkAccess',
-  'SteamAPI_ISteamNetworkingUtils_IsFakeIPv4'
-])
-
 describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-04, D-53-02)', () => {
   test('(a) every fixture name of a served family resolves to an export', () => {
     const served = servedFlatInterfaces()
@@ -124,7 +116,6 @@ describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-
       (n) =>
         isInterfaceMethodName(n) &&
         served.has(n.split('_')[1]) &&
-        !UTILS004_ABSENT_FLAT_NAMES.has(n) &&
         !SHIM64_EXPORTED_SYMBOLS.has(n)
     )
     expect(misses).toEqual([])
@@ -153,7 +144,6 @@ describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-
       .sort()
     const byFamily: Record<string, number> = {}
     for (const n of unexported) {
-      if (UTILS004_ABSENT_FLAT_NAMES.has(n)) continue
       if (isInterfaceMethodName(n)) {
         const family = n.split('_')[1]
         expect(served.has(family)).toBe(false)
