@@ -6160,8 +6160,12 @@ struct StoreEmbedState {
     /// The `storeKey` whose pages `history` holds (quick 261030-ts4). Steam, GOG and Amazon
     /// share this one reused webview, and a store switch only `navigate()`s it, so without this
     /// Back on `/store/gog` walked into the Amazon pages visited before the switch (live
-    /// 2026-10-30). `select_store()` drops the history when the key changes.
+    /// 2026-10-30). `select_store()` swaps histories when the key changes.
     store_key: Option<String>,
+    /// Each other store's `(history, cursor)`, parked by `select_store()` while that store is
+    /// not showing, so a return to it resumes its own Back history. Dropping it instead left
+    /// Back greyed out on a store reopened at its remembered game page (live 2026-10-30).
+    parked: HashMap<String, (Vec<String>, usize)>,
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
@@ -6175,9 +6179,18 @@ impl StoreEmbedState {
     /// user-initiated navigation: truncate any forward entries beyond the cursor (exactly as a
     /// browser does when you navigate away after going back), then push and move the cursor to
     /// the new last entry.
+    ///
+    /// A URL equal to the current entry is not appended again (quick 261030-ts4): a store
+    /// reopened by `select_store()` loads its remembered page, which is usually the entry its
+    /// restored cursor already points at. The event is still queued so the renderer learns the
+    /// restored `canGoBack`.
     fn push(&mut self, url: String) {
         if self.suppress_next_push {
             self.suppress_next_push = false;
+            return;
+        }
+        if self.current_url().as_deref() == Some(url.as_str()) {
+            self.enqueue_nav_event();
             return;
         }
         let keep = self.cursor.saturating_add(1).min(self.history.len());
@@ -6223,16 +6236,30 @@ impl StoreEmbedState {
         // the next embed would drain them and render another session's host in its chrome.
         self.pending_nav_events.clear();
         self.store_key = None;
+        self.parked.clear();
     }
 
-    /// PURE: called by `store_embed_open` before it loads `store_key`'s URL. A different store
-    /// starts a fresh history, so Back never crosses into another store's pages; reopening the
-    /// same store keeps it. Returns whether the history was dropped.
+    /// PURE: called by `store_embed_open` before it loads `store_key`'s URL. On a store switch,
+    /// parks the outgoing store's history and restores the incoming store's (empty on its first
+    /// visit), so Back never crosses into another store's pages yet still works on a store
+    /// reopened mid-history. Reopening the same store changes nothing. Returns whether the
+    /// histories were swapped.
     fn select_store(&mut self, store_key: &str) -> bool {
         if self.store_key.as_deref() == Some(store_key) {
             return false;
         }
-        self.clear();
+        let outgoing = (std::mem::take(&mut self.history), self.cursor);
+        if let Some(previous) = self.store_key.take() {
+            if !outgoing.0.is_empty() {
+                self.parked.insert(previous, outgoing);
+            }
+        }
+        let (history, cursor) = self.parked.remove(store_key).unwrap_or_default();
+        self.history = history;
+        self.cursor = cursor;
+        self.suppress_next_push = false;
+        // Queued events describe the outgoing store; the incoming page's push queues its own.
+        self.pending_nav_events.clear();
         self.store_key = Some(store_key.to_string());
         true
     }
@@ -18701,12 +18728,59 @@ mod tests {
 
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
+    fn store_embed_select_store_restores_a_returning_stores_own_history() {
+        // Live 2026-10-30: GOG reopened at its remembered game page with Back greyed out,
+        // because the switch away had dropped GOG's history instead of parking it.
+        let mut state = StoreEmbedState::default();
+        state.select_store("gog");
+        state.push("https://www.gog.com/en/".to_string());
+        state.push("https://www.gog.com/en/game/foo".to_string());
+
+        state.select_store("steam");
+        state.push("https://store.steampowered.com/".to_string());
+        state.push("https://store.steampowered.com/app/1/".to_string());
+
+        assert!(state.select_store("gog"));
+        let _ = state.take_nav_events();
+        // The reopen loads GOG's remembered page, which is the restored current entry.
+        state.push("https://www.gog.com/en/game/foo".to_string());
+        assert!(state.can_go_back(), "Back reaches GOG's home page again");
+        let events = state.take_nav_events();
+        assert_eq!(events.len(), 1, "the deduplicated push still reports state");
+        assert_eq!(events[0]["canGoBack"], true);
+        assert_eq!(
+            state.go_back().as_deref(),
+            Some("https://www.gog.com/en/"),
+            "Back stays within GOG, never Steam"
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_push_of_the_current_url_does_not_add_an_entry() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+        state.push("https://b.example/".to_string());
+        state.push("https://b.example/".to_string());
+        assert_eq!(state.go_back().as_deref(), Some("https://a.example/"));
+        assert!(!state.can_go_back());
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
     fn store_embed_clear_forgets_the_selected_store() {
         // store_embed_close clears; the next open of the same store is a fresh session.
         let mut state = StoreEmbedState::default();
         state.select_store("steam");
+        state.push("https://store.steampowered.com/".to_string());
+        state.select_store("gog");
         state.clear();
         assert!(state.select_store("steam"));
+        assert_eq!(
+            state.current_url(),
+            None,
+            "parked histories are dropped too"
+        );
     }
 
     // ---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----
