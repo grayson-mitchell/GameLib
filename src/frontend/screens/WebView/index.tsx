@@ -22,6 +22,10 @@ import EpicLauncherBlockedNotice from './components/EpicLauncherBlockedNotice'
 import { useTauriOAuthLogin } from './useTauriOAuthLogin'
 import type { OAuthLoginCompletionPayload } from './useTauriOAuthLogin'
 import { useStoreEmbedHost } from './useStoreEmbedHost'
+import {
+  runSteamStoreExitRefresh,
+  STEAM_STORE_EXIT_REFRESH_ORIGIN
+} from './steamStoreExitRefresh'
 import type { OAuthRunner } from 'common/types/oauthLogin'
 import {
   isLoginPathname,
@@ -49,7 +53,10 @@ export default function WebView() {
     steam,
     completeOAuthLogin,
     platform,
-    signInProbeOutcomes
+    signInProbeOutcomes,
+    refreshLibrary,
+    refreshing,
+    refreshingByRunner
   } = useContext(ContextProvider)
   const navigate = useNavigate()
 
@@ -333,26 +340,41 @@ export default function WebView() {
   // -- its branch order is load-bearing (Phase 49 D-06/D-07). Matches the argument shape
   // `GlobalState.tsx` and `LibrarySignInNotice/index.tsx` already use for their own
   // `collectSignInInputs(...)` call sites. Never a cookie (Phase 40 D-16).
-  const signInState = resolveSignInState(
-    collectSignInInputs(
-      {
-        epicUsername: epic.username,
-        gogUsername: gog.username,
-        amazonUserId: amazon.user_id,
-        humbleLoggedIn: humble?.isLoggedIn,
-        humbleExpired: humble?.expired,
-        steamUsername: steam?.username
-      },
-      signInProbeOutcomes
-    ).legendary
+  const signInInputs = collectSignInInputs(
+    {
+      epicUsername: epic.username,
+      gogUsername: gog.username,
+      amazonUserId: amazon.user_id,
+      humbleLoggedIn: humble?.isLoggedIn,
+      humbleExpired: humble?.expired,
+      steamUsername: steam?.username
+    },
+    signInProbeOutcomes
   )
+  const signInState = resolveSignInState(signInInputs.legendary)
+  const steamSignInState = resolveSignInState(signInInputs.steam)
+  // Quick 261030-qqh: leaving the Steam store after an app/cart/checkout page runs the same
+  // Steam-scoped refresh the Redeem-key dialog runs, behind sign-in/in-flight/throttle gates.
+  const onSteamStoreExit = () => {
+    runSteamStoreExitRefresh({
+      signInState: steamSignInState,
+      refreshInFlight: refreshing || refreshingByRunner?.steam === true,
+      refreshLibrary: () =>
+        refreshLibrary({
+          library: 'steam',
+          origin: STEAM_STORE_EXIT_REFRESH_ORIGIN
+        }),
+      log: (line) => window.api.logInfo(line)
+    })
+  }
   const embedHost = useStoreEmbedHost({
     slotNode,
     startUrl,
     storeKey,
     isStoreRoute,
     platform,
-    signInState
+    signInState,
+    onSteamStoreExit
   })
   const embedSuppressed = useStoreEmbedSuppressed()
 

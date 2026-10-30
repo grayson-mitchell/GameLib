@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
+import { isSteamPurchaseIntentUrl } from './steamStoreExitRefresh'
 import { readWebviewZoomFactor, scaleRectForZoom } from './storeEmbedZoom'
 
 // Dispatched on `window` by `applyFramelessDecorations` (`src/preload/api/tauriWindowChrome.ts`,
@@ -172,6 +173,12 @@ interface UseStoreEmbedHostOptions {
    * (D-04) -- see `signInStateAtLoadByStore` above.
    */
   signInState: string
+  /**
+   * Quick 261030-qqh: called when the user leaves a Steam store session in which the main frame
+   * loaded an app, cart or checkout page (route leave or a switch to another store). Never on
+   * app teardown, never on suppression. Optional: omitting it changes no behaviour.
+   */
+  onSteamStoreExit?: () => void
 }
 
 export interface StoreEmbedHostState {
@@ -215,8 +222,23 @@ export function useStoreEmbedHost({
   storeKey,
   isStoreRoute,
   platform,
-  signInState
+  signInState,
+  onSteamStoreExit
 }: UseStoreEmbedHostOptions): StoreEmbedHostState {
+  // Quick 261030-qqh: latest values for closures that outlive a render (the `[]`-deps drain and
+  // the firing cleanup below).
+  const onSteamStoreExitRef = useRef(onSteamStoreExit)
+  onSteamStoreExitRef.current = onSteamStoreExit
+  const storeKeyRef = useRef(storeKey)
+  storeKeyRef.current = storeKey
+  const steamPurchaseIntentArmedRef = useRef(false)
+  const noteVisitedUrl = (url: string) => {
+    if (storeKeyRef.current === 'steam' && isSteamPurchaseIntentUrl(url)) {
+      steamPurchaseIntentArmedRef.current = true
+    }
+  }
+  const noteVisitedUrlRef = useRef(noteVisitedUrl)
+  noteVisitedUrlRef.current = noteVisitedUrl
   const [navState, setNavState] = useState<StoreEmbedNavState>(() => ({
     url: startUrl,
     host: deriveInitialHost(startUrl),
@@ -228,6 +250,7 @@ export function useStoreEmbedHost({
   // synchronous query — this is the one place that state lands, from whichever call resolved it.
   const applyNavResult = useCallback((result: StoreEmbedNavCallResult) => {
     if (result.status === 'ok') {
+      noteVisitedUrlRef.current(result.navState.url)
       setNavState(result.navState)
       return
     }
@@ -333,6 +356,9 @@ export function useStoreEmbedHost({
           // batch, where the field is absent on every event, latches nothing.
           const latest = events[events.length - 1]
           if (!latest) return
+          // Quick 261030-qqh: arm from EVERY event -- the coalescing above would otherwise
+          // drop an app page followed by another load inside one tick.
+          for (const event of events) noteVisitedUrlRef.current(event.url)
           const loadTimedOut = events.some(
             (event) => event.loadTimedOut === true
           )
@@ -790,6 +816,21 @@ export function useStoreEmbedHost({
 
   // ── ROUTE LIFECYCLE — hide on leave, close only at app teardown (D-21) ─────────────────────
   const tearingDownRef = useRef(false)
+
+  // Quick 261030-qqh: fire the Steam store-exit callback. The cleanup of an effect keyed on
+  // `[storeKey]` runs on a store switch (`store/:store` is one route, so no unmount) AND on
+  // unmount (route leave), with the PREVIOUS storeKey in its closure -- one lifecycle point for
+  // both "leaving" shapes. Deliberately NOT the suppression hide (a modal is not leaving).
+  useEffect(() => {
+    if (storeKey === 'steam') steamPurchaseIntentArmedRef.current = false
+    return () => {
+      if (storeKey !== 'steam') return
+      const armed = steamPurchaseIntentArmedRef.current
+      steamPurchaseIntentArmedRef.current = false
+      if (tearingDownRef.current) return
+      if (armed) onSteamStoreExitRef.current?.()
+    }
+  }, [storeKey])
 
   useEffect(() => {
     const handleBeforeUnload = () => {

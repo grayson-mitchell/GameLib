@@ -316,6 +316,8 @@ interface MountOptions {
    * hook's new auth-triggered reload never arms for them regardless of what the default is.
    */
   signInState?: string
+  /** Quick 261030-qqh: the Steam store-exit callback under test. */
+  onSteamStoreExit?: () => void
 }
 
 function invoke(options: MountOptions): StoreEmbedHostState {
@@ -336,7 +338,8 @@ function invoke(options: MountOptions): StoreEmbedHostState {
     storeKey: options.storeKey ?? 'steam',
     isStoreRoute: options.isStoreRoute ?? true,
     platform: options.platform ?? 'linux',
-    signInState: options.signInState ?? 'connected'
+    signInState: options.signInState ?? 'connected',
+    onSteamStoreExit: options.onSteamStoreExit
   })
 }
 
@@ -2087,5 +2090,162 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
 
       expect(mockApi.storeEmbedSetBounds).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe('useStoreEmbedHost steam store-exit trigger (quick 261030-qqh)', () => {
+  const ev = (url: string) => ({
+    url,
+    host: new URL(url).host,
+    canGoBack: true,
+    canGoForward: false
+  })
+  const APP = 'https://store.steampowered.com/app/391540/'
+  const FRONT = 'https://store.steampowered.com/'
+
+  const drain = async (events: ReturnType<typeof ev>[]) => {
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce(events)
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+  }
+
+  beforeEach(() => {
+    suppressionContextValue = {
+      suppressed: false,
+      acquire: jest.fn(),
+      release: jest.fn()
+    }
+    MockResizeObserver.instances = []
+    windowListeners.clear()
+    fakeLocalStorage.clear()
+    resetStoreEmbedSignInBaselines()
+    mockApi.storeEmbedOpen.mockResolvedValue(okStatus)
+    mockApi.storeEmbedHide.mockResolvedValue(okStatus)
+    mockApi.storeEmbedShow.mockResolvedValue(okStatus)
+    mockApi.storeEmbedClose.mockResolvedValue(okStatus)
+    mockApi.storeEmbedBack.mockResolvedValue(okStatus)
+    mockApi.storeEmbedNavigate.mockResolvedValue(okStatus)
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValue([])
+  })
+
+  afterEach(() => {
+    jest.clearAllTimers()
+  })
+
+  it('arms from any event in a batch (app page not last) and fires once on unmount', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onSteamStoreExit = jest.fn()
+    mount({ slotRef: ref, onSteamStoreExit })
+    await drain([ev(APP), ev(FRONT)])
+    harness().__unmount()
+    expect(onSteamStoreExit).toHaveBeenCalledTimes(1)
+  })
+
+  it('plain browsing does not arm', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onSteamStoreExit = jest.fn()
+    mount({ slotRef: ref, onSteamStoreExit })
+    await drain([
+      ev(FRONT),
+      ev('https://store.steampowered.com/search/?term=x')
+    ])
+    harness().__unmount()
+    expect(onSteamStoreExit).not.toHaveBeenCalled()
+  })
+
+  it('a store switch fires once; a later unmount on the new store does not fire again', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onSteamStoreExit = jest.fn()
+    const options: MountOptions = { slotRef: ref, onSteamStoreExit }
+    mount(options)
+    await drain([ev(APP)])
+    reinvoke({
+      ...options,
+      storeKey: 'gog',
+      startUrl: 'https://www.gog.com/'
+    })
+    expect(onSteamStoreExit).toHaveBeenCalledTimes(1)
+    harness().__unmount()
+    expect(onSteamStoreExit).toHaveBeenCalledTimes(1)
+  })
+
+  it('a stale steam URL delivered while on gog never arms', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onSteamStoreExit = jest.fn()
+    mount({
+      slotRef: ref,
+      storeKey: 'gog',
+      startUrl: 'https://www.gog.com/',
+      onSteamStoreExit
+    })
+    await drain([ev(APP)])
+    harness().__unmount()
+    expect(onSteamStoreExit).not.toHaveBeenCalled()
+  })
+
+  it('app teardown (beforeunload) is not leaving', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onSteamStoreExit = jest.fn()
+    mount({ slotRef: ref, onSteamStoreExit })
+    await drain([ev(APP)])
+    dispatchWindowEvent('beforeunload')
+    harness().__unmount()
+    expect(onSteamStoreExit).not.toHaveBeenCalled()
+  })
+
+  it('suppression (a modal over the embed) is not leaving', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onSteamStoreExit = jest.fn()
+    const options: MountOptions = { slotRef: ref, onSteamStoreExit }
+    mount(options)
+    await drain([ev(APP)])
+    suppressionContextValue = {
+      suppressed: true,
+      acquire: jest.fn(),
+      release: jest.fn()
+    }
+    reinvoke(options)
+    suppressionContextValue = {
+      suppressed: false,
+      acquire: jest.fn(),
+      release: jest.fn()
+    }
+    reinvoke(options)
+    expect(onSteamStoreExit).not.toHaveBeenCalled()
+  })
+
+  it('arms from a chrome-initiated navigation result', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onSteamStoreExit = jest.fn()
+    const state = mount({ slotRef: ref, onSteamStoreExit })
+    jest.advanceTimersByTime(40)
+    mockApi.storeEmbedNavigate.mockResolvedValueOnce({
+      status: 'ok',
+      navState: ev('https://store.steampowered.com/cart/')
+    })
+    state.onNavigate('https://store.steampowered.com/cart/')
+    await Promise.resolve()
+    await Promise.resolve()
+    harness().__unmount()
+    expect(onSteamStoreExit).toHaveBeenCalledTimes(1)
+  })
+
+  it('fires once per session: re-entering steam without a new purchase-intent URL does not fire again', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onSteamStoreExit = jest.fn()
+    const options: MountOptions = { slotRef: ref, onSteamStoreExit }
+    const gog = {
+      ...options,
+      storeKey: 'gog',
+      startUrl: 'https://www.gog.com/'
+    }
+    mount(options)
+    await drain([ev(APP)])
+    reinvoke(gog)
+    expect(onSteamStoreExit).toHaveBeenCalledTimes(1)
+    reinvoke(options)
+    reinvoke(gog)
+    expect(onSteamStoreExit).toHaveBeenCalledTimes(1)
   })
 })
