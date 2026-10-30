@@ -32,6 +32,9 @@ import {
   attributeHelperLines,
   censusAccumulators,
   classifyBridgeEvidence,
+  classifyMultiplayerEvidence,
+  parseMultiplayerArgs,
+  parseNetLine,
   findUnityPlayerLogs,
   resetCensusAccumulators,
   selectLatestUnrealLogs,
@@ -1912,5 +1915,169 @@ describe('56-05: DRM-mode evidence (D-15/D-16)', () => {
     expect(
       drmAppLogSegmentFor(ID, [{ name: 'd', mtimeMs: 1, text: forged }])
     ).toBeNull()
+  })
+})
+
+describe('58-05: multiplayer evidence (D-08)', () => {
+  const H = '(12:00:00) [INFO]:    [Steam]:        '
+  const ID = '3205720'
+  const hello = (id = ID) =>
+    `${H}bridge helper [${id}]: [2026-10-31T12:00:00Z] HELLO  shim attached appid=${id} v1`
+  const net = (
+    kind: string,
+    over: { role?: string; id?: string; iface?: string; path?: string } = {}
+  ) =>
+    `${H}bridge helper [${over.id ?? ID}]: [2026-10-31T12:00:01Z] NET    role=${over.role ?? 'game'} kind=${kind} iface=${over.iface ?? 'Sockets'} cb=0 n=1 path=${over.path ?? 'unknown'}`
+  const tcp = (lines: string[]) =>
+    classifyMultiplayerEvidence({
+      appid: ID,
+      drmMode: false,
+      appLogTexts: [{ name: 'gamelib.log', mtimeMs: 1, text: lines.join('\n') }]
+    })
+  const full = [
+    net('join', { iface: 'Matchmaking' }),
+    net('send'),
+    net('recv', { path: 'direct' })
+  ]
+
+  it('TCP verified with all three game-originated lines', () => {
+    expect(tcp([hello(), ...full])).toMatchObject({
+      status: 'verified',
+      mode: 'tcp',
+      join: true,
+      send: true,
+      recv: true,
+      path: 'direct'
+    })
+  })
+
+  it('TCP role=helper join does not count', () => {
+    const v = tcp([
+      hello(),
+      net('join', { role: 'helper', iface: 'Matchmaking' }),
+      net('send'),
+      net('recv')
+    ])
+    expect(v.status).toBe('unverified')
+    expect(v.detail).toContain('no game-originated join')
+  })
+
+  it('TCP send without recv is unverified', () => {
+    const v = tcp([hello(), net('join'), net('send')])
+    expect(v.status).toBe('unverified')
+    expect(v.detail).toBe('no game-originated receive')
+  })
+
+  it('TCP ignores NET lines before the last HELLO', () => {
+    expect(tcp([...full, hello()]).status).toBe('unverified')
+  })
+
+  it('TCP ignores NET lines attributed to another appid', () => {
+    const other = full.map((_, i) =>
+      net(['join', 'send', 'recv'][i], { id: '1' })
+    )
+    expect(tcp([hello(), ...other]).status).toBe('unverified')
+  })
+
+  it('TCP ignores malformed NET lines', () => {
+    const good =
+      '[2026-10-31T12:00:01Z] NET    role=game kind=send iface=Sockets cb=0 n=1 path=unknown'
+    expect(parseNetLine(good)).not.toBeNull()
+    expect(parseNetLine(good + ' extra=1')).toBeNull()
+    expect(parseNetLine(good.replace('Sockets', 'Bogus'))).toBeNull()
+    expect(
+      parseNetLine('[ts] NET    role=game kind=%s iface=%s cb=%d n=%d path=%s')
+    ).toBeNull()
+    expect(
+      parseNetLine('[ts] NET    cap of 32 reached; later lines are not logged')
+    ).toBeNull()
+    expect(parseNetLine('x'.repeat(300))).toBeNull()
+  })
+
+  it('TCP reports mixed paths and counts oversize', () => {
+    const v = tcp([
+      hello(),
+      net('join', { path: 'relayed' }),
+      net('send'),
+      net('recv', { path: 'direct' }),
+      net('oversize', { role: 'helper' })
+    ])
+    expect(v.status).toBe('verified')
+    expect(v.path).toBe('relayed')
+    expect(v.oversize).toBe(1)
+    expect(v.detail).toContain('mixed')
+  })
+
+  describe('DRM', () => {
+    const anchor = `${H}[bridge-drm] appId=${ID} mode=steamclient-layer crossover=26.3.0.39832 client=1761084000 trace=/x/${ID}-1.log`
+    const t = (tail: string, role = 'game') =>
+      `${H}bridge drm [${ID}]: [drm-trace] appId=${ID} pid=${role === 'game' ? 200 : 100} role=${role} ${tail}`
+    const create = t('event=create-interface iface=SteamClient021')
+    const SEND =
+      'ISteamNetworkingSockets_SteamNetworkingSockets012_SendMessageToConnection'
+    const RECV =
+      'ISteamNetworkingSockets_SteamNetworkingSockets012_ReceiveMessagesOnConnection'
+    const drm = (lines: string[]) =>
+      classifyMultiplayerEvidence({
+        appid: ID,
+        drmMode: true,
+        appLogTexts: [
+          { name: 'gamelib.log', mtimeMs: 1, text: lines.join('\n') }
+        ]
+      })
+
+    it('verified with 1221 state=3, send and receive', () => {
+      expect(
+        drm([
+          anchor,
+          create,
+          t('event=callback id=1221 state=3'),
+          t(`event=call name=${SEND}`),
+          t(`event=call name=${RECV}`)
+        ])
+      ).toMatchObject({ status: 'verified', mode: 'drm', path: 'unknown' })
+    })
+
+    it('only 1202 is unverified and says so', () => {
+      const v = drm([
+        anchor,
+        create,
+        t('event=callback id=1202'),
+        t(`event=call name=${SEND}`),
+        t(`event=call name=${RECV}`)
+      ])
+      expect(v.status).toBe('unverified')
+      expect(v.detail).toContain('only P2PSessionRequest_t')
+    })
+
+    it('helper-only join is unverified', () => {
+      const v = drm([
+        anchor,
+        create,
+        t('event=callback id=504 resp=1', 'helper'),
+        t(`event=call name=${SEND}`),
+        t(`event=call name=${RECV}`)
+      ])
+      expect(v.status).toBe('unverified')
+      expect(v.join).toBe(false)
+    })
+  })
+})
+
+describe('58-05: parseMultiplayerArgs', () => {
+  it('parses TCP, --drm, and rejects bad input', () => {
+    expect(parseMultiplayerArgs(['--multiplayer', '3205720'])).toEqual({
+      appid: '3205720',
+      drm: false
+    })
+    expect(parseMultiplayerArgs(['--multiplayer', '3205720', '--drm'])).toEqual(
+      {
+        appid: '3205720',
+        drm: true
+      }
+    )
+    expect(parseMultiplayerArgs(['--multiplayer', 'abc'])).toBeNull()
+    expect(parseMultiplayerArgs(['--multiplayer'])).toBeNull()
+    expect(parseMultiplayerArgs(['--multiplayer', '1', '--bogus'])).toBeNull()
   })
 })

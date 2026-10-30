@@ -2278,7 +2278,215 @@ export async function runCensus(): Promise<CensusRow[]> {
   return rows
 }
 
+/** Phase 58 (D-08): the TCP-mode helper `NET` line grammar. 58-07's emitter
+ * writes exactly this text; the regex anchors at the start of an attributed
+ * helper payload (after `[ts]`) so a NET-looking string inside another
+ * category's payload can never match (T-58-14). */
+export const NET_LINE_RE =
+  /^\[[^\]]*\]\s+NET\s+role=(game|helper) kind=(join|send|recv|path|oversize) iface=(Matchmaking|Networking|Sockets|Messages) cb=(0|[1-9]\d{0,4}) n=(0|[1-9]\d{0,9}) path=(direct|relayed|unknown)$/
+
+export interface NetEvent {
+  role: 'game' | 'helper'
+  kind: 'join' | 'send' | 'recv' | 'path' | 'oversize'
+  iface: 'Matchmaking' | 'Networking' | 'Sockets' | 'Messages'
+  cb: number
+  n: number
+  path: 'direct' | 'relayed' | 'unknown'
+}
+
+/** Parses one attributed helper payload as a NET event; null otherwise. */
+export function parseNetLine(payload: string): NetEvent | null {
+  if (payload.length > 256) return null
+  const m = NET_LINE_RE.exec(payload)
+  if (!m) return null
+  return {
+    role: m[1] as NetEvent['role'],
+    kind: m[2] as NetEvent['kind'],
+    iface: m[3] as NetEvent['iface'],
+    cb: Number(m[4]),
+    n: Number(m[5]),
+    path: m[6] as NetEvent['path']
+  }
+}
+
+export interface MultiplayerVerdict {
+  status: 'verified' | 'unverified'
+  mode: 'tcp' | 'drm'
+  join: boolean
+  send: boolean
+  recv: boolean
+  path: 'direct' | 'relayed' | 'unknown'
+  oversize: number
+  detail: string
+}
+
+const DRM_SEND_SUFFIXES = [
+  '_SendP2PPacket',
+  '_SendMessageToConnection',
+  '_SendMessages',
+  '_SendMessageToUser'
+]
+const DRM_RECV_SUFFIXES = [
+  '_ReadP2PPacket',
+  '_ReceiveMessagesOnConnection',
+  '_ReceiveMessagesOnPollGroup',
+  '_ReceiveMessagesOnChannel'
+]
+
+function missingDetail(join: boolean, send: boolean, recv: boolean): string {
+  const missing: string[] = []
+  if (!join) missing.push('no game-originated join')
+  if (!send) missing.push('no game-originated send')
+  if (!recv) missing.push('no game-originated receive')
+  return missing.join('; ')
+}
+
+/** Phase 58 (D-08 items 1 and 2): strict multiplayer evidence verdict for one
+ * appid and one launch segment. helper-role lines never count; the
+ * direct/relayed marker is reported, never gating (D-06). Item 3 (operator
+ * sees both players move) is a UAT result and is never inferred. Pure;
+ * detail carries fixed phrases and counts only (T-58-15). */
+export function classifyMultiplayerEvidence(input: {
+  appid: string
+  drmMode: boolean
+  appLogTexts: Array<{ name: string; mtimeMs: number; text: string }>
+}): MultiplayerVerdict {
+  const mode: 'tcp' | 'drm' = input.drmMode ? 'drm' : 'tcp'
+  const base = {
+    mode,
+    join: false,
+    send: false,
+    recv: false,
+    path: 'unknown' as const,
+    oversize: 0
+  }
+  if (input.drmMode) {
+    const segment = drmAppLogSegmentFor(input.appid, input.appLogTexts)
+    if (segment === null) {
+      return { ...base, status: 'unverified', detail: 'no DRM-mode anchor' }
+    }
+    const e = extractDrmEvidence(input.appid, segment)
+    if (!e.anchored) {
+      return { ...base, status: 'unverified', detail: 'no DRM-mode anchor' }
+    }
+    if (e.pidConflict) {
+      return {
+        ...base,
+        status: 'unverified',
+        detail: 'game/helper pid conflict'
+      }
+    }
+    const join = e.gameLobbyEnterOk || e.gameConnStates.includes(3)
+    const send = e.gameCalls.some((c) =>
+      DRM_SEND_SUFFIXES.some((s) => c.endsWith(s))
+    )
+    const recv = e.gameCalls.some((c) =>
+      DRM_RECV_SUFFIXES.some((s) => c.endsWith(s))
+    )
+    const verified = join && send && recv
+    let detail = verified ? 'game join, send and receive observed' : ''
+    if (!verified) {
+      detail = missingDetail(join, send, recv)
+      if (
+        !join &&
+        e.gameCallbacks.length > 0 &&
+        e.gameCallbacks.every((id) => id === 1202)
+      ) {
+        detail += '; only P2PSessionRequest_t (1202) seen'
+      }
+    }
+    return {
+      ...base,
+      status: verified ? 'verified' : 'unverified',
+      join,
+      send,
+      recv,
+      detail
+    }
+  }
+  const segment = appLogSegmentFor(input.appid, input.appLogTexts)
+  if (segment === null) {
+    return { ...base, status: 'unverified', detail: 'no HELLO' }
+  }
+  let join = false
+  let send = false
+  let recv = false
+  let oversize = 0
+  const paths: Array<'direct' | 'relayed'> = []
+  for (const payload of attributeHelperLines(input.appid, segment)) {
+    const ev = parseNetLine(payload)
+    if (!ev) continue
+    if (ev.kind === 'oversize') oversize++
+    if (ev.role !== 'game') continue
+    if (ev.kind === 'join') join = true
+    else if (ev.kind === 'send') send = true
+    else if (ev.kind === 'recv') recv = true
+    if ((ev.kind === 'join' || ev.kind === 'recv') && ev.path !== 'unknown') {
+      paths.push(ev.path)
+    }
+  }
+  const verified = join && send && recv
+  let detail = verified
+    ? 'game join, send and receive observed'
+    : missingDetail(join, send, recv)
+  if (paths.length > 0 && paths.some((p) => p !== paths[0])) {
+    detail += '; mixed direct and relayed paths'
+  }
+  if (oversize > 0) detail += `; ${oversize} oversize message(s)`
+  return {
+    ...base,
+    status: verified ? 'verified' : 'unverified',
+    join,
+    send,
+    recv,
+    path: paths[0] ?? 'unknown',
+    oversize,
+    detail
+  }
+}
+
+/** Phase 58: `--multiplayer <appid> [--drm]` argument parse. null = usage. */
+export function parseMultiplayerArgs(
+  argv: string[]
+): { appid: string; drm: boolean } | null {
+  const i = argv.indexOf('--multiplayer')
+  if (i < 0) return null
+  const appid = argv[i + 1]
+  if (appid === undefined || !/^\d+$/.test(appid)) return null
+  const rest = argv.slice(i + 2).filter((a) => a !== '--json')
+  if (rest.length === 0) return { appid, drm: false }
+  if (rest.length === 1 && rest[0] === '--drm') return { appid, drm: true }
+  return null
+}
+
 async function main(): Promise<void> {
+  if (process.argv.includes('--multiplayer')) {
+    const args = parseMultiplayerArgs(process.argv.slice(2))
+    if (!args) {
+      console.error(
+        'usage: bridge-census --multiplayer <appid> [--drm] [--json]'
+      )
+      process.exit(2)
+    }
+    const logs = findAppLogs()
+    const verdict = classifyMultiplayerEvidence({
+      appid: args.appid,
+      drmMode: args.drm,
+      appLogTexts: logs.texts.map((text, i) => ({
+        name: logs.names[i],
+        mtimeMs: logs.mtimes[i],
+        text
+      }))
+    })
+    if (process.argv.includes('--json')) {
+      console.log(JSON.stringify({ appid: args.appid, ...verdict }, null, 2))
+    } else {
+      console.log(
+        `multiplayer ${args.appid} ${verdict.mode}: ${verdict.status} join=${+verdict.join} send=${+verdict.send} recv=${+verdict.recv} path=${verdict.path} oversize=${verdict.oversize} — ${verdict.detail}`
+      )
+    }
+    return
+  }
   const rows = await runCensus()
   if (process.argv.includes('--json')) {
     console.log(JSON.stringify(rows, null, 2))
