@@ -94,6 +94,10 @@ describe('mapRefreshOriginToTrigger', () => {
     )
   })
 
+  it('maps steam-store-exit to user-refresh (quick 261030-qqh)', () => {
+    expect(mapRefreshOriginToTrigger('steam-store-exit')).toBe('user-refresh')
+  })
+
   it.each(['mount', 'push', undefined, 'a-brand-new-origin'])(
     'origin %s falls through to startup (ALLOWLIST, not a denylist)',
     (origin) => {
@@ -177,6 +181,17 @@ describe('noteRefreshTrigger (Task 2 — refreshLibrary dispatch threading)', ()
   it('a named non-Steam runner never unlocks the gate regardless of a deliberate-looking origin', () => {
     noteRefreshTrigger('nile', 'nav-tabs-games-tab')
     expect(isSteamAuthUnlocked()).toBe(false)
+  })
+
+  it('steam-store-exit arms a one-shot user-refresh grant for steam only', () => {
+    noteRefreshTrigger('steam', 'steam-store-exit')
+    expect(consumeSteamRefreshLogonGrant()).toBe('user-refresh')
+  })
+
+  it('steam-store-exit on a non-Steam runner leaves the gate locked and arms no grant', () => {
+    noteRefreshTrigger('gog', 'steam-store-exit')
+    expect(isSteamAuthUnlocked()).toBe(false)
+    expect(consumeSteamRefreshLogonGrant()).toBeNull()
   })
 
   it.each(['__proto__', 'constructor'])(

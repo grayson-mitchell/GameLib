@@ -81,6 +81,10 @@ const ORIGIN_TO_TRIGGER: Readonly<Record<string, SteamAuthTrigger>> = {
   'clear-cache': 'user-refresh',
   // The guided Go Offline dialog's retry.
   'steam-go-offline-retry': 'user-refresh',
+  // Leaving the in-app Steam store after an app/cart/checkout page (quick
+  // 261030-qqh): deliberate, the user just acted in the store. The renderer
+  // gates it on sign-in, app/cart/checkout arming and a 2-minute throttle.
+  'steam-store-exit': 'user-refresh',
   // Deliberately unmapped (-> 'startup'): 'game-status' (fires after every
   // install/Play status change), 'nav-tabs-games-tab' (browsing) and
   // 'login-screen' (navigation; a Steam sign-in already granted its own refresh
