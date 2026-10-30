@@ -1025,5 +1025,263 @@
     "SteamNetworkingIdentity_ParseString": {
       "shimLocal": true
     }
+  },
+  "SteamNetworkingSockets": {
+    "CreateListenSocketIP": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_CreateListenSocketIP",
+      "shimLocal": true,
+      "helperCustom": "gl_net_sockets_open"
+    },
+    "ConnectByIPAddress": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_ConnectByIPAddress",
+      "shimLocal": true,
+      "helperCustom": "gl_net_sockets_open"
+    },
+    "CreateListenSocketP2P": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_CreateListenSocketP2P",
+      "shimLocal": true,
+      "helperCustom": "gl_net_sockets_open"
+    },
+    "ConnectP2P": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_ConnectP2P",
+      "shimLocal": true,
+      "helperCustom": "gl_net_sockets_open"
+    },
+    "AcceptConnection": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_AcceptConnection"
+    },
+    "CloseConnection": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_CloseConnection",
+      "params": {
+        "pszDebug": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "CloseListenSocket": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_CloseListenSocket"
+    },
+    "SetConnectionUserData": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_SetConnectionUserData"
+    },
+    "GetConnectionUserData": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_GetConnectionUserData"
+    },
+    "SetConnectionName": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_SetConnectionName",
+      "params": {
+        "pszName": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetConnectionName": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_GetConnectionName",
+      "params": {
+        "pszName": {
+          "kind": "out-buffer",
+          "sizeParam": "nMaxLen"
+        }
+      }
+    },
+    "SendMessageToConnection": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_SendMessageToConnection",
+      "params": {
+        "pData": {
+          "kind": "in-buffer",
+          "lenParam": "cbData"
+        },
+        "pOutMessageNumber": {
+          "kind": "out-value",
+          "valueType": "uint64",
+          "type": "uint64*"
+        }
+      },
+      "evidence": {
+        "kind": "send",
+        "iface": "Sockets"
+      }
+    },
+    "SendMessages": {
+      "shimLocal": true,
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "int32",
+          "name": "nMessages"
+        },
+        "_unknownArg1": {
+          "kind": "value",
+          "type": "void**",
+          "name": "pMessages"
+        },
+        "_unknownArg2": {
+          "kind": "value",
+          "type": "int64_t*",
+          "name": "pOutMessageNumberOrResult"
+        },
+        "_unknownArg3": {
+          "kind": "value",
+          "type": "bool",
+          "name": "bDeleteFailedMessages"
+        }
+      }
+    },
+    "FlushMessagesOnConnection": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_FlushMessagesOnConnection"
+    },
+    "ReceiveMessagesOnConnection": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnConnection",
+      "helperCustom": "gl_net_receive_messages",
+      "returns": {
+        "type": "int32",
+        "kind": "int32"
+      },
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "hConn"
+        },
+        "_unknownArg1": {
+          "kind": "out-messages",
+          "type": "SteamNetworkingMessage_t**",
+          "name": "ppOutMessages",
+          "countParam": "nMaxMessages"
+        },
+        "_unknownArg2": {
+          "kind": "value",
+          "type": "int32",
+          "name": "nMaxMessages"
+        }
+      }
+    },
+    "GetConnectionInfo": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_GetConnectionInfo",
+      "helperCustom": "gl_net_get_connection_info",
+      "params": {
+        "pInfo": {
+          "kind": "out-struct",
+          "structSize": 696
+        }
+      }
+    },
+    "GetConnectionRealTimeStatus": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_GetConnectionRealTimeStatus",
+      "shimLocal": true,
+      "helperCustom": "gl_net_rt_status"
+    },
+    "GetDetailedConnectionStatus": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_GetDetailedConnectionStatus",
+      "params": {
+        "pszBuf": {
+          "kind": "out-buffer",
+          "sizeParam": "cbBuf"
+        }
+      }
+    },
+    "GetListenSocketAddress": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_GetListenSocketAddress",
+      "params": {
+        "address": {
+          "kind": "out-struct",
+          "structSize": 18
+        }
+      }
+    },
+    "CreateSocketPair": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_CreateSocketPair",
+      "params": {
+        "pOutConnection1": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        },
+        "pOutConnection2": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        },
+        "pPeerIdentity1": {
+          "kind": "in-struct",
+          "structSize": 136
+        },
+        "pPeerIdentity2": {
+          "kind": "in-struct",
+          "structSize": 136
+        }
+      }
+    },
+    "ConfigureConnectionLanes": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_ConfigureConnectionLanes",
+      "shimLocal": true,
+      "helperCustom": "gl_net_configure_lanes"
+    },
+    "GetIdentity": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_GetIdentity",
+      "params": {
+        "pIdentity": {
+          "kind": "out-struct",
+          "structSize": 136
+        }
+      }
+    },
+    "InitAuthentication": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_InitAuthentication"
+    },
+    "GetAuthenticationStatus": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_GetAuthenticationStatus",
+      "params": {
+        "pDetails": {
+          "kind": "out-struct",
+          "structSize": 260
+        }
+      }
+    },
+    "CreatePollGroup": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_CreatePollGroup"
+    },
+    "DestroyPollGroup": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_DestroyPollGroup"
+    },
+    "SetConnectionPollGroup": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_SetConnectionPollGroup"
+    },
+    "ReceiveMessagesOnPollGroup": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnPollGroup",
+      "helperCustom": "gl_net_receive_messages_pg",
+      "returns": {
+        "type": "int32",
+        "kind": "int32"
+      },
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "hPollGroup"
+        },
+        "_unknownArg1": {
+          "kind": "out-messages",
+          "type": "SteamNetworkingMessage_t**",
+          "name": "ppOutMessages",
+          "countParam": "nMaxMessages"
+        },
+        "_unknownArg2": {
+          "kind": "value",
+          "type": "int32",
+          "name": "nMaxMessages"
+        }
+      }
+    },
+    "ResetIdentity": {
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_ResetIdentity",
+      "params": {
+        "pIdentity": {
+          "kind": "in-struct",
+          "structSize": 136
+        }
+      }
+    },
+    "RunCallbacks": {
+      "shimLocal": true
+    }
   }
 }

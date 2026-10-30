@@ -280,9 +280,13 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
     'SteamMatchMakingServers003',
     { family: 'SteamMatchMakingServers', mode: 'stub' }
   ],
+  // D-07 / 58-15: connect, listen, accept, close, send, receive, info, status,
+  // identity, authentication, poll groups, lanes and ResetIdentity are wired;
+  // the dedicated-server, custom-signaling, certificate and FakeIP methods stay
+  // local stubs (D-09, D-10) and the destructor slot is never called.
   [
     'SteamNetworkingSockets013',
-    { family: 'SteamNetworkingSockets', mode: 'stub' }
+    { family: 'SteamNetworkingSockets', mode: 'wire' }
   ],
   // D-07 / 58-14: every virtual except SetDebugOutputFunction is wired (or
   // answered shim-side from the identity, message-pool and config-store

@@ -4689,7 +4689,8 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
           (m) =>
             m.interface !== 'SteamMatchMaking009' &&
             m.interface !== 'SteamNetworking006' &&
-            m.interface !== 'SteamNetworkingUtils004'
+            m.interface !== 'SteamNetworkingUtils004' &&
+            m.interface !== 'SteamNetworkingSockets013'
         )
         .map((m) => ({
           ...m,
@@ -4908,7 +4909,7 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       expect(header).not.toContain('arg_pData_len')
     })
 
-    it('real manifests declare exactly the 58-13 SteamNetworking006 and 58-14 SteamNetworkingUtils004 custom prototypes', () => {
+    it('real manifests declare exactly the 58-13, 58-14 and 58-15 custom prototypes', () => {
       const protos = [
         ...generateDispatchHeader(real).matchAll(
           /^int (gl_[a-z0-9_]+)\(void \*self,/gm
@@ -4916,14 +4917,20 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       ].map((m) => m[1])
       expect(protos.sort()).toEqual([
         'gl_net_check_ping_data',
+        'gl_net_configure_lanes',
         'gl_net_convert_ping_location',
         'gl_net_get_config_value',
         'gl_net_get_config_value_info',
+        'gl_net_get_connection_info',
         'gl_net_get_local_ping_location',
         'gl_net_get_p2p_session_state',
         'gl_net_get_pop_list',
         'gl_net_read_p2p_packet',
-        'gl_net_set_config_value'
+        'gl_net_receive_messages',
+        'gl_net_receive_messages_pg',
+        'gl_net_rt_status',
+        'gl_net_set_config_value',
+        'gl_net_sockets_open'
       ])
     })
   })
@@ -5417,5 +5424,130 @@ describe('58-14 SteamNetworkingUtils004 wire policy and served flip', () => {
         /collides with a generated stub local/.test(e)
       )
     ).toBe(true)
+  })
+})
+
+describe('58-15 SteamNetworkingSockets013 wire policy and served flip', () => {
+  const sockets = real.find((m) => m.interface === 'SteamNetworkingSockets013')!
+  const header = generateDispatchHeader(real)
+  const shim = generateShimC(real)
+  const method = (name: string) => sockets.methods.find((m) => m.name === name)!
+  const isWire = (name: string) =>
+    (method(name).mode ?? sockets.mode) === 'wire'
+
+  const STAYS_LOCAL = [
+    'ReceivedRelayAuthTicket',
+    'FindRelayAuthTicketForServer',
+    'ConnectToHostedDedicatedServer',
+    'GetHostedDedicatedServerPort',
+    'GetHostedDedicatedServerPOPID',
+    'GetHostedDedicatedServerAddress',
+    'CreateHostedDedicatedServerListenSocket',
+    'GetGameCoordinatorServerLogin',
+    'ConnectP2PCustomSignaling',
+    'ReceivedP2PCustomSignal',
+    'GetCertificateRequest',
+    'SetCertificate',
+    'BeginAsyncRequestFakeIP',
+    'GetFakeIP',
+    'CreateListenSocketP2PFakeIP',
+    'GetRemoteFakeIPForConnection',
+    'CreateFakeUDPPort',
+    'destructor'
+  ]
+
+  it('validates and wires 30 of 48 virtuals; the dedicated-server, signaling, certificate and FakeIP methods stay stubs with no helper case', () => {
+    expect(validateManifest(sockets)).toEqual([])
+    expect(sockets.methods).toHaveLength(48)
+    const wired = sockets.methods.filter((m) => isWire(m.name))
+    expect(wired).toHaveLength(30)
+    for (const name of STAYS_LOCAL) {
+      expect(isWire(name)).toBe(false)
+      expect(header).not.toContain(`SteamNetworkingSockets013.${name}`)
+      expect(method(name).helperCustom).toBeUndefined()
+    }
+  })
+
+  it('the four open methods and the lane and status methods are shimLocal with a helperCustom function', () => {
+    for (const name of [
+      'CreateListenSocketIP',
+      'ConnectByIPAddress',
+      'CreateListenSocketP2P',
+      'ConnectP2P'
+    ]) {
+      expect(method(name).shimLocal).toBe(true)
+      expect(method(name).helperCustom).toBe('gl_net_sockets_open')
+      expect(SHIM_LOCAL_BODIES[`SteamNetworkingSockets.${name}`]).toContain(
+        'gl_net_open('
+      )
+    }
+    expect(method('GetConnectionRealTimeStatus')).toMatchObject({
+      shimLocal: true,
+      helperCustom: 'gl_net_rt_status'
+    })
+    expect(method('ConfigureConnectionLanes')).toMatchObject({
+      shimLocal: true,
+      helperCustom: 'gl_net_configure_lanes'
+    })
+  })
+
+  it('RunCallbacks and SendMessages are shim-local with no helper case', () => {
+    for (const name of ['RunCallbacks', 'SendMessages']) {
+      expect(method(name).shimLocal).toBe(true)
+      expect(method(name).helperCustom).toBeUndefined()
+      expect(header).not.toContain(`SteamNetworkingSockets013.${name}`)
+    }
+    const run = SHIM_LOCAL_BODIES['SteamNetworkingSockets.RunCallbacks']
+    expect(run).toContain('gl_cb_run_callbacks()')
+    expect(run).toContain('gl_md_run_frame()')
+    const send = SHIM_LOCAL_BODIES['SteamNetworkingSockets.SendMessages']
+    expect(send).toContain(
+      'vt_SteamNetworkingSockets013_SendMessageToConnection('
+    )
+    // a sent message is always released, a failed one only on request
+    expect(send).toContain('gl_msg_release_via_fn(m)')
+    expect(send).toContain('if (del) gl_msg_release_via_fn(m);')
+    expect(send).toContain('bDeleteFailedMessages')
+  })
+
+  it('both receive methods use out-messages with nMaxMessages and their own helper function', () => {
+    for (const [name, fn] of [
+      ['ReceiveMessagesOnConnection', 'gl_net_receive_messages'],
+      ['ReceiveMessagesOnPollGroup', 'gl_net_receive_messages_pg']
+    ]) {
+      const m = method(name)
+      expect(m.helperCustom).toBe(fn)
+      expect(m.returnKind).toBe('int32')
+      expect(m.params.map((p) => p.kind ?? 'value')).toEqual([
+        'value',
+        'out-messages',
+        'value'
+      ])
+      expect(m.params[1].countParam).toBe('nMaxMessages')
+      expect(header).toContain(`${fn}(g_bd_self_steamnetworkingsockets013`)
+      expect(shim).toContain(`vt_SteamNetworkingSockets013_${name}(`)
+    }
+    expect(shim).toContain('gl_net_decode_messages(retbuf + respOff')
+  })
+
+  it('SendMessageToConnection logs send evidence on Sockets and GetConnectionInfo goes through the path-logging helper', () => {
+    expect(method('SendMessageToConnection').evidence).toEqual({
+      kind: 'send',
+      iface: 'Sockets'
+    })
+    expect(method('GetConnectionInfo').helperCustom).toBe(
+      'gl_net_get_connection_info'
+    )
+    expect(method('GetConnectionInfo').params[1]).toMatchObject({
+      kind: 'out-struct',
+      structSize: 696
+    })
+  })
+
+  it('every wired helperFlat is a SteamAPI_ISteamNetworkingSockets_ export', () => {
+    for (const m of sockets.methods.filter((x) => isWire(x.name))) {
+      if (m.shimLocal && m.helperCustom === undefined) continue
+      expect(m.helperFlat).toBe(`SteamAPI_ISteamNetworkingSockets_${m.name}`)
+    }
   })
 })
