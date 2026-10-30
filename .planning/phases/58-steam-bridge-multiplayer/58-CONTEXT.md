@@ -106,6 +106,16 @@ session the peer hosts.
 - Live gates are operator-run on the Mac. The gate's author is not its runner (56-15 / 56-16
   split). Restart `tauri dev` before live runs, because it does not rebuild the sidecar.
 
+### Operator approvals after research (2026-10-30)
+- **D-14 (D-02 outcome):** TCP-mode test title is **Schedule I: Free Sample (3205720)**. Its
+  `.bind`, architecture, imports and networking stack are unmeasured at research time; plan 58-01
+  measures them after the operator installs it. If it turns out SteamStub-wrapped, x86, or not on
+  Steam networking, fall back to Shift At Midnight Multiplayer Demo (4050060).
+- **D-15 (D-03 outcome):** DRM-mode test title is **Raft (648800)**; the second account buys a copy.
+- **D-16 (D-12 outcome):** `bridge-allowlist.json` already has `knownBad: []` (Hoard lifted in
+  quick 261026-ous, `90ebe6db7`), so D-12 is a **no-op**. Plans record it; no task removes an
+  entry. The `p2p-required` category stays.
+
 ### Claude's Discretion
 - The trace format for join callbacks, peer send/receive and the direct-vs-relayed marker, in both
   modes. It must be greppable by `meta/bridgeCensus.ts` (`classifyBridgeEvidence`) and carry
