@@ -5143,3 +5143,83 @@ describe('58-14 networking local block and registry hook', () => {
     ).toBe(true)
   })
 })
+
+describe('58-14 helper networking-utils handlers (source pins)', () => {
+  const helper = readFileSync(
+    join('native', 'steam-bridge', 'helper', 'bridge_helper.c'),
+    'utf-8'
+  )
+  function body(name: string): string {
+    const start = helper.indexOf(`int ${name}(void *self`)
+    expect(start).toBeGreaterThan(0)
+    const end = helper.indexOf('\n}\n', start)
+    return helper.slice(start, end)
+  }
+
+  it('defines the three custom functions the manifest names, non-static', () => {
+    for (const name of [
+      'gl_net_set_config_value',
+      'gl_net_get_config_value',
+      'gl_net_get_pop_list'
+    ]) {
+      expect(helper).toMatch(new RegExp(`^int ${name}\\(void \\*self`, 'm'))
+    }
+  })
+
+  it('gl_net_set_config_value refuses Ptr (5) and ids 201..207 before it reads the value', () => {
+    const b = body('gl_net_set_config_value')
+    const ptr = b.indexOf('if (type == GL_NETU_CFG_PTR) return 1;')
+    const cb = b.indexOf(
+      'if (e >= GL_NETU_CFG_CB_FIRST && e <= GL_NETU_CFG_CB_LAST) return 1;'
+    )
+    const read = b.indexOf('val = args + 24;')
+    expect(ptr).toBeGreaterThan(0)
+    expect(cb).toBeGreaterThan(0)
+    expect(read).toBeGreaterThan(ptr)
+    expect(read).toBeGreaterThan(cb)
+    expect(helper).toContain('#define GL_NETU_CFG_CB_FIRST 201')
+    expect(helper).toContain('#define GL_NETU_CFG_CB_LAST 207')
+    expect(helper).toContain('#define GL_NETU_CFG_PTR 5')
+  })
+
+  it('gl_net_set_config_value checks the exact length per type before the read', () => {
+    const b = body('gl_net_set_config_value')
+    const read = b.indexOf('val = args + 24;')
+    for (const pin of [
+      'if (len > GL_NETU_STRING_MAX || argLen != 24u + len) return 1;',
+      'if ((type == 1 || type == 3) && len != 4) return 1;',
+      'if (type == 2 && len != 8) return 1;',
+      'if (type == 4 && args[24 + len - 1] != 0) return 1;'
+    ]) {
+      const at = b.indexOf(pin)
+      expect(at).toBeGreaterThan(0)
+      expect(at).toBeLessThan(read)
+    }
+    expect(helper).toContain('#define GL_NETU_STRING_MAX 4096')
+  })
+
+  it('gl_net_get_config_value refuses callback ids up front and a Ptr reply', () => {
+    const b = body('gl_net_get_config_value')
+    const cb = b.indexOf(
+      'if (e >= GL_NETU_CFG_CB_FIRST && e <= GL_NETU_CFG_CB_LAST) return 1;'
+    )
+    const call = b.indexOf('ret = fn(self')
+    expect(cb).toBeGreaterThan(0)
+    expect(cb).toBeLessThan(call)
+    expect(b).toContain('if (type == GL_NETU_CFG_PTR) {')
+    expect(b).toContain('gl_cbq_secure_zero(buf, sizeof buf);')
+  })
+
+  it('gl_net_get_pop_list caps the list at 256 entries before calling', () => {
+    const b = body('gl_net_get_pop_list')
+    expect(helper).toContain('#define GL_NETU_POP_MAX 256')
+    expect(b.indexOf('want > GL_NETU_POP_MAX')).toBeGreaterThan(0)
+    expect(b.indexOf('want > GL_NETU_POP_MAX')).toBeLessThan(
+      b.indexOf('ret = fn(self')
+    )
+  })
+
+  it('logs no string from the NET or CBQ channels', () => {
+    expect(helper).not.toMatch(/logts_f\("(NET|CBQ)",[^)]*%s/)
+  })
+})

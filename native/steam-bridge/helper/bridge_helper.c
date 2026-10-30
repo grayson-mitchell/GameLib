@@ -684,6 +684,232 @@ int gl_net_get_p2p_session_state(void *self, const uint8_t *args, uint32_t argLe
   return 0;
 }
 
+/* === 58-14: ISteamNetworkingUtils helpers ================================== */
+/* Each function below is a helperCustom for SteamNetworkingUtils004. The shim
+ * reaches it through gl_bridge_call_raw (the method is shimLocal there), and
+ * the request layout is defined by the shim's NETWORKING_LOCAL_C. The Mac
+ * symbols are resolved with dlsym on the helper's one dylib handle on first
+ * use. A Windows function pointer can never arrive here: the shim keeps every
+ * Ptr value and Callback_* config in its own store, and these handlers refuse
+ * both again (T-58-44). Nothing here logs a string. */
+
+#define GL_NETU_CFG_CB_FIRST 201
+#define GL_NETU_CFG_CB_LAST 207
+#define GL_NETU_CFG_PTR 5
+#define GL_NETU_STRING_MAX 4096
+#define GL_NETU_GET_MAX 4096
+#define GL_NETU_POP_MAX 256
+#define GL_NETU_PING_LOC_BYTES 512
+#define GL_NETU_NAME_MAX 127
+
+static void *gl_netu_sym(const char *name) {
+  return g_dylib_handle != NULL ? dlsym(g_dylib_handle, name) : NULL;
+}
+
+/* [i32 eValue][i32 scope][i64 obj][i32 type][u32 len][len bytes] -> [i32 ret].
+ * type 1 or 3 needs len 4, type 2 len 8, type 4 len 1..4096 ending in NUL; a
+ * len of 0 resets to the inherited value. Type 5 (Ptr) and the Callback_* ids
+ * are refused before the value is read. */
+int gl_net_set_config_value(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                            uint32_t respCap, uint32_t *respLen) {
+  typedef int (*SetCfg_t)(void *, int32_t, int32_t, intptr_t, int32_t, const void *);
+  static SetCfg_t fn = NULL;
+  int32_t e, scope, type, ret;
+  int64_t obj;
+  uint32_t len;
+  const void *val = NULL;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || respCap < 4 || argLen < 24) return 1;
+  memcpy(&e, args, 4);
+  memcpy(&scope, args + 4, 4);
+  memcpy(&obj, args + 8, 8);
+  memcpy(&type, args + 16, 4);
+  memcpy(&len, args + 20, 4);
+  if (type == GL_NETU_CFG_PTR) return 1;
+  if (e >= GL_NETU_CFG_CB_FIRST && e <= GL_NETU_CFG_CB_LAST) return 1;
+  if (scope < 1 || scope > 4) return 1;
+  if (type < 1 || type > 4) return 1;
+  if (len > GL_NETU_STRING_MAX || argLen != 24u + len) return 1;
+  if (len != 0) {
+    if ((type == 1 || type == 3) && len != 4) return 1;
+    if (type == 2 && len != 8) return 1;
+    if (type == 4 && args[24 + len - 1] != 0) return 1;
+    val = args + 24;
+  }
+  if (self == NULL) return 1;
+  if (fn == NULL) fn = (SetCfg_t)gl_netu_sym("SteamAPI_ISteamNetworkingUtils_SetConfigValue");
+  if (fn == NULL) return 1;
+  ret = fn(self, e, scope, (intptr_t)obj, type, val) & 0xff;
+  memcpy(resp, &ret, 4);
+  *respLen = 4;
+  return 0;
+}
+
+/* [i32 eValue][i32 scope][i64 obj][u32 cap] -> [i32 ret][i32 type][u64 needed]
+ * [u32 n][n bytes]. cap is at most 4096. A Callback_* id is refused up front,
+ * and a native reply of type Ptr is refused so a Mac pointer never leaves. */
+int gl_net_get_config_value(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                            uint32_t respCap, uint32_t *respLen) {
+  typedef int (*GetCfg_t)(void *, int32_t, int32_t, intptr_t, int32_t *, void *, size_t *);
+  static GetCfg_t fn = NULL;
+  int32_t e, scope, ret, type = 0;
+  int64_t obj;
+  uint32_t cap, n = 0;
+  uint64_t needed;
+  size_t cb = 0;
+  uint8_t buf[GL_NETU_GET_MAX];
+  *respLen = 0;
+  if (args == NULL || resp == NULL || argLen != 20) return 1;
+  memcpy(&e, args, 4);
+  memcpy(&scope, args + 4, 4);
+  memcpy(&obj, args + 8, 8);
+  memcpy(&cap, args + 16, 4);
+  if (e >= GL_NETU_CFG_CB_FIRST && e <= GL_NETU_CFG_CB_LAST) return 1;
+  if (scope < 1 || scope > 4) return 1;
+  if (cap > GL_NETU_GET_MAX || respCap < 20u + cap) return 1;
+  if (self == NULL) return 1;
+  if (fn == NULL) fn = (GetCfg_t)gl_netu_sym("SteamAPI_ISteamNetworkingUtils_GetConfigValue");
+  if (fn == NULL) return 1;
+  memset(buf, 0, sizeof buf);
+  cb = cap;
+  ret = fn(self, e, scope, (intptr_t)obj, &type, cap != 0 ? buf : NULL, &cb);
+  if (type == GL_NETU_CFG_PTR) {
+    gl_cbq_secure_zero(buf, sizeof buf);
+    return 1;
+  }
+  needed = (uint64_t)cb;
+  if ((ret == 1 || ret == 2) && cap != 0) n = (uint32_t)(cb < cap ? cb : cap);
+  memcpy(resp, &ret, 4);
+  memcpy(resp + 4, &type, 4);
+  memcpy(resp + 8, &needed, 8);
+  memcpy(resp + 16, &n, 4);
+  if (n != 0) memcpy(resp + 20, buf, n);
+  *respLen = 20 + n;
+  return 0;
+}
+
+/* [i32 nListSz] -> [i32 ret][u32 n][n x u32]; at most 256 entries. */
+int gl_net_get_pop_list(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                        uint32_t respCap, uint32_t *respLen) {
+  typedef int (*PopList_t)(void *, uint32_t *, int);
+  static PopList_t fn = NULL;
+  int32_t want, ret;
+  uint32_t list[GL_NETU_POP_MAX];
+  uint32_t n = 0;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || argLen != 4) return 1;
+  memcpy(&want, args, 4);
+  if (want < 0 || want > GL_NETU_POP_MAX) return 1;
+  if (respCap < 8u + 4u * (uint32_t)want) return 1;
+  if (self == NULL) return 1;
+  if (fn == NULL) fn = (PopList_t)gl_netu_sym("SteamAPI_ISteamNetworkingUtils_GetPOPList");
+  if (fn == NULL) return 1;
+  memset(list, 0, sizeof list);
+  ret = fn(self, list, want);
+  if (ret > 0) n = (uint32_t)(ret < want ? ret : want);
+  memcpy(resp, &ret, 4);
+  memcpy(resp + 4, &n, 4);
+  if (n != 0) memcpy(resp + 8, list, 4u * n);
+  *respLen = 8 + 4 * n;
+  return 0;
+}
+
+/* [] -> [f32 ret][u8 present][512 bytes SteamNetworkPingLocation_t]. */
+int gl_net_get_local_ping_location(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                                   uint32_t respCap, uint32_t *respLen) {
+  typedef float (*LocalPing_t)(void *, void *);
+  static LocalPing_t fn = NULL;
+  uint8_t loc[GL_NETU_PING_LOC_BYTES];
+  float ret;
+  (void)args;
+  *respLen = 0;
+  if (resp == NULL || argLen != 0 || respCap < 5u + GL_NETU_PING_LOC_BYTES) return 1;
+  if (self == NULL) return 1;
+  if (fn == NULL) fn = (LocalPing_t)gl_netu_sym("SteamAPI_ISteamNetworkingUtils_GetLocalPingLocation");
+  if (fn == NULL) return 1;
+  memset(loc, 0, sizeof loc);
+  ret = fn(self, loc);
+  memcpy(resp, &ret, 4);
+  resp[4] = 1;
+  memcpy(resp + 5, loc, sizeof loc);
+  *respLen = 5 + GL_NETU_PING_LOC_BYTES;
+  return 0;
+}
+
+/* [f32 flMaxAgeSeconds] -> [i32 ret]. */
+int gl_net_check_ping_data(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                           uint32_t respCap, uint32_t *respLen) {
+  typedef int (*CheckPing_t)(void *, float);
+  static CheckPing_t fn = NULL;
+  float age;
+  int32_t ret;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || argLen != 4 || respCap < 4) return 1;
+  if (self == NULL) return 1;
+  memcpy(&age, args, 4);
+  if (fn == NULL) fn = (CheckPing_t)gl_netu_sym("SteamAPI_ISteamNetworkingUtils_CheckPingDataUpToDate");
+  if (fn == NULL) return 1;
+  ret = fn(self, age) & 0xff;
+  memcpy(resp, &ret, 4);
+  *respLen = 4;
+  return 0;
+}
+
+/* [512 bytes location][i32 cap] -> [u32 len][len bytes], cap 1..1024. */
+int gl_net_convert_ping_location(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                                 uint32_t respCap, uint32_t *respLen) {
+  typedef void (*ConvertPing_t)(void *, const void *, char *, int);
+  static ConvertPing_t fn = NULL;
+  char out[1024];
+  int32_t cap;
+  uint32_t n;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || argLen != GL_NETU_PING_LOC_BYTES + 4) return 1;
+  memcpy(&cap, args + GL_NETU_PING_LOC_BYTES, 4);
+  if (cap < 1 || cap > (int32_t)sizeof out || respCap < 4u + (uint32_t)cap) return 1;
+  if (self == NULL) return 1;
+  if (fn == NULL) fn = (ConvertPing_t)gl_netu_sym("SteamAPI_ISteamNetworkingUtils_ConvertPingLocationToString");
+  if (fn == NULL) return 1;
+  memset(out, 0, sizeof out);
+  fn(self, args, out, cap);
+  out[cap - 1] = 0;
+  n = (uint32_t)strlen(out);
+  memcpy(resp, &n, 4);
+  memcpy(resp + 4, out, n);
+  *respLen = 4 + n;
+  return 0;
+}
+
+/* [i32 eValue] -> [u32 nameLen][name][i32 type][i32 scope]; nameLen 0 for an
+ * unknown value. The name is capped at 127 bytes and never logged. */
+int gl_net_get_config_value_info(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                                 uint32_t respCap, uint32_t *respLen) {
+  typedef const char *(*CfgInfo_t)(void *, int32_t, int32_t *, int32_t *);
+  static CfgInfo_t fn = NULL;
+  int32_t e, type = 0, scope = 0;
+  const char *name;
+  uint32_t n = 0;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || argLen != 4 || respCap < 4u + GL_NETU_NAME_MAX + 8u) return 1;
+  memcpy(&e, args, 4);
+  if (self == NULL) return 1;
+  if (fn == NULL) fn = (CfgInfo_t)gl_netu_sym("SteamAPI_ISteamNetworkingUtils_GetConfigValueInfo");
+  if (fn == NULL) return 1;
+  name = fn(self, e, &type, &scope);
+  if (name != NULL) {
+    while (n < GL_NETU_NAME_MAX && name[n] != 0) n++;
+  } else {
+    type = 0;
+    scope = 0;
+  }
+  memcpy(resp, &n, 4);
+  if (n != 0) memcpy(resp + 4, name, n);
+  memcpy(resp + 4 + n, &type, 4);
+  memcpy(resp + 8 + n, &scope, 4);
+  *respLen = 12 + n;
+  return 0;
+}
+
 /* M-04 fallback: the shim reported a 1202 with no listener (ndispatched 0,
  * held 0), so accept the remote ourselves, once per remote. Helper-originated:
  * logged as src=helper and never counted as evidence. */
