@@ -141,6 +141,8 @@ Request blob:
     WIRE_OUT_BUFFER_MAX_BYTES.
 
 Response blob:
+  - an 'out-value' with valueType 'uint16' (58-12) is 2 bytes on the wire and
+    is written as a uint16_t into the game pointer.
   - then, for every 'out-struct' param in declaration order, after the
     out-buffers: [u8 present][structSize bytes]. The shim copies the bytes into
     the game pointer only when that pointer is non-NULL and present is 1.
@@ -166,7 +168,7 @@ Method modes:
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "00e358feeee6"
+#define BRIDGE_SHIM_TABLE_HASH "3905e453066c"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -9398,302 +9400,879 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION005 g_steamremotestorage_i
 
 // === SteamMatchMaking009 (ordinal 12, family SteamMatchmaking) ===
 
-// slot 0: GetFavoriteGameCount() -> int32 | __thiscall ret 0 (STUB)
+// slot 0: GetFavoriteGameCount() -> int32 | __thiscall ret 0
 static int32_t THISCALL vt_SteamMatchMaking009_GetFavoriteGameCount(void *self) {
-  static volatile LONG gamelib_sc[2];
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetFavoriteGameCount", 0, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 1: GetFavoriteGame(int32 iGame, uint32* pnAppID, uint32* pnIP, uint16_t* pnConnPort, uint16_t* pnQueryPort, uint32* punFlags, uint32* pRTime32LastPlayedOnServer) -> bool | __thiscall ret 28 (STUB)
-static int THISCALL vt_SteamMatchMaking009_GetFavoriteGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
-  static volatile LONG gamelib_sc[2];
+// slot 1: GetFavoriteGame(int32 iGame, uint32* pnAppID, uint32* pnIP, uint16_t* pnConnPort, uint16_t* pnQueryPort, uint32* punFlags, uint32* pRTime32LastPlayedOnServer) -> bool | __thiscall ret 28
+static int THISCALL vt_SteamMatchMaking009_GetFavoriteGame(void *self, int32_t iGame, uint32_t * pnAppID, uint32_t * pnIP, uint16_t * pnConnPort, uint16_t * pnQueryPort, uint32_t * punFlags, uint32_t * pRTime32LastPlayedOnServer) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetFavoriteGame", 1, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &iGame, 4); argOff += 4;
+  uint8_t retbuf[24]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pnAppID != NULL) *pnAppID = 0;
+    if (pnIP != NULL) *pnIP = 0;
+    if (pnConnPort != NULL) *pnConnPort = 0;
+    if (pnQueryPort != NULL) *pnQueryPort = 0;
+    if (punFlags != NULL) *punFlags = 0;
+    if (pRTime32LastPlayedOnServer != NULL) *pRTime32LastPlayedOnServer = 0;
+    return 0;
+  }
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pnAppID != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pnAppID = outVal;
+  }
+  respOff += 4;
+  if (pnIP != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pnIP = outVal;
+  }
+  respOff += 4;
+  if (pnConnPort != NULL && retlen >= respOff + 2) {
+    uint16_t outVal; memcpy(&outVal, retbuf + respOff, 2);
+    *pnConnPort = outVal;
+  }
+  respOff += 2;
+  if (pnQueryPort != NULL && retlen >= respOff + 2) {
+    uint16_t outVal; memcpy(&outVal, retbuf + respOff, 2);
+    *pnQueryPort = outVal;
+  }
+  respOff += 2;
+  if (punFlags != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *punFlags = outVal;
+  }
+  respOff += 4;
+  if (pRTime32LastPlayedOnServer != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pRTime32LastPlayedOnServer = outVal;
+  }
+  respOff += 4;
+  return ret;
 }
 
-// slot 2: AddFavoriteGame(uint32 nAppID, uint32 nIP, uint32 nConnPort, uint32 nQueryPort, uint32 unFlags, uint32 rTime32LastPlayedOnServer) -> int32 | __thiscall ret 24 (STUB)
-static int32_t THISCALL vt_SteamMatchMaking009_AddFavoriteGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
-  static volatile LONG gamelib_sc[2];
+// slot 2: AddFavoriteGame(uint32 nAppID, uint32 nIP, uint32 nConnPort, uint32 nQueryPort, uint32 unFlags, uint32 rTime32LastPlayedOnServer) -> int32 | __thiscall ret 24
+static int32_t THISCALL vt_SteamMatchMaking009_AddFavoriteGame(void *self, uint32_t nAppID, uint32_t nIP, uint32_t nConnPort, uint32_t nQueryPort, uint32_t unFlags, uint32_t rTime32LastPlayedOnServer) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddFavoriteGame", 2, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[24];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &nAppID, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nIP, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nConnPort, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nQueryPort, 4); argOff += 4;
+  memcpy(argbuf + argOff, &unFlags, 4); argOff += 4;
+  memcpy(argbuf + argOff, &rTime32LastPlayedOnServer, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 3: RemoveFavoriteGame(uint32 nAppID, uint32 nIP, uint32 nConnPort, uint32 nQueryPort, uint32 unFlags) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_SteamMatchMaking009_RemoveFavoriteGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
-  static volatile LONG gamelib_sc[2];
+// slot 3: RemoveFavoriteGame(uint32 nAppID, uint32 nIP, uint32 nConnPort, uint32 nQueryPort, uint32 unFlags) -> bool | __thiscall ret 20
+static int THISCALL vt_SteamMatchMaking009_RemoveFavoriteGame(void *self, uint32_t nAppID, uint32_t nIP, uint32_t nConnPort, uint32_t nQueryPort, uint32_t unFlags) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "RemoveFavoriteGame", 3, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[20];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &nAppID, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nIP, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nConnPort, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nQueryPort, 4); argOff += 4;
+  memcpy(argbuf + argOff, &unFlags, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 4: RequestLobbyList() -> uint64 | __thiscall ret 0 (STUB)
+// slot 4: RequestLobbyList() -> uint64 | __thiscall ret 0
 static uint64_t THISCALL vt_SteamMatchMaking009_RequestLobbyList(void *self) {
-  static volatile LONG gamelib_sc[2];
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "RequestLobbyList", 4, GAMELIB_STUBCALL_KIND_STUB);
-  return 0LL;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 8) return 0;
+  uint64_t ret; memcpy(&ret, retbuf, 8);
+  return ret;
 }
 
-// slot 5: AddRequestLobbyListStringFilter(const char* pchKeyToMatch, const char* pchValueToMatch, uint32 eComparisonType) -> void | __thiscall ret 12 (STUB)
-static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListStringFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 5: AddRequestLobbyListStringFilter(const char* pchKeyToMatch, const char* pchValueToMatch, uint32 eComparisonType) -> void | __thiscall ret 12
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListStringFilter(void *self, const char * pchKeyToMatch, const char * pchValueToMatch, uint32_t eComparisonType) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListStringFilter", 5, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[8204];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchKeyToMatch == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchKeyToMatch);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKeyToMatch, strLen); argOff += strLen;
+      }
+    }
+  }
+  {
+    uint32_t strLen;
+    if (pchValueToMatch == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchValueToMatch);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchValueToMatch, strLen); argOff += strLen;
+      }
+    }
+  }
+  memcpy(argbuf + argOff, &eComparisonType, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(12, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 6: AddRequestLobbyListNumericalFilter(const char* pchKeyToMatch, int32 nValueToMatch, uint32 eComparisonType) -> void | __thiscall ret 12 (STUB)
-static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListNumericalFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 6: AddRequestLobbyListNumericalFilter(const char* pchKeyToMatch, int32 nValueToMatch, uint32 eComparisonType) -> void | __thiscall ret 12
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListNumericalFilter(void *self, const char * pchKeyToMatch, int32_t nValueToMatch, uint32_t eComparisonType) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListNumericalFilter", 6, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchKeyToMatch == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchKeyToMatch);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKeyToMatch, strLen); argOff += strLen;
+      }
+    }
+  }
+  memcpy(argbuf + argOff, &nValueToMatch, 4); argOff += 4;
+  memcpy(argbuf + argOff, &eComparisonType, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(12, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 7: AddRequestLobbyListNearValueFilter(const char* pchKeyToMatch, int32 nValueToBeCloseTo) -> void | __thiscall ret 8 (STUB)
-static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListNearValueFilter(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 7: AddRequestLobbyListNearValueFilter(const char* pchKeyToMatch, int32 nValueToBeCloseTo) -> void | __thiscall ret 8
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListNearValueFilter(void *self, const char * pchKeyToMatch, int32_t nValueToBeCloseTo) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListNearValueFilter", 7, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[4104];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchKeyToMatch == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchKeyToMatch);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKeyToMatch, strLen); argOff += strLen;
+      }
+    }
+  }
+  memcpy(argbuf + argOff, &nValueToBeCloseTo, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(12, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 8: AddRequestLobbyListFilterSlotsAvailable(int32 nSlotsAvailable) -> void | __thiscall ret 4 (STUB)
-static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListFilterSlotsAvailable(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 8: AddRequestLobbyListFilterSlotsAvailable(int32 nSlotsAvailable) -> void | __thiscall ret 4
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListFilterSlotsAvailable(void *self, int32_t nSlotsAvailable) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListFilterSlotsAvailable", 8, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &nSlotsAvailable, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(12, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 9: AddRequestLobbyListDistanceFilter(uint32 eLobbyDistanceFilter) -> void | __thiscall ret 4 (STUB)
-static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListDistanceFilter(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 9: AddRequestLobbyListDistanceFilter(uint32 eLobbyDistanceFilter) -> void | __thiscall ret 4
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListDistanceFilter(void *self, uint32_t eLobbyDistanceFilter) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListDistanceFilter", 9, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &eLobbyDistanceFilter, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(12, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 10: AddRequestLobbyListResultCountFilter(int32 cMaxResults) -> void | __thiscall ret 4 (STUB)
-static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListResultCountFilter(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 10: AddRequestLobbyListResultCountFilter(int32 cMaxResults) -> void | __thiscall ret 4
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListResultCountFilter(void *self, int32_t cMaxResults) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListResultCountFilter", 10, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &cMaxResults, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(12, 10, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 11: AddRequestLobbyListCompatibleMembersFilter(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
-static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListCompatibleMembersFilter(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 11: AddRequestLobbyListCompatibleMembersFilter(CSteamID steamIDLobby) -> void | __thiscall ret 8
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListCompatibleMembersFilter(void *self, uint64_t steamIDLobby) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "AddRequestLobbyListCompatibleMembersFilter", 11, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(12, 11, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 12: GetLobbyByIndex(int32 iLobby) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
-static void * THISCALL vt_SteamMatchMaking009_GetLobbyByIndex(void *self, void *sretOut, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 12: GetLobbyByIndex(int32 iLobby) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer)
+static void * THISCALL vt_SteamMatchMaking009_GetLobbyByIndex(void *self, void *sretOut, int32_t iLobby) {
   (void)self;
-  memset(sretOut, 0, 8);
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyByIndex", 12, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &iLobby, 4); argOff += 4;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 8) {
+    memset(sretOut, 0, 8);
+    return sretOut;
+  }
+  memcpy(sretOut, retbuf, 8);
   return sretOut;
 }
 
-// slot 13: CreateLobby(uint32 eLobbyType, int32 cMaxMembers) -> uint64 | __thiscall ret 8 (STUB)
-static uint64_t THISCALL vt_SteamMatchMaking009_CreateLobby(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 13: CreateLobby(uint32 eLobbyType, int32 cMaxMembers) -> uint64 | __thiscall ret 8
+static uint64_t THISCALL vt_SteamMatchMaking009_CreateLobby(void *self, uint32_t eLobbyType, int32_t cMaxMembers) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "CreateLobby", 13, GAMELIB_STUBCALL_KIND_STUB);
-  return 0LL;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &eLobbyType, 4); argOff += 4;
+  memcpy(argbuf + argOff, &cMaxMembers, 4); argOff += 4;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 8) return 0;
+  uint64_t ret; memcpy(&ret, retbuf, 8);
+  return ret;
 }
 
-// slot 14: JoinLobby(CSteamID steamIDLobby) -> uint64 | __thiscall ret 8 (STUB)
-static uint64_t THISCALL vt_SteamMatchMaking009_JoinLobby(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 14: JoinLobby(CSteamID steamIDLobby) -> uint64 | __thiscall ret 8
+static uint64_t THISCALL vt_SteamMatchMaking009_JoinLobby(void *self, uint64_t steamIDLobby) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "JoinLobby", 14, GAMELIB_STUBCALL_KIND_STUB);
-  return 0LL;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 8) return 0;
+  uint64_t ret; memcpy(&ret, retbuf, 8);
+  return ret;
 }
 
-// slot 15: LeaveLobby(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
-static void THISCALL vt_SteamMatchMaking009_LeaveLobby(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 15: LeaveLobby(CSteamID steamIDLobby) -> void | __thiscall ret 8
+static void THISCALL vt_SteamMatchMaking009_LeaveLobby(void *self, uint64_t steamIDLobby) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "LeaveLobby", 15, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(12, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 16: InviteUserToLobby(CSteamID steamIDLobby, CSteamID steamIDInvitee) -> bool | __thiscall ret 16 (STUB)
-static int THISCALL vt_SteamMatchMaking009_InviteUserToLobby(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
-  static volatile LONG gamelib_sc[2];
+// slot 16: InviteUserToLobby(CSteamID steamIDLobby, CSteamID steamIDInvitee) -> bool | __thiscall ret 16
+static int THISCALL vt_SteamMatchMaking009_InviteUserToLobby(void *self, uint64_t steamIDLobby, uint64_t steamIDInvitee) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "InviteUserToLobby", 16, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[16];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  memcpy(argbuf + argOff, &steamIDInvitee, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 16, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 17: GetNumLobbyMembers(CSteamID steamIDLobby) -> int32 | __thiscall ret 8 (STUB)
-static int32_t THISCALL vt_SteamMatchMaking009_GetNumLobbyMembers(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 17: GetNumLobbyMembers(CSteamID steamIDLobby) -> int32 | __thiscall ret 8
+static int32_t THISCALL vt_SteamMatchMaking009_GetNumLobbyMembers(void *self, uint64_t steamIDLobby) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetNumLobbyMembers", 17, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 17, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 18: GetLobbyMemberByIndex(CSteamID steamIDLobby, int32 iMember) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
-static void * THISCALL vt_SteamMatchMaking009_GetLobbyMemberByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 18: GetLobbyMemberByIndex(CSteamID steamIDLobby, int32 iMember) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer)
+static void * THISCALL vt_SteamMatchMaking009_GetLobbyMemberByIndex(void *self, void *sretOut, uint64_t steamIDLobby, int32_t iMember) {
   (void)self;
-  memset(sretOut, 0, 8);
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyMemberByIndex", 18, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[12];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  memcpy(argbuf + argOff, &iMember, 4); argOff += 4;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 18, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 8) {
+    memset(sretOut, 0, 8);
+    return sretOut;
+  }
+  memcpy(sretOut, retbuf, 8);
   return sretOut;
 }
 
-// slot 19: GetLobbyData(CSteamID steamIDLobby, const char* pchKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
-static const char * THISCALL vt_SteamMatchMaking009_GetLobbyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 19: GetLobbyData(CSteamID steamIDLobby, const char* pchKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamMatchMaking009_GetLobbyData_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamMatchMaking009_GetLobbyData(void *self, uint64_t steamIDLobby, const char * pchKey) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyData", 19, GAMELIB_STUBCALL_KIND_STUB);
-  return "";
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  {
+    uint32_t strLen;
+    if (pchKey == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchKey);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      }
+    }
+  }
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 19, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamMatchMaking009_GetLobbyData_buf[0] = '\0';
+    return vt_SteamMatchMaking009_GetLobbyData_buf;
+  }
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamMatchMaking009_GetLobbyData_buf[0] = '\0'; return vt_SteamMatchMaking009_GetLobbyData_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamMatchMaking009_GetLobbyData_buf[0] = '\0'; return vt_SteamMatchMaking009_GetLobbyData_buf; }
+  memcpy(vt_SteamMatchMaking009_GetLobbyData_buf, retbuf + 4, declLen);
+  vt_SteamMatchMaking009_GetLobbyData_buf[declLen] = '\0';
+  return vt_SteamMatchMaking009_GetLobbyData_buf;
 }
 
-// slot 20: SetLobbyData(CSteamID steamIDLobby, const char* pchKey, const char* pchValue) -> bool | __thiscall ret 16 (STUB)
-static int THISCALL vt_SteamMatchMaking009_SetLobbyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
-  static volatile LONG gamelib_sc[2];
+// slot 20: SetLobbyData(CSteamID steamIDLobby, const char* pchKey, const char* pchValue) -> bool | __thiscall ret 16
+static int THISCALL vt_SteamMatchMaking009_SetLobbyData(void *self, uint64_t steamIDLobby, const char * pchKey, const char * pchValue) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyData", 20, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8208];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  {
+    uint32_t strLen;
+    if (pchKey == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchKey);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      }
+    }
+  }
+  {
+    uint32_t strLen;
+    if (pchValue == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchValue);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchValue, strLen); argOff += strLen;
+      }
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 20, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 21: GetLobbyDataCount(CSteamID steamIDLobby) -> int32 | __thiscall ret 8 (STUB)
-static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyDataCount(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 21: GetLobbyDataCount(CSteamID steamIDLobby) -> int32 | __thiscall ret 8
+static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyDataCount(void *self, uint64_t steamIDLobby) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyDataCount", 21, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 21, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 22: GetLobbyDataByIndex(CSteamID steamIDLobby, int32 iLobbyData, char* pchKey, int32 cchKeyBufferSize, char* pchValue, int32 cchValueBufferSize) -> bool | __thiscall ret 28 (STUB)
+// slot 22: GetLobbyDataByIndex(CSteamID steamIDLobby, int32 iLobbyData, char* pchKey, int32 cchKeyBufferSize, char* pchValue, int32 cchValueBufferSize) -> bool | __thiscall ret 28
 static int THISCALL vt_SteamMatchMaking009_GetLobbyDataByIndex(void *self, uint64_t steamIDLobby, int32_t iLobbyData, char * pchKey, int32_t cchKeyBufferSize, char * pchValue, int32_t cchValueBufferSize) {
-  static volatile LONG gamelib_sc[2];
   (void)self;
-  if (pchKey != NULL && cchKeyBufferSize > 0) pchKey[0] = '\0';
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyDataByIndex", 22, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  static uint8_t argbuf[28];
+  static uint8_t retbuf[8460];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  AcquireSRWLockExclusive(&g_bridge_lock);
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  memcpy(argbuf + argOff, &iLobbyData, 4); argOff += 4;
+  uint32_t cap_pchKey = (cchKeyBufferSize < 0) ? 0u : (uint32_t)cchKeyBufferSize; // negative size -> capacity 0 (53-14, T-53-56)
+  if (cap_pchKey > 256) cap_pchKey = 256;
+  memcpy(argbuf + argOff, &cap_pchKey, 4); argOff += 4;
+  memcpy(argbuf + argOff, &cchKeyBufferSize, 4); argOff += 4;
+  uint32_t cap_pchValue = (cchValueBufferSize < 0) ? 0u : (uint32_t)cchValueBufferSize; // negative size -> capacity 0 (53-14, T-53-56)
+  if (cap_pchValue > 8192) cap_pchValue = 8192;
+  memcpy(argbuf + argOff, &cap_pchValue, 4); argOff += 4;
+  memcpy(argbuf + argOff, &cchValueBufferSize, 4); argOff += 4;
+  int ok = bridge_transact_locked(12, 22, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+    uint32_t copied_pchKey = 0;
+    uint32_t copied_pchValue = 0;
+    if (retlen >= respOff + 4) {
+      uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;
+      uint32_t copyLen = declLen;
+      if (copyLen > 256) copyLen = 256;
+      if (copyLen > cap_pchKey) copyLen = cap_pchKey; // never write past the caller's own capacity (53-14, T-53-56)
+      if (copyLen >= cap_pchKey) copyLen = cap_pchKey ? cap_pchKey - 1 : 0; // room for the NUL (53-17 WR-03)
+      if (pchKey != NULL && retlen >= respOff + copyLen) {
+        memcpy(pchKey, retbuf + respOff, copyLen);
+        copied_pchKey = copyLen;
+        if (cap_pchKey > 0) pchKey[copyLen] = '\0';
+      }
+      respOff += declLen;
+    }
+    if (retlen >= respOff + 4) {
+      uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;
+      uint32_t copyLen = declLen;
+      if (copyLen > 8192) copyLen = 8192;
+      if (copyLen > cap_pchValue) copyLen = cap_pchValue; // never write past the caller's own capacity (53-14, T-53-56)
+      if (copyLen >= cap_pchValue) copyLen = cap_pchValue ? cap_pchValue - 1 : 0; // room for the NUL (53-17 WR-03)
+      if (pchValue != NULL && retlen >= respOff + copyLen) {
+        memcpy(pchValue, retbuf + respOff, copyLen);
+        copied_pchValue = copyLen;
+        if (cap_pchValue > 0) pchValue[copyLen] = '\0';
+      }
+      respOff += declLen;
+    }
+  } else {
+  }
+  ReleaseSRWLockExclusive(&g_bridge_lock);
+  return result;
 }
 
-// slot 23: DeleteLobbyData(CSteamID steamIDLobby, const char* pchKey) -> bool | __thiscall ret 12 (STUB)
-static int THISCALL vt_SteamMatchMaking009_DeleteLobbyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 23: DeleteLobbyData(CSteamID steamIDLobby, const char* pchKey) -> bool | __thiscall ret 12
+static int THISCALL vt_SteamMatchMaking009_DeleteLobbyData(void *self, uint64_t steamIDLobby, const char * pchKey) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "DeleteLobbyData", 23, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  {
+    uint32_t strLen;
+    if (pchKey == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchKey);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      }
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 23, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 24: GetLobbyMemberData(CSteamID steamIDLobby, CSteamID steamIDUser, const char* pchKey) -> const char* | __thiscall ret 20 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
-static const char * THISCALL vt_SteamMatchMaking009_GetLobbyMemberData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
-  static volatile LONG gamelib_sc[2];
+// slot 24: GetLobbyMemberData(CSteamID steamIDLobby, CSteamID steamIDUser, const char* pchKey) -> const char* | __thiscall ret 20 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamMatchMaking009_GetLobbyMemberData_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamMatchMaking009_GetLobbyMemberData(void *self, uint64_t steamIDLobby, uint64_t steamIDUser, const char * pchKey) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyMemberData", 24, GAMELIB_STUBCALL_KIND_STUB);
-  return "";
+  uint8_t argbuf[4116];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  memcpy(argbuf + argOff, &steamIDUser, 8); argOff += 8;
+  {
+    uint32_t strLen;
+    if (pchKey == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchKey);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      }
+    }
+  }
+  uint8_t retbuf[STRING_RETURN_WIRE_BYTES]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 24, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamMatchMaking009_GetLobbyMemberData_buf[0] = '\0';
+    return vt_SteamMatchMaking009_GetLobbyMemberData_buf;
+  }
+  uint32_t declLen = 0;
+  if (retlen < 4) { vt_SteamMatchMaking009_GetLobbyMemberData_buf[0] = '\0'; return vt_SteamMatchMaking009_GetLobbyMemberData_buf; }
+  memcpy(&declLen, retbuf, 4);
+  if (declLen > retlen - 4 || declLen >= STRING_RETURN_BUF_BYTES) { vt_SteamMatchMaking009_GetLobbyMemberData_buf[0] = '\0'; return vt_SteamMatchMaking009_GetLobbyMemberData_buf; }
+  memcpy(vt_SteamMatchMaking009_GetLobbyMemberData_buf, retbuf + 4, declLen);
+  vt_SteamMatchMaking009_GetLobbyMemberData_buf[declLen] = '\0';
+  return vt_SteamMatchMaking009_GetLobbyMemberData_buf;
 }
 
-// slot 25: SetLobbyMemberData(CSteamID steamIDLobby, const char* pchKey, const char* pchValue) -> void | __thiscall ret 16 (STUB)
-static void THISCALL vt_SteamMatchMaking009_SetLobbyMemberData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
-  static volatile LONG gamelib_sc[2];
+// slot 25: SetLobbyMemberData(CSteamID steamIDLobby, const char* pchKey, const char* pchValue) -> void | __thiscall ret 16
+static void THISCALL vt_SteamMatchMaking009_SetLobbyMemberData(void *self, uint64_t steamIDLobby, const char * pchKey, const char * pchValue) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyMemberData", 25, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[8208];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  {
+    uint32_t strLen;
+    if (pchKey == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchKey);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+      }
+    }
+  }
+  {
+    uint32_t strLen;
+    if (pchValue == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchValue);
+      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
+        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
+        // GetAuthTicketForWebApi, a different audience identity). Send the
+        // over-limit length with no bytes; the helper refuses it and this
+        // method returns its failure value.
+        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      } else {
+        strLen = (uint32_t)rawLen;
+        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+        memcpy(argbuf + argOff, pchValue, strLen); argOff += strLen;
+      }
+    }
+  }
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(12, 25, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 26: SendLobbyChatMsg(CSteamID steamIDLobby, const void* pvMsgBody, int32 cubMsgBody) -> bool | __thiscall ret 16 (STUB)
-static int THISCALL vt_SteamMatchMaking009_SendLobbyChatMsg(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
-  static volatile LONG gamelib_sc[2];
+// slot 26: SendLobbyChatMsg(CSteamID steamIDLobby, const void* pvMsgBody, int32 cubMsgBody) -> bool | __thiscall ret 16
+static int THISCALL vt_SteamMatchMaking009_SendLobbyChatMsg(void *self, uint64_t steamIDLobby, void * pvMsgBody, int32_t cubMsgBody) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SendLobbyChatMsg", 26, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int result = 0;
+  static uint8_t argbuf[61456];
+  static uint8_t retbuf[4];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  AcquireSRWLockExclusive(&g_bridge_lock);
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  {
+    uint32_t bufLen;
+    int64_t rawLen = (int64_t)cubMsgBody;
+    if (rawLen < 0 || rawLen > 61440 || (pvMsgBody == NULL && rawLen > 0)) {
+      // 58-06 Pitfall 4: never truncate -- send the over-limit marker with no
+      // bytes; the helper refuses it and this method returns its failure value.
+      bufLen = 61440 + 1u;
+      memcpy(argbuf + argOff, &bufLen, 4); argOff += 4;
+    } else {
+      bufLen = (uint32_t)rawLen;
+      memcpy(argbuf + argOff, &bufLen, 4); argOff += 4;
+      if (bufLen > 0) { memcpy(argbuf + argOff, pvMsgBody, bufLen); argOff += bufLen; }
+    }
+  }
+  memcpy(argbuf + argOff, &cubMsgBody, 4); argOff += 4;
+  int ok = bridge_transact_locked(12, 26, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+  } else {
+  }
+  ReleaseSRWLockExclusive(&g_bridge_lock);
+  return result;
 }
 
-// slot 27: GetLobbyChatEntry(CSteamID steamIDLobby, int32 iChatID, CSteamID* pSteamIDUser, void* pvData, int32 cubData, uint32* peChatEntryType) -> int32 | __thiscall ret 28 (STUB)
-static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyChatEntry(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
-  static volatile LONG gamelib_sc[2];
+// slot 27: GetLobbyChatEntry(CSteamID steamIDLobby, int32 iChatID, CSteamID* pSteamIDUser, void* pvData, int32 cubData, uint32* peChatEntryType) -> int32 | __thiscall ret 28
+static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyChatEntry(void *self, uint64_t steamIDLobby, int32_t iChatID, uint64_t * pSteamIDUser, void * pvData, int32_t cubData, uint32_t * peChatEntryType) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyChatEntry", 27, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  int32_t result = 0;
+  uint8_t argbuf[20];
+  uint8_t retbuf[4116];
+  uint32_t argOff = 0; uint32_t retlen = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  memcpy(argbuf + argOff, &iChatID, 4); argOff += 4;
+  uint32_t cap_pvData = (cubData < 0) ? 0u : (uint32_t)cubData; // negative size -> capacity 0 (53-14, T-53-56)
+  if (cap_pvData > 4096) cap_pvData = 4096;
+  memcpy(argbuf + argOff, &cap_pvData, 4); argOff += 4;
+  memcpy(argbuf + argOff, &cubData, 4); argOff += 4;
+  int ok = bridge_transact(12, 27, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+  if (ok && retlen >= 4) {
+    int32_t ret; memcpy(&ret, retbuf, 4);
+    result = ret;
+    uint32_t respOff = 4;
+    uint32_t copied_pvData = 0;
+    if (pSteamIDUser != NULL && retlen >= respOff + 8) {
+      uint64_t outVal; memcpy(&outVal, retbuf + respOff, 8);
+      *pSteamIDUser = outVal;
+    }
+    respOff += 8;
+    if (peChatEntryType != NULL && retlen >= respOff + 4) {
+      uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+      *peChatEntryType = outVal;
+    }
+    respOff += 4;
+    if (retlen >= respOff + 4) {
+      uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;
+      uint32_t copyLen = declLen;
+      if (copyLen > 4096) copyLen = 4096;
+      if (copyLen > cap_pvData) copyLen = cap_pvData; // never write past the caller's own capacity (53-14, T-53-56)
+      if (pvData != NULL && retlen >= respOff + copyLen) {
+        memcpy(pvData, retbuf + respOff, copyLen);
+        copied_pvData = copyLen;
+      }
+      respOff += declLen;
+    }
+  } else {
+    if (pSteamIDUser != NULL) *pSteamIDUser = 0;
+    if (peChatEntryType != NULL) *peChatEntryType = 0;
+  }
+  return result;
 }
 
-// slot 28: RequestLobbyData(CSteamID steamIDLobby) -> bool | __thiscall ret 8 (STUB)
-static int THISCALL vt_SteamMatchMaking009_RequestLobbyData(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 28: RequestLobbyData(CSteamID steamIDLobby) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamMatchMaking009_RequestLobbyData(void *self, uint64_t steamIDLobby) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "RequestLobbyData", 28, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 28, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 29: SetLobbyGameServer(CSteamID steamIDLobby, uint32 unGameServerIP, uint32 unGameServerPort, CSteamID steamIDGameServer) -> void | __thiscall ret 24 (STUB)
-static void THISCALL vt_SteamMatchMaking009_SetLobbyGameServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
-  static volatile LONG gamelib_sc[2];
+// slot 29: SetLobbyGameServer(CSteamID steamIDLobby, uint32 unGameServerIP, uint32 unGameServerPort, CSteamID steamIDGameServer) -> void | __thiscall ret 24
+static void THISCALL vt_SteamMatchMaking009_SetLobbyGameServer(void *self, uint64_t steamIDLobby, uint32_t unGameServerIP, uint32_t unGameServerPort, uint64_t steamIDGameServer) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyGameServer", 29, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[24];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  memcpy(argbuf + argOff, &unGameServerIP, 4); argOff += 4;
+  memcpy(argbuf + argOff, &unGameServerPort, 4); argOff += 4;
+  memcpy(argbuf + argOff, &steamIDGameServer, 8); argOff += 8;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(12, 29, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 30: GetLobbyGameServer(CSteamID steamIDLobby, uint32* punGameServerIP, uint16_t* punGameServerPort, CSteamID* psteamIDGameServer) -> bool | __thiscall ret 20 (STUB)
-static int THISCALL vt_SteamMatchMaking009_GetLobbyGameServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
-  static volatile LONG gamelib_sc[2];
+// slot 30: GetLobbyGameServer(CSteamID steamIDLobby, uint32* punGameServerIP, uint16_t* punGameServerPort, CSteamID* psteamIDGameServer) -> bool | __thiscall ret 20
+static int THISCALL vt_SteamMatchMaking009_GetLobbyGameServer(void *self, uint64_t steamIDLobby, uint32_t * punGameServerIP, uint16_t * punGameServerPort, uint64_t * psteamIDGameServer) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyGameServer", 30, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  uint8_t retbuf[18]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 30, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (punGameServerIP != NULL) *punGameServerIP = 0;
+    if (punGameServerPort != NULL) *punGameServerPort = 0;
+    if (psteamIDGameServer != NULL) *psteamIDGameServer = 0;
+    return 0;
+  }
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (punGameServerIP != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *punGameServerIP = outVal;
+  }
+  respOff += 4;
+  if (punGameServerPort != NULL && retlen >= respOff + 2) {
+    uint16_t outVal; memcpy(&outVal, retbuf + respOff, 2);
+    *punGameServerPort = outVal;
+  }
+  respOff += 2;
+  if (psteamIDGameServer != NULL && retlen >= respOff + 8) {
+    uint64_t outVal; memcpy(&outVal, retbuf + respOff, 8);
+    *psteamIDGameServer = outVal;
+  }
+  respOff += 8;
+  return ret;
 }
 
-// slot 31: SetLobbyMemberLimit(CSteamID steamIDLobby, int32 cMaxMembers) -> bool | __thiscall ret 12 (STUB)
-static int THISCALL vt_SteamMatchMaking009_SetLobbyMemberLimit(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 31: SetLobbyMemberLimit(CSteamID steamIDLobby, int32 cMaxMembers) -> bool | __thiscall ret 12
+static int THISCALL vt_SteamMatchMaking009_SetLobbyMemberLimit(void *self, uint64_t steamIDLobby, int32_t cMaxMembers) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyMemberLimit", 31, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[12];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  memcpy(argbuf + argOff, &cMaxMembers, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 31, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 32: GetLobbyMemberLimit(CSteamID steamIDLobby) -> int32 | __thiscall ret 8 (STUB)
-static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyMemberLimit(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 32: GetLobbyMemberLimit(CSteamID steamIDLobby) -> int32 | __thiscall ret 8
+static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyMemberLimit(void *self, uint64_t steamIDLobby) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyMemberLimit", 32, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 32, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 33: SetLobbyType(CSteamID steamIDLobby, uint32 eLobbyType) -> bool | __thiscall ret 12 (STUB)
-static int THISCALL vt_SteamMatchMaking009_SetLobbyType(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 33: SetLobbyType(CSteamID steamIDLobby, uint32 eLobbyType) -> bool | __thiscall ret 12
+static int THISCALL vt_SteamMatchMaking009_SetLobbyType(void *self, uint64_t steamIDLobby, uint32_t eLobbyType) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyType", 33, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[12];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  memcpy(argbuf + argOff, &eLobbyType, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 33, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 34: SetLobbyJoinable(CSteamID steamIDLobby, bool bLobbyJoinable) -> bool | __thiscall ret 12 (STUB)
-static int THISCALL vt_SteamMatchMaking009_SetLobbyJoinable(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
-  static volatile LONG gamelib_sc[2];
+// slot 34: SetLobbyJoinable(CSteamID steamIDLobby, bool bLobbyJoinable) -> bool | __thiscall ret 12
+static int THISCALL vt_SteamMatchMaking009_SetLobbyJoinable(void *self, uint64_t steamIDLobby, int bLobbyJoinable) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyJoinable", 34, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[12];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  memcpy(argbuf + argOff, &bLobbyJoinable, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 34, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 35: GetLobbyOwner(CSteamID steamIDLobby) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
-static void * THISCALL vt_SteamMatchMaking009_GetLobbyOwner(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 35: GetLobbyOwner(CSteamID steamIDLobby) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer)
+static void * THISCALL vt_SteamMatchMaking009_GetLobbyOwner(void *self, void *sretOut, uint64_t steamIDLobby) {
   (void)self;
-  memset(sretOut, 0, 8);
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "GetLobbyOwner", 35, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 35, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 8) {
+    memset(sretOut, 0, 8);
+    return sretOut;
+  }
+  memcpy(sretOut, retbuf, 8);
   return sretOut;
 }
 
-// slot 36: SetLobbyOwner(CSteamID steamIDLobby, CSteamID steamIDNewOwner) -> bool | __thiscall ret 16 (STUB)
-static int THISCALL vt_SteamMatchMaking009_SetLobbyOwner(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
-  static volatile LONG gamelib_sc[2];
+// slot 36: SetLobbyOwner(CSteamID steamIDLobby, CSteamID steamIDNewOwner) -> bool | __thiscall ret 16
+static int THISCALL vt_SteamMatchMaking009_SetLobbyOwner(void *self, uint64_t steamIDLobby, uint64_t steamIDNewOwner) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLobbyOwner", 36, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[16];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  memcpy(argbuf + argOff, &steamIDNewOwner, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 36, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 37: SetLinkedLobby(CSteamID steamIDLobby, CSteamID steamIDLobbyDependent) -> bool | __thiscall ret 16 (STUB)
-static int THISCALL vt_SteamMatchMaking009_SetLinkedLobby(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
-  static volatile LONG gamelib_sc[2];
+// slot 37: SetLinkedLobby(CSteamID steamIDLobby, CSteamID steamIDLobbyDependent) -> bool | __thiscall ret 16
+static int THISCALL vt_SteamMatchMaking009_SetLinkedLobby(void *self, uint64_t steamIDLobby, uint64_t steamIDLobbyDependent) {
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMaking009", "SetLinkedLobby", 37, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[16];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &steamIDLobby, 8); argOff += 8;
+  memcpy(argbuf + argOff, &steamIDLobbyDependent, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(12, 37, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 static vfn g_steammatchmaking009_vtbl[38] = {
@@ -23041,7 +23620,7 @@ static uint64_t THISCALL vt_SteamParties002_GetBeaconByIndex(void *self, uint32_
 }
 
 // slot 2: GetBeaconDetails(uint64 ulBeaconID, CSteamID* pSteamIDBeaconOwner, w_SteamPartyBeaconLocation_t* pLocation, char* pchMetadata, int32 cchMetadata) -> bool | __thiscall ret 24 (STUB)
-static int THISCALL vt_SteamParties002_GetBeaconDetails(void *self, uint64_t ulBeaconID, void * pSteamIDBeaconOwner, void * pLocation, char * pchMetadata, int32_t cchMetadata) {
+static int THISCALL vt_SteamParties002_GetBeaconDetails(void *self, uint64_t ulBeaconID, uint64_t * pSteamIDBeaconOwner, void * pLocation, char * pchMetadata, int32_t cchMetadata) {
   static volatile LONG gamelib_sc[2];
   (void)self;
   if (pchMetadata != NULL && cchMetadata > 0) pchMetadata[0] = '\0';
@@ -34543,18 +35122,18 @@ bool SteamAPI_ISteamFriends_CloseClanChatWindowInSteam(void *self, uint64_t a1) 
   return 0;
 }
 
-uint64_t SteamAPI_ISteamFriends_DownloadClanActivityCounts(void *self, void * a1, int32_t a2) {
+uint64_t SteamAPI_ISteamFriends_DownloadClanActivityCounts(void *self, uint64_t * a1, int32_t a2) {
   if (self == (void *)&g_steamfriends018_instance) {
     vfn *vt = *(vfn **)self;
-    return (uint64_t)((uint64_t (*)(void *, void *, int32_t))vt[22])(self, (void *)a1, (int32_t)a2);
+    return (uint64_t)((uint64_t (*)(void *, uint64_t *, int32_t))vt[22])(self, (uint64_t *)a1, (int32_t)a2);
   }
   if (self == (void *)&g_steamfriends015_instance) {
     vfn *vt = *(vfn **)self;
-    return (uint64_t)((uint64_t (*)(void *, void *, int32_t))vt[23])(self, (void *)a1, (int32_t)a2);
+    return (uint64_t)((uint64_t (*)(void *, uint64_t *, int32_t))vt[23])(self, (uint64_t *)a1, (int32_t)a2);
   }
   if (self == (void *)&g_steamfriends017_instance) {
     vfn *vt = *(vfn **)self;
-    return (uint64_t)((uint64_t (*)(void *, void *, int32_t))vt[23])(self, (void *)a1, (int32_t)a2);
+    return (uint64_t)((uint64_t (*)(void *, uint64_t *, int32_t))vt[23])(self, (uint64_t *)a1, (int32_t)a2);
   }
   return 0;
 }
@@ -34651,18 +35230,18 @@ int32_t SteamAPI_ISteamFriends_GetClanChatMemberCount(void *self, uint64_t a1) {
   return 0;
 }
 
-int32_t SteamAPI_ISteamFriends_GetClanChatMessage(void *self, uint64_t a1, int32_t a2, void * a3, int32_t a4, uint32_t * a5, void * a6) {
+int32_t SteamAPI_ISteamFriends_GetClanChatMessage(void *self, uint64_t a1, int32_t a2, void * a3, int32_t a4, uint32_t * a5, uint64_t * a6) {
   if (self == (void *)&g_steamfriends018_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, uint64_t, int32_t, void *, int32_t, uint32_t *, void *))vt[57])(self, (uint64_t)a1, (int32_t)a2, (void *)a3, (int32_t)a4, (uint32_t *)a5, (void *)a6);
+    return (int32_t)((int32_t (*)(void *, uint64_t, int32_t, void *, int32_t, uint32_t *, uint64_t *))vt[57])(self, (uint64_t)a1, (int32_t)a2, (void *)a3, (int32_t)a4, (uint32_t *)a5, (uint64_t *)a6);
   }
   if (self == (void *)&g_steamfriends015_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, uint64_t, int32_t, void *, int32_t, uint32_t *, void *))vt[59])(self, (uint64_t)a1, (int32_t)a2, (void *)a3, (int32_t)a4, (uint32_t *)a5, (void *)a6);
+    return (int32_t)((int32_t (*)(void *, uint64_t, int32_t, void *, int32_t, uint32_t *, uint64_t *))vt[59])(self, (uint64_t)a1, (int32_t)a2, (void *)a3, (int32_t)a4, (uint32_t *)a5, (uint64_t *)a6);
   }
   if (self == (void *)&g_steamfriends017_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, uint64_t, int32_t, void *, int32_t, uint32_t *, void *))vt[59])(self, (uint64_t)a1, (int32_t)a2, (void *)a3, (int32_t)a4, (uint32_t *)a5, (void *)a6);
+    return (int32_t)((int32_t (*)(void *, uint64_t, int32_t, void *, int32_t, uint32_t *, uint64_t *))vt[59])(self, (uint64_t)a1, (int32_t)a2, (void *)a3, (int32_t)a4, (uint32_t *)a5, (uint64_t *)a6);
   }
   return 0;
 }
@@ -35145,20 +35724,20 @@ int32_t SteamAPI_ISteamFriends_GetFriendsGroupMembersCount(void *self, uint32_t 
   return 0;
 }
 
-void SteamAPI_ISteamFriends_GetFriendsGroupMembersList(void *self, uint32_t a1, void * a2, int32_t a3) {
+void SteamAPI_ISteamFriends_GetFriendsGroupMembersList(void *self, uint32_t a1, uint64_t * a2, int32_t a3) {
   if (self == (void *)&g_steamfriends018_instance) {
     vfn *vt = *(vfn **)self;
-    ((void (*)(void *, uint32_t, void *, int32_t))vt[15])(self, (uint32_t)a1, (void *)a2, (int32_t)a3);
+    ((void (*)(void *, uint32_t, uint64_t *, int32_t))vt[15])(self, (uint32_t)a1, (uint64_t *)a2, (int32_t)a3);
     return;
   }
   if (self == (void *)&g_steamfriends015_instance) {
     vfn *vt = *(vfn **)self;
-    ((void (*)(void *, uint32_t, void *, int32_t))vt[16])(self, (uint32_t)a1, (void *)a2, (int32_t)a3);
+    ((void (*)(void *, uint32_t, uint64_t *, int32_t))vt[16])(self, (uint32_t)a1, (uint64_t *)a2, (int32_t)a3);
     return;
   }
   if (self == (void *)&g_steamfriends017_instance) {
     vfn *vt = *(vfn **)self;
-    ((void (*)(void *, uint32_t, void *, int32_t))vt[16])(self, (uint32_t)a1, (void *)a2, (int32_t)a3);
+    ((void (*)(void *, uint32_t, uint64_t *, int32_t))vt[16])(self, (uint32_t)a1, (uint64_t *)a2, (int32_t)a3);
     return;
   }
   return;
@@ -36123,18 +36702,18 @@ void SteamAPI_ISteamGameServer_GetGameplayStats(void *self) {
   return;
 }
 
-int32_t SteamAPI_ISteamGameServer_GetNextOutgoingPacket(void *self, void * a1, int32_t a2, uint32_t * a3, void * a4) {
+int32_t SteamAPI_ISteamGameServer_GetNextOutgoingPacket(void *self, void * a1, int32_t a2, uint32_t * a3, uint16_t * a4) {
   if (self == (void *)&g_steamgameserver014_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, void *, int32_t, uint32_t *, void *))vt[35])(self, (void *)a1, (int32_t)a2, (uint32_t *)a3, (void *)a4);
+    return (int32_t)((int32_t (*)(void *, void *, int32_t, uint32_t *, uint16_t *))vt[35])(self, (void *)a1, (int32_t)a2, (uint32_t *)a3, (uint16_t *)a4);
   }
   if (self == (void *)&g_steamgameserver015_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, void *, int32_t, uint32_t *, void *))vt[35])(self, (void *)a1, (int32_t)a2, (uint32_t *)a3, (void *)a4);
+    return (int32_t)((int32_t (*)(void *, void *, int32_t, uint32_t *, uint16_t *))vt[35])(self, (void *)a1, (int32_t)a2, (uint32_t *)a3, (uint16_t *)a4);
   }
   if (self == (void *)&g_steamgameserver012_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, void *, int32_t, uint32_t *, void *))vt[38])(self, (void *)a1, (int32_t)a2, (uint32_t *)a3, (void *)a4);
+    return (int32_t)((int32_t (*)(void *, void *, int32_t, uint32_t *, uint16_t *))vt[38])(self, (void *)a1, (int32_t)a2, (uint32_t *)a3, (uint16_t *)a4);
   }
   return 0;
 }
@@ -36305,22 +36884,22 @@ bool SteamAPI_ISteamGameServer_RequestUserGroupStatus(void *self, uint64_t a1, u
   return 0;
 }
 
-bool SteamAPI_ISteamGameServer_SendUserConnectAndAuthenticate(void *self, uint32_t a1, void * a2, uint32_t a3, void * a4) {
+bool SteamAPI_ISteamGameServer_SendUserConnectAndAuthenticate(void *self, uint32_t a1, void * a2, uint32_t a3, uint64_t * a4) {
   if (self == (void *)&g_steamgameserver012_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t, void *, uint32_t, void *))vt[24])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (void *)a4);
+    return (bool)((int (*)(void *, uint32_t, void *, uint32_t, uint64_t *))vt[24])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (uint64_t *)a4);
   }
   return 0;
 }
 
-bool SteamAPI_ISteamGameServer_SendUserConnectAndAuthenticate_DEPRECATED(void *self, uint32_t a1, void * a2, uint32_t a3, void * a4) {
+bool SteamAPI_ISteamGameServer_SendUserConnectAndAuthenticate_DEPRECATED(void *self, uint32_t a1, void * a2, uint32_t a3, uint64_t * a4) {
   if (self == (void *)&g_steamgameserver014_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t, void *, uint32_t, void *))vt[38])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (void *)a4);
+    return (bool)((int (*)(void *, uint32_t, void *, uint32_t, uint64_t *))vt[38])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (uint64_t *)a4);
   }
   if (self == (void *)&g_steamgameserver015_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t, void *, uint32_t, void *))vt[38])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (void *)a4);
+    return (bool)((int (*)(void *, uint32_t, void *, uint32_t, uint64_t *))vt[38])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3, (uint64_t *)a4);
   }
   return 0;
 }
@@ -38651,10 +39230,10 @@ bool SteamAPI_ISteamMatchmaking_DeleteLobbyData(void *self, uint64_t a1, const c
   return 0;
 }
 
-bool SteamAPI_ISteamMatchmaking_GetFavoriteGame(void *self, int32_t a1, uint32_t * a2, uint32_t * a3, void * a4, void * a5, uint32_t * a6, uint32_t * a7) {
+bool SteamAPI_ISteamMatchmaking_GetFavoriteGame(void *self, int32_t a1, uint32_t * a2, uint32_t * a3, uint16_t * a4, uint16_t * a5, uint32_t * a6, uint32_t * a7) {
   if (self == (void *)&g_steammatchmaking009_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, int32_t, uint32_t *, uint32_t *, void *, void *, uint32_t *, uint32_t *))vt[1])(self, (int32_t)a1, (uint32_t *)a2, (uint32_t *)a3, (void *)a4, (void *)a5, (uint32_t *)a6, (uint32_t *)a7);
+    return (bool)((int (*)(void *, int32_t, uint32_t *, uint32_t *, uint16_t *, uint16_t *, uint32_t *, uint32_t *))vt[1])(self, (int32_t)a1, (uint32_t *)a2, (uint32_t *)a3, (uint16_t *)a4, (uint16_t *)a5, (uint32_t *)a6, (uint32_t *)a7);
   }
   return 0;
 }
@@ -38677,10 +39256,10 @@ uint64_t SteamAPI_ISteamMatchmaking_GetLobbyByIndex(void *self, int32_t a1) {
   return 0;
 }
 
-int32_t SteamAPI_ISteamMatchmaking_GetLobbyChatEntry(void *self, uint64_t a1, int32_t a2, void * a3, void * a4, int32_t a5, uint32_t * a6) {
+int32_t SteamAPI_ISteamMatchmaking_GetLobbyChatEntry(void *self, uint64_t a1, int32_t a2, uint64_t * a3, void * a4, int32_t a5, uint32_t * a6) {
   if (self == (void *)&g_steammatchmaking009_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, uint64_t, int32_t, void *, void *, int32_t, uint32_t *))vt[27])(self, (uint64_t)a1, (int32_t)a2, (void *)a3, (void *)a4, (int32_t)a5, (uint32_t *)a6);
+    return (int32_t)((int32_t (*)(void *, uint64_t, int32_t, uint64_t *, void *, int32_t, uint32_t *))vt[27])(self, (uint64_t)a1, (int32_t)a2, (uint64_t *)a3, (void *)a4, (int32_t)a5, (uint32_t *)a6);
   }
   return 0;
 }
@@ -38709,10 +39288,10 @@ int32_t SteamAPI_ISteamMatchmaking_GetLobbyDataCount(void *self, uint64_t a1) {
   return 0;
 }
 
-bool SteamAPI_ISteamMatchmaking_GetLobbyGameServer(void *self, uint64_t a1, uint32_t * a2, void * a3, void * a4) {
+bool SteamAPI_ISteamMatchmaking_GetLobbyGameServer(void *self, uint64_t a1, uint32_t * a2, uint16_t * a3, uint64_t * a4) {
   if (self == (void *)&g_steammatchmaking009_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t *, void *, void *))vt[30])(self, (uint64_t)a1, (uint32_t *)a2, (void *)a3, (void *)a4);
+    return (bool)((int (*)(void *, uint64_t, uint32_t *, uint16_t *, uint64_t *))vt[30])(self, (uint64_t)a1, (uint32_t *)a2, (uint16_t *)a3, (uint64_t *)a4);
   }
   return 0;
 }
@@ -39980,14 +40559,14 @@ bool SteamAPI_ISteamNetworking_DestroySocket(void *self, uint32_t a1, bool a2) {
   return 0;
 }
 
-bool SteamAPI_ISteamNetworking_GetListenSocketInfo(void *self, uint32_t a1, uint64_t a2, void * a3) {
+bool SteamAPI_ISteamNetworking_GetListenSocketInfo(void *self, uint32_t a1, uint64_t a2, uint16_t * a3) {
   if (self == (void *)&g_steamnetworking005_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t, uint32_t *, void *))vt[19])(self, (uint32_t)a1, (uint32_t *)a2, (void *)a3);
+    return (bool)((int (*)(void *, uint32_t, uint32_t *, uint16_t *))vt[19])(self, (uint32_t)a1, (uint32_t *)a2, (uint16_t *)a3);
   }
   if (self == (void *)&g_steamnetworking006_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t, void *, void *))vt[19])(self, (uint32_t)a1, (void *)a2, (void *)a3);
+    return (bool)((int (*)(void *, uint32_t, void *, uint16_t *))vt[19])(self, (uint32_t)a1, (void *)a2, (uint16_t *)a3);
   }
   return 0;
 }
@@ -40028,14 +40607,14 @@ uint32_t SteamAPI_ISteamNetworking_GetSocketConnectionType(void *self, uint32_t 
   return 0;
 }
 
-bool SteamAPI_ISteamNetworking_GetSocketInfo(void *self, uint32_t a1, void * a2, int32_t * a3, uint64_t a4, void * a5) {
+bool SteamAPI_ISteamNetworking_GetSocketInfo(void *self, uint32_t a1, uint64_t * a2, int32_t * a3, uint64_t a4, uint16_t * a5) {
   if (self == (void *)&g_steamnetworking005_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t, void *, int32_t *, uint32_t *, void *))vt[18])(self, (uint32_t)a1, (void *)a2, (int32_t *)a3, (uint32_t *)a4, (void *)a5);
+    return (bool)((int (*)(void *, uint32_t, uint64_t *, int32_t *, uint32_t *, uint16_t *))vt[18])(self, (uint32_t)a1, (uint64_t *)a2, (int32_t *)a3, (uint32_t *)a4, (uint16_t *)a5);
   }
   if (self == (void *)&g_steamnetworking006_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t, void *, int32_t *, void *, void *))vt[18])(self, (uint32_t)a1, (void *)a2, (int32_t *)a3, (void *)a4, (void *)a5);
+    return (bool)((int (*)(void *, uint32_t, uint64_t *, int32_t *, void *, uint16_t *))vt[18])(self, (uint32_t)a1, (uint64_t *)a2, (int32_t *)a3, (void *)a4, (uint16_t *)a5);
   }
   return 0;
 }
@@ -40076,14 +40655,14 @@ bool SteamAPI_ISteamNetworking_IsP2PPacketAvailable(void *self, uint32_t * a1, i
   return 0;
 }
 
-bool SteamAPI_ISteamNetworking_ReadP2PPacket(void *self, void * a1, uint32_t a2, uint32_t * a3, void * a4, int32_t a5) {
+bool SteamAPI_ISteamNetworking_ReadP2PPacket(void *self, void * a1, uint32_t a2, uint32_t * a3, uint64_t * a4, int32_t a5) {
   if (self == (void *)&g_steamnetworking005_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, uint32_t, uint32_t *, void *, int32_t))vt[2])(self, (void *)a1, (uint32_t)a2, (uint32_t *)a3, (void *)a4, (int32_t)a5);
+    return (bool)((int (*)(void *, void *, uint32_t, uint32_t *, uint64_t *, int32_t))vt[2])(self, (void *)a1, (uint32_t)a2, (uint32_t *)a3, (uint64_t *)a4, (int32_t)a5);
   }
   if (self == (void *)&g_steamnetworking006_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *, uint32_t, uint32_t *, void *, int32_t))vt[2])(self, (void *)a1, (uint32_t)a2, (uint32_t *)a3, (void *)a4, (int32_t)a5);
+    return (bool)((int (*)(void *, void *, uint32_t, uint32_t *, uint64_t *, int32_t))vt[2])(self, (void *)a1, (uint32_t)a2, (uint32_t *)a3, (uint64_t *)a4, (int32_t)a5);
   }
   return 0;
 }
@@ -40233,10 +40812,10 @@ uint64_t SteamAPI_ISteamParties_GetBeaconByIndex(void *self, uint32_t a1) {
   return 0;
 }
 
-bool SteamAPI_ISteamParties_GetBeaconDetails(void *self, uint64_t a1, void * a2, void * a3, char * a4, int32_t a5) {
+bool SteamAPI_ISteamParties_GetBeaconDetails(void *self, uint64_t a1, uint64_t * a2, void * a3, char * a4, int32_t a5) {
   if (self == (void *)&g_steamparties002_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, void *, void *, char *, int32_t))vt[2])(self, (uint64_t)a1, (void *)a2, (void *)a3, (char *)a4, (int32_t)a5);
+    return (bool)((int (*)(void *, uint64_t, uint64_t *, void *, char *, int32_t))vt[2])(self, (uint64_t)a1, (uint64_t *)a2, (void *)a3, (char *)a4, (int32_t)a5);
   }
   return 0;
 }
@@ -40910,18 +41489,18 @@ uint32_t SteamAPI_ISteamRemoteStorage_GetSyncPlatforms(void *self, const char * 
   return 0;
 }
 
-bool SteamAPI_ISteamRemoteStorage_GetUGCDetails(void *self, uint64_t a1, uint32_t * a2, void * a3, int32_t * a4, void * a5) {
+bool SteamAPI_ISteamRemoteStorage_GetUGCDetails(void *self, uint64_t a1, uint32_t * a2, void * a3, int32_t * a4, uint64_t * a5) {
   if (self == (void *)&g_steamremotestorage_interface_version013_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t *, void *, int32_t *, void *))vt[26])(self, (uint64_t)a1, (uint32_t *)a2, (void *)a3, (int32_t *)a4, (void *)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t *, void *, int32_t *, uint64_t *))vt[26])(self, (uint64_t)a1, (uint32_t *)a2, (void *)a3, (int32_t *)a4, (uint64_t *)a5);
   }
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t *, void *, int32_t *, void *))vt[26])(self, (uint64_t)a1, (uint32_t *)a2, (void *)a3, (int32_t *)a4, (void *)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t *, void *, int32_t *, uint64_t *))vt[26])(self, (uint64_t)a1, (uint32_t *)a2, (void *)a3, (int32_t *)a4, (uint64_t *)a5);
   }
   if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint64_t, uint32_t *, void *, int32_t *, void *))vt[23])(self, (uint64_t)a1, (uint32_t *)a2, (void *)a3, (int32_t *)a4, (void *)a5);
+    return (bool)((int (*)(void *, uint64_t, uint32_t *, void *, int32_t *, uint64_t *))vt[23])(self, (uint64_t)a1, (uint32_t *)a2, (void *)a3, (int32_t *)a4, (uint64_t *)a5);
   }
   return 0;
 }
@@ -43454,18 +44033,18 @@ uint64_t SteamAPI_ISteamUserStats_DownloadLeaderboardEntries(void *self, uint64_
   return 0;
 }
 
-uint64_t SteamAPI_ISteamUserStats_DownloadLeaderboardEntriesForUsers(void *self, uint64_t a1, void * a2, int32_t a3) {
+uint64_t SteamAPI_ISteamUserStats_DownloadLeaderboardEntriesForUsers(void *self, uint64_t a1, uint64_t * a2, int32_t a3) {
   if (self == (void *)&g_steamuserstats_interface_version011_instance) {
     vfn *vt = *(vfn **)self;
-    return (uint64_t)((uint64_t (*)(void *, uint64_t, void *, int32_t))vt[29])(self, (uint64_t)a1, (void *)a2, (int32_t)a3);
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, uint64_t *, int32_t))vt[29])(self, (uint64_t)a1, (uint64_t *)a2, (int32_t)a3);
   }
   if (self == (void *)&g_steamuserstats_interface_version012_instance) {
     vfn *vt = *(vfn **)self;
-    return (uint64_t)((uint64_t (*)(void *, uint64_t, void *, int32_t))vt[29])(self, (uint64_t)a1, (void *)a2, (int32_t)a3);
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, uint64_t *, int32_t))vt[29])(self, (uint64_t)a1, (uint64_t *)a2, (int32_t)a3);
   }
   if (self == (void *)&g_steamuserstats_interface_version013_instance) {
     vfn *vt = *(vfn **)self;
-    return (uint64_t)((uint64_t (*)(void *, uint64_t, void *, int32_t))vt[28])(self, (uint64_t)a1, (void *)a2, (int32_t)a3);
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, uint64_t *, int32_t))vt[28])(self, (uint64_t)a1, (uint64_t *)a2, (int32_t)a3);
   }
   return 0;
 }
@@ -44894,22 +45473,22 @@ uint32_t SteamAPI_ISteamUtils_GetAppID(void *self) {
   return 0;
 }
 
-bool SteamAPI_ISteamUtils_GetCSERIPPort(void *self, uint32_t * a1, void * a2) {
+bool SteamAPI_ISteamUtils_GetCSERIPPort(void *self, uint32_t * a1, uint16_t * a2) {
   if (self == (void *)&g_steamutils008_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t *, void *))vt[7])(self, (uint32_t *)a1, (void *)a2);
+    return (bool)((int (*)(void *, uint32_t *, uint16_t *))vt[7])(self, (uint32_t *)a1, (uint16_t *)a2);
   }
   if (self == (void *)&g_steamutils010_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t *, void *))vt[7])(self, (uint32_t *)a1, (void *)a2);
+    return (bool)((int (*)(void *, uint32_t *, uint16_t *))vt[7])(self, (uint32_t *)a1, (uint16_t *)a2);
   }
   if (self == (void *)&g_steamutils009_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t *, void *))vt[7])(self, (uint32_t *)a1, (void *)a2);
+    return (bool)((int (*)(void *, uint32_t *, uint16_t *))vt[7])(self, (uint32_t *)a1, (uint16_t *)a2);
   }
   if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, uint32_t *, void *))vt[7])(self, (uint32_t *)a1, (void *)a2);
+    return (bool)((int (*)(void *, uint32_t *, uint16_t *))vt[7])(self, (uint32_t *)a1, (uint16_t *)a2);
   }
   return 0;
 }

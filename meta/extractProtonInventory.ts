@@ -90,7 +90,7 @@ const ACCEPTANCE_VERSIONS_PATH = join(
 
 export interface WirePolicyParamOverride {
   kind: ParamKind
-  valueType?: 'int32' | 'uint32' | 'float' | 'bool' | 'uint64'
+  valueType?: 'int32' | 'uint32' | 'uint16' | 'float' | 'bool' | 'uint64'
   sizeParam?: string
   lenParam?: string
   /** 58-06: exact struct byte size for kind in-struct/out-struct. */
@@ -130,6 +130,28 @@ export interface AcceptanceVersionEntry {
   /** Optional overrides so a re-run reproduces the hand-set accessor names. */
   helperInterface?: string
   flatAccessor?: string
+}
+
+/** 58-12: hand-set accessor fields a re-run must not drop from an existing
+ * manifest when the acceptance entry does not override them. */
+export interface PreservedAccessorFields {
+  helperInterface?: string
+  flatAccessor?: string
+  flatAccessorAliases?: string[]
+}
+
+export function preserveAccessorFields(
+  existing: PreservedAccessorFields | null,
+  entry: AcceptanceVersionEntry
+): PreservedAccessorFields {
+  const out: PreservedAccessorFields = {}
+  const helperInterface = entry.helperInterface ?? existing?.helperInterface
+  if (helperInterface !== undefined) out.helperInterface = helperInterface
+  const flatAccessor = entry.flatAccessor ?? existing?.flatAccessor
+  if (flatAccessor !== undefined) out.flatAccessor = flatAccessor
+  if (existing?.flatAccessorAliases !== undefined)
+    out.flatAccessorAliases = existing.flatAccessorAliases
+  return out
 }
 
 export type AcceptanceVersions = Record<string, AcceptanceVersionEntry>
@@ -901,6 +923,17 @@ export async function main(): Promise<void> {
     const methods = applyWirePolicy(rawMethods, family, wirePolicy)
     const ordinal = resolveOrdinal(version, ORDINALS_PATH)
 
+    const filename = manifestFilenameFor(version, family)
+    const outPath = join(SDK_DIR, filename)
+    const kept = preserveAccessorFields(
+      existsSync(outPath)
+        ? (JSON.parse(
+            readFileSync(outPath, 'utf-8')
+          ) as PreservedAccessorFields)
+        : null,
+      entry
+    )
+
     const manifest: InterfaceManifestV2 = {
       schemaVersion: 2,
       interface: version,
@@ -909,10 +942,13 @@ export async function main(): Promise<void> {
       arches,
       mode: 'stub',
       complete: true,
-      ...(entry.helperInterface !== undefined
-        ? { helperInterface: entry.helperInterface }
+      ...(kept.helperInterface !== undefined
+        ? { helperInterface: kept.helperInterface }
         : {}),
-      flatAccessor: entry.flatAccessor ?? computeFlatAccessor(version, family),
+      flatAccessor: kept.flatAccessor ?? computeFlatAccessor(version, family),
+      ...(kept.flatAccessorAliases !== undefined
+        ? { flatAccessorAliases: kept.flatAccessorAliases }
+        : {}),
       source: {
         kind: 'proton-lsteamclient',
         ref: protonRef,
@@ -921,8 +957,6 @@ export async function main(): Promise<void> {
       methods
     }
 
-    const filename = manifestFilenameFor(version, family)
-    const outPath = join(SDK_DIR, filename)
     writeFileSync(outPath, JSON.stringify(manifest, null, 2) + '\n')
     writtenPaths.push(outPath)
     console.log(

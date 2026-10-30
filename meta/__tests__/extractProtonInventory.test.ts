@@ -18,6 +18,7 @@ import {
   manifestFilenameFor,
   mapProtonCType,
   parseProtonThunks,
+  preserveAccessorFields,
   LSTEAMCLIENT_PROTON_SHA,
   parseArgvProtonRef,
   PINNED_PROTON_SHA,
@@ -405,5 +406,30 @@ describe('parseArgvProtonRef (58-03, T-58-06)', () => {
     expect(() => parseArgvProtonRef(['--proton-ref', 'proton_9.0'])).toThrow()
     expect(() => parseArgvProtonRef(['--proton-ref', 'a'.repeat(40)])).toThrow()
     expect(() => parseArgvProtonRef(['--proton-ref'])).toThrow()
+  })
+})
+
+describe('preserveAccessorFields (58-12)', () => {
+  const entry = { family: 'F', arches: ['x64' as const], titles: [] }
+  it('keeps hand-set accessor fields from the existing manifest', () => {
+    expect(
+      preserveAccessorFields(
+        { helperInterface: 'H', flatAccessor: 'A', flatAccessorAliases: ['B'] },
+        entry
+      )
+    ).toEqual({
+      helperInterface: 'H',
+      flatAccessor: 'A',
+      flatAccessorAliases: ['B']
+    })
+  })
+  it('lets the acceptance entry override, and tolerates no manifest', () => {
+    expect(
+      preserveAccessorFields(
+        { helperInterface: 'H' },
+        { ...entry, helperInterface: 'X' }
+      ).helperInterface
+    ).toBe('X')
+    expect(preserveAccessorFields(null, entry)).toEqual({})
   })
 })

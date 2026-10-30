@@ -491,5 +491,246 @@
         }
       }
     }
+  },
+  "SteamMatchmaking": {
+    "GetFavoriteGameCount": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetFavoriteGameCount"
+    },
+    "GetFavoriteGame": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetFavoriteGame",
+      "params": {
+        "pnAppID": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        },
+        "pnIP": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        },
+        "punFlags": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        },
+        "pRTime32LastPlayedOnServer": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        },
+        "pnConnPort": {
+          "kind": "out-value",
+          "valueType": "uint16"
+        },
+        "pnQueryPort": {
+          "kind": "out-value",
+          "valueType": "uint16"
+        }
+      }
+    },
+    "AddFavoriteGame": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_AddFavoriteGame"
+    },
+    "RemoveFavoriteGame": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_RemoveFavoriteGame"
+    },
+    "RequestLobbyList": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_RequestLobbyList",
+      "callResult": 510
+    },
+    "AddRequestLobbyListStringFilter": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_AddRequestLobbyListStringFilter",
+      "params": {
+        "pchKeyToMatch": {
+          "kind": "in-string"
+        },
+        "pchValueToMatch": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "AddRequestLobbyListNumericalFilter": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_AddRequestLobbyListNumericalFilter",
+      "params": {
+        "pchKeyToMatch": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "AddRequestLobbyListNearValueFilter": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_AddRequestLobbyListNearValueFilter",
+      "params": {
+        "pchKeyToMatch": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "AddRequestLobbyListFilterSlotsAvailable": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_AddRequestLobbyListFilterSlotsAvailable"
+    },
+    "AddRequestLobbyListDistanceFilter": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_AddRequestLobbyListDistanceFilter"
+    },
+    "AddRequestLobbyListResultCountFilter": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_AddRequestLobbyListResultCountFilter"
+    },
+    "AddRequestLobbyListCompatibleMembersFilter": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_AddRequestLobbyListCompatibleMembersFilter"
+    },
+    "GetLobbyByIndex": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetLobbyByIndex"
+    },
+    "CreateLobby": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_CreateLobby",
+      "callResult": 513
+    },
+    "JoinLobby": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_JoinLobby",
+      "callResult": 504
+    },
+    "LeaveLobby": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_LeaveLobby"
+    },
+    "InviteUserToLobby": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_InviteUserToLobby"
+    },
+    "GetNumLobbyMembers": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetNumLobbyMembers"
+    },
+    "GetLobbyMemberByIndex": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetLobbyMemberByIndex"
+    },
+    "GetLobbyData": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetLobbyData",
+      "params": {
+        "pchKey": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "SetLobbyData": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_SetLobbyData",
+      "params": {
+        "pchKey": {
+          "kind": "in-string"
+        },
+        "pchValue": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetLobbyDataCount": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetLobbyDataCount"
+    },
+    "GetLobbyDataByIndex": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetLobbyDataByIndex",
+      "params": {
+        "pchKey": {
+          "kind": "out-buffer",
+          "sizeParam": "cchKeyBufferSize",
+          "capBytes": 256
+        },
+        "pchValue": {
+          "kind": "out-buffer",
+          "sizeParam": "cchValueBufferSize",
+          "capBytes": 8192
+        }
+      }
+    },
+    "DeleteLobbyData": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_DeleteLobbyData",
+      "params": {
+        "pchKey": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetLobbyMemberData": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetLobbyMemberData",
+      "params": {
+        "pchKey": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "SetLobbyMemberData": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_SetLobbyMemberData",
+      "params": {
+        "pchKey": {
+          "kind": "in-string"
+        },
+        "pchValue": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "SendLobbyChatMsg": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_SendLobbyChatMsg",
+      "params": {
+        "pvMsgBody": {
+          "kind": "in-buffer",
+          "lenParam": "cubMsgBody"
+        }
+      }
+    },
+    "GetLobbyChatEntry": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetLobbyChatEntry",
+      "params": {
+        "pvData": {
+          "kind": "out-buffer",
+          "sizeParam": "cubData",
+          "capBytes": 4096
+        },
+        "pSteamIDUser": {
+          "kind": "out-value",
+          "valueType": "uint64"
+        },
+        "peChatEntryType": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        }
+      }
+    },
+    "RequestLobbyData": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_RequestLobbyData"
+    },
+    "SetLobbyGameServer": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_SetLobbyGameServer"
+    },
+    "GetLobbyGameServer": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetLobbyGameServer",
+      "params": {
+        "punGameServerIP": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        },
+        "punGameServerPort": {
+          "kind": "out-value",
+          "valueType": "uint16"
+        },
+        "psteamIDGameServer": {
+          "kind": "out-value",
+          "valueType": "uint64"
+        }
+      }
+    },
+    "SetLobbyMemberLimit": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_SetLobbyMemberLimit"
+    },
+    "GetLobbyMemberLimit": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetLobbyMemberLimit"
+    },
+    "SetLobbyType": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_SetLobbyType"
+    },
+    "SetLobbyJoinable": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_SetLobbyJoinable"
+    },
+    "GetLobbyOwner": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_GetLobbyOwner"
+    },
+    "SetLobbyOwner": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_SetLobbyOwner"
+    },
+    "SetLinkedLobby": {
+      "helperFlat": "SteamAPI_ISteamMatchmaking_SetLinkedLobby"
+    }
   }
 }

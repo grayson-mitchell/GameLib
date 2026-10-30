@@ -96,7 +96,7 @@ export interface ParamSignature {
   kind?: ParamKind
   /** For `kind: 'out-value'` only -- the scalar type the out-value decodes
    * to on the response side. */
-  valueType?: 'int32' | 'uint32' | 'float' | 'bool' | 'uint64'
+  valueType?: 'int32' | 'uint32' | 'uint16' | 'float' | 'bool' | 'uint64'
   /** For `kind: 'out-buffer'` only -- the name of the sibling param that
    * carries this buffer's capacity. */
   sizeParam?: string
@@ -769,6 +769,10 @@ function cType(type: string): string {
       return 'int32_t *'
     case 'uint32*':
       return 'uint32_t *'
+    case 'uint16_t*':
+      return 'uint16_t *'
+    case 'CSteamID*':
+      return 'uint64_t *'
     case 'float*':
       return 'float *'
     case 'bool*':
@@ -837,7 +841,11 @@ export const SHIM_LOCAL_BODIES: Readonly<Record<string, string>> = {
 const HELPER_CUSTOM_NAME = /^gl_[a-z0-9_]{1,48}$/
 
 function valueTypeWidth(valueType: string): number {
-  return valueType === 'uint64' ? 8 : 4
+  if (valueType === 'uint64') return 8
+  // 58-12: a uint16_t out-pointer (e.g. GetLobbyGameServer's port) is 2 bytes
+  // on the wire so the decode never writes 4 bytes into a 2-byte game field.
+  if (valueType === 'uint16') return 2
+  return 4
 }
 
 function valueTypeCType(valueType: string): string {
@@ -850,6 +858,8 @@ function valueTypeCType(valueType: string): string {
       return 'int'
     case 'uint32':
       return 'uint32_t'
+    case 'uint16':
+      return 'uint16_t'
     default:
       return 'int32_t'
   }
@@ -923,6 +933,8 @@ Request blob:
     WIRE_OUT_BUFFER_MAX_BYTES.
 
 Response blob:
+  - an 'out-value' with valueType 'uint16' (58-12) is 2 bytes on the wire and
+    is written as a uint16_t into the game pointer.
   - then, for every 'out-struct' param in declaration order, after the
     out-buffers: [u8 present][structSize bytes]. The shim copies the bytes into
     the game pointer only when that pointer is non-NULL and present is 1.
@@ -5363,15 +5375,20 @@ function assertDispatchable(
       `generateDispatchHeader: ${ctx} has returnKind "${method.returnKind}" with an 'out-value' param -- appending out-value response bytes after a void/string base return is deferred to a future plan, never silently wrong (51-10/51-11)`
     )
   }
-  // 53-14: out-buffer dispatch is supported for exactly ONE out-buffer per
-  // method, whose sizeParam is a sibling by-value scalar -- the response
-  // budget (BRIDGE_DISPATCH_RESP_SCRATCH_BYTES) is shared with nothing else.
+  // 53-14: out-buffer dispatch is supported for one out-buffer per method,
+  // whose sizeParam is a sibling by-value scalar. 58-12: several out-buffers
+  // are allowed only when each declares its own capBytes, so the response
+  // scratch (computeDispatchRespScratchBytes) is sized from explicit caps and
+  // never from an unbounded default.
   const outBuffers = method.params.filter(
     (p) => (p.kind ?? 'value') === 'out-buffer'
   )
-  if (outBuffers.length > 1) {
+  if (
+    outBuffers.length > 1 &&
+    outBuffers.some((p) => p.capBytes === undefined)
+  ) {
     throw new Error(
-      `generateDispatchHeader: ${ctx} declares ${outBuffers.length} out-buffer params -- helper-side dispatch supports at most one (53-14), never silently wrong`
+      `generateDispatchHeader: ${ctx} declares ${outBuffers.length} out-buffer params -- helper-side dispatch needs a capBytes on each when there is more than one (58-12), never silently wrong`
     )
   }
   for (const p of outBuffers) {
@@ -5604,11 +5621,14 @@ function emitDispatchCase(
       const outStructWidth = method.params
         .filter((q) => (q.kind ?? 'value') === 'out-struct')
         .reduce((sum, q) => sum + 1 + (q.structSize ?? 0), 0)
+      const outBufferCount = method.params.filter(
+        (q) => (q.kind ?? 'value') === 'out-buffer'
+      ).length
       const fixed =
         (dispatchReturnWidth(method, manifest) ?? 0) +
         outValueWidth +
         outStructWidth +
-        4
+        4 * outBufferCount
       decls.push(
         `      static uint8_t ${bufName}[${capLimit}];`,
         `      uint32_t ${capName} = 0;`,
@@ -5752,7 +5772,7 @@ function emitDispatchCase(
       )
       const totalWidth =
         extraWidths.reduce((sum, w) => sum + w, width!) +
-        (outBufferParams.length > 0 ? 4 : 0) +
+        outBufferParams.length * 4 +
         outStructParams.reduce((sum, p) => sum + 1 + (p.structSize ?? 0), 0)
       lines.push(
         `      ${returnType} __ret = ${callExpr};`,
@@ -5770,6 +5790,8 @@ function emitDispatchCase(
       }
       // 53-14: out-buffer trails the out-values -- [u32 len][len bytes],
       // len = min(lenParam's out-value if any, clamped capacity).
+      const multiBuf = outBufferParams.length > 1
+      if (multiBuf) lines.push(`      uint32_t bufOff = ${offset};`)
       for (const p of outBufferParams) {
         const bufName = `${flatVar}_${p.name}_buf`
         lines.push(`      uint32_t outLen_${p.name} = cap_${p.name};`)
@@ -5778,16 +5800,29 @@ function emitDispatchCase(
             `      if ((uint32_t)arg_${p.lenParam} < outLen_${p.name}) outLen_${p.name} = (uint32_t)arg_${p.lenParam};`
           )
         }
-        lines.push(
-          `      memcpy(resp + ${offset}, &outLen_${p.name}, 4);`,
-          `      memcpy(resp + ${offset} + 4, ${bufName}, outLen_${p.name});`
-        )
+        if (multiBuf) {
+          // 58-12: out-buffers follow each other, each [u32 len][bytes]; the
+          // running offset is checked against respCap before every copy.
+          lines.push(
+            `      if (respCap < bufOff + 4 + outLen_${p.name}) { *respLen = 0; return 1; }`,
+            `      memcpy(resp + bufOff, &outLen_${p.name}, 4);`,
+            `      memcpy(resp + bufOff + 4, ${bufName}, outLen_${p.name});`,
+            `      bufOff += 4 + outLen_${p.name};`
+          )
+        } else {
+          lines.push(
+            `      memcpy(resp + ${offset}, &outLen_${p.name}, 4);`,
+            `      memcpy(resp + ${offset} + 4, ${bufName}, outLen_${p.name});`
+          )
+        }
       }
       if (outStructParams.length > 0) {
         // 58-06: out-structs trail the out-buffers -- [u8 1][structSize bytes].
         const last = outBufferParams[0]
         lines.push(
-          `      uint32_t respEnd = ${offset}${last ? ` + 4 + outLen_${last.name}` : ''};`
+          outBufferParams.length > 1
+            ? `      uint32_t respEnd = bufOff;`
+            : `      uint32_t respEnd = ${offset}${last ? ` + 4 + outLen_${last.name}` : ''};`
         )
         for (const p of outStructParams) {
           lines.push(
@@ -5798,7 +5833,9 @@ function emitDispatchCase(
       } else if (outBufferParams.length > 0) {
         const last = outBufferParams[0]
         lines.push(
-          `      *respLen = ${offset} + 4 + outLen_${last.name};`,
+          outBufferParams.length > 1
+            ? `      *respLen = bufOff;`
+            : `      *respLen = ${offset} + 4 + outLen_${last.name};`,
           `      return 0;`
         )
       } else {

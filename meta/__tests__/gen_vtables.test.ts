@@ -3791,8 +3791,17 @@ describe('bridge transport serialization (WR-04)', () => {
     const once = spanOf('static int bridge_transact_once(')
 
     const lockedCalls = callsOutsideDefinition('bridge_transact_locked')
-    expect(lockedCalls).toHaveLength(1)
-    expect(within(lockedCalls[0], transact)).toBe(true)
+    // 58-12: a large-response stub (58-06 `large`) calls the locked path
+    // directly, but only with the lock held across the call.
+    expect(lockedCalls.filter((i) => within(i, transact))).toHaveLength(1)
+    for (const i of lockedCalls.filter((j) => !within(j, transact))) {
+      const fnStart = code.lastIndexOf('\nstatic ', i)
+      const held = code.slice(fnStart, i)
+      expect(held).toContain('AcquireSRWLockExclusive(&g_bridge_lock);')
+      expect(code.slice(i, code.indexOf('\n}', i))).toContain(
+        'ReleaseSRWLockExclusive(&g_bridge_lock);'
+      )
+    }
 
     const onceCalls = callsOutsideDefinition('bridge_transact_once')
     expect(onceCalls.length).toBeGreaterThan(0)
@@ -4602,10 +4611,12 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
     })
 
     it('a manifest set without the new kinds embeds the base text only; one using them embeds all of it', () => {
-      const plain = real.map((m) => ({
-        ...m,
-        methods: m.methods.filter((x) => !x.shimLocal)
-      }))
+      const plain = real
+        .filter((m) => m.interface !== 'SteamMatchMaking009')
+        .map((m) => ({
+          ...m,
+          methods: m.methods.filter((x) => !x.shimLocal)
+        }))
       expect(generateDispatchHeader(plain)).not.toMatch(
         /Extended kinds and modes/
       )
@@ -4735,7 +4746,13 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
             ]
           }
         ])
-      expect(computeDispatchRespScratchBytes(real)).toBe(4096)
+      expect(
+        computeDispatchRespScratchBytes(
+          real.filter((m) => m.interface !== 'SteamMatchMaking009')
+        )
+      ).toBe(4096)
+      // 58-12: ret 4 + (4 + 256) + (4 + 8192) for GetLobbyDataByIndex.
+      expect(computeDispatchRespScratchBytes(real)).toBe(8460)
       expect(computeDispatchRespScratchBytes([recv(61440)])).toBe(4 + 4 + 61440)
       const header = generateDispatchHeader([recv(61440)])
       expect(header).toContain(
@@ -4935,5 +4952,71 @@ describe('58-10 callResult and evidence policy fields', () => {
   it('the dispatch header includes the call-result hook header once', () => {
     const header = generateDispatchHeader(loadAllManifests())
     expect(header.split('#include "gamelib_callresult.h"').length - 1).toBe(1)
+  })
+})
+
+describe('58-12 SteamMatchMaking009 wire', () => {
+  const mm = real.find((m) => m.interface === 'SteamMatchMaking009')!
+  const method = (name: string) => mm.methods.find((x) => x.name === name)!
+  const header = generateDispatchHeader(real)
+  const shim = generateShimC(real, 'x64')
+
+  it('wires all 38 methods with a helperFlat', () => {
+    expect(mm.methods).toHaveLength(38)
+    for (const m of mm.methods) {
+      expect(m.mode).toBe('wire')
+      expect(m.helperFlat).toBe(`SteamAPI_ISteamMatchmaking_${m.name}`)
+    }
+    expect(mm.helperInterface).toBe('SteamAPI_SteamMatchmaking_v009')
+    expect(mm.flatAccessorAliases).toEqual(['SteamAPI_SteamMatchMaking_v009'])
+  })
+
+  it('tracks the call results CreateLobby 513, JoinLobby 504, RequestLobbyList 510', () => {
+    expect(method('CreateLobby').callResult).toBe(513)
+    expect(method('JoinLobby').callResult).toBe(504)
+    expect(method('RequestLobbyList').callResult).toBe(510)
+    for (const id of [513, 504, 510]) {
+      expect(header).toMatch(
+        new RegExp(`gl_helper_cr_track\\(\\(uint64_t\\)__ret, ${id}\\)`)
+      )
+    }
+  })
+
+  it('decodes a uint16 out-value as 2 bytes into a uint16_t pointer', () => {
+    expect(paramWidth('uint16_t*')).toBeGreaterThan(0)
+    const port = method('GetLobbyGameServer').params.find(
+      (p) => p.name === 'punGameServerPort'
+    )!
+    expect(port.valueType).toBe('uint16')
+    expect(header).toContain('uint16_t arg_punGameServerPort = 0;')
+    expect(header).toContain('memcpy(resp + 8, &arg_punGameServerPort, 2);')
+    expect(shim).toContain(
+      'uint16_t outVal; memcpy(&outVal, retbuf + respOff, 2);'
+    )
+  })
+
+  it('sends the chat body as in-buffer and bounds both lobby-data out-buffers', () => {
+    expect(
+      method('SendLobbyChatMsg').params.find((p) => p.name === 'pvMsgBody')!
+        .kind
+    ).toBe('in-buffer')
+    const byIndex = method('GetLobbyDataByIndex').params.filter(
+      (p) => p.kind === 'out-buffer'
+    )
+    expect(byIndex.map((p) => [p.sizeParam, p.capBytes])).toEqual([
+      ['cchKeyBufferSize', 256],
+      ['cchValueBufferSize', 8192]
+    ])
+    expect(header).toContain('cap_pchKey > 256')
+    expect(header).toContain('cap_pchValue > 8192')
+    expect(header).toContain('bufOff += 4 + outLen_pchValue;')
+    expect(validateManifest(mm)).toEqual([])
+  })
+
+  it('refuses several out-buffers when one lacks a capBytes', () => {
+    const bad: InterfaceManifestV2 = JSON.parse(JSON.stringify(mm))
+    const m = bad.methods.find((x) => x.name === 'GetLobbyDataByIndex')!
+    delete m.params.find((p) => p.name === 'pchKey')!.capBytes
+    expect(() => generateDispatchHeader([bad])).toThrow(/capBytes/)
   })
 })
