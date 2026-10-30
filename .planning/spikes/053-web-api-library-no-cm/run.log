@@ -1,0 +1,4 @@
+2026-10-30T23:34:52.744Z +     21ms [snapshot] steam_osx {"pid":"98746"}
+2026-10-30T23:34:58.684Z +   5960ms [token] refresh token read from Keychain {"prefix":"eyA","length":493}
+2026-10-30T23:35:00.310Z +   7586ms [token] access-token mint attempts {"cmWebsocket":"AccessDenied (eresult 15)","webApiForm":"status 200 x-eresult 63 body {\"response\":{}}"}
+2026-10-30T23:35:00.311Z +   7587ms [verdict] MINT_FAILED: no access token without a CM logon. >>> OPERATOR: is Friends still signed in?

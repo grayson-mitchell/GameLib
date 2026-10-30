@@ -1,0 +1,7 @@
+{
+  "subject": 3205720,
+  "mint": {
+    "cmWebsocket": "AccessDenied (eresult 15)",
+    "webApiForm": "status 200 x-eresult 63 body {\"response\":{}}"
+  }
+}
