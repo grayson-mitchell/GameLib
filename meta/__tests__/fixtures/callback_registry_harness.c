@@ -108,6 +108,35 @@ static int gl_cb_transport_drain(uint8_t *buf, uint32_t cap,
   }
 }
 
+/* 58-10: scripted call-result transport (CONTROL slot 11). */
+static reply_t g_cq[MAXQ];
+static int g_cqhead, g_cqtail;
+static int g_ctcalls;
+static uint8_t *g_lastcrbuf;
+
+static int gl_cb_transport_drain_cr(uint8_t *buf, uint32_t cap,
+                                    uint32_t *lenOut) {
+  int r;
+  g_ctcalls++;
+  g_lastcrbuf = buf;
+  r = pthread_mutex_trylock(&g_reg);
+  CHECK(r == 0); /* registry lock must NOT be held across the transport */
+  pthread_mutex_unlock(&g_reg);
+  if (g_cqhead == g_cqtail) {
+    memset(buf, 0, 4);
+    *lenOut = 4;
+    return 1;
+  }
+  {
+    reply_t *q = &g_cq[g_cqhead++];
+    if (!q->ok) return 0;
+    CHECK(q->len <= cap);
+    memcpy(buf, q->data, q->len);
+    *lenOut = q->len;
+    return 1;
+  }
+}
+
 /* quick k51: the embedder hook. Records every report and asserts the registry
  * lock is NOT held when it is called. */
 #define MAXREP 32
@@ -140,13 +169,18 @@ typedef struct fobj {
   int payload_ok;
   int lock_free;
   uint8_t got[24];
+  int cr_calls;
+  uint64_t cr_h;
+  int cr_failed;
+  int cr_lock_free;
+  uint8_t cr_got[24];
 } fobj;
 
 _Static_assert(offsetof(fobj, flags) == GL_CB_FLAGS_OFF, "flags offset");
 _Static_assert(offsetof(fobj, iCallback) == GL_CB_ICALLBACK_OFF,
                "iCallback offset");
 
-static fobj objA, objB, objG, objR, objS, objX, objU;
+static fobj objA, objB, objG, objR, objS, objX, objU, objC, objD, objY;
 static fobj bulk[520];
 
 static void trap(void *self) {
@@ -165,8 +199,38 @@ static void *xthread_unregister(void *arg) {
   g_x_saw_done = __atomic_load_n(&g_x_run_done, __ATOMIC_SEQ_CST);
   return NULL;
 }
-static void *g_vt[4] = {(void *)trap, (void *)h_run1, (void *)trap,
+static void h_run3(void *self, void *param, int failed, uint64_t h);
+static void *g_vt[4] = {(void *)h_run3, (void *)h_run1, (void *)trap,
                         (void *)trap};
+static int g_y_run_done;
+static int g_y_saw_done = -1;
+static pthread_t g_y_thread;
+static uint64_t g_y_h;
+static void *ythread_unregister(void *arg) {
+  (void)arg;
+  gl_cr_unregister(&objY, g_y_h);
+  g_y_saw_done = __atomic_load_n(&g_y_run_done, __ATOMIC_SEQ_CST);
+  return NULL;
+}
+
+static void h_run3(void *self, void *param, int failed, uint64_t h) {
+  fobj *o = (fobj *)self;
+  int r = pthread_mutex_trylock(&g_reg);
+  o->cr_calls++;
+  o->cr_lock_free = (r == 0);
+  if (r == 0) pthread_mutex_unlock(&g_reg);
+  o->cr_h = h;
+  o->cr_failed = failed;
+  if (param) memcpy(o->cr_got, param, 16);
+  if (o == &objY) {
+    pthread_t t;
+    g_y_h = h;
+    CHECK(pthread_create(&t, NULL, ythread_unregister, NULL) == 0);
+    usleep(50000);
+    __atomic_store_n(&g_y_run_done, 1, __ATOMIC_SEQ_CST);
+    g_y_thread = t;
+  }
+}
 
 static void h_run1(void *self, void *param) {
   fobj *o = (fobj *)self;
@@ -174,7 +238,7 @@ static void h_run1(void *self, void *param) {
   o->calls++;
   o->lock_free = (r == 0);
   if (r == 0) pthread_mutex_unlock(&g_reg);
-  if (param && o->iCallback == 1101) {
+  if (param && o->iCallback != 168) {
     memcpy(o->got, param, 24);
     o->payload_ok = 1;
   } else if (param) {
@@ -210,6 +274,18 @@ static void reset(void) {
   gl_cb_overflow = 0;
   gl_cb_no_target = 0;
   memset(gl_cb_held, 0, sizeof gl_cb_held);
+  memset(gl_cr_held, 0, sizeof gl_cr_held);
+  gl_cr_count = 0;
+  gl_cr_held_count = 0;
+  gl_cr_overflow = 0;
+  gl_cr_held_overflow = 0;
+  gl_cr_held_expired = 0;
+  gl_cr_fail_count = 0;
+  gl_cr_last_fail_ms = 0;
+  gl_cb_running = 0;
+  g_cqhead = g_cqtail = 0;
+  g_ctcalls = 0;
+  g_lastcrbuf = NULL;
   g_nrep = 0;
   g_qhead = g_qtail = 0;
   g_tcalls = 0;
@@ -222,6 +298,9 @@ static void reset(void) {
   init_obj(&objS);
   init_obj(&objX);
   init_obj(&objU);
+  init_obj(&objC);
+  init_obj(&objD);
+  init_obj(&objY);
   for (i = 0; i < sizeof bulk / sizeof bulk[0]; i++) init_obj(&bulk[i]);
 }
 
@@ -643,6 +722,291 @@ static void case_report_hook_unlocked(void) {
   PASS();
 }
 
+/* [u32 1][u64 h][i32 id][u32 failed][u32 cub][cub bytes all `seed`] */
+static void push_cr_raw(uint64_t h, int32_t id, uint32_t failed, uint32_t cub,
+                        uint32_t bodylen, uint8_t seed) {
+  uint8_t tmp[2700];
+  uint32_t one = 1u;
+  memcpy(tmp, &one, 4);
+  memcpy(tmp + 4, &h, 8);
+  memcpy(tmp + 12, &id, 4);
+  memcpy(tmp + 16, &failed, 4);
+  memcpy(tmp + 20, &cub, 4);
+  memset(tmp + 24, seed, bodylen);
+  {
+    reply_t *q = &g_cq[g_cqtail++];
+    CHECK(g_cqtail <= MAXQ);
+    q->ok = 1;
+    q->len = 24 + bodylen;
+    memcpy(q->data, tmp, q->len);
+  }
+}
+static void push_cr(uint64_t h, int32_t id, uint32_t failed, uint8_t seed) {
+  uint32_t cub = id == 513 ? 16u : id == 510 ? 4u : 24u;
+  push_cr_raw(h, id, failed, cub, cub, seed);
+}
+
+static int all_zero(const void *p, size_t n) {
+  size_t i;
+  for (i = 0; i < n; i++)
+    if (((const uint8_t *)p)[i] != 0) return 0;
+  return 1;
+}
+
+static void case_relay_504_dispatch(void) {
+  g_case = "relay_504_dispatch";
+  reset();
+  gl_cb_register(&objA, 504);
+  gl_cb_register(&objB, 503);
+  push_msg(504, 1, 24, 24);
+  gl_cb_run_callbacks();
+  CHECK(objA.calls == 1);
+  CHECK(memcmp(objA.got, g_expect, 24) == 0);
+  CHECK(objB.calls == 0);
+  CHECK(g_nrep == 1 && g_rep[0].id == 504 && g_rep[0].nd == 1);
+  CHECK(!held_valid(504)); /* broadcast rows are never held */
+  PASS();
+}
+
+static void case_relay_1221_dispatch(void) {
+  g_case = "relay_1221_dispatch";
+  reset();
+  gl_cb_register(&objA, 1221);
+  gl_cb_register(&objB, 1222);
+  push_msg(1221, 1, 712, 712);
+  gl_cb_run_callbacks();
+  CHECK(objA.calls == 1);
+  CHECK(memcmp(objA.got, g_expect, 24) == 0);
+  CHECK(objB.calls == 0);
+  PASS();
+}
+
+static void case_cr_register_complete(void) {
+  uint8_t want[16];
+  g_case = "cr_register_complete";
+  reset();
+  memset(want, 0x5C, sizeof want);
+  gl_cr_register(&objC, 0x1234);
+  CHECK(gl_cr_count == 1);
+  push_cr(0x1234, 513, 0, 0x5C);
+  gl_cb_run_callbacks();
+  CHECK(objC.cr_calls == 1);
+  CHECK(objC.cr_h == 0x1234);
+  CHECK(objC.cr_failed == 0);
+  CHECK(memcmp(objC.cr_got, want, 16) == 0);
+  CHECK(gl_cr_count == 0);
+  CHECK(g_tcalls == 0); /* no broadcast listener: slot 6 never pulled */
+  /* exactly once */
+  push_cr(0x1234, 513, 0, 0x5C);
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(objC.cr_calls == 1);
+  PASS();
+}
+
+static void case_cr_failed_passed(void) {
+  g_case = "cr_failed_passed";
+  reset();
+  gl_cr_register(&objC, 0x77);
+  push_cr(0x77, 510, 1, 0);
+  gl_cb_run_callbacks();
+  CHECK(objC.cr_calls == 1);
+  CHECK(objC.cr_failed == 1);
+  PASS();
+}
+
+static void case_cr_late_register_hold(void) {
+  g_case = "cr_late_register_hold";
+  reset();
+  gl_cr_register(&objC, 0x1);
+  push_cr(0x2, 513, 0, 0x6D);
+  gl_cb_run_callbacks();
+  CHECK(objC.cr_calls == 0);
+  CHECK(gl_cr_held_count == 1);
+  CHECK(g_nrep == 1 && g_rep[0].id == 513 && g_rep[0].nd == 0 &&
+        g_rep[0].held == 1);
+  gl_cr_register(&objD, 0x2);
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(objD.cr_calls == 1);
+  CHECK(objD.cr_h == 0x2);
+  CHECK(objC.cr_calls == 0);
+  CHECK(gl_cr_held_count == 0);
+  CHECK(all_zero(gl_cr_held, sizeof gl_cr_held));
+  CHECK(gl_cr_count == 1); /* only the unrelated pair remains */
+  PASS();
+}
+
+static void case_cr_expiry_zeroed(void) {
+  g_case = "cr_expiry_zeroed";
+  reset();
+  gl_cr_register(&objC, 0x1);
+  push_cr(0x2, 513, 0, 0x6D);
+  gl_cb_run_callbacks();
+  CHECK(gl_cr_held_count == 1);
+  g_now += 9000;
+  gl_cb_run_callbacks();
+  CHECK(gl_cr_held_count == 1);
+  g_now += 1001; /* 10001 ms since arrival */
+  gl_cb_run_callbacks();
+  CHECK(gl_cr_held_count == 0);
+  CHECK(gl_cr_held_expired == 1);
+  CHECK(all_zero(gl_cr_held, sizeof gl_cr_held));
+  /* a late registration after expiry sees nothing */
+  gl_cr_register(&objD, 0x2);
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(objD.cr_calls == 0);
+  PASS();
+}
+
+static void case_cr_unregister_race(void) {
+  g_case = "cr_unregister_race";
+  reset();
+  g_y_run_done = 0;
+  g_y_saw_done = -1;
+  gl_cr_register(&objY, 0x99);
+  push_cr(0x99, 504, 0, 0x01);
+  gl_cb_run_callbacks();
+  CHECK(objY.cr_calls == 1);
+  CHECK(pthread_join(g_y_thread, NULL) == 0);
+  CHECK(g_y_saw_done == 1); /* unregister waited for Run to return */
+  CHECK(gl_cr_count == 0);
+  CHECK(gl_cb_dispatching == NULL);
+  CHECK(gl_cb_running == 0);
+  PASS();
+}
+
+static void case_cr_no_lock_held(void) {
+  g_case = "cr_no_lock_held";
+  reset();
+  gl_cr_register(&objC, 0x10);
+  push_cr(0x10, 513, 0, 0x01);
+  gl_cb_run_callbacks();
+  CHECK(objC.cr_calls == 1);
+  CHECK(objC.cr_lock_free == 1);
+  CHECK(g_ctcalls >= 1); /* the transport asserts trylock==0 itself */
+  PASS();
+}
+
+static void case_cr_capacity(void) {
+  int i;
+  g_case = "cr_capacity";
+  reset();
+  for (i = 0; i < 65; i++) gl_cr_register(&bulk[i], (uint64_t)i + 1);
+  CHECK(gl_cr_count == 64);
+  CHECK(gl_cr_overflow == 1);
+  /* the same pair twice adds nothing */
+  gl_cr_register(&bulk[0], 1);
+  CHECK(gl_cr_count == 64);
+  gl_cr_unregister(&bulk[0], 1);
+  CHECK(gl_cr_count == 63);
+  PASS();
+}
+
+static void case_cr_report_hook(void) {
+  g_case = "cr_report_hook";
+  reset();
+  gl_cr_register(&objC, 0x21);
+  gl_cr_register(&objD, 0x22);
+  push_cr(0x21, 513, 0, 0x01);
+  push_cr(0x22, 510, 0, 0x02);
+  gl_cb_run_callbacks();
+  /* the hook CHECKs trylock==0 on every call */
+  CHECK(g_nrep == 2);
+  CHECK(g_rep[0].id == 513 && g_rep[0].nd == 1 && g_rep[0].held == 0);
+  CHECK(g_rep[1].id == 510 && g_rep[1].nd == 1 && g_rep[1].held == 0);
+  PASS();
+}
+
+static void case_cr_rejects_malformed_and_168(void) {
+  g_case = "cr_rejects_malformed_and_168";
+  reset();
+  gl_cr_register(&objC, 0x31);
+  push_cr_raw(0x31, 513, 0, 17, 17, 0x01); /* wrong cub for the id */
+  g_now += 31;
+  gl_cb_run_callbacks();
+  push_cr_raw(0x31, 513, 0, 16, 15, 0x01); /* body shorter than cub */
+  g_now += 31;
+  gl_cb_run_callbacks();
+  push_cr_raw(0x31, 513, 2, 16, 16, 0x01); /* failed not 0/1 */
+  g_now += 31;
+  gl_cb_run_callbacks();
+  push_cr_raw(0x31, 999, 0, 16, 16, 0x01); /* id not a call-result row */
+  g_now += 31;
+  gl_cb_run_callbacks();
+  push_cr_raw(0x32, 168, 0, 2572, 2572, 0xAB); /* ticket: never held */
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(objC.cr_calls == 0);
+  CHECK(gl_cr_held_count == 0);
+  CHECK(all_zero(gl_cr_held, sizeof gl_cr_held));
+  PASS();
+}
+
+static void case_cr_held_capacity(void) {
+  int i;
+  g_case = "cr_held_capacity";
+  reset();
+  gl_cr_register(&objC, 0x1);
+  for (i = 0; i < 17; i++) {
+    /* one per run keeps the scripted queue small */
+    g_cqhead = g_cqtail = 0;
+    push_cr(0x100 + (uint64_t)i, 513, 0, 0x01);
+    g_now += 31;
+    gl_cb_run_callbacks();
+  }
+  CHECK(gl_cr_held_count == 16);
+  CHECK(gl_cr_held_overflow == 1);
+  PASS();
+}
+
+static void case_cr_max_per_run_and_backoff(void) {
+  int i;
+  g_case = "cr_max_per_run_and_backoff";
+  reset();
+  gl_cr_register(&objC, 0x1);
+  for (i = 0; i < 6; i++) push_cr(0x500 + (uint64_t)i, 513, 0, 0x01);
+  gl_cb_run_callbacks();
+  CHECK(g_ctcalls == 4);
+  /* an old helper fails every pull: after 8 failures pulls back off */
+  reset();
+  gl_cr_register(&objC, 0x1);
+  for (i = 0; i < 8; i++) {
+    reply_t *q = &g_cq[g_cqtail++];
+    q->ok = 0;
+    q->len = 0;
+  }
+  for (i = 0; i < 8; i++) {
+    g_now += 31;
+    gl_cb_run_callbacks();
+  }
+  CHECK(g_ctcalls == 8);
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(g_ctcalls == 8);
+  g_now += 1000;
+  gl_cb_run_callbacks();
+  CHECK(g_ctcalls == 9);
+  PASS();
+}
+
+static void case_cr_buffer_zeroed(void) {
+  int left = 0;
+  uint32_t i;
+  g_case = "cr_buffer_zeroed";
+  reset();
+  gl_cr_register(&objC, 0x41);
+  push_cr(0x41, 504, 0, 0xCD);
+  gl_cb_run_callbacks();
+  CHECK(objC.cr_calls == 1);
+  CHECK(g_lastcrbuf != NULL);
+  for (i = 0; i < 2600; i++)
+    if (g_lastcrbuf[i] == 0xCD) left++;
+  CHECK(left == 0);
+  PASS();
+}
+
 int main(void) {
   pthread_mutexattr_t attr;
   uint32_t i;
@@ -674,5 +1038,19 @@ int main(void) {
   case_hold_dispatches_before_new_drain();
   case_no_hold_168();
   case_report_hook_unlocked();
+  case_relay_504_dispatch();
+  case_relay_1221_dispatch();
+  case_cr_register_complete();
+  case_cr_failed_passed();
+  case_cr_late_register_hold();
+  case_cr_expiry_zeroed();
+  case_cr_unregister_race();
+  case_cr_no_lock_held();
+  case_cr_capacity();
+  case_cr_report_hook();
+  case_cr_rejects_malformed_and_168();
+  case_cr_held_capacity();
+  case_cr_max_per_run_and_backoff();
+  case_cr_buffer_zeroed();
   return 0;
 }

@@ -53,6 +53,7 @@ import {
   CALLBACK_LAYOUTS,
   MSVC_CCALLBACKBASE_OFFSETS,
   MSVC_CCALLBACKBASE_VSLOT_RUN_1ARG,
+  MSVC_CCALLBACKBASE_VSLOT_RUN_3ARG,
   STEAM_CALLBACK_FLAG_GAMESERVER,
   STEAM_CALLBACK_FLAG_REGISTERED,
   USER_STATS_RECEIVED_LAYOUT
@@ -1164,15 +1165,79 @@ if (
   )
 }
 
+export interface CallbackRelayRow {
+  readonly id: number
+  readonly size: number
+  readonly hold: boolean
+  /** Present only when the struct's x86 size differs from x64: the row is then
+   *  emitted for steam_api64.dll only (58-10, the equality guard per row). */
+  readonly arches?: 'x64'
+}
+
+function broadcastRelayRow(
+  name: keyof typeof CALLBACK_LAYOUTS,
+  hold: boolean
+): CallbackRelayRow {
+  const l = CALLBACK_LAYOUTS[name]
+  if (l.id === null) throw new Error(`${name} has no callback id`)
+  const row = { id: l.id as number, size: l.x64.size as number, hold }
+  return l.x64.size === l.x86.size ? row : { ...row, arches: 'x64' }
+}
+
 /** Relayed callback ids and their exact (wire) param sizes; mirrors the helper
  *  allowlist rows in gamelib_cbqueue.h. `hold` keeps one latest message of that
  *  id when it arrives with no live listener, to be dispatched once one
  *  registers. 168 carries a web-API auth ticket and is NEVER held (Phase 55
- *  credential hygiene); 1101 (UserStatsReceived_t) carries no credential. */
-export const CALLBACK_RELAY_TABLE = [
+ *  credential hygiene); 1101 (UserStatsReceived_t) carries no credential. The
+ *  58-10 broadcast rows are never held. */
+export const CALLBACK_RELAY_TABLE: readonly CallbackRelayRow[] = [
   { id: 168, size: 2572, hold: false },
-  { id: 1101, size: USER_STATS_RECEIVED_LAYOUT.x64.size, hold: true }
-] as const
+  { id: 1101, size: USER_STATS_RECEIVED_LAYOUT.x64.size, hold: true },
+  broadcastRelayRow('LobbyInvite_t', false),
+  broadcastRelayRow('LobbyEnter_t', false),
+  broadcastRelayRow('LobbyDataUpdate_t', false),
+  broadcastRelayRow('LobbyChatUpdate_t', false),
+  broadcastRelayRow('LobbyChatMsg_t', false),
+  broadcastRelayRow('LobbyKicked_t', false),
+  broadcastRelayRow('P2PSessionRequest_t', false),
+  broadcastRelayRow('P2PSessionConnectFail_t', false),
+  broadcastRelayRow('SteamNetConnectionStatusChangedCallback_t', false),
+  broadcastRelayRow('SteamNetAuthenticationStatus_t', false),
+  broadcastRelayRow('SteamNetworkingMessagesSessionRequest_t', false),
+  broadcastRelayRow('SteamNetworkingMessagesSessionFailed_t', false),
+  broadcastRelayRow('SteamRelayNetworkStatus_t', false)
+]
+
+/** Call results the shim can complete through CCallResult::Run (58-10): the
+ *  helper tracks these handles (gamelib_callresult.h). 168 is never here. */
+export const CALL_RESULT_TABLE: readonly { id: number; size: number }[] = [
+  { id: 513, size: CALLBACK_LAYOUTS.LobbyCreated_t.x64.size },
+  { id: 510, size: CALLBACK_LAYOUTS.LobbyMatchList_t.x64.size },
+  { id: 504, size: CALLBACK_LAYOUTS.LobbyEnter_t.x64.size }
+]
+for (const name of [
+  'LobbyCreated_t',
+  'LobbyMatchList_t',
+  'LobbyEnter_t'
+] as const) {
+  if (CALLBACK_LAYOUTS[name].x64.size !== CALLBACK_LAYOUTS[name].x86.size) {
+    throw new Error(`${name} differs between x64 and x86 call-result rows`)
+  }
+}
+if (CALL_RESULT_TABLE.some((r) => r.id === 168)) {
+  throw new Error('168 carries a ticket and can never be a call result row')
+}
+/** Registered CCallResult pairs; overflow is counted and ignored. */
+export const CALL_RESULT_REGISTRY_CAPACITY = 64
+/** Results that arrived before their CCallResult registered. */
+export const CALL_RESULT_HELD_SLOTS = 16
+export const CALL_RESULT_HELD_EXPIRY_MS = 10000
+/** Slot-11 reply: u32 count + u64 h + i32 id + u32 failed + u32 cub + bytes.
+ *  Mirrors helper GL_CR_DRAIN_RESP_MAX_BYTES (cross-pinned in gen_vtables.test.ts). */
+export const CALL_RESULT_DRAIN_RESP_MAX_BYTES = 4 + 8 + 4 + 4 + 4 + 2572
+const CALL_RESULT_HELD_MAX_BYTES = Math.max(
+  ...CALL_RESULT_TABLE.map((r) => r.size)
+)
 
 /** Max bytes of one held message (every hold row must fit; checked at generation). */
 export const CALLBACK_HELD_MAX_BYTES = 64
@@ -1192,7 +1257,10 @@ const CALLBACK_DRAIN_BACKOFF_MS = 1000
  * (returns 1 on a good reply, 0 on any failure), and
  * `void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched, uint32_t held)`
  * (quick k51: told once per drained or held-retried relayed message, always
- * with no lock held; the embedder forwards it to the helper log).
+ * with no lock held; the embedder forwards it to the helper log), and
+ * `int gl_cb_transport_drain_cr(uint8_t *buf, uint32_t cap, uint32_t *lenOut)`
+ * (58-10: CONTROL slot 11, one completed call result per reply; 0 on failure,
+ * including an old helper that does not know the slot).
  *
  * Lock rule: the registry lock is NEVER held across the transport or a Run
  * call, so a handler may unregister, register or make a bridge call.
@@ -1214,6 +1282,14 @@ const CALLBACK_DRAIN_BACKOFF_MS = 1000
  * Exception (quick k51): a row with `hold` set is retained instead, one slot
  * per id, latest wins, and dispatched on a later RunCallbacks once a listener
  * registers. Rows that carry a credential (168) are never held.
+ *
+ * Call results (58-10): SteamAPI_RegisterCallResult records (object, handle)
+ * pairs (64). RunCallbacks pulls completed results from slot 11 and calls the
+ * object's Run(pvParam, bIOFailure, hCall) (vtable slot 0) outside the lock,
+ * then removes the pair. A result that arrives before its pair registers is
+ * held (16 slots, 10 s, secure-zeroed on delivery or expiry) and retried on a
+ * later RunCallbacks. Only ids in the call-result table are accepted, so a
+ * ticket (168) can never be held.
  */
 export function generateCallbackRegistryC(): string {
   const x86 = MSVC_CCALLBACKBASE_OFFSETS.x86
@@ -1225,9 +1301,15 @@ export function generateCallbackRegistryC(): string {
       )
     }
   }
-  const relayRows = CALLBACK_RELAY_TABLE.map(
-    (r) => `  {${r.id}, ${r.size}u, ${r.hold ? 1 : 0}}`
-  ).join(',\n')
+  // A row whose x86 struct differs is emitted for the 64-bit DLL only.
+  const relayRows = CALLBACK_RELAY_TABLE.map((r) =>
+    r.arches === 'x64'
+      ? `#if !defined(__i386__)\n  {${r.id}, ${r.size}u, ${r.hold ? 1 : 0}},\n#endif`
+      : `  {${r.id}, ${r.size}u, ${r.hold ? 1 : 0}},`
+  ).join('\n')
+  const crRows = CALL_RESULT_TABLE.map((r) => `  {${r.id}, ${r.size}u},`).join(
+    '\n'
+  )
   return `/* ---- callback registry (generated by meta/gen_vtables.ts, P55-3) ---- */
 #define GL_CB_REGISTRY_CAPACITY ${CALLBACK_REGISTRY_CAPACITY}
 #define GL_CB_DRAIN_MIN_INTERVAL_MS ${CALLBACK_DRAIN_MIN_INTERVAL_MS}
@@ -1236,6 +1318,11 @@ export function generateCallbackRegistryC(): string {
 #define GL_CB_DRAIN_BACKOFF_MS ${CALLBACK_DRAIN_BACKOFF_MS}
 #define GL_CB_DRAIN_RESP_MAX_BYTES ${CALLBACK_DRAIN_RESP_MAX_BYTES}
 #define GL_CB_HELD_MAX_BYTES ${CALLBACK_HELD_MAX_BYTES}
+#define GL_CR_REGISTRY_CAPACITY ${CALL_RESULT_REGISTRY_CAPACITY}
+#define GL_CR_HELD_SLOTS ${CALL_RESULT_HELD_SLOTS}
+#define GL_CR_HELD_EXPIRY_MS ${CALL_RESULT_HELD_EXPIRY_MS}
+#define GL_CR_HELD_MAX_BYTES ${CALL_RESULT_HELD_MAX_BYTES}
+#define GL_CR_DRAIN_RESP_MAX_BYTES ${CALL_RESULT_DRAIN_RESP_MAX_BYTES}
 #define GL_CB_FLAG_REGISTERED 0x${STEAM_CALLBACK_FLAG_REGISTERED.toString(16).padStart(2, '0')}
 #define GL_CB_FLAG_GAMESERVER 0x${STEAM_CALLBACK_FLAG_GAMESERVER.toString(16).padStart(2, '0')}
 /* MEASURED, not assumed: vtable slot of CCallbackBase::Run(void*). MSVC
@@ -1243,6 +1330,8 @@ export function generateCallbackRegistryC(): string {
  * Source: meta/msvcCallbackLayout.ts, checked against the committed dump
  * meta/__tests__/fixtures/msvc_ccallbackbase.layout.txt. */
 #define GL_CB_VSLOT_RUN_1ARG ${MSVC_CCALLBACKBASE_VSLOT_RUN_1ARG}
+/* vtable slot of CCallbackBase::Run(void*, bool, SteamAPICall_t). */
+#define GL_CB_VSLOT_RUN_3ARG ${MSVC_CCALLBACKBASE_VSLOT_RUN_3ARG}
 #if defined(__i386__)
 #define GL_CB_FLAGS_OFF ${x86.flags}
 #define GL_CB_ICALLBACK_OFF ${x86.iCallback}
@@ -1252,6 +1341,9 @@ export function generateCallbackRegistryC(): string {
 #endif
 
 typedef void (THISCALL *gl_cb_run1_fn)(void *self, void *pvParam);
+/* bIOFailure is an int: MSVC passes a bool as a full word on x86 and in a
+ * register on x64, and the callee reads only the low byte. */
+typedef void (THISCALL *gl_cb_run3_fn)(void *self, void *pvParam, int bIOFailure, uint64_t hCall);
 
 typedef struct {
   void *cb;
@@ -1277,6 +1369,44 @@ typedef struct {
 } gl_cb_held_entry;
 
 static gl_cb_held_entry gl_cb_held[GL_CB_RELAY_ROWS];
+
+/* ---- call results (58-10): CCallResult pairs and early arrivals ---- */
+typedef struct {
+  int32_t id;
+  uint32_t size;
+} gl_cr_row;
+
+static const gl_cr_row gl_cr_table[] = {
+${crRows}
+};
+#define GL_CR_ROWS ((uint32_t)(sizeof(gl_cr_table) / sizeof(gl_cr_table[0])))
+
+typedef struct {
+  void *cb;
+  uint64_t h;
+} gl_cr_entry;
+
+/* A result that arrived before its CCallResult registered. Never 168: only
+ * ids in gl_cr_table are accepted at all. */
+typedef struct {
+  int valid;
+  uint64_t h;
+  int32_t id;
+  uint32_t failed;
+  uint32_t cub;
+  uint32_t born_ms;
+  uint8_t bytes[GL_CR_HELD_MAX_BYTES];
+} gl_cr_held_entry;
+
+static gl_cr_entry gl_cr_entries[GL_CR_REGISTRY_CAPACITY];
+static uint32_t gl_cr_count;
+static gl_cr_held_entry gl_cr_held[GL_CR_HELD_SLOTS];
+static uint32_t gl_cr_held_count;
+static uint32_t gl_cr_overflow;
+static uint32_t gl_cr_held_overflow;
+static uint32_t gl_cr_held_expired;
+static uint32_t gl_cr_fail_count;
+static uint32_t gl_cr_last_fail_ms;
 
 static gl_cb_entry gl_cb_entries[GL_CB_REGISTRY_CAPACITY];
 static uint32_t gl_cb_count;
@@ -1369,11 +1499,218 @@ static void gl_cb_unregister(void *cb) {
   GL_CB_UNLOCK();
 }
 
+/* Secure zero: the compiler may not elide it. */
+static void gl_cb_zero(void *p, uint32_t n) {
+  volatile uint8_t *zp = (volatile uint8_t *)p;
+  uint32_t zi;
+  for (zi = 0; zi < n; zi++) zp[zi] = 0;
+}
+
+static uint32_t gl_cr_size(int32_t id) {
+  uint32_t i;
+  for (i = 0; i < GL_CR_ROWS; i++) {
+    if (gl_cr_table[i].id == id) return gl_cr_table[i].size;
+  }
+  return 0;
+}
+
+/* Caller holds the lock. Returns index or -1. */
+static int gl_cr_find(void *cb, uint64_t h) {
+  uint32_t i;
+  for (i = 0; i < gl_cr_count; i++) {
+    if (gl_cr_entries[i].cb == cb && gl_cr_entries[i].h == h) return (int)i;
+  }
+  return -1;
+}
+
+/* Caller holds the lock. Returns the first entry for h, or -1. */
+static int gl_cr_find_handle(uint64_t h) {
+  uint32_t i;
+  for (i = 0; i < gl_cr_count; i++) {
+    if (gl_cr_entries[i].h == h) return (int)i;
+  }
+  return -1;
+}
+
+static void gl_cr_register(void *cb, uint64_t h) {
+  if (!cb) return;
+  GL_CB_LOCK();
+  if (gl_cr_find(cb, h) >= 0) {
+    /* the same pair again: nothing to add */
+  } else if (gl_cr_count >= GL_CR_REGISTRY_CAPACITY) {
+    gl_cr_overflow++;
+  } else {
+    gl_cr_entries[gl_cr_count].cb = cb;
+    gl_cr_entries[gl_cr_count].h = h;
+    gl_cr_count++;
+  }
+  GL_CB_UNLOCK();
+}
+
+static void gl_cr_unregister(void *cb, uint64_t h) {
+  int idx;
+  if (!cb) return;
+  GL_CB_LOCK();
+  /* same in-flight rule as gl_cb_unregister (55 WR-01) */
+  while (gl_cb_dispatching == cb && gl_cb_run_tid != GL_CB_THREAD_ID()) {
+    GL_CB_UNLOCK();
+    GL_CB_YIELD();
+    GL_CB_LOCK();
+  }
+  idx = gl_cr_find(cb, h);
+  if (idx >= 0) {
+    gl_cr_count--;
+    gl_cr_entries[idx] = gl_cr_entries[gl_cr_count];
+    gl_cb_zero(&gl_cr_entries[gl_cr_count], (uint32_t)sizeof(gl_cr_entries[0]));
+  }
+  GL_CB_UNLOCK();
+}
+
+/* Called with NO lock held. Finds the CCallResult registered for h and calls
+ * Run(pvParam, bIOFailure, hCall) on it. Returns 1 when delivered (and the
+ * pair removed), 0 when no pair is registered for h. */
+static int gl_cr_deliver(uint64_t h, int32_t id, uint32_t failed, void *param) {
+  void *cb;
+  int idx;
+  GL_CB_LOCK();
+  idx = gl_cr_find_handle(h);
+  if (idx < 0) {
+    GL_CB_UNLOCK();
+    return 0;
+  }
+  cb = gl_cr_entries[idx].cb;
+  gl_cb_dispatching = cb;
+  GL_CB_UNLOCK();
+
+  {
+    void **vtbl = *(void ***)cb;
+    ((gl_cb_run3_fn)vtbl[GL_CB_VSLOT_RUN_3ARG])(cb, param, failed ? 1 : 0, h);
+  }
+
+  GL_CB_LOCK();
+  gl_cb_dispatching = NULL;
+  idx = gl_cr_find(cb, h);
+  if (idx >= 0) {
+    gl_cr_count--;
+    gl_cr_entries[idx] = gl_cr_entries[gl_cr_count];
+    gl_cb_zero(&gl_cr_entries[gl_cr_count], (uint32_t)sizeof(gl_cr_entries[0]));
+  }
+  GL_CB_UNLOCK();
+  gl_cb_report_dispatch(id, 1, 0);
+  return 1;
+}
+
+/* Keeps one early result. Called with NO lock held. A full table drops the
+ * newest and counts it; the table never grows. */
+static void gl_cr_hold(uint64_t h, int32_t id, uint32_t failed, uint32_t cub,
+                       const uint8_t *bytes, uint32_t now) {
+  uint32_t i;
+  int slot = -1;
+  GL_CB_LOCK();
+  for (i = 0; i < GL_CR_HELD_SLOTS; i++) {
+    if (gl_cr_held[i].valid && gl_cr_held[i].h == h) { slot = (int)i; break; }
+  }
+  if (slot < 0) {
+    for (i = 0; i < GL_CR_HELD_SLOTS; i++) {
+      if (!gl_cr_held[i].valid) { slot = (int)i; break; }
+    }
+  }
+  if (slot < 0 || cub > GL_CR_HELD_MAX_BYTES) {
+    gl_cr_held_overflow++;
+    GL_CB_UNLOCK();
+    return;
+  }
+  if (!gl_cr_held[slot].valid) gl_cr_held_count++;
+  gl_cb_zero(&gl_cr_held[slot], (uint32_t)sizeof(gl_cr_held[slot]));
+  gl_cr_held[slot].valid = 1;
+  gl_cr_held[slot].h = h;
+  gl_cr_held[slot].id = id;
+  gl_cr_held[slot].failed = failed;
+  gl_cr_held[slot].cub = cub;
+  gl_cr_held[slot].born_ms = now;
+  memcpy(gl_cr_held[slot].bytes, bytes, cub);
+  GL_CB_UNLOCK();
+  gl_cb_report_dispatch(id, 0, 1);
+}
+
+/* Expires old held results (zeroing them) and retries the rest against the
+ * current registrations. Called with NO lock held. */
+static void gl_cr_retry_held(uint32_t now) {
+  uint32_t i;
+  for (i = 0; i < GL_CR_HELD_SLOTS; i++) {
+    gl_cr_held_entry h;
+    GL_CB_LOCK();
+    if (!gl_cr_held[i].valid) {
+      GL_CB_UNLOCK();
+      continue;
+    }
+    if ((uint32_t)(now - gl_cr_held[i].born_ms) >= GL_CR_HELD_EXPIRY_MS) {
+      gl_cb_zero(&gl_cr_held[i], (uint32_t)sizeof(gl_cr_held[i]));
+      gl_cr_held_count--;
+      gl_cr_held_expired++;
+      GL_CB_UNLOCK();
+      continue;
+    }
+    if (gl_cr_find_handle(gl_cr_held[i].h) < 0) {
+      GL_CB_UNLOCK();
+      continue;
+    }
+    h = gl_cr_held[i];
+    GL_CB_UNLOCK();
+    if (gl_cr_deliver(h.h, h.id, h.failed, h.bytes)) {
+      GL_CB_LOCK();
+      if (gl_cr_held[i].valid && gl_cr_held[i].h == h.h) {
+        gl_cb_zero(&gl_cr_held[i], (uint32_t)sizeof(gl_cr_held[i]));
+        gl_cr_held_count--;
+      }
+      GL_CB_UNLOCK();
+    }
+    gl_cb_zero(&h, (uint32_t)sizeof(h));
+  }
+}
+
+/* One slot-11 pull. Called with NO lock held. Returns 1 to keep draining. */
+static int gl_cr_pull_one(uint8_t *buf, uint32_t now) {
+  uint32_t len = 0;
+  uint32_t count, failed, cub, size;
+  uint64_t h;
+  int32_t id;
+  int ok = gl_cb_transport_drain_cr(buf, GL_CR_DRAIN_RESP_MAX_BYTES, &len);
+  if (!ok) {
+    GL_CB_LOCK();
+    gl_cr_fail_count++;
+    gl_cr_last_fail_ms = now;
+    GL_CB_UNLOCK();
+    return 0;
+  }
+  GL_CB_LOCK();
+  gl_cr_fail_count = 0;
+  GL_CB_UNLOCK();
+  if (len > GL_CR_DRAIN_RESP_MAX_BYTES || len < 4) return 0;
+  memcpy(&count, buf, 4);
+  if (count != 1) return 0;
+  if (len < 24) return 0;
+  memcpy(&h, buf + 4, 8);
+  memcpy(&id, buf + 12, 4);
+  memcpy(&failed, buf + 16, 4);
+  memcpy(&cub, buf + 20, 4);
+  size = gl_cr_size(id);
+  if (!size || cub != size || failed > 1) return 0;
+  if (len != 24u + cub) return 0;
+  if (!gl_cr_deliver(h, id, failed, buf + 24)) {
+    gl_cr_hold(h, id, failed, cub, buf + 24, now);
+  }
+  return 1;
+}
+
 /* Empties the table only; never touches game object memory. */
 static void gl_cb_clear_all(void) {
   GL_CB_LOCK();
   gl_cb_count = 0;
   gl_cb_relay_count = 0;
+  gl_cr_count = 0;
+  gl_cb_zero(gl_cr_held, (uint32_t)sizeof(gl_cr_held));
+  gl_cr_held_count = 0;
   GL_CB_UNLOCK();
 }
 
@@ -1427,14 +1764,16 @@ static void gl_cb_run_callbacks(void) {
   uint32_t now;
   uint32_t iter;
   uint32_t hi;
-  volatile uint8_t *zp;
-  uint32_t zi;
+  int do_bcast, do_cr;
 
   GL_CB_LOCK();
-  if (gl_cb_running || gl_cb_relay_count == 0) {
+  if (gl_cb_running ||
+      (gl_cb_relay_count == 0 && gl_cr_count == 0 && gl_cr_held_count == 0)) {
     GL_CB_UNLOCK();
     return;
   }
+  do_bcast = gl_cb_relay_count != 0;
+  do_cr = gl_cr_count != 0 || gl_cr_held_count != 0;
   now = gl_cb_now_ms();
   interval = gl_cb_fail_count >= GL_CB_DRAIN_FAIL_BACKOFF_AFTER
                  ? GL_CB_DRAIN_BACKOFF_MS
@@ -1451,7 +1790,7 @@ static void gl_cb_run_callbacks(void) {
 
   /* quick k51: a held message (arrived before its listener) is retried first,
    * before any new drain. Cleared only once it reached at least one target. */
-  for (hi = 0; hi < GL_CB_RELAY_ROWS; hi++) {
+  for (hi = 0; do_bcast && hi < GL_CB_RELAY_ROWS; hi++) {
     uint8_t hbuf[GL_CB_HELD_MAX_BYTES];
     int32_t hid;
     int hvalid;
@@ -1473,7 +1812,7 @@ static void gl_cb_run_callbacks(void) {
     memset(hbuf, 0, sizeof(hbuf));
   }
 
-  for (iter = 0; iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
+  for (iter = 0; do_bcast && iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
     uint32_t len = 0;
     uint32_t count, cub, size, ndispatched;
     int32_t id;
@@ -1519,8 +1858,26 @@ static void gl_cb_run_callbacks(void) {
     }
   }
 
-  zp = buf;
-  for (zi = 0; zi < GL_CB_DRAIN_RESP_MAX_BYTES; zi++) zp[zi] = 0;
+  gl_cb_zero(buf, GL_CB_DRAIN_RESP_MAX_BYTES);
+
+  /* 58-10: call results. Held early arrivals are expired and retried first,
+   * then up to GL_CB_DRAIN_MAX_PER_RUN slot-11 pulls. A helper that does not
+   * know slot 11 fails every pull; that backs off on its own counter. */
+  if (do_cr) {
+    int crskip;
+    gl_cr_retry_held(now);
+    GL_CB_LOCK();
+    crskip = gl_cr_fail_count >= GL_CB_DRAIN_FAIL_BACKOFF_AFTER &&
+             (uint32_t)(now - gl_cr_last_fail_ms) < GL_CB_DRAIN_BACKOFF_MS;
+    GL_CB_UNLOCK();
+    for (iter = 0; !crskip && iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
+      uint8_t crbuf[GL_CR_DRAIN_RESP_MAX_BYTES];
+      int more = gl_cr_pull_one(crbuf, now);
+      gl_cb_zero(crbuf, GL_CR_DRAIN_RESP_MAX_BYTES);
+      if (!more) break;
+    }
+  }
+
   GL_CB_LOCK();
   gl_cb_running = 0;
   GL_CB_UNLOCK();
@@ -1563,9 +1920,9 @@ const FLAT_EXPORT_BODIES: Record<
   SteamAPI_UnregisterCallback:
     'void SteamAPI_UnregisterCallback(void *pCallback) { gl_cb_unregister(pCallback); }',
   SteamAPI_RegisterCallResult:
-    'void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }',
+    'void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { gl_cr_register(pCallback, hAPICall); }',
   SteamAPI_UnregisterCallResult:
-    'void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }'
+    'void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { gl_cr_unregister(pCallback, hAPICall); }'
 }
 
 // 51-15: the modern-SDK lookup family (D-51-13 GO) -- Win64-only (ROADMAP
@@ -3583,6 +3940,8 @@ export function generateShimC(
 #define BRIDGE_CONTROL_SLOT_REQUEST_CURRENT_STATS 9
 // quick 261027-k51: each relayed callback the registry dispatched or held is reported (the helper logs CBDISP); an old helper answers STATUS_ERR, which is harmless.
 #define BRIDGE_CONTROL_SLOT_REPORT_CB_DISPATCH 10
+// Phase 58 (58-10): SteamAPI_RunCallbacks drains one completed call result at a time ([u32 count][u64 h][i32 id][u32 failed][u32 cub][bytes]); an old helper answers STATUS_ERR, which bridge_transact reports as 0 and the registry treats as empty.
+#define BRIDGE_CONTROL_SLOT_DRAIN_CALL_RESULTS 11
 #define GAMELIB_STUBCALL_KIND_STUB 0
 #define GAMELIB_STUBCALL_KIND_FALLBACK 1
 #define GAMELIB_STUBCALL_KIND_OFFPATH 2
@@ -4008,6 +4367,9 @@ static SRWLOCK g_cb_registry_lock = SRWLOCK_INIT;
 static uint32_t gl_cb_now_ms(void) { return (uint32_t)GetTickCount(); }
 static int gl_cb_transport_drain(uint8_t *buf, uint32_t cap, uint32_t *lenOut) {
   return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS, NULL, 0, buf, cap, lenOut);
+}
+static int gl_cb_transport_drain_cr(uint8_t *buf, uint32_t cap, uint32_t *lenOut) {
+  return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALL_RESULTS, NULL, 0, buf, cap, lenOut);
 }
 /* quick 261027-k51: report one relayed callback the registry dispatched or held
  * (the helper logs CBDISP). Capped at 16 reports per process; the registry

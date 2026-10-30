@@ -37,7 +37,21 @@ const CASES = [
   'hold_1101_until_listener',
   'hold_dispatches_before_new_drain',
   'no_hold_168',
-  'report_hook_unlocked'
+  'report_hook_unlocked',
+  'relay_504_dispatch',
+  'relay_1221_dispatch',
+  'cr_register_complete',
+  'cr_failed_passed',
+  'cr_late_register_hold',
+  'cr_expiry_zeroed',
+  'cr_unregister_race',
+  'cr_no_lock_held',
+  'cr_capacity',
+  'cr_report_hook',
+  'cr_rejects_malformed_and_168',
+  'cr_held_capacity',
+  'cr_max_per_run_and_backoff',
+  'cr_buffer_zeroed'
 ]
 
 function spawnArgv(

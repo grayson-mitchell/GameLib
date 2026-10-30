@@ -28,6 +28,11 @@ import {
   CALLBACK_DRAIN_RESP_MAX_BYTES,
   CALLBACK_HELD_MAX_BYTES,
   CALLBACK_RELAY_TABLE,
+  CALL_RESULT_TABLE,
+  CALL_RESULT_DRAIN_RESP_MAX_BYTES,
+  CALL_RESULT_REGISTRY_CAPACITY,
+  CALL_RESULT_HELD_SLOTS,
+  CALL_RESULT_HELD_EXPIRY_MS,
   GAMESERVER_FLAT_STUBS,
   MODERN_LOOKUP_FLAT_EXPORTS,
   STRING_RETURN_BUF_BYTES,
@@ -48,8 +53,10 @@ import {
   type NullSretInventory
 } from '../gen_vtables'
 import {
+  CALLBACK_LAYOUTS,
   MSVC_CCALLBACKBASE_OFFSETS,
   MSVC_CCALLBACKBASE_VSLOT_RUN_1ARG,
+  MSVC_CCALLBACKBASE_VSLOT_RUN_3ARG,
   USER_STATS_RECEIVED_LAYOUT
 } from '../msvcCallbackLayout'
 import { CONTROL_SLOT } from '../../src/backend/storeManagers/steam/bridge/protocol'
@@ -3459,20 +3466,79 @@ describe('callback registry (P55-3) source pins', () => {
     const usrId = def('GL_CBQ_ID_USER_STATS_RECEIVED')
     const usrSize = def('GL_CBQ_USR_WIN_SIZE')
     expect(CALLBACK_DRAIN_RESP_MAX_BYTES).toBe(12 + max)
-    expect(CALLBACK_RELAY_TABLE).toEqual([
+    expect(CALLBACK_RELAY_TABLE.slice(0, 2)).toEqual([
       { id, size: max, hold: false },
       { id: usrId, size: usrSize, hold: true }
     ])
     // one row serves both Windows DLLs: the measured sizes agree
     expect(usrSize).toBe(USER_STATS_RECEIVED_LAYOUT.x64.size)
     expect(usrSize).toBe(USER_STATS_RECEIVED_LAYOUT.x86.size)
-    // the helper allowlist carries the same two rows (wire sizes)
-    expect(header).toContain(
-      '{GL_CBQ_ID_GET_TICKET_FOR_WEB_API_RESPONSE, GL_CBQ_MAX_PARAM_BYTES}'
+    // the helper allowlist carries the same two rows (wire sizes first)
+    expect(header).toMatch(
+      /GL_CBQ_ROW\(GL_CBQ_ID_GET_TICKET_FOR_WEB_API_RESPONSE, GL_CBQ_MAX_PARAM_BYTES,/
     )
-    expect(header).toContain(
-      '{GL_CBQ_ID_USER_STATS_RECEIVED, GL_CBQ_USR_WIN_SIZE}'
+    expect(header).toMatch(
+      /GL_CBQ_ROW\(GL_CBQ_ID_USER_STATS_RECEIVED, GL_CBQ_USR_WIN_SIZE,/
     )
+  })
+
+  it('relays the 13 broadcast ids with measured sizes, never held (58-10)', () => {
+    const ids = [
+      503, 504, 505, 506, 507, 512, 1202, 1203, 1221, 1222, 1251, 1252, 1281
+    ]
+    for (const bid of ids) {
+      const row = CALLBACK_RELAY_TABLE.find((r) => r.id === bid)
+      expect(row?.hold).toBe(false)
+      // wire size == the helper's WIN size define for the same struct
+      const layout = Object.values(CALLBACK_LAYOUTS).find((l) => l.id === bid)!
+      expect(row?.size).toBe(layout.x64.size)
+      expect(layout.x64.size).toBe(layout.x86.size) // one row per both DLLs
+      expect(row?.arches).toBeUndefined()
+      expect(src).toContain(`{${bid}, ${layout.x64.size}u, 0}`)
+      expect(2572).toBeGreaterThanOrEqual(row!.size)
+    }
+    // helper allowlist wire sizes: every GL_CBQ_*_WIN_SIZE appears as a row size
+    const winSizes = [
+      ...header.matchAll(/#define GL_CBQ_(?!USR_)\w+_WIN_SIZE (\d+)/g)
+    ]
+      .map((m) => Number(m[1]))
+      .sort((a, b) => a - b)
+    const relaySizes = CALLBACK_RELAY_TABLE.filter((r) => ids.includes(r.id))
+      .map((r) => r.size)
+      .sort((a, b) => a - b)
+    for (const sz of relaySizes) expect(winSizes).toContain(sz)
+  })
+
+  it('emits a row for the x64 DLL only when its x86 size differs', () => {
+    expect(CALLBACK_RELAY_TABLE.filter((r) => r.arches === 'x64')).toHaveLength(
+      0
+    )
+    expect(src).not.toContain('#if !defined(__i386__)\n  {')
+  })
+
+  it('call-result registry: constants, table and slot 11 contract (58-10)', () => {
+    const crHeader = readFileSync(
+      join(__dirname, '../../native/steam-bridge/helper/gamelib_callresult.h'),
+      'utf8'
+    )
+    const maxParam = Number(
+      /#define GL_CBQ_MAX_PARAM_BYTES (\d+)/.exec(header)![1]
+    )
+    // the helper expression is 4 + 8 + 4 + 4 + 4 + max param bytes
+    expect(crHeader).toContain(
+      '#define GL_CR_DRAIN_RESP_MAX_BYTES (4 + 8 + 4 + 4 + 4 + GL_CBQ_MAX_PARAM_BYTES)'
+    )
+    expect(CALL_RESULT_DRAIN_RESP_MAX_BYTES).toBe(4 + 8 + 4 + 4 + 4 + maxParam)
+    expect(CALL_RESULT_TABLE.map((r) => r.id)).toEqual([513, 510, 504])
+    expect(CALL_RESULT_TABLE.some((r) => r.id === 168)).toBe(false)
+    expect(CALL_RESULT_REGISTRY_CAPACITY).toBe(64)
+    expect(CALL_RESULT_HELD_SLOTS).toBe(16)
+    expect(CALL_RESULT_HELD_EXPIRY_MS).toBe(10000)
+    expect(src).toContain(
+      `#define GL_CB_VSLOT_RUN_3ARG ${MSVC_CCALLBACKBASE_VSLOT_RUN_3ARG}`
+    )
+    expect(src).toContain('gl_cb_transport_drain_cr(')
+    expect(src).toContain('{513, 16u},')
   })
 
   it('never holds a credential-bearing id; the hold row fits the held slot', () => {
@@ -3572,6 +3638,14 @@ describe('callback delivery wiring (P55-6)', () => {
     )
   })
 
+  it('call-result transport is bridge_transact on slot 11 (58-10)', () => {
+    expect(c).toContain('#define BRIDGE_CONTROL_SLOT_DRAIN_CALL_RESULTS 11')
+    const b = bodyOf('static int gl_cb_transport_drain_cr(')
+    expect(b).toContain(
+      'return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALL_RESULTS, NULL, 0,'
+    )
+  })
+
   it('embeds the registry exactly once, after bridge_transact', () => {
     const reg = generateCallbackRegistryC()
     expect(c.split(reg).length - 1).toBe(1)
@@ -3608,10 +3682,10 @@ describe('callback delivery wiring (P55-6)', () => {
 
   it('leaves out-of-scope surfaces unchanged', () => {
     expect(c).toContain(
-      'void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }'
+      'void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { gl_cr_register(pCallback, hAPICall); }'
     )
     expect(c).toContain(
-      'void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }'
+      'void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { gl_cr_unregister(pCallback, hAPICall); }'
     )
     expect(c).toContain('void Steam_RunCallbacks(void) { }')
     expect(c).toContain('void SteamGameServer_RunCallbacks(void) { }')
