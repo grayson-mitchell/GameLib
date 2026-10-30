@@ -236,6 +236,9 @@ describe('58-06 extended wire kinds compile', () => {
         '-Wno-unused-variable',
         '-I',
         dir,
+        // the generated header includes gamelib_callresult.h (plan 58-10)
+        '-I',
+        join(process.cwd(), 'native', 'steam-bridge', 'helper'),
         cPath
       ],
       home.childEnv()
