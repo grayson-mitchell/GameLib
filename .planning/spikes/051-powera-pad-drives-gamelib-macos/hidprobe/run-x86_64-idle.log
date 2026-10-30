@@ -1,0 +1,26 @@
+arch: x86_64
+IOHIDManagerOpen -> 0x0; listening 30s
+matched device 0x7fa18a305570, MaxInputReportSize=8, using buffer 8 (+256 guard)
+IOHIDDeviceOpen -> 0x0
+report 1 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 2 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 3 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 4 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 5 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 250 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 500 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 750 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 1000 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 1250 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 1500 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 1750 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 2000 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 2250 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 2500 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 2750 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 3000 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 3250 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+report 3500 res=0x0 id=0 len=8: 00 00 0f 80 80 80 80 00
+SUMMARY reports=3741 maxlen=8 overflows=0 buffer=8
+  len 8: 3741
+exit=0
