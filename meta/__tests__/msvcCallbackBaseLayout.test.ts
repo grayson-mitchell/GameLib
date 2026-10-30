@@ -23,9 +23,13 @@ import {
   MSVC_CCALLBACKBASE_VSLOT_RUN_3ARG,
   STEAM_CALLBACK_FLAG_GAMESERVER,
   STEAM_CALLBACK_FLAG_REGISTERED,
+  CALLBACK_LAYOUTS,
   USER_STATS_RECEIVED_LAYOUT,
+  parseCallbackLayoutsDump,
   parseMsvcCallbackLayoutDump,
   parseUserStatsReceivedLayoutDump,
+  type CallbackLayoutArch,
+  type CallbackLayoutEntry,
   type UserStatsTriple
 } from '../msvcCallbackLayout'
 
@@ -320,6 +324,175 @@ describe('UserStatsReceived_t layout (quick k51)', () => {
           .join('')
         const parsed = parseUserStatsReceivedLayoutDump(`${fresh}\n${others}`)
         expect(parsed[triple]).toEqual(USER_STATS_RECEIVED_LAYOUT[key])
+      }, 120000)
+    }
+  })
+})
+
+// Phase 58-02: CALLBACK_LAYOUTS, the measured table every multiplayer plan
+// reads sizes and offsets from.
+//
+// Structs whose Mac (pack 4) layout differs from the MSVC x64 (pack 8) layout
+// are the repack set for 58-07 (the helper must rewrite them into wire form).
+// Of the relayed callbacks that is exactly: LobbyEnter_t 20/24,
+// LobbyDataUpdate_t 20/24, LobbyChatUpdate_t 28/32, LobbyKicked_t 20/24,
+// LobbyCreated_t 12/16 and SteamNetConnectionStatusChangedCallback_t 704/712
+// (mac/x64). CallbackMsg_t also differs but is a host-pointer struct that is
+// never relayed. SteamNetworkingMessage_t is 216 on mac and x64 but 208 on x86.
+const REPACK_SET = [
+  'CallbackMsg_t',
+  'LobbyChatUpdate_t',
+  'LobbyCreated_t',
+  'LobbyDataUpdate_t',
+  'LobbyEnter_t',
+  'LobbyKicked_t',
+  'SteamNetConnectionStatusChangedCallback_t'
+]
+
+describe('CALLBACK_LAYOUTS (58-02)', () => {
+  let skipReason: string | null = null
+  let zigBinPath = ''
+  const createdProfiles: FakeHomeProfile[] = []
+  const entries = CALLBACK_LAYOUTS as Record<string, CallbackLayoutEntry>
+  const ARCHES: readonly CallbackLayoutArch[] = ['x64', 'x86', 'mac']
+
+  beforeAll(async () => {
+    if (process.platform !== 'darwin') {
+      skipReason = `requires darwin (pinned zig host), got "${process.platform}"`
+      return
+    }
+    try {
+      zigBinPath = await downloadZig()
+    } catch (error) {
+      skipReason = `zig unresolvable via downloadZig: ${(error as Error).message}`
+    }
+  }, 180000)
+
+  afterAll(() => {
+    for (const profile of createdProfiles) {
+      profile.dispose()
+    }
+  })
+
+  function expectTableEqualsParse(
+    parsed: Record<string, Record<CallbackLayoutArch, unknown>>
+  ) {
+    for (const name of Object.keys(entries)) {
+      for (const arch of ARCHES) {
+        expect({ name, arch, layout: parsed[name][arch] }).toEqual({
+          name,
+          arch,
+          layout: entries[name][arch]
+        })
+      }
+    }
+  }
+
+  describe('Arm A: committed dump', () => {
+    it('holds the 30 structs of the phase', () => {
+      expect(Object.keys(entries)).toHaveLength(30)
+    })
+
+    it('committed dump parses to the table literal for every struct and arch', () => {
+      expectTableEqualsParse(
+        parseCallbackLayoutsDump(readFileSync(STATS_DUMP, 'utf8'))
+      )
+    })
+
+    it('every callback id is asserted numerically by the fixture', () => {
+      const cpp = readFileSync(STATS_CPP, 'utf8')
+      for (const [name, e] of Object.entries(entries)) {
+        if (e.id !== null) {
+          expect(cpp).toContain(
+            `static_assert(${name}::k_iCallback == ${e.id},`
+          )
+        }
+      }
+    })
+
+    it('settles A3 by measurement', () => {
+      expect(entries.LobbyEnter_t.mac.size).toBe(20)
+      expect(entries.LobbyEnter_t.x64.size).toBe(24)
+      expect(entries.LobbyCreated_t.mac.size).toBe(12)
+      expect(entries.LobbyCreated_t.x64.size).toBe(16)
+      expect(entries.SteamNetConnectionStatusChangedCallback_t.mac.size).toBe(
+        704
+      )
+      expect(entries.SteamNetConnectionStatusChangedCallback_t.x64.size).toBe(
+        712
+      )
+      // CSteamID is pack(1) in the SDK, so these hold it at offset 0, size 9.
+      expect(entries.P2PSessionConnectFail_t.mac.size).toBe(9)
+      expect(entries.P2PSessionConnectFail_t.x64.size).toBe(9)
+      expect(entries.SteamNetworkingMessage_t.mac.size).toBe(216)
+      expect(entries.SteamNetworkingMessage_t.x64.size).toBe(216)
+      expect(entries.SteamNetworkingMessage_t.x86.size).toBe(208)
+    })
+
+    it('the repack set (mac differs from x64) is exactly the documented one', () => {
+      const differing = Object.keys(entries)
+        .filter(
+          (n) =>
+            JSON.stringify(entries[n].mac) !== JSON.stringify(entries[n].x64)
+        )
+        .sort()
+      expect(differing).toEqual(REPACK_SET)
+    })
+
+    it('throws naming the struct when a dump lacks one', () => {
+      const text = readFileSync(STATS_DUMP, 'utf8')
+      const broken = text.replace(
+        /Type: struct LobbyKicked_t\n/g,
+        'Type: struct LobbyKickedGone_t\n'
+      )
+      expect(() => parseCallbackLayoutsDump(broken)).toThrow(
+        /x86_64-pc-windows-msvc: missing record layout .* for LobbyKicked_t/
+      )
+    })
+
+    it('throws naming the triple when a section is missing', () => {
+      const text = readFileSync(STATS_DUMP, 'utf8')
+      const noMac = text.slice(0, text.indexOf('=== triple: arm64-apple'))
+      expect(() => parseCallbackLayoutsDump(noMac)).toThrow(
+        /arm64-apple-macosx/
+      )
+    })
+  })
+
+  describe('Arm B: live re-measurement', () => {
+    for (const { triple, args } of STATS_TRIPLES) {
+      it(`fresh ${triple} dump parses to the table`, async () => {
+        if (skipReason) {
+          console.warn(`msvcCallbackBaseLayout Arm B SKIPPED: ${skipReason}`)
+          return
+        }
+        const profile = createFakeHomeProfile({
+          prefix: 'gamelib-callbacklayouts-'
+        })
+        createdProfiles.push(profile)
+        const result = await spawnArgv(
+          zigBinPath,
+          [
+            'clang',
+            '-cc1',
+            '-triple',
+            triple,
+            ...args,
+            '-fdump-record-layouts-simple',
+            '-std=c++14',
+            STATS_CPP,
+            '-emit-llvm-only'
+          ],
+          profile.childEnv()
+        )
+        expect(result.code).toBe(0)
+        const fresh = `=== triple: ${triple} zig 0.16.0 ===\n${result.stdout}`
+        const others = readFileSync(STATS_DUMP, 'utf8')
+          .split(/^(?==== triple: )/m)
+          .filter((sec) => !sec.startsWith(`=== triple: ${triple} `))
+          .join('')
+        const parsed = parseCallbackLayoutsDump(`${fresh}\n${others}`)
+        expectTableEqualsParse(parsed)
       }, 120000)
     }
   })
