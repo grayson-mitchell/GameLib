@@ -10,6 +10,7 @@ files:
 severity: medium
 platform: any
 ready: live-gate
+status: "RESOLVED 2026-10-30 by quick 261030-qqh (4be6400bd, e34ad8668, e598f12da). Live gate passed after the throttle removal."
 ---
 
 The user bought Undertale through the Steam store in GameLib's embedded store browser. The game
@@ -67,3 +68,8 @@ First live test (2026-10-30), a demo:
 - A demo is the wrong test subject anyway. GameLib's owned-games fetch leaves out free-on-demand
   licenses (demos, free-to-play) until played, and the operator chose to keep it that way.
 - Retest with a paid purchase or a free-to-keep giveaway.
+
+## Resolved (2026-10-30)
+
+The operator reported the live gate as passed after `e598f12da`. The Steam client hiding the
+grant was a Steam library filter, not GameLib. The operator is handling that separately.
