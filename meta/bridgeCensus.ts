@@ -1039,6 +1039,9 @@ function classifyDrmEvidence(input: {
     anchored: false,
     gameInterfaces: [],
     gameCalls: [],
+    gameCallbacks: [],
+    gameLobbyEnterOk: false,
+    gameConnStates: [],
     helperEvents: 0,
     pidConflict: false
   }

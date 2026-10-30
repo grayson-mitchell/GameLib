@@ -39,6 +39,11 @@ export type DrmTraceEvent = {
 } & (
   | { event: 'create-interface'; iface: string }
   | { event: 'call'; name: string }
+  | {
+      event: 'callback'
+      id: number
+      detail?: { key: 'resp' | 'state'; value: number }
+    }
 )
 
 interface DrmLaunchAnchor {
@@ -55,6 +60,9 @@ export interface DrmEvidence {
   anchored: boolean
   gameInterfaces: string[]
   gameCalls: string[]
+  gameCallbacks: number[]
+  gameLobbyEnterOk: boolean
+  gameConnStates: number[]
   helperEvents: number
   pidConflict: boolean
 }
@@ -63,6 +71,8 @@ const TRACE_CREATE_RE =
   /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=create-interface iface=([A-Za-z0-9_]{1,64})$/
 const TRACE_CALL_RE =
   /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=call name=([A-Za-z0-9_]{1,128})$/
+const TRACE_CALLBACK_RE =
+  /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=callback id=([1-9]\d{0,4})(?: (resp|state)=(-?\d{1,3}))?$/
 
 const ANCHOR_RE =
   // eslint-disable-next-line no-control-regex
@@ -101,6 +111,21 @@ export function parseDrmTraceLine(line: string): DrmTraceEvent | null {
         name: m[4]
       }
     }
+    m = TRACE_CALLBACK_RE.exec(l)
+    if (m) {
+      const id = Number(m[4])
+      const key = m[5] as 'resp' | 'state' | undefined
+      if (key === 'resp' && id !== 504) return null
+      if (key === 'state' && id !== 1221) return null
+      const base = {
+        appId: m[1],
+        pid: Number(m[2]),
+        role: m[3] as DrmTraceRole,
+        event: 'callback' as const,
+        id
+      }
+      return key ? { ...base, detail: { key, value: Number(m[6]) } } : base
+    }
     return null
   } catch {
     return null
@@ -110,9 +135,16 @@ export function parseDrmTraceLine(line: string): DrmTraceEvent | null {
 /** Canonical grammar; 56-12 re-logs this text, never raw file bytes. */
 export function formatDrmTraceLine(ev: DrmTraceEvent): string {
   const head = `[drm-trace] appId=${ev.appId} pid=${ev.pid} role=${ev.role}`
-  return ev.event === 'create-interface'
-    ? `${head} event=create-interface iface=${ev.iface}`
-    : `${head} event=call name=${ev.name}`
+  if (ev.event === 'create-interface') {
+    return `${head} event=create-interface iface=${ev.iface}`
+  }
+  if (ev.event === 'callback') {
+    return (
+      `${head} event=callback id=${ev.id}` +
+      (ev.detail ? ` ${ev.detail.key}=${ev.detail.value}` : '')
+    )
+  }
+  return `${head} event=call name=${ev.name}`
 }
 
 /**
@@ -186,6 +218,9 @@ export function extractDrmEvidence(
     anchored: false,
     gameInterfaces: [],
     gameCalls: [],
+    gameCallbacks: [],
+    gameLobbyEnterOk: false,
+    gameConnStates: [],
     helperEvents: 0,
     pidConflict: false
   }
@@ -203,6 +238,9 @@ export function extractDrmEvidence(
     const prefix = drmRelogPrefix(appId)
     const ifaces = new Set<string>()
     const calls = new Set<string>()
+    const callbacks = new Set<number>()
+    const connStates = new Set<number>()
+    let lobbyEnterOk = false
     const gamePids = new Set<number>()
     const helperPids = new Set<number>()
     let helperEvents = 0
@@ -221,7 +259,11 @@ export function extractDrmEvidence(
       }
       gamePids.add(ev.pid)
       if (ev.event === 'create-interface') ifaces.add(ev.iface)
-      else calls.add(ev.name)
+      else if (ev.event === 'callback') {
+        callbacks.add(ev.id)
+        if (ev.id === 504 && ev.detail?.value === 1) lobbyEnterOk = true
+        if (ev.id === 1221 && ev.detail) connStates.add(ev.detail.value)
+      } else calls.add(ev.name)
     }
     let pidConflict = false
     for (const p of gamePids) if (helperPids.has(p)) pidConflict = true
@@ -229,6 +271,9 @@ export function extractDrmEvidence(
       anchored: true,
       gameInterfaces: [...ifaces],
       gameCalls: [...calls],
+      gameCallbacks: [...callbacks].sort((a, b) => a - b),
+      gameLobbyEnterOk: lobbyEnterOk,
+      gameConnStates: [...connStates].sort((a, b) => a - b),
       helperEvents,
       pidConflict
     }

@@ -179,3 +179,65 @@ describe('zero-import gate', () => {
     expect(src.includes('require(')).toBe(false)
   })
 })
+
+describe('event=callback', () => {
+  const cb = (tail: string, role = 'game') =>
+    `[drm-trace] appId=219990 pid=1234 role=${role} event=callback ${tail}`
+
+  it('parses with and without detail and round-trips', () => {
+    expect(parseDrmTraceLine(cb('id=504 resp=1'))).toEqual({
+      appId: '219990',
+      pid: 1234,
+      role: 'game',
+      event: 'callback',
+      id: 504,
+      detail: { key: 'resp', value: 1 }
+    })
+    expect(parseDrmTraceLine(cb('id=1221 state=3'))).toMatchObject({
+      id: 1221,
+      detail: { key: 'state', value: 3 }
+    })
+    const bare = parseDrmTraceLine(cb('id=1202'))!
+    expect(bare).not.toHaveProperty('detail')
+    for (const l of [
+      cb('id=504 resp=1'),
+      cb('id=1221 state=3'),
+      cb('id=1202')
+    ]) {
+      expect(formatDrmTraceLine(parseDrmTraceLine(l)!)).toBe(l)
+    }
+  })
+
+  it('rejects mismatched detail keys and malformed ids', () => {
+    for (const tail of [
+      'id=1202 resp=1',
+      'id=504 state=1',
+      'id=333 state=1',
+      'id=123456',
+      'id=0504',
+      'id=-5',
+      'id=504 resp=1 x'
+    ]) {
+      expect(parseDrmTraceLine(cb(tail))).toBeNull()
+    }
+  })
+
+  it('extractDrmEvidence collects game callbacks only from game role', () => {
+    const text = [
+      relog(ANCHOR.replace('[bridge-drm] ', '[bridge-drm] ')).replace(
+        drmRelogPrefix('219990'),
+        ''
+      ),
+      relog(cb('id=1202')),
+      relog(cb('id=504 resp=1')),
+      relog(cb('id=1221 state=3')),
+      relog(cb('id=1221 state=1')),
+      relog(cb('id=333', 'helper'))
+    ].join('\n')
+    const ev = extractDrmEvidence('219990', text)
+    expect(ev.gameCallbacks).toEqual([504, 1202, 1221])
+    expect(ev.gameLobbyEnterOk).toBe(true)
+    expect(ev.gameConnStates).toEqual([1, 3])
+    expect(ev.helperEvents).toBe(1)
+  })
+})
