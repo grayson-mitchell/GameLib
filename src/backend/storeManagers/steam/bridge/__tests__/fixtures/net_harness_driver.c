@@ -86,6 +86,28 @@ static void p2p_call(void) {
   fflush(stdout);
 }
 
+static int g_close_calls = 0;
+static int g_destroy_calls = 0;
+int SteamAPI_ISteamNetworkingSockets_CloseConnection(void *self, uint32_t h, int32_t reason, const char *dbg, int linger) {
+  (void)self; (void)h; (void)reason; (void)dbg; (void)linger;
+  g_close_calls++;
+  return 1;
+}
+int SteamAPI_ISteamNetworkingSockets_DestroyPollGroup(void *self, uint32_t h) {
+  (void)self; (void)h;
+  g_destroy_calls++;
+  return 1;
+}
+
+static void queue_n(int which, uint32_t handle, int n) {
+  gl_nets_queue *q = gl_nets_queue_find(which, handle, 1);
+  for (int i = 0; i < n; i++) {
+    uint8_t *rec = (uint8_t *)malloc(GL_NETS_REC_HEADER + 4);
+    memset(rec, 0x43, GL_NETS_REC_HEADER + 4);
+    gl_nets_queue_push(q, rec, GL_NETS_REC_HEADER + 4);
+  }
+}
+
 int main(int argc, char **argv) {
   const char *c = argc > 1 ? argv[1] : "";
   g_dylib_handle = RTLD_DEFAULT;
@@ -93,6 +115,35 @@ int main(int argc, char **argv) {
     for (int i = 0; i < 40; i++) gl_net_evidence(1, GL_NET_KIND_SEND, GL_NET_IFACE_SOCKETS, 0, 5, GL_NET_PATH_UNKNOWN);
     gl_net_evidence(1, GL_NET_KIND_JOIN, GL_NET_IFACE_SOCKETS, 1221, 0, GL_NET_PATH_UNKNOWN);
     gl_net_evidence(1, GL_NET_KIND_RECV, GL_NET_IFACE_SOCKETS, 0, 5, GL_NET_PATH_UNKNOWN);
+    return 0;
+  }
+  if (strcmp(c, "nets-evict") == 0) {
+    for (uint32_t h = 1; h <= GL_NETS_QUEUE_HANDLES; h++) queue_n(0, h, 1);
+    queue_n(0, 999, 1);
+    return 0;
+  }
+  if (strcmp(c, "nets-close-clears") == 0) {
+    static uint8_t resp[64];
+    uint8_t args[16];
+    uint32_t h = 9, reason = 1000, dlen = 0xFFFFFFFFu, linger = 0, rl = 0;
+    int32_t ret = -1;
+    queue_n(0, 9, 2);
+    memcpy(args, &h, 4); memcpy(args + 4, &reason, 4); memcpy(args + 8, &dlen, 4); memcpy(args + 12, &linger, 4);
+    gl_nets_close_connection((void *)1, args, 16, resp, sizeof resp, &rl);
+    memcpy(&ret, resp, 4);
+    printf("found=%d closes=%d ret=%d rl=%u\n", gl_nets_queue_find(0, 9, 0) != NULL, g_close_calls, ret, rl);
+    return 0;
+  }
+  if (strcmp(c, "nets-destroy-pg-clears") == 0) {
+    static uint8_t resp[64];
+    uint32_t h = 9, rl = 0;
+    int32_t ret = -1;
+    queue_n(1, 9, 2);
+    queue_n(0, 9, 1);
+    gl_nets_destroy_poll_group((void *)1, (const uint8_t *)&h, 4, resp, sizeof resp, &rl);
+    memcpy(&ret, resp, 4);
+    printf("found=%d connfound=%d destroys=%d ret=%d rl=%u\n", gl_nets_queue_find(1, 9, 0) != NULL,
+           gl_nets_queue_find(0, 9, 0) != NULL, g_destroy_calls, ret, rl);
     return 0;
   }
   if (strcmp(c, "net-join-budget") == 0) {

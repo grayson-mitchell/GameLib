@@ -159,7 +159,8 @@
         }
       ],
       "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamNetworkingSockets_CloseConnection"
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_CloseConnection",
+      "helperCustom": "gl_nets_close_connection"
     },
     {
       "slot": 6,
@@ -590,7 +591,8 @@
         }
       ],
       "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamNetworkingSockets_DestroyPollGroup"
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_DestroyPollGroup",
+      "helperCustom": "gl_nets_destroy_poll_group"
     },
     {
       "slot": 26,

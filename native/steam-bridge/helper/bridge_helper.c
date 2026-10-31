@@ -1035,6 +1035,9 @@ static void gl_nets_queue_clear(gl_nets_queue *s) {
   memset(s, 0, sizeof *s);
 }
 
+/* 58-28 (WR-08): CloseChannelWithUser deliberately does NOT clear a queue. The
+ * Messages queues (which == 2) are keyed by channel, not by peer, so clearing
+ * on one peer's close would drop the other peers' carried messages. */
 static gl_nets_queue *gl_nets_queue_find(int which, uint32_t handle, int create) {
   gl_nets_queue *free_slot = NULL;
   for (int i = 0; i < GL_NETS_QUEUE_HANDLES; i++) {
@@ -1045,6 +1048,10 @@ static gl_nets_queue *gl_nets_queue_find(int which, uint32_t handle, int create)
   if (!create) return NULL;
   if (free_slot == NULL) {
     free_slot = &g_nets_queue[g_nets_evict++ % GL_NETS_QUEUE_HANDLES];
+    // 58-28 (WR-08): eviction drops carried records; say how many (integer only).
+    if (free_slot->count > 0)
+      gl_net_evidence(1, GL_NET_KIND_OVERSIZE, free_slot->which == 2 ? GL_NET_IFACE_MESSAGES : GL_NET_IFACE_SOCKETS,
+                      0, free_slot->count, GL_NET_PATH_UNKNOWN);
     gl_nets_queue_clear(free_slot);
   }
   free_slot->used = 1;
@@ -1268,6 +1275,65 @@ int gl_net_get_connection_info(void *self, const uint8_t *args, uint32_t argLen,
   memcpy(resp + 5, info, sizeof info);
   *respLen = 5u + GL_NETS_INFO_BYTES;
   if (ret) gl_net_conn_info_path(info);
+  return 0;
+}
+
+/* 58-28 (WR-08): CloseConnection / DestroyPollGroup drop the handle's carry
+ * queue (securely zeroed by gl_nets_rec_free) so a reused handle never receives
+ * the old messages. Request/response layouts match the generic encoding the
+ * helperFlat path used: CloseConnection [u32 h][i32 reason][u32 len|0xFFFFFFFF]
+ * [len bytes][i32 linger] -> [i32 ret]; DestroyPollGroup [u32 h] -> [i32 ret]. */
+int gl_nets_close_connection(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                             uint32_t respCap, uint32_t *respLen) {
+  typedef int (*Close_t)(void *, uint32_t, int32_t, const char *, int);
+  static Close_t fn = NULL;
+  static char dbg[4096 + 1];
+  uint32_t handle, dlen;
+  int32_t reason, linger, ret;
+  const char *pdbg = NULL;
+  gl_nets_queue *q;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || respCap < 4 || self == NULL || argLen < 12) return 1;
+  memcpy(&handle, args, 4);
+  memcpy(&reason, args + 4, 4);
+  memcpy(&dlen, args + 8, 4);
+  if (dlen == 0xFFFFFFFFu) {
+    dlen = 0;
+  } else {
+    if (dlen > 4096 || argLen < 12u + dlen) return 1;
+    memcpy(dbg, args + 12, dlen);
+    dbg[dlen] = '\0';
+    pdbg = dbg;
+  }
+  if (argLen < 12u + dlen + 4) return 1;
+  memcpy(&linger, args + 12 + dlen, 4);
+  if (fn == NULL) fn = (Close_t)gl_nets_sym("SteamAPI_ISteamNetworkingSockets_CloseConnection");
+  if (fn == NULL) return 1;
+  ret = fn(self, handle, reason, pdbg, linger) & 0xff;
+  q = gl_nets_queue_find(0, handle, 0);
+  if (q != NULL) gl_nets_queue_clear(q);
+  memcpy(resp, &ret, 4);
+  *respLen = 4;
+  return 0;
+}
+
+int gl_nets_destroy_poll_group(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                               uint32_t respCap, uint32_t *respLen) {
+  typedef int (*Destroy_t)(void *, uint32_t);
+  static Destroy_t fn = NULL;
+  uint32_t handle;
+  int32_t ret;
+  gl_nets_queue *q;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || respCap < 4 || self == NULL || argLen != 4) return 1;
+  memcpy(&handle, args, 4);
+  if (fn == NULL) fn = (Destroy_t)gl_nets_sym("SteamAPI_ISteamNetworkingSockets_DestroyPollGroup");
+  if (fn == NULL) return 1;
+  ret = fn(self, handle) & 0xff;
+  q = gl_nets_queue_find(1, handle, 0);
+  if (q != NULL) gl_nets_queue_clear(q);
+  memcpy(resp, &ret, 4);
+  *respLen = 4;
   return 0;
 }
 

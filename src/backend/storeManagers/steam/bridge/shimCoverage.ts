@@ -288,6 +288,10 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   // identity, authentication, poll groups, lanes and ResetIdentity are wired;
   // the dedicated-server, custom-signaling, certificate and FakeIP methods stay
   // local stubs (D-09, D-10) and the destructor slot is never called.
+  // 58-28 (WR-08) coverage limit: a single message above 61260 bytes is
+  // dropped with an `oversize` NET line (the helper's record ceiling). GNS
+  // allows reliable messages up to 512 KB, so titles that send such messages
+  // are not covered.
   [
     'SteamNetworkingSockets013',
     { family: 'SteamNetworkingSockets', mode: 'wire' }
@@ -305,6 +309,9 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   ['SteamNetworkingUtils004', { family: 'SteamNetworkingUtils', mode: 'wire' }],
   // D-07 / 58-16: all six virtuals are wired; ReceiveMessagesOnChannel shares
   // the 58-15 out-messages kind and carry queue.
+  // 58-28 (WR-08): same 61260-byte single-message ceiling as Sockets (dropped
+  // with an `oversize` NET line); CloseChannelWithUser does not clear the carry
+  // queue because queues are keyed by channel, not by peer.
   [
     'SteamNetworkingMessages002',
     { family: 'SteamNetworkingMessages', mode: 'wire' }

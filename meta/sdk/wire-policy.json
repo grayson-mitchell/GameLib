@@ -1059,7 +1059,8 @@
         "pszDebug": {
           "kind": "in-string"
         }
-      }
+      },
+      "helperCustom": "gl_nets_close_connection"
     },
     "CloseListenSocket": {
       "helperFlat": "SteamAPI_ISteamNetworkingSockets_CloseListenSocket"
@@ -1251,7 +1252,8 @@
       "helperFlat": "SteamAPI_ISteamNetworkingSockets_CreatePollGroup"
     },
     "DestroyPollGroup": {
-      "helperFlat": "SteamAPI_ISteamNetworkingSockets_DestroyPollGroup"
+      "helperFlat": "SteamAPI_ISteamNetworkingSockets_DestroyPollGroup",
+      "helperCustom": "gl_nets_destroy_poll_group"
     },
     "SetConnectionPollGroup": {
       "helperFlat": "SteamAPI_ISteamNetworkingSockets_SetConnectionPollGroup"

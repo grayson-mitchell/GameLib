@@ -5168,7 +5168,9 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
         'gl_net_rt_status',
         'gl_net_session_info',
         'gl_net_set_config_value',
-        'gl_net_sockets_open'
+        'gl_net_sockets_open',
+        'gl_nets_close_connection',
+        'gl_nets_destroy_poll_group'
       ])
     })
   })

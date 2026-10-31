@@ -123,7 +123,7 @@ Method modes:
 // tuples BRIDGE_SHIM_TABLE_HASH (steam_api_shim.c) embeds -- a drift
 // between the two means the shim and this dispatch table disagree about
 // what is on the wire.
-#define BRIDGE_DISPATCH_TABLE_HASH "5a10c20bc906"
+#define BRIDGE_DISPATCH_TABLE_HASH "15a20aada86e"
 
 // Response scratch -- bridge_dispatch() never writes past respCap, which
 // the caller (bridge_helper.c) sizes to this constant.
@@ -199,6 +199,12 @@ int gl_net_set_config_value(void *self, const uint8_t *args, uint32_t argLen, ui
 
 // 58-06: hand-written in bridge_helper.c; returns 0 for ok.
 int gl_net_sockets_open(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_nets_close_connection(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_nets_destroy_poll_group(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
 
 #define BD_ORDINAL_SteamUser023 1
 static BDAccessorFn_t g_bd_accessor_steamuser023;
@@ -9728,30 +9734,9 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
     }
     case (((uint32_t)70) << 16 | 5u): { // SteamNetworkingSockets013.CloseConnection
       if (g_bd_flat_SteamNetworkingSockets013_CloseConnection == NULL || g_bd_self_steamnetworkingsockets013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
-      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_hPeer; memcpy(&arg_hPeer, arg + 0u, 4);
-      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      int32_t arg_nReason; memcpy(&arg_nReason, arg + (0u + 4), 4);
-      static char g_bd_flat_SteamNetworkingSockets013_CloseConnection_pszDebug_buf[4096 + 1];
-      const char *arg_pszDebug = NULL;
-      uint32_t arg_pszDebug_len = 0;
-      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
-      memcpy(&arg_pszDebug_len, arg + ((0u + 4) + 4), 4);
-      if (arg_pszDebug_len != 0xFFFFFFFFu) {
-        if (arg_pszDebug_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pszDebug_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
-        memcpy(g_bd_flat_SteamNetworkingSockets013_CloseConnection_pszDebug_buf, arg + ((0u + 4) + 4) + 4, arg_pszDebug_len);
-        g_bd_flat_SteamNetworkingSockets013_CloseConnection_pszDebug_buf[arg_pszDebug_len] = '\0';
-        arg_pszDebug = g_bd_flat_SteamNetworkingSockets013_CloseConnection_pszDebug_buf;
-      } else {
-        arg_pszDebug_len = 0;
-      }
-      if (argLen < (((0u + 4) + 4) + 4 + arg_pszDebug_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      int arg_bEnableLinger; memcpy(&arg_bEnableLinger, arg + (((0u + 4) + 4) + 4 + arg_pszDebug_len), 4);
-      int __ret = g_bd_flat_SteamNetworkingSockets013_CloseConnection(g_bd_self_steamnetworkingsockets013, arg_hPeer, arg_nReason, arg_pszDebug, arg_bEnableLinger);
-      if (respCap < 4) { *respLen = 0; return 1; }
-      memcpy(resp, &__ret, 4);
-      *respLen = 4;
-      return 0;
+      { uint32_t customLen = 0; // helperCustom gl_nets_close_connection
+        if (gl_nets_close_connection(g_bd_self_steamnetworkingsockets013, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
     }
     case (((uint32_t)70) << 16 | 6u): { // SteamNetworkingSockets013.CloseListenSocket
       if (g_bd_flat_SteamNetworkingSockets013_CloseListenSocket == NULL || g_bd_self_steamnetworkingsockets013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
@@ -10005,13 +9990,9 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
     }
     case (((uint32_t)70) << 16 | 25u): { // SteamNetworkingSockets013.DestroyPollGroup
       if (g_bd_flat_SteamNetworkingSockets013_DestroyPollGroup == NULL || g_bd_self_steamnetworkingsockets013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
-      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_hPollGroup; memcpy(&arg_hPollGroup, arg + 0u, 4);
-      int __ret = g_bd_flat_SteamNetworkingSockets013_DestroyPollGroup(g_bd_self_steamnetworkingsockets013, arg_hPollGroup);
-      if (respCap < 4) { *respLen = 0; return 1; }
-      memcpy(resp, &__ret, 4);
-      *respLen = 4;
-      return 0;
+      { uint32_t customLen = 0; // helperCustom gl_nets_destroy_poll_group
+        if (gl_nets_destroy_poll_group(g_bd_self_steamnetworkingsockets013, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
     }
     case (((uint32_t)70) << 16 | 26u): { // SteamNetworkingSockets013.SetConnectionPollGroup
       if (g_bd_flat_SteamNetworkingSockets013_SetConnectionPollGroup == NULL || g_bd_self_steamnetworkingsockets013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
@@ -10400,30 +10381,9 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
     }
     case (((uint32_t)73) << 16 | 5u): { // SteamNetworkingSockets012.CloseConnection
       if (g_bd_flat_SteamNetworkingSockets012_CloseConnection == NULL || g_bd_self_steamnetworkingsockets012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
-      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_hPeer; memcpy(&arg_hPeer, arg + 0u, 4);
-      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      int32_t arg_nReason; memcpy(&arg_nReason, arg + (0u + 4), 4);
-      static char g_bd_flat_SteamNetworkingSockets012_CloseConnection_pszDebug_buf[4096 + 1];
-      const char *arg_pszDebug = NULL;
-      uint32_t arg_pszDebug_len = 0;
-      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
-      memcpy(&arg_pszDebug_len, arg + ((0u + 4) + 4), 4);
-      if (arg_pszDebug_len != 0xFFFFFFFFu) {
-        if (arg_pszDebug_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pszDebug_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
-        memcpy(g_bd_flat_SteamNetworkingSockets012_CloseConnection_pszDebug_buf, arg + ((0u + 4) + 4) + 4, arg_pszDebug_len);
-        g_bd_flat_SteamNetworkingSockets012_CloseConnection_pszDebug_buf[arg_pszDebug_len] = '\0';
-        arg_pszDebug = g_bd_flat_SteamNetworkingSockets012_CloseConnection_pszDebug_buf;
-      } else {
-        arg_pszDebug_len = 0;
-      }
-      if (argLen < (((0u + 4) + 4) + 4 + arg_pszDebug_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      int arg_bEnableLinger; memcpy(&arg_bEnableLinger, arg + (((0u + 4) + 4) + 4 + arg_pszDebug_len), 4);
-      int __ret = g_bd_flat_SteamNetworkingSockets012_CloseConnection(g_bd_self_steamnetworkingsockets012, arg_hPeer, arg_nReason, arg_pszDebug, arg_bEnableLinger);
-      if (respCap < 4) { *respLen = 0; return 1; }
-      memcpy(resp, &__ret, 4);
-      *respLen = 4;
-      return 0;
+      { uint32_t customLen = 0; // helperCustom gl_nets_close_connection
+        if (gl_nets_close_connection(g_bd_self_steamnetworkingsockets012, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
     }
     case (((uint32_t)73) << 16 | 6u): { // SteamNetworkingSockets012.CloseListenSocket
       if (g_bd_flat_SteamNetworkingSockets012_CloseListenSocket == NULL || g_bd_self_steamnetworkingsockets012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
@@ -10677,13 +10637,9 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
     }
     case (((uint32_t)73) << 16 | 25u): { // SteamNetworkingSockets012.DestroyPollGroup
       if (g_bd_flat_SteamNetworkingSockets012_DestroyPollGroup == NULL || g_bd_self_steamnetworkingsockets012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
-      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint32_t arg_hPollGroup; memcpy(&arg_hPollGroup, arg + 0u, 4);
-      int __ret = g_bd_flat_SteamNetworkingSockets012_DestroyPollGroup(g_bd_self_steamnetworkingsockets012, arg_hPollGroup);
-      if (respCap < 4) { *respLen = 0; return 1; }
-      memcpy(resp, &__ret, 4);
-      *respLen = 4;
-      return 0;
+      { uint32_t customLen = 0; // helperCustom gl_nets_destroy_poll_group
+        if (gl_nets_destroy_poll_group(g_bd_self_steamnetworkingsockets012, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
     }
     case (((uint32_t)73) << 16 | 26u): { // SteamNetworkingSockets012.SetConnectionPollGroup
       if (g_bd_flat_SteamNetworkingSockets012_SetConnectionPollGroup == NULL || g_bd_self_steamnetworkingsockets012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called

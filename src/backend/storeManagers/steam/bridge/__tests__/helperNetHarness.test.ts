@@ -128,5 +128,22 @@ describeDarwinOnly(
       expect(lines(err, /kind=recv iface=Sockets/)).toHaveLength(1)
       expect(lines(err, /kind=send iface=Sockets cb=/)).toHaveLength(8)
     })
+
+    test('nets-evict: evicting a queue that holds records logs an oversize line with the count', () => {
+      const { err } = runBoth('nets-evict')
+      expect(lines(err, /kind=oversize iface=Sockets cb=0 n=1 /)).toHaveLength(
+        1
+      )
+    })
+
+    test('nets-close-clears: CloseConnection drops the handle queue and passes the result through', () => {
+      const { out } = runBoth('nets-close-clears')
+      expect(out).toContain('found=0 closes=1 ret=1 rl=4')
+    })
+
+    test('nets-destroy-pg-clears: DestroyPollGroup drops only the poll-group queue', () => {
+      const { out } = runBoth('nets-destroy-pg-clears')
+      expect(out).toContain('found=0 connfound=1 destroys=1 ret=1 rl=4')
+    })
   }
 )
