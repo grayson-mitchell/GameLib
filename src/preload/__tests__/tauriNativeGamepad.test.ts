@@ -118,6 +118,47 @@ describe('connect / disconnect', () => {
   })
 })
 
+describe('hot-plug', () => {
+  it('replug at the same index after absence reconnects', () => {
+    setup()
+    send([POWERA])
+    send([])
+    send([POWERA])
+    expect(events).toEqual([
+      { type: 'gamepadconnected', slot: 8 },
+      { type: 'gamepaddisconnected', slot: 8 },
+      { type: 'gamepadconnected', slot: 8 }
+    ])
+    expect(getPads()[8]!.id).toBe(POWERA.id)
+  })
+
+  it('replug under a new gilrs index lands in the new slot', () => {
+    setup()
+    send([POWERA])
+    send([])
+    send([{ ...POWERA, index: 1 }])
+    expect(events).toEqual([
+      { type: 'gamepadconnected', slot: 8 },
+      { type: 'gamepaddisconnected', slot: 8 },
+      { type: 'gamepadconnected', slot: 9 }
+    ])
+    const pads = getPads()
+    expect(pads).toHaveLength(10)
+    expect(pads[8]).toBeNull()
+    expect(pads[9]!.id).toBe(POWERA.id)
+  })
+
+  it('stick motion does not re-announce', () => {
+    setup()
+    send([POWERA])
+    const axes = [...POWERA.axes]
+    axes[0] = 0.75
+    send([{ ...POWERA, axes }])
+    expect(events.filter((e) => e.type === 'gamepadconnected')).toHaveLength(1)
+    expect(getPads()[8]!.axes[0]).toBe(0.75)
+  })
+})
+
 describe('dedupe', () => {
   const cases: [string, string, Partial<NativePad>][] = [
     ['rule 1 exact id', POWERA.id, {}],
