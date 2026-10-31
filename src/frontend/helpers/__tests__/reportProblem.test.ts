@@ -25,9 +25,9 @@ const baseArgs = {
 }
 
 describe('isReportingConfigured', () => {
-  test('the committed constant stays empty until the operator pastes a key', () => {
-    expect(WEB3FORMS_ACCESS_KEY).toBe('')
-    expect(isReportingConfigured()).toBe(false)
+  test('the committed constant is a configured, UUID-shaped key', () => {
+    expect(isReportingConfigured(WEB3FORMS_ACCESS_KEY)).toBe(true)
+    expect(isReportingConfigured()).toBe(true)
   })
 
   test('rejects empty and non-UUID, accepts UUID-shaped', () => {
@@ -40,7 +40,7 @@ describe('isReportingConfigured', () => {
 describe('submitReport', () => {
   test('unconfigured key never calls fetch', async () => {
     const fetchImpl = jest.fn()
-    const r = await submitReport({ ...baseArgs, fetchImpl })
+    const r = await submitReport({ ...baseArgs, accessKey: '', fetchImpl })
     expect(r).toEqual({ ok: false, reason: 'not-configured' })
     expect(fetchImpl).not.toHaveBeenCalled()
   })

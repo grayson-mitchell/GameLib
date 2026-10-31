@@ -13,7 +13,7 @@ import type { GameInfo } from 'common/types'
  * Empty means reporting is disabled: the form says so and no request is made.
  * Do not invent a key.
  */
-export const WEB3FORMS_ACCESS_KEY = ''
+export const WEB3FORMS_ACCESS_KEY = '990db980-7ed2-4ebf-a095-04394ff68ea3'
 
 export const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit'
 
