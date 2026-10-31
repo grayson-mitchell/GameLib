@@ -682,7 +682,7 @@ Plans:
 **Goal:** A Steam multiplayer title run through the macOS native bridge can host, find and join an online session with a second Steam account. Today it cannot in either bridge mode. In the TCP shim mode, the default for every ordinary title, `SteamMatchMaking009`, `SteamMatchMakingServers002` and `SteamNetworking005`/`006` are served as `mode: 'stub'` and answer "unavailable" (`bridge/shimCoverage.ts`, 51-14 sub-decision 1). `ISteamNetworkingSockets`/`ISteamNetworkingUtils`/`ISteamNetworkingMessages`, which modern games use for relay P2P, are not served at all. The roadmap's earlier rule that P2P join stays out of scope (24-SPEC) is lifted by this phase. The work in that mode: wire the matchmaking families (lobby create/list/join/data, server browser) and the networking families through the helper to the real `libsteam_api.dylib`; deliver their callbacks and call results the way quick 261027-k51 delivered `UserStatsReceived_t` (lobby `LobbyCreated_t`/`LobbyEnter_t`/`LobbyMatchList_t`, `P2PSessionRequest_t`, `SteamNetConnectionStatusChangedCallback_t`); and handle `InitRelayNetworkAccess()` and accepting incoming sessions, the known-hard join gap. In the `lsteamclient` steamclient-layer DRM mode (Phase 56, SteamStub titles only), networking already reaches the genuine Mac `steamclient.dylib`. There the work is proving it live, and deciding whether 56-02's omitted `serialized005.patch` must be carried. Anti-cheat titles (EAC, BattlEye) are out of scope: their Wine support is developer-opt-in and Linux-targeted. Open for discuss-phase: which titles serve as the measured test set (one lobby-based TCP-mode title, one SteamStub co-op title), whether the second account is a second Mac or a Windows/Linux peer, and which interface versions the test titles actually import. Done when: on this Mac, one TCP-mode title and one DRM-mode title each host a session that a second account joins and plays in, with the join visible in the bridge trace.
 **Requirements**: M-01..M-07 (58-RESEARCH.md)
 **Depends on:** Phase 51 (interface families and stub manifests), Phase 56 (DRM mode)
-**Plans:** 24/24 plans executed; NOT DONE: TCP gate Verdict FAIL, next `/gsd-plan-phase 58 --gaps`
+**Plans:** 34 plans (24 executed; 10 gap-closure plans 58-25..58-34 pending); NOT DONE: TCP gate Verdict FAIL
 
 Plans:
 **Wave 1**
@@ -759,6 +759,39 @@ Plans:
 **Wave 17** *(blocked on Wave 16 completion)*
 
 - [x] 58-24-PLAN.md — D-12/D-16 no-op pin, serialized005 record, closeout (STATE entries pending orchestrator; phase not done)
+
+**Gap closure (from 58-VERIFICATION.md, 2026-11-01)** — gap waves restart at 1:
+
+**Gap Wave 1**
+
+- [ ] 58-25-PLAN.md — Direction A host-path diagnosis (operator, Mac hosts on the current build); proceed/replan decision
+- [ ] 58-26-PLAN.md — CR-01 iface fix + `-Werror=uninitialized` + host harness; CR-02 consume-and-discard oversize legacy P2P
+- [ ] 58-27-PLAN.md — steamclientLayerNotice -p58b repin; WR-01 drmTrace apps lines; census `--log` + `host=`/`client=`; WR-02/05/07 deferral todos
+
+**Gap Wave 2**
+
+- [ ] 58-28-PLAN.md — WR-06 segmented NET budgets; WR-08 eviction evidence + queue clear on close; WR-09 333 hold expiry
+
+**Gap Wave 3**
+
+- [ ] 58-29-PLAN.md — helper invite plumbing: ActivateGameOverlayInviteDialog pending lobby, CONTROL slots 13/14 (friends, InviteUserToLobby), MMS lobby-shape lines
+
+**Gap Wave 4**
+
+- [ ] 58-30-PLAN.md — WR-03/WR-04 server-browser pool and issued-handle set
+- [ ] 58-31-PLAN.md — backend invite wiring: INVITE line -> frontend push, list/invite IPCs over authenticated control socket
+
+**Gap Wave 5**
+
+- [ ] 58-32-PLAN.md — GameLib friend-picker dialog + operator check of the live invite leg
+
+**Gap Wave 6**
+
+- [ ] 58-33-PLAN.md — TCP re-gate contract (author), Direction A and B in separate launches
+
+**Gap Wave 7**
+
+- [ ] 58-34-PLAN.md — TCP re-gate run (runner); FAIL routes to `/gsd-plan-phase 58 --gaps`
 
 **Cross-cutting constraints:**
 
