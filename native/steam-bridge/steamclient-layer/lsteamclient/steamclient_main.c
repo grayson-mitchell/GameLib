@@ -433,43 +433,179 @@ static void gamelib_apps_emit(const char *op, long ret)
     if (out > 0 && (size_t)out < sizeof(buf)) gamelib_trace_write( buf, out );
 }
 
-/* Returns the manifest buildid (> 0), or 0 when it cannot be read. */
+/* Minimal KeyValues reader for the two Steam text files read here (appmanifest_*.acf and
+ * libraryfolders.vdf). Tokens are quoted strings (\\ \" \n \t escapes honoured), braces, and
+ * // comments. Returns the idx-th string value whose key sits at brace depth `depth` (0 = the
+ * file's top level, so the AppState root is depth 0 and its fields are depth 1). Matching on depth
+ * is what keeps a nested "buildid" (or any other nested key) from being taken for the top-level
+ * one. Pure C, no Win32: the host-side check in the 58-REVIEW WR-02 task compiles it standalone. */
+/* GAMELIB_KV_BEGIN */
+static int gamelib_kv_token(const char *data, size_t len, size_t *pos, char *out, size_t outsz, int *quoted)
+{
+    size_t i = *pos, n = 0;
+
+    for (;;)
+    {
+        while (i < len && (data[i] == ' ' || data[i] == '\t' || data[i] == '\r' || data[i] == '\n')) i++;
+        if (i + 1 < len && data[i] == '/' && data[i + 1] == '/')
+        {
+            while (i < len && data[i] != '\n') i++;
+            continue;
+        }
+        break;
+    }
+    if (i >= len) { *pos = i; return 0; }
+    if (data[i] == '{' || data[i] == '}')
+    {
+        *quoted = 0;
+        out[0] = data[i];
+        out[1] = 0;
+        *pos = i + 1;
+        return 1;
+    }
+    if (data[i] != '"') { *pos = len; return 0; } /* not KeyValues text: stop */
+    *quoted = 1;
+    for (i++; i < len && data[i] != '"'; i++)
+    {
+        char c = data[i];
+        if (c == '\\' && i + 1 < len)
+        {
+            c = data[++i];
+            if (c == 'n') c = '\n';
+            else if (c == 't') c = '\t';
+        }
+        if (n + 1 < outsz) out[n++] = c;
+    }
+    if (i >= len) { *pos = len; return 0; } /* unterminated string */
+    out[n] = 0;
+    *pos = i + 1;
+    return 1;
+}
+
+static int gamelib_kv_find(const char *data, size_t len, const char *key, int depth, int idx,
+                           char *out, size_t outsz)
+{
+    char tok[512], val[512];
+    size_t pos = 0;
+    int level = 0, quoted, vq;
+
+    while (gamelib_kv_token( data, len, &pos, tok, sizeof(tok), &quoted ))
+    {
+        if (!quoted)
+        {
+            level += tok[0] == '{' ? 1 : -1;
+            if (level < 0) return 0;
+            continue;
+        }
+        /* tok is a key: its value is either a string or a '{' that opens a section. */
+        if (!gamelib_kv_token( data, len, &pos, val, sizeof(val), &vq )) return 0;
+        if (!vq)
+        {
+            if (val[0] == '}') { level--; if (level < 0) return 0; }
+            else level++;
+            continue;
+        }
+        if (level == depth && !strcmp( tok, key ) && idx-- == 0)
+        {
+            size_t n = strlen( val );
+            if (n + 1 > outsz) return 0;
+            memcpy( out, val, n + 1 );
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* The "buildid" field of an appmanifest, only when it is a plain decimal in (0, INT32_MAX]. */
+static int32_t gamelib_acf_buildid(const char *data, size_t len)
+{
+    char val[32];
+    int64_t v = 0;
+    size_t i;
+
+    if (!gamelib_kv_find( data, len, "buildid", 1, 0, val, sizeof(val) ) || !val[0]) return 0;
+    for (i = 0; val[i]; i++)
+    {
+        if (val[i] < '0' || val[i] > '9') return 0;
+        v = v * 10 + (val[i] - '0');
+        if (v > INT32_MAX) return 0;
+    }
+    return (int32_t)v;
+}
+/* GAMELIB_KV_END */
+
+/* Reads the whole file into data (at most cap - 1 bytes), looping until EOF. Returns the byte
+ * count, or -1 when the file cannot be opened. A file larger than cap is truncated; both files
+ * read here keep what is wanted well inside the first 64 KiB. */
+static int gamelib_read_file(const WCHAR *path, char *data, DWORD cap)
+{
+    HANDLE file;
+    DWORD got, total = 0;
+
+    file = CreateFileW( path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+                        FILE_ATTRIBUTE_NORMAL, NULL );
+    if (file == INVALID_HANDLE_VALUE) return -1;
+    while (total < cap - 1)
+    {
+        if (!ReadFile( file, data + total, cap - 1 - total, &got, NULL ) || !got) break;
+        total += got;
+    }
+    CloseHandle( file );
+    data[total] = 0;
+    return (int)total;
+}
+
+/* Reads <library>\steamapps\appmanifest_<id>.acf for one library root. 0 when absent or unusable. */
+static int32_t gamelib_apps_library_buildid(const WCHAR *library, const WCHAR *idw, char *data, DWORD cap)
+{
+    WCHAR path[MAX_PATH];
+    int pos, got;
+
+    pos = swprintf( path, ARRAY_SIZE(path), L"%ls\\steamapps\\appmanifest_%ls.acf", library, idw );
+    if (pos <= 0 || (size_t)pos >= ARRAY_SIZE(path)) return 0;
+    got = gamelib_read_file( path, data, cap );
+    return got > 0 ? gamelib_acf_buildid( data, got ) : 0;
+}
+
+/* Returns the manifest buildid (> 0), or 0 when it cannot be read. The default library is tried
+ * first, then every "path" the bottle's libraryfolders.vdf lists, so a game installed to another
+ * library folder is found too. */
 static int32_t gamelib_apps_manifest_buildid(void)
 {
-    static const char field[] = "\"buildid\"";
-    WCHAR idw[16], path[MAX_PATH];
-    char data[16384];
-    HANDLE file;
-    DWORD n, got = 0, i;
-    int pos;
-    int64_t v = 0;
+    static const WCHAR default_lib[] = L"C:\\Program Files (x86)\\Steam";
+    WCHAR idw[16], vdfpath[MAX_PATH], lib[MAX_PATH];
+    char *data, *vdf, path8[MAX_PATH];
+    const DWORD cap = 65536;
+    DWORD n, i;
+    int32_t id;
+    int got, idx;
 
     n = GetEnvironmentVariableW( L"SteamGameId", idw, ARRAY_SIZE(idw) );
     if (!n || n > 10) return 0;
     for (i = 0; i < n; i++) if (idw[i] < '0' || idw[i] > '9') return 0;
-    pos = swprintf( path, ARRAY_SIZE(path), L"C:\\Program Files (x86)\\Steam\\steamapps\\appmanifest_%ls.acf", idw );
-    if (pos <= 0) return 0;
-    file = CreateFileW( path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
-                        FILE_ATTRIBUTE_NORMAL, NULL );
-    if (file == INVALID_HANDLE_VALUE) return 0;
-    if (!ReadFile( file, data, sizeof(data) - 1, &got, NULL )) got = 0;
-    CloseHandle( file );
-    data[got] = 0;
 
-    for (i = 0; i + sizeof(field) - 1 < got; i++)
+    data = HeapAlloc( GetProcessHeap(), 0, 2 * cap );
+    if (!data) return 0;
+    vdf = data + cap;
+    id = gamelib_apps_library_buildid( default_lib, idw, data, cap );
+    if (!id)
     {
-        if (memcmp( data + i, field, sizeof(field) - 1 )) continue;
-        i += sizeof(field) - 1;
-        while (i < got && (data[i] == ' ' || data[i] == '\t')) i++;
-        if (i >= got || data[i] != '"') return 0;
-        for (i++; i < got && data[i] >= '0' && data[i] <= '9'; i++)
+        swprintf( vdfpath, ARRAY_SIZE(vdfpath), L"%ls\\steamapps\\libraryfolders.vdf", default_lib );
+        got = gamelib_read_file( vdfpath, vdf, cap );
+        /* "libraryfolders" { "<n>" { "path" "..." } }: the path keys sit at depth 2. */
+        for (idx = 0; got > 0 && !id && idx < 64
+                      && gamelib_kv_find( vdf, got, "path", 2, idx, path8, sizeof(path8) ); idx++)
         {
-            v = v * 10 + (data[i] - '0');
-            if (v > INT32_MAX) return 0;
+            /* A Windows path is ASCII in practice; anything else is skipped rather than guessed. */
+            for (i = 0; path8[i] && (unsigned char)path8[i] < 0x80 && i + 1 < ARRAY_SIZE(lib); i++)
+                lib[i] = (unsigned char)path8[i];
+            if (path8[i]) continue;
+            lib[i] = 0;
+            id = gamelib_apps_library_buildid( lib, idw, data, cap );
         }
-        return i < got && data[i] == '"' ? (int32_t)v : 0;
     }
-    return 0;
+    HeapFree( GetProcessHeap(), 0, data );
+    return id;
 }
 
 static void gamelib_apps_call(const char *name, void *args)
