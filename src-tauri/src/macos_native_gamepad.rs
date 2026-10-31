@@ -6,11 +6,12 @@
 //! each pad's state as a `native_gamepad` event; the shaping into Chromium's raw-HID report lives
 //! in the cfg-free `native_gamepad_shape` so `cargo test` covers it on every OS.
 //!
-//! Emits only on change. Started once from `.setup()`; the thread never touches the webview
+//! Emits only on change, coalesced by `EmitGate`. Started once from `.setup()`; the thread never touches the webview
 //! directly, only `AppHandle::emit`.
 
 use crate::native_gamepad_shape::{
-    pad_id, shape_axes, shape_buttons, NativeGamepadPayload, NativePad, NATIVE_GAMEPAD_EVENT,
+    pad_id, run_reader, shape_axes, shape_buttons, Drained, NativePad, PadSource,
+    NATIVE_GAMEPAD_EVENT,
 };
 use gilrs::ev::AxisOrBtn;
 use gilrs::{Axis, EventType, Gilrs};
@@ -57,45 +58,44 @@ fn snapshot(gilrs: &Gilrs) -> Vec<NativePad> {
     pads
 }
 
+struct GilrsSource(Gilrs);
+
+impl PadSource for GilrsSource {
+    fn drain_events(&mut self) -> Drained {
+        let mut d = Drained {
+            any: false,
+            connection_changed: false,
+        };
+        while let Some(ev) = self.0.next_event() {
+            d.any = true;
+            if matches!(ev.event, EventType::Connected | EventType::Disconnected) {
+                d.connection_changed = true;
+            }
+        }
+        d
+    }
+
+    fn snapshot(&mut self) -> Vec<NativePad> {
+        snapshot(&self.0)
+    }
+}
+
 /// Spawns the reader thread. Non-blocking and infallible: a spawn or gilrs init failure is
 /// logged and the renderer simply sees no native pads.
 pub fn start(app: AppHandle) {
     let spawned = std::thread::Builder::new()
         .name("native-gamepad".into())
         .spawn(move || {
-            let mut gilrs = match Gilrs::new() {
-                Ok(g) => g,
-                Err(e) => {
-                    eprintln!("[native-gamepad] gilrs init failed: {e}");
-                    return;
-                }
-            };
-            let mut last: Vec<NativePad> = Vec::new();
-            loop {
-                let mut changed_pads = false;
-                while let Some(ev) = gilrs.next_event() {
-                    if matches!(ev.event, EventType::Connected | EventType::Disconnected) {
-                        changed_pads = true;
-                    }
-                }
-                let pads = snapshot(&gilrs);
-                if changed_pads || pads != last {
-                    if changed_pads {
-                        for p in &pads {
-                            eprintln!(
-                                "[native-gamepad] pad {} {:?} connected={}",
-                                p.index, p.id, p.connected
-                            );
-                        }
-                    }
-                    let _ = app.emit(
-                        NATIVE_GAMEPAD_EVENT,
-                        NativeGamepadPayload { pads: pads.clone() },
-                    );
-                    last = pads;
-                }
-                std::thread::sleep(POLL_INTERVAL);
-            }
+            run_reader(
+                || Gilrs::new().map(GilrsSource).map_err(|e| e.to_string()),
+                |p| {
+                    let _ = app.emit(NATIVE_GAMEPAD_EVENT, p.clone());
+                },
+                || {
+                    std::thread::sleep(POLL_INTERVAL);
+                    true
+                },
+            );
         });
     if let Err(e) = spawned {
         eprintln!("[native-gamepad] could not spawn reader thread: {e}");

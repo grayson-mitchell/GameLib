@@ -17,9 +17,14 @@
 //!   reverses Y on macOS, so it is negated back), and the hat at index 9 as
 //!   `direction * 2/7 - 1` with neutral = `15 * 2/7 - 1` (the measured 3.28571).
 //!
+//! Quick task 261031-nwz: this module also holds the reader's loop policy (`PadSource`,
+//! `EmitGate`, `run_reader`), so init failure, hot-plug and emit coalescing are testable without
+//! gilrs or a clock.
+//!
 //! Everything here takes plain data, so `cargo test` covers it on Linux and Windows too.
 
 use serde::Serialize;
+use std::time::{Duration, Instant};
 
 pub const NATIVE_GAMEPAD_EVENT: &str = "native_gamepad";
 
@@ -115,9 +120,281 @@ pub fn shape_axes(
     out
 }
 
+/// Minimum gap between two non-connection emits. The spike 051 pad reports at about 125 Hz
+/// (Live 3) and `gamepad.ts` consumes through `requestAnimationFrame` at 60-120 Hz, so 8 ms caps
+/// IPC at the pad's own rate and adds at most 8 ms of latency.
+pub const MIN_EMIT_INTERVAL: Duration = Duration::from_millis(8);
+
+/// What `PadSource::drain_events` saw this tick.
+pub struct Drained {
+    /// Any event at all arrived.
+    pub any: bool,
+    /// A pad connected or disconnected.
+    pub connection_changed: bool,
+}
+
+/// A source of pad state (gilrs on macOS, a scripted fake in tests).
+pub trait PadSource {
+    fn drain_events(&mut self) -> Drained;
+    fn snapshot(&mut self) -> Vec<NativePad>;
+}
+
+/// Decides, per tick, whether a payload goes out: connection changes at once, state changes at
+/// most once per `MIN_EMIT_INTERVAL` with a trailing emit, idle ticks take no snapshot.
+pub struct EmitGate {
+    last: Vec<NativePad>,
+    last_emit: Option<Instant>,
+    pending: bool,
+}
+
+impl EmitGate {
+    pub fn new() -> Self {
+        Self {
+            last: Vec::new(),
+            last_emit: None,
+            pending: false,
+        }
+    }
+
+    pub fn tick(
+        &mut self,
+        now: Instant,
+        source: &mut impl PadSource,
+    ) -> Option<NativeGamepadPayload> {
+        let drained = source.drain_events();
+        if !drained.any && !self.pending {
+            return None;
+        }
+        let pads = source.snapshot();
+        if !drained.connection_changed {
+            if pads == self.last {
+                self.pending = false;
+                return None;
+            }
+            let due = self
+                .last_emit
+                .is_none_or(|t| now.saturating_duration_since(t) >= MIN_EMIT_INTERVAL);
+            if !due {
+                self.pending = true;
+                return None;
+            }
+        }
+        self.pending = false;
+        self.last = pads.clone();
+        self.last_emit = Some(now);
+        Some(NativeGamepadPayload { pads })
+    }
+}
+
+/// The reader loop. `keep_going` is called once per iteration and is where the caller sleeps
+/// (and, in tests, ends the loop).
+pub fn run_reader<S: PadSource>(
+    init: impl FnOnce() -> Result<S, String>,
+    mut emit: impl FnMut(&NativeGamepadPayload),
+    mut keep_going: impl FnMut() -> bool,
+) {
+    let mut source = match init() {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[native-gamepad] gilrs init failed: {e}");
+            return;
+        }
+    };
+    let mut gate = EmitGate::new();
+    while keep_going() {
+        let mut changed = false;
+        if let Some(payload) = gate.tick_logged(Instant::now(), &mut source, &mut changed) {
+            if changed {
+                if payload.pads.is_empty() {
+                    eprintln!("[native-gamepad] all pads disconnected");
+                }
+                for p in &payload.pads {
+                    eprintln!(
+                        "[native-gamepad] pad {} {:?} connected={}",
+                        p.index, p.id, p.connected
+                    );
+                }
+            }
+            emit(&payload);
+        }
+    }
+}
+
+impl EmitGate {
+    /// `tick`, also reporting whether the emit was caused by a connection change.
+    fn tick_logged(
+        &mut self,
+        now: Instant,
+        source: &mut impl PadSource,
+        connection_changed: &mut bool,
+    ) -> Option<NativeGamepadPayload> {
+        struct Spy<'a, S: PadSource>(&'a mut S, &'a mut bool);
+        impl<S: PadSource> PadSource for Spy<'_, S> {
+            fn drain_events(&mut self) -> Drained {
+                let d = self.0.drain_events();
+                *self.1 = d.connection_changed;
+                d
+            }
+            fn snapshot(&mut self) -> Vec<NativePad> {
+                self.0.snapshot()
+            }
+        }
+        self.tick(now, &mut Spy(source, connection_changed))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::VecDeque;
+
+    struct FakeSource {
+        steps: VecDeque<(Drained, Vec<NativePad>)>,
+        current: Vec<NativePad>,
+        snapshots: usize,
+    }
+
+    impl FakeSource {
+        fn new(steps: Vec<(Drained, Vec<NativePad>)>) -> Self {
+            Self {
+                steps: steps.into(),
+                current: Vec::new(),
+                snapshots: 0,
+            }
+        }
+    }
+
+    impl PadSource for FakeSource {
+        fn drain_events(&mut self) -> Drained {
+            match self.steps.pop_front() {
+                Some((d, pads)) => {
+                    self.current = pads;
+                    d
+                }
+                None => Drained {
+                    any: false,
+                    connection_changed: false,
+                },
+            }
+        }
+        fn snapshot(&mut self) -> Vec<NativePad> {
+            self.snapshots += 1;
+            self.current.clone()
+        }
+    }
+
+    fn pad(index: usize, axis0: f64) -> NativePad {
+        let mut axes = vec![0.0; AXIS_COUNT];
+        axes[0] = axis0;
+        NativePad {
+            index,
+            id: "P (Vendor: 20d6 Product: a720)".into(),
+            name: "P".into(),
+            vendor_id: Some(0x20d6),
+            product_id: Some(0xa720),
+            connected: true,
+            buttons: vec![0.0; MIN_BUTTONS],
+            axes,
+        }
+    }
+
+    fn conn() -> Drained {
+        Drained {
+            any: true,
+            connection_changed: true,
+        }
+    }
+
+    fn ev() -> Drained {
+        Drained {
+            any: true,
+            connection_changed: false,
+        }
+    }
+
+    #[test]
+    fn init_failure_returns_quietly() {
+        let mut emits = 0;
+        let mut polls = 0;
+        run_reader(
+            || Err::<FakeSource, _>("nope".to_string()),
+            |_| emits += 1,
+            || {
+                polls += 1;
+                true
+            },
+        );
+        assert_eq!((emits, polls), (0, 0));
+    }
+
+    #[test]
+    fn hotplug_emits_disconnect_and_reconnect() {
+        let mut src = FakeSource::new(vec![
+            (conn(), vec![pad(0, 0.0)]),
+            (conn(), vec![]),
+            (conn(), vec![pad(0, 0.0)]),
+            (conn(), vec![pad(1, 0.0)]),
+        ]);
+        let mut gate = EmitGate::new();
+        let t0 = Instant::now();
+        let mut got = Vec::new();
+        // Same instant every tick: connection changes must not wait on the interval.
+        for _ in 0..4 {
+            got.push(gate.tick(t0, &mut src).expect("emit").pads);
+        }
+        assert_eq!(got[0], vec![pad(0, 0.0)]);
+        assert!(got[1].is_empty());
+        assert_eq!(got[2], vec![pad(0, 0.0)]);
+        assert_eq!(got[3][0].index, 1);
+    }
+
+    #[test]
+    fn held_stick_is_coalesced() {
+        let mut steps: Vec<_> = (0..250).map(|i| (ev(), vec![pad(0, i as f64)])).collect();
+        steps.push((
+            Drained {
+                any: false,
+                connection_changed: false,
+            },
+            vec![pad(0, 249.0)],
+        ));
+        let mut src = FakeSource::new(steps);
+        let mut gate = EmitGate::new();
+        let t0 = Instant::now();
+        let mut emits = Vec::new();
+        for i in 0..250u64 {
+            let now = t0 + Duration::from_millis(4 * i);
+            if let Some(p) = gate.tick(now, &mut src) {
+                emits.push(p);
+            }
+        }
+        assert!(emits.len() <= 1000 / 8 + 1, "emits = {}", emits.len());
+        // Changes stopped; the next tick past the interval delivers the final value.
+        let now = t0 + Duration::from_millis(4 * 249 + 8);
+        if let Some(p) = gate.tick(now, &mut src) {
+            emits.push(p);
+        }
+        assert_eq!(emits.last().unwrap().pads[0].axes[0], 249.0);
+    }
+
+    #[test]
+    fn idle_tick_takes_no_snapshot() {
+        let mut src = FakeSource::new(vec![]);
+        let mut gate = EmitGate::new();
+        assert!(gate.tick(Instant::now(), &mut src).is_none());
+        assert_eq!(src.snapshots, 0);
+    }
+
+    #[test]
+    fn unchanged_state_not_reemitted() {
+        let mut src = FakeSource::new(vec![(ev(), vec![pad(0, 0.5)]), (ev(), vec![pad(0, 0.5)])]);
+        let mut gate = EmitGate::new();
+        let t0 = Instant::now();
+        assert!(gate.tick(t0, &mut src).is_some());
+        assert!(gate
+            .tick(t0 + Duration::from_millis(20), &mut src)
+            .is_none());
+    }
 
     fn close(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-4
