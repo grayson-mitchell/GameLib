@@ -115,6 +115,7 @@ import {
   findBridgeInstallBottle,
   isCrossoverInstalled,
   CROSSOVER_MISSING,
+  CROSSOVER_CREATE_TIMEOUT,
   getDrmBridgeRunner,
   type DrmLaunchForm
 } from './bottle'
@@ -195,6 +196,8 @@ import {
   userHome
 } from 'backend/constants/paths'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
+import type { EnginePin } from './engine/enginePins'
+import type { NonCrossoverEngine } from './engine/engineTypes'
 
 /** The project-wide appId shape guard (clientSetup.ts, installFormIpc.ts,
  * bottle.ts, bridge/allowlist.ts all carry the identical regex). Used by
@@ -1740,13 +1743,11 @@ export default class SteamGame implements Game {
       // 'failed-this-session' and silently reroutes the next Install to
       // bottled Steam, which needs the same CrossOver. Bottled Steam is a
       // narrow fallback and is never the answer to a missing engine.
-      if (isMac && !(await isCrossoverInstalled())) {
-        logWarning(
-          `SteamGame: CrossOver is not installed — install of appId ${this.appId} stopped (precondition, not a bridge failure)`,
-          LogPrefix.Steam
-        )
-        return this.crossoverRequiredError()
-      }
+      //
+      // Phase 59 (D-04): a missing CrossOver blocks only the bottled-Steam
+      // route. The bridge route installs on the built-in engine, so the gate
+      // is applied once the final route is known (below).
+      const crossoverMissing = isMac && !(await isCrossoverInstalled())
 
       // quick-260821-le0: remove a leftover unrunnable native i386 install
       // BEFORE anything else in this branch runs — HOARD proved a demoted
@@ -1836,6 +1837,14 @@ export default class SteamGame implements Game {
           prescreenLease.release()
         }
         bridgeRoute = this.bridgeRoute()
+      }
+
+      if (crossoverMissing && bridgeRoute.route !== 'bridge') {
+        logWarning(
+          `SteamGame: CrossOver is not installed — bottled-Steam install of appId ${this.appId} stopped (precondition, not a bridge failure)`,
+          LogPrefix.Steam
+        )
+        return this.crossoverRequiredError()
       }
 
       if (
@@ -2120,6 +2129,58 @@ export default class SteamGame implements Game {
     }
   }
 
+  /**
+   * Phase 59 (D-05): download the pinned built-in engine on first need, with
+   * `engine-download` progress. A failure is a PRECONDITION failure, like a
+   * missing CrossOver: it never marks the bridge failed, so it can never
+   * reroute the title to bottled Steam.
+   */
+  private async ensureBuiltInEngineForInstall(
+    pin: EnginePin
+  ): Promise<NonCrossoverEngine | InstallResult> {
+    const { ensurePinnedEngine } = await import('./engine/fallbackEngine')
+    let lastPercent = -1
+    const result = await ensurePinnedEngine(pin, {
+      onProgress: (p) => {
+        const percent = Math.round(p.percentage ?? 0)
+        if (percent === lastPercent) return
+        lastPercent = percent
+        sendGameStatusUpdate({
+          appName: this.appId,
+          runner: 'steam',
+          status: 'engine-download',
+          context: String(percent)
+        })
+      }
+    })
+    if (!result.ok) {
+      logWarning(
+        `SteamGame: built-in engine unavailable for appId ${this.appId}: ${result.reason} ${result.detail}`,
+        LogPrefix.Steam
+      )
+      sendGameStatusUpdate({
+        appName: this.appId,
+        runner: 'steam',
+        status: 'done'
+      })
+      return {
+        status: 'error',
+        error: i18next.t(
+          'gamelib:steam.engine.downloadFailed',
+          "GameLib couldn't download its built-in engine ({{reason}}). Check your connection and try again.",
+          { reason: result.reason }
+        )
+      }
+    }
+    return {
+      wineBin: result.paths.wineBin,
+      wineserverBin: result.paths.wineserverBin,
+      label: pin.label,
+      version: pin.wine.version,
+      dxvk: { dir: result.paths.dxvkDir, version: pin.dxvk.version }
+    }
+  }
+
   private async installBridgeGame(args: InstallArgs): Promise<InstallResult> {
     // quick/261016-u1w (D-A): new installs ALWAYS target this game's OWN
     // per-game bridge bottle directly — never via resolveBridgeBottleName
@@ -2143,17 +2204,46 @@ export default class SteamGame implements Game {
         `SteamGame: bridge bottle "${bridgeBottleName}" not yet provisioned for appId ${this.appId} — provisioning inline (BLOCKER 1, no consent dialog needed)`,
         LogPrefix.Steam
       )
-      const provisionResult = await provisionBridgeBottle({
-        bottleName: bridgeBottleName
-      })
-      if (provisionResult.errorCode === CROSSOVER_MISSING) {
-        // Race with the install() gate: CrossOver vanished in between. Still a
-        // precondition failure — never marks the bridge failed.
-        logWarning(
-          `SteamGame: CrossOver missing while provisioning the bridge bottle for appId ${this.appId}`,
-          LogPrefix.Steam
-        )
-        return this.crossoverRequiredError()
+      const { decideCreationEngine } = await import('./engine/engineDecision')
+      const creation = await decideCreationEngine({ appId: this.appId })
+      logInfo(
+        `SteamGame: bridge bottle creation engine for appId ${this.appId}: ${creation.kind}${creation.kind === 'pinned' ? ` (${creation.reason})` : ''}`,
+        LogPrefix.Steam
+      )
+      let provisionResult: Awaited<ReturnType<typeof provisionBridgeBottle>>
+      if (creation.kind === 'pinned') {
+        const engine = await this.ensureBuiltInEngineForInstall(creation.pin)
+        if ('status' in engine) return engine
+        provisionResult = await provisionBridgeBottle({
+          bottleName: bridgeBottleName,
+          fallbackEngine: engine
+        })
+      } else {
+        provisionResult = await provisionBridgeBottle({
+          bottleName: bridgeBottleName,
+          createTimeoutMs: creation.createTimeoutMs
+        })
+        if (
+          provisionResult.errorCode === CROSSOVER_CREATE_TIMEOUT ||
+          provisionResult.errorCode === CROSSOVER_MISSING
+        ) {
+          // D-12 (59-01 create_under_expiry): cxbottle --create can hang or
+          // fail under an expired/broken CrossOver, and CrossOver can vanish
+          // after the gate. Create the same bottle with the built-in engine.
+          logWarning(
+            `SteamGame: CrossOver bottle creation for appId ${this.appId} returned ${provisionResult.errorCode} — creating with the built-in engine`,
+            LogPrefix.Steam
+          )
+          const { ENGINE_PINS } = await import('./engine/enginePins')
+          const engine = await this.ensureBuiltInEngineForInstall(
+            ENGINE_PINS.current
+          )
+          if ('status' in engine) return engine
+          provisionResult = await provisionBridgeBottle({
+            bottleName: bridgeBottleName,
+            fallbackEngine: engine
+          })
+        }
       }
       if (provisionResult.status !== 'done') {
         logWarning(

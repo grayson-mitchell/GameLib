@@ -107,6 +107,9 @@ import {
   steamBridgeLaunchCommandParts
 } from '../bridgeKnownFixes'
 import { installSteamBridgeSharedRedists } from '../bridge/sharedRedistInstall'
+import { decideCreationEngine } from '../engine/engineDecision'
+import { ensurePinnedEngine } from '../engine/fallbackEngine'
+import { ENGINE_PINS } from '../engine/enginePins'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries } from 'backend/utils'
 // 260821-rb5: only needed by this task's case-C self-heal test (2) —
@@ -308,6 +311,7 @@ jest.mock('../bottle', () => {
     __crossoverInstalled: crossoverInstalled,
     isCrossoverInstalled: async () => crossoverInstalled() !== false,
     CROSSOVER_MISSING: 'crossover-missing',
+    CROSSOVER_CREATE_TIMEOUT: 'crossover-create-timeout',
     isBottleReady: jest.fn(),
     tellBottledSteamToLaunch: jest.fn(),
     tellBottledSteamToUninstall: jest.fn(),
@@ -498,6 +502,15 @@ jest.mock('../bridgeKnownFixes', () => ({
 // quick 261025-rkj: the bridge first-launch shared redist step.
 jest.mock('../bridge/sharedRedistInstall', () => ({
   installSteamBridgeSharedRedists: jest.fn()
+}))
+
+// Phase 59 (59-09): engine decision + on-demand download, lazily imported by
+// installBridgeGame. Defaults are set in the file-level beforeEach below.
+jest.mock('../engine/engineDecision', () => ({
+  decideCreationEngine: jest.fn()
+}))
+jest.mock('../engine/fallbackEngine', () => ({
+  ensurePinnedEngine: jest.fn()
 }))
 
 // ── backend/launcher.ts mock — runWineCommand, dynamically imported by
@@ -1931,6 +1944,15 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
 // Phase 54 plan 08: every install path acquires a lease; default to a granted
 // one so tests unrelated to the session policy keep their behaviour.
 let leaseRelease: jest.Mock
+const ENGINE_OK = {
+  ok: true,
+  paths: {
+    wineDir: '/engine/wine',
+    wineBin: '/engine/wine/bin/wine',
+    wineserverBin: '/engine/wine/bin/wineserver',
+    dxvkDir: '/engine/dxvk'
+  }
+}
 beforeEach(() => {
   leaseRelease = jest.fn()
   ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
@@ -1945,6 +1967,13 @@ beforeEach(() => {
     (_id: string, exePath: string) => [exePath]
   )
   ;(installSteamBridgeSharedRedists as jest.Mock).mockResolvedValue(undefined)
+  ;(decideCreationEngine as jest.Mock).mockResolvedValue({
+    kind: 'crossover',
+    createTimeoutMs: 120_000,
+    probed: false,
+    build: null
+  })
+  ;(ensurePinnedEngine as jest.Mock).mockResolvedValue(ENGINE_OK)
 })
 
 // ── Phase 24 Plan 08 (R4/R6/R7, finding #3): allowlist-based bridge launch
@@ -5777,7 +5806,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     )
     expect(isBridgeBottleReady).not.toHaveBeenCalledWith('GameLibSteamBridge')
     expect(provisionBridgeBottle).toHaveBeenCalledWith({
-      bottleName: `GameLibSteamBridge-${APP_ID}`
+      bottleName: `GameLibSteamBridge-${APP_ID}`,
+      createTimeoutMs: 120_000
     })
     expect(placeShimForGame).toHaveBeenCalledWith(
       APP_ID,
@@ -6489,7 +6519,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const result = await game.install({} as any)
 
     expect(provisionBridgeBottle).toHaveBeenCalledWith({
-      bottleName: `GameLibSteamBridge-${APP_ID}`
+      bottleName: `GameLibSteamBridge-${APP_ID}`,
+      createTimeoutMs: 120_000
     })
     expect(downloadSteamDepots).toHaveBeenCalled()
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
@@ -6511,7 +6542,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const result = await game.install({} as any)
 
     expect(provisionBridgeBottle).toHaveBeenCalledWith({
-      bottleName: `GameLibSteamBridge-${APP_ID}`
+      bottleName: `GameLibSteamBridge-${APP_ID}`,
+      createTimeoutMs: 120_000
     })
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -6529,63 +6561,70 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const crossoverInstalled = (): jest.Mock =>
       jest.requireMock('../bottle').__crossoverInstalled
 
-    it('CrossOver absent: install() errors with a CrossOver message, reaches no provisioner or setup dialog, and does not mark the bridge failed', async () => {
+    it('bridge route, CrossOver absent: install proceeds to the bridge (no crossoverRequired error, bridge not marked failed)', async () => {
       ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
       ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
       crossoverInstalled().mockReturnValue(false)
-
-      const game = new SteamGame(APP_ID)
-      const result = await game.install({} as any)
-
-      expect(result.status).toBe('error')
-      // i18next is mocked to echo the key in this file
-      expect(result.error).toContain('crossoverRequired')
-      expect(provisionBridgeBottle).not.toHaveBeenCalled()
-      expect(downloadSteamDepots).not.toHaveBeenCalled()
-      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
-        'steamBridgeSetupRequired',
-        expect.anything()
-      )
-      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
-        'steamBottleSetupRequired',
-        expect.anything()
-      )
-
-      // CrossOver gets installed: the next press still routes to the bridge.
-      crossoverInstalled().mockReturnValue(true)
+      ;(decideCreationEngine as jest.Mock).mockResolvedValue({
+        kind: 'pinned',
+        reason: 'cx-missing',
+        pin: ENGINE_PINS.current
+      })
       ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
         status: 'done'
       })
-      await game.install({} as any)
-      expect(provisionBridgeBottle).toHaveBeenCalledTimes(1)
-    })
-
-    it('race: provisionBridgeBottle reports crossover-missing -> error, no setup dialog, next install still tries the bridge', async () => {
-      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
-      ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
-        status: 'error',
-        errorCode: 'crossover-missing',
-        error: 'CrossOver is required...'
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+        status: 'done'
       })
 
       const game = new SteamGame(APP_ID)
       const result = await game.install({} as any)
 
-      expect(result.status).toBe('error')
-      // i18next is mocked to echo the key in this file
-      expect(result.error).toContain('crossoverRequired')
+      expect(result.error).toBeUndefined()
+      expect(provisionBridgeBottle).toHaveBeenCalledTimes(1)
+      expect(downloadSteamDepots).toHaveBeenCalled()
       expect(sendFrontendMessage).not.toHaveBeenCalledWith(
         'steamBridgeSetupRequired',
         expect.anything()
       )
+    })
 
-      await game.install({} as any)
+    it('race: provisionBridgeBottle reports crossover-missing -> built-in engine retry, no setup dialog', async () => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
+      ;(provisionBridgeBottle as jest.Mock)
+        .mockResolvedValueOnce({
+          status: 'error',
+          errorCode: 'crossover-missing',
+          error: 'CrossOver is required...'
+        })
+        .mockResolvedValueOnce({ status: 'done' })
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(result.error).toBeUndefined()
       expect(provisionBridgeBottle).toHaveBeenCalledTimes(2)
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.anything()
+      )
     })
 
     it('CrossOver absent on a bottle-routed, non-bridge-eligible title: same error, no bottled-Steam setup dialog', async () => {
+      // Known-bad + acknowledged: the route resolves to bottled Steam.
       ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+      ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
+        'drm-wrapped'
+      )
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false,
+        bridge: { noticeAcknowledgedFor: 'known-bad' }
+      })
       ;(isBottleReady as jest.Mock).mockReturnValue(false)
       crossoverInstalled().mockReturnValue(false)
 
@@ -6595,9 +6634,145 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       expect(result.status).toBe('error')
       // i18next is mocked to echo the key in this file
       expect(result.error).toContain('crossoverRequired')
+      expect(provisionBridgeBottle).not.toHaveBeenCalled()
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeRouteNotice',
+        expect.anything()
+      )
       expect(sendFrontendMessage).not.toHaveBeenCalledWith(
         'steamBottleSetupRequired',
         expect.anything()
+      )
+    })
+  })
+
+  describe('Phase 59 (59-09): engine-aware bridge bottle creation', () => {
+    const pinnedDecision = () => ({
+      kind: 'pinned',
+      reason: 'cx-missing',
+      pin: ENGINE_PINS.current
+    })
+    const sendGameStatusUpdate = jest.requireMock('backend/utils')
+      .sendGameStatusUpdate as jest.Mock
+    const statuses = () =>
+      (sendGameStatusUpdate as jest.Mock).mock.calls
+        .map(([u]) => u)
+        .filter((u) => u.status === 'engine-download')
+        .map((u) => u.context)
+
+    beforeEach(() => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
+      ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+    })
+
+    it('pinned decision: downloads with deduplicated whole-percent engine-download statuses, then creates the bottle with fallbackEngine', async () => {
+      ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
+      ;(ensurePinnedEngine as jest.Mock).mockImplementation(
+        async (_pin, opts) => {
+          for (const percentage of [0, 0.2, 10.4, 10.2, 99.6, 100]) {
+            opts.onProgress({ phase: 'download', artifact: 'wine', percentage })
+          }
+          return ENGINE_OK
+        }
+      )
+
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(statuses()).toEqual(['0', '10', '100'])
+      const call = (provisionBridgeBottle as jest.Mock).mock.calls[0][0]
+      expect(call.bottleName).toBe(`GameLibSteamBridge-${APP_ID}`)
+      expect(call.wineVersion).toBeUndefined()
+      expect(call.fallbackEngine).toEqual(
+        expect.objectContaining({
+          wineBin: ENGINE_OK.paths.wineBin,
+          wineserverBin: ENGINE_OK.paths.wineserverBin,
+          dxvk: expect.objectContaining({ dir: ENGINE_OK.paths.dxvkDir })
+        })
+      )
+      expect(downloadSteamDepots).toHaveBeenCalled()
+      expect(result.status).toBe('done')
+    })
+
+    it('already-installed pin: no engine-download status is sent', async () => {
+      ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
+      await new SteamGame(APP_ID).install({} as any)
+      expect(statuses()).toEqual([])
+      expect(provisionBridgeBottle).toHaveBeenCalledWith(
+        expect.objectContaining({ fallbackEngine: expect.anything() })
+      )
+    })
+
+    it('crossover decision: never downloads the engine (D-05) and passes the create cap', async () => {
+      await new SteamGame(APP_ID).install({} as any)
+      expect(ensurePinnedEngine).not.toHaveBeenCalled()
+      expect(provisionBridgeBottle).toHaveBeenCalledWith({
+        bottleName: `GameLibSteamBridge-${APP_ID}`,
+        createTimeoutMs: 120_000
+      })
+    })
+
+    it('crossover create timeout (D-12): falls back to the built-in engine and continues', async () => {
+      ;(provisionBridgeBottle as jest.Mock)
+        .mockResolvedValueOnce({
+          status: 'error',
+          errorCode: 'crossover-create-timeout',
+          error: 'timed out'
+        })
+        .mockResolvedValueOnce({ status: 'done' })
+
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(ensurePinnedEngine).toHaveBeenCalledTimes(1)
+      expect(provisionBridgeBottle).toHaveBeenCalledTimes(2)
+      expect(
+        (provisionBridgeBottle as jest.Mock).mock.calls[1][0].fallbackEngine
+      ).toBeDefined()
+      expect(result.status).toBe('done')
+    })
+
+    it('undownloadable engine: error result, terminal done status, never marks the bridge failed or shows setup', async () => {
+      ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
+      ;(ensurePinnedEngine as jest.Mock).mockResolvedValue({
+        ok: false,
+        reason: 'offline',
+        detail: 'no network'
+      })
+
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(result.status).toBe('error')
+      expect(result.error).toContain('downloadFailed')
+      expect(provisionBridgeBottle).not.toHaveBeenCalled()
+      expect(downloadSteamDepots).not.toHaveBeenCalled()
+      expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ appName: APP_ID, status: 'done' })
+      )
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.anything()
+      )
+      // a later install still routes to the bridge (not marked failed)
+      ;(ensurePinnedEngine as jest.Mock).mockResolvedValue(ENGINE_OK)
+      await new SteamGame(APP_ID).install({} as any)
+      expect(provisionBridgeBottle).toHaveBeenCalledTimes(1)
+    })
+
+    it('other provisioning errors keep marking the bridge failed with the setup dialog', async () => {
+      ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+        status: 'error',
+        error: 'boom'
+      })
+      const result = await new SteamGame(APP_ID).install({} as any)
+      expect(result).toEqual({ status: 'done', deferredToSetup: true })
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.objectContaining({ reason: 'bridge-bottle-provision-failed' })
       )
     })
   })
