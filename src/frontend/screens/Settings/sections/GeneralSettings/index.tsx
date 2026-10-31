@@ -10,7 +10,6 @@ import {
   EgsSettings,
   EnableSteamNativeInstall,
   HideChangelogOnStartup,
-  LoginBackground,
   MaxWorkers,
   MinimizeOnGameLaunch,
   Shortcuts,
@@ -31,8 +30,6 @@ export default function GeneralSettings() {
       <h3 className="settingSubheader">{t('settings.navbar.general')}</h3>
 
       <LanguageSelector />
-
-      <LoginBackground />
 
       <DefaultInstallPath />
 

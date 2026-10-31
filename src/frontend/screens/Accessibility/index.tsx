@@ -17,6 +17,7 @@ import SettingsContext from '../Settings/SettingsContext'
 import useSettingsContext from '../../hooks/useSettingsContext'
 import './index.css'
 import { hasHelp } from 'frontend/hooks/hasHelp'
+import { LoginBackground } from '../Settings/components'
 import { MenuItem, SelectChangeEvent } from '@mui/material'
 import { queryLocalFontsSafe } from './queryLocalFontsSafe'
 
@@ -137,6 +138,10 @@ const Accessibility = React.memo(function Accessibility() {
           {t('accessibility.title', 'Appearance')}
         </h1>
 
+        <ThemeSelector />
+
+        <LoginBackground />
+
         <span className="rangeWrapper Field">
           <label className={classNames({ isRTL: isRTL })}>
             {t('accessibility.zoom', 'Zoom')} ({zoomDraft}%)
@@ -196,8 +201,6 @@ const Accessibility = React.memo(function Accessibility() {
         >
           {options}
         </SelectField>
-
-        <ThemeSelector />
 
         <span className="setting">
           <label className={classNames('toggleWrapper', { isRTL: isRTL })}>
