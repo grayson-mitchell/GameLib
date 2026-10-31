@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 58 (steam-bridge-multiplayer) — EXECUTING
 Plan: 4 of 34
 Status: Ready to execute
-Last activity: 2026-11-01 - Completed quick task 261101-cl4: fix vite watcher OOM and shell stderr abort
+Last activity: 2026-11-01 - Completed quick task 261101-cvs: rewrite Default Steam path help text
 
 Progress: [█████████░] 92%
 
@@ -484,6 +484,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast-261030 | Stores tab reopens the last-visited store instead of Epic — `WebView` writes `last-store` (localStorage) on each `/store/:store` visit; `resolveDefaultStore` validates it. | 2026-10-30 | 13cc28c1b | ✅ | — |
 | 261030-ts4 | Leaving the in-app Epic, GOG or Amazon store now refreshes that store's library, as Steam does: `steamStoreExitRefresh.ts` generalised to a per-store table (`storeExitRefresh.ts`); Epic arms through the macOS raw-WKWebView nav drain, Amazon arms on any `gaming.amazon.com` page. Gate follow-up: embed Back no longer crosses stores — each store keeps its own parked history and a store switch re-opens (pre-existing defect). | 2026-10-30 | 3213dea8a | WebView jest 23 suites/550, cargo store_embed 42, codecheck, scoped eslint/prettier/rustfmt. Live gate PASSED for GOG, Epic, Steam and the Back fix (92788de94); Amazon not run (needs Prime), left on the todo. | [261030-ts4-store-exit-library-refresh-epic-gog-amazon](./quick/261030-ts4-store-exit-library-refresh-epic-gog-amazon/) |
 | 261101-cl4 | Fixed the `tauri:dev` crash loop: vite's watcher followed Wine-prefix `dosdevices` symlinks (`z: -> /`) under `.planning` until node OOMed (311,753 dirs, 2.6 GB, unsettled), and the orphaned shell then double-panicked on a closed stderr and aborted. `server.watch.ignored` gains `**/.planning/**` + `**/.claude/worktrees/**`; all shell `eprintln!` swept to non-panicking `shell_eprintln!`; panic hook writes the log before stderr. | 2026-11-01 | c5f2a394c, 95e6f5f4e | Postfix probe settled, 10,174 dirs, planning 0; viteRendererConfig 49/49; cargo test 5/5. 18 spike dosdevices links deleted by hand (Wine recreates them). | [261101-cl4-fix-vite-watcher-oom-via-wine-prefix-sym](./quick/261101-cl4-fix-vite-watcher-oom-via-wine-prefix-sym/) |
+| 261101-cvs | Rewrote the Default Steam path help text (Heroic's "determines Proton version" wording) to describe the real uses: Steam libraries, download progress, connection status, non-Steam shortcuts; Proton scoped to Linux. en locale + TSX fallback only. | 2026-11-01 | 960cbe67c | prettier (tsx) pass, JSON parses, old string gone from both files | [261101-cvs-rewrite-default-steam-path-help-text](./quick/261101-cvs-rewrite-default-steam-path-help-text/) |
 
 ## Deferred Items
 
