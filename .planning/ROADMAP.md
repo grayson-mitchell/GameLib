@@ -764,3 +764,13 @@ Plans:
 
 - FAIL routing: a `Verdict: FAIL` (or any item left `issue`/`blocked`) routes to gap-closure planning with `/gsd-plan-phase 58 --gaps`; the SUMMARY says so in its first line, and the phase is not marked done
 - Precondition: halt unless 58-01-TITLES.md has `Verdict: PROCEED`
+
+### Phase 59: Steam engine fallback when CrossOver is unavailable
+
+**Goal:** A Windows Steam title on the macOS native bridge still launches when CrossOver is missing, its trial has expired for that bottle, or it is broken. CrossOver stays the first-choice engine. The fallback is one Wine-Staging + DXVK build pinned per GameLib release, which GameLib installs and manages itself. GameLib keeps the previous pinned build so a bad bump can be rolled back. The fallback runs the game's existing bridge bottle with `USER=crossover`, so saves and settings stay in one Windows profile. Before every CrossOver launch, GameLib checks the bottle's trial state with `CX_BOTTLE=<bottle> wine --demo-status`. An expired bottle goes to the fallback instead of hanging on CrossOver's nag dialog. CrossOver launches always run with a timeout. Users see "N days remaining" before expiry. A per-game engine override exists only as an advanced, explicitly unsupported option (the Proton model): known-fixes and census verdicts do not apply to it, and the launch log records the exact engine and version. GameLib records the CrossOver versions it has tested, and warns on an untested one without blocking it. Out of scope: DRM mode and bottled Steam (CrossOver-only), GPTK and `-DXMT` for Steam, a full census on the fallback (it is best-effort). Evidence: spikes 056–060 and the Idea B engine decision in `.planning/spikes/MANIFEST.md`.
+**Requirements**: TBD
+**Depends on:** Phase 51 (per-game bridge bottles)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 59 to break down)
