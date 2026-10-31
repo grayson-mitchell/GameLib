@@ -5102,6 +5102,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
   beforeEach(() => {
     __resetBridgeFailedSessionForTests()
+    libraryModule.clearBridgeInstallFinalized(APP_ID)
     library.clear()
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Avernum 4' }))
@@ -5282,6 +5283,32 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ).toBeGreaterThan(
       (installSteamBridgeSharedRedists as jest.Mock).mock.invocationCallOrder[0]
     )
+  })
+
+  it('quick 261031-ihs: success finalizes the marker, unset during the tail, with one toast', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+    // A leftover marker from a previous install must be cleared at start.
+    libraryModule.markBridgeInstallFinalized(APP_ID)
+    const seen: boolean[] = []
+    ;(installSteamBridgeSharedRedists as jest.Mock).mockImplementation(
+      async () => {
+        seen.push(libraryModule.isBridgeInstallFinalized(APP_ID))
+      }
+    )
+    ;(notify as jest.Mock).mockClear()
+
+    await new SteamGame(APP_ID).install({} as any)
+
+    expect(seen).toEqual([false])
+    expect(libraryModule.isBridgeInstallFinalized(APP_ID)).toBe(true)
+    expect(sendGameStatusUpdate).toHaveBeenLastCalledWith({
+      appName: APP_ID,
+      runner: 'steam',
+      status: 'done'
+    })
+    expect(notify).toHaveBeenCalledTimes(1)
   })
 
   it('56-20 Gap 3: a rejecting redist step still sends the final done status', async () => {
@@ -5495,6 +5522,34 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
       ;(removePerGameBridgeBottle as jest.Mock).mockResolvedValue({
         status: 'removed'
+      })
+    })
+
+    it('quick 261031-ihs: an error result marks the install finalized and sends done', async () => {
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed',
+        shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+        verdict: {
+          status: 'clean',
+          arch: 'x86',
+          missingSymbols: [],
+          interfaceVersions: {},
+          stubbedInterfaces: [],
+          shimExportSetVersion: 'v-ceg',
+          scannedAt: '2026-01-01T00:00:00.000Z'
+        },
+        drm: CEG_DRM
+      })
+      const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(result.status).toBe('error')
+      expect(libraryModule.isBridgeInstallFinalized(APP_ID)).toBe(true)
+      expect(sendGameStatusUpdate).toHaveBeenLastCalledWith({
+        appName: APP_ID,
+        runner: 'steam',
+        status: 'done'
       })
     })
 

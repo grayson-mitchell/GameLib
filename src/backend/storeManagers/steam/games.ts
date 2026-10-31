@@ -87,7 +87,9 @@ import {
   resolveInstallRoot,
   findOtherManifestsWithInstalldir,
   removeSteamInstallCopy,
-  STEAM_BRIDGE_FINISHING_CONTEXT
+  STEAM_BRIDGE_FINISHING_CONTEXT,
+  markBridgeInstallFinalized,
+  clearBridgeInstallFinalized
 } from './library'
 import {
   probeMacSteamPid,
@@ -2183,12 +2185,14 @@ export default class SteamGame implements Game {
     // Quick 261029-exu: the bridge poller no longer sends 'done' when the
     // manifest lands, so a path that stops after the download (CEG, shim
     // failure, a throw) must clear the "finishing" status itself.
-    const clearFinishing = () =>
+    const clearFinishing = () => {
+      markBridgeInstallFinalized(this.appId)
       sendGameStatusUpdate({
         appName: this.appId,
         runner: 'steam',
         status: 'done'
       })
+    }
     try {
       const result = await this.installBridgeGameLeased(args, bridgeBottleName)
       if (result.status === 'error') clearFinishing()
@@ -2206,6 +2210,8 @@ export default class SteamGame implements Game {
     args: InstallArgs,
     bridgeBottleName: string
   ): Promise<InstallResult> {
+    // a new install must show finishing again (quick 261031-ihs)
+    clearBridgeInstallFinalized(this.appId)
     const targetSteamappsDir = getBottleSteamappsDir(bridgeBottleName)
     const downloadResult = await this.installDepotDownload(args, {
       targetSteamappsDirOverride: targetSteamappsDir,
@@ -2412,7 +2418,8 @@ export default class SteamGame implements Game {
     const { installSteamBridgeSharedRedists } =
       await import('./bridge/sharedRedistInstall')
     // The download queue suppresses Steam's own 'done', and on the bridge the
-    // ACF poller leaves completion to this method (quick 261029-exu), so the
+    // ACF poller leaves completion to this method (quick 261029-exu) and stays
+    // silent once this method has marked the install finalized (261031-ihs), so the
     // final update below is the only status that clears a lingering 'redist'
     // or 'drm-setup' (56-16 Gap 3) and ends the "finishing" state.
     const sendFinishing = () =>
@@ -2447,6 +2454,7 @@ export default class SteamGame implements Game {
         }
       )
     } finally {
+      markBridgeInstallFinalized(this.appId)
       sendGameStatusUpdate({
         appName: this.appId,
         runner: 'steam',
