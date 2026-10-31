@@ -5376,11 +5376,10 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     // A leftover marker from a previous install must be cleared at start.
     libraryModule.markBridgeInstallFinalized(APP_ID)
     const seen: boolean[] = []
-    ;(installSteamBridgeSharedRedists as jest.Mock).mockImplementation(
-      async () => {
-        seen.push(libraryModule.isBridgeInstallFinalized(APP_ID))
-      }
-    )
+    ;(installSteamBridgeSharedRedists as jest.Mock).mockImplementation(() => {
+      seen.push(libraryModule.isBridgeInstallFinalized(APP_ID))
+      return Promise.resolve()
+    })
     ;(notify as jest.Mock).mockClear()
 
     await new SteamGame(APP_ID).install({} as any)
@@ -6728,14 +6727,12 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('pinned decision: downloads with deduplicated whole-percent engine-download statuses, then creates the bottle with fallbackEngine', async () => {
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-      ;(ensurePinnedEngine as jest.Mock).mockImplementation(
-        async (_pin, opts) => {
-          for (const percentage of [0, 0.2, 10.4, 10.2, 99.6, 100]) {
-            opts.onProgress({ phase: 'download', artifact: 'wine', percentage })
-          }
-          return ENGINE_OK
+      ;(ensurePinnedEngine as jest.Mock).mockImplementation((_pin, opts) => {
+        for (const percentage of [0, 0.2, 10.4, 10.2, 99.6, 100]) {
+          opts.onProgress({ phase: 'download', artifact: 'wine', percentage })
         }
-      )
+        return Promise.resolve(ENGINE_OK)
+      })
 
       const result = await new SteamGame(APP_ID).install({} as any)
 
@@ -12251,13 +12248,13 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         useDrmOk(id)
         const spy = jest
           .spyOn(SteamGame.prototype as any, 'launchDrmModeGame')
-          .mockImplementation(async () => {
+          .mockImplementation(() => {
             sendGameStatusUpdate({
               appName: id,
               runner: 'steam',
               status: 'redist'
             })
-            return false
+            return Promise.resolve(false)
           })
         try {
           expect(await new SteamGame(id).launch({} as never)).toBe(false)
@@ -12736,13 +12733,13 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         pinnedDecision('cx-missing', { needsDownload: true })
       )
       ;(ensurePinnedEngine as jest.Mock).mockImplementation(
-        async (_pin: unknown, opts: any) => {
+        (_pin: unknown, opts: any) => {
           opts.onProgress({
             phase: 'downloading',
             artifact: 'wine',
             percentage: 40
           })
-          return ENGINE_OK
+          return Promise.resolve(ENGINE_OK)
         }
       )
       expect(await new SteamGame(ID).launch({} as any)).toBe(true)
@@ -12917,14 +12914,12 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           launcherExited: jest.fn()
         })
         const order: string[] = []
-        ;(killBridgeBottleWineServer as jest.Mock).mockImplementation(
-          async () => {
-            order.push(
-              `kill:${getEngineSelection(ID) ? 'registered' : 'cleared'}`
-            )
-            return true
-          }
-        )
+        ;(killBridgeBottleWineServer as jest.Mock).mockImplementation(() => {
+          order.push(
+            `kill:${getEngineSelection(ID) ? 'registered' : 'cleared'}`
+          )
+          return Promise.resolve(true)
+        })
         expect(await new SteamGame(ID).launch({} as any)).toBe(true)
         ;(decideLaunchEngine as jest.Mock).mockClear()
         await jest.advanceTimersByTimeAsync(180_000)

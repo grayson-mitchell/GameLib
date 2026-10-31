@@ -78,29 +78,29 @@ function makeInput(
 
 function makeDeps(callOrder: string[], over: Partial<DrmLaunchSetupDeps> = {}) {
   const deps = {
-    isMacSteamRunning: jest.fn(async () => {
+    isMacSteamRunning: jest.fn(() => {
       callOrder.push('steam')
-      return true
+      return Promise.resolve(true)
     }),
-    detectCrossover: jest.fn(async () => {
+    detectCrossover: jest.fn(() => {
       callOrder.push('crossover')
-      return { status: 'ok', ...CROSSOVER }
+      return Promise.resolve({ status: 'ok', ...CROSSOVER })
     }),
-    ensureComponent: jest.fn(async () => {
+    ensureComponent: jest.fn(() => {
       callOrder.push('component')
-      return { status: 'ok', ...COMPONENT }
+      return Promise.resolve({ status: 'ok', ...COMPONENT })
     }),
-    ensureRunner: jest.fn(async () => {
+    ensureRunner: jest.fn(() => {
       callOrder.push('runner')
-      return { status: 'ok', ...RUNNER }
+      return Promise.resolve({ status: 'ok', ...RUNNER })
     }),
-    ensureValveClient: jest.fn(async () => {
+    ensureValveClient: jest.fn(() => {
       callOrder.push('valve')
-      return { status: 'ok', ...VALVE }
+      return Promise.resolve({ status: 'ok', ...VALVE })
     }),
-    stageBottle: jest.fn(async () => {
+    stageBottle: jest.fn(() => {
       callOrder.push('stage')
-      return { status: 'ok', ...STAGED }
+      return Promise.resolve({ status: 'ok', ...STAGED })
     }),
     buildBottleSettings: jest.fn(() => SETTINGS),
     registerRunner: jest.fn(() => {
@@ -109,9 +109,9 @@ function makeDeps(callOrder: string[], over: Partial<DrmLaunchSetupDeps> = {}) {
     }),
     clearRunner: jest.fn(),
     getRunner: jest.fn(() => undefined),
-    endBottleSession: jest.fn(async () => {
+    endBottleSession: jest.fn(() => {
       callOrder.push('end-session')
-      return true
+      return Promise.resolve(true)
     }),
     sendStatus: jest.fn(),
     ...over
@@ -253,9 +253,9 @@ describe('drmLaunchSetup', () => {
   test('Mac Steam not running or probe failure stops before everything', async () => {
     const order: string[] = []
     const deps = makeDeps(order, {
-      isMacSteamRunning: jest.fn(async () => {
+      isMacSteamRunning: jest.fn(() => {
         order.push('steam')
-        return false
+        return Promise.resolve(false)
       })
     })
     const res = await drmLaunchSetup(makeInput(freshId()), deps)
@@ -344,17 +344,17 @@ describe('drmLaunchSetup', () => {
   test('progress: two contexts, consecutive duplicates deduped', async () => {
     const id = freshId()
     const deps = makeDeps([], {
-      ensureComponent: jest.fn(async (_o: Any, d: Any) => {
+      ensureComponent: jest.fn((_o: Any, d: Any) => {
         d.onFetchStart()
-        return { status: 'ok', ...COMPONENT }
+        return Promise.resolve({ status: 'ok', ...COMPONENT })
       }),
-      ensureRunner: jest.fn(async (_o: Any, d: Any) => {
+      ensureRunner: jest.fn((_o: Any, d: Any) => {
         d.onCloneStart()
-        return { status: 'ok', ...RUNNER }
+        return Promise.resolve({ status: 'ok', ...RUNNER })
       }),
-      ensureValveClient: jest.fn(async (_o: Any, d: Any) => {
+      ensureValveClient: jest.fn((_o: Any, d: Any) => {
         d.onFetchStart()
-        return { status: 'ok', ...VALVE }
+        return Promise.resolve({ status: 'ok', ...VALVE })
       })
     } as Any)
     const res = (await drmLaunchSetup(makeInput(id), deps)) as Any
@@ -390,9 +390,9 @@ describe('drmLaunchSetup', () => {
 
   describe('terminal done after failure (56-27, IN-01)', () => {
     const progressDeps = () => ({
-      ensureComponent: jest.fn(async (_o: Any, d: Any) => {
+      ensureComponent: jest.fn((_o: Any, d: Any) => {
         d.onFetchStart()
-        return { status: 'ok', ...COMPONENT }
+        return Promise.resolve({ status: 'ok', ...COMPONENT })
       })
     })
     const doneOf = (id: string) => ({
@@ -405,11 +405,13 @@ describe('drmLaunchSetup', () => {
       const id = freshId()
       const deps = makeDeps([], {
         ...progressDeps(),
-        stageBottle: jest.fn(async () => ({
-          status: 'error',
-          step: 'bottle-stage',
-          cause: 'boom'
-        }))
+        stageBottle: jest.fn(() =>
+          Promise.resolve({
+            status: 'error',
+            step: 'bottle-stage',
+            cause: 'boom'
+          })
+        )
       } as Any)
       const res = (await drmLaunchSetup(makeInput(id), deps)) as Any
       expect(res.status).toBe('error')
@@ -435,11 +437,13 @@ describe('drmLaunchSetup', () => {
 
     test('no progress and stage error sends nothing', async () => {
       const deps = makeDeps([], {
-        stageBottle: jest.fn(async () => ({
-          status: 'error',
-          step: 'bottle-stage',
-          cause: 'boom'
-        }))
+        stageBottle: jest.fn(() =>
+          Promise.resolve({
+            status: 'error',
+            step: 'bottle-stage',
+            cause: 'boom'
+          })
+        )
       } as Any)
       await drmLaunchSetup(makeInput(freshId()), deps)
       expect(deps.sendStatus).not.toHaveBeenCalled()
@@ -447,7 +451,7 @@ describe('drmLaunchSetup', () => {
 
     test('Mac Steam not running sends nothing', async () => {
       const deps = makeDeps([], {
-        isMacSteamRunning: jest.fn(async () => false)
+        isMacSteamRunning: jest.fn(() => Promise.resolve(false))
       } as Any)
       const res = (await drmLaunchSetup(makeInput(freshId()), deps)) as Any
       expect(res.status).toBe('error')
@@ -604,13 +608,13 @@ describe('prefetchDrmDownloads (quick 261029-e2t)', () => {
   it("reports fetch progress as 'drm-setup'", async () => {
     const id = freshId()
     const deps = makeDeps([], {
-      ensureComponent: jest.fn(async (_i: Any, h: Any) => {
+      ensureComponent: jest.fn((_i: Any, h: Any) => {
         h.onFetchStart()
-        return { status: 'ok', ...COMPONENT }
+        return Promise.resolve({ status: 'ok', ...COMPONENT })
       }),
-      ensureValveClient: jest.fn(async (_i: Any, h: Any) => {
+      ensureValveClient: jest.fn((_i: Any, h: Any) => {
         h.onFetchStart()
-        return { status: 'ok', ...VALVE }
+        return Promise.resolve({ status: 'ok', ...VALVE })
       })
     } as Any)
     await prefetchDrmDownloads(prefetchInput(id), deps)

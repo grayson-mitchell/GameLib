@@ -173,7 +173,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
 
   // Test 1: checkSteamInstalled resolves a real boolean, not the unported marker.
   it('Test 1: checkSteamInstalled invoke resolves a real boolean, not the unported marker', async () => {
-    jest.mocked(SteamUser.isSteamClientInstalled).mockReturnValue(true)
+    jest.spyOn(SteamUser, 'isSteamClientInstalled').mockReturnValue(true)
 
     const { input, frames } = startSidecar()
     writeInvoke(input, 'check-1', 'checkSteamInstalled', [])
@@ -181,13 +181,15 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
 
     const response = frames.find((frame) => frame.id === 'check-1')
     expect(response).toMatchObject({ id: 'check-1', ok: true, result: true })
-    expect(SteamUser.isSteamClientInstalled).toHaveBeenCalledTimes(1)
+    expect(
+      jest.spyOn(SteamUser, 'isSteamClientInstalled')
+    ).toHaveBeenCalledTimes(1)
   })
 
   // Test 2: steamStartQR resolves the declared shape and delegates to
   // SteamUser.startQRLogin exactly once.
   it('Test 2: steamStartQR invoke resolves the declared shape and delegates to SteamUser.startQRLogin exactly once', async () => {
-    jest.mocked(SteamUser.startQRLogin).mockResolvedValue({
+    jest.spyOn(SteamUser, 'startQRLogin').mockResolvedValue({
       status: 'done',
       challengeUrl: 'https://s.team/q/1/999001'
     })
@@ -202,13 +204,15 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       ok: true,
       result: { status: 'done', challengeUrl: 'https://s.team/q/1/999001' }
     })
-    expect(SteamUser.startQRLogin).toHaveBeenCalledTimes(1)
+    expect(jest.spyOn(SteamUser, 'startQRLogin')).toHaveBeenCalledTimes(1)
   })
 
   // Test 3: steamPollQR resolves the declared shape and delegates to
   // SteamUser.pollQRLogin.
   it('Test 3: steamPollQR invoke resolves the declared shape and delegates to SteamUser.pollQRLogin', async () => {
-    jest.mocked(SteamUser.pollQRLogin).mockResolvedValue({ status: 'waiting' })
+    jest
+      .spyOn(SteamUser, 'pollQRLogin')
+      .mockResolvedValue({ status: 'waiting' })
 
     const { input, frames } = startSidecar()
     writeInvoke(input, 'poll-1', 'steamPollQR', [])
@@ -220,7 +224,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       ok: true,
       result: { status: 'waiting' }
     })
-    expect(SteamUser.pollQRLogin).toHaveBeenCalledTimes(1)
+    expect(jest.spyOn(SteamUser, 'pollQRLogin')).toHaveBeenCalledTimes(1)
   })
 
   // Test 4 (token seam + Phase 28 D-04 regression, extended to this channel
@@ -232,7 +236,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   // field for steamConfigStore.
   it('Test 4 (token seam): a successful QR poll writes the token through the TokenStore seam via rustInvoke, and it never surfaces in a store snapshot', async () => {
     jest
-      .mocked(SteamUser.pollQRLogin)
+      .spyOn(SteamUser, 'pollQRLogin')
       .mockResolvedValue({ status: 'done', username: 'gsd-tester' })
 
     const { input, frames } = startSidecar()
@@ -345,7 +349,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   describe('credential/SteamGuard/TOTP login trio', () => {
     it('REQ-34.4-01 steamStartCredentials invoke resolves a real value (not the unported marker) and delegates the destructured username/password, not the raw payload object', async () => {
       jest
-        .mocked(SteamUser.startCredentialLogin)
+        .spyOn(SteamUser, 'startCredentialLogin')
         .mockResolvedValue({ status: 'done' })
 
       const { input, frames } = startSidecar()
@@ -361,16 +365,17 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { status: 'done' }
       })
       expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
-      expect(SteamUser.startCredentialLogin).toHaveBeenCalledTimes(1)
-      expect(SteamUser.startCredentialLogin).toHaveBeenCalledWith(
-        'gsd-tester',
-        'super-secret'
-      )
+      expect(
+        jest.spyOn(SteamUser, 'startCredentialLogin')
+      ).toHaveBeenCalledTimes(1)
+      expect(
+        jest.spyOn(SteamUser, 'startCredentialLogin')
+      ).toHaveBeenCalledWith('gsd-tester', 'super-secret')
     })
 
     it('REQ-34.4-01 steamStartCredentials round-trips a guard_required-shaped value unchanged (the frontend contract, steam/user.ts:49-51)', async () => {
       jest
-        .mocked(SteamUser.startCredentialLogin)
+        .spyOn(SteamUser, 'startCredentialLogin')
         .mockResolvedValue({ status: 'guard_required' })
 
       const { input, frames } = startSidecar()
@@ -389,7 +394,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
 
     it('REQ-34.4-01 steamSubmitGuard invoke resolves a real value and delegates the bare code string to submitSteamGuardCode', async () => {
       jest
-        .mocked(SteamUser.submitSteamGuardCode)
+        .spyOn(SteamUser, 'submitSteamGuardCode')
         .mockResolvedValue({ status: 'done' })
 
       const { input, frames } = startSidecar()
@@ -403,13 +408,17 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { status: 'done' }
       })
       expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
-      expect(SteamUser.submitSteamGuardCode).toHaveBeenCalledTimes(1)
-      expect(SteamUser.submitSteamGuardCode).toHaveBeenCalledWith('ABCDE')
+      expect(
+        jest.spyOn(SteamUser, 'submitSteamGuardCode')
+      ).toHaveBeenCalledTimes(1)
+      expect(
+        jest.spyOn(SteamUser, 'submitSteamGuardCode')
+      ).toHaveBeenCalledWith('ABCDE')
     })
 
     it('REQ-34.4-01 steamPollCredential invoke resolves a real value and delegates with no arguments', async () => {
       jest
-        .mocked(SteamUser.pollCredentialLogin)
+        .spyOn(SteamUser, 'pollCredentialLogin')
         .mockResolvedValue({ status: 'waiting' })
 
       const { input, frames } = startSidecar()
@@ -423,15 +432,19 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { status: 'waiting' }
       })
       expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
-      expect(SteamUser.pollCredentialLogin).toHaveBeenCalledTimes(1)
-      expect(SteamUser.pollCredentialLogin).toHaveBeenCalledWith()
+      expect(
+        jest.spyOn(SteamUser, 'pollCredentialLogin')
+      ).toHaveBeenCalledTimes(1)
+      expect(
+        jest.spyOn(SteamUser, 'pollCredentialLogin')
+      ).toHaveBeenCalledWith()
     })
   })
 
   // ── Session/identity trio (Phase 34.4 Plan 01, REQ-34.4-02) ──────────────────
   describe('session/identity trio', () => {
     it('REQ-34.4-02 getSteamUserInfo invoke round-trips a real value, not the unported marker', async () => {
-      jest.mocked(SteamUser.getUserDetails).mockResolvedValue({
+      jest.spyOn(SteamUser, 'getUserDetails').mockResolvedValue({
         username: 'gsd-tester',
         steamId: 'STEAMID_TEST'
       })
@@ -447,7 +460,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { username: 'gsd-tester', steamId: 'STEAMID_TEST' }
       })
       expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
-      expect(SteamUser.getUserDetails).toHaveBeenCalledTimes(1)
+      expect(jest.spyOn(SteamUser, 'getUserDetails')).toHaveBeenCalledTimes(1)
     })
 
     it('REQ-34.4-02 getSteamSyncedAt invoke resolves null when the store has no syncedAt (matching `?? null`)', async () => {
@@ -465,7 +478,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
 
     describe('logoutSteam (the G-30-01 send channel)', () => {
       it('REQ-34.4-02 kind proof, positive direction: a logoutSteam SEND frame causes SteamUser.logout to be called exactly once', async () => {
-        jest.mocked(SteamUser.logout).mockResolvedValue(undefined)
+        jest.spyOn(SteamUser, 'logout').mockResolvedValue(undefined)
 
         const { input, frames } = startSidecar()
         writeSend(input, 'logout-send-1', 'logoutSteam', [])
@@ -475,11 +488,11 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         expect(
           frames.find((frame) => frame.id === 'logout-send-1')
         ).toBeUndefined()
-        expect(SteamUser.logout).toHaveBeenCalledTimes(1)
+        expect(jest.spyOn(SteamUser, 'logout')).toHaveBeenCalledTimes(1)
       })
 
       it('REQ-34.4-02 kind proof, negative direction: logoutSteam must NOT be reachable as an invoke handler', async () => {
-        jest.mocked(SteamUser.logout).mockResolvedValue(undefined)
+        jest.spyOn(SteamUser, 'logout').mockResolvedValue(undefined)
 
         const { input, frames } = startSidecar()
         writeInvoke(input, 'logout-invoke-1', 'logoutSteam', [])
@@ -492,7 +505,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         // response frame carrying a SteamUser.logout() result — this is the
         // dispatchSend/dispatchInvoke mismatch G-30-01's inverse would produce.
         expect(response?.ok).not.toBe(true)
-        expect(SteamUser.logout).not.toHaveBeenCalled()
+        expect(jest.spyOn(SteamUser, 'logout')).not.toHaveBeenCalled()
       })
 
       it('REQ-34.4-02 rejection guard: a rejecting SteamUser.logout does not crash the sidecar and the RPC loop keeps serving', async () => {
@@ -506,7 +519,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
 
         try {
           jest
-            .mocked(SteamUser.logout)
+            .spyOn(SteamUser, 'logout')
             .mockRejectedValue(new Error('logout transport failure'))
 
           const { input, frames } = startSidecar()
@@ -782,7 +795,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   describe('redeem / install size', () => {
     it('REQ-34.4-05 redeemSteamKey invoke, valid payload: reaches SteamUser.redeemKey with exactly the two positional args and the result round-trips', async () => {
       jest
-        .mocked(SteamUser.redeemKey)
+        .spyOn(SteamUser, 'redeemKey')
         .mockResolvedValue({ store: 'steam', outcome: 'success' })
 
       const { input, frames } = startSidecar()
@@ -797,8 +810,8 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         ok: true,
         result: { store: 'steam', outcome: 'success' }
       })
-      expect(SteamUser.redeemKey).toHaveBeenCalledTimes(1)
-      expect(SteamUser.redeemKey).toHaveBeenCalledWith(
+      expect(jest.spyOn(SteamUser, 'redeemKey')).toHaveBeenCalledTimes(1)
+      expect(jest.spyOn(SteamUser, 'redeemKey')).toHaveBeenCalledWith(
         'steam',
         'AAAAA-BBBBB-CCCCC'
       )
@@ -826,7 +839,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
           message: 'invalid-request'
         }
       })
-      expect(SteamUser.redeemKey).not.toHaveBeenCalled()
+      expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
     })
 
     it('REQ-34.4-05 redeemSteamKey invoke rejects a non-string key before reaching SteamUser.redeemKey', async () => {
@@ -848,7 +861,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
           message: 'invalid-request'
         }
       })
-      expect(SteamUser.redeemKey).not.toHaveBeenCalled()
+      expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
     })
 
     it('REQ-34.4-05 redeemSteamKey invoke rejects an empty-string key before reaching SteamUser.redeemKey', async () => {
@@ -868,7 +881,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
           message: 'invalid-request'
         }
       })
-      expect(SteamUser.redeemKey).not.toHaveBeenCalled()
+      expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
     })
 
     it('REQ-34.4-05 redeemSteamKey invoke rejects a missing/null payload before reaching SteamUser.redeemKey', async () => {
@@ -888,7 +901,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
           message: 'invalid-request'
         }
       })
-      expect(SteamUser.redeemKey).not.toHaveBeenCalled()
+      expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
     })
 
     it('REQ-34.4-05 no emitted log line or response frame in the rejection cases contains the submitted key value', async () => {
@@ -916,7 +929,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
           .map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg)))
           .join('\n')
         expect(allLoggedText).not.toContain(SECRET_KEY)
-        expect(SteamUser.redeemKey).not.toHaveBeenCalled()
+        expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
       } finally {
         logSpy.mockRestore()
         warnSpy.mockRestore()

@@ -55,7 +55,7 @@ import { dialog, shell } from 'backend/platform'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
-import i18next, { t as i18nextT } from 'i18next'
+import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { SteamUser } from '../user'
 import {
@@ -67,7 +67,8 @@ import { getAnonymousPicsClient } from '../anonymousClient'
 import {
   steamLibraryStore,
   steamMetadataStore,
-  steamSyncStore
+  steamSyncStore,
+  steamRestartHoldStore
 } from '../electronStores'
 import {
   getBottleSteamappsDir,
@@ -95,7 +96,6 @@ import {
   listSteamClientPids,
   readSteamProcessStartTokens
 } from '../steamClientProcess'
-import { steamRestartHoldStore } from '../electronStores'
 import { logInfo } from 'backend/logger'
 import {
   readSteamDownloadMonitor,
@@ -381,14 +381,14 @@ const makeOwnedApp = (
 
 // 23.2-04: this project's jest config sets `resetMocks: true`, which strips
 // jest.fn() implementations (not just call history) before EVERY test — so
-// the i18next.t mock's fallback-returning implementation (set once at
+// the i18nextT mock's fallback-returning implementation (set once at
 // jest.mock() factory time, above) must be re-established file-wide, or any
 // test anywhere in this file that asserts on a notify() body derived from
-// i18next.t would see `undefined` instead of the fallback string. A plain
+// i18nextT would see `undefined` instead of the fallback string. A plain
 // (non-jest.fn) function is immune to resetMocks, which is why this was not
 // needed before this key was added to observe the call args.
 beforeEach(() => {
-  ;(i18next.t as jest.Mock).mockImplementation(
+  ;(i18nextT as jest.Mock).mockImplementation(
     (_key: string, fallback = '') => fallback
   )
   // quick/261016-u1w (D-C): default to "no ready bridge bottle" so every
@@ -1319,7 +1319,7 @@ describe('SteamLibraryManager', () => {
       jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
       jest
         .mocked(getFileSize)
-        .mockImplementation((bytes: unknown) => `${bytes} B`)
+        .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
       // Native scan finds nothing by default in this block — only the bottle
       // root (mocked separately below) has manifests.
       jest.mocked(getSteamLibraries).mockResolvedValue([])
@@ -1506,7 +1506,7 @@ describe('SteamLibraryManager', () => {
         .mockReturnValue(BRIDGE_BOTTLE_STEAMAPPS_ROOT)
       jest
         .mocked(getFileSize)
-        .mockImplementation((bytes: unknown) => `${bytes} B`)
+        .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
       // Native scan finds nothing by default — only the bridge root has manifests.
       jest.mocked(getSteamLibraries).mockResolvedValue([])
     })
@@ -1719,7 +1719,7 @@ describe('SteamLibraryManager', () => {
         )
       jest
         .mocked(getFileSize)
-        .mockImplementation((bytes: unknown) => `${bytes} B`)
+        .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
     })
 
     afterEach(() => {
@@ -1883,7 +1883,7 @@ describe('SteamLibraryManager', () => {
       jest.mocked(isBottleProvisioned).mockReturnValue(false)
       jest
         .mocked(getFileSize)
-        .mockImplementation((bytes: unknown) => `${bytes} B`)
+        .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
       jest.mocked(getSteamLibraries).mockResolvedValue(['/native/steam'])
       ;(existsSync as jest.Mock).mockReturnValue(true)
       // One incomplete manifest (1026, bit 4 unset) and one fully-installed
@@ -2139,7 +2139,7 @@ describe('SteamLibraryManager', () => {
       // stable, distinguishable formatted string per byte count.
       jest
         .mocked(getFileSize)
-        .mockImplementation((bytes: unknown) => `${bytes} B`)
+        .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
     })
 
     it('refreshInstallState() calls buildInstalledMap and pushes update when is_installed changes false→true', async () => {
@@ -2215,7 +2215,7 @@ describe('SteamLibraryManager', () => {
         expect.objectContaining({
           install_path: join('/steam', 'steamapps', 'common', 'dota2'),
           // install_size is persisted as a getFileSize-formatted string
-          // (mocked here as `${bytes} B`) — matches legendary/gog/nile contract.
+          // (mocked here as `${String(bytes)} B`) — matches legendary/gog/nile contract.
           install_size: '50000 B'
           // platform is host-derived (GAP 2 fix — no longer hardcoded 'Windows');
           // not asserted here since this test covers install_path/size detection.
@@ -3064,8 +3064,9 @@ describe('SteamLibraryManager', () => {
     })
 
     const order: string[] = []
-    jest.mocked(finalizeToSteam).mockImplementation(async () => {
+    jest.mocked(finalizeToSteam).mockImplementation(() => {
       order.push('finalize')
+      return Promise.resolve()
     })
     const setIntervalSpy = jest
       .spyOn(global, 'setInterval')
@@ -4440,7 +4441,7 @@ describe('pollInstallOnce()', () => {
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     jest
       .mocked(getFileSize)
-      .mockImplementation((bytes: unknown) => `${bytes} B`)
+      .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
   })
 
   afterEach(() => {
@@ -5380,9 +5381,9 @@ describe('pollInstallOnce()', () => {
   // text can only ever see the literal {{depots}} placeholder. It proves the
   // call site fired, and proves NOTHING about the depot id reaching the
   // user. The non-vacuous assertion in every case below is on the captured
-  // i18next.t call's OPTIONS object, not the notify() body.
+  // i18nextT call's OPTIONS object, not the notify() body.
 
-  it('23.2-04: fires the skip notice and names the depot via the i18next.t options object (not just the fallback body)', async () => {
+  it('23.2-04: fires the skip notice and names the depot via the i18nextT options object (not just the fallback body)', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {
         appid: '730',
@@ -5405,7 +5406,7 @@ describe('pollInstallOnce()', () => {
     // The non-vacuous half: without this assertion, a body-only check would
     // pass equally well against an implementation that never interpolates
     // anything at all.
-    expect(i18next.t).toHaveBeenCalledWith(
+    expect(i18nextT).toHaveBeenCalledWith(
       'steam.download.notify.depotSkipped',
       expect.any(String),
       { depots: '1771304' }
@@ -5428,7 +5429,7 @@ describe('pollInstallOnce()', () => {
     })
     await pollInstallOnce('730')
 
-    const depotSkippedCall = (i18next.t as jest.Mock).mock.calls.find(
+    const depotSkippedCall = (i18nextT as jest.Mock).mock.calls.find(
       ([key]) => key === 'steam.download.notify.depotSkipped'
     )
     expect(depotSkippedCall).toBeDefined()
@@ -5452,7 +5453,7 @@ describe('pollInstallOnce()', () => {
     })
     await pollInstallOnce('730')
 
-    expect(i18next.t).toHaveBeenCalledWith(
+    expect(i18nextT).toHaveBeenCalledWith(
       'steam.download.notify.depotSkipped',
       expect.any(String),
       { depots: '1771304, 1771310' }
@@ -5514,7 +5515,7 @@ describe('pollInstallOnce()', () => {
     // is gone (e.g. an overlapping manual re-check from a frontend refresh).
     await pollInstallOnce('730')
 
-    const skipNoticeCalls = (i18next.t as jest.Mock).mock.calls.filter(
+    const skipNoticeCalls = (i18nextT as jest.Mock).mock.calls.filter(
       ([key]) => key === 'steam.download.notify.depotSkipped'
     )
     expect(skipNoticeCalls).toHaveLength(1)
@@ -5536,7 +5537,7 @@ describe('pollInstallOnce()', () => {
     })
     await pollInstallOnce('730')
 
-    expect(i18next.t).not.toHaveBeenCalledWith(
+    expect(i18nextT).not.toHaveBeenCalledWith(
       'steam.download.notify.depotSkipped',
       expect.anything(),
       expect.anything()
@@ -5559,7 +5560,7 @@ describe('pollInstallOnce()', () => {
     startInstallPolling('730', 60000) // bare-number signature, OFF-path
     await pollInstallOnce('730')
 
-    expect(i18next.t).not.toHaveBeenCalledWith(
+    expect(i18nextT).not.toHaveBeenCalledWith(
       'steam.download.notify.depotSkipped',
       expect.anything(),
       expect.anything()
@@ -7281,7 +7282,7 @@ describe('pollUninstallOnce()', () => {
     beforeEach(() => {
       jest
         .mocked(getFileSize)
-        .mockImplementation((bytes: unknown) => `${bytes} B`)
+        .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
     })
 
     it('bottle copy removed, NATIVE copy survives: badge STAYS installed, install_path re-resolves to the native copy, no "Game Uninstalled" toast', async () => {
@@ -8081,7 +8082,7 @@ describe('hostInstallPlatform() via refreshInstallState() — install.platform r
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     jest
       .mocked(getFileSize)
-      .mockImplementation((bytes: unknown) => `${bytes} B`)
+      .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
   })
 
   afterEach(() => {
@@ -8674,7 +8675,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     jest.mocked(isBottleProvisioned).mockReturnValue(false)
     jest
       .mocked(getFileSize)
-      .mockImplementation((bytes: unknown) => `${bytes} B`)
+      .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
     ;(existsSync as jest.Mock).mockImplementation(
       (p: string) => !String(p).includes('appmanifest_') || manifestPresent
     )

@@ -2688,9 +2688,9 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     })
 
     const controller = new AbortController()
-    jest.mocked(fetchChunk).mockImplementation(async () => {
+    jest.mocked(fetchChunk).mockImplementation(() => {
       controller.abort()
-      return Buffer.from('x')
+      return Promise.resolve(Buffer.from('x'))
     })
 
     const result = await downloadSteamDepots('12345', {
@@ -5155,9 +5155,9 @@ describe('downloadDepotFiles', () => {
 
   it('D-02: halts new chunk fetches once AbortSignal fires and returns a cancelled outcome promptly', async () => {
     const controller = new AbortController()
-    jest.mocked(fetchChunk).mockImplementation(async () => {
+    jest.mocked(fetchChunk).mockImplementation(() => {
       controller.abort()
-      return Buffer.from('x')
+      return Promise.resolve(Buffer.from('x'))
     })
 
     const chunks = Array.from({ length: 5 }, (_, i) => ({
