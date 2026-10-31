@@ -56,6 +56,44 @@ Build mtimes at preflight (epoch): helper 1793477487, shim 1793477488, sidecar.j
 
 ## Results
 
-(empty until the operator session runs)
+Session: `/tmp/gamelib-diag-20261031T203126Z` (kept under /tmp, never committed). Dev restart: one `gamelib-shell` (pid 97371). `build/main/sidecar.js` mtime at restart 1793478702 (was 1793477706 at preflight; the dev restart rebuilt the sidecar; helper and shim were not rebuilt). The snapshot was taken while the game was still running, after the invite/join.
 
-Decision: pending
+### Procedure defect (carry-forward for the 58-33 re-gate contract)
+
+The helper pads log lines with multiple spaces (`CALL   X`, `NET    role=...`), so the single-space literals in the Measurements list return 0. The counts below used `grep -cE 'CALL +X\b'`. The 58-33 contract must use whitespace-tolerant patterns.
+
+### Counts (last HELLO segment, helper [3205720])
+
+| Literal | Count |
+| ------- | ----- |
+| CALL SteamNetworkingSockets013.CreateListenSocketP2P | 1 (20:33:09Z) |
+| CALL SteamMatchMaking009.CreateLobby | 1 |
+| CALL SteamMatchMaking009.SetLobbyJoinable | 0 |
+| CALL SteamMatchMaking009.SetLobbyType | 0 |
+| CALL SteamMatchMaking009.SetLobbyData | 1 |
+| CALL SteamFriends017.ActivateGameOverlayInviteDialog | 1 (20:32:54Z) |
+| CALL SteamFriends017.SetRichPresence | 0 |
+| CBDISP iCallback=513 | 2 |
+| CBDISP iCallback=504 | 1 |
+| NET role=game kind=join | 2 (iface=Matchmaking cb=504; iface=Sockets cb=1221) |
+| CBQ unlisted iCallback ids | none |
+| STUBCALL names | SteamClient021.SetWarningMessageHook, SteamFriends017.GetMediumFriendAvatar, SteamUtils010.GetImageSize (1 each) |
+
+Other: `SteamNetworkingSockets012.AcceptConnection` 1 (20:35:26Z), ReceiveMessagesOnConnection and SendMessageToConnection seen; NET Sockets send 28, recv 2; "NET cap of 32 reached" at 20:35:31Z (WR-06, about 3 s into the session; fixed by 58-28).
+
+CBDISP histogram: 1101 x1, 1221 x3, 1222 x2, 1281 x4, 504 x1, 505 x4, 506 x1, 507 x2, 513 x2.
+
+Player.log: `Server connection state` count 2; distinct words: Starting x1, Started x1.
+
+### Operator answers (verbatim, 2026-11-01)
+
+- Step 3: '+' (in the in-game menu) pressed, no response on the Mac.
+- Steps 4/5: the operator did not list menu entries. Their words: "in steam friends invited to game. worked in game and can interact".
+
+Observation (unscored, not a gate result; strict-verified rule unchanged): Mac Steam friends-list "invite to game" already produced a working Direction A join on this build, and both players could interact. The 58-34 re-gate can score both gestures. The Mac and PC menu entries were not captured, so 58-33 has no verbatim menu text to cite.
+
+### Assessment
+
+The host is serving: CreateListenSocketP2P CALL is 1 and Player.log reached `Started`. Recommendation: proceed. The game's own '+' call reached ActivateGameOverlayInviteDialog but showed nothing, which is the gap the friend picker (58-29, 58-31, 58-32) closes.
+
+Decision: proceed (operator's choice, 2026-11-01)
