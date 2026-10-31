@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Completed 56-34-PLAN.md (third live gate, Verdict PASS)
-last_updated: "2026-10-31T01:43:04.343Z"
+last_updated: "2026-10-31T02:41:04.339Z"
 last_activity: 2026-10-31
 progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 166
-  completed_plans: 156
+  completed_plans: 157
   percent: 67
 ---
 
@@ -72,11 +72,11 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 58 (steam-bridge-multiplayer) — EXECUTING
-Plan: 15 of 24
+Plan: 2 of 24
 Status: Ready to execute
-Last activity: 2026-10-31 - Completed quick task 261031-l0y: settings help icon on label line
+Last activity: 2026-10-31
 
-Progress: [█████████░] 94%
+Progress: [██████████] 95%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -208,6 +208,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 56 P34 | ~3h | 4 tasks | 9 files |
 | Phase 58 P02 | 25min | 2 tasks | 4 files |
 | Phase 58 P05 | 10m | 2 tasks | 2 files |
+| Phase 58 P08 | n/a | 4 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -298,6 +299,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 56]: 56-09: stageDrmBottle carries own HKCU registry builder and path mapping; no steamClientSetup import
 - [Phase 56]: 56-17: Gap 7 root cause x64 cwd (98837f09b); Gap 9 trigger strict SteamPath check (5ff2dbd8c); winebus abort-spin residual
 - [Phase 58]: [58-02] CSteamID measured pack(1) per SDK; UserStatsReceived_t Windows steamID offset likely 12 not 16 (finding, unfixed)
+- [Phase 58]: D-08a: Raft legacy-P2P joins scored by 1202+Accept+game P2P send/read; DRM trace uses peer ordinals not SteamID64
 
 ### Pending Todos
 
@@ -324,6 +326,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-10-26] [steam] "Install poller logs \"no manifest detected; user may have cancelled\" after a successful native install into GameLibSteam" — [todo file](.planning/todos/pending/2026-10-26-install-poller-false-cancel-warning-after-native-install.md)
 - [2026-10-26] [steam-bridge] "Bridge scan auto-clear drops scan.originalFingerprints, so the next launch does one extra rescan and shim re-place" — [todo file](.planning/todos/pending/2026-10-26-bridge-auto-clear-drops-original-fingerprints.md)
 - [2026-10-29] [login-window] "Epic login window presents as a macOS sheet on main, like GOG and the other logins (lift the REQ-34.4.2-10 Epic descope)" — [todo file](.planning/todos/pending/2026-10-29-epic-login-window-as-macos-sheet-like-gog.md)
+- [2026-10-31] [feedback] In-app "Report a problem" form for non-technical users — no account, auto-attached redacted diagnostics — [todo file](.planning/todos/pending/2026-10-31-in-app-report-a-problem-form-for-non-technical-users.md)
 
 ### Blockers/Concerns
 
@@ -336,6 +339,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - REQUIREMENTS.md has no Phase 34.9 traceability section -- REQ-34.9-01..11 are cited by ROADMAP.md, STATE.md, and every 34.9 plan/summary, but requirements.mark-complete cannot find them to check off. Pre-existing gap, not caused by plan 34.9-07; needs a REQUIREMENTS.md backfill pass (D-XX -> REQ mapping + traceability table) for the whole phase.
 - Phase 34.9-09: build-runners-onedir-macos.yml cannot be dispatched via gh workflow run until it exists on the repo's default branch (main) -- GitHub's workflow_dispatch requires this for ANY --ref, not just the pushed feature branch. Not resolvable within plan 34.9-09's authorized scope (no PR, no push to main). Blocks: real x64 onedir artifact (never built, no local fallback possible per constraint 1), pinning meta/runnersOnedirDigests.json's 6 sentinels, and full CI proof of the download-verify-extract round trip. See 34.9-CI-ROUNDTRIP.md.
 - 51-16 desk finding (not fixed, out of scope): meta/__tests__/hardcodedStringGate.test.ts has 6 pre-existing violations in GameStatus.tsx (Phase 51 Plan 08's file), unrelated to this plan's changes
+- 58-09 launch 1: stale Windows Steam (pid 47008, applaunch 264160) fails PC2; quit it and re-run PC2; PC11 needs operator
 
 ### Quick Tasks Completed
 
@@ -550,7 +554,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-31T01:43:04.335Z
+Last session: 2026-10-31T02:40:59.180Z
 Stopped at: Completed 56-34-PLAN.md (third live gate, Verdict PASS)
 Resume file: None
 
