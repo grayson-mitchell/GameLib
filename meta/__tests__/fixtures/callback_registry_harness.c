@@ -437,6 +437,17 @@ static void push_1101(uint8_t seed) {
   push_raw(1, tmp, sizeof tmp);
 }
 
+/* 58-28: [u32 1][i32 id][u32 cub][cub bytes all `seed`] for any relay row */
+static void push_sized(int32_t id, uint32_t cub, uint8_t seed) {
+  uint8_t tmp[12 + 64];
+  uint32_t one = 1u;
+  memcpy(tmp, &one, 4);
+  memcpy(tmp + 4, &id, 4);
+  memcpy(tmp + 8, &cub, 4);
+  memset(tmp + 12, seed, cub);
+  push_raw(1, tmp, 12 + cub);
+}
+
 static int held_valid(int32_t id) {
   int row = gl_cb_relay_row_index(id);
   return row >= 0 && gl_cb_held[row].valid;
@@ -779,6 +790,45 @@ static void case_hold_dispatches_before_new_drain(void) {
   CHECK(g_nrep == 3);
   CHECK(g_rep[1].nd == 1 && g_rep[1].held == 0);
   CHECK(g_rep[2].nd == 1 && g_rep[2].held == 0);
+  PASS();
+}
+
+/* 58-28 (WR-09): a held 333 expires 60 s after it arrived; 1101 never does. */
+static void hold_then_register(int32_t id, uint32_t cub, fobj *listener, uint32_t wait_ms) {
+  reset();
+  gl_cb_register(&objA, 168); /* keeps the drain running */
+  push_sized(id, cub, 0x77);
+  gl_cb_run_callbacks();
+  CHECK(held_valid(id));
+  gl_cb_register(listener, id);
+  g_now += wait_ms;
+  gl_cb_run_callbacks();
+}
+
+static void case_hold_333_delivered_before_expiry(void) {
+  g_case = "hold_333_delivered_before_expiry";
+  hold_then_register(333, 16, &objU, 59000u);
+  CHECK(objU.calls == 1);
+  CHECK(!held_valid(333));
+  PASS();
+}
+
+static void case_hold_333_expires(void) {
+  g_case = "hold_333_expires";
+  hold_then_register(333, 16, &objU, 61000u);
+  CHECK(objU.calls == 0);
+  CHECK(!held_valid(333));
+  g_now += 31;
+  gl_cb_run_callbacks();
+  CHECK(objU.calls == 0);
+  PASS();
+}
+
+static void case_hold_1101_no_expiry(void) {
+  g_case = "hold_1101_no_expiry";
+  hold_then_register(1101, 24, &objU, 600000u);
+  CHECK(objU.calls == 1);
+  CHECK(!held_valid(1101));
   PASS();
 }
 
@@ -1786,6 +1836,9 @@ int main(void) {
   case_relay_1101_dispatch();
   case_hold_1101_until_listener();
   case_hold_dispatches_before_new_drain();
+  case_hold_333_delivered_before_expiry();
+  case_hold_333_expires();
+  case_hold_1101_no_expiry();
   case_no_hold_168();
   case_report_hook_unlocked();
   case_relay_504_dispatch();

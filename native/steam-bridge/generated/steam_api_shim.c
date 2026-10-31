@@ -1798,26 +1798,27 @@ typedef struct {
   int32_t id;
   uint32_t size;
   int hold;
+  uint32_t hold_expiry_ms; /* 58-28 (WR-09): 0 = a held message never expires */
 } gl_cb_relay_row;
 
 static const gl_cb_relay_row gl_cb_relay_table[] = {
-  {168, 2572u, 0},
-  {1101, 24u, 1},
-  {503, 24u, 0},
-  {504, 24u, 0},
-  {505, 24u, 0},
-  {506, 32u, 0},
-  {507, 24u, 0},
-  {512, 24u, 0},
-  {513, 16u, 0},
-  {333, 16u, 1},
-  {1202, 8u, 0},
-  {1203, 9u, 0},
-  {1221, 712u, 0},
-  {1222, 260u, 0},
-  {1251, 136u, 0},
-  {1252, 696u, 0},
-  {1281, 272u, 0},
+  {168, 2572u, 0, 0u},
+  {1101, 24u, 1, 0u},
+  {503, 24u, 0, 0u},
+  {504, 24u, 0, 0u},
+  {505, 24u, 0, 0u},
+  {506, 32u, 0, 0u},
+  {507, 24u, 0, 0u},
+  {512, 24u, 0, 0u},
+  {513, 16u, 0, 0u},
+  {333, 16u, 1, 60000u},
+  {1202, 8u, 0, 0u},
+  {1203, 9u, 0, 0u},
+  {1221, 712u, 0, 0u},
+  {1222, 260u, 0, 0u},
+  {1251, 136u, 0, 0u},
+  {1252, 696u, 0, 0u},
+  {1281, 272u, 0, 0u},
 };
 #define GL_CB_RELAY_ROWS ((uint32_t)(sizeof(gl_cb_relay_table) / sizeof(gl_cb_relay_table[0])))
 
@@ -1825,6 +1826,7 @@ static const gl_cb_relay_row gl_cb_relay_table[] = {
 typedef struct {
   int valid;
   uint32_t cub;
+  uint32_t born_ms; /* 58-28: gl_cb_now_ms() when the message was held */
   uint8_t bytes[GL_CB_HELD_MAX_BYTES];
 } gl_cb_held_entry;
 
@@ -3062,6 +3064,13 @@ static void gl_cb_run_callbacks(void) {
     GL_CB_LOCK();
     hvalid = gl_cb_held[hi].valid;
     hid = gl_cb_relay_table[hi].id;
+    /* 58-28 (WR-09): a stale held message (e.g. a 333 invite) is cleared,
+     * never delivered, and reports nothing. */
+    if (hvalid && gl_cb_relay_table[hi].hold_expiry_ms != 0 &&
+        (uint32_t)(now - gl_cb_held[hi].born_ms) >= gl_cb_relay_table[hi].hold_expiry_ms) {
+      memset(&gl_cb_held[hi], 0, sizeof(gl_cb_held[hi]));
+      hvalid = 0;
+    }
     if (hvalid) memcpy(hbuf, gl_cb_held[hi].bytes, GL_CB_HELD_MAX_BYTES);
     GL_CB_UNLOCK();
     if (!hvalid) continue;
@@ -3108,6 +3117,7 @@ static void gl_cb_run_callbacks(void) {
       memset(&gl_cb_held[row], 0, sizeof(gl_cb_held[row]));
       memcpy(gl_cb_held[row].bytes, buf + 12, cub);
       gl_cb_held[row].cub = cub;
+      gl_cb_held[row].born_ms = now;
       gl_cb_held[row].valid = 1;
       GL_CB_UNLOCK();
       gl_cb_report_dispatch(id, 0, 1);

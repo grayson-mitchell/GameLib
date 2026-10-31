@@ -3532,7 +3532,7 @@ describe('callback registry (P55-3) source pins', () => {
       expect(row?.size).toBe(layout.x64.size)
       expect(layout.x64.size).toBe(layout.x86.size) // one row per both DLLs
       expect(row?.arches).toBeUndefined()
-      expect(src).toContain(`{${bid}, ${layout.x64.size}u, 0}`)
+      expect(src).toContain(`{${bid}, ${layout.x64.size}u, 0, 0u}`)
       expect(2572).toBeGreaterThanOrEqual(row!.size)
     }
     // helper allowlist wire sizes: every GL_CBQ_*_WIN_SIZE appears as a row size
@@ -3550,9 +3550,14 @@ describe('callback registry (P55-3) source pins', () => {
   it('relays GameLobbyJoinRequested_t (333) held, and not 337 (58-18, D-09)', () => {
     const l = CALLBACK_LAYOUTS.GameLobbyJoinRequested_t
     const row = CALLBACK_RELAY_TABLE.find((r) => r.id === 333)
-    expect(row).toEqual({ id: 333, size: l.x64.size, hold: true })
+    expect(row).toEqual({
+      id: 333,
+      size: l.x64.size,
+      hold: true,
+      holdExpiryMs: 60000
+    })
     expect(l.x64.size).toBeLessThanOrEqual(CALLBACK_HELD_MAX_BYTES)
-    expect(src).toContain(`{333, ${l.x64.size}u, 1}`)
+    expect(src).toContain(`{333, ${l.x64.size}u, 1, 60000u}`)
     expect(header).toContain('GL_CBQ_ROW(GL_CBQ_ID_GAME_LOBBY_JOIN_REQUESTED,')
     // 337 was not observed on the wired bridge: no relay row, no helper row
     expect(CALLBACK_RELAY_TABLE.some((r) => r.id === 337)).toBe(false)
@@ -3595,8 +3600,10 @@ describe('callback registry (P55-3) source pins', () => {
 
   it('never holds a credential-bearing id; the hold row fits the held slot', () => {
     expect(CALLBACK_RELAY_TABLE.find((r) => r.id === 168)?.hold).toBe(false)
-    expect(src).toContain('{168, 2572u, 0}')
-    expect(src).toContain(`{1101, ${USER_STATS_RECEIVED_LAYOUT.x64.size}u, 1}`)
+    expect(src).toContain('{168, 2572u, 0, 0u}')
+    expect(src).toContain(
+      `{1101, ${USER_STATS_RECEIVED_LAYOUT.x64.size}u, 1, 0u}`
+    )
     expect(CALLBACK_HELD_MAX_BYTES).toBeGreaterThanOrEqual(
       USER_STATS_RECEIVED_LAYOUT.x64.size
     )

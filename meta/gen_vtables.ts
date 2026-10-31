@@ -2975,6 +2975,9 @@ export interface CallbackRelayRow {
   readonly id: number
   readonly size: number
   readonly hold: boolean
+  /** 58-28 (WR-09): a held message older than this many ms is cleared instead
+   *  of delivered. Absent or 0 = no expiry (1101 keeps its k51 hold). */
+  readonly holdExpiryMs?: number
   /** Present only when the struct's x86 size differs from x64: the row is then
    *  emitted for steam_api64.dll only (58-10, the equality guard per row). */
   readonly arches?: 'x64'
@@ -3011,7 +3014,10 @@ export const CALLBACK_RELAY_TABLE: readonly CallbackRelayRow[] = [
   broadcastRelayRow('LobbyCreated_t', false),
   // 58-18 (D-09 measured): an invite can arrive before the game registers its
   // handler, so the latest one is held (16 bytes fits CALLBACK_HELD_MAX_BYTES).
-  broadcastRelayRow('GameLobbyJoinRequested_t', true),
+  {
+    ...broadcastRelayRow('GameLobbyJoinRequested_t', true),
+    holdExpiryMs: 60000
+  },
   broadcastRelayRow('P2PSessionRequest_t', false),
   broadcastRelayRow('P2PSessionConnectFail_t', false),
   broadcastRelayRow('SteamNetConnectionStatusChangedCallback_t', false),
@@ -3122,8 +3128,8 @@ export function generateCallbackRegistryC(): string {
   // A row whose x86 struct differs is emitted for the 64-bit DLL only.
   const relayRows = CALLBACK_RELAY_TABLE.map((r) =>
     r.arches === 'x64'
-      ? `#if !defined(__i386__)\n  {${r.id}, ${r.size}u, ${r.hold ? 1 : 0}},\n#endif`
-      : `  {${r.id}, ${r.size}u, ${r.hold ? 1 : 0}},`
+      ? `#if !defined(__i386__)\n  {${r.id}, ${r.size}u, ${r.hold ? 1 : 0}, ${r.holdExpiryMs ?? 0}u},\n#endif`
+      : `  {${r.id}, ${r.size}u, ${r.hold ? 1 : 0}, ${r.holdExpiryMs ?? 0}u},`
   ).join('\n')
   const crRows = CALL_RESULT_TABLE.map((r) => `  {${r.id}, ${r.size}u},`).join(
     '\n'
@@ -3183,6 +3189,7 @@ typedef struct {
   int32_t id;
   uint32_t size;
   int hold;
+  uint32_t hold_expiry_ms; /* 58-28 (WR-09): 0 = a held message never expires */
 } gl_cb_relay_row;
 
 static const gl_cb_relay_row gl_cb_relay_table[] = {
@@ -3194,6 +3201,7 @@ ${relayRows}
 typedef struct {
   int valid;
   uint32_t cub;
+  uint32_t born_ms; /* 58-28: gl_cb_now_ms() when the message was held */
   uint8_t bytes[GL_CB_HELD_MAX_BYTES];
 } gl_cb_held_entry;
 
@@ -4429,6 +4437,13 @@ static void gl_cb_run_callbacks(void) {
     GL_CB_LOCK();
     hvalid = gl_cb_held[hi].valid;
     hid = gl_cb_relay_table[hi].id;
+    /* 58-28 (WR-09): a stale held message (e.g. a 333 invite) is cleared,
+     * never delivered, and reports nothing. */
+    if (hvalid && gl_cb_relay_table[hi].hold_expiry_ms != 0 &&
+        (uint32_t)(now - gl_cb_held[hi].born_ms) >= gl_cb_relay_table[hi].hold_expiry_ms) {
+      memset(&gl_cb_held[hi], 0, sizeof(gl_cb_held[hi]));
+      hvalid = 0;
+    }
     if (hvalid) memcpy(hbuf, gl_cb_held[hi].bytes, GL_CB_HELD_MAX_BYTES);
     GL_CB_UNLOCK();
     if (!hvalid) continue;
@@ -4475,6 +4490,7 @@ static void gl_cb_run_callbacks(void) {
       memset(&gl_cb_held[row], 0, sizeof(gl_cb_held[row]));
       memcpy(gl_cb_held[row].bytes, buf + 12, cub);
       gl_cb_held[row].cub = cub;
+      gl_cb_held[row].born_ms = now;
       gl_cb_held[row].valid = 1;
       GL_CB_UNLOCK();
       gl_cb_report_dispatch(id, 0, 1);
