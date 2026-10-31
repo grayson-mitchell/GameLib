@@ -117,9 +117,14 @@ import {
   CROSSOVER_MISSING,
   CROSSOVER_CREATE_TIMEOUT,
   getDrmBridgeRunner,
+  killBridgeBottleWineServer,
   type DrmLaunchForm
 } from './bottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
+import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
+import type { CrossoverPreflight } from './engine/engineDecision'
+import type { EngineSelection } from './engine/engineTypes'
+import type { LaunchDeadline } from './engine/launchDeadline'
 import { noteSteamAuthTrigger } from './authTrigger'
 // quick-260817-d61: verified during planning that user.ts imports nothing
 // from games.ts (no import of './games' anywhere in user.ts), so this
@@ -1098,6 +1103,20 @@ export function relogDrmTrace(
 // and notify fire once per title and failed step per session. A different
 // failed step is new information, so it shows again. Keyed `${appId}|${step}`.
 const drmModeNoticeShownThisSession = new Set<string>()
+
+/**
+ * Phase 59 (D-11): whether the bottle process monitor sees a game started by a
+ * non-CrossOver engine. 59-01-SUMMARY.md `staging_monitor_match: yes` (a
+ * Wine-Staging `ps` line starts with the game's `C:\...` path, so
+ * deriveWindowsPrefix matching works). Were this false, every fallback launch
+ * would hit the deadline and be killed, so the deadline would not be armed
+ * for built-in-engine launches.
+ */
+const STAGING_MONITOR_MATCH = true
+
+function engineLabelForLog(sel: EngineSelection): string {
+  return sel.kind === 'crossover' ? 'crossover' : `${sel.kind} ${sel.label}`
+}
 
 type DrmWineLaunch = {
   ready: DrmLaunchReady
@@ -3544,6 +3563,18 @@ export default class SteamGame implements Game {
         `SteamGame: launching appId ${this.appId} via the bottled Steam client`,
         LogPrefix.Steam
       )
+      // Phase 59: bottled Steam stays CrossOver-only (no built-in engine).
+      // A clear message beats a hang behind CrossOver's own dialog.
+      const { preflightCrossover } = await import('./engine/engineDecision')
+      const pre = await preflightCrossover(
+        getSteamBottleSettings()?.wineCrossoverBottle ??
+          DEFAULT_STEAM_BOTTLE_NAME
+      )
+      if (pre.kind !== 'healthy') {
+        this.notifyCrossoverRequired('bottled', pre)
+        this.sendLaunchDone()
+        return false
+      }
       const result = await tellBottledSteamToLaunch(this.appId)
       return result.status === 'done'
     }
@@ -3775,6 +3806,243 @@ export default class SteamGame implements Game {
     )
   }
 
+  /** Terminal 'done' status for a launch that will not start (idempotent). */
+  private sendLaunchDone(): void {
+    sendGameStatusUpdate({
+      appName: this.appId,
+      runner: 'steam',
+      status: 'done'
+    })
+  }
+
+  /**
+   * Phase 59: notify plus an in-app dialog, copied from
+   * maybeNotifyDrmModeFailed's surface. Never marks the bridge failed and
+   * never sends steamBridgeSetupRequired (no path reroutes to bottled Steam).
+   */
+  private showEngineDialog(title: string, body: string, tag: string): void {
+    notify({ title, body })
+    app.raiseMainWindow()
+    const ackId = newDialogAckId()
+    const appId = this.appId
+    trackDialogDisplay(ackId, (result) => {
+      logInfo(
+        result.confirmed
+          ? `[engine-notice] appId=${appId} tag=${tag} display=confirmed elapsedMs=${result.elapsedMs}`
+          : `[engine-notice] appId=${appId} tag=${tag} display=unconfirmed timeout=${result.timeoutMs}`,
+        LogPrefix.Steam
+      )
+    })
+    const sent = showDialogBoxModalAuto({
+      title,
+      message: body,
+      type: 'MESSAGE',
+      ackId
+    })
+    logInfo(
+      `[engine-notice] appId=${this.appId} tag=${tag} dispatched=in-app-dialog+notify dialog-frame-sent=${sent} display=pending`,
+      LogPrefix.Steam
+    )
+  }
+
+  /**
+   * Phase 59: DRM-mode and bottled-Steam launches are CrossOver-only. Shown on
+   * every blocked attempt (the user pressed Play and nothing else will tell
+   * them why it did nothing).
+   */
+  private notifyCrossoverRequired(
+    kind: 'drm' | 'bottled',
+    pre: CrossoverPreflight
+  ): void {
+    const reason =
+      pre.kind === 'expired'
+        ? i18next.t(
+            'gamelib:steam.engine.reason.cxExpired',
+            'CrossOver trial expired'
+          )
+        : pre.kind === 'broken'
+          ? i18next.t(
+              'gamelib:steam.engine.reason.cxBroken',
+              "CrossOver isn't working"
+            )
+          : i18next.t(
+              'gamelib:steam.engine.reason.cxMissing',
+              'CrossOver not found'
+            )
+    logWarning(
+      `SteamGame: appId ${this.appId} ${kind} launch needs CrossOver but pre-flight is ${pre.kind}; not launching (no built-in engine, no fallback)`,
+      LogPrefix.Steam
+    )
+    const body =
+      kind === 'drm'
+        ? i18next.t(
+            'gamelib:steam.engine.crossoverRequired.drm',
+            'This game uses Steam DRM support that needs CrossOver ({{reason}}). Install or renew CrossOver, then try again.',
+            { reason }
+          )
+        : i18next.t(
+            'gamelib:steam.engine.crossoverRequired.bottled',
+            'This game runs through Windows Steam, which needs CrossOver ({{reason}}). Install or renew CrossOver, then try again.',
+            { reason }
+          )
+    this.showEngineDialog(
+      this.getGameInfo().title,
+      body,
+      `crossover-required-${kind}`
+    )
+  }
+
+  /**
+   * Phase 59 (D-05/D-06/D-07/D-09/D-14/D-15): a fresh pre-flight and engine
+   * decision for every TCP bridge launch. Downloads the built-in engine on
+   * first need, registers the choice, prepares the bottle for it, and
+   * re-reads the settings so every later spawn uses the registered engine.
+   */
+  private async selectLaunchEngine(
+    current: GameSettings
+  ): Promise<{ ok: true; settings: GameSettings } | { ok: false }> {
+    const bottleName = current.wineCrossoverBottle
+    const { decideLaunchEngine } = await import('./engine/engineDecision')
+    const { setEngineSelection, clearEngineSelection } =
+      await import('./engine/engineRegistry')
+    const { prepareBottleForEngine } = await import('./engine/engineSwitch')
+    const { recordLaunchDecision } = await import('./engine/engineState')
+    const { isNonCrossover } = await import('./engine/engineTypes')
+    const title = this.getGameInfo().title
+
+    const decision = await decideLaunchEngine({
+      appId: this.appId,
+      bottleName
+    })
+    if (decision.kind === 'unavailable') {
+      logWarning(
+        `SteamGame: appId ${this.appId} engine override ${decision.override} is unavailable: ${decision.detail}`,
+        LogPrefix.Steam
+      )
+      this.showEngineDialog(
+        title,
+        i18next.t(
+          'gamelib:steam.engine.overrideUnavailable',
+          'The engine chosen for this game in Advanced settings is not available ({{detail}}). Choose Automatic or install it.',
+          { detail: decision.detail }
+        ),
+        'override-unavailable'
+      )
+      return { ok: false }
+    }
+
+    if (decision.needsDownload && decision.pin) {
+      const engine = await this.ensureBuiltInEngineForInstall(decision.pin)
+      if ('status' in engine) {
+        notify({ title, body: engine.error ?? '' })
+        return { ok: false }
+      }
+    }
+
+    const sel: EngineSelection = decision.selection
+    if (!setEngineSelection(this.appId, sel)) {
+      logWarning(
+        `SteamGame: appId ${this.appId} engine selection was rejected (${engineLabelForLog(sel)}); not launching`,
+        LogPrefix.Steam
+      )
+      return { ok: false }
+    }
+    const prep = await prepareBottleForEngine({
+      appId: this.appId,
+      bottleName,
+      next: sel
+    })
+    if (!prep.ok) {
+      if (prep.reason === 'dxvk-failed') {
+        // The built-in engine is best-effort: missing DXVK degrades Direct3D
+        // but is not a launch blocker.
+        logWarning(
+          `SteamGame: appId ${this.appId} DXVK setup failed (${prep.detail}); continuing`,
+          LogPrefix.Steam
+        )
+      } else {
+        clearEngineSelection(this.appId)
+        logWarning(
+          `SteamGame: appId ${this.appId} cannot switch engine (${prep.reason}: ${prep.detail}); not launching`,
+          LogPrefix.Steam
+        )
+        return { ok: false }
+      }
+    }
+
+    // Engine and version on every launch (D-14) plus the untested-build line
+    // (D-15), written from the decision so they cannot drift from it.
+    for (const line of decision.logLines) {
+      logInfo(`SteamGame: appId ${this.appId} ${line}`, LogPrefix.Steam)
+    }
+    recordLaunchDecision(this.appId, decision, bottleName)
+
+    if (isNonCrossover(sel) && decision.override === 'automatic') {
+      const body =
+        sel.reason === 'cx-expired'
+          ? i18next.t(
+              'gamelib:steam.engine.toast.cxExpired',
+              'CrossOver trial expired — using built-in engine'
+            )
+          : sel.reason === 'cx-broken'
+            ? i18next.t(
+                'gamelib:steam.engine.toast.cxBroken',
+                "CrossOver isn't working — using built-in engine"
+              )
+            : i18next.t(
+                'gamelib:steam.engine.toast.cxMissing',
+                'CrossOver not found — using built-in engine'
+              )
+      notify({ title, body })
+    }
+    // 59-01 `nag_blocks: no`: a CrossOver trial reminder does not block a
+    // launch, so no nag handling exists here. An expired bottle does hang
+    // behind CodeWeavers' own dialog; the launch deadline in
+    // fireBridgeWineLaunch bounds that. GameLib never edits NagTime, the
+    // registry or the licence and never suppresses CodeWeavers' prompts.
+
+    return { ok: true, settings: getBridgeBottleSettings(this.appId) }
+  }
+
+  /**
+   * Phase 59 (D-10/D-11): the launch deadline fired with no game process
+   * seen. Stops the bottle with the running engine's own wineserver (before
+   * the registry entry that names it is cleared), stops the helper, and tells
+   * the user. No fallback retry, no markBridgeFailedThisSession, no
+   * steamBridgeSetupRequired: a game that never appeared on CrossOver is not
+   * evidence that the bridge is broken, and retrying on the built-in engine
+   * would hide the problem the user needs to see.
+   */
+  private async onBridgeLaunchDeadline(
+    clearLaunchRecord: () => void
+  ): Promise<void> {
+    const { stopBottleProcessMonitor } = await import('./bottleProcessMonitor')
+    const { clearEngineSelection, getEngineSelection } =
+      await import('./engine/engineRegistry')
+    const { engineLogLabel } = await import('./engine/engineTypes')
+    const { LAUNCH_DEADLINE_MS } = await import('./engine/launchDeadline')
+    const sel = getEngineSelection(this.appId)
+    logWarning(
+      `SteamGame: appId ${this.appId} launch deadline fired (${sel ? engineLogLabel(sel) : 'engine=crossover'}); stopping the bottle`,
+      LogPrefix.Steam
+    )
+    stopBottleProcessMonitor(this.appId)
+    await killBridgeBottleWineServer(this.appId, 15_000)
+    stopBridgeHelper(this.appId)
+    clearLaunchRecord()
+    clearEngineSelection(this.appId)
+    this.sendLaunchDone()
+    this.showEngineDialog(
+      i18next.t('gamelib:steam.engine.didntStart.title', "Game didn't start"),
+      i18next.t(
+        'gamelib:steam.engine.didntStart.body',
+        "{{title}} did not start within {{seconds}} seconds, so GameLib stopped it. Check the launch log (Settings > Logs) and this game's known fixes.",
+        { title: this.getGameInfo().title, seconds: LAUNCH_DEADLINE_MS / 1000 }
+      ),
+      'didnt-start'
+    )
+  }
+
   /**
    * Reads the launch exe's CEG markers through the bounded PE reader (never
    * the whole exe). 56-04's resolveBridgeMode sends a CEG-marked exe to 'tcp',
@@ -3908,7 +4176,25 @@ export default class SteamGame implements Game {
     })
   }
 
+  /**
+   * Phase 59: the engine registered for this launch (launchBridgeGameBody)
+   * must not outlive a launch that did not start. A started launch keeps it
+   * until the process monitor's onStopped clears it.
+   */
   private async launchBridgeGame(): Promise<boolean> {
+    let started = false
+    try {
+      started = await this.launchBridgeGameBody()
+      return started
+    } finally {
+      if (!started) {
+        const { clearEngineSelection } = await import('./engine/engineRegistry')
+        clearEngineSelection(this.appId)
+      }
+    }
+  }
+
+  private async launchBridgeGameBody(): Promise<boolean> {
     const exePath = await resolveBridgeLaunchExe(this.appId)
     if (!exePath) {
       logWarning(
@@ -3993,6 +4279,26 @@ export default class SteamGame implements Game {
         drmStepError('bottle-stage', 'install root not resolved').cause
       )
       return false
+    }
+    if (wantsDrm) {
+      // DRM mode stays CrossOver-only (phase 59 out of scope): a clear message
+      // instead of a hang, never the built-in engine, never decideLaunchEngine.
+      const { preflightCrossover } = await import('./engine/engineDecision')
+      const pre = await preflightCrossover(
+        bridgeBottleSettings.wineCrossoverBottle
+      )
+      if (pre.kind !== 'healthy') {
+        this.notifyCrossoverRequired('drm', pre)
+        this.sendLaunchDone()
+        return false
+      }
+    } else {
+      const engine = await this.selectLaunchEngine(bridgeBottleSettings)
+      if (!engine.ok) {
+        this.sendLaunchDone()
+        return false
+      }
+      bridgeBottleSettings = engine.settings
     }
     // No signal is passed: the bridge launch has no abort controller.
     const drm = await drmLaunchSetup({
@@ -4361,10 +4667,18 @@ export default class SteamGame implements Game {
       relogDrmTrace(this.appId, drm.traceFile)
     }
 
+    // Phase 59 (D-10/D-11): declared before the try so the catch can cancel it.
+    let deadline: LaunchDeadline | undefined
+    const deadlineFired = () => deadline?.state === 'fired'
+
     try {
       const { runWineCommand } = await import('backend/launcher')
-      const { startBottleProcessMonitor } =
+      const { startBottleProcessMonitor, getBottleProcessMonitorPhase } =
         await import('./bottleProcessMonitor')
+      const { armLaunchDeadline } = await import('./engine/launchDeadline')
+      const { getEngineSelection, clearEngineSelection } =
+        await import('./engine/engineRegistry')
+      const { isNonCrossover } = await import('./engine/engineTypes')
       const { applySteamBridgeKnownFixes, steamBridgeLaunchCommandParts } =
         await import('./bridgeKnownFixes')
       const { applyBridgeBottleDllOverrides } =
@@ -4389,6 +4703,29 @@ export default class SteamGame implements Game {
         bridgeBottleSettings.wineCrossoverBottle
       )
 
+      // Phase 59 (D-10/D-11): armed before the shared-redist step so the
+      // default covers a first-run prefix update and the redists. Cancelled
+      // when the monitor first sees the game process. Needs a monitor to be
+      // cancellable, and for a non-CrossOver engine, a monitor that matches
+      // its processes (STAGING_MONITOR_MATCH, 59-01).
+      const sel = getEngineSelection(this.appId)
+      if (!installRoot) {
+        logInfo(
+          `SteamGame: appId ${this.appId} has no process monitor, so no launch deadline is armed`,
+          LogPrefix.Steam
+        )
+      } else if (sel && isNonCrossover(sel) && !STAGING_MONITOR_MATCH) {
+        logInfo(
+          `SteamGame: appId ${this.appId} launch deadline not armed: the monitor does not match this engine's processes (59-01)`,
+          LogPrefix.Steam
+        )
+      } else {
+        deadline = armLaunchDeadline({
+          appId: this.appId,
+          onDeadline: () => this.onBridgeLaunchDeadline(clearLaunchRecord)
+        })
+      }
+
       // quick 261024-tny: the known-fixes hook for the bridge path. It runs
       // BEFORE the monitor because the monitor's start sends 'launching',
       // which supersedes the 'winetricks'/'redist' statuses the applier sends,
@@ -4410,6 +4747,7 @@ export default class SteamGame implements Game {
         )
         return bridgeBottleSettings
       })
+      if (deadlineFired()) return false
 
       // quick 261025-rkj: Steam's first-launch "Installing ..." step for the
       // Steamworks Common Redistributables (VC++/DirectX) the game's appinfo
@@ -4434,6 +4772,7 @@ export default class SteamGame implements Game {
           LogPrefix.Steam
         )
       })
+      if (deadlineFired()) return false
 
       // 53-19 (D-53-06): measured per-title DLL override in this appId's own
       // bridge bottle (Overlooting nvapi64). Never rejects; .catch is
@@ -4448,6 +4787,7 @@ export default class SteamGame implements Game {
         )
         return fixedSettings
       })
+      if (deadlineFired()) return false
 
       let drmCommandPrefix: string[] = []
       if (drm) {
@@ -4484,6 +4824,7 @@ export default class SteamGame implements Game {
             'bottle-stage',
             drmStepError('bottle-stage', env.cause).cause
           )
+          deadline?.cancel('launch-error')
           return false
         }
         launchSettings = {
@@ -4547,8 +4888,10 @@ export default class SteamGame implements Game {
                 `DLL override registry write failed: ${failure}`
               ).cause
             )
+            deadline?.cancel('launch-error')
             return false
           }
+          if (deadlineFired()) return false
         }
       }
 
@@ -4559,9 +4902,11 @@ export default class SteamGame implements Game {
           installPath: installRoot,
           bottleDir: getBottleDir(bridgeBottleSettings.wineCrossoverBottle),
           kind: 'bridge',
+          onFirstMatch: () => deadline?.cancel('first-match'),
           onStopped: () => {
             clearLaunchRecord()
             stopBridgeHelper(this.appId)
+            clearEngineSelection(this.appId)
             relogOnce()
           }
         })
@@ -4629,11 +4974,17 @@ export default class SteamGame implements Game {
           // gone; the launcher process exiting says nothing about the game.
           if (!handle) {
             clearLaunchRecord()
+            clearEngineSelection(this.appId)
             relogOnce()
+          }
+          if (getBottleProcessMonitorPhase(this.appId) !== 'running') {
+            deadline?.cancel('launcher-exited')
           }
           handle?.launcherExited()
         },
         (error: unknown) => {
+          deadline?.cancel('launch-error')
+          clearEngineSelection(this.appId)
           clearLaunchRecord()
           relogOnce()
           reportLaunchFailure(error)
@@ -4643,6 +4994,10 @@ export default class SteamGame implements Game {
 
       return true
     } catch (error) {
+      deadline?.cancel('launch-error')
+      void import('./engine/engineRegistry').then((m) =>
+        m.clearEngineSelection(this.appId)
+      )
       clearLaunchRecord()
       reportLaunchFailure(error)
       return false
