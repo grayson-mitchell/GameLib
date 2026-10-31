@@ -16,8 +16,8 @@ Licence of each file
   them from Proton lsteamclient at 164e0ccd2ea2b1ec2e5d08dc97f65b184c2539ca,
   with NotProton's three overlay files at
   8db22adb237e6ea640a5af148b69b93709daf50c and GameLib's trace additions
-  (exactly seven fenced blocks, including callback-id tracing for DRM-mode
-  multiplayer joins), contributed under the same licence. The licence text is LICENSE.lsteamclient.
+  (exactly seven fenced blocks, including callback-id and P2P peer/size tracing
+  for DRM-mode multiplayer joins), contributed under the same licence. The licence text is LICENSE.lsteamclient.
 - detour-cx<build>.bin: GPL-3.0. It is ported from NotProton ntdll-patch.
 - steam.exe: BSD-3-Clause. It is ported from NotProton steam-shim (Proton
   steam_helper).

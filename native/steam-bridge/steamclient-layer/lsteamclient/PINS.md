@@ -36,7 +36,7 @@ and never committed.
 | `unix_steam_input_manual.cpp` | `3f9e3390a9c4b060a367a312d61f84fc3690141ef34811484b3c21481d7583a7` |
 
 - `unixlib.cpp` and `unix_steam_input_manual.cpp` are committed byte-for-byte.
-- GameLib `steamclient_main.c` sha256 (as committed): `a748be08e1927a1e2fc33b551f2f8f282ce0dd2ad0fc27b33a67125c44821a78`.
+- GameLib `steamclient_main.c` sha256 (as committed): `c38ab0330a2b5b718c936d7d3662f14f1c93a1e4b27bcba0988178ce35fd9ebd`.
 - Strip rule: deleting every block from a line whose trimmed content is
   `/* GAMELIB-DRM-TRACE BEGIN (Phase 56 D-15/D-16) */` through the line whose trimmed content is
   `/* GAMELIB-DRM-TRACE END */`, marker lines included, reproduces the upstream bytes exactly. There
@@ -44,6 +44,18 @@ and never committed.
   CreateInterface hook, BGetCallback hook, GetAPICallResult hook). Blocks 6 and 7 (Phase 58 D-08)
   write `event=callback id=<n>` only for the closed callback id set {333, 337, 504, 505, 506, 510,
   513, 1202, 1203, 1221, 1251, 1252, 1281}, plus `resp=` on 504 and `state=` on 1221.
+- Phase 58 D-08a (plan 58-08, operator decision "Extend the trace") extends blocks 2, 4 and 6 in place
+  (the count stays seven). 1202 now carries `peer=<steamid64>` (P2PSessionRequest_t.m_steamIDRemote,
+  needs a payload of at least 8 bytes, else the bare line). The `steamclient_call` hook adds
+  `event=p2p op=accept peer=<steamid64> ok=0|1`, `op=send peer=<steamid64> bytes=<n>` (only when the
+  send returned true) and `op=read peer=<steamid64> bytes=<n>` (only when the read returned true and
+  both out-params are non-NULL), for ISteamNetworking 003 to 006 by name suffix. Params layout is the
+  x86_64 PE struct; `_Static_assert` pins the 003/004 offsets against 006. Volume scheme: each key
+  (1202 per peer; accept per peer and result; send and read per peer and zero/nonzero size) is written
+  once, capped at 32 such lines per launch (`GAMELIB_TRACE_MAX_P2P`), inside the existing 256-line cap.
+  Privacy: SteamID64 is now written to the trace file and re-logged into the app log (the former D-08
+  "no SteamID" rule is superseded for these four fields only); captures stay in `/tmp` and are never
+  committed (56-SECURITY T-56-15-03).
 - Known deviation: upstream `fetch.sh` also copies
   `steamworks_sdk_165x/isteamnetworkingsocketsserialized.h` and applies `serialized005.patch`
   (NotProton commit `1893a3a`, 2026-10-17). It adds `SteamNetworkingSocketsSerialized005`, which none

@@ -16,6 +16,10 @@
  * GAMELIB_DRM_TRACE_FILE environment variable, parsed by drm/drmTrace.ts:
  *   [drm-trace] appId=<id> pid=<n> role=game|helper event=create-interface iface=<name>
  *   [drm-trace] appId=<id> pid=<n> role=game|helper event=call name=<ISteam..._Method>
+ * Phase 58 D-08a adds three more shapes (see gamelib_trace_p2p and gamelib_trace_callback):
+ *   [drm-trace] ... event=callback id=1202 peer=<steamid64>
+ *   [drm-trace] ... event=p2p op=accept peer=<steamid64> ok=0|1
+ *   [drm-trace] ... event=p2p op=send|read peer=<steamid64> bytes=<n>
  */
 /* GAMELIB-DRM-TRACE END */
 #include <stdarg.h>
@@ -255,9 +259,128 @@ static void gamelib_trace_call(const char *name)
     LeaveCriticalSection( &gamelib_trace_cs );
 }
 
+/* Phase 58 D-08a: bounded SteamID and size evidence for the legacy P2P join path.
+ * A SteamID64 is formatted as a decimal u64, nothing else from a packet or payload is read.
+ * Scheme: each distinct key (callback 1202 per peer; accept per peer and result; send and read
+ * per peer and zero/nonzero size) is written at most once, and at most GAMELIB_TRACE_MAX_P2P
+ * lines are written per launch, so a long session cannot crowd out the join evidence. */
+#define GAMELIB_TRACE_MAX_P2P 32
+static unsigned int gamelib_trace_p2p_lines;
+
+static UINT64 gamelib_trace_u64(const void *p)
+{
+    const unsigned char *b = p;
+    UINT64 v = 0;
+    int i;
+    for (i = 7; i >= 0; i--) v = (v << 8) | b[i];
+    return v;
+}
+
+/* TRUE exactly once per key, and only while the P2P line budget lasts. */
+static BOOL gamelib_trace_claim(const char *key, int klen)
+{
+    UINT64 hash = 14695981039346656037ULL;
+    unsigned int slot, n;
+    BOOL claimed = FALSE;
+
+    if (!gamelib_trace_enabled || klen <= 0) return FALSE;
+    for (n = 0; n < (unsigned int)klen; n++) hash = (hash ^ (unsigned char)key[n]) * 1099511628211ULL;
+    if (!hash) hash = 1;
+    if (gamelib_trace_seen( hash )) return FALSE;
+
+    EnterCriticalSection( &gamelib_trace_cs );
+    if (!gamelib_trace_seen( hash ) && gamelib_trace_enabled && gamelib_trace_p2p_lines < GAMELIB_TRACE_MAX_P2P)
+    {
+        slot = (unsigned int)(hash % GAMELIB_TRACE_SLOTS);
+        for (n = 0; n < GAMELIB_TRACE_SLOTS; n++)
+        {
+            unsigned int s = (slot + n) % GAMELIB_TRACE_SLOTS;
+            if (!gamelib_trace_hashes[s])
+            {
+                gamelib_trace_hashes[s] = hash;
+                gamelib_trace_p2p_lines++;
+                claimed = TRUE;
+                break;
+            }
+        }
+    }
+    LeaveCriticalSection( &gamelib_trace_cs );
+    return claimed;
+}
+
+static void gamelib_trace_p2p(const char *op, UINT64 peer, BOOL has_bytes, uint32_t bytes, BOOL ok)
+{
+    char buf[512], key[96];
+    int klen, out;
+
+    if (!gamelib_trace_enabled) return;
+    klen = snprintf( key, sizeof(key), "p2p:%s:%llu:%u", op, (unsigned long long)peer,
+                     has_bytes ? (bytes ? 1u : 0u) : (ok ? 1u : 0u) );
+    if (klen <= 0 || (size_t)klen >= sizeof(key)) return;
+    if (!gamelib_trace_claim( key, klen )) return;
+    if (has_bytes)
+        out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=p2p op=%s peer=%llu bytes=%u\n",
+                        gamelib_trace_appid, (unsigned long)GetCurrentProcessId(), gamelib_trace_role, op,
+                        (unsigned long long)peer, (unsigned int)bytes );
+    else
+        out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=p2p op=%s peer=%llu ok=%d\n",
+                        gamelib_trace_appid, (unsigned long)GetCurrentProcessId(), gamelib_trace_role, op,
+                        (unsigned long long)peer, ok ? 1 : 0 );
+    if (out > 0 && (size_t)out < sizeof(buf)) gamelib_trace_write( buf, out );
+}
+
+#if defined(__x86_64__)
+/* The leading fields of the SendP2PPacket, ReadP2PPacket and AcceptP2PSessionWithUser params are
+ * identical across ISteamNetworking 003 to 006; only trailing channel arguments differ. The
+ * asserts fail the build if a regenerated layout ever moves them. */
+#define GAMELIB_P2P_SEND   struct ISteamNetworking_SteamNetworking006_SendP2PPacket_params
+#define GAMELIB_P2P_READ   struct ISteamNetworking_SteamNetworking006_ReadP2PPacket_params
+#define GAMELIB_P2P_ACCEPT struct ISteamNetworking_SteamNetworking006_AcceptP2PSessionWithUser_params
+_Static_assert( offsetof( GAMELIB_P2P_SEND, cubData ) ==
+                offsetof( struct ISteamNetworking_SteamNetworking003_SendP2PPacket_params, cubData ), "send layout" );
+_Static_assert( offsetof( GAMELIB_P2P_SEND, cubData ) ==
+                offsetof( struct ISteamNetworking_SteamNetworking004_SendP2PPacket_params, cubData ), "send layout" );
+_Static_assert( offsetof( GAMELIB_P2P_READ, psteamIDRemote ) ==
+                offsetof( struct ISteamNetworking_SteamNetworking003_ReadP2PPacket_params, psteamIDRemote ), "read layout" );
+_Static_assert( offsetof( GAMELIB_P2P_READ, psteamIDRemote ) ==
+                offsetof( struct ISteamNetworking_SteamNetworking004_ReadP2PPacket_params, psteamIDRemote ), "read layout" );
+
+/* Called after a successful unix call. name is compared by suffix after the ISteamNetworking_
+ * prefix; args is the Windows-side params struct the game's call filled in. */
+static void gamelib_trace_p2p_call(const char *name, const void *args)
+{
+    static const char prefix[] = "ISteamNetworking_SteamNetworking";
+    size_t len = 0;
+
+    if (!gamelib_trace_enabled || !name || !args) return;
+    while (len <= 128 && name[len]) len++;
+    if (len > 128 || len <= sizeof(prefix) - 1) return;
+    if (memcmp( name, prefix, sizeof(prefix) - 1 )) return;
+
+    if (gamelib_trace_ends_with( name, len, "_SendP2PPacket", 14 ))
+    {
+        const GAMELIB_P2P_SEND *p = args;
+        if (p->_ret) gamelib_trace_p2p( "send", gamelib_trace_u64( &p->steamIDRemote ), TRUE, p->cubData, TRUE );
+    }
+    else if (gamelib_trace_ends_with( name, len, "_ReadP2PPacket", 14 ))
+    {
+        const GAMELIB_P2P_READ *p = args;
+        if (p->_ret && p->pcubMsgSize && p->psteamIDRemote)
+            gamelib_trace_p2p( "read", gamelib_trace_u64( p->psteamIDRemote ), TRUE, *p->pcubMsgSize, TRUE );
+    }
+    else if (gamelib_trace_ends_with( name, len, "_AcceptP2PSessionWithUser", 25 ))
+    {
+        const GAMELIB_P2P_ACCEPT *p = args;
+        gamelib_trace_p2p( "accept", gamelib_trace_u64( &p->steamIDRemote ), FALSE, 0, p->_ret ? TRUE : FALSE );
+    }
+}
+#else
+static void gamelib_trace_p2p_call(const char *name, const void *args) { (void)name; (void)args; }
+#endif
+
 /* Phase 58 D-08: join-signal callbacks the game drains. Only an integer id from a closed set is
- * written, plus one enum integer for 504 and 1221. No SteamID, handle or other payload byte is
- * ever formatted. payload/cub are the Windows-side buffer; a size too small to hold the enum
+ * written, plus one enum integer for 504 and 1221, and (D-08a) the SteamID64 of the remote peer
+ * for 1202. No handle or other payload byte is ever formatted. payload/cub are the Windows-side buffer; a size too small to hold the enum
  * means the value is omitted. */
 static const int32_t gamelib_trace_callback_ids[] =
 {
@@ -289,6 +412,21 @@ static void gamelib_trace_callback(int32_t id, const void *payload, uint32_t cub
         if (cub >= off + 4) { detail = (int32_t)*(const uint32_t *)((const char *)payload + off); have_detail = TRUE; }
     }
     if (have_detail && (detail < -99 || detail > 999)) have_detail = FALSE;
+
+    if (id == 1202 && payload && cub >= 8)
+    {
+        /* P2PSessionRequest_t { CSteamID m_steamIDRemote; } */
+        UINT64 peer = gamelib_trace_u64( payload );
+        klen = snprintf( key, sizeof(key), "cb:1202:%llu", (unsigned long long)peer );
+        if (klen > 0 && (size_t)klen < sizeof(key) && gamelib_trace_claim( key, klen ))
+        {
+            out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=callback id=1202 peer=%llu\n",
+                            gamelib_trace_appid, (unsigned long)GetCurrentProcessId(), gamelib_trace_role,
+                            (unsigned long long)peer );
+            if (out > 0 && (size_t)out < sizeof(buf)) gamelib_trace_write( buf, out );
+        }
+        return;
+    }
 
     klen = snprintf( key, sizeof(key), "cb:%d:%d", id, have_detail ? detail : -1000 );
     if (klen <= 0 || (size_t)klen >= sizeof(key)) return;
@@ -361,6 +499,7 @@ NTSTATUS steamclient_call( unsigned int code, void *args, const char *name )
     NTSTATUS status = WINE_UNIX_CALL( code, args );
     /* GAMELIB-DRM-TRACE BEGIN (Phase 56 D-15/D-16) */
     if (!status) gamelib_trace_call( name );
+    if (!status) gamelib_trace_p2p_call( name, args );
     /* GAMELIB-DRM-TRACE END */
 
     if (status == STATUS_ACCESS_VIOLATION)
