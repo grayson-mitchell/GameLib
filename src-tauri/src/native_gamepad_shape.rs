@@ -196,7 +196,7 @@ pub fn run_reader<S: PadSource>(
     let mut source = match init() {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("[native-gamepad] gilrs init failed: {e}");
+            shell_eprintln!("[native-gamepad] gilrs init failed: {e}");
             return;
         }
     };
@@ -206,12 +206,14 @@ pub fn run_reader<S: PadSource>(
         if let Some(payload) = gate.tick_logged(Instant::now(), &mut source, &mut changed) {
             if changed {
                 if payload.pads.is_empty() {
-                    eprintln!("[native-gamepad] all pads disconnected");
+                    shell_eprintln!("[native-gamepad] all pads disconnected");
                 }
                 for p in &payload.pads {
-                    eprintln!(
+                    shell_eprintln!(
                         "[native-gamepad] pad {} {:?} connected={}",
-                        p.index, p.id, p.connected
+                        p.index,
+                        p.id,
+                        p.connected
                     );
                 }
             }

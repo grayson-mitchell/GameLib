@@ -48,6 +48,36 @@ use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::{process::Command as ShellCommand, ShellExt};
 
+/// Writes one formatted line (plus newline) to `w`, returning any write error.
+fn write_line_best_effort<W: std::io::Write>(
+    w: &mut W,
+    args: std::fmt::Arguments<'_>,
+) -> std::io::Result<()> {
+    w.write_fmt(args)?;
+    w.write_all(b"\n")
+}
+
+/// Writes a line to stderr under one lock (atomic like `eprintln!`) and discards any error.
+fn stderr_best_effort(args: std::fmt::Arguments<'_>) {
+    let _ = write_line_best_effort(&mut std::io::stderr().lock(), args);
+}
+
+/// Drop-in replacement for `eprintln!` that never panics. Incident (quick 261101-cl4): an
+/// orphaned shell (parent became launchd after a vite OOM killed the tauri CLI) hit EPIPE on
+/// stderr, `eprintln!` panicked, the panic hook's own `eprintln!` panicked inside the hook, and
+/// the process aborted. `eprintln!` panics on write failure; this macro discards the error. Every
+/// shell `eprintln!` is swept to it because each becomes fatal the same way once stderr is closed
+/// (reader threads, deep-link handlers and window events keep running). It is defined above the
+/// external `mod` declarations so those files see it through textual macro scope.
+macro_rules! shell_eprintln {
+    () => {
+        $crate::stderr_best_effort(format_args!(""))
+    };
+    ($($arg:tt)*) => {
+        $crate::stderr_best_effort(format_args!($($arg)*))
+    };
+}
+
 // Phase 50 Plan 01: the raw `WKWebView` Epic embed surface -- see that module's own doc comment
 // for why Epic alone gets a second, parallel surface instead of sharing `StoreEmbedState` below.
 // This is the first external-file `mod` declaration in this file; every other `mod` here is an
@@ -184,7 +214,7 @@ fn tray_image(dark: bool) -> Image<'static> {
         if let Ok(img) = Image::from_bytes(TRAY_ICON_TEMPLATE) {
             return img;
         }
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: macOS tray template image failed to decode, falling back to the colour variant"
         );
     }
@@ -196,13 +226,15 @@ fn tray_image(dark: bool) -> Image<'static> {
     if let Ok(img) = Image::from_bytes(bytes) {
         return img;
     }
-    eprintln!(
+    shell_eprintln!(
         "[shell] WARN: requested tray icon variant (dark={dark}) failed to decode, trying light variant"
     );
     if let Ok(img) = Image::from_bytes(TRAY_ICON_LIGHT) {
         return img;
     }
-    eprintln!("[shell] WARN: both tray icon variants failed to decode, using a blank fallback");
+    shell_eprintln!(
+        "[shell] WARN: both tray icon variants failed to decode, using a blank fallback"
+    );
     Image::new(&TRAY_ICON_FALLBACK_PIXEL, 1, 1)
 }
 
@@ -390,7 +422,7 @@ fn spawn_taskbar_theme_watcher(app: tauri::AppHandle) {
                 RegOpenKeyExW(HKEY_CURRENT_USER, subkey.as_ptr(), 0, KEY_NOTIFY, &mut key)
             };
             if opened != ERROR_SUCCESS {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: taskbar theme watcher could not open the Personalize key (code {opened}) -- Auto keeps the value read at the last sync"
                 );
                 return;
@@ -412,7 +444,7 @@ fn spawn_taskbar_theme_watcher(app: tauri::AppHandle) {
                     )
                 };
                 if status != ERROR_SUCCESS {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] WARN: taskbar theme watcher stopped -- RegNotifyChangeKeyValue returned {status}"
                     );
                     break;
@@ -426,13 +458,13 @@ fn spawn_taskbar_theme_watcher(app: tauri::AppHandle) {
                         if let Err(e) =
                             tray.set_icon_with_as_template(Some(tray_image(dark)), tray_is_template())
                         {
-                            eprintln!(
+                            shell_eprintln!(
                                 "[shell] WARN: taskbar theme watcher could not set the tray icon ({e})"
                             );
                         }
                     }
                     None => {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] taskbar theme watcher: no tray with id {TRAY_ICON_ID:?} -- stopping"
                         );
                         break;
@@ -446,7 +478,7 @@ fn spawn_taskbar_theme_watcher(app: tauri::AppHandle) {
             }
         });
     if let Err(e) = spawned {
-        eprintln!("[shell] WARN: could not spawn the taskbar theme watcher thread ({e})");
+        shell_eprintln!("[shell] WARN: could not spawn the taskbar theme watcher thread ({e})");
     }
 }
 
@@ -611,7 +643,7 @@ fn tray_recent_runner_for(app_name: &str) -> Option<String> {
     let guard = match tray_recent_games().lock() {
         Ok(guard) => guard,
         Err(poisoned) => {
-            eprintln!("[shell] WARN: tray recent-games cache mutex poisoned -- recovering");
+            shell_eprintln!("[shell] WARN: tray recent-games cache mutex poisoned -- recovering");
             poisoned.into_inner()
         }
     };
@@ -822,7 +854,7 @@ fn read_json_file(path: &std::path::Path) -> Option<Value> {
 /// Read the tray settings from `<appFolder>/config.json`, degrading to defaults.
 fn load_tray_settings() -> TraySettingsSnapshot {
     let Some(folder) = gamelib_app_folder() else {
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: could not resolve the GameLib config folder -- using default tray settings"
         );
         return TraySettingsSnapshot::default();
@@ -912,7 +944,7 @@ fn build_tray_menu(app: &AppHandle) -> Option<tauri::menu::Menu<tauri::Wry>> {
     let recents: Vec<TrayRecentGame> = match tray_recent_games().lock() {
         Ok(guard) => guard.clone(),
         Err(poisoned) => {
-            eprintln!("[shell] WARN: tray recent-games cache mutex poisoned -- recovering");
+            shell_eprintln!("[shell] WARN: tray recent-games cache mutex poisoned -- recovering");
             poisoned.into_inner().clone()
         }
     };
@@ -923,7 +955,7 @@ fn build_tray_menu(app: &AppHandle) -> Option<tauri::menu::Menu<tauri::Wry>> {
         // id round-trip; skipping it here is what keeps "every rendered entry is clickable"
         // true by construction rather than by hope.
         let Some(id) = tray_recent_menu_id(&game.app_name) else {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] WARN: tray recent-games entry skipped -- appName failed the plain-appName check (len={})",
                 game.app_name.len()
             );
@@ -931,7 +963,7 @@ fn build_tray_menu(app: &AppHandle) -> Option<tauri::menu::Menu<tauri::Wry>> {
         };
         match MenuItemBuilder::with_id(id, tray_recent_title(game)).build(app) {
             Ok(item) => recent_items.push(item),
-            Err(e) => eprintln!(
+            Err(e) => shell_eprintln!(
                 "[shell] WARN: tray recent-game menu item failed to build ({e}) -- skipping that entry"
             ),
         }
@@ -940,7 +972,7 @@ fn build_tray_menu(app: &AppHandle) -> Option<tauri::menu::Menu<tauri::Wry>> {
     let show_item = match MenuItemBuilder::with_id("show", "Show GameLib").build(app) {
         Ok(item) => item,
         Err(e) => {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] WARN: tray menu items failed to build ({e}) -- continuing without a tray"
             );
             return None;
@@ -949,7 +981,7 @@ fn build_tray_menu(app: &AppHandle) -> Option<tauri::menu::Menu<tauri::Wry>> {
     let about_item = match MenuItemBuilder::with_id("about", "About GameLib").build(app) {
         Ok(item) => item,
         Err(e) => {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] WARN: tray menu items failed to build ({e}) -- continuing without a tray"
             );
             return None;
@@ -958,7 +990,7 @@ fn build_tray_menu(app: &AppHandle) -> Option<tauri::menu::Menu<tauri::Wry>> {
     let quit_item = match MenuItemBuilder::with_id("quit", "Quit").build(app) {
         Ok(item) => item,
         Err(e) => {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] WARN: tray menu items failed to build ({e}) -- continuing without a tray"
             );
             return None;
@@ -977,7 +1009,9 @@ fn build_tray_menu(app: &AppHandle) -> Option<tauri::menu::Menu<tauri::Wry>> {
     match builder.build() {
         Ok(menu) => Some(menu),
         Err(e) => {
-            eprintln!("[shell] WARN: tray menu failed to build ({e}) -- continuing without a tray");
+            shell_eprintln!(
+                "[shell] WARN: tray menu failed to build ({e}) -- continuing without a tray"
+            );
             None
         }
     }
@@ -988,17 +1022,17 @@ fn build_tray_menu(app: &AppHandle) -> Option<tauri::menu::Menu<tauri::Wry>> {
 /// at startup, and neither is an error condition here.
 fn refresh_tray_menu(app: &AppHandle) {
     let Some(tray) = app.tray_by_id(TRAY_ICON_ID) else {
-        eprintln!("[shell] tray menu refresh: no tray with id {TRAY_ICON_ID:?}, skipping");
+        shell_eprintln!("[shell] tray menu refresh: no tray with id {TRAY_ICON_ID:?}, skipping");
         return;
     };
     let Some(menu) = build_tray_menu(app) else {
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: tray menu refresh failed to build a menu -- keeping the previous menu"
         );
         return;
     };
     if let Err(e) = tray.set_menu(Some(menu)) {
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: tray menu refresh failed to apply ({e}) -- keeping the previous menu"
         );
     }
@@ -1011,7 +1045,7 @@ fn update_tray_recent_games(app: &AppHandle, games: Vec<TrayRecentGame>) {
     match tray_recent_games().lock() {
         Ok(mut guard) => *guard = games,
         Err(poisoned) => {
-            eprintln!("[shell] WARN: tray recent-games cache mutex poisoned -- recovering");
+            shell_eprintln!("[shell] WARN: tray recent-games cache mutex poisoned -- recovering");
             *poisoned.into_inner() = games;
         }
     }
@@ -1108,7 +1142,7 @@ fn update_tray_recent_games(app: &AppHandle, games: Vec<TrayRecentGame>) {
 /// so they add no injection surface either.
 fn open_about_window_from_tray(app: &AppHandle) {
     let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: tray About: no '{MAIN_WINDOW_LABEL}' window to reach window.api.showAboutWindow -- skipping"
         );
         return;
@@ -1117,7 +1151,7 @@ fn open_about_window_from_tray(app: &AppHandle) {
     let _ = window.show();
     let _ = window.set_focus();
     if let Err(e) = window.eval("window.api?.showAboutWindow?.()") {
-        eprintln!("[shell] WARN: tray About: eval failed ({e}) -- About window not opened");
+        shell_eprintln!("[shell] WARN: tray About: eval failed ({e}) -- About window not opened");
     }
 }
 
@@ -1483,20 +1517,20 @@ mod terminate_reply_tests {
 /// nothing to show the user either way.
 fn dispatch_tray_launch(app: &AppHandle, app_name: String, known_runner: Option<String>) {
     let Some(state) = app.try_state::<Arc<SidecarState>>() else {
-        eprintln!("[shell] WARN: tray recent-game launch: no sidecar state -- skipping");
+        shell_eprintln!("[shell] WARN: tray recent-game launch: no sidecar state -- skipping");
         return;
     };
     let state = state.inner().clone();
     thread::spawn(move || {
         let runner = match known_runner {
             Some(runner) => {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] tray recent-game launch: using the runner persisted on the entry (no lookup needed)"
                 );
                 runner
             }
             None => {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] tray recent-game launch: entry carries no runner (pre-Phase-35 entry) -- falling back to the trayResolveRunner probe"
                 );
                 match state.invoke(
@@ -1505,13 +1539,13 @@ fn dispatch_tray_launch(app: &AppHandle, app_name: String, known_runner: Option<
                 ) {
                     Ok(Value::String(runner)) => runner,
                     Ok(_) => {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] tray recent-game launch: sidecar could not resolve a runner for the selected entry -- not launching"
                         );
                         return;
                     }
                     Err(e) => {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] WARN: tray recent-game launch: runner lookup failed ({e})"
                         );
                         return;
@@ -1523,9 +1557,13 @@ fn dispatch_tray_launch(app: &AppHandle, app_name: String, known_runner: Option<
         payload.insert("appName".to_string(), Value::String(app_name));
         payload.insert("runner".to_string(), Value::String(runner));
         match state.invoke("launch".to_string(), vec![Value::Object(payload)]) {
-            Ok(_) => eprintln!("[shell] tray recent-game launch: dispatched to the sidecar: ok"),
+            Ok(_) => {
+                shell_eprintln!("[shell] tray recent-game launch: dispatched to the sidecar: ok")
+            }
             Err(e) => {
-                eprintln!("[shell] tray recent-game launch: dispatched to the sidecar: err={e}")
+                shell_eprintln!(
+                    "[shell] tray recent-game launch: dispatched to the sidecar: err={e}"
+                )
             }
         }
     });
@@ -1939,7 +1977,7 @@ impl SidecarState {
         let mut child = match self.child.lock() {
             Ok(guard) => guard,
             Err(poisoned) => {
-                eprintln!("[shell] sidecar mutex poisoned during exit shutdown; recovering");
+                shell_eprintln!("[shell] sidecar mutex poisoned during exit shutdown; recovering");
                 poisoned.into_inner()
             }
         };
@@ -1967,7 +2005,7 @@ impl SidecarState {
                     }
                     Ok(None) => thread::sleep(Duration::from_millis(50)),
                     Err(e) => {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] sidecar try_wait() failed during exit shutdown grace period: {e}"
                         );
                         break;
@@ -1985,14 +2023,14 @@ impl SidecarState {
         #[cfg(not(unix))]
         {
             if let Err(e) = child.kill() {
-                eprintln!("[shell] sidecar kill() failed during exit shutdown (may have already exited): {e}");
+                shell_eprintln!("[shell] sidecar kill() failed during exit shutdown (may have already exited): {e}");
             }
         }
 
         if let Err(e) = child.wait() {
-            eprintln!("[shell] sidecar wait() failed during exit shutdown: {e}");
+            shell_eprintln!("[shell] sidecar wait() failed during exit shutdown: {e}");
         } else {
-            eprintln!("[shell] sidecar terminated on exit");
+            shell_eprintln!("[shell] sidecar terminated on exit");
         }
     }
 
@@ -2188,7 +2226,7 @@ fn sidecar_send(
         args,
     };
     if send_trace_enabled() {
-        eprintln!(
+        shell_eprintln!(
             "[shell] send-trace: sidecar_send entered for '{}'",
             req.channel
         );
@@ -2198,7 +2236,7 @@ fn sidecar_send(
             "send writer thread is gone; frame for '{}' not written",
             rejected.0.channel
         );
-        eprintln!("[shell] send-trace: {message}");
+        shell_eprintln!("[shell] send-trace: {message}");
         message
     })
 }
@@ -2219,7 +2257,7 @@ where
     thread::spawn(move || {
         for req in rx {
             if let Err(e) = write(&req) {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] send-trace: write_frame FAILED for '{}': {e}",
                     req.channel
                 );
@@ -2263,7 +2301,7 @@ fn open_external_scheme_check(url: &str) -> Result<(), String> {
         .ok_or_else(|| "open_external: rejected a URL with no scheme".to_string())?;
     if !OPEN_EXTERNAL_ALLOWED_SCHEMES.contains(&scheme.as_str()) {
         // Scheme name only, never the URL (T-28-04 convention).
-        eprintln!("[shell] open_external: rejected scheme '{scheme}'");
+        shell_eprintln!("[shell] open_external: rejected scheme '{scheme}'");
         return Err("open_external: scheme not allowed".to_string());
     }
     Ok(())
@@ -3471,7 +3509,7 @@ fn request_login_sheet_cancel(app: &AppHandle, label: &str, route: &str) {
         // quick-261029-o1w: the GOG pristine window is a plain `tauri::Window`.
         let _ = window.close();
     }
-    eprintln!("[shell] login-sheet: cancel requested for '{label}' via {route}");
+    shell_eprintln!("[shell] login-sheet: cancel requested for '{label}' via {route}");
 }
 
 /// Host this arm uses to decide whether the window it is about to open is Epic's --
@@ -4000,7 +4038,7 @@ fn open_pristine_epic_login_window(
             // first-responder promotion.
             if let Some(ns_window) = ns_view.window() {
                 if !ns_window.makeFirstResponder(Some(&webview)) {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] WARN: humble_login_open:pristine: makeFirstResponder declined for '{main_thread_label}' -- paste may not reach the login form"
                     );
                 }
@@ -4095,13 +4133,13 @@ fn open_pristine_epic_login_window(
                         }
                     }
                     None => {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] WARN: humble_login_open:pristine: addLocalMonitorForEventsMatchingMask failed for '{main_thread_label}' -- Cmd+V/C/X/A/Z may not reach the login form"
                         );
                     }
                 }
             } else {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: humble_login_open:pristine: no NSWindow for '{main_thread_label}' -- cannot promote webview to first responder"
                 );
             }
@@ -4121,7 +4159,7 @@ fn open_pristine_epic_login_window(
 
     match rx.recv_timeout(Duration::from_secs(10)) {
         Ok(Ok(())) => {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] humble_login_open: pristine WKWebView built for '{label}' (zero Tauri injection, F-34.5-G6-01 bounded attempt)"
             );
             Ok(Value::String(label.to_string()))
@@ -4471,7 +4509,7 @@ fn clear_pending_visible_login_window(label: &str) {
             .unwrap_or(false);
         if matches {
             *guard = None;
-            eprintln!(
+            shell_eprintln!(
                 "[shell] humble_login_open: cleared pending login window latch for '{label}'"
             );
         }
@@ -4538,7 +4576,9 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
     // URL/origin/title (T-34.4.1-21/-106 discipline unchanged) -- only elapsed durations and
     // the fixed label.
     let started = std::time::Instant::now();
-    eprintln!("[shell] login-window sheet: present_login_window_as_sheet entered for '{label}'");
+    shell_eprintln!(
+        "[shell] login-window sheet: present_login_window_as_sheet entered for '{label}'"
+    );
 
     // CR-02 fix (gap cycle following 34.4.2-LIVE-GATE-RERUN.md's FAIL 0/6): the channel now
     // carries a `bool` -- whether AppKit itself confirms the attachment -- rather than `()`.
@@ -4556,7 +4596,7 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
         // scheduled" from "started and stalled inside the AppKit call below" -- the two
         // failure modes the checkpoint response could not tell apart from a beachball
         // alone.
-        eprintln!(
+        shell_eprintln!(
             "[shell] login-window sheet: main-thread closure entered for '{closure_label}'"
         );
         // F-34.4.2-05 fix (see `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY`'s own doc comment for
@@ -4567,7 +4607,7 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
         // executes synchronously inline when already on the main thread (confirmed by direct
         // read of tauri-runtime-wry's vendored source), so it would not yield a single
         // run-loop turn and would reproduce exactly the wedge this fix targets.
-        eprintln!(
+        shell_eprintln!(
             "[shell] login-window sheet: deferring beginSheet dispatch by {SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY:?} via DispatchQueue::main().after() for '{closure_label}'"
         );
         let deferred_app = closure_app;
@@ -4580,7 +4620,7 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
             // GCD silently dropping/never scheduling it), and how much real wall-clock
             // time elapsed since it was scheduled -- should be >= WARMUP_DELAY, confirming
             // a genuine run-loop deferral took place rather than an inline no-op.
-            eprintln!(
+            shell_eprintln!(
                 "[shell] login-window sheet: deferred beginSheet closure entered for '{deferred_label}' (deferred_elapsed={:?})",
                 deferred_started.elapsed()
             );
@@ -4604,7 +4644,7 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
             let Some(parent) =
                 login_window_ns_window_retained(&deferred_app, MAIN_WINDOW_LABEL)
             else {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: login-window sheet: no NSWindow for '{MAIN_WINDOW_LABEL}' -- skipping"
                 );
                 let _ = tx.send(false);
@@ -4612,7 +4652,7 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
             };
             let Some(child) = login_window_ns_window_retained(&deferred_app, &deferred_label)
             else {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: login-window sheet: no NSWindow for '{deferred_label}' -- skipping"
                 );
                 let _ = tx.send(false);
@@ -4622,7 +4662,7 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
             // addresses resolved" line, which no longer has a pre-dispatch leg to sit in.
             // Keeps a future live gate able to localize a stall to the resolution leg
             // specifically, now measured from inside the deferred closure.
-            eprintln!(
+            shell_eprintln!(
                 "[shell] login-window sheet: both NSWindow handles resolved on the main thread for '{deferred_label}' (deferred_elapsed={:?})",
                 deferred_started.elapsed()
             );
@@ -4635,7 +4675,7 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
             // opposed to blocking the main thread inside AppKit, which would mean this
             // line -- and every other main-thread message queued behind it, including the
             // visible-fallback `humble_login_open` queues further down -- never runs).
-            eprintln!(
+            shell_eprintln!(
                 "[shell] login-window sheet: beginSheet dispatch call returned for '{deferred_label}'"
             );
             // CR-02 read-back: two independent AppKit-owned signals, both required.
@@ -4650,13 +4690,13 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
                 && parent.attachedSheet().is_some_and(|sheet| {
                     std::ptr::eq(&*sheet as *const _, &*child as *const _)
                 });
-            eprintln!(
+            shell_eprintln!(
                 "[shell] login-window sheet: read-back attached={attached} for '{deferred_label}'"
             );
             let _ = tx.send(attached);
         });
     }) {
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: login-window sheet: main-thread dispatch failed for '{label}' ({e})"
         );
         return false;
@@ -4664,19 +4704,19 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
     let attached = match rx.recv_timeout(Duration::from_secs(10)) {
         Ok(attached) => attached,
         Err(_) => {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] WARN: login-window sheet: main-thread dispatch timed out for '{label}' (elapsed={:?} -- the main-thread closure above may still be running/queued; see LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT in humble_login_open for the caller-side bound that guarantees a fallback regardless)",
                 started.elapsed()
             );
             return false;
         }
     };
-    eprintln!(
+    shell_eprintln!(
         "[shell] login-window sheet: present_login_window_as_sheet resolved attached={attached} for '{label}' (elapsed={:?})",
         started.elapsed()
     );
     if !attached {
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: login-window sheet: beginSheet did not attach '{label}' to '{MAIN_WINDOW_LABEL}' (attachedSheet/isSheet read-back false -- CR-01/CR-02)"
         );
         return false;
@@ -4791,7 +4831,7 @@ fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {
         // own doc comment for why re-registering on the healthy "window is already gone" path
         // would strand the label instead of rescuing it.
         let Some(parent) = login_window_ns_window_retained(&closure_app, MAIN_WINDOW_LABEL) else {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] WARN: login-window dismiss: no NSWindow for '{MAIN_WINDOW_LABEL}' -- skipping"
             );
             let _ = tx.send(());
@@ -4809,7 +4849,7 @@ fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {
         // WR-01: the dispatch never ran at all -- re-register so both cancel routes (strip,
         // Esc) and any retry stay reachable rather than permanently membership-gated shut.
         register_presented_login_sheet(label);
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: login-window dismiss: '{label}' main-thread dispatch failed -- re-registered as still presented so the cancel routes stay reachable ({e})"
         );
         return;
@@ -4819,7 +4859,7 @@ fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {
         // unconfirmed, not successful, and re-register for the same reason as the dispatch-Err
         // arm above.
         register_presented_login_sheet(label);
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: login-window dismiss: '{label}' main-thread hop unconfirmed within 10s -- re-registered as still presented so the cancel routes stay reachable"
         );
     }
@@ -5052,7 +5092,7 @@ fn install_native_login_bar(
         reg.borrow_mut().insert(label.clone(), text);
     });
     // Frame numbers only, never the origin (T-34.4.1-106).
-    eprintln!(
+    shell_eprintln!(
         "[shell] login-bar: installed for '{label}' flipped={flipped} webview_y={webview_y} webview_h={webview_h} bar_h={bar_h}"
     );
 }
@@ -5107,20 +5147,20 @@ fn open_pristine_login_sheet(
             let attached = match done_rx.recv_timeout(LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT) {
                 Ok(attached) => attached,
                 Err(_) => {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] WARN: humble_login_open:{store}-sheet: '{label}' sheet-attach watchdog exceeded {LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT:?} -- treating as unconfirmed"
                     );
                     false
                 }
             };
             if !attached {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: humble_login_open:{store}-sheet: '{label}' sheet attachment unconfirmed -- falling back to a free-standing visible window"
                 );
                 let _ = window.show();
                 let _ = window.set_focus();
             }
-            eprintln!("[shell] humble_login_open:{store}-sheet: sheet_presented={attached}");
+            shell_eprintln!("[shell] humble_login_open:{store}-sheet: sheet_presented={attached}");
         }
     }
     clear_pending_visible_login_window(label);
@@ -5314,7 +5354,7 @@ fn clear_default_data_store_cookies_for_domain(
                 let remove_completion = block2::RcBlock::new(move || {
                     let _ = tx_remove.send(());
                 });
-                eprintln!(
+                shell_eprintln!(
                     "[shell] humble_login_clear_cookies: default-store evicting cookies + HTTP disk/memory cache for {matched_record_count} matching data record(s) (domain-scoped, count only)"
                 );
                 // SAFETY: `data_store_for_removal` is a live object obtained on the main
@@ -5335,14 +5375,14 @@ fn clear_default_data_store_cookies_for_domain(
             data_store.fetchDataRecordsOfTypes_completionHandler(&all_types, &fetch_completion);
         }
     }) {
-        eprintln!("[shell] humble_login_clear_cookies: default-store dispatch failed: {e}");
+        shell_eprintln!("[shell] humble_login_clear_cookies: default-store dispatch failed: {e}");
         return Err(format!(
             "humble_login_clear_cookies:default-store:dispatch:{e}"
         ));
     }
 
     if rx.recv_timeout(CLEAR_COOKIES_TIMEOUT).is_err() {
-        eprintln!(
+        shell_eprintln!(
             "[shell] humble_login_clear_cookies: default-store WKWebsiteDataStore removal timed out waiting for the completion signal"
         );
     }
@@ -5631,14 +5671,14 @@ fn macos_finder_reselect_workaround(path: &str) {
         // `[shell]` eprintln diagnostic convention used by `open_external`.
         match out {
             Ok(o) if !o.status.success() || !o.stderr.is_empty() => {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] finder reselect workaround failed for {:?}: {}",
                     path,
                     String::from_utf8_lossy(&o.stderr).trim()
                 );
             }
             Err(e) => {
-                eprintln!("[shell] finder reselect workaround could not spawn osascript: {e}")
+                shell_eprintln!("[shell] finder reselect workaround could not spawn osascript: {e}")
             }
             _ => {}
         }
@@ -5876,7 +5916,7 @@ mod windows_wake_lock {
                     // than panicking on this thread.
                     let previous = unsafe { SetThreadExecutionState(next) };
                     if previous == 0 {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] WARN: wake lock SetThreadExecutionState({next:#x}) failed -- continuing"
                         );
                     }
@@ -5985,7 +6025,7 @@ fn wake_lock_start(kind_str: &str) -> Result<u32, String> {
             }
             Err(e) => {
                 registry.held.remove(&id);
-                eprintln!("[shell] WARN: wake lock could not be taken ({e}) -- continuing");
+                shell_eprintln!("[shell] WARN: wake lock could not be taken ({e}) -- continuing");
                 return Err(e);
             }
         }
@@ -5999,7 +6039,7 @@ fn wake_lock_start(kind_str: &str) -> Result<u32, String> {
             }
             Err(e) => {
                 registry.held.remove(&id);
-                eprintln!("[shell] WARN: wake lock could not be taken ({e}) -- continuing");
+                shell_eprintln!("[shell] WARN: wake lock could not be taken ({e}) -- continuing");
                 return Err(e);
             }
         }
@@ -6007,7 +6047,7 @@ fn wake_lock_start(kind_str: &str) -> Result<u32, String> {
 
     if let Err(e) = wake_lock_sync_platform(&registry) {
         registry.held.remove(&id);
-        eprintln!("[shell] WARN: wake lock could not be taken ({e}) -- continuing");
+        shell_eprintln!("[shell] WARN: wake lock could not be taken ({e}) -- continuing");
         return Err(e);
     }
 
@@ -6025,19 +6065,19 @@ fn wake_lock_stop(id: u32) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     if let Some(assertion_id) = registry.assertions.remove(&id) {
         if let Err(e) = macos_wake_lock::release(assertion_id) {
-            eprintln!("[shell] WARN: wake lock could not be released ({e}) -- continuing");
+            shell_eprintln!("[shell] WARN: wake lock could not be released ({e}) -- continuing");
         }
     }
 
     #[cfg(target_os = "linux")]
     if let Some(child) = registry.inhibitors.remove(&id) {
         if let Err(e) = linux_wake_lock::release(child) {
-            eprintln!("[shell] WARN: wake lock could not be released ({e}) -- continuing");
+            shell_eprintln!("[shell] WARN: wake lock could not be released ({e}) -- continuing");
         }
     }
 
     if let Err(e) = wake_lock_sync_platform(&registry) {
-        eprintln!("[shell] WARN: wake lock could not be released ({e}) -- continuing");
+        shell_eprintln!("[shell] WARN: wake lock could not be released ({e}) -- continuing");
     }
 
     Ok(())
@@ -6066,7 +6106,7 @@ fn wake_lock_release_all() {
         #[cfg(target_os = "macos")]
         if let Some(assertion_id) = registry.assertions.remove(&id) {
             if let Err(e) = macos_wake_lock::release(assertion_id) {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: wake lock could not be released at exit ({e}) -- continuing"
                 );
             }
@@ -6075,14 +6115,16 @@ fn wake_lock_release_all() {
         #[cfg(target_os = "linux")]
         if let Some(child) = registry.inhibitors.remove(&id) {
             if let Err(e) = linux_wake_lock::release(child) {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: wake lock could not be released at exit ({e}) -- continuing"
                 );
             }
         }
     }
     if let Err(e) = wake_lock_sync_platform(&registry) {
-        eprintln!("[shell] WARN: wake lock could not be released at exit ({e}) -- continuing");
+        shell_eprintln!(
+            "[shell] WARN: wake lock could not be released at exit ({e}) -- continuing"
+        );
     }
 }
 
@@ -6486,7 +6528,7 @@ fn store_embed_navigation_policy(
         // The sharpest edge in the phase (T-40-04-02): a store page driving the app's own deep
         // link would let it act with the app's own IPC surface. Scheme-only in the log --
         // never the full URL -- matching `open_external_scheme_check`'s T-28-04 convention.
-        eprintln!(
+        shell_eprintln!(
             "[shell] store_embed: blocked in-embed navigation to the app's own scheme \
              ('gamelib') -- T-40-04-02"
         );
@@ -6500,7 +6542,7 @@ fn store_embed_navigation_policy(
             return StoreEmbedNavigationDecision::Handoff;
         }
         // Scheme-only in the log, as above -- never the steam: URL itself.
-        eprintln!(
+        shell_eprintln!(
             "[shell] store_embed: blocked steam: hand-off -- the top-level page is not a Valve \
              host"
         );
@@ -6509,7 +6551,9 @@ fn store_embed_navigation_policy(
     // Default-deny (T-40-04-03): any scheme outside the enumerated set above, not an allowlist
     // of known-bad schemes. A future store/wiki origin registering some other custom scheme
     // falls here automatically rather than needing a new arm added reactively.
-    eprintln!("[shell] store_embed: blocked in-embed navigation to unrecognized scheme '{scheme}'");
+    shell_eprintln!(
+        "[shell] store_embed: blocked in-embed navigation to unrecognized scheme '{scheme}'"
+    );
     StoreEmbedNavigationDecision::Block
 }
 
@@ -6619,7 +6663,7 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
         state.select_store(&store_key);
         state.prepare_open(url.as_str(), home_url.as_ref().map(tauri::Url::as_str));
     } else {
-        eprintln!("[shell] WARN: store_embed history registry poisoned -- continuing");
+        shell_eprintln!("[shell] WARN: store_embed history registry poisoned -- continuing");
     }
 
     if let Some(existing) = app.get_webview(STORE_EMBED_LABEL) {
@@ -6680,7 +6724,9 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
                 if let Ok(mut state) = store_embed_state().lock() {
                     state.push(payload.url().to_string());
                 } else {
-                    eprintln!("[shell] WARN: store_embed history registry poisoned -- continuing");
+                    shell_eprintln!(
+                        "[shell] WARN: store_embed history registry poisoned -- continuing"
+                    );
                 }
             }
         })
@@ -6702,7 +6748,7 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
                     StoreEmbedNavigationDecision::Block => false,
                     StoreEmbedNavigationDecision::Handoff => {
                         if !store_embed_handoff_admitted(&STORE_EMBED_STEAM_THROTTLE) {
-                            eprintln!(
+                            shell_eprintln!(
                                 "[shell] store_embed: steam: hand-off rate-limited -- dropped"
                             );
                             return false;
@@ -6710,7 +6756,7 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
                         // Reuses the existing `open_external` command function directly -- never a
                         // second, duplicated `app.opener()` call site (D-28).
                         if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
-                            eprintln!(
+                            shell_eprintln!(
                                 "[shell] store_embed: on_navigation handoff to open_external \
                              failed: {e}"
                             );
@@ -6741,7 +6787,7 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
                 if store_embed_browser_handoff_policy(url.as_str())
                     != StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
                 {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] store_embed: denied window.open request to scheme '{}' -- not \
                          routed to the system browser",
                         url.scheme()
@@ -6749,18 +6795,18 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
                     return tauri::webview::NewWindowResponse::Deny;
                 }
                 if !store_embed_handoff_admitted(&STORE_EMBED_POPUP_THROTTLE) {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] store_embed: denied window.open request, rate-limited -- not \
                          routed to the system browser"
                     );
                     return tauri::webview::NewWindowResponse::Deny;
                 }
-                eprintln!(
+                shell_eprintln!(
                     "[shell] store_embed: denied window.open request, routing to system \
                      browser (D-28)"
                 );
                 if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] store_embed: on_new_window handoff to open_external failed: {e}"
                     );
                 }
@@ -6783,19 +6829,19 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
                     if store_embed_browser_handoff_policy(url.as_str())
                         != StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
                     {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] store_embed: denied in-embed download with scheme '{}' -- \
                              not routed to the system browser",
                             url.scheme()
                         );
                         return false;
                     }
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] store_embed: denied in-embed download, routing to system \
                          browser (D-28)"
                     );
                     if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] store_embed: on_download handoff to open_external \
                              failed: {e}"
                         );
@@ -6822,7 +6868,7 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
             #[cfg(target_os = "linux")]
             if let Err(e) = linux_store_embed_layout::mount(app, &_webview, linux_rect) {
                 // Main must never be left sharing the vbox with an unmounted embed.
-                eprintln!("[shell] store_embed(linux): error mount: {e}");
+                shell_eprintln!("[shell] store_embed(linux): error mount: {e}");
                 let _ = _webview.close();
                 if let Ok(mut state) = store_embed_state().lock() {
                     state.clear();
@@ -6832,7 +6878,7 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
             Ok(Value::Null)
         }
         Err(e) => {
-            eprintln!("[shell] store_embed_open: child webview construction failed: {e}");
+            shell_eprintln!("[shell] store_embed_open: child webview construction failed: {e}");
             Err(format!("store_embed_open:child-webview-failed:{e}"))
         }
     }
@@ -7021,7 +7067,7 @@ fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, Stri
     #[cfg(target_os = "linux")]
     {
         if store_embed_linux_rect_is_zero_area(linux_rect) {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] store_embed(linux): ignored zero-area bounds (slot unmounted); \
                  keeping the last real geometry"
             );
@@ -7033,7 +7079,7 @@ fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, Stri
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         if store_embed_rect_is_zero_area(w, h) {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] store_embed({}): ignored zero-area bounds (slot unmounted); \
                  keeping the last real geometry",
                 std::env::consts::OS
@@ -7254,7 +7300,7 @@ mod linux_store_embed_layout {
                 return;
             };
             let Some(main_w) = overlay.child() else {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] store_embed(linux): error settled-log: overlay has no main child"
                 );
                 return;
@@ -7263,13 +7309,13 @@ mod linux_store_embed_layout {
                 embed_w.translate_coordinates(&main_w, 0, 0),
                 main_w.translate_coordinates(&overlay, 0, 0),
             ) else {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] store_embed(linux): error settled-log: translate_coordinates failed"
                 );
                 return;
             };
             let Some(vbox) = overlay.parent() else { return };
-            eprintln!(
+            shell_eprintln!(
                 "{}",
                 store_embed_linux_settled_line(
                     requested,
@@ -8105,7 +8151,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             }
             #[cfg(not(target_os = "macos"))]
             {
-                eprintln!(
+                shell_eprintln!(
                     "[dispatch_rust_channel] app_hide: declared no-op off macOS -- \
                      AppHandle::hide() does not exist on this platform, exact parity with real \
                      Electron's own macOS-only app.hide()"
@@ -8136,7 +8182,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             if let Some(raw) = tray_set_icon_variant_str(&args) {
                 if parse_tray_icon_mode(Some(raw)) == TrayIconMode::Auto && raw != "auto" {
                     // Length only, never the value (T-260930-lyk-01/05).
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] WARN: tray_set_icon: unrecognised variant ({} bytes) -- treating as auto",
                         raw.len()
                     );
@@ -8149,7 +8195,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 None
             };
             if mode == TrayIconMode::Auto && system_uses_light_theme.is_none() {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] tray_set_icon: SystemUsesLightTheme unreadable -- Auto falling back to the light glyph"
                 );
             }
@@ -8165,7 +8211,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 }
                 // A missing tray is not an error condition -- it may have legitimately
                 // failed to build at startup (T-34.1-22); log and resolve successfully.
-                None => eprintln!(
+                None => shell_eprintln!(
                     "[shell] tray_set_icon: no tray found with id {TRAY_ICON_ID:?}, skipping"
                 ),
             }
@@ -8364,7 +8410,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 if let Some((stale_label, armed_at)) = pending_guard.clone() {
                     let age = now.duration_since(armed_at);
                     if pending_login_entry_is_stale(age) {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] humble_login_open: pending login window latch for '{stale_label}' expired after {age:?} (TTL {PENDING_VISIBLE_LOGIN_WINDOW_TTL:?}) -- treating as absent"
                         );
                         *pending_guard = None;
@@ -8380,13 +8426,13 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                             .and_then(|guard| guard.as_ref().and_then(|list| list.first().cloned()))
                     });
                 if let Some(incumbent_label) = incumbent {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] humble_login_open: REFUSED visible login window '{label}' -- '{incumbent_label}' is already pending or presented (T-34.4.2-39 single-flight)"
                     );
                     return Err("humble_login_open:login-already-in-progress".to_string());
                 }
                 *pending_guard = Some((label.clone(), now));
-                eprintln!(
+                shell_eprintln!(
                     "[shell] humble_login_open: visible login window '{label}' armed as the single pending login flow (T-34.4.2-39)"
                 );
             }
@@ -8535,7 +8581,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         // (T-34.4.1-106: remote page content must never reach an
                         // uploadable log).
                         if title.is_empty() {
-                            eprintln!(
+                            shell_eprintln!(
                                 "[shell] humble_login_open: title change SKIPPED len=0 (empty document title; previous title retained)"
                             );
                             return;
@@ -8546,7 +8592,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                             .unwrap_or_default();
                         let composed = login_window_title(&origin_now, Some(&title));
                         let _ = window.set_title(&composed);
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] humble_login_open: title change applied len={}",
                             title.len()
                         );
@@ -8562,7 +8608,9 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 // Humble's marketing footer is visual noise on Windows and Linux too, so it runs
                 // unconditionally inside this `if visible` block on every platform.
                 builder = builder.initialization_script(&login_chrome_css_script());
-                eprintln!("[shell] humble_login_open: login chrome CSS injected for '{label}'");
+                shell_eprintln!(
+                    "[shell] humble_login_open: login chrome CSS injected for '{label}'"
+                );
                 // F-4 machine record (Phase 34.4.1 Plan 24): `.focused(true)` above is
                 // a ONE-SHOT raise-on-creation with no persistent state to inspect
                 // afterwards, so without this line there is no record of what
@@ -8612,7 +8660,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             #[cfg(debug_assertions)]
             if visible && std::env::var("GAMELIB_LOGIN_DIAG").as_deref() == Ok("1") {
                 builder = builder.initialization_script(DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT);
-                eprintln!(
+                shell_eprintln!(
                     "[shell] humble_login_open: GAMELIB-DIAG init script INJECTED for '{label}' (GAMELIB_LOGIN_DIAG=1)"
                 );
             }
@@ -8676,7 +8724,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                                 &label_for_origin,
                                 &new_origin,
                             );
-                            eprintln!(
+                            shell_eprintln!(
                                 "[shell] humble_login_open: origin banner updated len={}",
                                 new_origin.len()
                             );
@@ -8741,7 +8789,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             };
             #[cfg(target_os = "macos")]
             if visible && !native_bar_installed {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: humble_login_open: '{label}' native login bar unconfirmed -- not presenting as a sheet (no visible exit)"
                 );
             }
@@ -8776,7 +8824,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 match watchdog_rx.recv_timeout(LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT) {
                     Ok(attached) => attached,
                     Err(_) => {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] WARN: humble_login_open: '{label}' sheet-attach watchdog exceeded {LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT:?} -- present_login_window_as_sheet has not returned (see that function's own diagnostics for where it last logged); treating as unconfirmed and falling back now rather than waiting further"
                         );
                         false
@@ -8814,7 +8862,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // still strictly better than the invisible one this fallback exists to prevent.
             #[cfg(target_os = "macos")]
             if visible && !sheet_presented {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: humble_login_open: '{label}' sheet attachment unconfirmed -- falling back to a free-standing visible window"
                 );
                 let _ = window.show();
@@ -8831,7 +8879,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 // rationale. `sheet_presented` (Phase 34.4.2 Plan 07's sheet-presentation
                 // switch, superseding Plan 02's differently-named field) is recorded here;
                 // this print still runs AFTER `.build()`/presentation so it can be included.
-                eprintln!(
+                shell_eprintln!(
                     "[shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true sheet_presented={sheet_presented}"
                 );
             }
@@ -8922,9 +8970,11 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             #[cfg(debug_assertions)]
             if visible && should_auto_open_devtools(std::env::consts::OS) {
                 window.open_devtools();
-                eprintln!("[shell] humble_login_open: devtools opened for '{label}' (debug build)");
+                shell_eprintln!(
+                    "[shell] humble_login_open: devtools opened for '{label}' (debug build)"
+                );
             } else if visible {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] humble_login_open: devtools NOT auto-opened for '{label}' on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
                 );
             }
@@ -9538,7 +9588,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                             let remove_completion = block2::RcBlock::new(move || {
                                 let _ = tx_remove.send(());
                             });
-                            eprintln!(
+                            shell_eprintln!(
                                 "[shell] humble_login_clear_cookies: window branch evicting cookies + HTTP disk/memory cache for {matched_record_count} matching data record(s) (domain-scoped, count only)"
                             );
                             // SAFETY: `data_store_for_removal` is a live object obtained
@@ -9563,14 +9613,14 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                             .fetchDataRecordsOfTypes_completionHandler(&all_types, &fetch_completion);
                     }
                 }) {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] humble_login_clear_cookies: with_webview dispatch failed: {e}"
                     );
                     return Err(format!("humble_login_clear_cookies:dispatch:{e}"));
                 }
 
                 if rx.recv_timeout(CLEAR_COOKIES_TIMEOUT).is_err() {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] humble_login_clear_cookies: WKWebsiteDataStore removal timed out waiting for the completion signal"
                     );
                     // Fall through to the re-read below regardless -- a timeout means the
@@ -9661,7 +9711,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                                             if let Err(e) = unsafe {
                                                 manager_for_delete.DeleteCookie(&cookie)
                                             } {
-                                                eprintln!(
+                                                shell_eprintln!(
                                                     "[shell] humble_login_clear_cookies: DeleteCookie refused: {e}"
                                                 );
                                             }
@@ -9682,14 +9732,14 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         let _ = tx.send(());
                     }
                 }) {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] humble_login_clear_cookies: with_webview dispatch failed: {e}"
                     );
                     return Err(format!("humble_login_clear_cookies:dispatch:{e}"));
                 }
 
                 if rx.recv_timeout(CLEAR_COOKIES_TIMEOUT).is_err() {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] humble_login_clear_cookies: WebView2 cookie removal timed out waiting for the completion signal"
                     );
                     // Fall through to the re-read regardless, as the macOS arm does.
@@ -9710,7 +9760,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 }
                 // Counts only, never a cookie name or value. Tells the live gate whether the
                 // removal landed synchronously (0 re-reads) or needed the settle window.
-                eprintln!(
+                shell_eprintln!(
                     "[shell] humble_login_clear_cookies: before={before_matching} after={after_matching} settle_rereads={settle_rereads}"
                 );
                 if after_matching > 0 {
@@ -9722,10 +9772,10 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     // holding a partitioned cookie waits out the first settle window (2s)
                     // before this pass runs.
                     match webview2_cdp_delete_matching_cookies(&window, domain) {
-                        Ok((issued, partitioned)) => eprintln!(
+                        Ok((issued, partitioned)) => shell_eprintln!(
                             "[shell] humble_login_clear_cookies: CDP cleanup issued={issued} partitioned={partitioned}"
                         ),
-                        Err(e) => eprintln!(
+                        Err(e) => shell_eprintln!(
                             "[shell] humble_login_clear_cookies: CDP cleanup failed: {e}"
                         ),
                     }
@@ -9735,7 +9785,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         thread::sleep(Duration::from_millis(100));
                         after_matching = count_matching(&window)?;
                     }
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] humble_login_clear_cookies: after CDP cleanup after={after_matching}"
                     );
                 }
@@ -9813,7 +9863,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             {
                 Ok(w) => w,
                 Err(e) => {
-                    eprintln!("[shell] humble_reveal_post: window build failed: {e}");
+                    shell_eprintln!("[shell] humble_reveal_post: window build failed: {e}");
                     return Err(format!("humble_reveal_post:window:{e}"));
                 }
             };
@@ -9826,7 +9876,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             );
             if let Err(e) = window.eval(&script) {
                 let _ = window.close(); // close site 1: script injection itself failed
-                eprintln!("[shell] humble_reveal_post: script injection failed: {e}");
+                shell_eprintln!("[shell] humble_reveal_post: script injection failed: {e}");
                 return Err(format!("humble_reveal_post:script:{e}"));
             }
 
@@ -9835,7 +9885,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
 
             match outcome {
                 Ok(raw) => serde_json::from_str::<Value>(&raw).map_err(|e| {
-                    eprintln!("[shell] humble_reveal_post: exfil payload parse failed: {e}");
+                    shell_eprintln!("[shell] humble_reveal_post: exfil payload parse failed: {e}");
                     format!("humble_reveal_post:script:{e}")
                 }),
                 Err(_) => Err("humble_reveal_post:timeout".to_string()),
@@ -9881,7 +9931,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             {
                 Ok(w) => w,
                 Err(e) => {
-                    eprintln!("[shell] humble_login_clear_storage: window build failed: {e}");
+                    shell_eprintln!("[shell] humble_login_clear_storage: window build failed: {e}");
                     return Err(format!("humble_login_clear_storage:window:{e}"));
                 }
             };
@@ -9889,7 +9939,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             let script = clear_storage_script(REVEAL_EXFIL_HOST);
             if let Err(e) = window.eval(&script) {
                 let _ = window.close(); // close site 1: script injection itself failed
-                eprintln!("[shell] humble_login_clear_storage: script injection failed: {e}");
+                shell_eprintln!("[shell] humble_login_clear_storage: script injection failed: {e}");
                 return Err(format!("humble_login_clear_storage:script:{e}"));
             }
 
@@ -9898,7 +9948,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
 
             match outcome {
                 Ok(raw) => serde_json::from_str::<Value>(&raw).map_err(|e| {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] humble_login_clear_storage: exfil payload parse failed: {e}"
                     );
                     format!("humble_login_clear_storage:script:{e}")
@@ -10811,14 +10861,14 @@ fn acquire_single_instance(socket_path: &std::path::Path) -> SingleInstanceRole 
             if let Err(e) =
                 std::fs::set_permissions(socket_path, std::fs::Permissions::from_mode(0o600))
             {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: failed to set single-instance socket permissions to 0600: {e}"
                 );
             }
             SingleInstanceRole::Primary(listener)
         }
         Err(e) => {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] WARN: single-instance socket bind failed ({e}) -- continuing as primary without a listener (fail-open, T-34.5-G6-24)"
             );
             SingleInstanceRole::PrimaryWithoutListener
@@ -11230,7 +11280,7 @@ fn repair_windows_gamelib_protocol_registration(identifier: &str) {
     }
 
     if std::env::var("CI").as_deref() == Ok("e2e") {
-        eprintln!(
+        shell_eprintln!(
             "[shell] CI=e2e -- skipping the gamelib:// HKCU registration repair (unlike the Linux arm, this path WRITES to the real user registry)"
         );
         return;
@@ -11239,14 +11289,14 @@ fn repair_windows_gamelib_protocol_registration(identifier: &str) {
     let exe_path = match std::env::current_exe() {
         Ok(path) => path,
         Err(e) => {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] WARN: gamelib:// HKCU repair skipped -- current_exe() failed ({e}) (fail-open, T-34.5-G6-24)"
             );
             return;
         }
     };
     let Some(exe) = exe_path.to_str() else {
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: gamelib:// HKCU repair skipped -- the executable path is not valid UTF-8 (fail-open, T-34.5-G6-24)"
         );
         return;
@@ -11257,7 +11307,7 @@ fn repair_windows_gamelib_protocol_registration(identifier: &str) {
         option_env!("CARGO_TARGET_DIR"),
     );
     if gamelib_protocol_exe_is_dev_build(exe, &dev_build_dirs) {
-        eprintln!(
+        shell_eprintln!(
             "[shell] dev build running from its cargo target dir -- skipping the gamelib:// HKCU registration repair (the installed app owns the scheme; quick-260926-f3l)"
         );
         return;
@@ -11372,7 +11422,7 @@ fn repair_windows_gamelib_protocol_registration(identifier: &str) {
                 std::ptr::null_mut(),
             );
             if created != ERROR_SUCCESS {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: gamelib:// HKCU repair could not open HKCU\\{subkey} for writing (error {created}) -- continuing with the remaining values (fail-open, T-34.5-G6-24)"
                 );
                 continue;
@@ -11392,7 +11442,7 @@ fn repair_windows_gamelib_protocol_registration(identifier: &str) {
             if set == ERROR_SUCCESS {
                 written += 1;
             } else {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: gamelib:// HKCU repair could not write HKCU\\{subkey} value '{value_name}' (error {set}) -- continuing with the remaining values (fail-open, T-34.5-G6-24)"
                 );
             }
@@ -11530,7 +11580,7 @@ fn acquire_single_instance_windows(user_sid: &str, session_id: u32) -> WindowsSi
         windows_pipe_name(Some(user_sid), session_id),
         windows_pipe_sddl(Some(user_sid)),
     ) else {
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: could not derive the Windows single-instance mutex/pipe name from the current SID -- continuing as primary without a listener (fail-open, T-34.5-G6-24)"
         );
         return WindowsSingleInstanceRole::PrimaryWithoutListener;
@@ -11547,7 +11597,7 @@ fn acquire_single_instance_windows(user_sid: &str, session_id: u32) -> WindowsSi
     let handle = unsafe { CreateMutexW(std::ptr::null(), 0, mutex_name_w.as_ptr()) };
 
     if handle.is_null() {
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: CreateMutexW failed for the Windows single-instance mutex -- continuing as primary without a listener (fail-open, T-34.5-G6-24)"
         );
         return WindowsSingleInstanceRole::PrimaryWithoutListener;
@@ -11575,7 +11625,7 @@ fn acquire_single_instance_windows(user_sid: &str, session_id: u32) -> WindowsSi
             sddl,
         }),
         Err(e) => {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] WARN: single-instance pipe creation failed ({e}) -- continuing as primary without a listener (fail-open, T-34.5-G6-24)"
             );
             WindowsSingleInstanceRole::PrimaryWithoutListener
@@ -11751,16 +11801,18 @@ fn deliver_to_running_instance_windows(
         GetNamedPipeServerProcessId(file.as_raw_handle() as HANDLE, &mut server_pid) != 0
     };
     if !got_pid {
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: could not grant foreground rights to the running instance (GetNamedPipeServerProcessId failed: {}) -- its window may flash in the taskbar instead of coming to the front",
             std::io::Error::last_os_error()
         );
     } else if unsafe { AllowSetForegroundWindow(server_pid) } != 0 {
         // Pass the verified server PID only -- never the wildcard: least privilege, so only the
         // verified same-user owner may take the foreground.
-        eprintln!("[shell] granted foreground rights to the running instance (pid={server_pid})");
+        shell_eprintln!(
+            "[shell] granted foreground rights to the running instance (pid={server_pid})"
+        );
     } else {
-        eprintln!(
+        shell_eprintln!(
             "[shell] WARN: could not grant foreground rights to the running instance (AllowSetForegroundWindow failed: {}) -- its window may flash in the taskbar instead of coming to the front",
             std::io::Error::last_os_error()
         );
@@ -11824,7 +11876,7 @@ fn run_windows_single_instance_accept_loop(
             // documented contract.
             let last_error = unsafe { GetLastError() };
             if last_error != windows_sys::Win32::Foundation::ERROR_PIPE_CONNECTED {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: single-instance ConnectNamedPipe failed: {}",
                     std::io::Error::from_raw_os_error(last_error as i32)
                 );
@@ -11853,7 +11905,7 @@ fn run_windows_single_instance_accept_loop(
                         continue;
                     }
                     Err(e) => {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] WARN: could not create the next single-instance pipe instance ({e}) -- warm deep-link delivery disabled for this session (fail-open, T-34.5-G6-24)"
                         );
                         return;
@@ -11885,7 +11937,7 @@ fn run_windows_single_instance_accept_loop(
                 current = next;
             }
             Err(e) => {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: could not create the next single-instance pipe instance ({e}) -- warm deep-link delivery disabled for this session (fail-open, T-34.5-G6-24)"
                 );
                 // Inline is deliberate here: the loop is ending, so parking this now-terminal
@@ -11920,7 +11972,7 @@ fn run_windows_single_instance_accept_loop(
                 handle_windows_single_instance_connection(handle, &worker_state, &worker_app_handle)
             });
         if let Err(e) = spawned {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] WARN: could not spawn a single-instance connection worker ({e}) -- dropping this one connection; the accept loop keeps listening (fail-open, T-34.5-G6-24)"
             );
         }
@@ -11961,32 +12013,35 @@ fn run_windows_single_instance_accept_loop(
         // which `run_on_main_thread` guarantees -- so by the time `set_focus()` runs next, the
         // MINIMIZED flag is already cleared.
         if trimmed == SINGLE_INSTANCE_FOCUS_SENTINEL {
-            eprintln!("[shell] received single-instance focus sentinel -- raising the main window");
+            shell_eprintln!(
+                "[shell] received single-instance focus sentinel -- raising the main window"
+            );
             let focus_handle = accept_app_handle.clone();
-            let scheduled = accept_app_handle.run_on_main_thread(move || {
-                let render = |r: tauri::Result<()>| match r {
-                    Ok(()) => "ok".to_string(),
-                    Err(e) => format!("err={e}"),
-                };
-                match focus_handle.get_webview_window(MAIN_WINDOW_LABEL) {
-                    Some(window) => {
-                        let unminimize_result = render(window.unminimize());
-                        let show_result = render(window.show());
-                        let set_focus_result = render(window.set_focus());
-                        eprintln!(
+            let scheduled =
+                accept_app_handle.run_on_main_thread(move || {
+                    let render = |r: tauri::Result<()>| match r {
+                        Ok(()) => "ok".to_string(),
+                        Err(e) => format!("err={e}"),
+                    };
+                    match focus_handle.get_webview_window(MAIN_WINDOW_LABEL) {
+                        Some(window) => {
+                            let unminimize_result = render(window.unminimize());
+                            let show_result = render(window.show());
+                            let set_focus_result = render(window.set_focus());
+                            shell_eprintln!(
                             "[shell] focus sentinel raise: unminimize={}, show={}, set_focus={}",
                             unminimize_result, show_result, set_focus_result
                         );
-                    }
-                    None => {
-                        eprintln!(
+                        }
+                        None => {
+                            shell_eprintln!(
                             "[shell] WARN: focus sentinel: no '{MAIN_WINDOW_LABEL}' window to raise"
                         );
+                        }
                     }
-                }
-            });
+                });
             if let Err(e) = scheduled {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] WARN: focus sentinel: could not schedule the raise on the main thread: {e}"
                 );
             }
@@ -12001,16 +12056,20 @@ fn run_windows_single_instance_accept_loop(
                 match accept_state.invoke("handleProtocolUrl".to_string(), vec![Value::String(url)])
                 {
                     Ok(_) => {
-                        eprintln!("[shell] delivered single-instance deep link to sidecar: ok")
+                        shell_eprintln!(
+                            "[shell] delivered single-instance deep link to sidecar: ok"
+                        )
                     }
                     Err(e) => {
-                        eprintln!("[shell] delivered single-instance deep link to sidecar: err={e}")
+                        shell_eprintln!(
+                            "[shell] delivered single-instance deep link to sidecar: err={e}"
+                        )
                     }
                 }
             }
             None => {
                 // T-34.5-G6-25: the REASON and byte count only, never the payload.
-                eprintln!(
+                shell_eprintln!(
                     "[shell] rejected single-instance payload (failed protocol_url_arg validation), bytes={}",
                     trimmed.len()
                 );
@@ -12117,11 +12176,11 @@ fn spawn_sidecar_packaged(
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "<unknown>".into());
     let exists = std::path::Path::new(&program).exists();
-    eprintln!("[shell] spawning sidecar (packaged): \"{program}\"");
-    eprintln!("[shell]   cwd={cwd}");
-    eprintln!("[shell]   entry_exists={exists}");
-    eprintln!("[shell]   GAMELIB_APP_ROOT={app_root}");
-    eprintln!("[shell]   forward_args={forward_args:?}");
+    shell_eprintln!("[shell] spawning sidecar (packaged): \"{program}\"");
+    shell_eprintln!("[shell]   cwd={cwd}");
+    shell_eprintln!("[shell]   entry_exists={exists}");
+    shell_eprintln!("[shell]   GAMELIB_APP_ROOT={app_root}");
+    shell_eprintln!("[shell]   forward_args={forward_args:?}");
     std_command
         .args(forward_args)
         .env("GAMELIB_SHELL_EXE", shell_exe)
@@ -12132,8 +12191,8 @@ fn spawn_sidecar_packaged(
     configure_sidecar_process_group(&mut std_command);
     let child = std_command.spawn();
     match &child {
-        Ok(_) => eprintln!("[shell] sidecar process spawned OK"),
-        Err(e) => eprintln!(
+        Ok(_) => shell_eprintln!("[shell] sidecar process spawned OK"),
+        Err(e) => shell_eprintln!(
             "[shell] FAILED to spawn packaged sidecar (does the externalBin exist for this target triple?): {e}"
         ),
     }
@@ -12165,7 +12224,7 @@ fn start_stderr_forwarder(stderr: std::process::ChildStderr) {
         let reader = BufReader::new(stderr);
         for line in reader.lines() {
             match line {
-                Ok(l) => eprintln!("[sidecar:err] {l}"),
+                Ok(l) => shell_eprintln!("[sidecar:err] {l}"),
                 Err(_) => break,
             }
         }
@@ -12193,14 +12252,14 @@ fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std::process::
             }
             if trimmed == READY_SENTINEL {
                 // Sidecar bootstrapped; commands may already be queued and will now flow.
-                eprintln!("[shell] sidecar signalled READY ({READY_SENTINEL})");
+                shell_eprintln!("[shell] sidecar signalled READY ({READY_SENTINEL})");
                 continue;
             }
             let value: Value = match serde_json::from_str(trimmed) {
                 Ok(v) => v,
                 // non-JSON diagnostic line (console.log etc.) — surface it, don't drop it.
                 Err(_) => {
-                    eprintln!("[sidecar:out] {trimmed}");
+                    shell_eprintln!("[sidecar:out] {trimmed}");
                     continue;
                 }
             };
@@ -12294,7 +12353,7 @@ fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std::process::
                     if let Err(e) =
                         app.run_on_main_thread(move || update_tray_recent_games(&tray_app, games))
                     {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] WARN: tray recent-games rebuild could not be scheduled ({e}) -- tray menu left as-is"
                         );
                     }
@@ -12362,11 +12421,11 @@ fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std::process::
                     // rejected scheme itself, never the URL.
                     if open_external_scheme_check(url).is_ok() {
                         if let Err(e) = app.opener().open_url(url, None::<&str>) {
-                            eprintln!("[shell] openExternal failed: {e}");
+                            shell_eprintln!("[shell] openExternal failed: {e}");
                         }
                     }
                 } else {
-                    eprintln!("[shell] openExternal frame missing a string URL in args[0]");
+                    shell_eprintln!("[shell] openExternal frame missing a string URL in args[0]");
                 }
                 continue;
             }
@@ -12375,7 +12434,7 @@ fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std::process::
             // per threat T-28-04) instead of silently dropping it, so this class of gap
             // cannot recur unnoticed.
             let id = value.get("id").and_then(|v| v.as_str());
-            eprintln!("[shell] unrecognized sidecar frame kind: {kind:?} id={id:?}");
+            shell_eprintln!("[shell] unrecognized sidecar frame kind: {kind:?} id={id:?}");
         }
 
         // stdout has ended (EOF, or a read error such as a non-UTF-8 line), so no response can
@@ -12451,7 +12510,7 @@ fn shell_diag_log_path(home: Option<&str>) -> Option<std::path::PathBuf> {
 /// Best-effort and infallible by construction — a diagnostic that can fail a real operation
 /// would be worse than no diagnostic.
 fn shell_diag(message: &str) {
-    eprintln!("[shell] {message}");
+    shell_eprintln!("[shell] {message}");
     let Some(path) = shell_diag_log_path(std::env::var("HOME").ok().as_deref()) else {
         return;
     };
@@ -12496,6 +12555,21 @@ fn format_panic_record(
     )
 }
 
+/// Best-effort append of one panic record; every error is discarded.
+fn append_panic_record(path: &std::path::Path, record: &str) {
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        let _ = file.write_all(record.as_bytes());
+        let _ = file.flush();
+    }
+}
+
 fn install_panic_hook() {
     std::panic::set_hook(Box::new(move |info| {
         // `PanicHookInfo::payload_as_str` is newer than this crate's MSRV (1.77.2), so downcast.
@@ -12529,21 +12603,13 @@ fn install_panic_hook() {
             &backtrace,
         );
 
-        eprintln!("{record}");
-
+        // The file write comes first so a dead stderr cannot pre-empt the only durable record.
+        // The hook must never panic: a panic inside the panic hook aborts the process.
         if let Some(path) = shell_panic_log_path(std::env::var("HOME").ok().as_deref()) {
-            if let Some(dir) = path.parent() {
-                let _ = std::fs::create_dir_all(dir);
-            }
-            if let Ok(mut file) = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&path)
-            {
-                let _ = file.write_all(record.as_bytes());
-                let _ = file.flush();
-            }
+            append_panic_record(&path, &record);
         }
+
+        shell_eprintln!("{record}");
     }));
 }
 
@@ -12585,14 +12651,14 @@ fn main() {
                         &dir,
                         std::fs::Permissions::from_mode(0o700),
                     ) {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] WARN: failed to set single-instance socket directory permissions to 0700: {e}"
                         );
                     }
                     Some(single_instance_socket_path(&dir))
                 }
                 Err(e) => {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] WARN: failed to create single-instance socket directory {dir:?}: {e} -- continuing without the single-instance guard (fail-open, T-34.5-G6-24)"
                     );
                     None
@@ -12620,7 +12686,7 @@ fn main() {
                     Some(url) => (url, "deep-link"),
                     None => ("__GAMELIB_FOCUS__".to_string(), "focus sentinel"),
                 };
-                eprintln!(
+                shell_eprintln!(
                     "[shell] another GameLib instance is already running -- sending {kind} to it and exiting"
                 );
                 match UnixStream::connect(path) {
@@ -12628,7 +12694,7 @@ fn main() {
                         let _ = writeln!(stream, "{payload}");
                         let _ = stream.flush();
                     }
-                    Err(e) => eprintln!(
+                    Err(e) => shell_eprintln!(
                         "[shell] WARN: secondary instance failed to deliver {kind} to the running instance: {e}"
                     ),
                 }
@@ -12648,7 +12714,7 @@ fn main() {
     #[cfg(windows)]
     let primary_listener: Option<WindowsPrimaryPipe> = match current_user_identity() {
         None => {
-            eprintln!(
+            shell_eprintln!(
                 "[shell] WARN: could not read the current user's SID/session -- continuing without the single-instance guard (fail-open, T-34.5-G6-24)"
             );
             None
@@ -12659,12 +12725,12 @@ fn main() {
                 user_sid,
             } => {
                 let (payload, kind) = single_instance_payload(&argv);
-                eprintln!(
+                shell_eprintln!(
                     "[shell] another GameLib instance is already running -- sending {kind} to it and exiting"
                 );
                 if let Err(e) = deliver_to_running_instance_windows(&pipe_name, &user_sid, &payload)
                 {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] WARN: secondary instance failed to deliver {kind} to the running instance: {e}"
                     );
                 }
@@ -12779,7 +12845,7 @@ fn main() {
                         let stream = match incoming {
                             Ok(s) => s,
                             Err(e) => {
-                                eprintln!(
+                                shell_eprintln!(
                                     "[shell] WARN: single-instance accept() failed: {e}"
                                 );
                                 continue;
@@ -12828,13 +12894,13 @@ fn main() {
                                         let unminimize_result = render(window.unminimize());
                                         let show_result = render(window.show());
                                         let set_focus_result = render(window.set_focus());
-                                        eprintln!(
+                                        shell_eprintln!(
                                             "[shell] focus sentinel raise: unminimize={}, show={}, set_focus={}",
                                             unminimize_result, show_result, set_focus_result
                                         );
                                     }
                                     None => {
-                                        eprintln!(
+                                        shell_eprintln!(
                                             "[shell] WARN: focus sentinel: no '{MAIN_WINDOW_LABEL}' window to raise"
                                         );
                                     }
@@ -12852,10 +12918,10 @@ fn main() {
                                 match accept_state
                                     .invoke("handleProtocolUrl".to_string(), vec![Value::String(url)])
                                 {
-                                    Ok(_) => eprintln!(
+                                    Ok(_) => shell_eprintln!(
                                         "[shell] delivered single-instance deep link to sidecar: ok"
                                     ),
-                                    Err(e) => eprintln!(
+                                    Err(e) => shell_eprintln!(
                                         "[shell] delivered single-instance deep link to sidecar: err={e}"
                                     ),
                                 }
@@ -12863,7 +12929,7 @@ fn main() {
                             None => {
                                 // T-34.5-G6-25: the REASON and byte count only, never the
                                 // payload.
-                                eprintln!(
+                                shell_eprintln!(
                                     "[shell] rejected single-instance payload (failed protocol_url_arg validation), bytes={}",
                                     trimmed.len()
                                 );
@@ -13087,13 +13153,13 @@ fn main() {
                 // in intent: an automated test run must never rewrite the host's OS-level
                 // protocol association as a side effect of starting the app.
                 if std::env::var("CI").as_deref() == Ok("e2e") {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] CI=e2e -- skipping gamelib:// OS registration (carried forward from main.ts:501)"
                     );
                 } else if let Err(e) = app.deep_link().register_all() {
                     // Fail open (T-34.5-G6-24 discipline): a failed registration degrades deep
                     // links, it must never abort startup.
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] WARN: failed to register the gamelib:// protocol handler: {e}"
                     );
                 }
@@ -13178,14 +13244,14 @@ fn main() {
                 match app.get_webview_window(MAIN_WINDOW_LABEL) {
                     Some(window) => {
                         if let Err(e) = window.hide() {
-                            eprintln!(
+                            shell_eprintln!(
                                 "[shell] WARN: startInTray: could not hide the main window ({e}) -- starting visible"
                             );
                         } else {
-                            eprintln!("[shell] startInTray: main window starts hidden");
+                            shell_eprintln!("[shell] startInTray: main window starts hidden");
                         }
                     }
-                    None => eprintln!(
+                    None => shell_eprintln!(
                         "[shell] WARN: startInTray: no '{MAIN_WINDOW_LABEL}' window to hide -- starting visible"
                     ),
                 }
@@ -13236,7 +13302,7 @@ fn main() {
                             ) {
                                 CloseRequestAction::Hide => {
                                     if let Err(e) = close_window.hide() {
-                                        eprintln!(
+                                        shell_eprintln!(
                                             "[shell] WARN: exitToTray: hide on close failed ({e})"
                                         );
                                     }
@@ -13251,7 +13317,7 @@ fn main() {
                         "close handler attached (tray={tray_exists}): hide-to-tray re-read on every close; otherwise the quit is routed to the sidecar"
                     ));
                 }
-                None => eprintln!(
+                None => shell_eprintln!(
                     "[shell] WARN: close handler: no '{MAIN_WINDOW_LABEL}' window to attach a close handler to"
                 ),
             }
@@ -13295,7 +13361,7 @@ fn main() {
                         if let tauri::WindowEvent::Focused(true) = event {
                             let Some(state) = focus_app_handle.try_state::<Arc<SidecarState>>()
                             else {
-                                eprintln!(
+                                shell_eprintln!(
                                     "[shell] WARN: window focus refresh: no sidecar state -- skipping"
                                 );
                                 return;
@@ -13309,24 +13375,24 @@ fn main() {
                                     args: Vec::new(),
                                 };
                                 if send_trace_enabled() {
-                                    eprintln!(
+                                    shell_eprintln!(
                                         "[shell] send-trace: window focus refresh entered for '{}'",
                                         req.channel
                                     );
                                 }
                                 if let Err(e) = state.write_frame(&req) {
-                                    eprintln!(
+                                    shell_eprintln!(
                                         "[shell] WARN: window focus refresh: write_frame failed: {e}"
                                     );
                                 }
                             });
                         }
                     });
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] window focus refresh: listener attached to '{MAIN_WINDOW_LABEL}'"
                     );
                 }
-                None => eprintln!(
+                None => shell_eprintln!(
                     "[shell] WARN: window focus refresh: no '{MAIN_WINDOW_LABEL}' window to attach a focus listener to"
                 ),
             }
@@ -13334,7 +13400,7 @@ fn main() {
             // Seed the recent-games cache before the menu is built, so the section is
             // populated on a COLD start rather than only after the first launch of a session.
             let seeded = load_recent_games_from_disk(tray_settings.max_recent_games);
-            eprintln!(
+            shell_eprintln!(
                 "[shell] tray recent games: seeded {} entr{} from disk (limit {})",
                 seeded.len(),
                 if seeded.len() == 1 { "y" } else { "ies" },
@@ -13348,7 +13414,7 @@ fn main() {
             // `noTrayIcon` (tray_icon.ts:20's `if (noTrayIcon) return null`). Decided BEFORE
             // the tray is built, so the user never sees an icon they asked not to have.
             if tray_settings.no_tray_icon {
-                eprintln!(
+                shell_eprintln!(
                     "[shell] tray suppressed by the noTrayIcon setting -- not building a tray"
                 );
             } else {
@@ -13386,7 +13452,7 @@ fn main() {
                                         ),
                                         None => {
                                             if id.starts_with(TRAY_RECENT_ID_PREFIX) {
-                                                eprintln!(
+                                                shell_eprintln!(
                                                     "[shell] WARN: tray menu event rejected a malformed recent-game id (bytes={}) -- not launching",
                                                     id.len()
                                                 );
@@ -13420,13 +13486,13 @@ fn main() {
                                 spawn_taskbar_theme_watcher(app.handle().clone());
                             }
                             Err(e) => {
-                                eprintln!(
+                                shell_eprintln!(
                                     "[shell] WARN: tray icon failed to build ({e}) -- continuing without a tray"
                                 );
                             }
                         }
                     }
-                    None => eprintln!(
+                    None => shell_eprintln!(
                         "[shell] WARN: tray menu failed to build -- continuing without a tray"
                     ),
                 }
@@ -13566,7 +13632,7 @@ fn main() {
                         std::mem::forget(token);
                     }
                     None => {
-                        eprintln!(
+                        shell_eprintln!(
                             "[shell] WARN: login-sheet esc monitor: addLocalMonitorForEventsMatchingMask failed -- continuing without it"
                         );
                     }
@@ -13584,9 +13650,9 @@ fn main() {
                 match app.get_webview_window(MAIN_WINDOW_LABEL) {
                     Some(window) => {
                         let _ = window.hide();
-                        eprintln!("[shell] --no-gui: main window hidden");
+                        shell_eprintln!("[shell] --no-gui: main window hidden");
                     }
-                    None => eprintln!(
+                    None => shell_eprintln!(
                         "[shell] WARN: --no-gui: no 'main' webview window found to hide"
                     ),
                 }
@@ -13627,26 +13693,26 @@ fn main() {
                         Some(window) => match window.is_visible() {
                             Ok(true) => {
                                 window.open_devtools();
-                                eprintln!(
+                                shell_eprintln!(
                                     "[shell] devtools opened for 'main' webview (debug build)"
                                 );
                             }
-                            Ok(false) => eprintln!(
+                            Ok(false) => shell_eprintln!(
                                 "[shell] devtools NOT opened: 'main' webview is hidden (startInTray or --no-gui) -- opening it would force the window visible and defeat that setting"
                             ),
                             // Erring toward NOT opening: a devtools window the developer can
                             // open by hand is a smaller loss than silently defeating a setting
                             // the user asked for.
-                            Err(e) => eprintln!(
+                            Err(e) => shell_eprintln!(
                                 "[shell] WARN: devtools NOT opened: could not read 'main' webview visibility ({e})"
                             ),
                         },
-                        None => eprintln!(
+                        None => shell_eprintln!(
                             "[shell] WARN: no 'main' webview window found — devtools not opened"
                         ),
                     }
                 } else {
-                    eprintln!(
+                    shell_eprintln!(
                         "[shell] devtools NOT auto-opened for 'main' webview on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
                     );
                 }
@@ -18121,6 +18187,45 @@ mod tests {
                 std::path::Path::new("/home/example/.config/gamelib/gamelib-shell-panic.log")
             );
         }
+    }
+
+    #[test]
+    fn stderr_best_effort_broken_pipe_returns_err_without_panic() {
+        struct BrokenPipeWriter;
+        impl std::io::Write for BrokenPipeWriter {
+            fn write(&mut self, _: &[u8]) -> std::io::Result<usize> {
+                Err(std::io::ErrorKind::BrokenPipe.into())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Err(std::io::ErrorKind::BrokenPipe.into())
+            }
+        }
+        let r = write_line_best_effort(&mut BrokenPipeWriter, format_args!("x {}", 1));
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn stderr_best_effort_vec_ends_with_exactly_one_newline() {
+        let mut v: Vec<u8> = Vec::new();
+        write_line_best_effort(&mut v, format_args!("hello {}", 2)).unwrap();
+        assert_eq!(v, b"hello 2\n");
+    }
+
+    #[test]
+    fn stderr_best_effort_macro_both_arms_compile_and_do_not_panic() {
+        shell_eprintln!();
+        shell_eprintln!("x {}", 1);
+    }
+
+    #[test]
+    fn panic_record_append_creates_dir_and_appends() {
+        let dir = std::env::temp_dir().join(format!("gamelib-261101-cl4-{}", std::process::id()));
+        let path = dir.join("nested").join("gamelib-shell-panic.log");
+        append_panic_record(&path, "REC\n");
+        append_panic_record(&path, "REC\n");
+        let body = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(body.matches("REC").count(), 2);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

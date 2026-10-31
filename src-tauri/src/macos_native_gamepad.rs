@@ -98,6 +98,6 @@ pub fn start(app: AppHandle) {
             );
         });
     if let Err(e) = spawned {
-        eprintln!("[native-gamepad] could not spawn reader thread: {e}");
+        shell_eprintln!("[native-gamepad] could not spawn reader thread: {e}");
     }
 }
