@@ -246,4 +246,21 @@ Verdict: pending
 
 ## 7. Run record
 
-(empty; plan 58-23 fills it)
+### Preflight
+
+Run by plan 58-23 Task 1 on 2026-10-31 (~20:38 NZDT). Session dir: `/tmp/gamelib-gate-20261031T073804Z/`. No scored result filled; no game launched.
+
+| ID | Observed | Status |
+| -- | -------- | ------ |
+| PC1 | `pgrep -x steam_osx` printed a pid (98746) | held |
+| PC2 | grep of steamwebhelper.exe / steamservice.exe / Steam\\steam.exe printed nothing | held |
+| PC3 | CrossOver CFBundleVersion `26.3.0.39832` | held |
+| PC4 | 58-21 commit time (c683b8fc8) epoch 1793431043 (20:17:23). Mtimes: steam-bridge-helper 1793431475 (20:24:35), steam_api64.dll 1793431476 (20:24:36), build/main/sidecar.js 1793431477 (20:24:37); all newer than the commit | held |
+| PC5 | `/tmp/gamelib-gate-20261031T073804Z/` created; `pre-session-gamelib.log` (31536 bytes) and `pre-session-gamelib.log.old` (60423 bytes) copied | held |
+| PC6 | NOT YET: the dev app now running (gamelib-shell pid 45207, started 20:24:40) was not launched under the tee; sidecar.js (20:24:37) predates its start and postdates the helper mtime. Operator must restart under `tee -a /tmp/gamelib-gate-20261031T073804Z/terminal.log` | pending operator |
+| PC7 | sha256 of built shim and installed `Plugins/x86_64/steam_api64.dll` are equal (`77abbe76...9ae7`); `steam_api64.dll.gamelib-orig` exists | held (pre-launch 1) |
+| PC8 | Peer PC ready | pending operator |
+| PC9 | Local Network grant states | pending operator |
+| PC10 | `objdump -h "Schedule I Free Sample.exe" \| grep -c '\.bind'` printed 0 (coff-x86-64; sections .text .rdata .data .pdata _RDATA .rsrc .reloc) | held |
+
+Also at preflight: no `steam-bridge-helper` or Schedule I process running.
