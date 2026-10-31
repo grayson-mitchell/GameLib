@@ -7,6 +7,9 @@ import {
   CONTROL_ORDINAL,
   HELLO_ROLE_PROBE,
   CONTROL_SLOT,
+  decodeFriendList,
+  encodeInviteFriendArgs,
+  INVITE_RESULT,
   FrameTooLargeError,
   FrameTruncatedError,
   INTERFACE_ORDINAL,
@@ -475,9 +478,9 @@ describe('protocol -- CONTROL_SLOT.drainCallResults (58-07)', () => {
 })
 
 describe('protocol -- CONTROL_SLOT.drainServerEvents (58-20)', () => {
-  it('is 12, equals the helper #define, leaves 13 to 58-19 and keeps slots distinct', () => {
+  it('is 12, equals the helper #define and keeps slots distinct', () => {
     expect(CONTROL_SLOT.drainServerEvents).toBe(12)
-    expect(Object.values(CONTROL_SLOT)).not.toContain(13)
+    // 13 and 14 were taken by 58-29 (listFriends, inviteFriend)
     const values = Object.values(CONTROL_SLOT)
     expect(new Set(values).size).toBe(values.length)
     const root = join(__dirname, '..', '..', '..', '..', '..', '..')
@@ -489,5 +492,63 @@ describe('protocol -- CONTROL_SLOT.drainServerEvents (58-20)', () => {
       helper
     )
     expect(Number(helperValue![1])).toBe(CONTROL_SLOT.drainServerEvents)
+  })
+})
+
+describe('protocol -- invite path (58-29)', () => {
+  const rec = (
+    ordinal: number,
+    online: number,
+    playing: number,
+    name: string
+  ): Buffer => {
+    const n = Buffer.from(name, 'utf8')
+    const h = Buffer.alloc(8)
+    h.writeUInt32LE(ordinal, 0)
+    h[4] = online
+    h[5] = playing
+    h.writeUInt16LE(n.length, 6)
+    return Buffer.concat([h, n])
+  }
+  const list = (...recs: Buffer[]): Buffer => {
+    const c = Buffer.alloc(4)
+    c.writeUInt32LE(recs.length, 0)
+    return Buffer.concat([c, ...recs])
+  }
+
+  it('slots 13 and 14', () => {
+    expect(CONTROL_SLOT.listFriends).toBe(13)
+    expect(CONTROL_SLOT.inviteFriend).toBe(14)
+  })
+
+  it('decodeFriendList round-trips a fixture', () => {
+    const buf = list(rec(0, 1, 0, 'Alice'), rec(1, 0, 1, 'Bob \u00e9'))
+    expect(decodeFriendList(buf)).toEqual([
+      { ordinal: 0, online: true, playingThisApp: false, name: 'Alice' },
+      { ordinal: 1, online: false, playingThisApp: true, name: 'Bob \u00e9' }
+    ])
+  })
+
+  it('decodeFriendList rejects truncation and over-long names', () => {
+    const buf = list(rec(0, 1, 0, 'Alice'))
+    expect(() => decodeFriendList(buf.subarray(0, buf.length - 1))).toThrow(
+      RangeError
+    )
+    expect(() => decodeFriendList(Buffer.alloc(2))).toThrow(RangeError)
+    expect(() => decodeFriendList(list(rec(0, 1, 0, 'x'.repeat(129))))).toThrow(
+      RangeError
+    )
+  })
+
+  it('encodeInviteFriendArgs is a little-endian u32 and INVITE_RESULT matches the helper', () => {
+    expect(encodeInviteFriendArgs(2)).toEqual(Buffer.from([2, 0, 0, 0]))
+    expect(() => encodeInviteFriendArgs(-1)).toThrow(RangeError)
+    expect(INVITE_RESULT).toEqual({
+      ok: 1,
+      macRefused: 0,
+      noPending: -1,
+      expired: -2,
+      badOrdinal: -3
+    })
   })
 })
