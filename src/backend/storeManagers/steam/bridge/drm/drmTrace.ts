@@ -47,6 +47,7 @@ export type DrmTraceEvent = {
       peer?: string
     }
   | ({ event: 'p2p' } & DrmP2pOp)
+  | { event: 'apps'; op: 'build-id' | 'build-id-given'; ret: number }
 )
 
 /** Phase 58 D-08a: legacy P2P peer/size evidence written by lsteamclient. */
@@ -96,6 +97,9 @@ const TRACE_CALLBACK_RE =
   /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=callback id=([1-9]\d{0,4})(?: (?:(resp|state)=(-?\d{1,3})|peer=([1-9]\d?)))?$/
 const TRACE_P2P_RE =
   /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=p2p op=(?:(accept) peer=([1-9]\d?) ok=([01])|(send|read) peer=([1-9]\d?) bytes=(\d{1,10}))$/
+
+const TRACE_APPS_RE =
+  /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=apps op=(build-id|build-id-given) ret=(-?\d{1,10})$/
 
 const MAX_U32 = 4294967295
 const MAX_DRM_P2P_EVENTS = 256
@@ -175,6 +179,17 @@ export function parseDrmTraceLine(line: string): DrmTraceEvent | null {
       if (/^0+$/.test(m[8]) || bytes > MAX_U32) return null
       return { ...head, op: m[7] as 'send' | 'read', peer: m[8], bytes }
     }
+    m = TRACE_APPS_RE.exec(l)
+    if (m) {
+      return {
+        appId: m[1],
+        pid: Number(m[2]),
+        role: m[3] as DrmTraceRole,
+        event: 'apps',
+        op: m[4] as 'build-id' | 'build-id-given',
+        ret: Number(m[5])
+      }
+    }
     return null
   } catch {
     return null
@@ -198,6 +213,9 @@ export function formatDrmTraceLine(ev: DrmTraceEvent): string {
     return ev.op === 'accept'
       ? `${head} event=p2p op=accept peer=${ev.peer} ok=${ev.ok}`
       : `${head} event=p2p op=${ev.op} peer=${ev.peer} bytes=${ev.bytes}`
+  }
+  if (ev.event === 'apps') {
+    return `${head} event=apps op=${ev.op} ret=${ev.ret}`
   }
   return `${head} event=call name=${ev.name}`
 }
@@ -333,7 +351,7 @@ export function extractDrmEvidence(
         }
         if (ev.id === 504 && ev.detail?.value === 1) lobbyEnterOk = true
         if (ev.id === 1221 && ev.detail) connStates.add(ev.detail.value)
-      } else calls.add(ev.name)
+      } else if (ev.event === 'call') calls.add(ev.name)
     }
     let pidConflict = false
     for (const p of gamePids) if (helperPids.has(p)) pidConflict = true

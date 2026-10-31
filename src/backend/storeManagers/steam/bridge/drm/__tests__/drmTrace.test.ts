@@ -372,3 +372,33 @@ describe('Phase 58 D-08a: peer and size evidence', () => {
     })
   })
 })
+
+describe('WR-01: event=apps trace lines', () => {
+  const BID =
+    '[drm-trace] appId=219990 pid=1234 role=game event=apps op=build-id ret=12345'
+  const GIVEN =
+    '[drm-trace] appId=219990 pid=1234 role=game event=apps op=build-id-given ret=-1'
+
+  it('round-trips build-id and build-id-given', () => {
+    for (const l of [BID, GIVEN]) {
+      const ev = parseDrmTraceLine(l)
+      expect(ev).not.toBeNull()
+      expect(ev?.event).toBe('apps')
+      expect(formatDrmTraceLine(ev!)).toBe(l)
+    }
+  })
+
+  it('rejects a non-numeric ret', () => {
+    expect(parseDrmTraceLine(BID.replace('ret=12345', 'ret=abc'))).toBeNull()
+  })
+
+  it('reports rejected 0 for a file of only apps lines', () => {
+    const r = parseDrmTraceFile(`${BID}\n${GIVEN}\n`, '219990')
+    expect(r).toEqual({
+      status: 'ok',
+      events: expect.any(Array),
+      rejected: 0
+    })
+    if (r.status === 'ok') expect(r.events).toHaveLength(2)
+  })
+})
