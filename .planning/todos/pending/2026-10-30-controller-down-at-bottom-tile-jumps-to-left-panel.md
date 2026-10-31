@@ -5,7 +5,6 @@ area: gamepad
 severity: medium
 platform: any
 ready: live-gate
-status: "RESOLVED 2026-10-31 by quick 261031-lrx (5fd6a3c60), live-tested once 261031-mj9 (d60cd6ccb) put the native pad reader on main. Live gate passed."
 source: "spike 051 live test 2026-10-30 (PowerA Switch 2 pad via the native-gamepad prototype on macOS)"
 files:
   - src/preload/api/tauriGamepadInput.ts
@@ -51,3 +50,21 @@ whole-document search once the container cannot scroll further. The keyboard com
 step" is moot: WKWebView has no spatial navigation, so arrow keys never move focus there.
 
 Live gate passed 2026-10-31 (operator, PowerA Switch 2 pad on macOS, main at 8d0b59963).
+
+## Reopened 2026-10-31: the fix made held-stick navigation jumpy
+
+Quick 261031-lrx (`5fd6a3c60`) and its follow-ups `a3a9db170` / `adc2ad54d` were reverted in
+`974e69697`. During quick 261031-nwz's live gate, holding the left stick to the bottom of
+the grid and then moving up made focus jump (up two, snap back down) across the whole interface,
+on stick and D-pad alike. The native pad input was measured clean at the same time (gilrs probe +
+a renderer diagnostic: every hold and flick returns to neutral within ~20 ms). With all four
+commits reverted the operator measured smooth navigation, and this todo's original escape came back.
+
+Likely mechanism (read from the code, not measured): the container-first move scrolls one tile
+and then polls up to 250 ms for a revealed card, and `gamepad.ts` does not await it, so a held
+stick at the default 50 ms repeat stacks several scroll-and-poll cycles; each scrolls again and
+late ones focus their card after the operator has moved on. The previous gate only tried single
+presses.
+
+A re-fix must serialise or cancel in-flight reveal moves, and its live gate must include a ~3 s
+held stick to the bottom of the grid followed by Up presses, not only single presses.

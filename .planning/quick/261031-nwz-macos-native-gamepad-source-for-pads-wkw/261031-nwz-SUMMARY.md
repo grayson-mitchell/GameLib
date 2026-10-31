@@ -24,3 +24,18 @@ Reader loop is now a tested driver (`PadSource` / `EmitGate` / `run_reader` in t
 
 ## Task 3 live gate: PENDING
 Operator steps recorded in the plan (restart `pnpm tauri:dev`, press A, hold stick ~3 s, unplug/replug and expect `[native-gamepad] all pads disconnected` then `pad N ... connected=true` and a new `[NATIVE-GAMEPAD] connected slot=...` in gamelib.log). Results: not yet reported. Todo stays in pending/.
+
+## Live gate results (2026-10-31, operator + PowerA 20d6:a720)
+
+- Step 1 restart: pass.
+- Step 2 log lines: pass (`[NATIVE-GAMEPAD] connected slot=8`, `[GAMEPAD] ... mapping="" buttons=17 axes=10`).
+- Step 4 unplug/replug: pass (reconnects at the next gilrs index, slot 9/10, and drives again).
+- Step 3 navigation: input verified clean end to end, navigation itself NOT clean:
+  - gilrs state probe (scratchpad) and a temporary renderer diagnostic (`[NATIVE-GAMEPAD-DIAG]`,
+    since reverted) show every stick hold/flick returning to neutral within ~20 ms, and D-pad
+    up = hat -1.000, down = 0.143, release = 3.286 neutral. No stuck or flickering state.
+  - Operator: holding a direction repeats far too fast, and afterwards focus "jumps" (moves up
+    two, snaps back down) across the whole interface, on the stick too. Since the input stream
+    is clean, both are frontend issues outside this source: repeat speed is the inherited
+    50 ms / 300 ms default (`gamepadRepeatDelay` / `gamepadInitialRepeatDelay`, saved in the
+    user's config), and the jump is in focus handling (suspects: a3a9db170, adc2ad54d).
