@@ -3519,9 +3519,10 @@ describe('callback registry (P55-3) source pins', () => {
     )
   })
 
-  it('relays the 13 broadcast ids with measured sizes, never held (58-10)', () => {
+  it('relays the 14 broadcast ids with measured sizes, never held (58-10)', () => {
     const ids = [
-      503, 504, 505, 506, 507, 512, 1202, 1203, 1221, 1222, 1251, 1252, 1281
+      503, 504, 505, 506, 507, 512, 513, 1202, 1203, 1221, 1222, 1251, 1252,
+      1281
     ]
     for (const bid of ids) {
       const row = CALLBACK_RELAY_TABLE.find((r) => r.id === bid)
@@ -3568,6 +3569,8 @@ describe('callback registry (P55-3) source pins', () => {
     expect(CALL_RESULT_DRAIN_RESP_MAX_BYTES).toBe(4 + 8 + 4 + 4 + 4 + maxParam)
     expect(CALL_RESULT_TABLE.map((r) => r.id)).toEqual([513, 510, 504])
     expect(CALL_RESULT_TABLE.some((r) => r.id === 168)).toBe(false)
+    // 510 stays call-result-only: never observed as a broadcast
+    expect(CALLBACK_RELAY_TABLE.some((r) => r.id === 510)).toBe(false)
     expect(CALL_RESULT_REGISTRY_CAPACITY).toBe(64)
     expect(CALL_RESULT_HELD_SLOTS).toBe(16)
     expect(CALL_RESULT_HELD_EXPIRY_MS).toBe(10000)
@@ -3645,12 +3648,36 @@ describe('quick k51: RequestCurrentStats notify and dispatch report (shim)', () 
     expect(def).not.toContain('Interlocked')
   })
 
-  it('the embedder defines the report hook before the registry, capped at 16', () => {
+  it('the embedder defines the report hook before the registry, budgeted per id', () => {
     const hookAt = c.indexOf('static void gl_cb_report_dispatch(')
     expect(hookAt).toBeGreaterThan(-1)
     expect(hookAt).toBeLessThan(c.indexOf('static void gl_cb_run_callbacks('))
     const hook = c.slice(hookAt, c.indexOf('\n}\n', hookAt))
-    expect(hook).toContain('InterlockedIncrement(&g_gl_cb_reports) > 16')
+    expect(hook).not.toContain('> 16')
+    expect(hook).toContain('InterlockedIncrement(&g_gl_cb_report_n[i]) > 4')
+    expect(hook).toContain('gl_cb_report_ids[i] == id')
+    const idsLine = /gl_cb_report_ids\[\] = \{([^}]*)\}/.exec(c)![1]
+    const ids = idsLine.split(',').map((x) => Number(x.trim()))
+    const union = [
+      ...new Set([
+        ...CALLBACK_RELAY_TABLE.map((r) => r.id),
+        ...CALL_RESULT_TABLE.map((r) => r.id)
+      ])
+    ]
+    expect(ids).toEqual(union)
+    expect(ids).not.toContain(703)
+    const deliver = c.slice(
+      c.indexOf('static int gl_cr_deliver('),
+      c.indexOf('\n}\n', c.indexOf('static int gl_cr_deliver('))
+    )
+    expect(deliver).toContain('gl_cb_report_dispatch(id, 1, 2)')
+    const md = c.slice(
+      c.indexOf('static int gl_md_get_api_call_result('),
+      c.indexOf('\n}\n', c.indexOf('static int gl_md_get_api_call_result('))
+    )
+    expect(
+      md.indexOf('gl_cb_report_dispatch((int32_t)iExpected, 1, 2)')
+    ).toBeGreaterThan(md.lastIndexOf('GL_CB_UNLOCK();'))
     expect(hook).toContain('BRIDGE_CONTROL_SLOT_REPORT_CB_DISPATCH')
   })
 })

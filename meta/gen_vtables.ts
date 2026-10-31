@@ -2870,7 +2870,10 @@ function broadcastRelayRow(
  *  id when it arrives with no live listener, to be dispatched once one
  *  registers. 168 carries a web-API auth ticket and is NEVER held (Phase 55
  *  credential hygiene); 1101 (UserStatsReceived_t) carries no credential. The
- *  58-10 broadcast rows are never held. */
+ *  58-10 broadcast rows are never held. 513 (LobbyCreated_t) is BOTH a
+ *  broadcast and a call result (quick 261031-ixa): a game with Callback<> and
+ *  CallResult<> sees both, each path independent (broadcast: slot 6 into the
+ *  relay/FIFO; call result: slot 11 into Run or GetAPICallResult). */
 export const CALLBACK_RELAY_TABLE: readonly CallbackRelayRow[] = [
   { id: 168, size: 2572, hold: false },
   { id: 1101, size: USER_STATS_RECEIVED_LAYOUT.x64.size, hold: true },
@@ -2880,6 +2883,7 @@ export const CALLBACK_RELAY_TABLE: readonly CallbackRelayRow[] = [
   broadcastRelayRow('LobbyChatUpdate_t', false),
   broadcastRelayRow('LobbyChatMsg_t', false),
   broadcastRelayRow('LobbyKicked_t', false),
+  broadcastRelayRow('LobbyCreated_t', false),
   broadcastRelayRow('P2PSessionRequest_t', false),
   broadcastRelayRow('P2PSessionConnectFail_t', false),
   broadcastRelayRow('SteamNetConnectionStatusChangedCallback_t', false),
@@ -3288,7 +3292,7 @@ static int gl_cr_deliver(uint64_t h, int32_t id, uint32_t failed, void *param) {
     gl_cb_zero(&gl_cr_entries[gl_cr_count], (uint32_t)sizeof(gl_cr_entries[0]));
   }
   GL_CB_UNLOCK();
-  gl_cb_report_dispatch(id, 1, 0);
+  gl_cb_report_dispatch(id, 1, 2);
   return 1;
 }
 
@@ -3637,6 +3641,8 @@ static int gl_md_get_api_call_result(uint64_t h, void *out, int cub,
     }
   }
   GL_CB_UNLOCK();
+  /* quick 261031-ixa: kind 2 = call result delivered; never under the lock. */
+  if (ok) gl_cb_report_dispatch((int32_t)iExpected, 1, 2);
   return ok;
 }
 
@@ -5973,6 +5979,18 @@ export function generateShimExportsTs(manifests: InterfaceManifest[]): string {
 // Top-level emission
 // ---------------------------------------------------------------------------
 
+/** quick 261031-ixa: ids the shim may report to the helper (slot 10): the
+ *  deduplicated union of the relay and call-result tables. 703 is absent on
+ *  purpose (the helper refuses it). */
+const REPORT_IDS: readonly number[] = [
+  ...new Set([
+    ...CALLBACK_RELAY_TABLE.map((r) => r.id),
+    ...CALL_RESULT_TABLE.map((r) => r.id)
+  ])
+]
+const REPORT_IDS_C = REPORT_IDS.join(', ')
+const REPORT_IDS_N = REPORT_IDS.length
+
 export function generateShimC(
   manifests: InterfaceManifest[],
   options: {
@@ -6486,13 +6504,21 @@ static int gl_cb_transport_drain_cr(uint8_t *buf, uint32_t cap, uint32_t *lenOut
   return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALL_RESULTS, NULL, 0, buf, cap, lenOut);
 }
 /* quick 261027-k51: report one relayed callback the registry dispatched or held
- * (the helper logs CBDISP). Capped at 16 reports per process; the registry
- * calls this with no lock held. The result is ignored. */
-static volatile LONG g_gl_cb_reports;
+ * (the helper logs CBDISP). Third word = kind: 0 dispatched/dropped, 1 held,
+ * 2 call result delivered (quick 261031-ixa). Per-id budget of 4: one
+ * process-wide cap of 16 was spent by early 1281/1222 traffic and by refused
+ * 703 reports. Ids outside gl_cb_report_ids[] (703, which the helper refuses)
+ * spend nothing. The registry calls this with no lock held. The result is
+ * ignored. */
+static const int32_t gl_cb_report_ids[] = { ${REPORT_IDS_C} };
+static volatile LONG g_gl_cb_report_n[${REPORT_IDS_N}];
 static void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched, uint32_t held) {
   uint8_t req[12];
   uint8_t retbuf[1]; uint32_t retlen = 0;
-  if (InterlockedIncrement(&g_gl_cb_reports) > 16) return;
+  uint32_t i;
+  for (i = 0; i < ${REPORT_IDS_N}u; i++) if (gl_cb_report_ids[i] == id) break;
+  if (i == ${REPORT_IDS_N}u) return;
+  if (InterlockedIncrement(&g_gl_cb_report_n[i]) > 4) return;
   memcpy(req, &id, 4);
   memcpy(req + 4, &ndispatched, 4);
   memcpy(req + 8, &held, 4);

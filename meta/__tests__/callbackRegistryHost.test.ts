@@ -58,6 +58,8 @@ const CASES = [
   'md_callresult',
   'md_callresult_failed_flag',
   'md_callresult_wrong_id',
+  'md_callresult_report',
+  'relay_513_dispatch',
   'md_fifo_bounded',
   'md_runcallbacks_inert',
   'md_report',

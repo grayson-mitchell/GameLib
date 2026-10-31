@@ -583,13 +583,21 @@ static int gl_cb_transport_drain_cr(uint8_t *buf, uint32_t cap, uint32_t *lenOut
   return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALL_RESULTS, NULL, 0, buf, cap, lenOut);
 }
 /* quick 261027-k51: report one relayed callback the registry dispatched or held
- * (the helper logs CBDISP). Capped at 16 reports per process; the registry
- * calls this with no lock held. The result is ignored. */
-static volatile LONG g_gl_cb_reports;
+ * (the helper logs CBDISP). Third word = kind: 0 dispatched/dropped, 1 held,
+ * 2 call result delivered (quick 261031-ixa). Per-id budget of 4: one
+ * process-wide cap of 16 was spent by early 1281/1222 traffic and by refused
+ * 703 reports. Ids outside gl_cb_report_ids[] (703, which the helper refuses)
+ * spend nothing. The registry calls this with no lock held. The result is
+ * ignored. */
+static const int32_t gl_cb_report_ids[] = { 168, 1101, 503, 504, 505, 506, 507, 512, 513, 1202, 1203, 1221, 1222, 1251, 1252, 1281, 510 };
+static volatile LONG g_gl_cb_report_n[17];
 static void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched, uint32_t held) {
   uint8_t req[12];
   uint8_t retbuf[1]; uint32_t retlen = 0;
-  if (InterlockedIncrement(&g_gl_cb_reports) > 16) return;
+  uint32_t i;
+  for (i = 0; i < 17u; i++) if (gl_cb_report_ids[i] == id) break;
+  if (i == 17u) return;
+  if (InterlockedIncrement(&g_gl_cb_report_n[i]) > 4) return;
   memcpy(req, &id, 4);
   memcpy(req + 4, &ndispatched, 4);
   memcpy(req + 8, &held, 4);
@@ -1791,6 +1799,7 @@ static const gl_cb_relay_row gl_cb_relay_table[] = {
   {506, 32u, 0},
   {507, 24u, 0},
   {512, 24u, 0},
+  {513, 16u, 0},
   {1202, 8u, 0},
   {1203, 9u, 0},
   {1221, 712u, 0},
@@ -2038,7 +2047,7 @@ static int gl_cr_deliver(uint64_t h, int32_t id, uint32_t failed, void *param) {
     gl_cb_zero(&gl_cr_entries[gl_cr_count], (uint32_t)sizeof(gl_cr_entries[0]));
   }
   GL_CB_UNLOCK();
-  gl_cb_report_dispatch(id, 1, 0);
+  gl_cb_report_dispatch(id, 1, 2);
   return 1;
 }
 
@@ -2387,6 +2396,8 @@ static int gl_md_get_api_call_result(uint64_t h, void *out, int cub,
     }
   }
   GL_CB_UNLOCK();
+  /* quick 261031-ixa: kind 2 = call result delivered; never under the lock. */
+  if (ok) gl_cb_report_dispatch((int32_t)iExpected, 1, 2);
   return ok;
 }
 

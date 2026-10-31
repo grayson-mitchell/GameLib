@@ -1002,8 +1002,8 @@ static void case_cr_report_hook(void) {
   gl_cb_run_callbacks();
   /* the hook CHECKs trylock==0 on every call */
   CHECK(g_nrep == 2);
-  CHECK(g_rep[0].id == 513 && g_rep[0].nd == 1 && g_rep[0].held == 0);
-  CHECK(g_rep[1].id == 510 && g_rep[1].nd == 1 && g_rep[1].held == 0);
+  CHECK(g_rep[0].id == 513 && g_rep[0].nd == 1 && g_rep[0].held == 2);
+  CHECK(g_rep[1].id == 510 && g_rep[1].nd == 1 && g_rep[1].held == 2);
   PASS();
 }
 
@@ -1201,6 +1201,42 @@ static void case_md_callresult_wrong_id(void) {
   PASS();
 }
 
+/* quick 261031-ixa: a manual-dispatch result fetch reports kind 2 once, with no
+ * lock held (the hook CHECKs trylock); a refused fetch reports nothing. */
+static void case_md_callresult_report(void) {
+  uint8_t out[64];
+  uint8_t failed = 0;
+  uint32_t size = gl_cr_size(513);
+  g_case = "md_callresult_report";
+  reset();
+  gl_md_init();
+  push_cr(9, 513, 0, 0x5A);
+  gl_md_run_frame();
+  g_nrep = 0;
+  CHECK(gl_md_get_api_call_result(9, out, (int)size, 510, &failed) == 0);
+  CHECK(gl_md_get_api_call_result(9, out, (int)size + 1, 513, &failed) == 0);
+  CHECK(g_nrep == 0);
+  CHECK(gl_md_get_api_call_result(9, out, (int)size, 513, &failed) == 1);
+  CHECK(g_nrep == 1);
+  CHECK(g_rep[0].id == 513 && g_rep[0].nd == 1 && g_rep[0].held == 2);
+  PASS();
+}
+
+static void case_relay_513_dispatch(void) {
+  g_case = "relay_513_dispatch";
+  reset();
+  gl_cb_register(&objA, 513);
+  gl_cb_register(&objB, 512);
+  push_msg(513, 1, 16, 16);
+  gl_cb_run_callbacks();
+  CHECK(objA.calls == 1);
+  CHECK(memcmp(objA.got, g_expect, 16) == 0);
+  CHECK(objB.calls == 0);
+  CHECK(g_nrep == 1 && g_rep[0].id == 513 && g_rep[0].nd == 1 && g_rep[0].held == 0);
+  CHECK(!held_valid(513)); /* broadcast rows are never held */
+  PASS();
+}
+
 static void case_md_fifo_bounded(void) {
   uint8_t raw[24];
   int i;
@@ -1362,6 +1398,8 @@ int main(void) {
   case_md_callresult();
   case_md_callresult_failed_flag();
   case_md_callresult_wrong_id();
+  case_md_callresult_report();
+  case_relay_513_dispatch();
   case_md_fifo_bounded();
   case_md_runcallbacks_inert();
   case_md_report();
