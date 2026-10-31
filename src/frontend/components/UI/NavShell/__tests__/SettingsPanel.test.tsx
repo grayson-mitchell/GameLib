@@ -225,7 +225,7 @@ describe('SettingsPanel', () => {
       'Game Defaults',
       'Advanced',
       'Wine Manager',
-      'Accessibility',
+      'Appearance',
       'Log',
       'System Information',
       'Documentation',
@@ -345,11 +345,11 @@ describe('SettingsPanel', () => {
       expect(row?.props['data-tour']).toBe('nav-wine')
     })
 
-    it('the Accessibility row carries data-tour="nav-accessibility"', () => {
+    it('the Appearance row carries data-tour="nav-accessibility"', () => {
       contextValue = makeContextValue()
 
       const tree = SettingsPanel() as unknown as ReactElement
-      const row = findNavItem(tree, 'Accessibility')
+      const row = findNavItem(tree, 'Appearance')
 
       expect(row?.props['data-tour']).toBe('nav-accessibility')
     })

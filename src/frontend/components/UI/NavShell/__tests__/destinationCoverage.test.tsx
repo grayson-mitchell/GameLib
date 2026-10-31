@@ -276,7 +276,7 @@ describe('Destination coverage -- the settled tree', () => {
       'Game Defaults',
       'Advanced',
       'Wine Manager',
-      'Accessibility',
+      'Appearance',
       'Log',
       'System Information',
       'Documentation',

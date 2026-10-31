@@ -40,8 +40,13 @@ const Accessibility = React.memo(function Accessibility() {
 
   hasHelp(
     'accessibility',
-    t('help.title.accessibility', 'Accessibility'),
-    <p>{t('help.content.accessibility', 'Shows accessibility settings.')}</p>
+    t('help.title.accessibility', 'Appearance'),
+    <p>
+      {t(
+        'help.content.accessibility',
+        'Shows appearance and accessibility settings.'
+      )}
+    </p>
   )
 
   const [fonts, setFonts] = useState<string[]>([])
@@ -129,7 +134,7 @@ const Accessibility = React.memo(function Accessibility() {
     <div className="Accessibility Settings">
       <div className="settingsWrapper">
         <h1 className="headerTitle">
-          {t('accessibility.title', 'Accessibility')}
+          {t('accessibility.title', 'Appearance')}
         </h1>
 
         <span className="rangeWrapper Field">

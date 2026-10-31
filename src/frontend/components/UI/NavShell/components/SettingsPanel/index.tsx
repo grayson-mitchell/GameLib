@@ -150,7 +150,7 @@ export default function SettingsPanel() {
       <NavItem
         url="/accessibility"
         icon={faUniversalAccess}
-        label={t('accessibility.title', 'Accessibility')}
+        label={t('accessibility.title', 'Appearance')}
         data-tour="nav-accessibility"
       />
       <NavItem url="/settings/log" label={t('settings.navbar.log', 'Log')} />

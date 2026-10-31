@@ -128,7 +128,7 @@ const NavShellTour: React.FC = () => {
         element: '[data-tour="nav-accessibility"]',
         intro: t(
           'tour.sidebar.accessibility',
-          'Access accessibility features to customize your experience.'
+          'Customize how GameLib looks: theme, zoom, fonts and accessibility options.'
         ),
         position
       },
