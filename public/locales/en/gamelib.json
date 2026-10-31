@@ -561,6 +561,64 @@
                 "notSignedIn": "You are not signed in to Steam, so this download could not start."
             }
         },
+        "engine": {
+            "badge": {
+                "builtin": "Built-in engine (best-effort)",
+                "builtinTitle": "CrossOver is unavailable for this game ({{reason}}), so GameLib runs it on its built-in Wine engine. It is slower and has no Direct3D 12 support.",
+                "unsupported": "Unsupported engine",
+                "unsupportedTitle": "This game uses an engine chosen in its Advanced settings ({{engine}}). Known fixes and compatibility ratings don't apply."
+            },
+            "crossoverRequired": {
+                "bottled": "This game runs through Windows Steam, which needs CrossOver ({{reason}}). Install or renew CrossOver, then try again.",
+                "drm": "This game uses Steam DRM support that needs CrossOver ({{reason}}). Install or renew CrossOver, then try again."
+            },
+            "didntStart": {
+                "body": "{{title}} did not start within {{seconds}} seconds, so GameLib stopped it. Check the launch log (Settings > Logs) and this game's known fixes.",
+                "title": "Game didn't start"
+            },
+            "downloadFailed": "GameLib couldn't download its built-in engine ({{reason}}). Check your connection and try again.",
+            "nagNotice": "CrossOver is showing a trial reminder. Close it to start {{title}}.",
+            "noCrossover": {
+                "body": "CrossOver isn't installed. GameLib runs Windows games on its built-in engine; CrossOver gives better compatibility and performance.",
+                "link": "Get CrossOver"
+            },
+            "notice": {
+                "dismiss": "Dismiss"
+            },
+            "override": {
+                "automatic": "Automatic (CrossOver, then built-in)",
+                "crossover": "CrossOver",
+                "help": "Choose the Wine engine for this game. Automatic uses CrossOver when it works and the built-in engine otherwise.",
+                "label": "Engine",
+                "notInstalled": "{{label}} (downloads on first launch)",
+                "previous": "{{label}} (previous build)",
+                "summary": "Engine (advanced)",
+                "warning": "Unsupported — known fixes and compatibility ratings don't apply"
+            },
+            "overrideUnavailable": "The engine chosen for this game in Advanced settings is not available ({{detail}}). Choose Automatic or install it.",
+            "reason": {
+                "cxBroken": "CrossOver isn't working",
+                "cxExpired": "CrossOver trial expired",
+                "cxMissing": "CrossOver not found"
+            },
+            "status": {
+                "downloading": "Downloading built-in engine ({{percent}}%)"
+            },
+            "toast": {
+                "cxBroken": "CrossOver isn't working — using built-in engine",
+                "cxExpired": "CrossOver trial expired — using built-in engine",
+                "cxMissing": "CrossOver not found — using built-in engine"
+            },
+            "trial": {
+                "body": "When the trial ends, GameLib will switch this game to its built-in engine (best-effort).",
+                "buy": "Buy CrossOver",
+                "daysRemaining_one": "CrossOver trial: {{count}} day remaining",
+                "daysRemaining_other": "CrossOver trial: {{count}} days remaining"
+            },
+            "untested": {
+                "body": "CrossOver {{build}} is untested with GameLib. Games should still work; please report issues."
+            }
+        },
         "goOffline": {
             "body": "GameLib needs to sign in to your Steam account for this. To keep your Steam Friends list signed in, it signs in while the Steam app is offline, but Steam did not go offline when GameLib asked. This can happen while a Steam game is running.",
             "continue": "Continue",
