@@ -11,7 +11,9 @@ files:
   - src-tauri/src/main.rs
 severity: minor
 platform: macos
-ready: human
+ready: blocked
+blocked_by: "an Amazon Prime subscription - claiming a Prime Gaming game needs one, and the operator does not have one yet"
+revisit_trigger: "the operator has a Prime account - run the Amazon check below"
 ---
 
 ## Status (2026-10-30, after quick 261030-ts4)
@@ -21,7 +23,7 @@ Shipped in 261030-ts4 (`3213dea8a`): Steam's mechanism is now the per-store tabl
 passed for GOG, Epic (macOS raw WKWebView) and the Steam regression.
 
 **What remains is Amazon only.** It was not run: claiming a Prime Gaming game needs a Prime
-subscription, so this needs a person with one (`ready: human`). Check:
+subscription, so this is parked until the operator has one (`ready: blocked`). Check:
 
 - Claim a free game in `/store/amazon`, leave the store, and confirm
   `[amazonStoreExitRefresh] origin=amazon-store-exit outcome=refreshed` in `gamelib.log`.

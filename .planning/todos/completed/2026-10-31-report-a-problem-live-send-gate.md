@@ -28,3 +28,10 @@ the live send has never been exercised. This is NOT verified. The access key was
    account name.
 5. Confirm the webview origin (`tauri://localhost`) is accepted by Web3Forms CORS. This is
    unverified at plan time; if it is rejected the renderer POST needs a different route.
+
+## Result
+
+Passed 2026-10-31 (operator, packaged debug build): reports with and without diagnostics both
+arrived, and Web3Forms accepted the webview origin. The operator's follow-up styling notes
+(small field font, bright white fields in Midnight Mirage) were fixed in the commit after this
+gate.
