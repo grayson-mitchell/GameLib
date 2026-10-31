@@ -39,6 +39,9 @@
  *      260930-ssf). Same EBUSY class as 6 and 7, measured in Phase 38 sitting 13:
  *      a `cargo build` of spike 027 into its `target-cache` killed a running
  *      `pnpm tauri:dev`.
+ *   9. `server.watch.ignored` losing its `.planning` or `.claude/worktrees`
+ *      entry (quick task 261101-cl4). Spike Wine prefixes under .planning have
+ *      dosdevices links to / and $HOME; chokidar followed them into a V8 OOM.
  *
  * The assertions run against the RESOLVED config object returned by the
  * exported callback, under both `mode: 'production'` and `mode: 'development'`
@@ -273,12 +276,22 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
       // Quick task 260930-ssf: third member of the same defect class. Measured
       // on the pre-fix config, the dev watcher held 519 dirs / 3846 entries under
       // the spike 027 target-cache -- a `cargo build` there killed a running
-      // `pnpm tauri:dev`. The named directory, not the planning tree (OD-1).
+      // `pnpm tauri:dev`. The named-directory stance was superseded by
+      // 261101-cl4, which ignores the whole planning tree.
       it('ignores spike target-cache dirs in the dev-server watcher', () => {
         const ignored = config.server?.watch?.ignored
         expect(Array.isArray(ignored)).toBe(true)
         expect(ignored).toContain('**/target-cache/**')
-        expect(ignored).not.toContain('**/.planning/**')
+      })
+
+      // Quick task 261101-cl4: 7 V8 OOM crashes of the dev server. Wine prefix
+      // dosdevices links (z: -> /) under .planning/spikes made chokidar walk
+      // the disk (311,753 dirs, 97% under .planning); .claude/worktrees is a
+      // full untracked checkout.
+      it('ignores .planning and .claude/worktrees in the dev-server watcher', () => {
+        const ignored = config.server?.watch?.ignored
+        expect(ignored).toContain('**/.planning/**')
+        expect(ignored).toContain('**/.claude/worktrees/**')
       })
 
       // The array is observation-only: every entry is a measured failure. build/
@@ -290,7 +303,9 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
         expect(ignored).toEqual([
           '**/src-tauri/target/**',
           '**/graphify-out/**',
-          '**/target-cache/**'
+          '**/target-cache/**',
+          '**/.planning/**',
+          '**/.claude/worktrees/**'
         ])
       })
 
@@ -394,6 +409,12 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
       expect(source).toContain('260930-ssf')
       expect(source).toContain('target-cache')
       expect(source).toContain('dot: true')
+    })
+
+    it('keeps the 261101-cl4 rationale next to the .planning ignore', () => {
+      expect(source).toContain('261101-cl4')
+      expect(source).toContain('dosdevices')
+      expect(source).toContain('OOM')
     })
   })
 })

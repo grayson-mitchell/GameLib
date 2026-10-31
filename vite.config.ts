@@ -122,23 +122,40 @@ export default defineConfig(({ mode }) => ({
     // target-cache, the spike README's own recipe, killed a running
     // `pnpm tauri:dev` with chokidar EBUSY on the spike exe the linker held
     // open. The watcher held 519 dirs / 3846 entries under it on the pre-fix
-    // config. It is named as the directory, not as the whole planning tree: the
-    // renderer never imports from .planning, but a wider entry breaks the
-    // observation-only rule below. The glob reaches through the .planning
-    // dot-directory only because Vite's bundled chokidar matches ignore globs
-    // with `dot: true`; re-run 260930-ssf's watcherProbe.mjs after a Vite
-    // upgrade.
+    // config. That reasoning (name the directory, not the whole planning tree)
+    // held until 261101-cl4 below measured the whole tree as a failure in its
+    // own right; the .planning entry now satisfies the observation-only rule
+    // below and subsumes target-cache for spike 027. target-cache stays: it is
+    // harmless, it is pinned, and it still covers a CARGO_TARGET_DIR pointed
+    // elsewhere under the root. The globs reach through the .planning and
+    // .claude dot-directories only because Vite's bundled chokidar matches
+    // ignore globs with `dot: true`; re-run 261101-cl4's watcherProbe.mjs (the
+    // 260930-ssf probe extended) after a Vite upgrade.
+    //
+    // Quick task 261101-cl4 (2026-11-01): 7 node-*.ips crash reports
+    // (Oct 31 to Nov 1) were all V8 FatalProcessOutOfMemory (OOM) in the
+    // beforeDevCommand vite, at 10-100 min uptime. Cause: spike Wine/CrossOver
+    // prefixes under .planning/spikes whose dosdevices links (z: -> /, y: ->
+    // $HOME) chokidar follows, walking the whole disk. Wine recreates those
+    // links on every prefix run, so deleting them is not a fix. Baseline
+    // (vite 6.3.5): not settled in 120 s, 311,753 dirs, 1,638,930 entries,
+    // 302,950 of them (97%) under .planning, 2.63 GB RSS. .claude/worktrees/
+    // is a full untracked checkout (4.5 GB, ~2,516 non-node_modules dirs, with
+    // its own .planning). Downstream effect: the orphaned shell then aborted
+    // on dead stderr (fixed separately in src-tauri/src/main.rs).
     //
     // Each entry below is a MEASURED failure, named as a specific generated
     // directory. build/ and public/bin are watched too (169 dirs, and the same
     // written-while-serving shape) and are deliberately NOT here -- no crash has
     // been observed on them, and keeping this array observation-only is what makes
-    // it auditable. See 260925-re8-GATE.md and 260930-ssf-GATE.md.
+    // it auditable. See 260925-re8-GATE.md, 260930-ssf-GATE.md and 261101-cl4-GATE.md.
     watch: {
       ignored: [
         '**/src-tauri/target/**',
         '**/graphify-out/**',
-        '**/target-cache/**'
+        '**/target-cache/**',
+        '**/.planning/**',
+        '**/.claude/worktrees/**'
       ]
     }
   },
