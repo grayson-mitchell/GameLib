@@ -169,7 +169,7 @@ int main(void) {
 
   /* ---- Phase 58-07: relay rows, repack, call results ---- */
   {
-    static const int32_t ids[] = {503, 504, 505, 506, 507, 512, 1202, 1203,
+    static const int32_t ids[] = {503, 504, 505, 506, 507, 512, 513, 1202, 1203,
                                   1221, 1222, 1251, 1252, 1281};
     int sizes_ok = 1, repack_ok = 1, wrongsize_ok = 1;
     for (size_t k = 0; k < sizeof ids / sizeof ids[0]; k++) {
@@ -195,7 +195,8 @@ int main(void) {
       if (!gl_cbq_offer(&ring, ids[k], win, (int32_t)row->winSize)) wrongsize_ok = 0;
     }
     CHECK("relay_row_sizes", sizes_ok && gl_cbq_allowed_size(510) == 0 &&
-                                 gl_cbq_allowed_size(513) == 0 && gl_cbq_allowed_size(703) == 0);
+                                 gl_cbq_allowed_size(513) == 16 && gl_cbq_allowed_size(703) == 0 &&
+                                 gl_cr_row(513) == gl_cbq_row(513));
     CHECK("repack_all_rows", repack_ok);
     CHECK("offer_wrong_size_drops", wrongsize_ok);
 
@@ -220,6 +221,25 @@ int main(void) {
     gl_cbq_repack_fields(m513, w513, gl_cr_row(513));
     CHECK("repack_513_positions",
           memcmp(w513, &er, 4) == 0 && all_zero(w513 + 4, 4) && memcmp(w513 + 8, &lob, 8) == 0);
+
+    /* 513 as a broadcast: repack through the shared row, offer at 16, pop. */
+    {
+      static gl_cbq_ring r513;
+      uint8_t mb[12], wb[GL_CBQ_MAX_PARAM_BYTES], po[GL_CBQ_DRAIN_RESP_MAX_BYTES];
+      uint32_t e1 = 1;
+      uint64_t lid = 0x0110000100000042ull;
+      memset(&r513, 0, sizeof r513);
+      memcpy(mb, &e1, 4);
+      memcpy(mb + 4, &lid, 8);
+      memset(wb, 0xCC, sizeof wb);
+      gl_cbq_repack_fields(mb, wb, gl_cbq_row(513));
+      int q = gl_cbq_offer(&r513, 513, wb, 16);
+      uint32_t pn = gl_cbq_pop_encode(&r513, po, sizeof po);
+      CHECK("offer_513_broadcast",
+            q == 1 && pn == 12 + 16 && rd32(po) == 1 && rd32(po + 4) == 513 &&
+                rd32(po + 8) == 16 && memcmp(po + 12, &e1, 4) == 0 && all_zero(po + 16, 4) &&
+                memcmp(po + 20, &lid, 8) == 0);
+    }
 
     memset(&ring, 0, sizeof ring);
     fill(payload, 5);

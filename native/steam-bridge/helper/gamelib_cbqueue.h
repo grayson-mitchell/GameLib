@@ -170,6 +170,11 @@ static const gl_cbq_field_map gl_cbq_map_505[] = {{0, 0, GL_CBQ_LOBBYDATAUPDATE_
 static const gl_cbq_field_map gl_cbq_map_506[] = {{0, 0, GL_CBQ_LOBBYCHATUPDATE_MAC_SIZE}};
 static const gl_cbq_field_map gl_cbq_map_507[] = {{0, 0, GL_CBQ_LOBBYCHATMSG_MAC_SIZE}};
 static const gl_cbq_field_map gl_cbq_map_512[] = {{0, 0, GL_CBQ_LOBBYKICKED_MAC_SIZE}};
+/* LobbyCreated_t (513): m_eResult@0, m_ulSteamIDLobby 4 (Mac pack 4) -> 8
+ * (MSVC pack 8); measured in CALLBACK_LAYOUTS.LobbyCreated_t. Relayed as a
+ * broadcast AND as the CreateLobby call result (real Steam delivers both, and
+ * Steamworks.NET games listen through Callback<> or CallResult<>). */
+static const gl_cbq_field_map gl_cbq_map_513[] = {{0, 0, 4}, {4, 8, 8}};
 static const gl_cbq_field_map gl_cbq_map_1202[] = {{0, 0, GL_CBQ_P2PSESSIONREQUEST_MAC_SIZE}};
 static const gl_cbq_field_map gl_cbq_map_1203[] = {{0, 0, GL_CBQ_P2PSESSIONCONNECTFAIL_MAC_SIZE}};
 /* 1221: m_hConn@0, m_info 4 -> 8 (696 bytes), m_eOldState 700 -> 704. */
@@ -198,6 +203,8 @@ static const gl_cbq_allow_row gl_cbq_allow[] = {
                gl_cbq_map_506),
     GL_CBQ_ROW(507, GL_CBQ_LOBBYCHATMSG_WIN_SIZE, GL_CBQ_LOBBYCHATMSG_MAC_SIZE, gl_cbq_map_507),
     GL_CBQ_ROW(512, GL_CBQ_LOBBYKICKED_WIN_SIZE, GL_CBQ_LOBBYKICKED_MAC_SIZE, gl_cbq_map_512),
+    GL_CBQ_ROW(GL_CBQ_ID_LOBBY_CREATED, GL_CBQ_LOBBYCREATED_WIN_SIZE,
+               GL_CBQ_LOBBYCREATED_MAC_SIZE, gl_cbq_map_513),
     GL_CBQ_ROW(1202, GL_CBQ_P2PSESSIONREQUEST_WIN_SIZE, GL_CBQ_P2PSESSIONREQUEST_MAC_SIZE,
                gl_cbq_map_1202),
     GL_CBQ_ROW(1203, GL_CBQ_P2PSESSIONCONNECTFAIL_WIN_SIZE, GL_CBQ_P2PSESSIONCONNECTFAIL_MAC_SIZE,

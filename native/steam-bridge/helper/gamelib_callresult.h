@@ -28,23 +28,19 @@
 #define GL_CR_ID_LOBBY_MATCH_LIST 510
 #define GL_CR_ID_LOBBY_CREATED 513
 
-/* LobbyCreated_t: m_eResult@0, m_ulSteamIDLobby 4 (mac pack 4) -> 8 (win). */
-static const gl_cbq_field_map gl_cr_map_513[] = {{0, 0, 4}, {4, 8, 8}};
 static const gl_cbq_field_map gl_cr_map_510[] = {{0, 0, GL_CBQ_LOBBYMATCHLIST_MAC_SIZE}};
 
-/* Rows: winSize, macSize, field map. 504 shares the broadcast row. */
+/* Rows: winSize, macSize, field map. 504 and 513 share the broadcast row. */
 static const gl_cbq_allow_row gl_cr_rows[] = {
-    GL_CBQ_ROW(GL_CR_ID_LOBBY_CREATED, GL_CBQ_LOBBYCREATED_WIN_SIZE, GL_CBQ_LOBBYCREATED_MAC_SIZE,
-               gl_cr_map_513),
     GL_CBQ_ROW(GL_CR_ID_LOBBY_MATCH_LIST, GL_CBQ_LOBBYMATCHLIST_WIN_SIZE,
                GL_CBQ_LOBBYMATCHLIST_MAC_SIZE, gl_cr_map_510),
 };
 
-/* Row for a call-result id (504 resolves to the broadcast row), or NULL. */
+/* Row for a call-result id (504 and 513 resolve to the broadcast row), or NULL. */
 static const gl_cbq_allow_row *gl_cr_row(int32_t id) {
   for (size_t i = 0; i < sizeof gl_cr_rows / sizeof gl_cr_rows[0]; i++)
     if (gl_cr_rows[i].id == id) return &gl_cr_rows[i];
-  if (id == GL_CBQ_ID_LOBBY_ENTER) return gl_cbq_row(id);
+  if (id == GL_CBQ_ID_LOBBY_ENTER || id == GL_CR_ID_LOBBY_CREATED) return gl_cbq_row(id);
   return NULL;
 }
 

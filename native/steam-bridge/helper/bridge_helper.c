@@ -281,7 +281,29 @@ static gl_cr_state     g_cr;
 static struct { int valid; int32_t id; int path; } g_join_note;
 static unsigned g_net_logged = 0;
 static int g_net_cap_noted = 0;
-static unsigned        g_cbq_logged = 0;
+// quick 261031-ixa: per-id log budgets. One process-wide cap let steady
+// 1281/1222 traffic hide a later 513 line. Fixed 32-id table; a new id beyond
+// it is silent. gl_logbudget_take: 1 = log it, 2 = first refusal (emit a cap
+// line), 0 = silent.
+typedef struct { int32_t id; uint8_t n; } gl_logbudget_slot;
+typedef struct { gl_logbudget_slot s[32]; unsigned count; } gl_logbudget;
+static int gl_logbudget_take(gl_logbudget *b, int32_t id, unsigned max) {
+  for (unsigned i = 0; i < b->count; i++) {
+    if (b->s[i].id != id) continue;
+    if (b->s[i].n < max) { b->s[i].n++; return 1; }
+    if (b->s[i].n == max) { b->s[i].n++; return 2; }
+    return 0;
+  }
+  if (b->count >= 32) return 0;
+  b->s[b->count].id = id;
+  b->s[b->count].n = 1;
+  b->count++;
+  return 1;
+}
+static gl_logbudget g_cbq_budget;
+static gl_logbudget g_cr_done_budget;
+static gl_logbudget g_cr_drain_budget;
+static gl_logbudget g_cbdisp_budget;
 
 // quick 261027-k51: UserStatsReceived_t (1101) forwarding. Both exports are
 // NULL-tolerant: a missing one degrades only the fetch path.
@@ -294,10 +316,8 @@ static uint64_t             g_appid_u64 = 0;
 static unsigned             g_cbq_stats_logged = 0;
 static unsigned             g_stats_logged = 0;
 static int                  g_stats_cap_noted = 0;
-static unsigned             g_cbdisp_logged = 0;
-static int                  g_cbdisp_cap_noted = 0;
 #define STATS_LOG_MAX 32
-#define CBDISP_LOG_MAX 32
+#define CBDISP_PER_ID_LOG_MAX 4
 #define CBDISP_MAX_TARGETS 512
 
 // True once SteamAPI_InitFlat succeeded against a live session -- gates
@@ -1460,14 +1480,23 @@ static void gl_manual_pump_into_ring(void) {
           if (macSize == 0 || macSize > sizeof buf || done.m_iCallback != crId ||
               done.m_cubParam != macSize) {
             gl_cr_untrack(&g_cr, done.m_hAsyncCall);
+            if (gl_logbudget_take(&g_cr_done_budget, crId, 1) == 1)
+              logts_f("CBQ", "callresult iCallback=%d action=mismatch", (int)crId);
           } else {
             bool got = g_md_get_api_call_result(g_hpipe, done.m_hAsyncCall, buf,
                                                 (int)macSize, crId, &failed);
             if (got && !failed) {
-              if (gl_cr_complete(&g_cr, done.m_hAsyncCall, buf, macSize, 0))
+              if (gl_cr_complete(&g_cr, done.m_hAsyncCall, buf, macSize, 0)) {
                 gl_note_join_from_mac(crId, buf);
+                if (gl_logbudget_take(&g_cr_done_budget, crId, 1) == 1)
+                  logts_f("CBQ", "callresult iCallback=%d failed=%d cub=%u", (int)crId, 0,
+                          (unsigned)macSize);
+              }
             } else {
-              gl_cr_complete(&g_cr, done.m_hAsyncCall, NULL, 0, 1);
+              if (gl_cr_complete(&g_cr, done.m_hAsyncCall, NULL, 0, 1) &&
+                  gl_logbudget_take(&g_cr_done_budget, crId, 1) == 1)
+                logts_f("CBQ", "callresult iCallback=%d failed=%d cub=%u", (int)crId, 1,
+                        (unsigned)macSize);
             }
           }
           gl_cbq_secure_zero(buf, sizeof buf);
@@ -1477,8 +1506,12 @@ static void gl_manual_pump_into_ring(void) {
       const gl_cbq_allow_row *row = gl_cbq_row(msg.m_iCallback);
       int queued = 0;
       if (row == NULL) {
-        if (gl_cbq_note_unlisted(msg.m_iCallback))
-          logts_f("CBQ", "unlisted iCallback=%d action=drop", (int)msg.m_iCallback);
+        if (gl_cbq_note_unlisted(msg.m_iCallback)) {
+          if (gl_cr_allowed_size(msg.m_iCallback) != 0)
+            logts_f("CBQ", "unlisted iCallback=%d action=drop callresult=1", (int)msg.m_iCallback);
+          else
+            logts_f("CBQ", "unlisted iCallback=%d action=drop callresult=0", (int)msg.m_iCallback);
+        }
       } else if (msg.m_pubParam != NULL && msg.m_cubParam > 0 &&
                  (uint32_t)msg.m_cubParam == row->macSize) {
         // Repack Mac -> MSVC wire form before queueing (RESEARCH Pitfall 7).
@@ -1494,8 +1527,7 @@ static void gl_manual_pump_into_ring(void) {
       } else {
         g_cbq.dropped_filtered++;
       }
-      if (row != NULL && g_cbq_logged < 32) {
-        g_cbq_logged++;
+      if (row != NULL && gl_logbudget_take(&g_cbq_budget, msg.m_iCallback, 4) == 1) {
         if (queued)
           logts_f("CBQ", "queued iCallback=%d cub=%d", (int)msg.m_iCallback, (int)row->winSize);
         else
@@ -1907,7 +1939,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       memcpy(&dn, argBlob + 4, 4);
       memcpy(&dheld, argBlob + 8, 4);
       if ((gl_cbq_allowed_size(did) == 0 && gl_cr_allowed_size(did) == 0) || dn > CBDISP_MAX_TARGETS ||
-          dheld > 1) {
+          dheld > 2 || (dheld == 2 && (gl_cr_allowed_size(did) == 0 || dn > 1))) {
         send_response(fd, requestId, STATUS_ERR, NULL, 0);
         return;
       }
@@ -1920,16 +1952,16 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
                         did, dn, g_join_note.path);
         g_join_note.valid = 0;
       }
-      if (g_cbdisp_logged >= CBDISP_LOG_MAX) {
-        if (!g_cbdisp_cap_noted) {
-          g_cbdisp_cap_noted = 1;
-          logts("CBDISP", "cap of 32 reached; later reports are not logged");
-        }
-        send_response(fd, requestId, STATUS_OK, NULL, 0);
-        return;
+      int bud = gl_logbudget_take(&g_cbdisp_budget, did, CBDISP_PER_ID_LOG_MAX);
+      if (bud == 2) {
+        logts_f("CBDISP", "cap reached iCallback=%d", (int)did);
+      } else if (bud == 1) {
+        if (dheld == 2)
+          logts_f("CBDISP", "iCallback=%d targets=%u src=callresult", (int)did, (unsigned)dn);
+        else
+          logts_f("CBDISP", "iCallback=%d targets=%u held=%u", (int)did, (unsigned)dn,
+                  (unsigned)dheld);
       }
-      g_cbdisp_logged++;
-      logts_f("CBDISP", "iCallback=%d targets=%u held=%u", (int)did, (unsigned)dn, (unsigned)dheld);
       send_response(fd, requestId, STATUS_OK, NULL, 0);
       return;
     }
@@ -1979,6 +2011,14 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       if (cn == 0) {
         send_response(fd, requestId, STATUS_ERR, NULL, 0);
       } else {
+        uint32_t reply_count = 0;
+        memcpy(&reply_count, cout, 4);
+        if (cn >= 16 && reply_count == 1) {
+          int32_t drained_id = 0;
+          memcpy(&drained_id, cout + 12, 4);
+          if (gl_logbudget_take(&g_cr_drain_budget, drained_id, 1) == 1)
+            logts_f("CBQ", "callresult iCallback=%d action=drained", (int)drained_id);
+        }
         send_response(fd, requestId, STATUS_OK, cout, cn);
       }
       gl_cbq_secure_zero(cout, sizeof cout);

@@ -137,8 +137,10 @@ export const CONTROL_SLOT = {
   // one or fetches it. Nothing in the sidecar sends this.
   requestCurrentStats: 9,
   // quick 261027-k51: the shim reports each relayed callback it dispatched or
-  // held ({i32 iCallback, u32 ndispatched, u32 held}); the helper logs
-  // `CBDISP`. Nothing in the sidecar sends this.
+  // held ({i32 iCallback, u32 ndispatched, u32 kind}); kind 0 = dispatched or
+  // dropped, 1 = held, 2 = call result delivered (quick 261031-ixa). The helper
+  // logs `CBDISP`. An old shim never sends 2; a new shim against an old helper
+  // gets STATUS_ERR, which it ignores. Nothing in the sidecar sends this.
   reportCbDispatch: 10,
   // Phase 58 (58-07): the shim's RunCallbacks/ManualDispatch pops one completed
   // call result (CreateLobby, JoinLobby, RequestLobbyList) from the helper;

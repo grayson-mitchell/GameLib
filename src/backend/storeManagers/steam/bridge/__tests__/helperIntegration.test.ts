@@ -1419,7 +1419,9 @@ describeDarwinOnly(
             req(5, cbDispatchBlob(163, 1, 0)),
             req(6, cbDispatchBlob(0, 1, 0)),
             req(7, cbDispatchBlob(1101, 1, 2)),
-            req(8, cbDispatchBlob(1101, 513, 0))
+            req(8, cbDispatchBlob(1101, 513, 0)),
+            req(12, cbDispatchBlob(513, 1, 3)),
+            req(13, cbDispatchBlob(513, 2, 2))
           ]
           for (const f of bad) {
             expect((await sendFrameOnSocket(socket, f)).status).toBe(STATUS_ERR)
@@ -1455,6 +1457,18 @@ describeDarwinOnly(
           expect(log).toMatch(/ CBDISP iCallback=1101 targets=1 held=0\n/)
           expect(log).toMatch(/ CBDISP iCallback=1101 targets=0 held=1\n/)
           expect(log).toMatch(/ CBDISP iCallback=168 targets=2 held=0\n/)
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                req(14, cbDispatchBlob(513, 1, 2))
+              )
+            ).status
+          ).toBe(STATUS_OK)
+          await settle()
+          expect(h.getStderr()).toMatch(
+            / CBDISP iCallback=513 targets=1 src=callresult\n/
+          )
           for (let i = 0; i < 40; i++) {
             expect(
               (
@@ -1465,6 +1479,15 @@ describeDarwinOnly(
               ).status
             ).toBe(STATUS_OK)
           }
+          // The budget is per id: 168 is still logged after 1101 hit its cap.
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                req(200, cbDispatchBlob(168, 2, 0))
+              )
+            ).status
+          ).toBe(STATUS_OK)
         } finally {
           socket.destroy()
         }
@@ -1473,8 +1496,15 @@ describeDarwinOnly(
           .getStderr()
           .split('\n')
           .filter((l) => / CBDISP /.test(l))
-        expect(lines).toHaveLength(33)
-        expect(lines[32]).toMatch(/CBDISP cap of 32 reached/)
+        expect(
+          lines.filter((l) => /CBDISP iCallback=1101 /.test(l))
+        ).toHaveLength(4)
+        expect(
+          lines.filter((l) => /CBDISP cap reached iCallback=1101/.test(l))
+        ).toHaveLength(1)
+        expect(
+          lines.filter((l) => /CBDISP iCallback=168 /.test(l))
+        ).toHaveLength(2)
         expect(h.getStderr()).not.toMatch(/\] CALL /)
       } finally {
         h.child.kill()
@@ -1540,7 +1570,15 @@ describeDarwinOnly(
         // The NET emitter assembles `msg` from closed literal word tables.
         expect(call[0]).toMatch(/^logts(?:_f)?\("(?:NET|CBQ)", (?:"|msg\);$)/)
       }
-      expect(src).toContain('CBQ", "unlisted iCallback=%d action=drop"')
+      expect(src).toContain(
+        'CBQ", "unlisted iCallback=%d action=drop callresult=1"'
+      )
+      expect(src).toContain(
+        'CBQ", "unlisted iCallback=%d action=drop callresult=0"'
+      )
+      expect(src).not.toMatch(/action=drop"/)
+      expect(src).toContain('CBQ", "callresult iCallback=%d failed=%d cub=%u"')
+      expect(src).toContain('CBQ", "callresult iCallback=%d action=drained"')
       expect(src).toContain('gl_cr_allowed_size(did)')
     })
 

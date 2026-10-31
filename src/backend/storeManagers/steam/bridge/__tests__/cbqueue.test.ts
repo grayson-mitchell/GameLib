@@ -47,6 +47,7 @@ const CASES = [
   'offer_wrong_size_drops',
   'repack_1221_positions',
   'repack_513_positions',
+  'offer_513_broadcast',
   'ring_32_slots',
   'ring_33rd_evicts',
   'cr_track_complete',
@@ -140,6 +141,15 @@ describe('header defines cross-pin to CALLBACK_LAYOUTS (58-02)', () => {
     expect(define(`GL_CBQ_${tag}_WIN_SIZE`)).toBe(
       CALLBACK_LAYOUTS[name].x64.size
     )
+  })
+
+  test('gl_cbq_map_513 equals the triples derived from CALLBACK_LAYOUTS.LobbyCreated_t', () => {
+    const l = CALLBACK_LAYOUTS.LobbyCreated_t
+    const m = /gl_cbq_map_513\[\] = \{(\{[^;]*\})\};/.exec(header)
+    if (!m) throw new Error('gl_cbq_map_513 missing')
+    const expected = `{{${l.mac.fields.m_eResult}, ${l.x64.fields.m_eResult}, 4}, {${l.mac.fields.m_ulSteamIDLobby}, ${l.x64.fields.m_ulSteamIDLobby}, 8}}`
+    expect(`{${m[1]}}`).toBe(expected)
+    expect(expected).toBe('{{0, 0, 4}, {4, 8, 8}}')
   })
 
   test('1221 and 504 classifier offsets equal the measured Mac layout', () => {
