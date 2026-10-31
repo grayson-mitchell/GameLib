@@ -47,6 +47,12 @@ import {
   steamSupportPath
 } from './constants'
 import { steamBottleConfigStore } from './electronStores'
+import { getEngineSelection } from './engine/engineRegistry'
+import { isNonCrossover } from './engine/engineTypes'
+import type {
+  NonCrossoverEngine,
+  NonCrossoverSelection
+} from './engine/engineTypes'
 import { library } from './state'
 import {
   resolveCrossoverBinDir,
@@ -685,6 +691,60 @@ async function killBottleWineServer(
     logWarning(
       [
         `killBottleWineServer: wineserver -k for bottle "${bottleName}" failed (best-effort — provisioning continues)`,
+        error
+      ],
+      LogPrefix.Steam
+    )
+    return false
+  }
+}
+
+/**
+ * Phase 59: `wineserver -k` with an explicit (non-CrossOver) wineserver.
+ * Same scope fence as killBottleWineServer (T-17-DoS): WINEPREFIX is always
+ * the per-game bottle (spread last so extraEnv cannot override it), the name
+ * must survive sanitizeBottleName and sit directly under the Bottles root.
+ * Real-profile arm: the env inherits process.env (HOME) because the prefix is
+ * explicit and wine needs nothing GameLib-private from HOME. Never throws.
+ */
+export async function killBottleWineServerWith(
+  bottleName: string,
+  wineserverBin: string,
+  extraEnv: Record<string, string>,
+  timeoutMs: number
+): Promise<boolean> {
+  const bottlesRoot = resolve(dirname(getBottleDir(DEFAULT_BRIDGE_BOTTLE_NAME)))
+  if (
+    sanitizeBottleName(bottleName) !== bottleName ||
+    relative(bottlesRoot, resolve(getBottleDir(bottleName))) !== bottleName
+  ) {
+    logWarning(
+      `killBottleWineServerWith: refusing unsafe bottle "${bottleName}"`,
+      LogPrefix.Steam
+    )
+    return false
+  }
+  try {
+    const result = await spawnAsync(wineserverBin, ['-k'], {
+      env: {
+        ...process.env,
+        ...extraEnv,
+        WINEPREFIX: getBottleDir(bottleName)
+      },
+      timeout: timeoutMs
+    })
+    if (result?.code === null) {
+      logWarning(
+        `killBottleWineServerWith: wineserver -k for bottle "${bottleName}" was killed by its timeout`,
+        LogPrefix.Steam
+      )
+      return false
+    }
+    return true
+  } catch (error) {
+    logWarning(
+      [
+        `killBottleWineServerWith: wineserver -k for bottle "${bottleName}" failed`,
         error
       ],
       LogPrefix.Steam
@@ -1582,16 +1642,83 @@ function drmRunnerBinDir(appId: string): string | undefined {
   return entry ? join(entry.runner.cxRoot, 'bin') : undefined
 }
 
+const FALLBACK_STRIPPED_ENV_KEYS = new Set([
+  'USER',
+  'WINEPREFIX',
+  'CX_BOTTLE',
+  'CX_ROOT',
+  'WINELOADER',
+  'WINESERVER',
+  'WINEDEBUG',
+  'MVK_CONFIG_LOG_LEVEL'
+])
+
+/**
+ * Phase 59 (D-01): GameSettings that run a bottle on a non-CrossOver engine
+ * (pinned fallback or Wine Manager override). Takes a bottle name, not an
+ * appId, so bottle creation (59-06) can use it too. DXVK is managed by the
+ * engine switch, never by the generic auto-install.
+ */
+export function buildFallbackGameSettings(
+  bottleName: string,
+  engine: NonCrossoverEngine
+): GameSettings {
+  const globalSettings = GlobalConfig.get().getSettings()
+  const kept = (globalSettings.enviromentOptions ?? []).filter(
+    (e) => !FALLBACK_STRIPPED_ENV_KEYS.has(String(e.key).toUpperCase())
+  )
+  return {
+    ...globalSettings,
+    wineCrossoverBottle: bottleName,
+    winePrefix: getBottleDir(bottleName),
+    wineVersion: {
+      type: 'wine',
+      bin: engine.wineBin,
+      name: engine.label,
+      wineserver: engine.wineserverBin
+    },
+    autoInstallDxvk: false,
+    autoInstallDxvkNvapi: false,
+    autoInstallVkd3d: false,
+    enviromentOptions: [
+      ...kept,
+      // Wine-Staging ignores WINEUSERNAME; USER keeps C:\users\crossover.
+      { key: 'USER', value: 'crossover' },
+      { key: 'WINEDEBUG', value: '-all' },
+      { key: 'MVK_CONFIG_LOG_LEVEL', value: '0' }
+    ]
+  }
+}
+
+function fallbackBridgeBottleSettings(
+  appId: string,
+  sel: NonCrossoverSelection
+): GameSettings {
+  const resolved = resolveBridgeBottleName(appId)
+  if (!resolved) {
+    throw new Error(
+      `getBridgeBottleSettings: invalid appId "${appId}" (must be numeric)`
+    )
+  }
+  return buildFallbackGameSettings(resolved, sel)
+}
+
 /**
  * While a DRM runner is registered for this appId (56-11), every caller gets
  * the clone runner, so the redist, known-fix, registry and launch spawns for
- * the title share one wineserver. The bottle name never changes.
+ * the title share one wineserver. The bottle name never changes. A DRM runner
+ * wins; otherwise a registered non-CrossOver engine (phase 59 fallback or
+ * override) is used; otherwise stock CrossOver.
  * See stockBridgeBottleSettings for the stock resolution.
  */
 export function getBridgeBottleSettings(appId: string): GameSettings {
   const entry = drmBridgeRunners.get(appId)
   if (entry) {
     return getDrmBridgeBottleSettings(appId, entry.runner, entry.form)
+  }
+  const engine = getEngineSelection(appId)
+  if (engine && isNonCrossover(engine)) {
+    return fallbackBridgeBottleSettings(appId, engine)
   }
   return stockBridgeBottleSettings(appId)
 }
@@ -1845,6 +1972,56 @@ export async function removePerGameBridgeBottle(
  * spawn. The kill reuses killBottleWineServer (WINEPREFIX-scoped, T-17-DoS,
  * best-effort) - no new spawn site. Never throws.
  */
+/**
+ * The one engine dispatch for killing a per-game bottle: DRM clone, then a
+ * registered fallback/override engine, then stock CrossOver (D-10).
+ */
+async function killForRegisteredEngine(
+  appId: string,
+  name: string,
+  timeoutMs?: number
+): Promise<boolean> {
+  if (drmBridgeRunners.has(appId)) {
+    return killBottleWineServer(name, drmRunnerBinDir(appId), timeoutMs)
+  }
+  const engine = getEngineSelection(appId)
+  if (engine && isNonCrossover(engine)) {
+    return killBottleWineServerWith(
+      name,
+      engine.wineserverBin,
+      { USER: 'crossover' },
+      timeoutMs ?? 10000
+    )
+  }
+  return killBottleWineServer(name, undefined, timeoutMs)
+}
+
+/**
+ * Phase 59: stops this appId's per-game bottle with the wineserver of the
+ * engine actually running it. Refuses (false, no spawn) when the per-game
+ * guard refuses. Never throws.
+ */
+// ts-prune-ignore-next
+export async function killBridgeBottleWineServer(
+  appId: string,
+  timeoutMs: number
+): Promise<boolean> {
+  try {
+    const guard = guardPerGameBridgeBottleName(
+      appId,
+      'killBridgeBottleWineServer'
+    )
+    if (!guard.ok) return false
+    return await killForRegisteredEngine(appId, guard.name, timeoutMs)
+  } catch (error) {
+    logWarning(
+      [`killBridgeBottleWineServer: failed for appId "${appId}"`, error],
+      LogPrefix.Steam
+    )
+    return false
+  }
+}
+
 export async function stopPerGameBridgeBottle(
   appId: string
 ): Promise<
@@ -1871,7 +2048,7 @@ export async function stopPerGameBridgeBottle(
     LogPrefix.Steam
   )
   // D-11: a registered DRM runner's own wineserver, one runner per bottle.
-  await killBottleWineServer(name, drmRunnerBinDir(appId))
+  await killForRegisteredEngine(appId, name)
   return { status: 'stopped' }
 }
 
@@ -1901,7 +2078,7 @@ export async function endPerGameBridgeBottleSession(
       LogPrefix.Steam
     )
     // D-11: a registered DRM runner's own wineserver, one runner per bottle.
-    return await killBottleWineServer(name, drmRunnerBinDir(appId), timeoutMs)
+    return await killForRegisteredEngine(appId, name, timeoutMs)
   } catch (error) {
     logWarning(
       [`endPerGameBridgeBottleSession: failed for appId "${appId}"`, error],

@@ -12,7 +12,7 @@ export type EngineReason =
 
 export type FallbackReason = 'cx-missing' | 'cx-expired' | 'cx-broken'
 
-interface NonCrossoverEngine {
+export interface NonCrossoverEngine {
   wineBin: string
   wineserverBin: string
   label: string

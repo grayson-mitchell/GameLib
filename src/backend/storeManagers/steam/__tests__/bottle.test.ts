@@ -63,9 +63,16 @@ import {
   getDrmBridgeBottleSettings,
   setDrmBridgeRunner,
   clearDrmBridgeRunner,
-  getDrmBridgeRunner
+  getDrmBridgeRunner,
+  killBottleWineServerWith,
+  killBridgeBottleWineServer
 } from '../bottle'
 import type { DrmBridgeRunner } from '../bottle'
+import {
+  setEngineSelection,
+  clearEngineSelection
+} from '../engine/engineRegistry'
+import type { NonCrossoverSelection } from '../engine/engineTypes'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
 
@@ -2776,5 +2783,211 @@ describe('quick 261024-cjq: CrossOver precondition', () => {
     expect(mockedSpawnAsync.mock.calls[0][0]).toBe(
       `${userHome}/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle`
     )
+  })
+})
+
+describe('Phase 59 engine registry', () => {
+  const pinned: NonCrossoverSelection = {
+    kind: 'pinned',
+    pinId: 'pin-1',
+    reason: 'cx-missing',
+    wineBin: '/pins/bin/wine',
+    wineserverBin: '/pins/bin/wineserver',
+    label: 'Pinned Wine',
+    version: '9.0',
+    dxvk: { dir: '/pins/dxvk', version: '2.4' }
+  }
+  const bottle = 'GameLibSteamBridge-620'
+
+  beforeAll(() => {
+    cxState.binDir = CX_BIN_DIR
+  })
+
+  beforeEach(() => {
+    mockedExistsSync.mockReset()
+    mockedExistsSync.mockImplementation((p: string) =>
+      String(p).startsWith('/pins/')
+    )
+    mockedGetNodefault.mockReset()
+    mockedSpawnAsync.mockReset()
+    mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+    mockedGlobalConfigGet.mockReset()
+    mockedGlobalConfigGet.mockReturnValue({
+      getSettings: () =>
+        ({
+          wineVersion: defaultWine,
+          enviromentOptions: [
+            { key: 'USER', value: 'mac' },
+            { key: 'WINEPREFIX', value: '/x' },
+            { key: 'CX_BOTTLE', value: 'x' },
+            { key: 'CX_ROOT', value: 'x' },
+            { key: 'WINELOADER', value: 'x' },
+            { key: 'WINESERVER', value: 'x' },
+            { key: 'WINEDEBUG', value: '+all' },
+            { key: 'FOO', value: 'bar' }
+          ]
+        }) as unknown as GameSettings
+    })
+    clearEngineSelection('620')
+    clearDrmBridgeRunner('620')
+  })
+  afterEach(() => {
+    clearEngineSelection('620')
+    clearDrmBridgeRunner('620')
+  })
+
+  test('unregistered: stock CrossOver settings', () => {
+    const s = getBridgeBottleSettings('620')
+    expect(s.wineVersion.type).not.toBe('wine-staging')
+    expect(s.wineVersion.bin).not.toBe(pinned.wineBin)
+  })
+
+  test('pinned selection yields wine settings with USER=crossover', () => {
+    expect(setEngineSelection('620', pinned)).toBe(true)
+    const s = getBridgeBottleSettings('620')
+    expect(s.wineVersion).toEqual({
+      type: 'wine',
+      bin: pinned.wineBin,
+      wineserver: pinned.wineserverBin,
+      name: pinned.label
+    })
+    expect(s.winePrefix).toBe(getBottleDir(bottle))
+    expect(s.wineCrossoverBottle).toBe(bottle)
+    expect(s.autoInstallDxvk).toBe(false)
+    expect(s.autoInstallDxvkNvapi).toBe(false)
+    expect(s.autoInstallVkd3d).toBe(false)
+    const env = s.enviromentOptions
+    for (const [k, v] of [
+      ['USER', 'crossover'],
+      ['WINEDEBUG', '-all'],
+      ['MVK_CONFIG_LOG_LEVEL', '0']
+    ]) {
+      expect(env.filter((e) => e.key === k)).toEqual([{ key: k, value: v }])
+    }
+    expect(env.map((e) => e.key)).toEqual(
+      expect.not.arrayContaining(['WINEPREFIX', 'CX_BOTTLE', 'CX_ROOT'])
+    )
+    expect(env).toContainEqual({ key: 'FOO', value: 'bar' })
+  })
+
+  test('wine-manager selection dispatches like a pinned one', () => {
+    const wm: NonCrossoverSelection = {
+      ...pinned,
+      kind: 'wine-manager',
+      managerVersion: 'Wine-9',
+      reason: 'override'
+    } as NonCrossoverSelection
+    expect(setEngineSelection('620', wm)).toBe(true)
+    expect(getBridgeBottleSettings('620').wineVersion.bin).toBe(pinned.wineBin)
+  })
+
+  test('crossover selection stays on the stock path', () => {
+    setEngineSelection('620', {
+      kind: 'crossover',
+      reason: 'override',
+      crossoverBuild: '24',
+      binDir: CX_BIN_DIR
+    })
+    expect(getBridgeBottleSettings('620').wineVersion.bin).not.toBe(
+      pinned.wineBin
+    )
+  })
+
+  test('DRM runner wins over an engine registration', () => {
+    setEngineSelection('620', pinned)
+    const drmRunner = {
+      cxRoot: '/drm/cx',
+      wineBin: '/drm/cx/bin/wine',
+      wineserverBin: '/drm/cx/bin/wineserver',
+      wineloaderBin: '/drm/cx/bin/wineloader',
+      crossoverBuild: '24'
+    } as unknown as DrmBridgeRunner
+    mockedExistsSync.mockReturnValue(true)
+    if (setDrmBridgeRunner('620', drmRunner)) {
+      expect(getBridgeBottleSettings('620').wineVersion.bin).not.toBe(
+        pinned.wineBin
+      )
+    }
+  })
+
+  test('registration is rejected for bad appId or missing binaries', () => {
+    expect(setEngineSelection('abc', pinned)).toBe(false)
+    mockedExistsSync.mockReturnValue(false)
+    expect(setEngineSelection('620', pinned)).toBe(false)
+    mockedExistsSync.mockImplementation((p: string) =>
+      String(p).startsWith('/pins/')
+    )
+    expect(getBridgeBottleSettings('620').wineVersion.bin).not.toBe(
+      pinned.wineBin
+    )
+  })
+
+  test('clearEngineSelection restores stock settings', () => {
+    setEngineSelection('620', pinned)
+    clearEngineSelection('620')
+    expect(getBridgeBottleSettings('620').wineVersion.bin).not.toBe(
+      pinned.wineBin
+    )
+  })
+
+  describe('wineserver kill', () => {
+    test('killBottleWineServerWith spawns the given wineserver', async () => {
+      const ok = await killBottleWineServerWith(
+        bottle,
+        '/pins/wineserver',
+        { USER: 'crossover', WINEPREFIX: '/evil' },
+        5000
+      )
+      expect(ok).toBe(true)
+      const [bin, args, opts] = mockedSpawnAsync.mock.calls[0]
+      expect(bin).toBe('/pins/wineserver')
+      expect(args).toEqual(['-k'])
+      expect(opts.env.WINEPREFIX).toBe(getBottleDir(bottle))
+      expect(opts.env.USER).toBe('crossover')
+      expect(opts.timeout).toBe(5000)
+    })
+
+    test('killBottleWineServerWith returns false on timeout', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: null })
+      expect(await killBottleWineServerWith(bottle, '/w', {}, 1)).toBe(false)
+    })
+
+    test.each(['../evil', 'a/b', ''])(
+      'killBottleWineServerWith refuses unsafe bottle %j',
+      async (name) => {
+        expect(await killBottleWineServerWith(name, '/w', {}, 1)).toBe(false)
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      }
+    )
+
+    test('killBridgeBottleWineServer uses the registered engine wineserver', async () => {
+      setEngineSelection('620', pinned)
+      await killBridgeBottleWineServer('620', 5000)
+      const [bin, , opts] = mockedSpawnAsync.mock.calls[0]
+      expect(bin).toBe(pinned.wineserverBin)
+      expect(opts.env.USER).toBe('crossover')
+      expect(opts.env.CX_ROOT).toBeUndefined()
+    })
+
+    test('killBridgeBottleWineServer uses CrossOver when nothing is registered', async () => {
+      await killBridgeBottleWineServer('620', 5000)
+      expect(mockedSpawnAsync.mock.calls[0][0]).toBe(`${CX_BIN_DIR}/wineserver`)
+    })
+
+    test('killBridgeBottleWineServer refuses a non-numeric appId', async () => {
+      expect(await killBridgeBottleWineServer('abc', 5000)).toBe(false)
+      expect(mockedSpawnAsync).not.toHaveBeenCalled()
+    })
+
+    test('stop/end per-game use the registered engine wineserver', async () => {
+      setEngineSelection('620', pinned)
+      mockedExistsSync.mockReturnValue(true)
+      await stopPerGameBridgeBottle('620')
+      await endPerGameBridgeBottleSession('620', bottle, 5000)
+      expect(mockedSpawnAsync.mock.calls.map((c) => c[0])).toEqual([
+        pinned.wineserverBin,
+        pinned.wineserverBin
+      ])
+    })
   })
 })
