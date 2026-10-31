@@ -30,6 +30,7 @@
  */
 import api from './api'
 import { applyFramelessDecorations, installDragRegionHandlers } from './api/tauriWindowChrome'
+import { installNativeGamepads } from './api/tauriNativeGamepad'
 import { isMacWebview, isWindowsWebview } from './platformDetect'
 
 // Proof-of-execution marker (Phase 27 Plan 05): the literal first console line so we can
@@ -94,6 +95,15 @@ try {
   installDragRegionHandlers()
 } catch (error) {
   console.warn('[GameLib] installDragRegionHandlers failed:', error)
+}
+// Quick task 261031-mj9 (spike 051): WKWebView does not expose pads Apple's GameController
+// framework does not claim, so on macOS natively-read pads are merged into navigator.getGamepads().
+if (isMacWebview()) {
+  try {
+    installNativeGamepads()
+  } catch (error) {
+    console.warn('[GameLib] installNativeGamepads failed:', error)
+  }
 }
 
 export {}
