@@ -234,6 +234,10 @@ export interface MethodSignature {
   /** 58-20: name of a by-value integer param holding an opaque handle. When it
    * is 0 the shim answers locally (false / 0 / no-op) and sends no wire frame. */
   zeroHandleParam?: string
+  /** 58-21: on a wire method that also names `zeroHandleParam`, the shim drops
+   * its server-browser response mapping for that handle (list handles key on the
+   * low 32 bits, query handles on the int32) before the wire call. */
+  unmapHandle?: 'list' | 'query'
   /** 58-10: the method returns a SteamAPICall_t (int64) that completes as this
    * callback id (a CALL_RESULT_TABLE id); the helper dispatch records the
    * handle with gl_helper_cr_track after a nonzero return. */
@@ -638,6 +642,15 @@ export function validateManifest(
         errors.push(
           `${methodCtx}: zeroHandleParam cannot be combined with a ${method.returnKind} return`
         )
+      }
+    }
+
+    if (method.unmapHandle !== undefined) {
+      if (method.unmapHandle !== 'list' && method.unmapHandle !== 'query') {
+        errors.push(`${methodCtx}: unmapHandle must be "list" or "query"`)
+      }
+      if (method.zeroHandleParam === undefined) {
+        errors.push(`${methodCtx}: unmapHandle requires zeroHandleParam`)
       }
     }
 
@@ -1055,7 +1068,32 @@ export const SHIM_LOCAL_BODIES: Readonly<Record<string, string>> = {
     '    }\n' +
     '  }',
   'SteamNetworkingSockets.RunCallbacks':
-    '  gl_cb_run_callbacks();\n  gl_md_run_frame();'
+    '  gl_cb_run_callbacks();\n  gl_md_run_frame();',
+  // 58-21: ISteamMatchmakingServers003 request methods. The response-object
+  // pointer and the filter array never cross the wire; the registry keeps the
+  // object keyed by the returned handle.
+  'SteamMatchmakingServers.RequestInternetServerList':
+    '  return (void *)(uintptr_t)gl_mms_request_list(0, iApp, ppchFilters, nFilters, pRequestServersResponse);',
+  'SteamMatchmakingServers.RequestLANServerList':
+    '  return (void *)(uintptr_t)gl_mms_request_list(1, iApp, NULL, 0, pRequestServersResponse);',
+  'SteamMatchmakingServers.RequestFriendsServerList':
+    '  return (void *)(uintptr_t)gl_mms_request_list(2, iApp, ppchFilters, nFilters, pRequestServersResponse);',
+  'SteamMatchmakingServers.RequestFavoritesServerList':
+    '  return (void *)(uintptr_t)gl_mms_request_list(3, iApp, ppchFilters, nFilters, pRequestServersResponse);',
+  'SteamMatchmakingServers.RequestHistoryServerList':
+    '  return (void *)(uintptr_t)gl_mms_request_list(4, iApp, ppchFilters, nFilters, pRequestServersResponse);',
+  'SteamMatchmakingServers.RequestSpectatorServerList':
+    '  return (void *)(uintptr_t)gl_mms_request_list(5, iApp, ppchFilters, nFilters, pRequestServersResponse);',
+  'SteamMatchmakingServers.GetServerDetails':
+    '  return gl_mms_get_server_details(hRequest, iServer);',
+  'SteamMatchmakingServers.PingServer':
+    '  return gl_mms_query(13, GL_MMS_Q_PING, unIP, usPort & 0xffffu, pRequestServersResponse);',
+  'SteamMatchmakingServers.PlayerDetails':
+    '  return gl_mms_query(14, GL_MMS_Q_PLAYERS, unIP, usPort & 0xffffu, pRequestServersResponse);',
+  'SteamMatchmakingServers.ServerRules':
+    '  return gl_mms_query(15, GL_MMS_Q_RULES, unIP, usPort & 0xffffu, pRequestServersResponse);',
+  'SteamMatchmakingServers.ServerFriends':
+    '  return gl_mms_query(16, GL_MMS_Q_FRIENDS, unIP, usPort & 0xffffu, pRequestServersResponse);'
 }
 
 /** Local variable names the generated wire stubs declare (58-14). */
@@ -3035,7 +3073,12 @@ const CALLBACK_DRAIN_BACKOFF_MS = 1000
  * with no lock held; the embedder forwards it to the helper log), and
  * `int gl_cb_transport_drain_cr(uint8_t *buf, uint32_t cap, uint32_t *lenOut)`
  * (58-10: CONTROL slot 11, one completed call result per reply; 0 on failure,
- * including an old helper that does not know the slot).
+ * including an old helper that does not know the slot), and (x64 only, 58-21)
+ * `int gl_cb_transport_drain_mms(uint8_t *buf, uint32_t cap, uint32_t *lenOut)`
+ * (CONTROL slot 12, one server-browser event per reply) and
+ * `int gl_mms_transport(uint16_t slot, const uint8_t *req, uint32_t reqLen,
+ * uint8_t *resp, uint32_t cap, uint32_t *lenOut)` (a request frame to the
+ * SteamMatchMakingServers003 ordinal).
  *
  * Lock rule: the registry lock is NEVER held across the transport or a Run
  * call, so a handler may unregister, register or make a bridge call.
@@ -3487,6 +3530,398 @@ static int gl_cr_read_reply(uint8_t *buf, uint32_t now, uint64_t *h,
   return 1;
 }
 
+#if !defined(__i386__)
+/* ---- server-browser response relay (58-21, x64 only) ----
+ * Request methods record {returned handle -> game response object} in a
+ * bounded table (64). RunCallbacks / RunFrame / Sockets RunCallbacks drain
+ * CONTROL slot 12 and call the game object's vtable slot for the event kind
+ * outside every lock. The game's object pointer never leaves the shim. Event
+ * strings and gameserveritem_t are copied into shim-owned buffers that outlive
+ * the call. Embedder contract: gl_cb_transport_drain_mms (slot 12) and
+ * gl_mms_transport(slot, req, reqLen, resp, cap, lenOut) (a request to the
+ * SteamMatchMakingServers003 ordinal; 1 on a good reply, 0 on any failure). */
+#define GL_MMS_MAP_CAP 64
+#define GL_MMS_FILTER_MAX 32
+#define GL_MMS_FILTER_BYTES 256
+#define GL_MMS_GSI_SIZE ${CALLBACK_LAYOUTS.gameserveritem_t.x64.size}
+#define GL_MMS_EV_HEADER 21
+#define GL_MMS_STR_MAX 255
+#define GL_MMS_DRAIN_RESP_MAX_BYTES (GL_MMS_EV_HEADER + GL_MMS_GSI_SIZE + 132)
+#define GL_MMS_SLOT_DETAILS 7
+#define GL_MMS_CLS_LIST 0
+#define GL_MMS_CLS_QUERY 1
+#define GL_MMS_Q_PING 1
+#define GL_MMS_Q_PLAYERS 2
+#define GL_MMS_Q_RULES 3
+#define GL_MMS_Q_FRIENDS 4
+
+typedef struct {
+  int state; /* 0 free, 1 reserved by an in-flight request, 2 live */
+  int cls;
+  int qkind;
+  uint32_t key;
+  uint64_t h64;
+  void *obj;
+  uint8_t details[GL_MMS_GSI_SIZE];
+} gl_mms_ent;
+
+static gl_mms_ent gl_mms_tab[GL_MMS_MAP_CAP];
+static uint32_t gl_mms_count;
+static int gl_mms_draining;
+static uint32_t gl_mms_fail_count;
+static uint32_t gl_mms_last_fail_ms;
+static uint32_t gl_mms_dropped;
+static gl_mms_ent *gl_mms_busy;
+static uint32_t gl_mms_busy_tid;
+
+/* Returns a reserved slot index, or -1 when the table is full. */
+static int gl_mms_reserve(void) {
+  uint32_t i;
+  int r = -1;
+  GL_CB_LOCK();
+  for (i = 0; i < GL_MMS_MAP_CAP; i++) {
+    if (gl_mms_tab[i].state == 0) {
+      gl_cb_zero(&gl_mms_tab[i], (uint32_t)sizeof(gl_mms_tab[i]));
+      gl_mms_tab[i].state = 1;
+      r = (int)i;
+      break;
+    }
+  }
+  GL_CB_UNLOCK();
+  return r;
+}
+
+static void gl_mms_abort(int idx) {
+  GL_CB_LOCK();
+  gl_cb_zero(&gl_mms_tab[idx], (uint32_t)sizeof(gl_mms_tab[idx]));
+  GL_CB_UNLOCK();
+}
+
+/* Caller holds the lock. */
+static int gl_mms_find_locked(int cls, uint32_t key) {
+  uint32_t i;
+  for (i = 0; i < GL_MMS_MAP_CAP; i++) {
+    if (gl_mms_tab[i].state == 2 && gl_mms_tab[i].cls == cls && gl_mms_tab[i].key == key) return (int)i;
+  }
+  return -1;
+}
+
+static void gl_mms_commit(int idx, int cls, int qkind, uint32_t key, uint64_t h64, void *obj) {
+  int dup;
+  GL_CB_LOCK();
+  dup = gl_mms_find_locked(cls, key);
+  if (dup >= 0) {
+    /* the same handle issued again: the newest response object wins */
+    gl_mms_tab[dup].obj = obj;
+    gl_mms_tab[dup].h64 = h64;
+    gl_mms_tab[dup].qkind = qkind;
+    gl_cb_zero(&gl_mms_tab[idx], (uint32_t)sizeof(gl_mms_tab[idx]));
+  } else {
+    gl_mms_tab[idx].state = 2;
+    gl_mms_tab[idx].cls = cls;
+    gl_mms_tab[idx].qkind = qkind;
+    gl_mms_tab[idx].key = key;
+    gl_mms_tab[idx].h64 = h64;
+    gl_mms_tab[idx].obj = obj;
+    gl_mms_count++;
+  }
+  GL_CB_UNLOCK();
+}
+
+/* ReleaseRequest / CancelServerQuery: drops the mapping (and its details
+ * slot). Waits while another thread is delivering to this very object; a
+ * handler unmapping itself never waits. */
+static void gl_mms_unmap(int cls, uint32_t key) {
+  GL_CB_LOCK();
+  for (;;) {
+    int f = gl_mms_find_locked(cls, key);
+    if (f < 0) break;
+    if (gl_mms_busy == &gl_mms_tab[f] && gl_mms_busy_tid != GL_CB_THREAD_ID()) {
+      GL_CB_UNLOCK();
+      GL_CB_YIELD();
+      GL_CB_LOCK();
+      continue;
+    }
+    gl_cb_zero(&gl_mms_tab[f], (uint32_t)sizeof(gl_mms_tab[f]));
+    gl_mms_count--;
+    break;
+  }
+  GL_CB_UNLOCK();
+}
+
+/* Request*ServerList. variant 0..5 = Internet, LAN, Friends, Favorites,
+ * History, Spectator (also the helper slot). Returns the Mac handle, or 0 (a
+ * failed request) when the arguments are bad, the table is full or the helper
+ * refused. */
+static uint64_t gl_mms_request_list(uint32_t variant, uint32_t appId, const void *ppchFilters,
+                                    uint32_t nFilters, void *obj) {
+  uint8_t req[12 + GL_MMS_FILTER_MAX * 2 * GL_MMS_FILTER_BYTES];
+  uint8_t resp[16];
+  const uint8_t *flt = NULL;
+  uint32_t reqLen, rlen = 0, i, j;
+  uint64_t h = 0;
+  int idx, ok;
+  if (obj == NULL || variant > 5 || nFilters > GL_MMS_FILTER_MAX) return 0;
+  if (variant == 1) nFilters = 0;
+  if (nFilters != 0) {
+    if (ppchFilters == NULL) return 0;
+    flt = *(const uint8_t *const *)ppchFilters;
+    if (flt == NULL) return 0;
+  }
+  idx = gl_mms_reserve();
+  if (idx < 0) return 0;
+  reqLen = 12u + nFilters * 2u * GL_MMS_FILTER_BYTES;
+  memset(req, 0, sizeof req);
+  memcpy(req, &variant, 4);
+  memcpy(req + 4, &appId, 4);
+  memcpy(req + 8, &nFilters, 4);
+  for (i = 0; i < nFilters * 2u; i++) {
+    const uint8_t *src = flt + (size_t)i * GL_MMS_FILTER_BYTES;
+    uint8_t *dst = req + 12 + (size_t)i * GL_MMS_FILTER_BYTES;
+    for (j = 0; j < GL_MMS_FILTER_BYTES - 1 && src[j] != 0; j++) dst[j] = src[j];
+  }
+  ok = gl_mms_transport((uint16_t)variant, req, reqLen, resp, (uint32_t)sizeof resp, &rlen);
+  gl_cb_zero(req, (uint32_t)sizeof req);
+  if (ok && rlen == 8) memcpy(&h, resp, 8);
+  if (!ok || rlen != 8 || h == 0) {
+    gl_mms_abort(idx);
+    return 0;
+  }
+  gl_mms_commit(idx, GL_MMS_CLS_LIST, 0, (uint32_t)h, h, obj);
+  return h;
+}
+
+/* PingServer / PlayerDetails / ServerRules / ServerFriends. Returns the
+ * HServerQuery, or -1 (invalid). */
+static int32_t gl_mms_query(uint16_t slot, int qkind, uint32_t ip, uint32_t port, void *obj) {
+  uint8_t req[8];
+  uint8_t resp[8];
+  uint32_t rlen = 0;
+  int32_t q = -1;
+  int idx, ok;
+  if (obj == NULL || port > 65535u) return -1;
+  idx = gl_mms_reserve();
+  if (idx < 0) return -1;
+  memcpy(req, &ip, 4);
+  memcpy(req + 4, &port, 4);
+  ok = gl_mms_transport(slot, req, 8, resp, (uint32_t)sizeof resp, &rlen);
+  if (ok && rlen == 4) memcpy(&q, resp, 4);
+  if (!ok || rlen != 4 || q == -1) {
+    gl_mms_abort(idx);
+    return -1;
+  }
+  gl_mms_commit(idx, GL_MMS_CLS_QUERY, qkind, (uint32_t)q, (uint64_t)(uint32_t)q, obj);
+  return q;
+}
+
+/* GetServerDetails: a pointer to the request's own details slot (valid until
+ * ReleaseRequest; overwritten by the next call for that request), or NULL. */
+static void *gl_mms_get_server_details(uint64_t hRequest, int32_t iServer) {
+  uint8_t req[12];
+  uint8_t resp[4 + GL_MMS_GSI_SIZE];
+  uint32_t rlen = 0, present;
+  void *out = NULL;
+  int f, ok;
+  GL_CB_LOCK();
+  f = gl_mms_find_locked(GL_MMS_CLS_LIST, (uint32_t)hRequest);
+  if (f >= 0 && gl_mms_tab[f].h64 != hRequest) f = -1;
+  GL_CB_UNLOCK();
+  if (f < 0) return NULL;
+  memcpy(req, &hRequest, 8);
+  memcpy(req + 8, &iServer, 4);
+  ok = gl_mms_transport(GL_MMS_SLOT_DETAILS, req, 12, resp, (uint32_t)sizeof resp, &rlen);
+  if (ok && rlen == sizeof resp) {
+    memcpy(&present, resp, 4);
+    if (present == 1) {
+      GL_CB_LOCK();
+      f = gl_mms_find_locked(GL_MMS_CLS_LIST, (uint32_t)hRequest);
+      if (f >= 0) {
+        memcpy(gl_mms_tab[f].details, resp + 4, GL_MMS_GSI_SIZE);
+        out = gl_mms_tab[f].details;
+      }
+      GL_CB_UNLOCK();
+    }
+  }
+  gl_cb_zero(resp, (uint32_t)sizeof resp);
+  return out;
+}
+
+typedef void (THISCALL *gl_mms_fn_self)(void *);
+typedef void (THISCALL *gl_mms_fn_hi)(void *, uint64_t, int32_t);
+typedef void (THISCALL *gl_mms_fn_item)(void *, const void *);
+typedef void (THISCALL *gl_mms_fn_player)(void *, const char *, int32_t, float);
+typedef void (THISCALL *gl_mms_fn_rule)(void *, const char *, const char *);
+
+/* Bounded length of a string inside a payload (stops at NUL or cub). */
+static uint32_t gl_mms_strlen(const uint8_t *p, uint32_t cap) {
+  uint32_t n = 0;
+  while (n < cap && p[n] != 0) n++;
+  return n;
+}
+
+/* Delivers one validated event. Called with NO lock held. Event kinds are in
+ * the 58-20 table. Returns 1 when a game slot was called. */
+static int gl_mms_deliver(uint8_t kind, uint32_t hreq, int32_t iServer, int32_t value,
+                          const uint8_t *pay, uint32_t cub) {
+  int cls = kind <= 3 ? GL_MMS_CLS_LIST : GL_MMS_CLS_QUERY;
+  int want = kind <= 3 ? 0 : kind <= 5 ? GL_MMS_Q_PING : kind <= 8 ? GL_MMS_Q_PLAYERS
+                                       : kind <= 11 ? GL_MMS_Q_RULES : GL_MMS_Q_FRIENDS;
+  int terminal = kind == 4 || kind == 5 || kind == 7 || kind == 8 || kind == 10 || kind == 11 ||
+                 kind == 12;
+  void *obj;
+  void **vt;
+  uint64_t h64;
+  gl_mms_ent *e;
+  int f, called = 0;
+  char s1[GL_MMS_STR_MAX + 1], s2[GL_MMS_STR_MAX + 1];
+  uint8_t item[GL_MMS_GSI_SIZE];
+  uint32_t l1 = 0, l2 = 0;
+
+  /* Strings and items are copied to shim-owned buffers before any lookup. */
+  if (kind == 4) memcpy(item, pay, GL_MMS_GSI_SIZE);
+  if (kind == 6) {
+    l1 = gl_mms_strlen(pay, cub);
+    if (l1 > GL_MMS_STR_MAX) return 0;
+    memcpy(s1, pay, l1);
+    s1[l1] = 0;
+  }
+  if (kind == 9) {
+    l1 = gl_mms_strlen(pay, cub);
+    if (l1 >= cub || l1 > GL_MMS_STR_MAX) return 0;
+    l2 = gl_mms_strlen(pay + l1 + 1, cub - l1 - 1);
+    if (l2 > GL_MMS_STR_MAX) return 0;
+    memcpy(s1, pay, l1);
+    s1[l1] = 0;
+    memcpy(s2, pay + l1 + 1, l2);
+    s2[l2] = 0;
+  }
+
+  GL_CB_LOCK();
+  f = gl_mms_find_locked(cls, hreq);
+  if (f >= 0 && cls == GL_MMS_CLS_QUERY && gl_mms_tab[f].qkind != want) f = -1;
+  if (f < 0) {
+    gl_mms_dropped++;
+    GL_CB_UNLOCK();
+    gl_cb_zero(item, (uint32_t)sizeof item);
+    return 0;
+  }
+  e = &gl_mms_tab[f];
+  obj = e->obj;
+  h64 = e->h64;
+  gl_mms_busy = e;
+  gl_mms_busy_tid = GL_CB_THREAD_ID();
+  GL_CB_UNLOCK();
+
+  vt = obj != NULL ? *(void ***)obj : NULL;
+  if (vt != NULL) {
+    switch (kind) {
+      case 1: ((gl_mms_fn_hi)vt[0])(obj, h64, iServer); called = 1; break;
+      case 2: ((gl_mms_fn_hi)vt[1])(obj, h64, iServer); called = 1; break;
+      case 3: ((gl_mms_fn_hi)vt[2])(obj, h64, value); called = 1; break;
+      case 4: ((gl_mms_fn_item)vt[0])(obj, item); called = 1; break;
+      case 5: ((gl_mms_fn_self)vt[1])(obj); called = 1; break;
+      case 6: {
+        float t;
+        memcpy(&t, &iServer, 4);
+        ((gl_mms_fn_player)vt[0])(obj, s1, value, t);
+        called = 1;
+        break;
+      }
+      case 7: ((gl_mms_fn_self)vt[1])(obj); called = 1; break;
+      case 8: ((gl_mms_fn_self)vt[2])(obj); called = 1; break;
+      case 9: ((gl_mms_fn_rule)vt[0])(obj, s1, s2); called = 1; break;
+      case 10: ((gl_mms_fn_self)vt[1])(obj); called = 1; break;
+      case 11: ((gl_mms_fn_self)vt[2])(obj); called = 1; break;
+      /* kind 12: the ServerFriends callback shape is unmeasured, so calling a
+       * game slot with guessed arguments is unsafe; the event only retires the
+       * query. */
+      default: break;
+    }
+  }
+
+  GL_CB_LOCK();
+  gl_mms_busy = NULL;
+  if (terminal && e->state == 2 && e->cls == cls && e->key == hreq && e->obj == obj) {
+    gl_cb_zero(e, (uint32_t)sizeof(*e));
+    gl_mms_count--;
+  }
+  GL_CB_UNLOCK();
+  gl_cb_zero(item, (uint32_t)sizeof item);
+  gl_cb_zero(s1, (uint32_t)sizeof s1);
+  gl_cb_zero(s2, (uint32_t)sizeof s2);
+  return called;
+}
+
+/* Reads and validates one slot-12 reply. Called with NO lock held. Returns 1
+ * for a valid event (outputs set; the payload is at buf + 21), 0 for an empty
+ * or malformed reply, -1 for a transport failure (counted for backoff). */
+static int gl_mms_read_reply(uint8_t *buf, uint32_t now, uint8_t *kind, uint32_t *hreq,
+                             int32_t *iServer, int32_t *value, uint32_t *cub) {
+  uint32_t len = 0, count;
+  int ok = gl_cb_transport_drain_mms(buf, GL_MMS_DRAIN_RESP_MAX_BYTES, &len);
+  if (!ok) {
+    GL_CB_LOCK();
+    gl_mms_fail_count++;
+    gl_mms_last_fail_ms = now;
+    GL_CB_UNLOCK();
+    return -1;
+  }
+  GL_CB_LOCK();
+  gl_mms_fail_count = 0;
+  GL_CB_UNLOCK();
+  if (len > GL_MMS_DRAIN_RESP_MAX_BYTES || len < 4) return 0;
+  memcpy(&count, buf, 4);
+  if (count != 1 || len < GL_MMS_EV_HEADER) return 0;
+  *kind = buf[4];
+  memcpy(hreq, buf + 5, 4);
+  memcpy(iServer, buf + 9, 4);
+  memcpy(value, buf + 13, 4);
+  memcpy(cub, buf + 17, 4);
+  if (*kind < 1 || *kind > 12) return 0;
+  if (len != GL_MMS_EV_HEADER + *cub) return 0;
+  switch (*kind) {
+    case 4: if (*cub != GL_MMS_GSI_SIZE) return 0; break;
+    case 6: if (*cub < 1 || *cub > GL_MMS_STR_MAX + 1) return 0; break;
+    case 9: if (*cub < 2 || *cub > 2 * (GL_MMS_STR_MAX + 1)) return 0; break;
+    default: if (*cub != 0) return 0; break;
+  }
+  return 1;
+}
+
+/* Drains slot 12 (at most GL_CB_DRAIN_MAX_PER_RUN events) and delivers them.
+ * The caller has already applied the shared 30 ms floor; this adds the slot's
+ * own failure backoff. Called with NO lock held. */
+static void gl_mms_drain(uint32_t now) {
+  uint8_t buf[GL_MMS_DRAIN_RESP_MAX_BYTES];
+  uint32_t iter;
+  int skip;
+  GL_CB_LOCK();
+  skip = gl_mms_draining || gl_mms_count == 0 ||
+         (gl_mms_fail_count >= GL_CB_DRAIN_FAIL_BACKOFF_AFTER &&
+          (uint32_t)(now - gl_mms_last_fail_ms) < GL_CB_DRAIN_BACKOFF_MS);
+  if (!skip) gl_mms_draining = 1;
+  GL_CB_UNLOCK();
+  if (skip) return;
+  for (iter = 0; iter < GL_CB_DRAIN_MAX_PER_RUN; iter++) {
+    uint8_t kind = 0;
+    uint32_t hreq = 0, cub = 0;
+    int32_t iServer = 0, value = 0;
+    int r = gl_mms_read_reply(buf, now, &kind, &hreq, &iServer, &value, &cub);
+    if (r > 0) gl_mms_deliver(kind, hreq, iServer, value, buf + GL_MMS_EV_HEADER, cub);
+    gl_cb_zero(buf, GL_MMS_DRAIN_RESP_MAX_BYTES);
+    if (r <= 0) break;
+  }
+  GL_CB_LOCK();
+  gl_mms_draining = 0;
+  GL_CB_UNLOCK();
+}
+#define GL_MMS_ACTIVE() (gl_mms_count != 0)
+#define GL_MMS_DRAIN(now) gl_mms_drain(now)
+#else
+#define GL_MMS_ACTIVE() 0
+#define GL_MMS_DRAIN(now) ((void)(now))
+#endif
+
 /* ---- results table and manual dispatch (58-11) ----
  * The results table (16 entries, 10 s expiry, zeroed) serves GetAPICallResult
  * and ISteamUtils polling on both DLLs. The message FIFO (32) and every
@@ -3819,6 +4254,9 @@ static void gl_md_run_frame(void) {
     if (r <= 0) break;
   }
 
+  /* 58-21: server-browser events (slot 12). */
+  GL_MMS_DRAIN(now);
+
   GL_CB_LOCK();
   gl_md_running = 0;
   GL_CB_UNLOCK();
@@ -3895,6 +4333,10 @@ static void gl_cb_clear_all(void) {
   gl_cr_count = 0;
   gl_cb_zero(gl_cr_held, (uint32_t)sizeof(gl_cr_held));
   gl_cr_held_count = 0;
+#if !defined(__i386__)
+  gl_cb_zero(gl_mms_tab, (uint32_t)sizeof(gl_mms_tab));
+  gl_mms_count = 0;
+#endif
   GL_CB_UNLOCK();
 }
 
@@ -3956,7 +4398,7 @@ static void gl_cb_run_callbacks(void) {
   GL_CB_LOCK();
   if (gl_cb_running || gl_md_enabled ||
       (gl_cb_relay_count == 0 && gl_cr_count == 0 && gl_cr_held_count == 0 &&
-       !GL_NET_CB_ANY())) {
+       !GL_NET_CB_ANY() && !GL_MMS_ACTIVE())) {
     GL_CB_UNLOCK();
     return;
   }
@@ -4065,6 +4507,9 @@ static void gl_cb_run_callbacks(void) {
       if (!more) break;
     }
   }
+
+  /* 58-21: server-browser events (slot 12), delivered on this thread. */
+  GL_MMS_DRAIN(now);
 
   GL_CB_LOCK();
   gl_cb_running = 0;
@@ -5231,8 +5676,13 @@ function emitVtableStub(
   }
   const at = open + ') {\n'.length
   const ret = method.returnKind === 'void' ? 'return;' : 'return 0;'
+  const unmap =
+    method.unmapHandle === undefined
+      ? ''
+      : `  gl_mms_unmap(${method.unmapHandle === 'list' ? 'GL_MMS_CLS_LIST' : 'GL_MMS_CLS_QUERY'}, (uint32_t)${method.zeroHandleParam}); // 58-21: drop the response mapping\n`
   return (
     text.slice(0, at) +
+    unmap +
     `  if (${method.zeroHandleParam} == 0) { ${ret} } // 58-20: zero handle, no wire call\n` +
     text.slice(at)
   )
@@ -6108,6 +6558,10 @@ const REPORT_IDS: readonly number[] = [
   ])
 ]
 const REPORT_IDS_C = REPORT_IDS.join(', ')
+
+/** 58-21: ordinal of SteamMatchMakingServers003 (meta/sdk/ordinals.json,
+ * append-only); the shim's server-browser requests are sent to it. */
+const MMS_ORDINAL = 69
 const REPORT_IDS_N = REPORT_IDS.length
 
 export function generateShimC(
@@ -6193,6 +6647,8 @@ export function generateShimC(
 #define BRIDGE_CONTROL_SLOT_REPORT_CB_DISPATCH 10
 // Phase 58 (58-10): SteamAPI_RunCallbacks drains one completed call result at a time ([u32 count][u64 h][i32 id][u32 failed][u32 cub][bytes]); an old helper answers STATUS_ERR, which bridge_transact reports as 0 and the registry treats as empty.
 #define BRIDGE_CONTROL_SLOT_DRAIN_CALL_RESULTS 11
+// Phase 58 (58-21): SteamAPI_RunCallbacks, ManualDispatch RunFrame and ISteamNetworkingSockets::RunCallbacks drain one server-browser event at a time ([u32 count][u8 kind][u32 hRequest][i32 iServer][i32 value][u32 cub][bytes]); an old helper answers STATUS_ERR, which bridge_transact reports as 0 and the registry backs off.
+#define BRIDGE_CONTROL_SLOT_DRAIN_SERVER_EVENTS 12
 #define GAMELIB_STUBCALL_KIND_STUB 0
 #define GAMELIB_STUBCALL_KIND_FALLBACK 1
 #define GAMELIB_STUBCALL_KIND_OFFPATH 2
@@ -6622,6 +7078,14 @@ static int gl_cb_transport_drain(uint8_t *buf, uint32_t cap, uint32_t *lenOut) {
 static int gl_cb_transport_drain_cr(uint8_t *buf, uint32_t cap, uint32_t *lenOut) {
   return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALL_RESULTS, NULL, 0, buf, cap, lenOut);
 }
+#if !defined(__i386__)
+static int gl_cb_transport_drain_mms(uint8_t *buf, uint32_t cap, uint32_t *lenOut) {
+  return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_SERVER_EVENTS, NULL, 0, buf, cap, lenOut);
+}
+static int gl_mms_transport(uint16_t slot, const uint8_t *req, uint32_t reqLen, uint8_t *resp, uint32_t cap, uint32_t *lenOut) {
+  return bridge_transact(${MMS_ORDINAL}, slot, req, reqLen, resp, cap, lenOut);
+}
+#endif
 /* quick 261027-k51: report one relayed callback the registry dispatched or held
  * (the helper logs CBDISP). Third word = kind: 0 dispatched/dropped, 1 held,
  * 2 call result delivered (quick 261031-ixa). Per-id budget of 4: one

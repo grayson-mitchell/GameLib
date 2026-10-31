@@ -176,6 +176,64 @@ static int h_icept(int32_t id, void *param) {
 #define GL_NET_CB_INTERCEPT(id, param) h_icept((id), (param))
 #define GL_NET_CB_ANY() g_net_any
 
+/* 58-21: scripted server-browser transports. Slot 12 events come from g_mq;
+ * request frames (ordinal 69) are answered from g_rq. Both assert the registry
+ * lock is NOT held. */
+static reply_t g_mq[MAXQ];
+static int g_mqhead, g_mqtail;
+static int g_mtcalls;
+static uint8_t *g_lastmmsbuf;
+static int gl_cb_transport_drain_mms(uint8_t *buf, uint32_t cap,
+                                     uint32_t *lenOut) {
+  int r;
+  g_mtcalls++;
+  g_lastmmsbuf = buf;
+  r = pthread_mutex_trylock(&g_reg);
+  CHECK(r == 0);
+  pthread_mutex_unlock(&g_reg);
+  if (g_mqhead == g_mqtail) {
+    memset(buf, 0, 4);
+    *lenOut = 4;
+    return 1;
+  }
+  {
+    reply_t *q = &g_mq[g_mqhead++];
+    if (!q->ok) return 0;
+    CHECK(q->len <= cap);
+    memcpy(buf, q->data, q->len);
+    *lenOut = q->len;
+    return 1;
+  }
+}
+
+#define MAXRQ 80
+static reply_t g_rq[MAXRQ];
+static int g_rqhead, g_rqtail;
+static int g_rcalls;
+static uint16_t g_rslot;
+static uint8_t g_rreq[16400];
+static uint32_t g_rreqlen;
+static int gl_mms_transport(uint16_t slot, const uint8_t *req, uint32_t reqLen,
+                            uint8_t *resp, uint32_t cap, uint32_t *lenOut) {
+  int r = pthread_mutex_trylock(&g_reg);
+  CHECK(r == 0); /* registry lock must NOT be held across a request */
+  pthread_mutex_unlock(&g_reg);
+  g_rcalls++;
+  g_rslot = slot;
+  CHECK(reqLen <= sizeof g_rreq);
+  memcpy(g_rreq, req, reqLen);
+  g_rreqlen = reqLen;
+  if (g_rqhead == g_rqtail) return 0;
+  {
+    reply_t *q = &g_rq[g_rqhead++];
+    if (!q->ok) return 0;
+    CHECK(q->len <= cap);
+    memcpy(resp, q->data, q->len);
+    *lenOut = q->len;
+    return 1;
+  }
+}
+
 #include "gl_cb_registry.c"
 
 typedef struct fobj {
@@ -311,6 +369,18 @@ static void reset(void) {
   gl_md_poll_have = 0;
   memset(gl_md_fifo, 0, sizeof gl_md_fifo);
   memset(gl_md_results, 0, sizeof gl_md_results);
+  memset(gl_mms_tab, 0, sizeof gl_mms_tab);
+  gl_mms_count = 0;
+  gl_mms_draining = 0;
+  gl_mms_fail_count = 0;
+  gl_mms_last_fail_ms = 0;
+  gl_mms_dropped = 0;
+  gl_mms_busy = NULL;
+  g_mqhead = g_mqtail = 0;
+  g_mtcalls = 0;
+  g_lastmmsbuf = NULL;
+  g_rqhead = g_rqtail = 0;
+  g_rcalls = 0;
   g_cqhead = g_cqtail = 0;
   g_ctcalls = 0;
   g_lastcrbuf = NULL;
@@ -1347,6 +1417,346 @@ static void case_md_registry_unmatched_pollable(void) {
   PASS();
 }
 
+
+/* ---- 58-21: server-browser response relay ---- */
+typedef struct mobj {
+  void **vptr;
+  int calls[3];
+  int lock_free;
+  uint64_t h;
+  int32_t iServer;
+  int32_t resp;
+  char s1[300];
+  char s2[300];
+  const void *p1;
+  uint8_t item[380];
+} mobj;
+
+static mobj mlist, mrules, mping, mother;
+
+static void m_lock_note(mobj *o) {
+  int r = pthread_mutex_trylock(&g_reg);
+  o->lock_free = (r == 0);
+  if (r == 0) pthread_mutex_unlock(&g_reg);
+}
+static void ml0(void *self, uint64_t h, int32_t i) {
+  mobj *o = (mobj *)self;
+  o->calls[0]++;
+  m_lock_note(o);
+  o->h = h;
+  o->iServer = i;
+}
+static void ml1(void *self, uint64_t h, int32_t i) {
+  mobj *o = (mobj *)self;
+  o->calls[1]++;
+  m_lock_note(o);
+  o->h = h;
+  o->iServer = i;
+}
+static void ml2(void *self, uint64_t h, int32_t r) {
+  mobj *o = (mobj *)self;
+  o->calls[2]++;
+  m_lock_note(o);
+  o->h = h;
+  o->resp = r;
+}
+static void mr0(void *self, const char *a, const char *b) {
+  mobj *o = (mobj *)self;
+  o->calls[0]++;
+  m_lock_note(o);
+  o->p1 = a;
+  strncpy(o->s1, a, sizeof o->s1 - 1);
+  strncpy(o->s2, b, sizeof o->s2 - 1);
+}
+static void mr_n(void *self, int slot) {
+  mobj *o = (mobj *)self;
+  o->calls[slot]++;
+  m_lock_note(o);
+}
+static void mr1(void *self) { mr_n(self, 1); }
+static void mr2(void *self) { mr_n(self, 2); }
+static void mp0(void *self, const void *item) {
+  mobj *o = (mobj *)self;
+  o->calls[0]++;
+  m_lock_note(o);
+  o->p1 = item;
+  memcpy(o->item, item, 380);
+}
+static void *g_ml_vt[3] = {(void *)ml0, (void *)ml1, (void *)ml2};
+static void *g_mr_vt[3] = {(void *)mr0, (void *)mr1, (void *)mr2};
+static void *g_mp_vt[2] = {(void *)mp0, (void *)mr1};
+
+static void mms_objs(void) {
+  memset(&mlist, 0, sizeof mlist);
+  memset(&mrules, 0, sizeof mrules);
+  memset(&mping, 0, sizeof mping);
+  memset(&mother, 0, sizeof mother);
+  mlist.vptr = g_ml_vt;
+  mrules.vptr = g_mr_vt;
+  mping.vptr = g_mp_vt;
+  mother.vptr = g_ml_vt;
+}
+
+static void push_mreq(const void *d, uint32_t len) {
+  reply_t *q = &g_rq[g_rqtail++];
+  CHECK(g_rqtail <= MAXRQ);
+  q->ok = 1;
+  q->len = len;
+  memcpy(q->data, d, len);
+}
+static void push_mreq_h(uint64_t h) { push_mreq(&h, 8); }
+static void push_mreq_q(int32_t q) { push_mreq(&q, 4); }
+
+static void push_mevent_len(uint8_t kind, uint32_t h, int32_t iServer,
+                            int32_t value, const void *pay, uint32_t cub,
+                            uint32_t declared) {
+  uint8_t tmp[600];
+  uint32_t one = 1u;
+  reply_t *q = &g_mq[g_mqtail++];
+  CHECK(g_mqtail <= MAXQ);
+  memcpy(tmp, &one, 4);
+  tmp[4] = kind;
+  memcpy(tmp + 5, &h, 4);
+  memcpy(tmp + 9, &iServer, 4);
+  memcpy(tmp + 13, &value, 4);
+  memcpy(tmp + 17, &declared, 4);
+  if (cub) memcpy(tmp + 21, pay, cub);
+  q->ok = 1;
+  q->len = 21 + cub;
+  memcpy(q->data, tmp, q->len);
+}
+static void push_mevent(uint8_t kind, uint32_t h, int32_t iServer,
+                        int32_t value, const void *pay, uint32_t cub) {
+  push_mevent_len(kind, h, iServer, value, pay, cub, cub);
+}
+
+static void case_mms_list_dispatch(void) {
+  uint64_t h;
+  g_case = "mms_list_dispatch";
+  reset();
+  mms_objs();
+  push_mreq_h(0x1122334400000005ull);
+  h = gl_mms_request_list(0, 480, NULL, 0, &mlist);
+  CHECK(h == 0x1122334400000005ull);
+  CHECK(g_rslot == 0 && g_rreqlen == 12 && g_rcalls == 1);
+  CHECK(gl_mms_count == 1);
+  /* events name the request by the low 32 bits of the handle */
+  push_mevent(1, 5, 0, 0, NULL, 0);
+  push_mevent(3, 5, 0, 1, NULL, 0);
+  gl_cb_run_callbacks();
+  CHECK(mlist.calls[0] == 1 && mlist.calls[2] == 1 && mlist.calls[1] == 0);
+  CHECK(mlist.h == 0x1122334400000005ull && mlist.resp == 1);
+  CHECK(mlist.lock_free);
+  CHECK(gl_mms_count == 1); /* a list stays mapped until ReleaseRequest */
+  PASS();
+}
+
+static void case_mms_rules_strings(void) {
+  int32_t q;
+  uint8_t pay[16];
+  g_case = "mms_rules_strings";
+  reset();
+  mms_objs();
+  push_mreq_q(9);
+  q = gl_mms_query(15, GL_MMS_Q_RULES, 0x7f000001u, 27015u, &mrules);
+  CHECK(q == 9 && g_rslot == 15 && g_rreqlen == 8);
+  memset(pay, 0, sizeof pay);
+  memcpy(pay, "map\0de_dust\0", 12);
+  push_mevent(9, 9, 0, 0, pay, 12);
+  gl_cb_run_callbacks();
+  CHECK(mrules.calls[0] == 1);
+  CHECK(strcmp(mrules.s1, "map") == 0 && strcmp(mrules.s2, "de_dust") == 0);
+  CHECK(mrules.p1 != (const void *)(g_lastmmsbuf + 21)); /* shim-owned copy */
+  CHECK(mrules.lock_free);
+  CHECK(gl_mms_count == 1);
+  push_mevent(11, 9, 0, 0, NULL, 0);
+  g_now += 100000u;
+  gl_cb_run_callbacks();
+  CHECK(mrules.calls[2] == 1);
+  CHECK(gl_mms_count == 0); /* the terminal event retires the query */
+  PASS();
+}
+
+static void case_mms_unknown_handle_dropped(void) {
+  uint32_t i;
+  int left = 0;
+  uint8_t pay[380];
+  g_case = "mms_unknown_handle_dropped";
+  reset();
+  mms_objs();
+  push_mreq_h(5);
+  CHECK(gl_mms_request_list(0, 480, NULL, 0, &mlist) == 5);
+  memset(pay, 0xAB, sizeof pay);
+  push_mevent(4, 77, 0, 0, pay, 380); /* a ping event for a handle never issued */
+  push_mevent(3, 77, 0, 0, NULL, 0);
+  gl_cb_run_callbacks();
+  CHECK(mlist.calls[0] == 0 && mlist.calls[1] == 0 && mlist.calls[2] == 0);
+  CHECK(mping.calls[0] == 0);
+  CHECK(gl_mms_dropped == 2);
+  CHECK(gl_mms_count == 1);
+  /* inline scan, no calls: the dead frame is still intact */
+  if (g_lastmmsbuf) {
+    for (i = 0; i < GL_MMS_DRAIN_RESP_MAX_BYTES; i++)
+      if (g_lastmmsbuf[i] == 0xAB) left++;
+  }
+  CHECK(g_lastmmsbuf != NULL);
+  CHECK(left == 0);
+  PASS();
+}
+
+static void case_mms_release_unmaps(void) {
+  g_case = "mms_release_unmaps";
+  reset();
+  mms_objs();
+  push_mreq_h(5);
+  CHECK(gl_mms_request_list(0, 480, NULL, 0, &mlist) == 5);
+  push_mreq_h(6);
+  CHECK(gl_mms_request_list(0, 480, NULL, 0, &mother) == 6);
+  gl_mms_unmap(GL_MMS_CLS_LIST, 5);
+  CHECK(gl_mms_count == 1);
+  push_mevent(1, 5, 0, 0, NULL, 0);
+  push_mevent(1, 6, 0, 0, NULL, 0);
+  gl_cb_run_callbacks();
+  CHECK(mlist.calls[0] == 0);
+  CHECK(mother.calls[0] == 1);
+  CHECK(gl_mms_dropped == 1);
+  /* with nothing mapped the drain does not even pull */
+  gl_mms_unmap(GL_MMS_CLS_LIST, 6);
+  CHECK(gl_mms_count == 0);
+  g_now += 100000u;
+  g_mtcalls = 0;
+  gl_cb_run_callbacks();
+  CHECK(g_mtcalls == 0);
+  PASS();
+}
+
+static void case_mms_details_slot(void) {
+  uint8_t reply[384];
+  void *p1;
+  void *p2;
+  int calls;
+  uint64_t hh = 5;
+  g_case = "mms_details_slot";
+  reset();
+  mms_objs();
+  push_mreq_h(5);
+  CHECK(gl_mms_request_list(0, 480, NULL, 0, &mlist) == 5);
+  memset(reply, 0, sizeof reply);
+  reply[0] = 1;
+  memset(reply + 4, 0x5A, 380);
+  push_mreq(reply, 384);
+  p1 = gl_mms_get_server_details(5, 3);
+  CHECK(p1 != NULL && g_rslot == 7 && g_rreqlen == 12);
+  CHECK(memcmp(g_rreq, &hh, 8) == 0);
+  CHECK(((uint8_t *)p1)[0] == 0x5A && ((uint8_t *)p1)[379] == 0x5A);
+  memset(reply + 4, 0x6B, 380);
+  push_mreq(reply, 384);
+  p2 = gl_mms_get_server_details(5, 4);
+  CHECK(p2 == p1); /* one stable slot per request */
+  CHECK(((uint8_t *)p2)[0] == 0x6B);
+  /* absent on the Mac side: NULL */
+  memset(reply, 0, sizeof reply);
+  push_mreq(reply, 384);
+  CHECK(gl_mms_get_server_details(5, 9) == NULL);
+  /* an unknown or wrongly-keyed handle never reaches the helper */
+  calls = g_rcalls;
+  CHECK(gl_mms_get_server_details(0x1100000005ull, 0) == NULL);
+  CHECK(gl_mms_get_server_details(6, 0) == NULL);
+  CHECK(g_rcalls == calls);
+  gl_mms_unmap(GL_MMS_CLS_LIST, 5);
+  CHECK(gl_mms_get_server_details(5, 0) == NULL);
+  CHECK(g_rcalls == calls);
+  PASS();
+}
+
+static void case_mms_capacity(void) {
+  uint32_t i;
+  int calls;
+  g_case = "mms_capacity";
+  reset();
+  mms_objs();
+  for (i = 0; i < GL_MMS_MAP_CAP; i++) {
+    push_mreq_h(100u + i);
+    CHECK(gl_mms_request_list(0, 480, NULL, 0, &mlist) == 100u + i);
+  }
+  CHECK(gl_mms_count == GL_MMS_MAP_CAP);
+  calls = g_rcalls;
+  /* the 65th is refused locally: no frame, so no helper handle to leak */
+  push_mreq_h(999);
+  CHECK(gl_mms_request_list(0, 480, NULL, 0, &mlist) == 0);
+  CHECK(gl_mms_query(13, GL_MMS_Q_PING, 1, 2, &mping) == -1);
+  CHECK(g_rcalls == calls);
+  /* a refused helper reply frees the reserved slot */
+  gl_mms_unmap(GL_MMS_CLS_LIST, 100);
+  g_rqhead = g_rqtail = 0;
+  push_mreq_h(0);
+  CHECK(gl_mms_request_list(0, 480, NULL, 0, &mlist) == 0);
+  CHECK(gl_mms_count == GL_MMS_MAP_CAP - 1);
+  push_mreq_h(777);
+  CHECK(gl_mms_request_list(0, 480, NULL, 0, &mlist) == 777);
+  CHECK(gl_mms_count == GL_MMS_MAP_CAP);
+  PASS();
+}
+
+static void case_mms_ping_terminal(void) {
+  uint8_t pay[380];
+  g_case = "mms_ping_terminal";
+  reset();
+  mms_objs();
+  push_mreq_q(4);
+  CHECK(gl_mms_query(13, GL_MMS_Q_PING, 0x0a000001u, 27015u, &mping) == 4);
+  CHECK(g_rslot == 13);
+  memset(pay, 0x33, sizeof pay);
+  /* the right handle but the wrong interface kind is dropped */
+  push_mevent(6, 4, 0, 0, "x", 2);
+  push_mevent(4, 4, 0, 0, pay, 380);
+  gl_cb_run_callbacks();
+  CHECK(mping.calls[0] == 1 && mping.item[0] == 0x33 && mping.item[379] == 0x33);
+  CHECK(mping.p1 != (const void *)(g_lastmmsbuf + 21));
+  CHECK(gl_mms_dropped == 1);
+  CHECK(gl_mms_count == 0);
+  PASS();
+}
+
+static void case_mms_malformed_ignored(void) {
+  uint8_t pay[380];
+  uint32_t two = 2u;
+  g_case = "mms_malformed_ignored";
+  reset();
+  mms_objs();
+  push_mreq_h(5);
+  CHECK(gl_mms_request_list(0, 480, NULL, 0, &mlist) == 5);
+  memset(pay, 0, sizeof pay);
+  /* declared cub disagrees with the bytes that arrived */
+  push_mevent_len(1, 5, 0, 0, pay, 4, 8);
+  gl_cb_run_callbacks();
+  CHECK(mlist.calls[0] == 0);
+  g_now += 100000u;
+  g_mqhead = g_mqtail = 0;
+  /* an unknown kind, an oversized cub for a no-payload kind, a bad count */
+  push_mevent(99, 5, 0, 0, NULL, 0);
+  gl_cb_run_callbacks();
+  g_now += 100000u;
+  g_mqhead = g_mqtail = 0;
+  push_mevent(1, 5, 0, 0, pay, 4);
+  gl_cb_run_callbacks();
+  g_now += 100000u;
+  g_mqhead = g_mqtail = 0;
+  push_mevent(1, 5, 0, 0, NULL, 0);
+  memcpy(g_mq[0].data, &two, 4);
+  gl_cb_run_callbacks();
+  CHECK(mlist.calls[0] == 0 && mlist.calls[1] == 0 && mlist.calls[2] == 0);
+  /* a bad request reply is a failed request */
+  gl_mms_unmap(GL_MMS_CLS_LIST, 5);
+  push_mreq(pay, 3);
+  CHECK(gl_mms_request_list(0, 480, NULL, 0, &mlist) == 0);
+  CHECK(gl_mms_request_list(0, 480, NULL, 0, NULL) == 0);
+  CHECK(gl_mms_request_list(7, 480, NULL, 0, &mlist) == 0);
+  CHECK(gl_mms_request_list(0, 480, NULL, 33, &mlist) == 0);
+  CHECK(gl_mms_count == 0);
+  PASS();
+}
+
 int main(void) {
   pthread_mutexattr_t attr;
   uint32_t i;
@@ -1405,5 +1815,13 @@ int main(void) {
   case_md_report();
   case_utils_poll();
   case_md_registry_unmatched_pollable();
+  case_mms_list_dispatch();
+  case_mms_rules_strings();
+  case_mms_unknown_handle_dropped();
+  case_mms_release_unmaps();
+  case_mms_details_slot();
+  case_mms_capacity();
+  case_mms_ping_terminal();
+  case_mms_malformed_ignored();
   return 0;
 }

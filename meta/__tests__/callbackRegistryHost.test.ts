@@ -64,7 +64,15 @@ const CASES = [
   'md_runcallbacks_inert',
   'md_report',
   'utils_poll',
-  'md_registry_unmatched_pollable'
+  'md_registry_unmatched_pollable',
+  'mms_list_dispatch',
+  'mms_rules_strings',
+  'mms_unknown_handle_dropped',
+  'mms_release_unmaps',
+  'mms_details_slot',
+  'mms_capacity',
+  'mms_ping_terminal',
+  'mms_malformed_ignored'
 ]
 
 function spawnArgv(
