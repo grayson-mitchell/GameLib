@@ -288,6 +288,13 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
     'SteamNetworkingSockets013',
     { family: 'SteamNetworkingSockets', mode: 'wire' }
   ],
+  // D-07 / 58-18: the title's own older import (static string table, 58-17),
+  // extracted from its own Proton block (no aliasing). Wired only where the
+  // parameter list equals SteamNetworkingSockets013's; the rest stay stubs.
+  [
+    'SteamNetworkingSockets012',
+    { family: 'SteamNetworkingSockets', mode: 'wire' }
+  ],
   // D-07 / 58-14: every virtual except SetDebugOutputFunction is wired (or
   // answered shim-side from the identity, message-pool and config-store
   // block); SetDebugOutputFunction is stored locally and never forwarded.

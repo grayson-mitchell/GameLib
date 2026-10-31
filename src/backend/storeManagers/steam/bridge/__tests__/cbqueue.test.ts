@@ -125,6 +125,7 @@ describe('header defines cross-pin to CALLBACK_LAYOUTS (58-02)', () => {
     ['LOBBYMATCHLIST', 'LobbyMatchList_t'],
     ['LOBBYKICKED', 'LobbyKicked_t'],
     ['LOBBYCREATED', 'LobbyCreated_t'],
+    ['GAMELOBBYJOINREQUESTED', 'GameLobbyJoinRequested_t'],
     ['P2PSESSIONREQUEST', 'P2PSessionRequest_t'],
     ['P2PSESSIONCONNECTFAIL', 'P2PSessionConnectFail_t'],
     ['NETCONNSTATUS', 'SteamNetConnectionStatusChangedCallback_t'],
@@ -150,6 +151,18 @@ describe('header defines cross-pin to CALLBACK_LAYOUTS (58-02)', () => {
     const expected = `{{${l.mac.fields.m_eResult}, ${l.x64.fields.m_eResult}, 4}, {${l.mac.fields.m_ulSteamIDLobby}, ${l.x64.fields.m_ulSteamIDLobby}, 8}}`
     expect(`{${m[1]}}`).toBe(expected)
     expect(expected).toBe('{{0, 0, 4}, {4, 8, 8}}')
+  })
+
+  test('gl_cbq_map_333 is one whole-struct copy of the measured size, id 333', () => {
+    const l = CALLBACK_LAYOUTS.GameLobbyJoinRequested_t
+    expect(l.id).toBe(333)
+    expect(l.mac).toEqual(l.x64)
+    expect(define('GL_CBQ_ID_GAME_LOBBY_JOIN_REQUESTED')).toBe(333)
+    const m =
+      /gl_cbq_map_333\[\] = \{\{0, 0, GL_CBQ_GAMELOBBYJOINREQUESTED_MAC_SIZE\}\};/.exec(
+        header
+      )
+    expect(m).not.toBeNull()
   })
 
   test('1221 and 504 classifier offsets equal the measured Mac layout', () => {

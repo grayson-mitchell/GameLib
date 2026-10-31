@@ -1049,6 +1049,7 @@ export const SHIM64_GENERATED_EXPORTS: readonly string[] = [
   'SteamAPI_SteamNetworkingIdentity_ToString',
   'SteamAPI_SteamNetworkingMessage_t_Release',
   'SteamAPI_SteamNetworkingMessages_SteamAPI_v002',
+  'SteamAPI_SteamNetworkingSockets_SteamAPI_v012',
   'SteamAPI_SteamNetworkingSockets_SteamAPI_v013',
   'SteamAPI_SteamNetworkingUtils_SteamAPI_v004',
   'SteamAPI_SteamNetworking_v005',

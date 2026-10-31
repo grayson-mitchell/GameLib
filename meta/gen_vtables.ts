@@ -50,6 +50,12 @@ import {
 import { join } from 'node:path'
 
 import {
+  OLDER_VERSION_CHECKED_FAMILIES,
+  normalizeParamType,
+  paramListsEqual
+} from './signatureEquality'
+
+import {
   CALLBACK_LAYOUTS,
   MSVC_CCALLBACKBASE_OFFSETS,
   MSVC_CCALLBACKBASE_VSLOT_RUN_1ARG,
@@ -782,6 +788,64 @@ export function validateManifest(
     }
   }
 
+  errors.push(...validateOlderVersionSignatures(manifest, allManifests))
+
+  return errors
+}
+
+function interfaceVersionNumber(name: string): number {
+  const m = /(\d+)$/.exec(name)
+  return m ? Number(m[1]) : -1
+}
+
+/**
+ * 58-18 (T-58-56): an older interface version may wire a method onto the helper
+ * flat function it shares with the newest version (same family, same
+ * helperInterface) only when the method's parameter list -- count and types --
+ * equals the newest version's method of the same name. A mismatch means the
+ * ABI moved between versions and the shared flat call would be wrong. The error
+ * names both versions.
+ */
+function validateOlderVersionSignatures(
+  manifest: InterfaceManifestV2,
+  allManifests: InterfaceManifestV2[]
+): string[] {
+  if (!manifest.helperInterface) return []
+  if (!OLDER_VERSION_CHECKED_FAMILIES.has(manifest.family)) return []
+  const peers = allManifests.filter(
+    (m) =>
+      m !== manifest &&
+      m.family === manifest.family &&
+      m.helperInterface === manifest.helperInterface
+  )
+  const own = interfaceVersionNumber(manifest.interface)
+  const newest = [manifest, ...peers].reduce((a, b) =>
+    interfaceVersionNumber(b.interface) > interfaceVersionNumber(a.interface)
+      ? b
+      : a
+  )
+  if (newest === manifest || interfaceVersionNumber(newest.interface) <= own) {
+    return []
+  }
+  const errors: string[] = []
+  for (const method of manifest.methods) {
+    if (method.mode !== 'wire') continue
+    const ref = newest.methods.find((m) => m.name === method.name)
+    const where = `${manifest.interface} slot ${method.slot} (${method.name}) is wired but`
+    if (!ref) {
+      errors.push(
+        `${where} ${newest.interface} has no method of that name to share a helper flat function with`
+      )
+      continue
+    }
+    if (!paramListsEqual(method.params, ref.params)) {
+      const a = method.params.map((p) => normalizeParamType(p.type))
+      const b = ref.params.map((p) => normalizeParamType(p.type))
+      errors.push(
+        `${where} its parameter list (${a.join(', ')}) differs from ${newest.interface} (${b.join(', ')}); older versions wire only an identical signature`
+      )
+    }
+  }
   return errors
 }
 
@@ -2884,6 +2948,9 @@ export const CALLBACK_RELAY_TABLE: readonly CallbackRelayRow[] = [
   broadcastRelayRow('LobbyChatMsg_t', false),
   broadcastRelayRow('LobbyKicked_t', false),
   broadcastRelayRow('LobbyCreated_t', false),
+  // 58-18 (D-09 measured): an invite can arrive before the game registers its
+  // handler, so the latest one is held (16 bytes fits CALLBACK_HELD_MAX_BYTES).
+  broadcastRelayRow('GameLobbyJoinRequested_t', true),
   broadcastRelayRow('P2PSessionRequest_t', false),
   broadcastRelayRow('P2PSessionConnectFail_t', false),
   broadcastRelayRow('SteamNetConnectionStatusChangedCallback_t', false),

@@ -169,7 +169,7 @@ int main(void) {
 
   /* ---- Phase 58-07: relay rows, repack, call results ---- */
   {
-    static const int32_t ids[] = {503, 504, 505, 506, 507, 512, 513, 1202, 1203,
+    static const int32_t ids[] = {333, 503, 504, 505, 506, 507, 512, 513, 1202, 1203,
                                   1221, 1222, 1251, 1252, 1281};
     int sizes_ok = 1, repack_ok = 1, wrongsize_ok = 1;
     for (size_t k = 0; k < sizeof ids / sizeof ids[0]; k++) {

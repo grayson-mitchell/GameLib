@@ -12,6 +12,7 @@ import { join } from 'path'
 import {
   ALLOWED_PROTON_REFS,
   applyWirePolicy,
+  demoteSignatureMismatches,
   buildNullSretInventory,
   classifyProtonReturn,
   computeFlatAccessor,
@@ -469,5 +470,52 @@ describe('applyWirePolicy 58-14 return and param type overrides', () => {
     expect(other.returns).toBe(
       methods.find((m) => m.name === 'GetWidgetID')!.returns
     )
+  })
+})
+
+describe('demoteSignatureMismatches (58-18, T-58-56)', () => {
+  const sig = (name: string, types: string[], mode: 'wire' | 'stub') =>
+    ({
+      slot: 0,
+      name,
+      returns: 'void',
+      returnKind: 'void',
+      stackBytes: 0,
+      params: types.map((type, i) => ({ name: `p${i}`, type })),
+      mode
+    }) as unknown as Parameters<typeof demoteSignatureMismatches>[0][number]
+
+  test('keeps a wired method with identical params and demotes a changed one', () => {
+    const raw = [
+      sig('Same', ['int32'], 'stub'),
+      sig('Changed', ['int32'], 'stub')
+    ]
+    const wired = [
+      sig('Same', ['int32'], 'wire'),
+      sig('Changed', ['int32'], 'wire')
+    ]
+    const ref = [
+      sig('Same', ['int32'], 'wire'),
+      sig('Changed', ['int32', 'bool'], 'wire')
+    ]
+    const out = demoteSignatureMismatches(
+      wired,
+      raw,
+      'SteamNetworkingSockets',
+      ref
+    )
+    expect(out[0].mode).toBe('wire')
+    expect(out[1].mode).toBe('stub')
+  })
+
+  test('is a no-op for the newest version and for unchecked families', () => {
+    const wired = [sig('A', ['int32'], 'wire')]
+    const raw = [sig('A', ['int32'], 'stub')]
+    expect(
+      demoteSignatureMismatches(wired, raw, 'SteamNetworkingSockets', null)
+    ).toBe(wired)
+    expect(
+      demoteSignatureMismatches(wired, raw, 'SteamUser', [sig('A', [], 'wire')])
+    ).toBe(wired)
   })
 })

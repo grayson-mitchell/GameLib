@@ -70,5 +70,6 @@
   "SteamMatchMakingServers003": 69,
   "SteamNetworkingSockets013": 70,
   "SteamNetworkingUtils004": 71,
-  "SteamNetworkingMessages002": 72
+  "SteamNetworkingMessages002": 72,
+  "SteamNetworkingSockets012": 73
 }

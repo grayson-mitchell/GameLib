@@ -507,7 +507,9 @@
           "name": "steamIDLobby",
           "type": "CSteamID"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog"
     },
     {
       "slot": 34,

@@ -3547,6 +3547,18 @@ describe('callback registry (P55-3) source pins', () => {
     for (const sz of relaySizes) expect(winSizes).toContain(sz)
   })
 
+  it('relays GameLobbyJoinRequested_t (333) held, and not 337 (58-18, D-09)', () => {
+    const l = CALLBACK_LAYOUTS.GameLobbyJoinRequested_t
+    const row = CALLBACK_RELAY_TABLE.find((r) => r.id === 333)
+    expect(row).toEqual({ id: 333, size: l.x64.size, hold: true })
+    expect(l.x64.size).toBeLessThanOrEqual(CALLBACK_HELD_MAX_BYTES)
+    expect(src).toContain(`{333, ${l.x64.size}u, 1}`)
+    expect(header).toContain('GL_CBQ_ROW(GL_CBQ_ID_GAME_LOBBY_JOIN_REQUESTED,')
+    // 337 was not observed on the wired bridge: no relay row, no helper row
+    expect(CALLBACK_RELAY_TABLE.some((r) => r.id === 337)).toBe(false)
+    expect(header).not.toMatch(/GL_CBQ_ROW\(337/)
+  })
+
   it('emits a row for the x64 DLL only when its x86 size differs', () => {
     expect(CALLBACK_RELAY_TABLE.filter((r) => r.arches === 'x64')).toHaveLength(
       0
@@ -4718,6 +4730,7 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
             m.interface !== 'SteamNetworking006' &&
             m.interface !== 'SteamNetworkingUtils004' &&
             m.interface !== 'SteamNetworkingSockets013' &&
+            m.interface !== 'SteamNetworkingSockets012' &&
             m.interface !== 'SteamNetworkingMessages002'
         )
         .map((m) => ({
@@ -5622,5 +5635,58 @@ describe('58-16 SteamNetworkingMessages002 wire policy', () => {
   it('no method auto-accepts a session on the helper side', () => {
     expect(method('AcceptSessionWithUser').helperCustom).toBeUndefined()
     expect(method('AcceptSessionWithUser').params[0].kind).toBe('in-struct')
+  })
+})
+
+describe('58-18 older-version signature equality (T-58-56)', () => {
+  const sockets012 = real.find(
+    (m) => m.interface === 'SteamNetworkingSockets012'
+  )!
+  const sockets013 = real.find(
+    (m) => m.interface === 'SteamNetworkingSockets013'
+  )!
+
+  test('the real older manifest passes validation against the newest', () => {
+    expect(validateManifest(sockets012, real)).toEqual([])
+  })
+
+  test('SteamNetworkingSockets012 is built from its own Proton block, not aliased', () => {
+    expect(sockets012.ordinal).not.toBe(sockets013.ordinal)
+    expect(sockets012.source.file).toBe(
+      'lsteamclient/winISteamNetworkingSockets.c'
+    )
+    expect(sockets012.helperInterface).toBe(sockets013.helperInterface)
+    expect(sockets012.flatAccessor).toBe(
+      'SteamAPI_SteamNetworkingSockets_SteamAPI_v012'
+    )
+    // SendMessages gained a parameter in 013: it must not be wired on 012
+    const send = sockets012.methods.find((m) => m.name === 'SendMessages')!
+    expect(send.mode).not.toBe('wire')
+  })
+
+  test('refuses an older wired method whose params differ, naming both versions', () => {
+    const bad = JSON.parse(JSON.stringify(sockets012)) as InterfaceManifestV2
+    const send = bad.methods.find((m) => m.name === 'SendMessages')!
+    send.mode = 'wire'
+    send.helperFlat = 'SteamAPI_ISteamNetworkingSockets_SendMessages'
+    const errors = validateManifest(bad, real)
+    const hit = errors.find((e) => e.includes('SendMessages'))
+    expect(hit).toContain('SteamNetworkingSockets012')
+    expect(hit).toContain('SteamNetworkingSockets013')
+  })
+
+  test('SteamFriends017 wires exactly the measured invite dialog method added by 58-18', () => {
+    const f = real.find((m) => m.interface === 'SteamFriends017')!
+    const inv = f.methods.find(
+      (m) => m.name === 'ActivateGameOverlayInviteDialog'
+    )!
+    expect(inv.mode).toBe('wire')
+    expect(inv.helperFlat).toBe(
+      'SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog'
+    )
+    // rich presence was not observed: nothing wired for it
+    for (const n of ['SetRichPresence', 'GetFriendRichPresence']) {
+      expect(f.methods.find((m) => m.name === n)?.mode).not.toBe('wire')
+    }
   })
 })

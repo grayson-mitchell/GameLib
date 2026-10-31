@@ -397,5 +397,12 @@
     "titles": ["648800", "219990"],
     "helperInterface": "SteamAPI_SteamNetworkingMessages_SteamAPI_v002",
     "flatAccessor": "SteamAPI_SteamNetworkingMessages_SteamAPI_v002"
+  },
+  "SteamNetworkingSockets012": {
+    "family": "SteamNetworkingSockets",
+    "arches": ["x64"],
+    "titles": ["3205720"],
+    "helperInterface": "SteamAPI_SteamNetworkingSockets_SteamAPI_v013",
+    "flatAccessor": "SteamAPI_SteamNetworkingSockets_SteamAPI_v012"
   }
 }

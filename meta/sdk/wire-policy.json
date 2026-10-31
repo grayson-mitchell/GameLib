@@ -45,6 +45,9 @@
     },
     "GetPersonaState": {
       "helperFlat": "SteamAPI_ISteamFriends_GetPersonaState"
+    },
+    "ActivateGameOverlayInviteDialog": {
+      "helperFlat": "SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog"
     }
   },
   "SteamUtils": {
@@ -1205,6 +1208,14 @@
           "structSize": 136
         },
         "pPeerIdentity2": {
+          "kind": "in-struct",
+          "structSize": 136
+        },
+        "pIdentity1": {
+          "kind": "in-struct",
+          "structSize": 136
+        },
+        "pIdentity2": {
           "kind": "in-struct",
           "structSize": 136
         }

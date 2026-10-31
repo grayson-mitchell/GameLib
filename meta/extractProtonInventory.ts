@@ -45,6 +45,10 @@ import { spawn } from 'node:child_process'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 
+import {
+  OLDER_VERSION_CHECKED_FAMILIES,
+  paramListsEqual
+} from './signatureEquality'
 import type {
   ArchToken,
   InterfaceManifestV2,
@@ -662,6 +666,28 @@ export function applyWirePolicy(
   })
 }
 
+/**
+ * 58-18 (T-58-56): an older version of a Phase 58 family keeps a wire overlay on
+ * a method only when its parameter list equals the newest version's method of
+ * the same name (the helper flat function is shared). Any other method reverts
+ * to its raw stub shape, so re-extraction never produces a manifest that
+ * gen_vtables' signature-equality check refuses. `reference` is the newest
+ * version's manifest methods, or null when this version is the newest.
+ */
+export function demoteSignatureMismatches(
+  wired: MethodSignature[],
+  raw: MethodSignature[],
+  family: string,
+  reference: MethodSignature[] | null
+): MethodSignature[] {
+  if (!reference || !OLDER_VERSION_CHECKED_FAMILIES.has(family)) return wired
+  return wired.map((method, i) => {
+    if (method.mode !== 'wire') return method
+    const ref = reference.find((m) => m.name === method.name)
+    return ref && paramListsEqual(method.params, ref.params) ? method : raw[i]
+  })
+}
+
 // ---------------------------------------------------------------------------
 // CLI (fetch + ordinal/filename resolution + manifest emission)
 // ---------------------------------------------------------------------------
@@ -888,6 +914,27 @@ function runPrettierWrite(paths: string[]): Promise<void> {
   })
 }
 
+/** Methods of the newest on-disk manifest sharing this entry's family and
+ * helperInterface, when that is a higher version than `version`; else null. */
+function newestSiblingMethods(
+  version: string,
+  entry: { family: string; helperInterface?: string }
+): MethodSignature[] | null {
+  if (!entry.helperInterface) return null
+  const num = (v: string): number => Number(/(\d+)$/.exec(v)?.[1] ?? -1)
+  let best: InterfaceManifestV2 | null = null
+  for (const [other, e] of Object.entries(loadAcceptanceVersions())) {
+    if (other === version || e.family !== entry.family) continue
+    if (e.helperInterface !== entry.helperInterface) continue
+    const path = join(SDK_DIR, manifestFilenameFor(other, e.family))
+    if (!existsSync(path)) continue
+    if (num(other) <= num(version)) continue
+    if (best && num(other) <= num(best.interface)) continue
+    best = JSON.parse(readFileSync(path, 'utf-8')) as InterfaceManifestV2
+  }
+  return best ? best.methods : null
+}
+
 export async function main(): Promise<void> {
   const argv = process.argv.slice(2)
   if (argv.includes('--null-sret-inventory')) {
@@ -936,7 +983,13 @@ export async function main(): Promise<void> {
     const text = await sourceCache.get(family)!
 
     const rawMethods = parseProtonThunks(text, family, version)
-    const methods = applyWirePolicy(rawMethods, family, wirePolicy)
+    const wiredMethods = applyWirePolicy(rawMethods, family, wirePolicy)
+    const methods = demoteSignatureMismatches(
+      wiredMethods,
+      rawMethods,
+      family,
+      newestSiblingMethods(version, entry)
+    )
     const ordinal = resolveOrdinal(version, ORDINALS_PATH)
 
     const filename = manifestFilenameFor(version, family)

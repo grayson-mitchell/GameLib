@@ -1479,6 +1479,19 @@ describe('58-03 multiplayer baseline served tables', () => {
   })
 })
 
+// 58-18 (D-07): the title's own older SteamNetworkingSockets012 import is served
+// from its own manifest, x64 only.
+describe('58-18 SteamNetworkingSockets012 served entry', () => {
+  test('is served wire on x64 and never on x86', () => {
+    expect(
+      SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamNetworkingSockets012')
+    ).toEqual({ family: 'SteamNetworkingSockets', mode: 'wire' })
+    expect(
+      SHIM_SERVED_INTERFACE_VERSIONS.has('SteamNetworkingSockets012')
+    ).toBe(false)
+  })
+})
+
 // 58-12 (D-13): the stub notice keeps its code and copy; only the verdict moves.
 describe('58-12 SteamMatchMaking009 coverage verdicts (D-13)', () => {
   const symbols = ['SteamInternal_CreateInterface', 'SteamAPI_RunCallbacks']
