@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 59 context gathered
-last_updated: "2026-10-31T20:14:31.202Z"
+last_updated: "2026-10-31T20:15:52.310Z"
 last_activity: 2026-10-31
 progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 189
-  completed_plans: 173
+  completed_plans: 174
   percent: 67
 ---
 
@@ -72,7 +72,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 58 (steam-bridge-multiplayer) — EXECUTING
-Plan: 3 of 34
+Plan: 4 of 34
 Status: Ready to execute
 Last activity: 2026-10-31
 
@@ -212,6 +212,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 58 P17 | n/a | 2 tasks | 1 files |
 | Phase 58 P20 | 60min | 2 tasks | 14 files |
 | Phase 59 P03 | 15min | 2 tasks | 6 files |
+| Phase 59 P06 | n/a | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -304,6 +305,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 58]: [58-02] CSteamID measured pack(1) per SDK; UserStatsReceived_t Windows steamID offset likely 12 not 16 (finding, unfixed)
 - [Phase 58]: D-08a: Raft legacy-P2P joins scored by 1202+Accept+game P2P send/read; DRM trace uses peer ordinals not SteamID64
 - [Phase 58]: 58-24 close-out (2026-11-01): DRM mode Raft PASS (58-08-LIVE-GATE); TCP mode Schedule I gate Verdict FAIL — Direction A (Mac hosts) no working invite path (overlay invite dialog call reaches Mac Steam but shows nothing; friends-list Invite to Game and Join Game missing), Direction B (PC hosts) PASS with the 333 GameLobbyJoinRequested_t relay proven live, path unknown (58-22-LIVE-GATE). serialized005 not needed (M-06); D-12 no-op per D-16; D-13 unchanged; x86 multiplayer deferred. Open gaps in 58-22-LIVE-GATE.md section 5. Phase 58 NOT done — next: `/gsd-plan-phase 58 --gaps`.
+- [Phase 59-06]: Fallback bottle cxbottle.conf written last; DXVK restore runs on CrossOver (59-01)
 
 ### Pending Todos
 
@@ -565,7 +567,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-31T20:14:31.143Z
+Last session: 2026-10-31T20:15:47.243Z
 Stopped at: Phase 59 context gathered
 Resume file: None
 
