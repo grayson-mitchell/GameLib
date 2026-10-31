@@ -1,5 +1,6 @@
 import {
   collectDiagnostics,
+  getReportEnv,
   isReportingConfigured,
   submitReport,
   WEB3FORMS_ACCESS_KEY
@@ -203,5 +204,22 @@ describe('collectDiagnostics', () => {
       knownIdentifiers: []
     })
     expect(out).toContain('Launch route: compatibility layer')
+  })
+})
+
+describe('getReportEnv', () => {
+  test('falls back to unknown without throwing', async () => {
+    const g = globalThis as unknown as { window?: { api?: unknown } }
+    if (!g.window) g.window = {}
+    g.window.api = {
+      systemInfo: { get: jest.fn().mockRejectedValue(new Error('x')) },
+      getHeroicVersion: jest.fn().mockImplementation(() => {
+        throw new Error('y')
+      })
+    }
+    expect(await getReportEnv()).toEqual({
+      appVersion: 'unknown',
+      osLabel: 'unknown'
+    })
   })
 })

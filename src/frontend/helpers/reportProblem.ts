@@ -73,6 +73,20 @@ async function readLog(args: Parameters<typeof window.api.getLogContent>[0]) {
   }
 }
 
+/** App version and OS label for the report subject. Never throws. */
+export async function getReportEnv(): Promise<{
+  appVersion: string
+  osLabel: string
+}> {
+  const info = await safe(() => window.api.systemInfo.get(true), undefined)
+  const appVersion = await safe(() => window.api.getHeroicVersion(), 'unknown')
+  return { appVersion, osLabel: info ? osLabelOf(info.OS) : 'unknown' }
+}
+
+function osLabelOf(os: { name: string; version: string; platform: string }) {
+  return `${os.name} ${os.version} (${os.platform})`
+}
+
 /**
  * Collect diagnostics and redact them in the renderer. Never throws: each
  * source falls back, so collecting can never block sending.
@@ -83,11 +97,7 @@ export async function collectDiagnostics(opts: {
 }): Promise<string> {
   const { game, knownIdentifiers } = opts
 
-  const info = await safe(() => window.api.systemInfo.get(true), undefined)
-  const appVersion = await safe(() => window.api.getHeroicVersion(), 'unknown')
-  const os = info
-    ? `${info.OS.name} ${info.OS.version} (${info.OS.platform})`
-    : 'unknown'
+  const { appVersion, osLabel: os } = await getReportEnv()
 
   const appLog = await readLog({})
   const gameLog = game
