@@ -363,6 +363,8 @@ export type Status =
   | 'installed'
   | 'redist'
   | 'drm-setup'
+  // Phase 59 (D-05): the built-in Steam engine is downloading; context carries the percent
+  | 'engine-download'
   | 'steam-starting'
   | 'extracting'
   | 'winetricks'

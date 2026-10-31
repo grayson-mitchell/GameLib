@@ -48,6 +48,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     is.installingWinetricksPackages ||
     is.installingRedist ||
     is.preparingDrm ||
+    is.downloadingEngine ||
     is.startingSteam ||
     // quick 261029-exu: a bridge install is marked installed when its manifest
     // lands but keeps installing (redists, DRM support) until its own 'done'.
@@ -83,6 +84,15 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     }
     if (is.preparingDrm) {
       return t('label.drmSetup', 'Preparing Steam DRM support')
+    }
+    if (is.downloadingEngine) {
+      return t(
+        'gamelib:steam.engine.status.downloading',
+        'Downloading built-in engine ({{percent}}%)',
+        {
+          percent: statusContext || '0'
+        }
+      )
     }
     if (is.startingSteam) {
       return t('label.steamStarting', 'Starting Steam')

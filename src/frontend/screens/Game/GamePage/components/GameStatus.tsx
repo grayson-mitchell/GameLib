@@ -108,6 +108,22 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       )
     }
 
+    // Phase 59 (D-05): the built-in Steam engine is downloading.
+    if (is.downloadingEngine) {
+      return (
+        <span
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+        >
+          <CircularProgress size={14} color="inherit" />
+          {t(
+            'gamelib:steam.engine.status.downloading',
+            'Downloading built-in engine ({{percent}}%)',
+            { percent: statusContext || '0' }
+          )}
+        </span>
+      )
+    }
+
     // quick 261029-ji2: Play is restarting Mac Steam so it adopts the install.
     if (is.startingSteam) {
       return (

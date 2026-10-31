@@ -161,6 +161,13 @@ export default function LaunchOverlay({
         { step: statusContext || '' }
       )
       break
+    case 'engine-download':
+      label = t(
+        'gamelib:steam.engine.status.downloading',
+        'Downloading built-in engine ({{percent}}%)',
+        { percent: statusContext || '0' }
+      )
+      break
     case 'steam-starting':
       label = t('gamepage:status.steamStarting', 'Starting Steam')
       break

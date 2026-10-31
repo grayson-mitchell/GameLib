@@ -312,6 +312,7 @@ const GameCard = ({
           'winetricks',
           'redist',
           'drm-setup',
+          'engine-download',
           'steam-starting'
         ].includes(status!)
       return (
