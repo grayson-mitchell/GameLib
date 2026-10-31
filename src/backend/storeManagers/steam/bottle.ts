@@ -1685,7 +1685,7 @@ export function buildFallbackGameSettings(
     autoInstallVkd3d: false,
     enviromentOptions: [
       ...kept,
-      // Wine-Staging ignores WINEUSERNAME; USER keeps C:\users\crossover.
+      // Wine-Staging takes its profile name from USER; USER keeps C:\users\crossover.
       { key: 'USER', value: 'crossover' },
       { key: 'WINEDEBUG', value: '-all' },
       { key: 'MVK_CONFIG_LOG_LEVEL', value: '0' }
