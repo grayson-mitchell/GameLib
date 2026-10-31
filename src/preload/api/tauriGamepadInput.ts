@@ -377,6 +377,9 @@ function nextFrame(): Promise<void> {
  */
 const REVEAL_TIMEOUT_MS = 250
 
+/** Scroll containers carrying this attribute keep Down inside them at their scroll end. */
+const STOP_DOWN_ATTRIBUTE = 'data-gamepad-stop-down'
+
 /**
  * Chromium's built-in spatial navigation -- which is what made Electron's synthetic
  * `keyDown` with keyCode `Up`/`Down`/`Left`/`Right` actually move focus -- does not
@@ -452,6 +455,11 @@ async function moveFocusDirectionally(direction: Direction): Promise<void> {
     // Nothing rendered in time; the grid still scrolled one step and the next press continues.
     return
   }
+
+  // A container that opts in with `data-gamepad-stop-down` (the library's `.listing`) is a
+  // dead end for Down at its scroll end: escaping to the whole document from the last row
+  // landed on the left panel. Up still escapes, so the toolbar above stays reachable.
+  if (direction === 'Down' && container.getAttribute(STOP_DOWN_ATTRIBUTE) !== null) return
 
   // The container cannot scroll further: today's whole-document search keeps controls
   // below a scrollable list reachable.

@@ -628,6 +628,22 @@ describe('tauriGamepadAction scroll-container-aware directional moves (quick 261
     expect(container.scrollTop).toBe(600)
   })
 
+  it('at the scroll end of a data-gamepad-stop-down container, Down stays put and Up still escapes', async () => {
+    const { container, current, leftPanelBtn } = setup(600)
+    container.setAttribute('data-gamepad-stop-down', '')
+    const toolbarBtn = new FakeElement('button', rectOf(100, 120))
+    fakeDocument.querySelectorAll.mockReturnValue([current, leftPanelBtn, toolbarBtn])
+    fakeDocument.activeElement = current
+
+    await tauriGamepadAction({ action: 'padDown' })
+    expect(fakeDocument.activeElement).toBe(current)
+    expect(container.scrollTop).toBe(600)
+
+    container.scrollTop = 0
+    await tauriGamepadAction({ action: 'padUp' })
+    expect(fakeDocument.activeElement).toBe(toolbarBtn)
+  })
+
   it('261031-lrx: with only the document scroller above it, directional moves are the pure whole-document pick', async () => {
     const plain = new FakeElement('div')
     plain.overflowY = 'visible'
