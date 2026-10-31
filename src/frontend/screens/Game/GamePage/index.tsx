@@ -76,6 +76,9 @@ import {
   SettingsButton,
   WikiInfoEmptyState
 } from './components'
+import EngineBadge from './components/EngineBadge'
+import SteamEngineNotices from './components/SteamEngineNotices'
+import { useSteamEngineState } from 'frontend/state/SteamEngineState'
 import { hasAnticheatInfo } from 'frontend/hooks/hasAnticheatInfo'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 import Genres from './components/Genres'
@@ -215,6 +218,24 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const [currentTab, setCurrentTab] = useState<
     'info' | 'achievements' | 'extra' | 'requirements'
   >('info')
+
+  // Phase 59 (D-04/D-06/D-13/D-14/D-15): the engine state is computed by the
+  // backend; fetch it once per title and once when a launch ends (no polling).
+  const engineState = useSteamEngineState((s) => s.byAppId[appName])
+  const wasLaunchingOrPlaying = useRef(false)
+  const launchEnded =
+    wasLaunchingOrPlaying.current && !isLaunching && !isPlaying
+  wasLaunchingOrPlaying.current = isLaunching || isPlaying
+  useEffect(() => {
+    if (runner !== 'steam' || !isMac) return
+    let cancelled = false
+    void window.api.getSteamEngineState(appName).then((result) => {
+      if (!cancelled && result) useSteamEngineState.getState().set(result)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [appName, runner, isMac, launchEnded])
 
   const previousIsPlaying = useRef<boolean>(isPlaying)
   useEffect(() => {
@@ -532,6 +553,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
                       <MacArchBadge gameInfo={gameInfo} isMac={isMac} />
 
                       <h1 style={{ opacity: art_logo ? 0 : 1 }}>{title}</h1>
+                      <EngineBadge state={engineState} />
                       <Genres
                         genres={
                           gameInfo.extra?.genres ||
@@ -540,6 +562,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
                         }
                       />
                       <Developer gameInfo={gameInfo} />
+                      <SteamEngineNotices state={engineState} />
                       <ReleaseDate
                         runnerDate={extraInfo?.releaseDate}
                         date={wikiInfo?.pcgamingwiki?.releaseDate}

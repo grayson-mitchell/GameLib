@@ -194,6 +194,41 @@
         }
       }
 
+      .engineBadge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 9999px;
+        padding: 0.15rem 0.6rem;
+        font-size: var(--text-sm);
+        font-weight: 600;
+        cursor: default;
+        margin: 0.25rem 0;
+
+        &.engineBadge--builtin {
+          background-color: var(--status-warning);
+          color: var(--body-background);
+        }
+
+        &.engineBadge--unsupported {
+          background-color: var(--status-danger);
+          color: var(--body-background);
+        }
+      }
+
+      .steamEngineNotice {
+        display: block;
+        border: 1px solid var(--neutral-03);
+        border-radius: 10px;
+        padding: 0.6rem 0.8rem;
+        margin: 0.5rem 0;
+        background-color: var(--neutral-02);
+
+        button {
+          display: inline-block;
+          margin-inline-end: 0.5rem;
+        }
+      }
+
       .gamePicture {
         position: absolute;
         left: 2px;
