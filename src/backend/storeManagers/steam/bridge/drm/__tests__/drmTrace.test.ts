@@ -244,8 +244,8 @@ describe('event=callback', () => {
 })
 
 describe('Phase 58 D-08a: peer and size evidence', () => {
-  const PEER = '76561198000000001'
-  const OTHER = '76561198000000002'
+  const PEER = '1'
+  const OTHER = '2'
   const line = (tail: string, role = 'game') =>
     `[drm-trace] appId=219990 pid=1234 role=${role} event=${tail}`
 
@@ -282,6 +282,15 @@ describe('Phase 58 D-08a: peer and size evidence', () => {
       line(`callback id=504 peer=${PEER}`),
       line(`callback id=1202 peer=0`),
       line(`callback id=1202 peer=123456789012345678901`),
+      // stale archive: a raw SteamID64 must never parse (privacy, D-08 restored)
+      line(`callback id=1202 peer=76561198000000001`),
+      line(`p2p op=accept peer=76561198000000001 ok=1`),
+      line(`p2p op=send peer=76561198000000001 bytes=8`),
+      line(`p2p op=read peer=76561198000000001 bytes=8`),
+      // table-full marker is never a match
+      line(`callback id=1202 peer=overflow`),
+      line(`p2p op=send peer=overflow bytes=8`),
+      line(`callback id=1202 peer=01`),
       line(`callback id=1202 peer=${PEER} resp=1`),
       line(`p2p op=send peer=0 bytes=1`),
       line(`p2p op=send peer=${PEER} bytes=4294967296`),

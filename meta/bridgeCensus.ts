@@ -2335,7 +2335,7 @@ const DRM_RECV_SUFFIXES = [
   '_ReceiveMessagesOnChannel'
 ]
 
-/** D-08a clause names only: never a SteamID (T-58-15). */
+/** D-08a clause names only: never a peer value or SteamID (T-58-15). */
 function legacyP2pMissing(p: {
   request: boolean
   accepted: boolean

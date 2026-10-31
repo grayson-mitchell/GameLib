@@ -2036,7 +2036,7 @@ describe('58-05: multiplayer evidence (D-08)', () => {
     })
 
     describe('D-08a legacy P2P join', () => {
-      const PEER = '76561198000000001'
+      const PEER = '1'
       const REQ = t(`event=callback id=1202 peer=${PEER}`)
       const ACC = t(`event=p2p op=accept peer=${PEER} ok=1`)
       const PSEND = t(`event=p2p op=send peer=${PEER} bytes=32`)
@@ -2061,14 +2061,14 @@ describe('58-05: multiplayer evidence (D-08)', () => {
         ])
         expect(v).toMatchObject({ status: 'verified', join: true })
         expect(v.detail).toContain('D-08a')
-        expect(v.detail).not.toContain(PEER)
+        expect(v.detail).not.toMatch(/peer=|\d{15,}/)
       })
 
       it('stays unverified without the Accept and names the missing clause', () => {
         const v = drm([anchor, create, REQ, SENDCALL, PSEND, READCALL, PREAD])
         expect(v.status).toBe('unverified')
         expect(v.detail).toContain('no Accept after 1202 for that peer')
-        expect(v.detail).not.toContain(PEER)
+        expect(v.detail).not.toMatch(/peer=|\d{15,}/)
       })
 
       it('stays unverified when the traffic names a different peer', () => {
@@ -2078,12 +2078,30 @@ describe('58-05: multiplayer evidence (D-08)', () => {
           REQ,
           ACC,
           SENDCALL,
-          t('event=p2p op=send peer=76561198000000002 bytes=32'),
+          t('event=p2p op=send peer=2 bytes=32'),
           READCALL,
           PREAD
         ])
         expect(v.status).toBe('unverified')
         expect(v.detail).toContain('no nonzero send to the peer')
+      })
+
+      it('stays unverified on a stale archive that traces raw SteamID64s or overflow', () => {
+        const ID = '76561198000000001'
+        for (const tail of [ID, 'overflow']) {
+          const v = drm([
+            anchor,
+            create,
+            t(`event=callback id=1202 peer=${tail}`),
+            t(`event=p2p op=accept peer=${tail} ok=1`),
+            SENDCALL,
+            t(`event=p2p op=send peer=${tail} bytes=32`),
+            READCALL,
+            t(`event=p2p op=read peer=${tail} bytes=16`)
+          ])
+          expect(v.status).toBe('unverified')
+          expect(v.detail).not.toContain(ID)
+        }
       })
 
       it('does not widen the 504 / 1221 path: a delivered 1221 state=1 blocks it', () => {

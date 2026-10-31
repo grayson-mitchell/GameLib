@@ -17,12 +17,12 @@ Measured 2026-10-31 by plan 58-08 Task 1. Read-only: `strings -a` and a Python b
 (it names every type). macOS `strings` has no `-e`, so UTF-16 user strings were counted with Python; every UTF-16 count is 0.
 
 Archive (not uploaded), REBUILT 2026-10-31 by plan 58-08 under the operator's "Extend the trace" decision (D-08a trace fields; see Review part e):
-`build/steamclient-layer-cx26.3.0.39832-p58.tar.gz`, sha256 `0dd202aabc599556871b2000fada6409670b9d7136b343721d361fe25f1ba010`, size 5364395.
+`build/steamclient-layer-cx26.3.0.39832-p58.tar.gz`, sha256 `4390a08746f70f6d6a47235b86a968396290e239b87a3538f32222e233c2f3b1`, size 5365254 (rebuilt again for ordinal peers; supersedes the interim 0dd202aa... archive, size 5364395, which traced raw SteamID64s and must not be published).
 It REPLACES the 58-04 archive (sha256 `53780308f648eff14f6f162721a1446ee9af0a208cb52e9e31eff51cff06e8c5`, size 5360143), which is superseded and must not be published.
 Built with `pnpm build:lsteamclient --base wine` then `pnpm build:steamclient-layer-archive --out ...` (the CrossOver base cannot build; PINS.md D-19). Seven
 `GAMELIB-DRM-TRACE BEGIN` blocks in steamclient_main.c (extended in place). Members (the builder's per-file output): LICENSE.lsteamclient, detour-cx26.3.0.39832.bin,
 lsteamclient.so and steam.exe are byte-equal to 58-04-SUMMARY; NOTICE is now sha256 `289a650147ae83aff4f8412ac98323ab30720810b84349c37d10503a2c4995a9` size 4129 and
-lsteamclient.dll is now sha256 `d718a492e5bfa38f757744c4db445452ee018fd6a15a2627d555cf2d4f2963e1` size 33930155. The builder printed `pinned: MISMATCH (file NOTICE)` and exit 3, as
+lsteamclient.dll is now sha256 `ef252a424d13130ba504d55957ab81961a34873e357899171d0a71dc5128df70` size 33934643. The builder printed `pinned: MISMATCH (file NOTICE)` and exit 3, as
 for 58-04: the catalogue (`src/common/steamclientLayerCatalogue.ts`) still pins the Phase 56 archive until Task 4. Publish target: asset
 `steamclient-layer-cx26.3.0.39832-p58.tar.gz` added to the existing tag `steamclient-layer-cx26.3.0.39832` in grayson-mitchell/GameLib, no `--clobber`.
 
@@ -206,16 +206,17 @@ no Raft session left open from a prior run on either machine.
 
 First read 2026-10-31 against the 58-04 trace (gaps found), then CLOSED the same day by the operator-approved scope extension "Extend the trace"
 (commits f3df38704 layer, 063041e8b parser and census). New trace lines, all `role=game`-scoped by the same role tag as every other line:
-`event=callback id=1202 peer=<steamid64>` (P2PSessionRequest_t.m_steamIDRemote), `event=p2p op=accept peer=<steamid64> ok=0|1`,
-`event=p2p op=send peer=<steamid64> bytes=<n>` (send returned true), `event=p2p op=read peer=<steamid64> bytes=<n>` (read returned true).
+`event=callback id=1202 peer=<ordinal>` (P2PSessionRequest_t.m_steamIDRemote), `event=p2p op=accept peer=<ordinal> ok=0|1`,
+`event=p2p op=send peer=<ordinal> bytes=<n>` (send returned true), `event=p2p op=read peer=<ordinal> bytes=<n>` (read returned true).
 Volume scheme: one line per distinct key (1202 per peer; accept per peer and result; send and read per peer and zero/nonzero size), at most 32 such lines per launch,
-so the first nonzero send and read per peer is always kept even if zero-length packets arrive first. SteamIDs appear in the trace file and the SIDECAR re-log; per
-this file's capture rule they stay in `<session>` and are never copied into any committed file.
+so the first nonzero send and read per peer is always kept even if zero-length packets arrive first. `peer=` is a per-launch ORDINAL (1, 2, ... assigned on first sight of each distinct SteamID64, table of 16; a full table writes `peer=overflow`, which never
+matches). The raw SteamID64 is read only to look up the ordinal and is written nowhere, so the SIDECAR re-log and uploaded logs carry no real peer ID (operator
+decision 2026-10-31; D-08 "no SteamID in the trace" restored). Ordinals are per launch and per process: X means the same peer only within one trace file.
 
 | D-08a clause | Observable on the Mac by the extended trace? | Detail |
 | ------------ | -------------------------------------------- | ------ |
 | (1) host: `role=game` delivery of 1202 | YES | `event=callback id=1202`. |
-| (1) "naming the joiner's SteamID" | YES | `id=1202 peer=X` carries the payload SteamID64. |
+| (1) "naming the joiner's SteamID" | YES | `id=1202 peer=X` carries the peer's per-launch ordinal (mapped from the payload SteamID64, which is not written). |
 | (1) followed by the game's own `AcceptP2PSessionWithUser` for that SteamID | YES | `event=p2p op=accept peer=X` on a LATER line than `id=1202 peer=X`; `ok=` records whether Steam had a pending request. D-08a asks for the call, so `ok=0` still satisfies the clause. |
 | (2) game `SendP2PPacket` with nonzero payload addressed to the peer | YES | `op=send peer=X bytes=N`, N > 0, logged only when the send returned true. |
 | (2) game `ReadP2PPacket` with nonzero payload received from the peer | YES | `op=read peer=X bytes=N`, N > 0, logged only when the read returned true; the peer is the `*psteamIDRemote` out-param. |
@@ -224,7 +225,7 @@ this file's capture rule they stay in `<session>` and are never copied into any 
 | census `verified` | YES for Direction A | `classifyMultiplayerEvidence` verifies `join` under D-08a when no 504 or 1221 was delivered and ONE peer X has: 1202(X), a later Accept(X), a nonzero send to X, a nonzero read from X. The 504 resp=1 / 1221 state=3 path is unchanged. The census cannot see assemblies, so D-08a's precondition ("neither 504 nor 1221 referenced") stays the pre-gate measurement's job; the census only requires that neither was delivered. Direction B prints `unverified` ("no 1202 naming a peer"), by design. |
 
 Consequence: every D-08a clause the Mac can see is now trace-backed; nothing rests on the operator's statement except (c) (same world, mutual movement) and the
-unobservable peer-PC half in Direction B. Fail-closed notes: a trace from the superseded 58-04 archive has bare `id=1202` and no `p2p` lines and cannot satisfy these
+unobservable peer-PC half in Direction B. Fail-closed notes: a trace from the superseded 58-04 archive has bare `id=1202` and no `p2p` lines, and a trace from the superseded f3df38704 archive carries raw SteamID64 `peer=` values (the parser rejects them), so neither can satisfy these
 sub-checks; a peer whose first read/send is zero-length is still recorded once as `bytes=0` and does not count.
 
 ## 4. Tests
@@ -236,7 +237,7 @@ expected: after launch 1 starts, `COMPDIR` exists and the sha256 of its six file
 result: pending
 
 ### 2. Direction A: GameLib hosts, peer joins
-expected: sub-checks, all from launch 1. (a) scored per D-08a (Raft is `1202-only`), on `trace-launch-1.log` (Mac is host; sink TRACEDIR raw file, cross-checked in SIDECAR re-log), with X = the `peer=` value of the first `role=game` `event=callback id=1202 peer=` line: (a1) that line exists; (a2) `grep -n 'role=game event=p2p op=accept peer=X'` is non-empty with a line number greater than the `id=1202 peer=X` line (the `ok=` value is recorded, not scored); (a3) `role=game event=p2p op=send peer=X bytes=N` with N > 0 AND `role=game event=p2p op=read peer=X bytes=N` with N > 0 (X identical on all four lines; also `role=game event=call name=` lines ending `_SendP2PPacket` and `_ReadP2PPacket`). The operator additionally confirms in (c) that the peer's account is the one that joined (X is not copied into any repo file). Also record `id=337` presence (not scored). (b) `trace-launch-1.log` holds at least one `role=game event=call name=` for a send (e.g. SendP2PPacket / SendMessages) and one for a receive (e.g. ReadP2PPacket / ReceiveMessages), and no helper line is used. (c) The operator confirms both players are in the same world and each sees the other move. (d) run `pnpm bridge-census --multiplayer 648800 --drm | tee <session>/census-launch-1.txt` and record the output. It is expected to print `verified` with detail `game join (D-08a legacy P2P), send and receive observed`, and `join`, `send`, `recv` true; that output corroborates (a1)-(a3) and is scored with them (a census `unverified` here with a D-08a clause named is a FAIL of the matching sub-check). Path: from `lsof-launch-1.txt`, a LAN peer address means direct, a Valve relay address means relayed; the path is recorded, not scored (D-06).
+expected: sub-checks, all from launch 1. (a) scored per D-08a (Raft is `1202-only`), on `trace-launch-1.log` (Mac is host; sink TRACEDIR raw file, cross-checked in SIDECAR re-log), with X = the `peer=` value of the first `role=game` `event=callback id=1202 peer=` line: (a1) that line exists; (a2) `grep -n 'role=game event=p2p op=accept peer=X'` is non-empty with a line number greater than the `id=1202 peer=X` line (the `ok=` value is recorded, not scored); (a3) `role=game event=p2p op=send peer=X bytes=N` with N > 0 AND `role=game event=p2p op=read peer=X bytes=N` with N > 0 (X identical on all four lines; also `role=game event=call name=` lines ending `_SendP2PPacket` and `_ReadP2PPacket`). The operator additionally confirms in (c) that the peer's account is the one that joined (X is only an ordinal, 1 for the first peer seen). Also record `id=337` presence (not scored). (b) `trace-launch-1.log` holds at least one `role=game event=call name=` for a send (e.g. SendP2PPacket / SendMessages) and one for a receive (e.g. ReadP2PPacket / ReceiveMessages), and no helper line is used. (c) The operator confirms both players are in the same world and each sees the other move. (d) run `pnpm bridge-census --multiplayer 648800 --drm | tee <session>/census-launch-1.txt` and record the output. It is expected to print `verified` with detail `game join (D-08a legacy P2P), send and receive observed`, and `join`, `send`, `recv` true; that output corroborates (a1)-(a3) and is scored with them (a census `unverified` here with a D-08a clause named is a FAIL of the matching sub-check). Path: from `lsof-launch-1.txt`, a LAN peer address means direct, a Valve relay address means relayed; the path is recorded, not scored (D-06).
 result: pending
 
 ### 3. Direction B: peer hosts, GameLib joins

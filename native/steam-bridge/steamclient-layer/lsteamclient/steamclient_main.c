@@ -17,9 +17,9 @@
  *   [drm-trace] appId=<id> pid=<n> role=game|helper event=create-interface iface=<name>
  *   [drm-trace] appId=<id> pid=<n> role=game|helper event=call name=<ISteam..._Method>
  * Phase 58 D-08a adds three more shapes (see gamelib_trace_p2p and gamelib_trace_callback):
- *   [drm-trace] ... event=callback id=1202 peer=<steamid64>
- *   [drm-trace] ... event=p2p op=accept peer=<steamid64> ok=0|1
- *   [drm-trace] ... event=p2p op=send|read peer=<steamid64> bytes=<n>
+ *   [drm-trace] ... event=callback id=1202 peer=<ordinal>
+ *   [drm-trace] ... event=p2p op=accept peer=<ordinal> ok=0|1
+ *   [drm-trace] ... event=p2p op=send|read peer=<ordinal> bytes=<n>
  */
 /* GAMELIB-DRM-TRACE END */
 #include <stdarg.h>
@@ -260,7 +260,8 @@ static void gamelib_trace_call(const char *name)
 }
 
 /* Phase 58 D-08a: bounded SteamID and size evidence for the legacy P2P join path.
- * A SteamID64 is formatted as a decimal u64, nothing else from a packet or payload is read.
+ * The raw SteamID64 is read only to be mapped to a per-launch ordinal (1, 2, ...) and is never
+ * formatted or written anywhere; nothing else from a packet or payload is read.
  * Scheme: each distinct key (callback 1202 per peer; accept per peer and result; send and read
  * per peer and zero/nonzero size) is written at most once, and at most GAMELIB_TRACE_MAX_P2P
  * lines are written per launch, so a long session cannot crowd out the join evidence. */
@@ -274,6 +275,37 @@ static UINT64 gamelib_trace_u64(const void *p)
     int i;
     for (i = 7; i >= 0; i--) v = (v << 8) | b[i];
     return v;
+}
+
+/* Per-launch peer ordinals: first sight of a distinct SteamID64 gets the next small integer. The
+ * table is bounded and lock-protected; the ID itself never leaves it. Returns 0 when the table is
+ * full, which the writers render as peer=overflow (the census never treats that as a match). */
+#define GAMELIB_TRACE_MAX_PEERS 16
+static UINT64 gamelib_trace_peer_ids[GAMELIB_TRACE_MAX_PEERS];
+static unsigned int gamelib_trace_peer_count;
+
+static unsigned int gamelib_trace_peer_ordinal(UINT64 id)
+{
+    unsigned int i, ord = 0;
+
+    EnterCriticalSection( &gamelib_trace_cs );
+    for (i = 0; i < gamelib_trace_peer_count; i++)
+        if (gamelib_trace_peer_ids[i] == id) { ord = i + 1; break; }
+    if (!ord && gamelib_trace_peer_count < GAMELIB_TRACE_MAX_PEERS)
+    {
+        gamelib_trace_peer_ids[gamelib_trace_peer_count++] = id;
+        ord = gamelib_trace_peer_count;
+    }
+    LeaveCriticalSection( &gamelib_trace_cs );
+    return ord;
+}
+
+/* peer text: decimal ordinal, or "overflow" */
+static void gamelib_trace_peer_text(UINT64 id, char *out, size_t n)
+{
+    unsigned int ord = gamelib_trace_peer_ordinal( id );
+    if (ord) snprintf( out, n, "%u", ord );
+    else snprintf( out, n, "overflow" );
 }
 
 /* TRUE exactly once per key, and only while the P2P line budget lasts. */
@@ -310,22 +342,23 @@ static BOOL gamelib_trace_claim(const char *key, int klen)
 
 static void gamelib_trace_p2p(const char *op, UINT64 peer, BOOL has_bytes, uint32_t bytes, BOOL ok)
 {
-    char buf[512], key[96];
+    char buf[512], key[96], ptxt[16];
     int klen, out;
 
     if (!gamelib_trace_enabled) return;
-    klen = snprintf( key, sizeof(key), "p2p:%s:%llu:%u", op, (unsigned long long)peer,
+    gamelib_trace_peer_text( peer, ptxt, sizeof(ptxt) );
+    klen = snprintf( key, sizeof(key), "p2p:%s:%s:%u", op, ptxt,
                      has_bytes ? (bytes ? 1u : 0u) : (ok ? 1u : 0u) );
     if (klen <= 0 || (size_t)klen >= sizeof(key)) return;
     if (!gamelib_trace_claim( key, klen )) return;
     if (has_bytes)
-        out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=p2p op=%s peer=%llu bytes=%u\n",
+        out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=p2p op=%s peer=%s bytes=%u\n",
                         gamelib_trace_appid, (unsigned long)GetCurrentProcessId(), gamelib_trace_role, op,
-                        (unsigned long long)peer, (unsigned int)bytes );
+                        ptxt, (unsigned int)bytes );
     else
-        out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=p2p op=%s peer=%llu ok=%d\n",
+        out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=p2p op=%s peer=%s ok=%d\n",
                         gamelib_trace_appid, (unsigned long)GetCurrentProcessId(), gamelib_trace_role, op,
-                        (unsigned long long)peer, ok ? 1 : 0 );
+                        ptxt, ok ? 1 : 0 );
     if (out > 0 && (size_t)out < sizeof(buf)) gamelib_trace_write( buf, out );
 }
 
@@ -379,8 +412,8 @@ static void gamelib_trace_p2p_call(const char *name, const void *args) { (void)n
 #endif
 
 /* Phase 58 D-08: join-signal callbacks the game drains. Only an integer id from a closed set is
- * written, plus one enum integer for 504 and 1221, and (D-08a) the SteamID64 of the remote peer
- * for 1202. No handle or other payload byte is ever formatted. payload/cub are the Windows-side buffer; a size too small to hold the enum
+ * written, plus one enum integer for 504 and 1221, and (D-08a) the per-launch peer ordinal of the
+ * remote peer for 1202 (never the SteamID64). No handle or other payload byte is ever formatted. payload/cub are the Windows-side buffer; a size too small to hold the enum
  * means the value is omitted. */
 static const int32_t gamelib_trace_callback_ids[] =
 {
@@ -416,13 +449,14 @@ static void gamelib_trace_callback(int32_t id, const void *payload, uint32_t cub
     if (id == 1202 && payload && cub >= 8)
     {
         /* P2PSessionRequest_t { CSteamID m_steamIDRemote; } */
-        UINT64 peer = gamelib_trace_u64( payload );
-        klen = snprintf( key, sizeof(key), "cb:1202:%llu", (unsigned long long)peer );
+        char ptxt[16];
+        gamelib_trace_peer_text( gamelib_trace_u64( payload ), ptxt, sizeof(ptxt) );
+        klen = snprintf( key, sizeof(key), "cb:1202:%s", ptxt );
         if (klen > 0 && (size_t)klen < sizeof(key) && gamelib_trace_claim( key, klen ))
         {
-            out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=callback id=1202 peer=%llu\n",
+            out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=callback id=1202 peer=%s\n",
                             gamelib_trace_appid, (unsigned long)GetCurrentProcessId(), gamelib_trace_role,
-                            (unsigned long long)peer );
+                            ptxt );
             if (out > 0 && (size_t)out < sizeof(buf)) gamelib_trace_write( buf, out );
         }
         return;

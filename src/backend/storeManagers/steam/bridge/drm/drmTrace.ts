@@ -43,7 +43,7 @@ export type DrmTraceEvent = {
       event: 'callback'
       id: number
       detail?: { key: 'resp' | 'state'; value: number }
-      /** Phase 58 D-08a: SteamID64 (decimal) of the remote peer; only on id 1202. */
+      /** Phase 58 D-08a: per-launch peer ordinal (1..16, never a SteamID64); only on id 1202. */
       peer?: string
     }
   | ({ event: 'p2p' } & DrmP2pOp)
@@ -93,9 +93,9 @@ const TRACE_CREATE_RE =
 const TRACE_CALL_RE =
   /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=call name=([A-Za-z0-9_]{1,128})$/
 const TRACE_CALLBACK_RE =
-  /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=callback id=([1-9]\d{0,4})(?: (?:(resp|state)=(-?\d{1,3})|peer=(\d{1,20})))?$/
+  /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=callback id=([1-9]\d{0,4})(?: (?:(resp|state)=(-?\d{1,3})|peer=([1-9]\d?)))?$/
 const TRACE_P2P_RE =
-  /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=p2p op=(?:(accept) peer=(\d{1,20}) ok=([01])|(send|read) peer=(\d{1,20}) bytes=(\d{1,10}))$/
+  /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=p2p op=(?:(accept) peer=([1-9]\d?) ok=([01])|(send|read) peer=([1-9]\d?) bytes=(\d{1,10}))$/
 
 const MAX_U32 = 4294967295
 const MAX_DRM_P2P_EVENTS = 256
