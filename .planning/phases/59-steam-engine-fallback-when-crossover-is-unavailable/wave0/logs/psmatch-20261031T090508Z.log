@@ -1,0 +1,3 @@
+# psmatch 20261031T090508Z WORK=/var/folders/f7/stgr185j04g2hm431z971xl40000gn/T//gl59-psmatch.rJq93c
+ps: 11624 C:\Games\Probe\probecmd.exe /c ping -n 25 127.0.0.1 
+staging_monitor_match: yes

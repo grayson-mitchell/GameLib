@@ -1,0 +1,19 @@
+# dxvk 20261031T090419Z WORK=/var/folders/f7/stgr185j04g2hm431z971xl40000gn/T//gl59-dxvk.z3t9N1
+source bottle (read-only clone source): /Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-1284190
+cx_bottle_has_update_timestamp: yes
+before sha system32 d3d11: 9fb42c6df2774386  syswow64 d3d11: 73ab10471fe377d5
+--- backup (Staging)
+reg: The operation completed successfully
+reg: The operation completed successfully
+after-backup sha system32 d3d11: 0ff0b0835dde2955
+--- restore (CrossOver)
+reg: The operation completed successfully
+reg: The operation completed successfully
+wineboot -u (cx) rc=0
+post-restore sha system32 d3d11: 9fb42c6df2774386  syswow64 d3d11: 73ab10471fe377d5
+DllOverride DXVK names remaining in user.reg: 0
+
+Microsoft Windows 10.0.19045
+cmd /c ver (cx) rc=0
+dxvk_restore_clean: yes
+dxvk_restore_engine: crossover
