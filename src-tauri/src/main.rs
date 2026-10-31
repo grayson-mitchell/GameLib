@@ -59,6 +59,14 @@ mod macos_epic_embed;
 // `UNUserNotificationCenter` -- see that module's doc comment for the mechanism.
 #[cfg(target_os = "macos")]
 mod macos_notifications;
+// Quick task 261031-mj9 (from spike 051): gilrs-backed gamepad source for pads WKWebView does
+// not expose.
+#[cfg(target_os = "macos")]
+mod macos_native_gamepad;
+// Its cfg-free half (pad id, button/axis/hat shaping), kept out of the macOS-only module so
+// `cargo test` covers it on Linux/Windows too.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod native_gamepad_shape;
 // Its cfg-free half (backend selection, authorization-status -> error-string contract), kept out
 // of the macOS-only module so `cargo test` covers it on Linux/Windows too.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
@@ -12697,6 +12705,10 @@ fn main() {
             // macOS builds (no-op elsewhere); see `macos_notifications`' module doc. Non-blocking.
             #[cfg(target_os = "macos")]
             macos_notifications::init_at_startup();
+            // Quick task 261031-mj9: native gamepad reader thread. Non-blocking and infallible
+            // (failures are logged inside), since setup must not panic -- see the SIGABRT note below.
+            #[cfg(target_os = "macos")]
+            macos_native_gamepad::start(app.handle().clone());
             // A spawn failure used to propagate through this `?`. Tauri turns a setup error into
             // a panic (`app.rs:1425`), and that panic unwinds out of `did_finish_launching` — an
             // `extern "C"` ObjC callback — so it became `panic_cannot_unwind` -> `SIGABRT`. The

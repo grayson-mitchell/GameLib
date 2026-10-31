@@ -138,6 +138,9 @@ tauri-plugin-deep-link = "2"
 # same `tauri` dependency graph node; `version = "2"` is repeated here anyway so this table
 # reads standalone and matches every other entry's own explicit-`version` convention.
 tauri = { version = "2", features = ["unstable"] }
+# Quick task 261031-mj9 (from spike 051): native gamepad reader for pads WKWebView does not
+# expose (see `src/macos_native_gamepad.rs`). macOS-only, so Linux/Windows never resolve it.
+gilrs = "0.11"
 block2 = "0.6.2"
 objc2 = "0.6.4"
 # `NSAlert`/`NSApplication`/`NSButton`/`NSControl`/`NSResponder`/`NSTextField` added for the
