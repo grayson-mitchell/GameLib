@@ -36,7 +36,7 @@ and never committed.
 | `unix_steam_input_manual.cpp` | `3f9e3390a9c4b060a367a312d61f84fc3690141ef34811484b3c21481d7583a7` |
 
 - `unixlib.cpp` and `unix_steam_input_manual.cpp` are committed byte-for-byte.
-- GameLib `steamclient_main.c` sha256 (as committed): `389163118ed2f69ed358999967de8cec625fa49dcf459c6d085ec6336e1bf878`.
+- GameLib `steamclient_main.c` sha256 (as committed): `6fab6375ae1afff6e3f4644440ca9c5fe108bd58a6e0e6279380dca93ce4f543` (was `389163118e...` before the GetAppBuildId fixup below).
 - Strip rule: deleting every block from a line whose trimmed content is
   `/* GAMELIB-DRM-TRACE BEGIN (Phase 56 D-15/D-16) */` through the line whose trimmed content is
   `/* GAMELIB-DRM-TRACE END */`, marker lines included, reproduces the upstream bytes exactly. There
@@ -61,6 +61,14 @@ and never committed.
   is now written to the trace file"); that archive (raw IDs) is withdrawn and unpublished. The census
   checks equality on the ordinal, which is stable within one launch's process. Captures stay in `/tmp`
   and are never committed (56-SECURITY T-56-15-03).
+- raft-drm-build-id-mismatch (2026-10-31) extends blocks 2 and 4 in place (the count stays seven).
+  Block 4's `steamclient_call` hook calls `gamelib_apps_call`, which for `ISteamApps_..._GetAppBuildId`
+  (007/008) replaces Mac Steam's answer with the `buildid` of `C:\Program Files (x86)\Steam\steamapps\appmanifest_<SteamGameId>.acf`
+  when that file exists and parses; otherwise Mac Steam's answer stands. It runs whether or not tracing is
+  enabled. Trace shape: `event=apps op=build-id|build-id-given ret=<int>` (two integers, no ID; the
+  census parser ignores it). Audit: the Raft host trace shows only `GetAppBuildId` among ISteamApps
+  calls, so `GetCurrentBetaName`, `BIsAppInstalled`, `GetAppInstallDir`, `BIsSubscribedApp`,
+  `GetInstalledDepots` and `GetLaunchCommandLine` are deliberately not rewritten (no evidence a game needs it).
 - Known deviation: upstream `fetch.sh` also copies
   `steamworks_sdk_165x/isteamnetworkingsocketsserialized.h` and applies `serialized005.patch`
   (NotProton commit `1893a3a`, 2026-10-17). It adds `SteamNetworkingSocketsSerialized005`, which none

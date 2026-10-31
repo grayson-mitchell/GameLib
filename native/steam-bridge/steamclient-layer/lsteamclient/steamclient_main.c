@@ -411,6 +411,95 @@ static void gamelib_trace_p2p_call(const char *name, const void *args)
 static void gamelib_trace_p2p_call(const char *name, const void *args) { (void)name; (void)args; }
 #endif
 
+/* Phase 58 (raft-drm-build-id-mismatch): ISteamApps::GetAppBuildId in DRM mode.
+ * The call is forwarded to native Mac Steam, which has no install record for a game GameLib
+ * installed itself, so it answers a build id that is not the installed one. Raft's join check
+ * compares that id with the host's, so a peer on the real build rejects the join. Fix: when the
+ * bottle holds the app's own appmanifest, report its "buildid", the id Windows Steam would report
+ * for the same files. No manifest, an unreadable one, or a missing field leaves Mac Steam's answer
+ * untouched. The two integers (Mac Steam's answer, the answer given) are traced; nothing else.
+ * Raft calls no other ISteamApps method (host trace 2026-10-31); the layout of _ret is identical
+ * across ISteamApps 007 and 008, the only versions that have GetAppBuildId. */
+#if defined(__x86_64__)
+static void gamelib_apps_emit(const char *op, long ret)
+{
+    char buf[256], key[64];
+    int klen, out;
+
+    klen = snprintf( key, sizeof(key), "apps:%s:%ld", op, ret );
+    if (klen <= 0 || (size_t)klen >= sizeof(key) || !gamelib_trace_claim( key, klen )) return;
+    out = snprintf( buf, sizeof(buf), "[drm-trace] appId=%s pid=%lu role=%s event=apps op=%s ret=%ld\n",
+                    gamelib_trace_appid, (unsigned long)GetCurrentProcessId(), gamelib_trace_role, op, ret );
+    if (out > 0 && (size_t)out < sizeof(buf)) gamelib_trace_write( buf, out );
+}
+
+/* Returns the manifest buildid (> 0), or 0 when it cannot be read. */
+static int32_t gamelib_apps_manifest_buildid(void)
+{
+    static const char field[] = "\"buildid\"";
+    WCHAR idw[16], path[MAX_PATH];
+    char data[16384];
+    HANDLE file;
+    DWORD n, got = 0, i;
+    int pos;
+    int64_t v = 0;
+
+    n = GetEnvironmentVariableW( L"SteamGameId", idw, ARRAY_SIZE(idw) );
+    if (!n || n > 10) return 0;
+    for (i = 0; i < n; i++) if (idw[i] < '0' || idw[i] > '9') return 0;
+    pos = swprintf( path, ARRAY_SIZE(path), L"C:\\Program Files (x86)\\Steam\\steamapps\\appmanifest_%ls.acf", idw );
+    if (pos <= 0) return 0;
+    file = CreateFileW( path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+                        FILE_ATTRIBUTE_NORMAL, NULL );
+    if (file == INVALID_HANDLE_VALUE) return 0;
+    if (!ReadFile( file, data, sizeof(data) - 1, &got, NULL )) got = 0;
+    CloseHandle( file );
+    data[got] = 0;
+
+    for (i = 0; i + sizeof(field) - 1 < got; i++)
+    {
+        if (memcmp( data + i, field, sizeof(field) - 1 )) continue;
+        i += sizeof(field) - 1;
+        while (i < got && (data[i] == ' ' || data[i] == '\t')) i++;
+        if (i >= got || data[i] != '"') return 0;
+        for (i++; i < got && data[i] >= '0' && data[i] <= '9'; i++)
+        {
+            v = v * 10 + (data[i] - '0');
+            if (v > INT32_MAX) return 0;
+        }
+        return i < got && data[i] == '"' ? (int32_t)v : 0;
+    }
+    return 0;
+}
+
+static void gamelib_apps_call(const char *name, void *args)
+{
+    static const char prefix[] = "ISteamApps_STEAMAPPS_INTERFACE_VERSION";
+    static int32_t manifest_id;
+    static volatile LONG manifest_state; /* 0 untried, 1 resolving, 2 done */
+    struct ISteamApps_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId_params *p = args;
+    size_t len = 0;
+
+    if (!name || !args) return;
+    while (len <= 128 && name[len]) len++;
+    if (len > 128 || len <= sizeof(prefix) - 1) return;
+    if (memcmp( name, prefix, sizeof(prefix) - 1 )) return;
+    if (!gamelib_trace_ends_with( name, len, "_GetAppBuildId", 14 )) return;
+
+    if (manifest_state != 2)
+    {
+        EnterCriticalSection( &gamelib_trace_cs );
+        if (manifest_state == 0) { manifest_id = gamelib_apps_manifest_buildid(); manifest_state = 2; }
+        LeaveCriticalSection( &gamelib_trace_cs );
+    }
+    gamelib_apps_emit( "build-id", (long)p->_ret );
+    if (manifest_id > 0) p->_ret = manifest_id;
+    gamelib_apps_emit( "build-id-given", (long)p->_ret );
+}
+#else
+static void gamelib_apps_call(const char *name, void *args) { (void)name; (void)args; }
+#endif
+
 /* Phase 58 D-08: join-signal callbacks the game drains. Only an integer id from a closed set is
  * written, plus one enum integer for 504 and 1221, and (D-08a) the per-launch peer ordinal of the
  * remote peer for 1202 (never the SteamID64). No handle or other payload byte is ever formatted. payload/cub are the Windows-side buffer; a size too small to hold the enum
@@ -534,6 +623,7 @@ NTSTATUS steamclient_call( unsigned int code, void *args, const char *name )
     /* GAMELIB-DRM-TRACE BEGIN (Phase 56 D-15/D-16) */
     if (!status) gamelib_trace_call( name );
     if (!status) gamelib_trace_p2p_call( name, args );
+    if (!status) gamelib_apps_call( name, args );
     /* GAMELIB-DRM-TRACE END */
 
     if (status == STATUS_ACCESS_VIOLATION)

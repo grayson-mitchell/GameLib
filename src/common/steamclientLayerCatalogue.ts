@@ -87,11 +87,11 @@ export const STEAMCLIENT_LAYER_CATALOGUE: Readonly<
     release: {
       repo: STEAMCLIENT_LAYER_RELEASE_REPO,
       tag: 'steamclient-layer-cx26.3.0.39832',
-      asset: 'steamclient-layer-cx26.3.0.39832-p58.tar.gz'
+      asset: 'steamclient-layer-cx26.3.0.39832-p58b.tar.gz'
     },
     archiveSha256:
-      '4390a08746f70f6d6a47235b86a968396290e239b87a3538f32222e233c2f3b1',
-    archiveSize: 5365254,
+      '769d8532890613ea365c679d7fc1961b1960292cbee6b548125dac72081295e7',
+    archiveSize: 5368352,
     files: [
       {
         path: 'LICENSE.lsteamclient',
@@ -117,8 +117,8 @@ export const STEAMCLIENT_LAYER_CATALOGUE: Readonly<
       {
         path: 'lsteamclient.dll',
         sha256:
-          'ef252a424d13130ba504d55957ab81961a34873e357899171d0a71dc5128df70',
-        size: 33934643,
+          '8257505948f8f5edc2421607eb1b74f509480c9e2d44d46a067f78e0610fd5f1',
+        size: 33936281,
         licence: 'Steamworks-SDK-License'
       },
       {
