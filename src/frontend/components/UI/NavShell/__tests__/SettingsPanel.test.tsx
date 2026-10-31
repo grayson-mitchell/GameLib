@@ -228,6 +228,7 @@ describe('SettingsPanel', () => {
       'Appearance',
       'Log',
       'System Information',
+      'Report a problem',
       'Documentation',
       'About',
       'Donate',

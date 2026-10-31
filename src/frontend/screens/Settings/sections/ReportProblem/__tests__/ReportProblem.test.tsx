@@ -186,9 +186,8 @@ describe('ReportProblem', () => {
     let tree = render()
     typeMessage(tree, 'it broke')
     tree = render()
-    await (
-      byTestId(tree, 'report-send')?.props.onClick as () => Promise<void>
-    )()
+    ;(byTestId(tree, 'report-send')?.props.onClick as () => void)()
+    await flush()
     expect(mockSubmit).toHaveBeenCalledTimes(1)
     expect(mockSubmit.mock.calls[0][0]).toMatchObject({
       message: 'it broke',
@@ -212,9 +211,8 @@ describe('ReportProblem', () => {
     tree = render()
     typeMessage(tree, 'it broke')
     tree = render()
-    await (
-      byTestId(tree, 'report-send')?.props.onClick as () => Promise<void>
-    )()
+    ;(byTestId(tree, 'report-send')?.props.onClick as () => void)()
+    await flush()
     expect(mockCollect).not.toHaveBeenCalled()
     expect(mockSubmit.mock.calls[0][0].diagnostics).toBeUndefined()
   })
@@ -224,9 +222,8 @@ describe('ReportProblem', () => {
     let tree = render()
     typeMessage(tree, 'it broke')
     tree = render()
-    await (
-      byTestId(tree, 'report-send')?.props.onClick as () => Promise<void>
-    )()
+    ;(byTestId(tree, 'report-send')?.props.onClick as () => void)()
+    await flush()
     tree = render()
     expect(textOf(byTestId(tree, 'report-error'))).toMatch(/connect|internet/i)
     expect(byTestId(tree, 'report-message')?.props.value).toBe('it broke')
@@ -237,9 +234,8 @@ describe('ReportProblem', () => {
     let tree = render()
     typeMessage(tree, 'it broke')
     tree = render()
-    await (
-      byTestId(tree, 'report-send')?.props.onClick as () => Promise<void>
-    )()
+    ;(byTestId(tree, 'report-send')?.props.onClick as () => void)()
+    await flush()
     tree = render()
     expect(byTestId(tree, 'report-thanks')).toBeDefined()
     expect(byTestId(tree, 'report-message')?.props.value).toBe('')

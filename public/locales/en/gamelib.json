@@ -369,6 +369,30 @@
         "title": "Redeem a Steam key",
         "viewInLibrary": "View in library"
     },
+    "reportProblem": {
+        "email": "Email for a reply (optional)",
+        "emailHint": "Only used to answer this report.",
+        "error": {
+            "generic": "Your report couldn't be sent. Please try again in a bit. What you typed is still here.",
+            "network": "Couldn't connect. Check your internet connection and try again.",
+            "notConfigured": "Reporting isn't set up in this build.",
+            "rateLimited": "Too many reports were sent just now. Please wait a little and try again."
+        },
+        "includeDiagnostics": "Include diagnostics",
+        "includeDiagnosticsHint": "Your app version, system, and recent logs help us find the problem. Personal info such as your username and account names is removed first.",
+        "navLabel": "Report a problem",
+        "noDiagnostics": "No diagnostics will be sent.",
+        "noGame": "None",
+        "notConfigured": "Reporting isn't set up in this build, so reports can't be sent.",
+        "previewLoading": "Collecting...",
+        "send": "Send",
+        "sending": "Sending...",
+        "thanks": "Thank you! Your report was sent.",
+        "title": "Report a problem",
+        "whatHappened": "What happened?",
+        "whatWillBeSent": "What will be sent",
+        "whichGame": "Which game? (optional)"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "The EOS Overlay is unavailable in this build",

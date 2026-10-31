@@ -159,6 +159,10 @@ export default function SettingsPanel() {
         label={t('settings.navbar.systemInformation', 'System Information')}
       />
       <NavItem
+        url="/settings/report"
+        label={tGamelib('gamelib:reportProblem.navLabel', 'Report a problem')}
+      />
+      <NavItem
         url="/wiki"
         icon={faBookOpen}
         label={t('docs', 'Documentation')}
