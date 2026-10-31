@@ -50,6 +50,8 @@ jest.mock('react', () => ({
   useContext: () => mockContext
 }))
 
+jest.mock('../index.css', () => ({}))
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_k: string, d: string) => d

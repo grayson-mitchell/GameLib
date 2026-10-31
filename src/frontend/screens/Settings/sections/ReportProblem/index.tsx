@@ -10,6 +10,7 @@ import {
 } from 'frontend/helpers/reportProblem'
 
 import type { GameInfo } from 'common/types'
+import './index.css'
 
 type Status = 'idle' | 'sending' | 'sent' | 'error'
 
