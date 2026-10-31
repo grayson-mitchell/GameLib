@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 58 (steam-bridge-multiplayer) — EXECUTING
 Plan: 15 of 24
 Status: Ready to execute
-Last activity: 2026-10-31
+Last activity: 2026-10-31 - Completed quick task 261031-kqr: Rename Accessibility settings screen to Appearance
 
 Progress: [█████████░] 94%
 
@@ -543,6 +543,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261031-i0q | Steam Refresh now adds licensed demos: `getUserOwnedApps` never returns demos (spike 052), so `licensedDemos.ts` reads `client.licenses` → PICS packages → apps on the held Refresh session and adds `type: Demo` apps not already owned (fail-soft, 30 s cap). Live: `licenses=485 licensedNotOwned=754 demos=12`, Schedule I: Free Sample listed | 2026-10-31 | f31d35811 | Verified | [261031-i0q-add-licensed-demos-to-steam-library-refr](./quick/261031-i0q-add-licensed-demos-to-steam-library-refr/) |
 | 261031-ihs | Bridge install stuck on "Finishing install…" when the installer's tail sent `done` before the ACF poller's finishing update (race from 261029-exu, seen on Schedule I 3205720). Per-appId finalized marker in `library.ts`: the installer sets it before every `done` and clears it at install start; the bridge poller sends no status once it is set | 2026-10-31 | 6212bdd66 | Needs Review (confirm on next bridge install) | [261031-ihs-fix-bridge-install-finishing-status-race](./quick/261031-ihs-fix-bridge-install-finishing-status-race/) |
 | 261031-ixa | Phase 58 gap fix: Mac Steam broadcasts LobbyCreated_t (513) as well as completing CreateLobby's call result, and the helper dropped the broadcast as unlisted, so Schedule I never ran its lobby-created handler (blank host version). 513 is now relayed (repacked 12→16) on both paths, with per-id call-result/CBDISP logging and `callresult=` on unlisted drops. Live: SetLobbyData now called | 2026-10-31 | a0eae4319 | Verified | [261031-ixa-relay-lobbycreated-513-broadcast-gap-fix](./quick/261031-ixa-relay-lobbycreated-513-broadcast-gap-fix/) |
+| 261031-kqr | Settings: renamed the Accessibility screen to "Appearance" (user-visible strings only; route, keys and identifiers unchanged) and removed the duplicate ThemeSelector from General, so theme lives only on Appearance | 2026-10-31 | fb4ffde41 | | [261031-kqr-rename-accessibility-settings-screen-to-](./quick/261031-kqr-rename-accessibility-settings-screen-to-/) |
 
 ## Session Continuity
 
