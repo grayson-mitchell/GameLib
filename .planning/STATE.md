@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
-stopped_at: Completed 56-34-PLAN.md (third live gate, Verdict PASS)
-last_updated: "2026-10-31T07:37:50.329Z"
+stopped_at: Phase 59 context gathered
+last_updated: "2026-10-31T07:55:59.092Z"
 last_activity: 2026-10-31
 progress:
   total_phases: 9
@@ -563,9 +563,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-31T07:37:50.323Z
-Stopped at: Completed 56-34-PLAN.md (third live gate, Verdict PASS)
-Resume file: None
+Last session: 2026-10-31T07:55:59.085Z
+Stopped at: Phase 59 context gathered
+Resume file: .planning/phases/59-steam-engine-fallback-when-crossover-is-unavailable/59-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
