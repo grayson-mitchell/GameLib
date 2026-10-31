@@ -36,3 +36,17 @@ shared focus-move path and any pad hits it. If not, compare the `padDown` path w
 
 Live: in a library with more rows than fit on screen, press Down repeatedly from the top row with a
 pad. The grid scrolls row by row to the last tile, and focus never jumps to the left panel.
+
+## Fix landed (quick 261031-lrx)
+
+Root cause: GameCard renders a non-focusable placeholder until cardVisibility's IntersectionObserver
+fires, and that observer clips targets by the grid's scroll container before applying rootMargin.
+Rows below the container stayed placeholders, so the whole-document search in
+`moveFocusDirectionally` found nothing below the bottom tile and picked a left-panel element.
+
+Change (`src/preload/api/tauriGamepadInput.ts`): the search is now container-first, then scrolls the
+container one tile and polls up to 250ms for the newly rendered tile, then falls back to the
+whole-document search once the container cannot scroll further. The keyboard comparison in "First
+step" is moot: WKWebView has no spatial navigation, so arrow keys never move focus there.
+
+This todo stays pending until the operator runs the Gate above live.
