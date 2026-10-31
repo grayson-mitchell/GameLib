@@ -93,5 +93,6 @@ it swallowed the one exit that mattered in the Steam live test.
 - Live, on this Mac, for each store: claim or buy a free item in the embed, leave the store, and
   check that the game appears without a manual Refresh and the log shows the store's `-store-exit`
   origin.
-  - Use a normal, library-listed license. A Steam demo was the wrong subject: free-on-demand
-    licenses are excluded from the owned-games fetch until played.
+  - Use a normal, library-listed license. A Steam demo was the wrong subject because demos are
+    never returned by GetOwnedGames, played or not (spike 052); quick 261031-i0q now adds
+    licensed demos to Refresh through the licenses path.

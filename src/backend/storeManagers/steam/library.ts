@@ -90,6 +90,7 @@ import { bridgeAllowlist } from './bridge/allowlist'
 import { backfillBridgeLaunchTargets } from './bridge/launchTarget'
 import { depotSignalCaptured } from './metadataCapture'
 import { captureOwnedAppMetacritic } from './metacriticCapture'
+import { fetchLicensedDemos, LicensedDemosPicsClient } from './licensedDemos'
 import {
   captureOwnedAppPlatforms,
   type PlatformCapturePicsClient
@@ -1218,6 +1219,18 @@ export default class SteamLibraryManager implements LibraryManager {
       })
       return { stdout: '', stderr: String(err) }
     }
+
+    // Quick 261031-i0q: licensed demos. Spike 052: getUserOwnedApps never
+    // returns demos (free-on-demand licenses), played or not. Only PICS type
+    // Demo is added, by user decision; unplayed free-to-play games and every
+    // other type are deliberately excluded, so do not widen the filter. Fail
+    // soft and bounded by LICENSED_DEMOS_TIMEOUT_MS; reuses the held client,
+    // no new logon.
+    const demos = await fetchLicensedDemos(
+      client as unknown as LicensedDemosPicsClient,
+      ownedApps.map((a) => a.appid)
+    )
+    ownedApps = ownedApps.concat(demos)
 
     // ── Step 1.5: bulk-capture platform data from PICS (34.15 D-01..D-04) ──
     // WHY HERE (D-03): the CM client is already connected and the owned-app
