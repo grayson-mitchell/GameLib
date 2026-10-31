@@ -345,6 +345,41 @@ function canScrollToward(container: Element, direction: Direction): boolean {
   return false
 }
 
+/**
+ * quick 261031-rwk (todo 2026-10-31-pad-left-right-in-library-grid-scrolls-down-a-few-pixels):
+ * a focused library card scales to 1.05 (`.gameCard:focus-within`), and a bare `.focus()`
+ * makes WebKit reveal the focused element using that grown box. A tile whose resting box sat
+ * fully on screen near the bottom of `main.content` poked a few pixels past the edge, so every
+ * Left/Right press nudged the page down. The resting box is measured BEFORE focusing: when it
+ * is already fully visible in the viewport and every scrollable ancestor, focus without a
+ * reveal; otherwise keep the browser's reveal so off-screen targets still scroll into view.
+ */
+function isFullyVisible(el: HTMLElement): boolean {
+  const rect = el.getBoundingClientRect()
+  let top = 0
+  let left = 0
+  let bottom = window.innerHeight
+  let right = window.innerWidth
+  for (let anc = el.parentElement; anc; anc = anc.parentElement) {
+    if (isDocumentScroller(anc) || !isScrollable(anc)) continue
+    const clip = anc.getBoundingClientRect()
+    top = Math.max(top, clip.top)
+    left = Math.max(left, clip.left)
+    bottom = Math.min(bottom, clip.bottom)
+    right = Math.min(right, clip.right)
+  }
+  return rect.top >= top && rect.left >= left && rect.bottom <= bottom && rect.right <= right
+}
+
+function focusTarget(el: HTMLElement | null): void {
+  if (!el) return
+  if (isFullyVisible(el)) {
+    el.focus({ preventScroll: true })
+  } else {
+    el.focus()
+  }
+}
+
 function scrollContainerBy(container: Element, top: number): void {
   if (typeof container.scrollBy === 'function') {
     container.scrollBy({ top })
@@ -426,7 +461,7 @@ async function moveFocusDirectionally(direction: Direction): Promise<void> {
   // rather than a zero rect at (0,0) -- see `viewportOriginFor`.
   const origin = current ? current.getBoundingClientRect() : viewportOriginFor(direction)
   if (!current) {
-    bestInDirection(direction, origin, getFocusableElements())?.focus()
+    focusTarget(bestInDirection(direction, origin, getFocusableElements()))
     return
   }
 
@@ -440,14 +475,14 @@ async function moveFocusDirectionally(direction: Direction): Promise<void> {
   // Start from the parent so a scrollable focused element is never its own container.
   const container = findScrollableAncestor(current.parentElement)
   if (isDocumentScroller(container)) {
-    bestInDirection(direction, origin, all)?.focus()
+    focusTarget(bestInDirection(direction, origin, all))
     return
   }
 
   const inside = all.filter((el) => container.contains(el))
   const inContainer = bestInDirection(direction, origin, inside)
   if (inContainer) {
-    inContainer.focus()
+    focusTarget(inContainer)
     return
   }
 
@@ -466,7 +501,7 @@ async function moveFocusDirectionally(direction: Direction): Promise<void> {
       const fresh = getFocusableElements().filter((el) => reachable(el) && container.contains(el))
       const revealed = bestInDirection(direction, freshOrigin, fresh)
       if (revealed) {
-        revealed.focus()
+        focusTarget(revealed)
         return
       }
     }
@@ -476,7 +511,7 @@ async function moveFocusDirectionally(direction: Direction): Promise<void> {
 
   // The container cannot scroll further: today's whole-document search keeps controls
   // below a scrollable list reachable.
-  bestInDirection(direction, origin, all)?.focus()
+  focusTarget(bestInDirection(direction, origin, all))
 }
 
 export async function tauriGamepadAction(args: GamepadActionArgs): Promise<void> {

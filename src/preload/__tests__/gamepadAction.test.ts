@@ -696,3 +696,53 @@ describe('tauriGamepadAction scroll-container-aware directional moves (quick 261
     expect(newTile.focus).not.toHaveBeenCalled()
   })
 })
+
+describe('tauriGamepadAction focus reveal (quick 261031-rwk)', () => {
+  // The library grid: `main.content` scrolls (0..400 on screen), one row of tiles near its bottom.
+  function setup(tileBottom: number) {
+    const container = new FakeElement('div', { top: 0, left: 0, right: 800, bottom: 400, width: 800, height: 400 })
+    container.overflowY = 'auto'
+    container.scrollHeight = 1000
+    container.clientHeight = 400
+    const tileRect = (left: number): Partial<FakeRect> => ({
+      top: tileBottom - 80,
+      bottom: tileBottom,
+      left,
+      right: left + 100,
+      width: 100,
+      height: 80
+    })
+    const current = new FakeElement('a', tileRect(100))
+    const next = new FakeElement('a', tileRect(220))
+    current.parentElement = container
+    next.parentElement = container
+    fakeDocument.querySelectorAll.mockReturnValue([current, next])
+    fakeDocument.activeElement = current
+    return { container, current, next }
+  }
+
+  it('261031-rwk: Right to a fully visible tile focuses it without a reveal scroll', async () => {
+    // The resting tile ends 2px above the container's edge; its 1.05 focus scale would poke past it.
+    const { next } = setup(398)
+    await tauriGamepadAction({ action: 'padRight' })
+    expect(fakeDocument.activeElement).toBe(next)
+    expect(next.focus).toHaveBeenCalledWith({ preventScroll: true })
+  })
+
+  it('261031-rwk: a tile clipped by the scroll container keeps the browser reveal', async () => {
+    const { next } = setup(430)
+    await tauriGamepadAction({ action: 'leftStickRight' })
+    expect(fakeDocument.activeElement).toBe(next)
+    expect(next.focus).toHaveBeenCalledWith()
+  })
+
+  it('261031-rwk: a tile below the viewport keeps the browser reveal even with no scroll container', async () => {
+    const tile = (left: number): Partial<FakeRect> => ({ top: 560, bottom: 640, left, right: left + 100 })
+    const current = new FakeElement('a', tile(100))
+    const next = new FakeElement('a', tile(220))
+    fakeDocument.querySelectorAll.mockReturnValue([current, next])
+    fakeDocument.activeElement = current
+    await tauriGamepadAction({ action: 'padRight' })
+    expect(next.focus).toHaveBeenCalledWith()
+  })
+})
