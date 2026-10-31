@@ -339,7 +339,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - REQUIREMENTS.md has no Phase 34.9 traceability section -- REQ-34.9-01..11 are cited by ROADMAP.md, STATE.md, and every 34.9 plan/summary, but requirements.mark-complete cannot find them to check off. Pre-existing gap, not caused by plan 34.9-07; needs a REQUIREMENTS.md backfill pass (D-XX -> REQ mapping + traceability table) for the whole phase.
 - Phase 34.9-09: build-runners-onedir-macos.yml cannot be dispatched via gh workflow run until it exists on the repo's default branch (main) -- GitHub's workflow_dispatch requires this for ANY --ref, not just the pushed feature branch. Not resolvable within plan 34.9-09's authorized scope (no PR, no push to main). Blocks: real x64 onedir artifact (never built, no local fallback possible per constraint 1), pinning meta/runnersOnedirDigests.json's 6 sentinels, and full CI proof of the download-verify-extract round trip. See 34.9-CI-ROUNDTRIP.md.
 - 51-16 desk finding (not fixed, out of scope): meta/__tests__/hardcodedStringGate.test.ts has 6 pre-existing violations in GameStatus.tsx (Phase 51 Plan 08's file), unrelated to this plan's changes
-- 58-09 launch 1: stale Windows Steam (pid 47008, applaunch 264160) fails PC2; quit it and re-run PC2; PC11 needs operator
+- 58-09 launch 1: preconditions PC1/PC2/PC6/PC7/PC10/PC11 all recorded met (2026-10-31); awaiting operator to run launch 1 (no blocker)
 
 ### Quick Tasks Completed
 
