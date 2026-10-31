@@ -140,8 +140,6 @@ const Accessibility = React.memo(function Accessibility() {
 
         <ThemeSelector />
 
-        <LoginBackground />
-
         <span className="rangeWrapper Field">
           <label className={classNames({ isRTL: isRTL })}>
             {t('accessibility.zoom', 'Zoom')} ({zoomDraft}%)
@@ -201,6 +199,8 @@ const Accessibility = React.memo(function Accessibility() {
         >
           {options}
         </SelectField>
+
+        <LoginBackground />
 
         <span className="setting">
           <label className={classNames('toggleWrapper', { isRTL: isRTL })}>

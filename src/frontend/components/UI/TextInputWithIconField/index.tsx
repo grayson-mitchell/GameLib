@@ -10,6 +10,7 @@ interface TextInputWithIconFieldProps {
   onIconClick: () => void
   afterInput?: ReactNode
   label?: string
+  labelHelp?: ReactNode
   placeholder?: string
   disabled?: boolean
   extraClass?: string

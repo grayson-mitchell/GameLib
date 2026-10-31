@@ -1,0 +1,21 @@
+.fieldLabelRow {
+  grid-area: label;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  position: relative;
+  margin-bottom: var(--space-md);
+}
+
+.Field .fieldLabelRow > .fieldLabelRow__label {
+  margin-bottom: 0;
+}
+
+.fieldLabelRow .popover-wrapper {
+  position: static;
+}
+
+.fieldLabelRow .popover {
+  top: 100%;
+  inset-inline-start: 0;
+}

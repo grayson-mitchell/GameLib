@@ -8,9 +8,10 @@ import PopoverComponent from '../PopoverComponent'
 interface Props {
   children: React.ReactElement | React.ReactNode | React.ReactNode[]
   text: string
+  iconOnly?: boolean
 }
 
-export default function InfoBox({ children, text }: Props) {
+export default function InfoBox({ children, text, iconOnly = false }: Props) {
   const { t } = useTranslation()
 
   /*
@@ -23,10 +24,21 @@ export default function InfoBox({ children, text }: Props) {
   return (
     <PopoverComponent
       item={
-        <span className="helpLink">
-          <Info />
-          <span>{t(text)}</span>
-        </span>
+        iconOnly ? (
+          <button
+            type="button"
+            className="helpLink helpLink--iconOnly"
+            aria-label={t(text)}
+            title={t(text)}
+          >
+            <Info />
+          </button>
+        ) : (
+          <span className="helpLink">
+            <Info />
+            <span>{t(text)}</span>
+          </span>
+        )
       }
     >
       <div className="poppedElement">{children}</div>

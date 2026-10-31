@@ -2,6 +2,7 @@ import { ReactNode, useContext } from 'react'
 import classnames from 'classnames'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { Select, MenuItem, SelectChangeEvent } from '@mui/material'
+import FieldLabel from '../FieldLabel'
 import './index.css'
 
 interface SelectFieldProps {
@@ -11,6 +12,7 @@ interface SelectFieldProps {
   children: ReactNode
   afterSelect?: ReactNode
   label?: string
+  labelHelp?: ReactNode
   prompt?: string
   disabled?: boolean
   extraClass?: string
@@ -21,6 +23,7 @@ export default function SelectField({
   value,
   onChange,
   label,
+  labelHelp,
   prompt,
   disabled = false,
   extraClass = '',
@@ -35,7 +38,7 @@ export default function SelectField({
         isRTL
       })}
     >
-      {label && <label htmlFor={htmlId}>{label}</label>}
+      {label && <FieldLabel htmlId={htmlId} label={label} help={labelHelp} />}
       <Select
         id={htmlId}
         value={value}

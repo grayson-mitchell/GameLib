@@ -57,7 +57,11 @@ const LoginBackground = () => {
         'Manage Accounts background'
       )}
       htmlId="login_background_path"
-      afterInput={<InfoBox text="infobox.help">{helpContent}</InfoBox>}
+      labelHelp={
+        <InfoBox text="infobox.help" iconOnly>
+          {helpContent}
+        </InfoBox>
+      }
     />
   )
 }

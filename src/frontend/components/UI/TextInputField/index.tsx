@@ -1,6 +1,7 @@
 import React, { ReactNode, useContext, useEffect, useRef } from 'react'
 import classnames from 'classnames'
 import ContextProvider from 'frontend/state/ContextProvider'
+import FieldLabel from '../FieldLabel'
 import './index.css'
 
 interface TextInputFieldProps extends Omit<
@@ -11,6 +12,7 @@ interface TextInputFieldProps extends Omit<
   inputIcon?: ReactNode
   afterInput?: ReactNode
   label?: string
+  labelHelp?: ReactNode
   placeholder?: string
   extraClass?: string
   warning?: ReactNode
@@ -21,6 +23,7 @@ interface TextInputFieldProps extends Omit<
 const TextInputField = ({
   htmlId,
   label,
+  labelHelp,
   extraClass = '',
   inputIcon,
   afterInput,
@@ -55,7 +58,7 @@ const TextInputField = ({
         isRTL
       })}
     >
-      {label && <label htmlFor={htmlId}>{label}</label>}
+      {label && <FieldLabel htmlId={htmlId} label={label} help={labelHelp} />}
       {inputIcon}
       <input
         type="text"

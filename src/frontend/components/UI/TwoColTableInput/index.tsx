@@ -7,6 +7,7 @@ import { faArrowUp } from '@fortawesome/free-solid-svg-icons'
 import EditIcon from '@mui/icons-material/Edit'
 import classnames from 'classnames'
 import ContextProvider from 'frontend/state/ContextProvider'
+import FieldLabel from '../FieldLabel'
 import './index.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +24,7 @@ interface FullFillProps {
 
 interface Props {
   label: string
+  labelHelp?: ReactNode
   htmlId: string
   header: ColumnProps
   rows: ColumnProps[]
@@ -39,6 +41,7 @@ const EMPTY_INPUTS = { key: '', value: '' }
 
 export function TableInput({
   label,
+  labelHelp,
   htmlId,
   header,
   rows,
@@ -135,7 +138,7 @@ export function TableInput({
         isRTL
       })}
     >
-      {label && <label htmlFor={htmlId}>{label}</label>}
+      {label && <FieldLabel htmlId={htmlId} label={label} help={labelHelp} />}
       <table>
         <tbody>
           <tr>
