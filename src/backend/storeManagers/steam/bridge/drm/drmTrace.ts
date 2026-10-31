@@ -43,8 +43,27 @@ export type DrmTraceEvent = {
       event: 'callback'
       id: number
       detail?: { key: 'resp' | 'state'; value: number }
+      /** Phase 58 D-08a: SteamID64 (decimal) of the remote peer; only on id 1202. */
+      peer?: string
     }
+  | ({ event: 'p2p' } & DrmP2pOp)
 )
+
+/** Phase 58 D-08a: legacy P2P peer/size evidence written by lsteamclient. */
+type DrmP2pOp =
+  | { op: 'accept'; peer: string; ok: 0 | 1 }
+  | { op: 'send' | 'read'; peer: string; bytes: number }
+
+// Exported for meta/bridgeCensus.ts; see DrmTraceEvent.
+// ts-prune-ignore-next
+export interface DrmP2pEvent {
+  /** Order of the line among the game's trace events (ascending). */
+  seq: number
+  kind: 'request' | 'accept' | 'send' | 'read'
+  peer: string
+  bytes?: number
+  ok?: boolean
+}
 
 interface DrmLaunchAnchor {
   appId: string
@@ -63,6 +82,8 @@ export interface DrmEvidence {
   gameCallbacks: number[]
   gameLobbyEnterOk: boolean
   gameConnStates: number[]
+  /** D-08a: ordered game-role 1202 / accept / send / read events that name a peer. */
+  gameP2p: DrmP2pEvent[]
   helperEvents: number
   pidConflict: boolean
 }
@@ -72,7 +93,12 @@ const TRACE_CREATE_RE =
 const TRACE_CALL_RE =
   /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=call name=([A-Za-z0-9_]{1,128})$/
 const TRACE_CALLBACK_RE =
-  /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=callback id=([1-9]\d{0,4})(?: (resp|state)=(-?\d{1,3}))?$/
+  /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=callback id=([1-9]\d{0,4})(?: (?:(resp|state)=(-?\d{1,3})|peer=(\d{1,20})))?$/
+const TRACE_P2P_RE =
+  /^\[drm-trace\] appId=(\d{1,10}) pid=([1-9]\d{0,9}) role=(game|helper) event=p2p op=(?:(accept) peer=(\d{1,20}) ok=([01])|(send|read) peer=(\d{1,20}) bytes=(\d{1,10}))$/
+
+const MAX_U32 = 4294967295
+const MAX_DRM_P2P_EVENTS = 256
 
 const ANCHOR_RE =
   // eslint-disable-next-line no-control-regex
@@ -117,6 +143,7 @@ export function parseDrmTraceLine(line: string): DrmTraceEvent | null {
       const key = m[5] as 'resp' | 'state' | undefined
       if (key === 'resp' && id !== 504) return null
       if (key === 'state' && id !== 1221) return null
+      if (m[7] !== undefined && (id !== 1202 || /^0+$/.test(m[7]))) return null
       const base = {
         appId: m[1],
         pid: Number(m[2]),
@@ -124,7 +151,29 @@ export function parseDrmTraceLine(line: string): DrmTraceEvent | null {
         event: 'callback' as const,
         id
       }
+      if (m[7] !== undefined) return { ...base, peer: m[7] }
       return key ? { ...base, detail: { key, value: Number(m[6]) } } : base
+    }
+    m = TRACE_P2P_RE.exec(l)
+    if (m) {
+      const head = {
+        appId: m[1],
+        pid: Number(m[2]),
+        role: m[3] as DrmTraceRole,
+        event: 'p2p' as const
+      }
+      if (m[4]) {
+        if (/^0+$/.test(m[5])) return null
+        return {
+          ...head,
+          op: 'accept' as const,
+          peer: m[5],
+          ok: m[6] === '1' ? (1 as const) : (0 as const)
+        }
+      }
+      const bytes = Number(m[9])
+      if (/^0+$/.test(m[8]) || bytes > MAX_U32) return null
+      return { ...head, op: m[7] as 'send' | 'read', peer: m[8], bytes }
     }
     return null
   } catch {
@@ -141,8 +190,14 @@ export function formatDrmTraceLine(ev: DrmTraceEvent): string {
   if (ev.event === 'callback') {
     return (
       `${head} event=callback id=${ev.id}` +
-      (ev.detail ? ` ${ev.detail.key}=${ev.detail.value}` : '')
+      (ev.detail ? ` ${ev.detail.key}=${ev.detail.value}` : '') +
+      (ev.peer ? ` peer=${ev.peer}` : '')
     )
+  }
+  if (ev.event === 'p2p') {
+    return ev.op === 'accept'
+      ? `${head} event=p2p op=accept peer=${ev.peer} ok=${ev.ok}`
+      : `${head} event=p2p op=${ev.op} peer=${ev.peer} bytes=${ev.bytes}`
   }
   return `${head} event=call name=${ev.name}`
 }
@@ -221,6 +276,7 @@ export function extractDrmEvidence(
     gameCallbacks: [],
     gameLobbyEnterOk: false,
     gameConnStates: [],
+    gameP2p: [],
     helperEvents: 0,
     pidConflict: false
   }
@@ -241,6 +297,8 @@ export function extractDrmEvidence(
     const callbacks = new Set<number>()
     const connStates = new Set<number>()
     let lobbyEnterOk = false
+    const p2p: DrmP2pEvent[] = []
+    let seq = 0
     const gamePids = new Set<number>()
     const helperPids = new Set<number>()
     let helperEvents = 0
@@ -258,9 +316,21 @@ export function extractDrmEvidence(
         continue
       }
       gamePids.add(ev.pid)
+      seq++
       if (ev.event === 'create-interface') ifaces.add(ev.iface)
-      else if (ev.event === 'callback') {
+      else if (ev.event === 'p2p') {
+        if (p2p.length < MAX_DRM_P2P_EVENTS) {
+          p2p.push(
+            ev.op === 'accept'
+              ? { seq, kind: 'accept', peer: ev.peer, ok: ev.ok === 1 }
+              : { seq, kind: ev.op, peer: ev.peer, bytes: ev.bytes }
+          )
+        }
+      } else if (ev.event === 'callback') {
         callbacks.add(ev.id)
+        if (ev.id === 1202 && ev.peer && p2p.length < MAX_DRM_P2P_EVENTS) {
+          p2p.push({ seq, kind: 'request', peer: ev.peer })
+        }
         if (ev.id === 504 && ev.detail?.value === 1) lobbyEnterOk = true
         if (ev.id === 1221 && ev.detail) connStates.add(ev.detail.value)
       } else calls.add(ev.name)
@@ -274,10 +344,60 @@ export function extractDrmEvidence(
       gameCallbacks: [...callbacks].sort((a, b) => a - b),
       gameLobbyEnterOk: lobbyEnterOk,
       gameConnStates: [...connStates].sort((a, b) => a - b),
+      gameP2p: p2p,
       helperEvents,
       pidConflict
     }
   } catch {
     return empty
   }
+}
+
+/**
+ * Phase 58 D-08a over one launch's game-role events. For some peer X ALL of:
+ * a 1202 delivery naming X, a later AcceptP2PSessionWithUser(X), a send to X
+ * with nonzero bytes, a read from X with nonzero bytes. Returns the flags of
+ * the best candidate peer (most clauses met) so a failure can say which clause
+ * is missing. The peer is never returned: callers print fixed phrases only.
+ */
+// Exported for meta/bridgeCensus.ts; see DrmTraceEvent.
+// ts-prune-ignore-next
+export function scoreLegacyP2pJoin(events: DrmP2pEvent[]): {
+  request: boolean
+  accepted: boolean
+  send: boolean
+  read: boolean
+  complete: boolean
+} {
+  const none = {
+    request: false,
+    accepted: false,
+    send: false,
+    read: false,
+    complete: false
+  }
+  let best = none
+  let bestScore = -1
+  const peers = new Set(events.map((e) => e.peer))
+  for (const peer of peers) {
+    const mine = events.filter((e) => e.peer === peer)
+    const reqSeq = mine.find((e) => e.kind === 'request')?.seq
+    const request = reqSeq !== undefined
+    const accepted =
+      request && mine.some((e) => e.kind === 'accept' && e.seq > reqSeq)
+    const send = mine.some((e) => e.kind === 'send' && (e.bytes ?? 0) > 0)
+    const read = mine.some((e) => e.kind === 'read' && (e.bytes ?? 0) > 0)
+    const score = [request, accepted, send, read].filter(Boolean).length
+    if (score > bestScore) {
+      bestScore = score
+      best = {
+        request,
+        accepted,
+        send,
+        read,
+        complete: request && accepted && send && read
+      }
+    }
+  }
+  return best
 }

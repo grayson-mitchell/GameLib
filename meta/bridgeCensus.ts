@@ -124,6 +124,7 @@ import {
 import {
   appLogPayload,
   extractDrmEvidence,
+  scoreLegacyP2pJoin,
   parseDrmLaunchAnchor,
   type DrmEvidence
 } from '../src/backend/storeManagers/steam/bridge/drm/drmTrace'
@@ -1042,6 +1043,7 @@ function classifyDrmEvidence(input: {
     gameCallbacks: [],
     gameLobbyEnterOk: false,
     gameConnStates: [],
+    gameP2p: [],
     helperEvents: 0,
     pidConflict: false
   }
@@ -2333,6 +2335,21 @@ const DRM_RECV_SUFFIXES = [
   '_ReceiveMessagesOnChannel'
 ]
 
+/** D-08a clause names only: never a SteamID (T-58-15). */
+function legacyP2pMissing(p: {
+  request: boolean
+  accepted: boolean
+  send: boolean
+  read: boolean
+}): string {
+  const missing: string[] = []
+  if (!p.request) missing.push('no 1202 naming a peer')
+  else if (!p.accepted) missing.push('no Accept after 1202 for that peer')
+  if (!p.send) missing.push('no nonzero send to the peer')
+  if (!p.read) missing.push('no nonzero read from the peer')
+  return 'D-08a: ' + missing.join(', ')
+}
+
 function missingDetail(join: boolean, send: boolean, recv: boolean): string {
   const missing: string[] = []
   if (!join) missing.push('no game-originated join')
@@ -2376,7 +2393,15 @@ export function classifyMultiplayerEvidence(input: {
         detail: 'game/helper pid conflict'
       }
     }
-    const join = e.gameLobbyEnterOk || e.gameConnStates.includes(3)
+    const standardJoin = e.gameLobbyEnterOk || e.gameConnStates.includes(3)
+    // D-08a applies only when the title never delivered 504 or 1221 at all;
+    // it never widens the 504 / 1221 path.
+    const legacyP2p =
+      !standardJoin &&
+      !e.gameCallbacks.includes(504) &&
+      !e.gameCallbacks.includes(1221)
+    const p2p = legacyP2p ? scoreLegacyP2pJoin(e.gameP2p) : null
+    const join = standardJoin || (p2p?.complete ?? false)
     const send = e.gameCalls.some((c) =>
       DRM_SEND_SUFFIXES.some((s) => c.endsWith(s))
     )
@@ -2384,7 +2409,11 @@ export function classifyMultiplayerEvidence(input: {
       DRM_RECV_SUFFIXES.some((s) => c.endsWith(s))
     )
     const verified = join && send && recv
-    let detail = verified ? 'game join, send and receive observed' : ''
+    let detail = verified
+      ? p2p
+        ? 'game join (D-08a legacy P2P), send and receive observed'
+        : 'game join, send and receive observed'
+      : ''
     if (!verified) {
       detail = missingDetail(join, send, recv)
       if (
@@ -2394,6 +2423,7 @@ export function classifyMultiplayerEvidence(input: {
       ) {
         detail += '; only P2PSessionRequest_t (1202) seen'
       }
+      if (p2p && !p2p.complete) detail += '; ' + legacyP2pMissing(p2p)
     }
     return {
       ...base,

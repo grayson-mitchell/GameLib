@@ -2035,6 +2035,88 @@ describe('58-05: multiplayer evidence (D-08)', () => {
       expect(v.detail).toContain('only P2PSessionRequest_t')
     })
 
+    describe('D-08a legacy P2P join', () => {
+      const PEER = '76561198000000001'
+      const REQ = t(`event=callback id=1202 peer=${PEER}`)
+      const ACC = t(`event=p2p op=accept peer=${PEER} ok=1`)
+      const PSEND = t(`event=p2p op=send peer=${PEER} bytes=32`)
+      const PREAD = t(`event=p2p op=read peer=${PEER} bytes=16`)
+      const SENDCALL = t(
+        'event=call name=ISteamNetworking_SteamNetworking006_SendP2PPacket'
+      )
+      const READCALL = t(
+        'event=call name=ISteamNetworking_SteamNetworking006_ReadP2PPacket'
+      )
+
+      it('verifies 1202(X), later Accept(X), nonzero send and read with X', () => {
+        const v = drm([
+          anchor,
+          create,
+          REQ,
+          ACC,
+          SENDCALL,
+          PSEND,
+          READCALL,
+          PREAD
+        ])
+        expect(v).toMatchObject({ status: 'verified', join: true })
+        expect(v.detail).toContain('D-08a')
+        expect(v.detail).not.toContain(PEER)
+      })
+
+      it('stays unverified without the Accept and names the missing clause', () => {
+        const v = drm([anchor, create, REQ, SENDCALL, PSEND, READCALL, PREAD])
+        expect(v.status).toBe('unverified')
+        expect(v.detail).toContain('no Accept after 1202 for that peer')
+        expect(v.detail).not.toContain(PEER)
+      })
+
+      it('stays unverified when the traffic names a different peer', () => {
+        const v = drm([
+          anchor,
+          create,
+          REQ,
+          ACC,
+          SENDCALL,
+          t('event=p2p op=send peer=76561198000000002 bytes=32'),
+          READCALL,
+          PREAD
+        ])
+        expect(v.status).toBe('unverified')
+        expect(v.detail).toContain('no nonzero send to the peer')
+      })
+
+      it('does not widen the 504 / 1221 path: a delivered 1221 state=1 blocks it', () => {
+        const v = drm([
+          anchor,
+          create,
+          t('event=callback id=1221 state=1'),
+          REQ,
+          ACC,
+          SENDCALL,
+          PSEND,
+          READCALL,
+          PREAD
+        ])
+        expect(v.status).toBe('unverified')
+        expect(v.join).toBe(false)
+      })
+
+      it('a helper-role 1202 never counts', () => {
+        const v = drm([
+          anchor,
+          create,
+          t(`event=callback id=1202 peer=${PEER}`, 'helper'),
+          ACC,
+          SENDCALL,
+          PSEND,
+          READCALL,
+          PREAD
+        ])
+        expect(v.status).toBe('unverified')
+      })
+    })
+
     it('helper-only join is unverified', () => {
       const v = drm([
         anchor,
