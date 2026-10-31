@@ -773,16 +773,36 @@ Plans:
 **Plans:** 13 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 59-01-PLAN.md — Wave 0 attended live checks on clones: adoption, DXVK round trip, Staging ps match, spike-060 expiry runs
 - [ ] 59-02-PLAN.md — Engine types, `--demo-status` parser and bounded probe, tested-CrossOver-versions record
 - [ ] 59-03-PLAN.md — Pinned Wine-Staging 11.20 + DXVK pins, override id grammar, on-demand verified download
 - [ ] 59-04-PLAN.md — bottleProcessMonitor onFirstMatch and the per-appId launch deadline
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 59-05-PLAN.md — Engine registry, fallback GameSettings dispatch, engine-aware wineserver kill
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 59-06-PLAN.md — Fallback bottle creation, adoptable cxbottle.conf, create cap, engine switch with DXVK
 - [ ] 59-07-PLAN.md — Engine decision (pre-flight, launch, creation, override options) and per-title engine state
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 59-08-PLAN.md — Engine IPC channels, `engine-download` status, all phase strings
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 59-09-PLAN.md — No-CrossOver bridge installs on the built-in engine
-- [ ] 59-10-PLAN.md — Per-launch engine selection, toast, launch-log lines, CrossOver-only DRM/bottled, launch deadline
 - [ ] 59-11-PLAN.md — Game page engine badges, 7-day trial notice, no-CrossOver and untested notices
 - [ ] 59-12-PLAN.md — Per-game advanced engine override in settings
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 59-10-PLAN.md — Per-launch engine selection, toast, launch-log lines, CrossOver-only DRM/bottled, launch deadline
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
 - [ ] 59-13-PLAN.md — Live UAT (CrossOver hidden by sandbox profile) and gate battery
