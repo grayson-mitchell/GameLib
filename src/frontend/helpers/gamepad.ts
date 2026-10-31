@@ -748,16 +748,27 @@ export const initGamepad = () => {
 
     currentController = controllerIndex
     dispatchControllerEvent(gamepad.id)
-
-    window.addEventListener(
-      'mousemove',
-      () => {
-        currentController = -1
-        dispatchControllerEvent('')
-      },
-      { once: true }
-    )
   }
+
+  // Leave controller mode on a REAL pointer move only. WebKit and Chromium
+  // dispatch a synthetic `mousemove` at unchanged screen coordinates when
+  // content scrolls under a stationary pointer (the same filter as
+  // inputModality.ts). Counting it made every controller-driven scroll re-arm
+  // the hover-seed handoff, so the next press jumped focus to the card under
+  // the cursor (quick 261031-nwz live gate).
+  let lastScreenX: number | undefined
+  let lastScreenY: number | undefined
+  window.addEventListener('mousemove', (event: MouseEvent) => {
+    const moved =
+      lastScreenX === undefined ||
+      event.screenX !== lastScreenX ||
+      event.screenY !== lastScreenY
+    lastScreenX = event.screenX
+    lastScreenY = event.screenY
+    if (!moved || currentController === -1) return
+    currentController = -1
+    dispatchControllerEvent('')
+  })
 
   window.addEventListener('gamepadconnected', connecthandler)
   window.addEventListener('gamepaddisconnected', disconnecthandler)

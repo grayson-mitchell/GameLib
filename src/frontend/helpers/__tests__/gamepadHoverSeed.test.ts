@@ -353,9 +353,13 @@ function buildHarness(
     ;(listeners.get(type) ?? []).forEach((entry) => entry.cb({ gamepad: pad }))
   }
 
-  function fireMouseMove() {
+  // Each call is a real move to fresh coordinates unless `at` repeats the
+  // previous position (WebKit's synthetic after-scroll move).
+  let mouseX = 0
+  function fireMouseMove(at?: { screenX: number; screenY: number }) {
     const entries = listeners.get('mousemove') ?? []
-    entries.forEach((entry) => entry.cb({}))
+    const event = at ?? { screenX: ++mouseX, screenY: 0 }
+    entries.forEach((entry) => entry.cb(event))
     listeners.set(
       'mousemove',
       entries.filter((entry) => !entry.once)
@@ -674,6 +678,44 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     harness.runFrame()
 
     expect(link?.focus).toHaveBeenCalledTimes(2)
+  })
+
+  it('I7b: a synthetic mousemove at unchanged coordinates (content scrolled under the pointer) does not re-arm the handoff', () => {
+    jest.resetModules()
+    const harness = buildHarness()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
+    initGamepad()
+
+    const { card, link } = harness.createCard()
+    harness.setHoverChain([card])
+
+    // the pointer last really moved to (5, 5)
+    harness.fireMouseMove({ screenX: 5, screenY: 5 })
+
+    const pad = makePad(0)
+    harness.pads[0] = asGamepad(pad)
+    harness.fire('gamepadconnected', asGamepad(pad))
+    harness.runFrame()
+
+    pad.buttons[PAD_LEFT].pressed = true
+    harness.runFrame()
+    expect(link?.focus).toHaveBeenCalledTimes(1)
+    pad.buttons[PAD_LEFT].pressed = false
+    harness.runFrame()
+
+    const elementC = harness.createElement('DIV', ['somethingElse'])
+    harness.setFocused(elementC)
+
+    // the press scrolled the grid; WebKit refreshes hover with a move at the
+    // same screen position
+    harness.fireMouseMove({ screenX: 5, screenY: 5 })
+
+    pad.buttons[PAD_LEFT].pressed = true
+    harness.runFrame()
+
+    expect(link?.focus).toHaveBeenCalledTimes(1)
+    expect(harness.gamepadAction).toHaveBeenCalledWith({ action: 'padLeft' })
   })
 
   it('I8: no seed while the virtual keyboard is active', () => {
