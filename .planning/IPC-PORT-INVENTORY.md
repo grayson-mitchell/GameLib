@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 235 |
-| Ported to sidecar | 80 |
+| Unique channels | 237 |
+| Ported to sidecar | 82 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -676,6 +676,19 @@ all numbers moved together by +3 and `Unported` (159) is unchanged.
 `dismissSteamEngineNotice`
 `getSteamEngineState`
 `listSteamEngineOptions`
+
+## Phase 58 — Steam bridge invite picker (2 channels) — **PORTED**
+
+Added 2026-11-01 during Phase 58 execution (gate fix for plan 58-32). Both channels are BRAND NEW,
+created by `29be44715` (plan 58-32), invoke-kind (`makeHandlerInvoker`, `src/preload/api/steam.ts`),
+and registered only in the sidecar, in `steamAuthFlowRegistration.ts`. There is no Electron leg, so
+`Ported to sidecar` rises along with `Unique channels`.
+
+**Unique channels raised 235 → 237, Ported to sidecar raised 80 → 82 (Phase 58, 2026-11-01):**
+both numbers moved together by +2 and `Unported` (159) is unchanged.
+
+`steamBridgeInviteFriend`
+`steamBridgeListFriends`
 
 ## Not an IPC channel, but blocks Phase 35
 
