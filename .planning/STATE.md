@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 58 (steam-bridge-multiplayer) — EXECUTING
 Plan: 14 of 24
 Status: Ready to execute
-Last activity: 2026-10-30
+Last activity: 2026-10-31 - Completed quick task 261031-i0q: add licensed demos to Steam library Refresh
 
 Progress: [█████████░] 93%
 
@@ -539,6 +539,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | fast | Library grid tiles centered: `.gameList` `justify-content` start → center, so window-resize slack splits on both sides. Not live-tested. | 2026-10-30 | `ffb623ea2` | Done | — |
 | fast | Focus-row strips centred with the grid: viewport moves in by the grid's slack at both ends, track sizes from that box. Headers stay at the strip start. Not live-tested. | 2026-10-30 | `f6756354e` | Done | — |
 | fast | Focus-row titles pad in by the grid's centring slack, so they start over the first card and ellipsize at the grid end. Not live-tested. | 2026-10-30 | `cad735311` | Done | — |
+| 261031-i0q | Steam Refresh now adds licensed demos: `getUserOwnedApps` never returns demos (spike 052), so `licensedDemos.ts` reads `client.licenses` → PICS packages → apps on the held Refresh session and adds `type: Demo` apps not already owned (fail-soft, 30 s cap). Live: `licenses=485 licensedNotOwned=754 demos=12`, Schedule I: Free Sample listed | 2026-10-31 | f31d35811 | Verified | [261031-i0q-add-licensed-demos-to-steam-library-refr](./quick/261031-i0q-add-licensed-demos-to-steam-library-refr/) |
 
 ## Session Continuity
 
