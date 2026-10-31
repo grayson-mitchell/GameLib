@@ -56,3 +56,15 @@ Product: a720)" mapping="" buttons=17 axes=10` — identical to the Windows/WebV
 Live on this Mac with the pad: restart `tauri:dev`, `[NATIVE-GAMEPAD] connected` + `[GAMEPAD] …
 buttons=17 axes=10` in `gamelib.log`, focus moves with D-pad and left stick, A activates, B goes back;
 unplug and replug the pad and it still works.
+
+## Shipped and closed 2026-10-31
+
+Landed by quick 261031-mj9 (`70f7022af`, `c1abed746`, `d60cd6ccb`) and hardened by quick 261031-nwz
+(`3362e5816`, `e34a91fbe`), which cover every "To ship" item: Rust payload-shape tests, init-failure
+and hot-plug tests, 8 ms emit coalescing, the renderer merge tests, and macOS-only gating.
+
+Live gate passed 2026-10-31 (operator, PowerA Switch 2 pad on macOS, main at `c6e6999d4`). Restart,
+both log lines and unplug/replug passed in the 261031-nwz run. Navigation, which failed there, now
+passes: D-pad and left stick move focus, A activates, B goes back, and held-direction repeat speed
+is acceptable. The focus jump seen in that run was the synthetic-mousemove handoff fixed in
+`d5351646c`.
