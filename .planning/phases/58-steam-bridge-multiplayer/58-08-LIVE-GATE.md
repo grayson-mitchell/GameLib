@@ -333,4 +333,5 @@ Between launch 1 and launch 2 no Raft ran through GameLib (no delimiter, no trac
 - Trace `role=game` lines: `op=build-id ret=0`, `op=build-id-given ret=22312909`; `p2p op=send peer=1 bytes=10`; `p2p op=read peer=1 bytes=524`; `callback id=337` present (record only); `callback id=1281` x1. No 1202, no 504/1221, no 16+ digit value.
 - Serialized005 check, launch 2: 0 hits in wine (10), trace (74), gamelib (291).
 - Census (`census-launch-2.txt`), verbatim: `multiplayer 648800 drm: unverified join=0 send=1 recv=1 path=unknown oversize=0 — no game-originated join; D-08a: no 1202 naming a peer`
-- Closing inventory: `inventory.txt` (ls -la plus wc -l of the session dir) written to the session dir. Session dir is still to be deleted by the operator (T-58-28).
+- Closing inventory: `inventory.txt` (ls -la plus wc -l of the session dir) written to the session dir. Session dir `/tmp/gamelib-gate-20261031T023945Z` deleted 2026-10-31 on operator instruction (T-58-28).
+- Task 3 sign-off: the operator reviewed items 2–4 and the Verdict and answered `Approve` (2026-10-31).
