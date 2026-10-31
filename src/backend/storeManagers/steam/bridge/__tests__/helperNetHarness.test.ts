@@ -171,6 +171,42 @@ describeDarwinOnly(
       expect(err).not.toMatch(/[0-9]{17}/)
     })
 
+    test('mms-pool-full: a full pool refuses the new query and never recycles', () => {
+      const { out } = runBoth('mms-pool-full')
+      expect(out).toContain('pool=64 ok=1 extra=-1 calls=64 bound=64')
+    })
+
+    test('mms-cancel-releases: cancel forwards to Mac and frees the slot', () => {
+      const { out } = runBoth('mms-cancel-releases')
+      expect(out).toContain('full-refused=1')
+      expect(out).toContain('cancel calls=1 last=105 bound=63')
+      expect(out).toContain('again=164 bound=64 slot5=164')
+    })
+
+    test('mms-cancel-unknown: an unbound handle forwards and changes no binding', () => {
+      const { out } = runBoth('mms-cancel-unknown')
+      expect(out).toContain('cancel calls=1 last=9999 bound=2 h0=100 h1=101')
+    })
+
+    test('mms-issued-full: a full issued set refuses and releases, evicting nothing', () => {
+      const { out } = runBoth('mms-issued-full')
+      expect(out).toContain('kept=1 releases=0')
+      expect(out).toContain('extra=0 releases=1')
+      expect(out).toContain('all-issued=1')
+    })
+
+    test('mms-release-frees: ReleaseRequest forgets the handle', () => {
+      const { out } = runBoth('mms-release-frees')
+      expect(out).toContain('issue=1 is=1')
+      expect(out).toContain('release calls=1 is=0')
+      expect(out).toContain('reissue=1')
+    })
+
+    test('mms-collision: a live low-32 collision still refuses', () => {
+      const { out } = runBoth('mms-collision')
+      expect(out).toContain('first=1 same=1 collide=0 is2=0')
+    })
+
     test('list-friends: ordinals, flags and names, never a SteamID', () => {
       const { out, err } = runBoth('list-friends')
       expect(out).toContain('rc=0')

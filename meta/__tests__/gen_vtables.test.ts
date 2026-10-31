@@ -4767,7 +4767,8 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
             m.interface !== 'SteamNetworkingSockets013' &&
             m.interface !== 'SteamNetworkingSockets012' &&
             m.interface !== 'SteamNetworkingMessages002' &&
-            m.interface !== 'SteamFriends017'
+            m.interface !== 'SteamFriends017' &&
+            m.interface !== 'SteamMatchMakingServers003'
         )
         .map((m) => ({
           ...m,
@@ -5155,9 +5156,11 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       ].map((m) => m[1])
       expect(protos.sort()).toEqual([
         'gl_friends_invite_dialog',
+        'gl_mms_cancel_server_query',
         'gl_mms_get_server_details',
         'gl_mms_ping_server',
         'gl_mms_player_details',
+        'gl_mms_release_request',
         'gl_mms_request_list',
         'gl_mms_server_friends',
         'gl_mms_server_rules',

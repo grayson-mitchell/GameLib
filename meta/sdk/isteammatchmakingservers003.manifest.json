@@ -217,6 +217,7 @@
       ],
       "mode": "wire",
       "helperFlat": "SteamAPI_ISteamMatchmakingServers_ReleaseRequest",
+      "helperCustom": "gl_mms_release_request",
       "zeroHandleParam": "hRequest",
       "unmapHandle": "list"
     },
@@ -446,6 +447,7 @@
       ],
       "mode": "wire",
       "helperFlat": "SteamAPI_ISteamMatchmakingServers_CancelServerQuery",
+      "helperCustom": "gl_mms_cancel_server_query",
       "zeroHandleParam": "hServerQuery",
       "unmapHandle": "query"
     }

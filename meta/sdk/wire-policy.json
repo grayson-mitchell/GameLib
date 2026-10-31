@@ -1391,6 +1391,7 @@
   "SteamMatchmakingServers": {
     "ReleaseRequest": {
       "helperFlat": "SteamAPI_ISteamMatchmakingServers_ReleaseRequest",
+      "helperCustom": "gl_mms_release_request",
       "stackBytes": 8,
       "zeroHandleParam": "hRequest",
       "params": {
@@ -1460,6 +1461,7 @@
     },
     "CancelServerQuery": {
       "helperFlat": "SteamAPI_ISteamMatchmakingServers_CancelServerQuery",
+      "helperCustom": "gl_mms_cancel_server_query",
       "stackBytes": 4,
       "zeroHandleParam": "hServerQuery",
       "unmapHandle": "query"

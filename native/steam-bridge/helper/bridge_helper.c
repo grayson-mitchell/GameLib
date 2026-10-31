@@ -1759,26 +1759,25 @@ static const char *const k_stubcall_kind[4] = {"stub", "fallback", "offpath", "n
  *
  * Ping, players, rules and friends callbacks carry no query handle, so each
  * query takes one object from a small pool (GL_MMS_POOL per interface) and the
- * object remembers the HServerQuery it was bound to. A full pool reuses the
- * oldest object (a cancelled query never sends a terminal callback). Objects
- * are static: a late callback on a reused object misattributes one event, it
- * never touches freed memory. No game-supplied pointer is ever accepted: the
+ * object remembers the HServerQuery it was bound to. A bound object is never
+ * recycled (58-30, WR-03): a full pool refuses the new query (HSERVERQUERY_INVALID)
+ * and CancelServerQuery frees the binding. Objects are static, so a late
+ * callback never touches freed memory. No game-supplied pointer is ever accepted: the
  * custom request encodings carry only integers and 256-byte string slots. */
-#define GL_MMS_POOL 8
+/* Equals GL_MMS_MAP_CAP, the shim's 64-entry server-browser map (meta/gen_vtables.ts). */
+#define GL_MMS_POOL 64
 #define GL_MMS_FILTER_MAX 32
 #define GL_MMS_FILTER_BYTES 256
 #define GL_MMS_ISSUED_MAX 64
 enum { GL_MMS_G_PING = 0, GL_MMS_G_PLAYERS, GL_MMS_G_RULES, GL_MMS_G_FRIENDS, GL_MMS_G_COUNT };
 
 typedef struct { const void *const *vt; uint32_t idx; } gl_mms_obj;
-typedef struct { int used; int32_t handle; uint32_t age; } gl_mms_bind;
+typedef struct { int used; int32_t handle; } gl_mms_bind;
 
 static gl_mms_ring g_mms;
 static gl_mms_obj  g_mms_obj[GL_MMS_G_COUNT][GL_MMS_POOL];
 static gl_mms_bind g_mms_bind[GL_MMS_G_COUNT][GL_MMS_POOL];
-static uint32_t    g_mms_clock = 0;
 static uint64_t    g_mms_issued[GL_MMS_ISSUED_MAX];
-static uint32_t    g_mms_issued_next = 0;
 
 /* Pool slot of `o` in `group`, or -1 when it is not one of that group's objects. */
 static int gl_mms_slot_of(int group, const void *o) {
@@ -1796,18 +1795,16 @@ static void gl_mms_obj_release(int group, int slot) {
   memset(&g_mms_bind[group][slot], 0, sizeof g_mms_bind[group][slot]);
 }
 
-/* Takes a free pool object, or recycles the oldest one. */
+/* Takes a free pool object, or returns -1 when every object is bound. */
 static int gl_mms_obj_acquire(int group) {
-  int victim = 0;
-  uint32_t best = 0xFFFFFFFFu;
   for (int i = 0; i < GL_MMS_POOL; i++) {
-    if (!g_mms_bind[group][i].used) { victim = i; break; }
-    if (g_mms_bind[group][i].age < best) { best = g_mms_bind[group][i].age; victim = i; }
+    if (!g_mms_bind[group][i].used) {
+      g_mms_bind[group][i].used = 1;
+      g_mms_bind[group][i].handle = 0;
+      return i;
+    }
   }
-  g_mms_bind[group][victim].used = 1;
-  g_mms_bind[group][victim].handle = 0;
-  g_mms_bind[group][victim].age = ++g_mms_clock;
-  return victim;
+  return -1;
 }
 
 /* ---- list response (ISteamMatchmakingServerListResponse, 3 slots) ---- */
@@ -1928,7 +1925,8 @@ static void gl_mms_objs_init(void) {
 
 static void *gl_mms_sym(const char *name) { return gl_nets_sym(name); }
 
-/* Records a freshly issued list handle. Returns 1 when kept. A handle whose low
+/* Records a freshly issued list handle in the first free slot. Returns 1 when kept
+ * and 0 when refused (collision, or no free slot). ReleaseRequest frees the slot. A handle whose low
  * 32 bits equal another live handle's (but is not the same handle) is refused:
  * slot 12 events name a request by its low 32 bits. */
 static int gl_mms_issue(uint64_t h) {
@@ -1936,9 +1934,13 @@ static int gl_mms_issue(uint64_t h) {
     if (g_mms_issued[i] == h) return 1;
     if (g_mms_issued[i] != 0 && (uint32_t)g_mms_issued[i] == (uint32_t)h) return 0;
   }
-  g_mms_issued[g_mms_issued_next] = h;
-  g_mms_issued_next = (g_mms_issued_next + 1) % GL_MMS_ISSUED_MAX;
-  return 1;
+  for (uint32_t i = 0; i < GL_MMS_ISSUED_MAX; i++) {
+    if (g_mms_issued[i] == 0) {
+      g_mms_issued[i] = h;
+      return 1;
+    }
+  }
+  return 0; /* set full: refuse rather than evict a live request (58-30, WR-04) */
 }
 
 static int gl_mms_is_issued(uint64_t h) {
@@ -2014,7 +2016,14 @@ static int gl_mms_query(void *self, const uint8_t *args, uint32_t argLen, uint8_
   if (fn[group] == NULL) return 1;
   gl_mms_objs_init();
   int slot = gl_mms_obj_acquire(group);
-  int32_t q = ((Q_t)fn[group])(self, ip, (uint16_t)port, &g_mms_obj[group][slot]);
+  int32_t q;
+  if (slot < 0) {
+    q = -1; /* every pool object is bound to a live query: refuse, never recycle */
+    memcpy(resp, &q, 4);
+    *respLen = 4;
+    return 0;
+  }
+  q = ((Q_t)fn[group])(self, ip, (uint16_t)port, &g_mms_obj[group][slot]);
   if (q == -1) {
     gl_mms_obj_release(group, slot);
   } else {
@@ -2022,6 +2031,46 @@ static int gl_mms_query(void *self, const uint8_t *args, uint32_t argLen, uint8_
   }
   memcpy(resp, &q, 4);
   *respLen = 4;
+  return 0;
+}
+
+/* helperCustom for CancelServerQuery. Request [i32 hServerQuery]; no response.
+ * Forwards to Mac, then frees the pool binding for that handle. */
+int gl_mms_cancel_server_query(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                               uint32_t respCap, uint32_t *respLen) {
+  typedef void (*C_t)(void *, int32_t);
+  static C_t fn;
+  int32_t q;
+  (void)resp; (void)respCap;
+  *respLen = 0;
+  if (args == NULL || self == NULL || argLen != 4) return 1;
+  memcpy(&q, args, 4);
+  if (fn == NULL) fn = (C_t)gl_mms_sym("SteamAPI_ISteamMatchmakingServers_CancelServerQuery");
+  if (fn == NULL) return 1;
+  fn(self, q);
+  for (int g = 0; g < GL_MMS_G_COUNT; g++)
+    for (int i = 0; i < GL_MMS_POOL; i++)
+      if (g_mms_bind[g][i].used && g_mms_bind[g][i].handle == q) gl_mms_obj_release(g, i);
+  return 0;
+}
+
+/* helperCustom for ReleaseRequest. Request [u64 hRequest]; no response.
+ * Forwards to Mac, then forgets the handle so its details are no longer served. */
+int gl_mms_release_request(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                           uint32_t respCap, uint32_t *respLen) {
+  typedef void (*R_t)(void *, void *);
+  static R_t fn;
+  uint64_t h;
+  (void)resp; (void)respCap;
+  *respLen = 0;
+  if (args == NULL || self == NULL || argLen != 8) return 1;
+  memcpy(&h, args, 8);
+  if (fn == NULL) fn = (R_t)gl_mms_sym("SteamAPI_ISteamMatchmakingServers_ReleaseRequest");
+  if (fn == NULL) return 1;
+  fn(self, (void *)(uintptr_t)h);
+  if (h != 0)
+    for (uint32_t i = 0; i < GL_MMS_ISSUED_MAX; i++)
+      if (g_mms_issued[i] == h) g_mms_issued[i] = 0;
   return 0;
 }
 

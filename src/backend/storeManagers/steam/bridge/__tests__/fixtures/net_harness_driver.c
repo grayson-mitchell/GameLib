@@ -161,6 +161,115 @@ uint64_t SteamAPI_ISteamFriends_GetFriendByIndex(void *self, int i, int f) { ret
 int SteamAPI_ISteamFriends_GetFriendPersonaState(void *self, uint64_t id) { return fake_friend_state(self, id); }
 int SteamAPI_ISteamFriends_GetFriendGamePlayed(void *self, uint64_t id, void *info) { return fake_friend_played(self, id, info); }
 
+/* 58-30: server-browser fakes. */
+static int g_ping_calls = 0, g_cancel_calls = 0, g_relreq_calls = 0;
+static int32_t g_cancel_last = 0;
+static int32_t g_next_query = 100;
+static uint64_t g_next_list = 1;
+int32_t SteamAPI_ISteamMatchmakingServers_PingServer(void *self, uint32_t ip, uint16_t port, void *resp) {
+  (void)self; (void)ip; (void)port; (void)resp;
+  g_ping_calls++;
+  return g_next_query++;
+}
+void SteamAPI_ISteamMatchmakingServers_CancelServerQuery(void *self, int32_t q) {
+  (void)self;
+  g_cancel_calls++;
+  g_cancel_last = q;
+}
+void SteamAPI_ISteamMatchmakingServers_ReleaseRequest(void *self, void *h) {
+  (void)self; (void)h;
+  g_relreq_calls++;
+}
+void *SteamAPI_ISteamMatchmakingServers_RequestInternetServerList(void *self, uint32_t app, void *f, uint32_t n, void *r) {
+  (void)self; (void)app; (void)f; (void)n; (void)r;
+  return (void *)(uintptr_t)(g_next_list++);
+}
+
+static int32_t do_ping(void) {
+  uint8_t a[8] = {1, 2, 3, 4, 0x39, 0x30, 0, 0};
+  uint8_t r[8];
+  uint32_t rl = 0;
+  int32_t q = 12345;
+  int rc = gl_mms_ping_server((void *)1, a, 8, r, sizeof r, &rl);
+  if (rc != 0 || rl != 4) return 12345;
+  memcpy(&q, r, 4);
+  return q;
+}
+static uint64_t do_list(void) {
+  uint8_t a[12] = {0};
+  uint8_t r[8];
+  uint32_t rl = 0;
+  uint64_t h = 777;
+  if (gl_mms_request_list((void *)1, a, 12, r, sizeof r, &rl) != 0 || rl != 8) return 777;
+  memcpy(&h, r, 8);
+  return h;
+}
+static int do_cancel(int32_t q) {
+  uint32_t rl = 0;
+  uint8_t r[4];
+  return gl_mms_cancel_server_query((void *)1, (const uint8_t *)&q, 4, r, sizeof r, &rl);
+}
+static int do_release(uint64_t h) {
+  uint32_t rl = 0;
+  uint8_t r[4];
+  return gl_mms_release_request((void *)1, (const uint8_t *)&h, 8, r, sizeof r, &rl);
+}
+static int pool_bound(void) {
+  int n = 0;
+  for (int i = 0; i < GL_MMS_POOL; i++) n += g_mms_bind[GL_MMS_G_PING][i].used;
+  return n;
+}
+
+static int run_mms_case(const char *c) {
+  g_dylib_handle = RTLD_DEFAULT;
+  if (strcmp(c, "mms-pool-full") == 0) {
+    int ok = 1;
+    int32_t extra;
+    for (int i = 0; i < GL_MMS_POOL; i++) if (do_ping() != 100 + i) ok = 0;
+    extra = do_ping();
+    for (int i = 0; i < GL_MMS_POOL; i++) if (g_mms_bind[GL_MMS_G_PING][i].handle != 100 + i) ok = 0;
+    printf("pool=%d ok=%d extra=%d calls=%d bound=%d\n", GL_MMS_POOL, ok, extra, g_ping_calls, pool_bound());
+  } else if (strcmp(c, "mms-cancel-releases") == 0) {
+    int32_t again;
+    for (int i = 0; i < GL_MMS_POOL; i++) do_ping();
+    printf("full-refused=%d\n", do_ping() == -1);
+    do_cancel(105);
+    printf("cancel calls=%d last=%d bound=%d\n", g_cancel_calls, g_cancel_last, pool_bound());
+    again = do_ping();
+    printf("again=%d bound=%d slot5=%d\n", again, pool_bound(), g_mms_bind[GL_MMS_G_PING][5].handle);
+  } else if (strcmp(c, "mms-cancel-unknown") == 0) {
+    do_ping();
+    do_ping();
+    do_cancel(9999);
+    printf("cancel calls=%d last=%d bound=%d h0=%d h1=%d\n", g_cancel_calls, g_cancel_last, pool_bound(),
+           g_mms_bind[GL_MMS_G_PING][0].handle, g_mms_bind[GL_MMS_G_PING][1].handle);
+  } else if (strcmp(c, "mms-issued-full") == 0) {
+    int ok = 1;
+    uint64_t extra;
+    for (uint64_t i = 1; i <= GL_MMS_ISSUED_MAX; i++) if (do_list() != i) ok = 0;
+    printf("kept=%d releases=%d\n", ok, g_relreq_calls);
+    extra = do_list();
+    printf("extra=%llu releases=%d\n", (unsigned long long)extra, g_relreq_calls);
+    ok = 1;
+    for (uint64_t i = 1; i <= GL_MMS_ISSUED_MAX; i++) if (!gl_mms_is_issued(i)) ok = 0;
+    printf("all-issued=%d\n", ok);
+  } else if (strcmp(c, "mms-release-frees") == 0) {
+    uint64_t h = 0x100000005ull, h2 = 0x200000005ull;
+    printf("issue=%d is=%d\n", gl_mms_issue(h), gl_mms_is_issued(h));
+    do_release(h);
+    printf("release calls=%d is=%d\n", g_relreq_calls, gl_mms_is_issued(h));
+    printf("reissue=%d\n", gl_mms_issue(h2));
+  } else if (strcmp(c, "mms-collision") == 0) {
+    uint64_t h = 0x100000005ull, h2 = 0x200000005ull;
+    printf("first=%d same=%d collide=%d is2=%d\n", gl_mms_issue(h), gl_mms_issue(h), gl_mms_issue(h2),
+           gl_mms_is_issued(h2));
+  } else {
+    return 2;
+  }
+  fflush(stdout);
+  return 0;
+}
+
 static int read_frame(int fd, uint8_t *status, uint8_t *body, uint32_t cap) {
   uint8_t h[9];
   uint32_t total;
@@ -195,6 +304,7 @@ static int control_call(int authenticated, uint16_t slot, const uint8_t *arg, ui
 
 int main(int argc, char **argv) {
   const char *c = argc > 1 ? argv[1] : "";
+  if (strncmp(c, "mms-", 4) == 0 && strcmp(c, "mms-lobby-args") != 0) return run_mms_case(c);
   g_dylib_handle = RTLD_DEFAULT;
   if (strncmp(c, "invite-", 7) == 0 || strcmp(c, "list-friends") == 0 || strcmp(c, "control-unauth") == 0 ||
       strcmp(c, "mms-lobby-args") == 0) {
