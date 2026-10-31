@@ -628,10 +628,17 @@ describe('tauriGamepadAction scroll-container-aware directional moves (quick 261
     expect(container.scrollTop).toBe(600)
   })
 
-  it('at the scroll end of a data-gamepad-stop-down container, Down stays put and Up still escapes', async () => {
+  it('Down from inside a data-gamepad-stop-down region never leaves it, even to an in-container target; Up still does', async () => {
+    // Real shape: the scroll container (`main.content`) holds both `.listing` (the region)
+    // and the left panel, so the left panel is an IN-CONTAINER candidate below the last row.
     const { container, current, leftPanelBtn } = setup(600)
-    container.setAttribute('data-gamepad-stop-down', '')
+    const listing = new FakeElement('div')
+    listing.setAttribute('data-gamepad-stop-down', '')
+    listing.parentElement = container
+    current.parentElement = listing
+    leftPanelBtn.parentElement = container
     const toolbarBtn = new FakeElement('button', rectOf(100, 120))
+    toolbarBtn.parentElement = container
     fakeDocument.querySelectorAll.mockReturnValue([current, leftPanelBtn, toolbarBtn])
     fakeDocument.activeElement = current
 
@@ -639,7 +646,6 @@ describe('tauriGamepadAction scroll-container-aware directional moves (quick 261
     expect(fakeDocument.activeElement).toBe(current)
     expect(container.scrollTop).toBe(600)
 
-    container.scrollTop = 0
     await tauriGamepadAction({ action: 'padUp' })
     expect(fakeDocument.activeElement).toBe(toolbarBtn)
   })

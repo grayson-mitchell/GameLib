@@ -377,8 +377,21 @@ function nextFrame(): Promise<void> {
  */
 const REVEAL_TIMEOUT_MS = 250
 
-/** Scroll containers carrying this attribute keep Down inside them at their scroll end. */
+/**
+ * Regions carrying this attribute keep Down inside them. It marks a region, not a scroll
+ * container: the library's `.listing` does not scroll itself (the app-wide `main.content`
+ * does, and that also holds the left panel), so the region must be matched by ancestry.
+ */
 const STOP_DOWN_ATTRIBUTE = 'data-gamepad-stop-down'
+
+function findStopDownRegion(start: Element): Element | null {
+  let el: Element | null = start
+  while (el) {
+    if (el.getAttribute(STOP_DOWN_ATTRIBUTE) !== null) return el
+    el = el.parentElement
+  }
+  return null
+}
 
 /**
  * Chromium's built-in spatial navigation -- which is what made Electron's synthetic
@@ -412,12 +425,17 @@ async function moveFocusDirectionally(direction: Direction): Promise<void> {
   // WR-03: with nothing focused, seed from the viewport edge opposite `direction`
   // rather than a zero rect at (0,0) -- see `viewportOriginFor`.
   const origin = current ? current.getBoundingClientRect() : viewportOriginFor(direction)
-  const all = getFocusableElements().filter((el) => el !== current)
-
   if (!current) {
-    bestInDirection(direction, origin, all)?.focus()
+    bestInDirection(direction, origin, getFocusableElements())?.focus()
     return
   }
+
+  // Down from inside a `data-gamepad-stop-down` region (the library's `.listing`) only
+  // considers targets inside that region, so the last row is a dead end instead of an
+  // exit to the left panel. Up is untouched: the toolbar above the grid stays reachable.
+  const stopRegion = direction === 'Down' ? findStopDownRegion(current) : null
+  const reachable = (el: HTMLElement): boolean => el !== current && (!stopRegion || stopRegion.contains(el))
+  const all = getFocusableElements().filter(reachable)
 
   // Start from the parent so a scrollable focused element is never its own container.
   const container = findScrollableAncestor(current.parentElement)
@@ -445,7 +463,7 @@ async function moveFocusDirectionally(direction: Direction): Promise<void> {
       if (activeElement() !== current) return
       // The scroll moved the origin, and cards render lazily -- recompute both.
       const freshOrigin = current.getBoundingClientRect()
-      const fresh = getFocusableElements().filter((el) => el !== current && container.contains(el))
+      const fresh = getFocusableElements().filter((el) => reachable(el) && container.contains(el))
       const revealed = bestInDirection(direction, freshOrigin, fresh)
       if (revealed) {
         revealed.focus()
@@ -455,11 +473,6 @@ async function moveFocusDirectionally(direction: Direction): Promise<void> {
     // Nothing rendered in time; the grid still scrolled one step and the next press continues.
     return
   }
-
-  // A container that opts in with `data-gamepad-stop-down` (the library's `.listing`) is a
-  // dead end for Down at its scroll end: escaping to the whole document from the last row
-  // landed on the left panel. Up still escapes, so the toolbar above stays reachable.
-  if (direction === 'Down' && container.getAttribute(STOP_DOWN_ATTRIBUTE) !== null) return
 
   // The container cannot scroll further: today's whole-document search keeps controls
   // below a scrollable list reachable.
