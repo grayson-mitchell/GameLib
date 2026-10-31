@@ -2028,6 +2028,12 @@ describe('58-05: multiplayer evidence (D-08)', () => {
     expect(
       parseNetLine('[ts] NET    cap of 32 reached; later lines are not logged')
     ).toBeNull()
+    for (const note of [
+      'cap kind=send iface=Sockets reached; later lines are not logged',
+      'cap kind=join reached; later lines are not logged'
+    ]) {
+      expect(parseNetLine('[ts] NET    ' + note)).toBeNull()
+    }
     expect(parseNetLine('x'.repeat(300))).toBeNull()
   })
 

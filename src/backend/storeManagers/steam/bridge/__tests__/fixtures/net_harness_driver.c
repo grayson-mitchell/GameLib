@@ -89,6 +89,23 @@ static void p2p_call(void) {
 int main(int argc, char **argv) {
   const char *c = argc > 1 ? argv[1] : "";
   g_dylib_handle = RTLD_DEFAULT;
+  if (strcmp(c, "net-budget") == 0) {
+    for (int i = 0; i < 40; i++) gl_net_evidence(1, GL_NET_KIND_SEND, GL_NET_IFACE_SOCKETS, 0, 5, GL_NET_PATH_UNKNOWN);
+    gl_net_evidence(1, GL_NET_KIND_JOIN, GL_NET_IFACE_SOCKETS, 1221, 0, GL_NET_PATH_UNKNOWN);
+    gl_net_evidence(1, GL_NET_KIND_RECV, GL_NET_IFACE_SOCKETS, 0, 5, GL_NET_PATH_UNKNOWN);
+    return 0;
+  }
+  if (strcmp(c, "net-join-budget") == 0) {
+    for (int i = 0; i < 40; i++) gl_net_evidence(1, GL_NET_KIND_JOIN, GL_NET_IFACE_SOCKETS, 1221, 0, GL_NET_PATH_UNKNOWN);
+    return 0;
+  }
+  if (strcmp(c, "net-path-latch") == 0) {
+    for (int i = 0; i < 40; i++) gl_net_evidence(1, GL_NET_KIND_SEND, GL_NET_IFACE_SOCKETS, 0, 5, GL_NET_PATH_UNKNOWN);
+    gl_net_evidence(1, GL_NET_KIND_PATH, GL_NET_IFACE_SOCKETS, 0, 0, GL_NET_PATH_DIRECT);
+    gl_net_evidence(1, GL_NET_KIND_PATH, GL_NET_IFACE_NETWORKING, 0, 0, GL_NET_PATH_RELAYED);
+    gl_net_evidence(1, GL_NET_KIND_RECV, GL_NET_IFACE_SOCKETS, 0, 5, GL_NET_PATH_UNKNOWN);
+    return 0;
+  }
   if (strncmp(c, "p2p-", 4) == 0) {
     g_bd_flat_SteamNetworking006_IsP2PPacketAvailable = fake_avail;
     g_bd_flat_SteamNetworking006_ReadP2PPacket = fake_read;

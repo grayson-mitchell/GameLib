@@ -100,5 +100,33 @@ describeDarwinOnly(
       const { out } = runBoth('p2p-normal')
       expect(out).toContain('ret=1 len=100')
     })
+
+    const lines = (err: string, re: RegExp): string[] =>
+      err.split('\n').filter((l) => re.test(l))
+
+    test('net-budget: a send burst cannot starve join or recv lines', () => {
+      const { err } = runBoth('net-budget')
+      expect(lines(err, /kind=send iface=Sockets cb=/)).toHaveLength(8)
+      expect(
+        lines(err, /NET {2,}cap kind=send iface=Sockets reached;/)
+      ).toHaveLength(1)
+      expect(lines(err, /kind=join iface=Sockets cb=1221/)).toHaveLength(1)
+      expect(lines(err, /kind=recv iface=Sockets/)).toHaveLength(1)
+    })
+
+    test('net-join-budget: join lines are capped at 16 with one note', () => {
+      const { err } = runBoth('net-join-budget')
+      expect(lines(err, /kind=join iface=Sockets cb=/)).toHaveLength(16)
+      expect(
+        lines(err, /cap kind=join reached; later lines are not logged/)
+      ).toHaveLength(1)
+    })
+
+    test('net-path-latch: path lines consume no send/recv budget', () => {
+      const { err } = runBoth('net-path-latch')
+      expect(lines(err, /kind=path/)).toHaveLength(2)
+      expect(lines(err, /kind=recv iface=Sockets/)).toHaveLength(1)
+      expect(lines(err, /kind=send iface=Sockets cb=/)).toHaveLength(8)
+    })
   }
 )

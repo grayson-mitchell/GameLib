@@ -281,8 +281,17 @@ static gl_cbq_ring     g_cbq;
 static gl_cr_state     g_cr;
 // 58-07: latest join observed by the pump, awaiting the shim's slot-10 report.
 static struct { int valid; int32_t id; int path; } g_join_note;
-static unsigned g_net_logged = 0;
-static int g_net_cap_noted = 0;
+// 58-28 (WR-06): segmented NET budgets. join has its own budget; each
+// (kind, iface) of send/recv/oversize has its own. PATH is exempt (callers
+// latch it). Worst case 16 + 3*4*8 = 112 lines per launch. Scope: the helper is
+// stopped at game stop (games.ts stopBridgeHelper), so per process == per launch
+// and no reset is needed.
+#define GL_NET_JOIN_MAX 16
+#define GL_NET_KIND_IFACE_MAX 8
+static unsigned g_net_join_logged = 0;
+static int g_net_join_cap_noted = 0;
+static unsigned g_net_ki_logged[5][4];
+static int g_net_ki_cap_noted[5][4];
 // quick 261031-ixa: per-id log budgets. One process-wide cap let steady
 // 1281/1222 traffic hide a later 513 line. Fixed 32-id table; a new id beyond
 // it is silent. gl_logbudget_take: 1 = log it, 2 = first refusal (emit a cap
@@ -567,7 +576,6 @@ static void gl_log_stats_obs(int from_callresult, int rc, int32_t result) {
 // Phase 58 (58-07, D-08 / M-05): NET evidence lines in the 58-05 grammar. Words
 // come from closed literal tables; the only runtime values are integers
 // (callback id, count). Never a SteamID, address, handle or payload (V7).
-#define NET_LOG_MAX 32
 static void gl_net_append(char *dst, size_t cap, const char *lit) {
   size_t n = strlen(dst);
   size_t l = strlen(lit);
@@ -582,14 +590,32 @@ void gl_net_evidence(int game, int kind, int iface, int32_t cb, uint32_t n, int 
   if (kind < 0 || kind > GL_NET_KIND_OVERSIZE || iface < 0 || iface > GL_NET_IFACE_MESSAGES ||
       path < 0 || path > GL_NET_PATH_RELAYED || cb < 0 || cb > 99999)
     return;
-  if (g_net_logged >= NET_LOG_MAX) {
-    if (!g_net_cap_noted) {
-      g_net_cap_noted = 1;
-      logts("NET", "cap of 32 reached; later lines are not logged");
+  if (kind == GL_NET_KIND_JOIN) {
+    if (g_net_join_logged >= GL_NET_JOIN_MAX) {
+      if (!g_net_join_cap_noted) {
+        g_net_join_cap_noted = 1;
+        logts("NET", "cap kind=join reached; later lines are not logged");
+      }
+      return;
     }
-    return;
+    g_net_join_logged++;
+  } else if (kind != GL_NET_KIND_PATH) {
+    if (g_net_ki_logged[kind][iface] >= GL_NET_KIND_IFACE_MAX) {
+      if (!g_net_ki_cap_noted[kind][iface]) {
+        char cap[96];
+        g_net_ki_cap_noted[kind][iface] = 1;
+        cap[0] = '\0';
+        gl_net_append(cap, sizeof cap, "cap kind=");
+        gl_net_append(cap, sizeof cap, k_kind[kind]);
+        gl_net_append(cap, sizeof cap, " iface=");
+        gl_net_append(cap, sizeof cap, k_iface[iface]);
+        gl_net_append(cap, sizeof cap, " reached; later lines are not logged");
+        logts("NET", cap);
+      }
+      return;
+    }
+    g_net_ki_logged[kind][iface]++;
   }
-  g_net_logged++;
   char msg[160];
   char num[16];
   msg[0] = '\0';

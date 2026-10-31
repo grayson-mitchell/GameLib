@@ -1649,8 +1649,10 @@ describeDarwinOnly(
       expect(calls.length).toBeGreaterThan(0)
       for (const call of calls) {
         expect(call[0]).not.toMatch(/%s|%p|%llu|%lx/)
-        // The NET emitter assembles `msg` from closed literal word tables.
-        expect(call[0]).toMatch(/^logts(?:_f)?\("(?:NET|CBQ)", (?:"|msg\);$)/)
+        // The NET emitter assembles `msg` (and the per-pair cap note `cap`) from closed literal word tables.
+        expect(call[0]).toMatch(
+          /^logts(?:_f)?\("(?:NET|CBQ)", (?:"|(?:msg|cap)\);$)/
+        )
       }
       expect(src).toContain(
         'CBQ", "unlisted iCallback=%d action=drop callresult=1"'
