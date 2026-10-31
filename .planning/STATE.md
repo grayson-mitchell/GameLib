@@ -302,6 +302,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 56]: 56-17: Gap 7 root cause x64 cwd (98837f09b); Gap 9 trigger strict SteamPath check (5ff2dbd8c); winebus abort-spin residual
 - [Phase 58]: [58-02] CSteamID measured pack(1) per SDK; UserStatsReceived_t Windows steamID offset likely 12 not 16 (finding, unfixed)
 - [Phase 58]: D-08a: Raft legacy-P2P joins scored by 1202+Accept+game P2P send/read; DRM trace uses peer ordinals not SteamID64
+- [Phase 58]: 58-24 close-out (2026-11-01): DRM mode Raft PASS (58-08-LIVE-GATE); TCP mode Schedule I gate Verdict FAIL — Direction A (Mac hosts) no working invite path (overlay invite dialog call reaches Mac Steam but shows nothing; friends-list Invite to Game and Join Game missing), Direction B (PC hosts) PASS with the 333 GameLobbyJoinRequested_t relay proven live, path unknown (58-22-LIVE-GATE). serialized005 not needed (M-06); D-12 no-op per D-16; D-13 unchanged; x86 multiplayer deferred. Open gaps in 58-22-LIVE-GATE.md section 5. Phase 58 NOT done — next: `/gsd-plan-phase 58 --gaps`.
 
 ### Pending Todos
 
