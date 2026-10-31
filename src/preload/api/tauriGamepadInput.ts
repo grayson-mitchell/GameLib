@@ -314,29 +314,7 @@ const ARROW_KEYS: Record<Direction, 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'Arr
   Right: 'ArrowRight'
 }
 
-/**
- * Chromium's built-in spatial navigation -- which is what made Electron's synthetic
- * `keyDown` with keyCode `Up`/`Down`/`Left`/`Right` actually move focus -- does not
- * exist in WKWebView or WebView2 (D-10's accepted re-derivation cost). This computes
- * the nearest-in-direction focusable element from `getBoundingClientRect()` geometry
- * instead: candidates strictly on the requested side of the currently focused element
- * are scored by facing-edge distance plus double the perpendicular centre offset, and
- * the lowest-scoring candidate is focused. Electron's spatial navigation does not wrap
- * at the edges, so neither does this -- if there are no candidates, focus is left
- * unchanged.
- */
-function moveFocusDirectionally(direction: Direction): void {
-  const current = activeElement()
-  if (current) {
-    const prevented = dispatchKey(current, ARROW_KEYS[direction])
-    if (prevented) return
-  }
-
-  // WR-03: with nothing focused, seed from the viewport edge opposite `direction`
-  // rather than a zero rect at (0,0) -- see `viewportOriginFor`.
-  const origin = current ? current.getBoundingClientRect() : viewportOriginFor(direction)
-  const candidates = getFocusableElements().filter((el) => el !== current)
-
+function bestInDirection(direction: Direction, origin: RectLike, candidates: HTMLElement[]): HTMLElement | null {
   let best: HTMLElement | null = null
   let bestScore = Infinity
   for (const candidate of candidates) {
@@ -348,11 +326,160 @@ function moveFocusDirectionally(direction: Direction): void {
       best = candidate
     }
   }
-
-  best?.focus()
+  return best
 }
 
-export function tauriGamepadAction(args: GamepadActionArgs): Promise<void> {
+function isDocumentScroller(el: Element): boolean {
+  return el === document.scrollingElement || el === document.documentElement || el === document.body
+}
+
+/**
+ * quick 261031-lrx: can `container` still scroll in `direction`? The 1px slack allows for
+ * sub-pixel scroll positions. Horizontal reveal is deliberately out of scope: the library
+ * grid scrolls only vertically, and Left from the leftmost tile must keep reaching the
+ * left panel through the whole-document fallback.
+ */
+function canScrollToward(container: Element, direction: Direction): boolean {
+  if (direction === 'Down') return container.scrollTop < container.scrollHeight - container.clientHeight - 1
+  if (direction === 'Up') return container.scrollTop > 0
+  return false
+}
+
+function scrollContainerBy(container: Element, top: number): void {
+  if (typeof container.scrollBy === 'function') {
+    container.scrollBy({ top })
+  } else {
+    container.scrollTop += top
+  }
+}
+
+/**
+ * Resolves on whichever comes first of requestAnimationFrame or a 16ms timeout. The
+ * timeout matters twice: the preload test env is node (no rAF), and a hidden or occluded
+ * WKWebView may throttle rAF indefinitely -- the promise must never hang.
+ */
+function nextFrame(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    let done = false
+    const finish = (): void => {
+      if (done) return
+      done = true
+      resolve()
+    }
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => finish())
+    setTimeout(finish, 16)
+  })
+}
+
+/**
+ * quick 261031-lrx: how long to wait for lazily rendered cards after scrolling a
+ * container. Bounded so a grid that never renders anything cannot pin the promise.
+ */
+const REVEAL_TIMEOUT_MS = 250
+
+/**
+ * Regions carrying this attribute keep Down inside them. It marks a region, not a scroll
+ * container: the library's `.listing` does not scroll itself (the app-wide `main.content`
+ * does, and that also holds the left panel), so the region must be matched by ancestry.
+ */
+const STOP_DOWN_ATTRIBUTE = 'data-gamepad-stop-down'
+
+function findStopDownRegion(start: Element): Element | null {
+  let el: Element | null = start
+  while (el) {
+    if (el.getAttribute(STOP_DOWN_ATTRIBUTE) !== null) return el
+    el = el.parentElement
+  }
+  return null
+}
+
+/**
+ * Chromium's built-in spatial navigation -- which is what made Electron's synthetic
+ * `keyDown` with keyCode `Up`/`Down`/`Left`/`Right` actually move focus -- does not
+ * exist in WKWebView or WebView2 (D-10's accepted re-derivation cost). This computes
+ * the nearest-in-direction focusable element from `getBoundingClientRect()` geometry
+ * instead: candidates strictly on the requested side of the currently focused element
+ * are scored by facing-edge distance plus double the perpendicular centre offset, and
+ * the lowest-scoring candidate is focused. Electron's spatial navigation does not wrap
+ * at the edges, so neither does this -- if there are no candidates, focus is left
+ * unchanged.
+ *
+ * quick 261031-lrx (todo 2026-10-30-controller-down-at-bottom-tile-jumps-to-left-panel.md):
+ * the search is container-first. GameCard renders a non-focusable placeholder until
+ * cardVisibility.ts's IntersectionObserver fires, and IntersectionObserver clips targets
+ * by intermediate overflow scroll containers before applying rootMargin, so rows below the
+ * grid's scroll container never render. A whole-document search then found nothing below
+ * the bottom tile and escaped to the left panel. Now: (1) prefer candidates inside the
+ * focused element's scroll container; (2) if none and the container can scroll toward
+ * `direction`, scroll it one tile and poll briefly for the newly rendered tile; (3) only
+ * when the container cannot scroll further, fall back to the whole document. With only the
+ * document scroller above the focused element, behaviour is unchanged.
+ */
+async function moveFocusDirectionally(direction: Direction): Promise<void> {
+  const current = activeElement()
+  if (current) {
+    const prevented = dispatchKey(current, ARROW_KEYS[direction])
+    if (prevented) return
+  }
+
+  // WR-03: with nothing focused, seed from the viewport edge opposite `direction`
+  // rather than a zero rect at (0,0) -- see `viewportOriginFor`.
+  const origin = current ? current.getBoundingClientRect() : viewportOriginFor(direction)
+  if (!current) {
+    bestInDirection(direction, origin, getFocusableElements())?.focus()
+    return
+  }
+
+  // Down from inside a `data-gamepad-stop-down` region (the library's `.listing`) only
+  // considers targets inside that region, so the last row is a dead end instead of an
+  // exit to the left panel. Up is untouched: the toolbar above the grid stays reachable.
+  const stopRegion = direction === 'Down' ? findStopDownRegion(current) : null
+  const reachable = (el: HTMLElement): boolean => el !== current && (!stopRegion || stopRegion.contains(el))
+  const all = getFocusableElements().filter(reachable)
+
+  // Start from the parent so a scrollable focused element is never its own container.
+  const container = findScrollableAncestor(current.parentElement)
+  if (isDocumentScroller(container)) {
+    bestInDirection(direction, origin, all)?.focus()
+    return
+  }
+
+  const inside = all.filter((el) => container.contains(el))
+  const inContainer = bestInDirection(direction, origin, inside)
+  if (inContainer) {
+    inContainer.focus()
+    return
+  }
+
+  if (canScrollToward(container, direction)) {
+    const height = current.getBoundingClientRect().height
+    const step = height > 0 ? height : 1
+    scrollContainerBy(container, direction === 'Down' ? step : -step)
+
+    const deadline = Date.now() + REVEAL_TIMEOUT_MS
+    while (Date.now() < deadline) {
+      await nextFrame()
+      // An overlapping press (gamepad.ts does not await) or the app moved focus: do not steal it.
+      if (activeElement() !== current) return
+      // The scroll moved the origin, and cards render lazily -- recompute both.
+      const freshOrigin = current.getBoundingClientRect()
+      const fresh = getFocusableElements().filter((el) => reachable(el) && container.contains(el))
+      const revealed = bestInDirection(direction, freshOrigin, fresh)
+      if (revealed) {
+        revealed.focus()
+        return
+      }
+    }
+    // Nothing rendered in time; the grid still scrolled one step and the next press continues.
+    return
+  }
+
+  // The container cannot scroll further: today's whole-document search keeps controls
+  // below a scrollable list reachable.
+  bestInDirection(direction, origin, all)?.focus()
+}
+
+export async function tauriGamepadAction(args: GamepadActionArgs): Promise<void> {
   try {
     switch (args.action) {
       case 'tab':
@@ -388,7 +515,7 @@ export function tauriGamepadAction(args: GamepadActionArgs): Promise<void> {
       case 'leftStickLeft':
       case 'leftStickRight': {
         const direction = args.action.replace(/pad|leftStick/, '') as 'Up' | 'Down' | 'Left' | 'Right'
-        moveFocusDirectionally(direction)
+        await moveFocusDirectionally(direction)
         break
       }
       default:
@@ -401,5 +528,4 @@ export function tauriGamepadAction(args: GamepadActionArgs): Promise<void> {
   } catch (error) {
     warn('tauriGamepadAction failed', error)
   }
-  return Promise.resolve()
 }
