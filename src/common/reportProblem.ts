@@ -199,7 +199,7 @@ export function redactDiagnostics(
 
 // --- formatting ------------------------------------------------------------
 
-export interface ReportDiagnosticsInput {
+interface ReportDiagnosticsInput {
   appVersion: string
   os: string
   store?: string

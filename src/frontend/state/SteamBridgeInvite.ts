@@ -2,7 +2,7 @@ import type { IpcRendererEvent } from 'backend/platform'
 import { create } from 'zustand'
 import type { BridgeFriend, BridgeInviteResult } from 'common/types/steam'
 
-export type SteamBridgeInviteLoad = 'idle' | 'loading' | 'ready' | 'unavailable'
+type SteamBridgeInviteLoad = 'idle' | 'loading' | 'ready' | 'unavailable'
 export type SteamBridgeInviteRow = 'pending' | BridgeInviteResult
 
 interface SteamBridgeInviteState {

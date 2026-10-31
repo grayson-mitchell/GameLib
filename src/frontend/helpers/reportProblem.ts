@@ -15,7 +15,7 @@ import type { GameInfo } from 'common/types'
  */
 export const WEB3FORMS_ACCESS_KEY = '990db980-7ed2-4ebf-a095-04394ff68ea3'
 
-export const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit'
+const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit'
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -24,7 +24,7 @@ export function isReportingConfigured(key: string = WEB3FORMS_ACCESS_KEY) {
   return UUID_RE.test(key.trim())
 }
 
-export type SubmitResult =
+type SubmitResult =
   | { ok: true }
   | {
       ok: false

@@ -913,8 +913,6 @@ export const CALLBACK_LAYOUTS = {
   }
 } as const satisfies Record<string, CallbackLayoutEntry>
 
-type CallbackLayoutName = keyof typeof CALLBACK_LAYOUTS
-
 const CALLBACK_LAYOUT_TRIPLES: readonly {
   triple: UserStatsTriple
   arch: CallbackLayoutArch

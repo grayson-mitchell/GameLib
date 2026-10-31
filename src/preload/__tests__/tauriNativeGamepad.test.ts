@@ -34,7 +34,7 @@ const browserPad = (id: string): Gamepad => ({ id, index: 0, connected: true }) 
 function load(): Mod {
   let mod!: Mod
   jest.isolateModules(() => {
-    mod = require('../api/tauriNativeGamepad')
+    mod = jest.requireActual<Mod>('../api/tauriNativeGamepad')
   })
   return mod
 }

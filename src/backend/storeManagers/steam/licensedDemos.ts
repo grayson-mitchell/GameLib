@@ -65,7 +65,7 @@ function packageAppIds(
 }
 
 /** Deduped appids granted by the given packages, minus owned ones. */
-export function licensedNotOwnedAppIds(
+function licensedNotOwnedAppIds(
   ownedAppIds: ReadonlySet<number>,
   packageIds: number[],
   packages: Record<number, { packageinfo?: unknown }> | undefined

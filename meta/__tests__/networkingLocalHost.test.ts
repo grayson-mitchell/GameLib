@@ -6,7 +6,7 @@
  * "pointers never reach the transport" are exercised, not just pinned in text.
  */
 import { spawn } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import {
@@ -206,10 +206,14 @@ describe('networking local export wiring (58-14)', () => {
   })
 
   it('the utils ordinal and slots in the C block match the committed manifest', () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const manifest = require('../sdk/isteamnetworkingutils004.manifest.json')
+    const manifest = JSON.parse(
+      readFileSync(
+        join(__dirname, '..', 'sdk', 'isteamnetworkingutils004.manifest.json'),
+        'utf8'
+      )
+    ) as { ordinal: number; methods: Array<{ name: string; slot: number }> }
     const slot = (name: string): number =>
-      manifest.methods.find((m: { name: string }) => m.name === name).slot
+      manifest.methods.find((m) => m.name === name)?.slot ?? NaN
     const define = (name: string): number =>
       Number(new RegExp(`#define ${name} (\\d+)`).exec(NETWORKING_LOCAL_C)?.[1])
     expect(define('GL_NET_UTILS_ORDINAL')).toBe(manifest.ordinal)

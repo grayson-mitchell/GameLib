@@ -18,7 +18,7 @@ const N_EXT = 0x01
 const N_TYPE_MASK = 0x0e
 const N_STAB_MASK = 0xe0
 
-export const DXMT_REQUIRED_MACDRV_SYMBOLS = [
+const DXMT_REQUIRED_MACDRV_SYMBOLS = [
   '_macdrv_functions',
   '_macdrv_view_create_metal_view',
   '_macdrv_view_get_metal_layer',

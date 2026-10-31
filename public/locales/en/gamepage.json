@@ -276,12 +276,11 @@
         "wineversion": "Wine version"
     },
     "label": {
+        "drmSetup": "Preparing Steam DRM support",
         "game": {
             "not-installable-game": "Game is NOT Installable",
             "third-party-game": "Third-Party Game NOT Supported"
         },
-        "drmSetup": "Preparing Steam DRM support",
-        "steamStarting": "Starting Steam",
         "launching": "Launching",
         "playing": {
             "start": "Play Now",
@@ -292,6 +291,7 @@
         "saves": {
             "syncing": "Syncing Saves"
         },
+        "steamStarting": "Starting Steam",
         "winetricks": "Installing Winetricks Packages"
     },
     "launch": {
@@ -368,7 +368,6 @@
         "clickToUpdate": "Click to Update",
         "downloading": "Downloading",
         "drmSetup": "Preparing Steam DRM support ({{step}})",
-        "steamStarting": "Starting Steam",
         "extracting": "Extracting",
         "gameNotAvailable": "Game not available",
         "gog-goodie": "This game doesn't appear to be installable. Check downloadable content on https://gog.com/account",
@@ -389,10 +388,11 @@
         "redist": "Installing Redistributables ({{redist}})",
         "reparing": "Repairing Game, please wait",
         "settingUpBottle": "Setting up Steam…",
-        "steamFinishInSteam": "Finish in Steam",
         "steamFinishing": "Finishing install…",
+        "steamFinishInSteam": "Finish in Steam",
         "steamInstalling": "Installing…",
         "steamPaused": "Paused",
+        "steamStarting": "Starting Steam",
         "steamWaitingRestart": "Restart Steam to finish",
         "syncingSaves": "Syncing Saves",
         "this-game-uses-third-party": "This game uses third party launcher and it is not supported yet",

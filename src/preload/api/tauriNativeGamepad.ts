@@ -62,10 +62,7 @@ const WEBKIT_GC_ID = /^(.*?) (Extended )?Gamepad$/
 const normalise = (s: string): string => s.toLowerCase().trim().replace(/\s+/g, ' ')
 
 /** Which dedupe rule (1-3, see the task plan) says `browserId` is the same device; 0 for none. */
-export function matchRule(
-  browserId: string,
-  pad: Pick<NativePad, 'id' | 'name' | 'vendorId' | 'productId'>
-): 0 | 1 | 2 | 3 {
+function matchRule(browserId: string, pad: Pick<NativePad, 'id' | 'name' | 'vendorId' | 'productId'>): 0 | 1 | 2 | 3 {
   if (browserId === pad.id) return 1
   const hid = WEBKIT_HID_ID.exec(browserId)
   if (hid && pad.vendorId != null && pad.productId != null) {
@@ -74,13 +71,6 @@ export function matchRule(
   const gc = WEBKIT_GC_ID.exec(browserId)
   if (gc && pad.name && normalise(gc[1]) === normalise(pad.name)) return 3
   return 0
-}
-
-export function isSameDevice(
-  browserId: string,
-  pad: Pick<NativePad, 'id' | 'name' | 'vendorId' | 'productId'>
-): boolean {
-  return matchRule(browserId, pad) !== 0
 }
 
 function findBrowserMatch(browserPads: (Gamepad | null)[], pad: NativePad): { id: string; rule: number } | null {

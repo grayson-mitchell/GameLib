@@ -7,10 +7,9 @@ import type { ReactElement, ReactNode } from 'react'
 import { isValidElement } from 'react'
 
 jest.mock('react-i18next', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const {
-    gamelibT
-  } = require('../../../../screens/Game/GamePage/components/__tests__/gamelibT')
+  const { gamelibT } = jest.requireActual<
+    typeof import('../../../../screens/Game/GamePage/components/__tests__/gamelibT')
+  >('../../../../screens/Game/GamePage/components/__tests__/gamelibT')
   return { useTranslation: () => ({ t: gamelibT }) }
 })
 jest.mock('frontend/components/UI/Dialog', () => ({
