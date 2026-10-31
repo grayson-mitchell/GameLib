@@ -1936,6 +1936,58 @@ describe('58-05: multiplayer evidence (D-08)', () => {
     })
   })
 
+  describe('58-27: direction fields', () => {
+    const call = (name: string, id = ID) =>
+      `${H}bridge helper [${id}]: [2026-10-31T12:00:00Z] CALL   ${name}`
+
+    it('AcceptConnection gives host, not client', () => {
+      const v = tcp([
+        hello(),
+        call('SteamNetworkingSockets013.AcceptConnection'),
+        ...full
+      ])
+      expect(v).toMatchObject({ status: 'verified', host: true, client: false })
+    })
+
+    it('ConnectP2P and JoinLobby give client', () => {
+      const v = tcp([
+        hello(),
+        call('SteamNetworkingSockets013.ConnectP2P'),
+        call('SteamMatchMaking009.JoinLobby'),
+        ...full
+      ])
+      expect(v).toMatchObject({ host: false, client: true })
+    })
+
+    it('AcceptP2PSessionWithUser gives host', () => {
+      const v = tcp([
+        hello(),
+        call('SteamNetworking006.AcceptP2PSessionWithUser'),
+        ...full
+      ])
+      expect(v.host).toBe(true)
+    })
+
+    it('never widens status', () => {
+      const v = tcp([
+        hello(),
+        call('SteamNetworkingSockets013.AcceptConnection'),
+        net('join'),
+        net('send')
+      ])
+      expect(v).toMatchObject({ status: 'unverified', host: true })
+    })
+
+    it('ignores another appid helper CALL lines', () => {
+      const v = tcp([
+        hello(),
+        call('SteamNetworkingSockets013.AcceptConnection', '999'),
+        ...full
+      ])
+      expect(v).toMatchObject({ host: false, client: false })
+    })
+  })
+
   it('TCP role=helper join does not count', () => {
     const v = tcp([
       hello(),
@@ -2164,5 +2216,18 @@ describe('58-05: parseMultiplayerArgs', () => {
     expect(parseMultiplayerArgs(['--multiplayer', 'abc'])).toBeNull()
     expect(parseMultiplayerArgs(['--multiplayer'])).toBeNull()
     expect(parseMultiplayerArgs(['--multiplayer', '1', '--bogus'])).toBeNull()
+  })
+
+  it('58-27: parses --log', () => {
+    expect(
+      parseMultiplayerArgs(['--multiplayer', '3205720', '--log', '/tmp/x.log'])
+    ).toEqual({ appid: '3205720', drm: false, log: '/tmp/x.log' })
+    expect(parseMultiplayerArgs(['--multiplayer', '1', '--log'])).toBeNull()
+    expect(
+      parseMultiplayerArgs(['--multiplayer', '1', '--log', '--drm'])
+    ).toBeNull()
+    expect(
+      parseMultiplayerArgs(['--multiplayer', '1', '--drm', '--log', 'a.log'])
+    ).toEqual({ appid: '1', drm: true, log: 'a.log' })
   })
 })

@@ -2311,9 +2311,20 @@ export function parseNetLine(payload: string): NetEvent | null {
   }
 }
 
+/** Phase 58-27: direction evidence from helper CALL lines. The helper logs a
+ * CALL only after dispatching a shim wire request that returned STATUS_OK
+ * (bridge_helper.c, once per method per process), so these are
+ * game-originated by construction. Host = the game accepted a peer; client =
+ * the game connected or joined. */
+export const NET_DIRECTION_CALL_RE =
+  /^\[[^\]]*\]\s+CALL\s+(SteamNetworkingSockets\d{3}\.AcceptConnection|SteamNetworking\d{3}\.AcceptP2PSessionWithUser|SteamNetworkingSockets\d{3}\.ConnectP2P|SteamMatchMaking\d{3}\.JoinLobby)$/
+
 export interface MultiplayerVerdict {
   status: 'verified' | 'unverified'
   mode: 'tcp' | 'drm'
+  /** Direction fields are reported only and never widen `status`. */
+  host: boolean
+  client: boolean
   join: boolean
   send: boolean
   recv: boolean
@@ -2371,6 +2382,8 @@ export function classifyMultiplayerEvidence(input: {
   const mode: 'tcp' | 'drm' = input.drmMode ? 'drm' : 'tcp'
   const base = {
     mode,
+    host: false,
+    client: false,
     join: false,
     send: false,
     recv: false,
@@ -2442,8 +2455,17 @@ export function classifyMultiplayerEvidence(input: {
   let send = false
   let recv = false
   let oversize = 0
+  let host = false
+  let client = false
   const paths: Array<'direct' | 'relayed'> = []
   for (const payload of attributeHelperLines(input.appid, segment)) {
+    const dir = NET_DIRECTION_CALL_RE.exec(payload)
+    if (dir) {
+      if (/\.(AcceptConnection|AcceptP2PSessionWithUser)$/.test(dir[1])) {
+        host = true
+      } else client = true
+      continue
+    }
     const ev = parseNetLine(payload)
     if (!ev) continue
     if (ev.kind === 'oversize') oversize++
@@ -2466,6 +2488,8 @@ export function classifyMultiplayerEvidence(input: {
   return {
     ...base,
     status: verified ? 'verified' : 'unverified',
+    host,
+    client,
     join,
     send,
     recv,
@@ -2475,18 +2499,57 @@ export function classifyMultiplayerEvidence(input: {
   }
 }
 
-/** Phase 58: `--multiplayer <appid> [--drm]` argument parse. null = usage. */
+/** Phase 58: `--multiplayer <appid> [--drm] [--log <file>]` argument parse.
+ * null = usage. */
 export function parseMultiplayerArgs(
   argv: string[]
-): { appid: string; drm: boolean } | null {
+): { appid: string; drm: boolean; log?: string } | null {
   const i = argv.indexOf('--multiplayer')
   if (i < 0) return null
   const appid = argv[i + 1]
   if (appid === undefined || !/^\d+$/.test(appid)) return null
   const rest = argv.slice(i + 2).filter((a) => a !== '--json')
-  if (rest.length === 0) return { appid, drm: false }
-  if (rest.length === 1 && rest[0] === '--drm') return { appid, drm: true }
-  return null
+  let drm = false
+  let log: string | undefined
+  for (let k = 0; k < rest.length; k++) {
+    if (rest[k] === '--drm' && !drm) drm = true
+    else if (rest[k] === '--log' && log === undefined) {
+      const v = rest[++k]
+      if (v === undefined || v === '' || v.startsWith('--')) return null
+      log = v
+    } else return null
+  }
+  return log === undefined ? { appid, drm } : { appid, drm, log }
+}
+
+/** 58-27 (T-58-86): `--log <file>` reads exactly one regular file, capped at
+ * the app-log size cap. Exits 2 with a fixed message on refusal. */
+function readExplicitLog(path: string): {
+  names: string[]
+  texts: string[]
+  mtimes: number[]
+} {
+  let st
+  try {
+    st = statSync(path)
+  } catch {
+    console.error('bridge-census: --log file is not readable')
+    process.exit(2)
+  }
+  if (!st.isFile()) {
+    console.error('bridge-census: --log must name a regular file')
+    process.exit(2)
+  }
+  if (st.size > MAX_APP_LOG_BYTES) {
+    console.error('bridge-census: --log file exceeds the size cap')
+    process.exit(2)
+  }
+  const text = readTail(path, MAX_APP_LOG_BYTES)
+  if (text === null) {
+    console.error('bridge-census: --log file is not readable')
+    process.exit(2)
+  }
+  return { names: [basename(path)], texts: [text], mtimes: [st.mtimeMs] }
 }
 
 async function main(): Promise<void> {
@@ -2494,11 +2557,11 @@ async function main(): Promise<void> {
     const args = parseMultiplayerArgs(process.argv.slice(2))
     if (!args) {
       console.error(
-        'usage: bridge-census --multiplayer <appid> [--drm] [--json]'
+        'usage: bridge-census --multiplayer <appid> [--drm] [--log <file>] [--json]'
       )
       process.exit(2)
     }
-    const logs = findAppLogs()
+    const logs = args.log ? readExplicitLog(args.log) : findAppLogs()
     const verdict = classifyMultiplayerEvidence({
       appid: args.appid,
       drmMode: args.drm,
@@ -2512,7 +2575,7 @@ async function main(): Promise<void> {
       console.log(JSON.stringify({ appid: args.appid, ...verdict }, null, 2))
     } else {
       console.log(
-        `multiplayer ${args.appid} ${verdict.mode}: ${verdict.status} join=${+verdict.join} send=${+verdict.send} recv=${+verdict.recv} path=${verdict.path} oversize=${verdict.oversize} — ${verdict.detail}`
+        `multiplayer ${args.appid} ${verdict.mode}: ${verdict.status} join=${+verdict.join} send=${+verdict.send} recv=${+verdict.recv} path=${verdict.path} oversize=${verdict.oversize} host=${+verdict.host} client=${+verdict.client} — ${verdict.detail}`
       )
     }
     return
