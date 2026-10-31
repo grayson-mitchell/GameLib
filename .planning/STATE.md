@@ -4,8 +4,8 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 59 context gathered
-last_updated: "2026-10-31T08:50:57.632Z"
-last_activity: 2026-10-31 -- Phase 59 planning complete
+last_updated: "2026-10-31T09:00:43.397Z"
+last_activity: 2026-10-31 -- Phase 59 execution started
 progress:
   total_phases: 9
   completed_phases: 6
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 58 — steam-bridge-multiplayer
+**Current focus:** Phase 59 — steam-engine-fallback-when-crossover-is-unavailable
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -71,10 +71,10 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 58 (steam-bridge-multiplayer) — EXECUTING
-Plan: 9 of 24
-Status: Ready to execute
-Last activity: 2026-10-31 -- Phase 59 planning complete
+Phase: 59 (steam-engine-fallback-when-crossover-is-unavailable) — EXECUTING
+Plan: 1 of 13
+Status: Executing Phase 59
+Last activity: 2026-10-31 -- Phase 59 execution started
 
 Progress: [██████████] 99%
 
