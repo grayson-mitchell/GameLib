@@ -79,6 +79,11 @@ session the peer hosts.
 
   Helper-originated calls never count, and neither does Mac Steam's In-Game status
   (D-53-13 / D-56-16). In DRM mode the trace comes from GameLib's `lsteamclient` (`role=game`).
+- **D-08a** (2026-10-31, operator-decided at the 58-08 Task 3 checkpoint)
+  (legacy-P2P DRM title): for a title whose game assemblies reference neither LobbyEnter_t (504) nor SteamNetConnectionStatusChangedCallback_t (1221), D-08 item 1's join signal is met by ALL of:
+  (1) host: a role=game delivery of P2PSessionRequest_t (1202) naming the joiner's SteamID, followed by the game's own AcceptP2PSessionWithUser call for that SteamID;
+  (2) both sides: game-originated SendP2PPacket and ReadP2PPacket calls with nonzero payload addressed to / received from the peer's SteamID.
+  The joiner's entry route (GameRichPresenceJoinRequested_t 337) is recorded but not scored. No other D-08 bar is widened; In-Game presence still never counts.
 - **D-09:** The baseline is the roadmap's family list. **Other families come in only when a chosen
   test title is measured calling them on its host or join path.** Examples:
   - `ISteamFriends` invite and overlay calls (`ActivateGameOverlayInviteDialog`,

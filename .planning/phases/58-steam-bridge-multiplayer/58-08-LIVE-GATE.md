@@ -58,13 +58,20 @@ Reference: `.claude/skills/spike-findings-gamelib/references/live-gate-contract-
 
 D-08 bar per scored direction (all three required):
 
-- (a) a `role=game` `event=callback id=504 resp=1` (LobbyEnter_t success) or `id=1221 state=3` (connection Connected) line;
+- (a) [Raft: scored per D-08a below] a `role=game` `event=callback id=504 resp=1` (LobbyEnter_t success) or `id=1221 state=3` (connection Connected) line;
 - (b) at least one `role=game` send and one `role=game` receive `event=call name=` line;
 - (c) the operator confirms both players are in the same world and each sees the other move.
 
-Join-callback applicability: see `## Pre-gate measurement` (`join signal: 1202-only`). Under the unamended D-08 text sub-check (a)
-cannot be met by a legacy-P2P-only title; plan 58-08 Task 3 holds the operator decision (approve / amend as D-08a / re-pick).
-If D-08a is adopted, items 2, 3 and 6 are rewritten to cite it verbatim. Until then the bar above is unchanged.
+Join-callback applicability: see `## Pre-gate measurement` (`join signal: 1202-only`). Raft's assemblies reference neither 504 nor 1221, so
+the operator amended D-08 as **D-08a** at the 58-08 Task 3 checkpoint (2026-10-31; verbatim text in `58-CONTEXT.md`). For Raft, sub-check (a) of
+items 2 and 3 is scored against D-08a, not against 504 / 1221. D-08a, verbatim:
+
+> D-08a (legacy-P2P DRM title): for a title whose game assemblies reference neither LobbyEnter_t (504) nor SteamNetConnectionStatusChangedCallback_t (1221), D-08 item 1's join signal is met by ALL of:
+> (1) host: a role=game delivery of P2PSessionRequest_t (1202) naming the joiner's SteamID, followed by the game's own AcceptP2PSessionWithUser call for that SteamID;
+> (2) both sides: game-originated SendP2PPacket and ReadP2PPacket calls with nonzero payload addressed to / received from the peer's SteamID.
+> The joiner's entry route (GameRichPresenceJoinRequested_t 337) is recorded but not scored. No other D-08 bar is widened; In-Game presence still never counts.
+
+Sub-checks (b) and (c) are unchanged. Sub-check (d) (census) cannot print `verified` for Raft: see Review part e.
 
 Paths used below:
 
@@ -101,6 +108,12 @@ Launch ordinals:
 
 - launch 1: Direction A. GameLib hosts Raft, the peer joins. Operator opens a world in Raft and invites the peer from Raft's own invite UI or the Steam friends list; the peer accepts on the PC.
 - launch 2: Direction B. The peer hosts on the PC and invites the main account; the operator joins from Raft through GameLib (the Mac accepts the Steam friend invite / Join Game).
+
+Join route (D-08a): Raft's entry route is Steam friend "Join Game", delivered to the joiner as `GameRichPresenceJoinRequested_t` (337). On each
+launch's joiner side, the operator uses the Steam friends "Join Game" gesture where available and records whether
+`grep 'role=game event=callback id=337' trace-launch-N.log` is non-empty. Record-only, never scored (D-08a). D-08a (1) is scored on the HOST's
+trace only: launch 1 for Direction A (the Mac hosts); for Direction B the host is the peer PC, whose trace is not captured, so Direction B scores
+only D-08a (2) from the Mac plus the operator's (c). See Review part e.
 
 Dual-sink capture standard. Before each launch:
 
@@ -162,14 +175,14 @@ The trace writer dedups by hash and caps at GAMELIB_TRACE_MAX_LINES, so each dis
 | PC10 | peer PC | account online, friend, Raft installed | T6 C depends on external state: peer PC session, friendship, Raft installed; recorded as operator statement; T7 R operator gestures on the PC | 58-01-TITLES.md `## Account preflight` |
 | PC11 | System Settings Local Network | state recorded | T6 C external state (permission grant); record-only so no pass/fail depends on it | System Settings |
 | Item 1 component | COMPDIR files | sums equal catalogue p58 pins | T3 R filesystem; T4 R falsifiable, a Phase 56 dir fails; T5 C pair {PC7 move, launch 1}: item 1 is read after launch 1's first install; T6 R positive observable is a present dir with matching sums; T7 N/A | `shasum -a 256` of the six files against steamclientLayerCatalogue.ts |
-| Item 2 / 3 (a) | trace `role=game` 504 / 1221 | callback line | T3 R sink TRACEDIR + SIDECAR; T4 R falsifiable, no line = issue; T5 C pair {launch 2 relaunch, trace capture}: launch 2 gets its own TRACEDIR file and gamelib log copy before relaunch; T6 C depends on Raft actually emitting 504/1221, which `## Pre-gate measurement` says it does not (1202-only); this is why Task 3 holds a decision; T7 R | `grep 'role=game event=callback id=504 resp=1'` etc. |
+| Item 2 / 3 (a) | trace `role=game` 504 / 1221 | callback line | T3 R sink TRACEDIR + SIDECAR; T4 R falsifiable, no line = issue; T5 C pair {launch 2 relaunch, trace capture}: launch 2 gets its own TRACEDIR file and gamelib log copy before relaunch; T6 C depends on external state only (peer session); the 504/1221 gap is resolved by D-08a, see Review part e for what the trace can and cannot show; T7 R | `grep 'role=game event=callback id=504 resp=1'` etc. |
 | Item 2 / 3 (b) | trace `role=game` calls | send and receive names | T3 R sink as above; T4 R; T5 C same pair as (a); T6 C requires the game reaching in-session traffic, external state: peer PC session; T7 R | `grep 'role=game event=call name='` |
 | Item 2 / 3 (c) | operator observation | same world, mutual movement | T3 N/A not a log claim; T4 R operator can answer no; T6 C external state: peer PC, friendship, Raft save worlds, Local Network grant, a Raft session still open from a prior run (quit all before each launch); T7 R the invite and join gestures are Raft's own invite UI / Steam friends "Join Game" on both machines, which are the real surfaces | operator statement |
 | Item 2 / 3 (d) | census verdict | `verified` | T3 R stdout teed; T4 R falsifiable (`failed`/`unverified`); T5 R; T6 C census reads the same trace as (a)/(b) so it inherits (a)'s conditionality; T7 N/A | `pnpm bridge-census --multiplayer 648800 --drm` (58-05) |
 | Item 2 / 3 path | lsof | peer address or Valve relay | T3 R sink lsof file; T4 N/A record-only; T5 R; T6 C requires both players in session at capture time; T7 R | `lsof -nP -iUDP -a -p <pid>` |
 | Item 4 serialized005 | WINELOG, TRACEDIR | grep counts | T3 R named sinks WINELOG and TRACEDIR; T4 R a hit is observable; T5 C pair {PC7 move, WINELOG}: the log is per launch, so both launches' WINELOG copies are required; T6 R zero is meaningful only because the WINELOG copy is non-empty (item records line counts); T7 N/A | `grep -c` per capture |
 | Item 5 relay | trace | InitRelayNetworkAccess or id=1281 | T3 R; T4 N/A record-only; T5 C same pair as (a); T6 R; T7 N/A | grep |
-| Item 6 consistency | Pre-gate measurement vs scored callback | matches classification or D-08a | T3 N/A reading; T4 R falsifiable; T5 N/A; T6 R; T7 N/A | file text |
+| Item 6 consistency | Pre-gate measurement vs scored callback | matches classification and is scored per D-08a | T3 N/A reading; T4 R falsifiable; T5 N/A; T6 R; T7 N/A | file text |
 | Capture instruction | tee, delimiters, copies | present | T3 R each literal names its sink in 3a; T5 C pairs listed above are the reductions applied; T7 N/A | Section 2 |
 
 ### Review part c. Pairing pass (Test 5)
@@ -183,6 +196,26 @@ Pairs examined: {PC7 COMPDIR move, launch 1 install}, {PC7 COMPDIR move, trace c
 Peer PC session online; friendship accepted; Raft installed and launchable on the peer; Raft save worlds on both machines; Local Network permission for CrossOver/Wine;
 no Raft session left open from a prior run on either machine.
 
+### Review part e. D-08a signals vs the 58-04 DRM trace (Test 3 / Test 6)
+
+Read from `steamclient_main.c` trace blocks and `meta/bridgeCensus.ts` on 2026-10-31. Each D-08a clause, and whether the existing trace can show it:
+
+| D-08a clause | Observable by the existing trace? | Detail |
+| ------------ | --------------------------------- | ------ |
+| (1) host: `role=game` delivery of 1202 | YES | 1202 is in `gamelib_trace_callback_ids`; line `event=callback id=1202`, deduped per launch (one line). |
+| (1) "naming the joiner's SteamID" | NO | The callback writer emits only the integer id (plus an enum for 504 and 1221). No SteamID or payload byte is ever formatted (steamclient_main.c:258-260). Carried by the operator statement in (c) only. |
+| (1) followed by the game's own `AcceptP2PSessionWithUser` | PARTLY | The call NAME is traced (`event=call name=..._AcceptP2PSessionWithUser`), first occurrence per launch only, in file order, so "after the 1202 line" is checkable by line number. The argument ("for that SteamID") is not traced. |
+| (2) `SendP2PPacket` / `ReadP2PPacket` by the game | YES (names) | `event=call name=` lines ending `_SendP2PPacket` / `_ReadP2PPacket`, `role=game`, first occurrence only. |
+| (2) "nonzero payload", "addressed to / received from the peer's SteamID" | NO | No size, buffer or SteamID is traced. Carried by the operator statement in (c) only. |
+| "both sides" | PARTLY | Direction A traces the Mac as host; Direction B traces the Mac as joiner. The peer PC (Windows / Linux) is not instrumented, so the host-side (1) in Direction B is not observable from the Mac. |
+| 337 entry route | YES | In the closed id set; recorded, not scored. |
+| census `verified` | NO | `classifyMultiplayerEvidence` requires 504 resp=1 or 1221 state=3 for `join` (bridgeCensus.ts:2379), so it prints `unverified` for Raft by design. This gate does not change the census; the verdict is read from the grep sub-checks (a1)-(a3). |
+
+Consequence: the trace can prove the 1202 delivery, the Accept call after it, and the send / receive call names. Three D-08a clauses (SteamID naming,
+nonzero payload, peer addressing) cannot be shown by the trace and rest on the operator's explicit statement. This is stated rather than papered over; if the
+operator wants those clauses trace-backed, the DRM trace needs a payload-size or SteamID field (a layer change and a new p58 archive), which is out of
+scope for this plan.
+
 ## 4. Tests
 
 Every item names its sink and launch ordinal. All results are pending; plan 58-09 fills them.
@@ -192,11 +225,11 @@ expected: after launch 1 starts, `COMPDIR` exists and the sha256 of its six file
 result: pending
 
 ### 2. Direction A: GameLib hosts, peer joins
-expected: sub-checks, all from launch 1. (a) `grep 'role=game event=callback id=504 resp=1\|role=game event=callback id=1221 state=3' trace-launch-1.log` is non-empty (sink TRACEDIR raw file, cross-checked in SIDECAR re-log). (b) `trace-launch-1.log` holds at least one `role=game event=call name=` for a send (e.g. SendP2PPacket / SendMessages) and one for a receive (e.g. ReadP2PPacket / ReceiveMessages), and no helper line is used. (c) The operator confirms both players are in the same world and each sees the other move. (d) `pnpm bridge-census --multiplayer 648800 --drm | tee <session>/census-launch-1.txt` prints `verified`. Path: from `lsof-launch-1.txt`, a LAN peer address means direct, a Valve relay address means relayed; the path is recorded, not scored (D-06).
+expected: sub-checks, all from launch 1. (a) scored per D-08a (Raft is `1202-only`): on `trace-launch-1.log` (Mac is host; sink TRACEDIR raw file, cross-checked in SIDECAR re-log) BOTH (a1) `grep 'role=game event=callback id=1202'` is non-empty, and (a2) `grep -n 'role=game event=call name=.*AcceptP2PSessionWithUser'` is non-empty with its line number greater than that of the first `id=1202` line; plus (a3) `trace-launch-1.log` holds `role=game event=call name=` lines ending `_SendP2PPacket` and `_ReadP2PPacket`. The `naming the joiner's SteamID`, `for that SteamID` and `nonzero payload addressed to / received from the peer` clauses are NOT observable in the trace (payload bytes and SteamIDs are never written, steamclient_main.c:258-260); they are scored on the operator's statement in (c), which must explicitly confirm the peer's account joined and that traffic flowed in both directions. Also record `id=337` presence (not scored). (b) `trace-launch-1.log` holds at least one `role=game event=call name=` for a send (e.g. SendP2PPacket / SendMessages) and one for a receive (e.g. ReadP2PPacket / ReceiveMessages), and no helper line is used. (c) The operator confirms both players are in the same world and each sees the other move. (d) run `pnpm bridge-census --multiplayer 648800 --drm | tee <session>/census-launch-1.txt` and record the output. It is expected to print `unverified` with `only P2PSessionRequest_t (1202) seen` because meta/bridgeCensus.ts classifies `join` from 504 resp=1 or 1221 state=3 only (bridgeCensus.ts:2379); `send` and `recv` should read true. That output is recorded, not scored, and is not a failure; (a1)-(a3) replace it. Path: from `lsof-launch-1.txt`, a LAN peer address means direct, a Valve relay address means relayed; the path is recorded, not scored (D-06).
 result: pending
 
 ### 3. Direction B: peer hosts, GameLib joins
-expected: as item 2 from launch 2 (sinks `trace-launch-2.log`, `gamelib-launch-2.log`, `lsof-launch-2.txt`, `census-launch-2.txt`): (a) role=game 504 resp=1 or 1221 state=3; (b) one role=game send and one role=game receive call name; (c) operator confirms same world and mutual movement; (d) census prints `verified`; path recorded, not scored.
+expected: as item 2 from launch 2 (sinks `trace-launch-2.log`, `gamelib-launch-2.log`, `lsof-launch-2.txt`, `census-launch-2.txt`): (a) scored per D-08a, joiner side only because the peer PC is the host and its trace is not captured: (a3) `role=game` `_SendP2PPacket` and `_ReadP2PPacket` call names in `trace-launch-2.log`; D-08a (1) is NOT scorable from the Mac in this direction, so it is covered by item 2's (a1)/(a2) from launch 1 and by the operator's statement here that the peer's session request was accepted; record `id=337` presence (not scored); (b) one role=game send and one role=game receive call name; (c) operator confirms same world, mutual movement, and that the join succeeded via Join Game / invite on the Mac; (d) census output recorded as in item 2 (expected `unverified`, `only 1202` may not even appear on the joiner, not scored); path recorded, not scored.
 result: pending
 
 ### 4. serialized005 decision (M-06)
@@ -208,7 +241,7 @@ expected: record whether the trace holds `event=call name=` containing `InitRela
 result: pending
 
 ### 6. Join-signal consistency
-expected: the callback scored in items 2(a) and 3(a) is the one named by `## Pre-gate measurement` (currently `1202-only`). Under the unamended D-08 a join whose only callback is `id=1202` is `issue` (no silent widening). If the operator amends D-08 as D-08a at plan 58-08 Task 3, this item is rewritten to cite D-08a and is scored against it. Sink: this file plus `trace-launch-N.log`. Launches 1 and 2.
+expected: the join signal scored in items 2(a) and 3(a) is the one named by `## Pre-gate measurement` (`join signal: 1202-only`) and is scored against D-08a (adopted 2026-10-31, verbatim in `58-CONTEXT.md` and in the D-08 bar section above), not against 504 / 1221. Confirm from `trace-launch-N.log` that no `id=504` or `id=1221` line appears (if one does, record it: the measurement was wrong, and the standard D-08 item 1 then also applies as a cross-check). Confirm that nothing outside D-08a was widened: only `role=game` lines were used, `role=helper` lines and Mac Steam In-Game status were not. Sink: this file plus `trace-launch-N.log`. Launches 1 and 2.
 result: pending
 
 ## 5. Gaps
