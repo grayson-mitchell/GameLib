@@ -62,6 +62,18 @@ const CASES = [
   'cr_failed_layout',
   'cr_reject_unknown_id',
   'cr_ring_bounded',
+  'mms_ring_evicts_oldest',
+  'mms_pop_layout',
+  'mms_pop_zeroes',
+  'mms_pop_small_cap_keeps',
+  'mms_pop_empty',
+  'mms_ring_refuses_long_strings',
+  'mms_ring_accepts_255',
+  'mms_strs_layout',
+  'mms_ring_refuses_bad_kind',
+  'mms_gsi_repack',
+  'mms_gsi_padding_zero',
+  'mms_gsi_rows',
   'unlisted_once',
   'unlisted_cap',
   'offsets'
@@ -151,6 +163,36 @@ describe('header defines cross-pin to CALLBACK_LAYOUTS (58-02)', () => {
     const expected = `{{${l.mac.fields.m_eResult}, ${l.x64.fields.m_eResult}, 4}, {${l.mac.fields.m_ulSteamIDLobby}, ${l.x64.fields.m_ulSteamIDLobby}, 8}}`
     expect(`{${m[1]}}`).toBe(expected)
     expect(expected).toBe('{{0, 0, 4}, {4, 8, 8}}')
+  })
+
+  test('gl_mms_gsi_map rows equal CALLBACK_LAYOUTS.gameserveritem_t offsets (mac to x64) and size (58-20)', () => {
+    const l = CALLBACK_LAYOUTS.gameserveritem_t
+    const cr = readFileSync(join(HEADER_DIR, 'gamelib_callresult.h'), 'utf8')
+    expect(/#define GL_MMS_GSI_SIZE\s+(\d+)/.exec(cr)?.[1]).toBe(
+      String(l.x64.size)
+    )
+    expect(l.mac.size).toBe(l.x64.size)
+    const block = /gl_mms_gsi_map\[\] = \{([\s\S]*?)\n\};/.exec(cr)
+    if (!block) throw new Error('gl_mms_gsi_map missing')
+    const rows = [...block[1].matchAll(/\{(\d+), (\d+), (\d+)\}/g)].map((m) => [
+      Number(m[1]),
+      Number(m[2]),
+      Number(m[3])
+    ])
+    const names = Object.keys(l.x64.fields)
+    expect(rows.map((r) => [r[0], r[1]])).toEqual(
+      names.map((n) => [
+        (l.mac.fields as Record<string, number>)[n],
+        (l.x64.fields as Record<string, number>)[n]
+      ])
+    )
+    // Rows are contiguous-or-padded: no row overlaps the next, none passes the end.
+    for (let i = 0; i < rows.length; i++) {
+      const end = rows[i][1] + rows[i][2]
+      expect(end).toBeLessThanOrEqual(
+        i + 1 < rows.length ? rows[i + 1][1] : l.x64.size
+      )
+    }
   })
 
   test('gl_cbq_map_333 is one whole-struct copy of the measured size, id 333', () => {

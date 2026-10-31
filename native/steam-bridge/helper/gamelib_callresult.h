@@ -178,6 +178,191 @@ static uint32_t gl_cr_pop(gl_cr_state *st, uint8_t *out, uint32_t cap) {
   return total;
 }
 
+/* ---- Server-browser event ring (58-20, CONTROL slot 12) ----
+ * The helper passes its OWN C response objects to Mac Steam; their callbacks
+ * push events here and the shim drains one per round trip (slot 12). Bounded
+ * at 64; the oldest is zeroed and evicted on overflow; a popped slot is zeroed.
+ *
+ * Slot 12 reply:
+ *   [u32 count 0|1]  if 1: [u8 kind][u32 hRequest][i32 iServer][i32 value]
+ *                          [u32 cub][cub bytes]
+ * Kinds (the final table lives in the 58-20 SUMMARY):
+ *   1 list ServerResponded(hRequest, iServer)      2 list ServerFailedToRespond
+ *   3 list RefreshComplete (value = EMatchMakingServerResponse)
+ *   4 ping ServerResponded (payload = 380-byte gameserveritem_t)  5 ping failed
+ *   6 players AddPlayerToList (value = score, iServer = float bits of the time
+ *     played, payload = name NUL)                  7 players failed  8 players done
+ *   9 rules RulesResponded (payload = rule NUL value NUL)  10 failed  11 done
+ *   12 friends (value = vtable slot index, no payload)
+ * hRequest is the low 32 bits of the Mac HServerListRequest for kinds 1-3 and
+ * the HServerQuery for kinds 4-12. Strings are NUL-terminated, 255 chars at most;
+ * a longer one refuses the whole event. The ring carries SteamIDs (the
+ * gameserveritem_t): callers never log the bytes. */
+#define GL_MMS_RING_SLOTS 64
+#define GL_MMS_STR_MAX 255 /* chars; 256 bytes with the NUL */
+#define GL_MMS_PAYLOAD_MAX 512
+#define GL_MMS_GSI_SIZE 380
+#define GL_MMS_DRAIN_RESP_MAX_BYTES (4 + 1 + 4 + 4 + 4 + 4 + GL_MMS_PAYLOAD_MAX)
+
+enum {
+  GL_MMS_EV_LIST_RESPONDED = 1,
+  GL_MMS_EV_LIST_FAILED = 2,
+  GL_MMS_EV_LIST_COMPLETE = 3,
+  GL_MMS_EV_PING_RESPONDED = 4,
+  GL_MMS_EV_PING_FAILED = 5,
+  GL_MMS_EV_PLAYERS_ADD = 6,
+  GL_MMS_EV_PLAYERS_FAILED = 7,
+  GL_MMS_EV_PLAYERS_DONE = 8,
+  GL_MMS_EV_RULES_RESPONDED = 9,
+  GL_MMS_EV_RULES_FAILED = 10,
+  GL_MMS_EV_RULES_DONE = 11,
+  GL_MMS_EV_FRIENDS = 12,
+  GL_MMS_EV_MAX = 12
+};
+
+typedef struct {
+  uint8_t kind;
+  uint32_t h;
+  int32_t iServer;
+  int32_t value;
+  uint32_t cub;
+  uint8_t bytes[GL_MMS_PAYLOAD_MAX];
+} gl_mms_ev;
+
+typedef struct {
+  gl_mms_ev ring[GL_MMS_RING_SLOTS];
+  uint32_t head;
+  uint32_t count;
+  uint32_t dropped_full;
+  uint32_t refused;
+} gl_mms_ring;
+
+/* Queues an event with a raw payload of `cub` bytes. Returns 1 when queued, 0
+ * for an unknown kind or an oversize payload (nothing queued). */
+static int gl_mms_ev_push(gl_mms_ring *r, uint8_t kind, uint32_t h, int32_t iServer,
+                          int32_t value, const void *payload, uint32_t cub) {
+  if (kind == 0 || kind > GL_MMS_EV_MAX || cub > GL_MMS_PAYLOAD_MAX ||
+      (cub != 0 && payload == NULL)) {
+    r->refused++;
+    return 0;
+  }
+  if (r->count == GL_MMS_RING_SLOTS) {
+    gl_cbq_secure_zero(&r->ring[r->head], sizeof r->ring[0]);
+    r->head = (r->head + 1) % GL_MMS_RING_SLOTS;
+    r->count--;
+    r->dropped_full++;
+  }
+  gl_mms_ev *e = &r->ring[(r->head + r->count) % GL_MMS_RING_SLOTS];
+  gl_cbq_secure_zero(e, sizeof *e);
+  e->kind = kind;
+  e->h = h;
+  e->iServer = iServer;
+  e->value = value;
+  e->cub = cub;
+  if (cub != 0) memcpy(e->bytes, payload, cub);
+  r->count++;
+  return 1;
+}
+
+/* Length of a string capped at GL_MMS_STR_MAX; returns -1 when `s` is NULL or
+ * has no NUL within GL_MMS_STR_MAX + 1 bytes. */
+static int32_t gl_mms_str_len(const char *s) {
+  if (s == NULL) return -1;
+  for (int32_t i = 0; i <= GL_MMS_STR_MAX; i++)
+    if (s[i] == '\0') return i;
+  return -1;
+}
+
+/* Queues an event whose payload is `a` NUL (and `b` NUL when b != NULL). Either
+ * string over GL_MMS_STR_MAX chars (or NULL `a`) refuses the whole event. */
+static int gl_mms_ev_push_strs(gl_mms_ring *r, uint8_t kind, uint32_t h, int32_t iServer,
+                               int32_t value, const char *a, const char *b) {
+  uint8_t buf[GL_MMS_PAYLOAD_MAX];
+  int32_t la = gl_mms_str_len(a);
+  int32_t lb = 0;
+  if (la < 0 || (b != NULL && (lb = gl_mms_str_len(b)) < 0)) {
+    r->refused++;
+    return 0;
+  }
+  memcpy(buf, a, (size_t)la + 1);
+  uint32_t n = (uint32_t)la + 1;
+  if (b != NULL) {
+    memcpy(buf + n, b, (size_t)lb + 1);
+    n += (uint32_t)lb + 1;
+  }
+  int ok = gl_mms_ev_push(r, kind, h, iServer, value, buf, n);
+  gl_cbq_secure_zero(buf, sizeof buf);
+  return ok;
+}
+
+/* Encodes and pops one event. Returns bytes written, or 0 when `cap` is too
+ * small (the entry is kept). The popped slot is zeroed. */
+static uint32_t gl_mms_ev_pop(gl_mms_ring *r, uint8_t *out, uint32_t cap) {
+  if (cap < 4) return 0;
+  if (r->count == 0) {
+    uint32_t zero = 0;
+    memcpy(out, &zero, 4);
+    return 4;
+  }
+  gl_mms_ev *e = &r->ring[r->head];
+  uint32_t total = 4 + 1 + 4 + 4 + 4 + 4 + e->cub;
+  if (cap < total) return 0;
+  uint32_t one = 1;
+  memcpy(out, &one, 4);
+  out[4] = e->kind;
+  memcpy(out + 5, &e->h, 4);
+  memcpy(out + 9, &e->iServer, 4);
+  memcpy(out + 13, &e->value, 4);
+  memcpy(out + 17, &e->cub, 4);
+  memcpy(out + 21, e->bytes, e->cub);
+  gl_cbq_secure_zero(e, sizeof *e);
+  r->head = (r->head + 1) % GL_MMS_RING_SLOTS;
+  r->count--;
+  return total;
+}
+
+/* gameserveritem_t repack (macOff, winOff, width), built from CALLBACK_LAYOUTS
+ * gameserveritem_t (58-02: x64 and mac both 380 bytes, identical offsets). One
+ * row per field, in layout order; cbqueue.test.ts pins every row to the
+ * measured offsets. */
+static const gl_cbq_field_map gl_mms_gsi_map[] = {
+    {0, 0, 8},      /* m_NetAdr */
+    {8, 8, 4},      /* m_nPing */
+    {12, 12, 1},    /* m_bHadSuccessfulResponse */
+    {13, 13, 1},    /* m_bDoNotRefresh */
+    {14, 14, 32},   /* m_szGameDir */
+    {46, 46, 32},   /* m_szMap */
+    {78, 78, 64},   /* m_szGameDescription */
+    {144, 144, 4},  /* m_nAppID */
+    {148, 148, 4},  /* m_nPlayers */
+    {152, 152, 4},  /* m_nMaxPlayers */
+    {156, 156, 4},  /* m_nBotPlayers */
+    {160, 160, 1},  /* m_bPassword */
+    {161, 161, 1},  /* m_bSecure */
+    {164, 164, 4},  /* m_ulTimeLastPlayed */
+    {168, 168, 4},  /* m_nServerVersion */
+    {172, 172, 64}, /* m_szServerName */
+    {236, 236, 128}, /* m_szGameTags */
+    {364, 364, 8},  /* m_steamID */
+    {372, 372, 4},  /* m_nCurrentFriendCount */
+    {376, 376, 4},  /* m_nTotalFriendCount */
+};
+
+static const gl_cbq_allow_row gl_mms_gsi_row = {
+    0, GL_MMS_GSI_SIZE, GL_MMS_GSI_SIZE, gl_mms_gsi_map, GL_CBQ_MAPLEN(gl_mms_gsi_map)};
+
+/* Repacks a Mac gameserveritem_t (380 bytes) into the Windows x64 form at every
+ * measured field offset; padding is zero and every string field is forced
+ * NUL-terminated so the game never reads past it. */
+static void gl_mms_gsi_repack(const uint8_t *mac, uint8_t *win) {
+  gl_cbq_repack_fields(mac, win, &gl_mms_gsi_row);
+  win[14 + 31] = 0;
+  win[46 + 31] = 0;
+  win[78 + 63] = 0;
+  win[172 + 63] = 0;
+  win[236 + 127] = 0;
+}
+
 /* ---- NET evidence (58-05 grammar) ----
  * Implemented by bridge_helper.c (non-static) so the generated dispatch header
  * can call it. game: 1 = role=game, 0 = role=helper. Closed enums; an

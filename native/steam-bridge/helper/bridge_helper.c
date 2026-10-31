@@ -224,6 +224,8 @@
 #define CONTROL_SLOT_REPORT_CB_DISPATCH 10
 // Phase 58 (58-07): the shim drains one completed call result (CreateLobby, JoinLobby, RequestLobbyList) per round trip.
 #define CONTROL_SLOT_DRAIN_CALL_RESULTS 11
+// Phase 58 (58-20): the shim drains one server-browser event (list, ping, players, rules) per round trip. Slot 13 is reserved (58-19).
+#define CONTROL_SLOT_DRAIN_SERVER_EVENTS 12
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
@@ -1640,6 +1642,332 @@ static unsigned g_stubcall_logged = 0;
 static int g_stubcall_cap_noted = 0;
 static const char *const k_stubcall_kind[4] = {"stub", "fallback", "offpath", "null"};
 
+/* ===== Phase 58 (58-20): server-browser response relay (helper half) =====
+ * The helper never calls a Windows vtable. It hands Mac Steam its OWN C response
+ * objects (Itanium ABI: an object whose first word points at an array of
+ * function pointers); their callbacks push events onto g_mms and the shim drains
+ * them over CONTROL slot 12. The shim half is 58-21.
+ *
+ * Ping, players, rules and friends callbacks carry no query handle, so each
+ * query takes one object from a small pool (GL_MMS_POOL per interface) and the
+ * object remembers the HServerQuery it was bound to. A full pool reuses the
+ * oldest object (a cancelled query never sends a terminal callback). Objects
+ * are static: a late callback on a reused object misattributes one event, it
+ * never touches freed memory. No game-supplied pointer is ever accepted: the
+ * custom request encodings carry only integers and 256-byte string slots. */
+#define GL_MMS_POOL 8
+#define GL_MMS_FILTER_MAX 32
+#define GL_MMS_FILTER_BYTES 256
+#define GL_MMS_ISSUED_MAX 64
+enum { GL_MMS_G_PING = 0, GL_MMS_G_PLAYERS, GL_MMS_G_RULES, GL_MMS_G_FRIENDS, GL_MMS_G_COUNT };
+
+typedef struct { const void *const *vt; uint32_t idx; } gl_mms_obj;
+typedef struct { int used; int32_t handle; uint32_t age; } gl_mms_bind;
+
+static gl_mms_ring g_mms;
+static gl_mms_obj  g_mms_obj[GL_MMS_G_COUNT][GL_MMS_POOL];
+static gl_mms_bind g_mms_bind[GL_MMS_G_COUNT][GL_MMS_POOL];
+static uint32_t    g_mms_clock = 0;
+static uint64_t    g_mms_issued[GL_MMS_ISSUED_MAX];
+static uint32_t    g_mms_issued_next = 0;
+
+/* Pool slot of `o` in `group`, or -1 when it is not one of that group's objects. */
+static int gl_mms_slot_of(int group, const void *o) {
+  const gl_mms_obj *base = g_mms_obj[group];
+  if ((const gl_mms_obj *)o < base || (const gl_mms_obj *)o >= base + GL_MMS_POOL) return -1;
+  return (int)((const gl_mms_obj *)o - base);
+}
+
+/* Event handle for a pooled object (0 when unbound). */
+static uint32_t gl_mms_obj_handle(int group, int slot) {
+  return g_mms_bind[group][slot].used ? (uint32_t)g_mms_bind[group][slot].handle : 0u;
+}
+
+static void gl_mms_obj_release(int group, int slot) {
+  memset(&g_mms_bind[group][slot], 0, sizeof g_mms_bind[group][slot]);
+}
+
+/* Takes a free pool object, or recycles the oldest one. */
+static int gl_mms_obj_acquire(int group) {
+  int victim = 0;
+  uint32_t best = 0xFFFFFFFFu;
+  for (int i = 0; i < GL_MMS_POOL; i++) {
+    if (!g_mms_bind[group][i].used) { victim = i; break; }
+    if (g_mms_bind[group][i].age < best) { best = g_mms_bind[group][i].age; victim = i; }
+  }
+  g_mms_bind[group][victim].used = 1;
+  g_mms_bind[group][victim].handle = 0;
+  g_mms_bind[group][victim].age = ++g_mms_clock;
+  return victim;
+}
+
+/* ---- list response (ISteamMatchmakingServerListResponse, 3 slots) ---- */
+static void gl_mms_cb_list_responded(void *self, void *hRequest, int iServer) {
+  (void)self;
+  gl_mms_ev_push(&g_mms, GL_MMS_EV_LIST_RESPONDED, (uint32_t)(uintptr_t)hRequest, iServer, 0, NULL, 0);
+}
+static void gl_mms_cb_list_failed(void *self, void *hRequest, int iServer) {
+  (void)self;
+  gl_mms_ev_push(&g_mms, GL_MMS_EV_LIST_FAILED, (uint32_t)(uintptr_t)hRequest, iServer, 0, NULL, 0);
+}
+static void gl_mms_cb_list_complete(void *self, void *hRequest, int response) {
+  (void)self;
+  gl_mms_ev_push(&g_mms, GL_MMS_EV_LIST_COMPLETE, (uint32_t)(uintptr_t)hRequest, 0, response, NULL, 0);
+}
+static const void *const gl_mms_list_vt[3] = {(const void *)gl_mms_cb_list_responded,
+                                              (const void *)gl_mms_cb_list_failed,
+                                              (const void *)gl_mms_cb_list_complete};
+static gl_mms_obj g_mms_list_obj = {gl_mms_list_vt, 0};
+
+/* ---- ping response (2 slots) ---- */
+static void gl_mms_cb_ping_responded(void *self, const void *item) {
+  int s = gl_mms_slot_of(GL_MMS_G_PING, self);
+  uint8_t win[GL_MMS_GSI_SIZE];
+  if (s < 0 || item == NULL) return;
+  gl_mms_gsi_repack((const uint8_t *)item, win);
+  gl_mms_ev_push(&g_mms, GL_MMS_EV_PING_RESPONDED, gl_mms_obj_handle(GL_MMS_G_PING, s), 0, 0, win, sizeof win);
+  gl_cbq_secure_zero(win, sizeof win);
+  gl_mms_obj_release(GL_MMS_G_PING, s);
+}
+static void gl_mms_cb_ping_failed(void *self) {
+  int s = gl_mms_slot_of(GL_MMS_G_PING, self);
+  if (s < 0) return;
+  gl_mms_ev_push(&g_mms, GL_MMS_EV_PING_FAILED, gl_mms_obj_handle(GL_MMS_G_PING, s), 0, 0, NULL, 0);
+  gl_mms_obj_release(GL_MMS_G_PING, s);
+}
+static const void *const gl_mms_ping_vt[2] = {(const void *)gl_mms_cb_ping_responded,
+                                              (const void *)gl_mms_cb_ping_failed};
+
+/* ---- players response (3 slots) ---- */
+static void gl_mms_cb_players_add(void *self, const char *name, int score, float timePlayed) {
+  int s = gl_mms_slot_of(GL_MMS_G_PLAYERS, self);
+  int32_t bits;
+  if (s < 0) return;
+  memcpy(&bits, &timePlayed, 4);
+  gl_mms_ev_push_strs(&g_mms, GL_MMS_EV_PLAYERS_ADD, gl_mms_obj_handle(GL_MMS_G_PLAYERS, s), bits, score,
+                      name, NULL);
+}
+static void gl_mms_cb_players_failed(void *self) {
+  int s = gl_mms_slot_of(GL_MMS_G_PLAYERS, self);
+  if (s < 0) return;
+  gl_mms_ev_push(&g_mms, GL_MMS_EV_PLAYERS_FAILED, gl_mms_obj_handle(GL_MMS_G_PLAYERS, s), 0, 0, NULL, 0);
+  gl_mms_obj_release(GL_MMS_G_PLAYERS, s);
+}
+static void gl_mms_cb_players_done(void *self) {
+  int s = gl_mms_slot_of(GL_MMS_G_PLAYERS, self);
+  if (s < 0) return;
+  gl_mms_ev_push(&g_mms, GL_MMS_EV_PLAYERS_DONE, gl_mms_obj_handle(GL_MMS_G_PLAYERS, s), 0, 0, NULL, 0);
+  gl_mms_obj_release(GL_MMS_G_PLAYERS, s);
+}
+static const void *const gl_mms_players_vt[3] = {(const void *)gl_mms_cb_players_add,
+                                                 (const void *)gl_mms_cb_players_failed,
+                                                 (const void *)gl_mms_cb_players_done};
+
+/* ---- rules response (3 slots) ---- */
+static void gl_mms_cb_rules_responded(void *self, const char *rule, const char *value) {
+  int s = gl_mms_slot_of(GL_MMS_G_RULES, self);
+  if (s < 0) return;
+  gl_mms_ev_push_strs(&g_mms, GL_MMS_EV_RULES_RESPONDED, gl_mms_obj_handle(GL_MMS_G_RULES, s), 0, 0, rule,
+                      value != NULL ? value : "");
+}
+static void gl_mms_cb_rules_failed(void *self) {
+  int s = gl_mms_slot_of(GL_MMS_G_RULES, self);
+  if (s < 0) return;
+  gl_mms_ev_push(&g_mms, GL_MMS_EV_RULES_FAILED, gl_mms_obj_handle(GL_MMS_G_RULES, s), 0, 0, NULL, 0);
+  gl_mms_obj_release(GL_MMS_G_RULES, s);
+}
+static void gl_mms_cb_rules_done(void *self) {
+  int s = gl_mms_slot_of(GL_MMS_G_RULES, self);
+  if (s < 0) return;
+  gl_mms_ev_push(&g_mms, GL_MMS_EV_RULES_DONE, gl_mms_obj_handle(GL_MMS_G_RULES, s), 0, 0, NULL, 0);
+  gl_mms_obj_release(GL_MMS_G_RULES, s);
+}
+static const void *const gl_mms_rules_vt[3] = {(const void *)gl_mms_cb_rules_responded,
+                                               (const void *)gl_mms_cb_rules_failed,
+                                               (const void *)gl_mms_cb_rules_done};
+
+/* ---- server-friends response ----
+ * The callback shape of ServerFriends is not measured, so every one of four
+ * slots only records which slot Mac Steam called (value); arguments are never
+ * read. Four slots bound the damage of a wider real vtable to a harmless no-op. */
+static void gl_mms_friends_note(void *self, int32_t which) {
+  int s = gl_mms_slot_of(GL_MMS_G_FRIENDS, self);
+  if (s < 0) return;
+  gl_mms_ev_push(&g_mms, GL_MMS_EV_FRIENDS, gl_mms_obj_handle(GL_MMS_G_FRIENDS, s), 0, which, NULL, 0);
+}
+static void gl_mms_cb_friends0(void *self) { gl_mms_friends_note(self, 0); }
+static void gl_mms_cb_friends1(void *self) { gl_mms_friends_note(self, 1); }
+static void gl_mms_cb_friends2(void *self) { gl_mms_friends_note(self, 2); }
+static void gl_mms_cb_friends3(void *self) { gl_mms_friends_note(self, 3); }
+static const void *const gl_mms_friends_vt[4] = {(const void *)gl_mms_cb_friends0,
+                                                 (const void *)gl_mms_cb_friends1,
+                                                 (const void *)gl_mms_cb_friends2,
+                                                 (const void *)gl_mms_cb_friends3};
+
+static int g_mms_objs_ready = 0;
+static void gl_mms_objs_init(void) {
+  if (g_mms_objs_ready) return;
+  const void *const *vts[GL_MMS_G_COUNT] = {gl_mms_ping_vt, gl_mms_players_vt, gl_mms_rules_vt,
+                                            gl_mms_friends_vt};
+  for (int g = 0; g < GL_MMS_G_COUNT; g++)
+    for (uint32_t i = 0; i < GL_MMS_POOL; i++) {
+      g_mms_obj[g][i].vt = vts[g];
+      g_mms_obj[g][i].idx = i;
+    }
+  g_mms_objs_ready = 1;
+}
+
+static void *gl_mms_sym(const char *name) { return gl_nets_sym(name); }
+
+/* Records a freshly issued list handle. Returns 1 when kept. A handle whose low
+ * 32 bits equal another live handle's (but is not the same handle) is refused:
+ * slot 12 events name a request by its low 32 bits. */
+static int gl_mms_issue(uint64_t h) {
+  for (uint32_t i = 0; i < GL_MMS_ISSUED_MAX; i++) {
+    if (g_mms_issued[i] == h) return 1;
+    if (g_mms_issued[i] != 0 && (uint32_t)g_mms_issued[i] == (uint32_t)h) return 0;
+  }
+  g_mms_issued[g_mms_issued_next] = h;
+  g_mms_issued_next = (g_mms_issued_next + 1) % GL_MMS_ISSUED_MAX;
+  return 1;
+}
+
+static int gl_mms_is_issued(uint64_t h) {
+  if (h == 0) return 0;
+  for (uint32_t i = 0; i < GL_MMS_ISSUED_MAX; i++)
+    if (g_mms_issued[i] == h) return 1;
+  return 0;
+}
+
+/* The six Request*ServerList variants. Request (exact length):
+ * [u32 variant 0..5 = Internet, LAN, Friends, Favorites, History, Spectator]
+ * [u32 appId][u32 nFilters <= 32] then nFilters x ([256 key][256 value]), each
+ * slot holding a NUL inside its 256 bytes. LAN takes no filters. Response: [u64
+ * Mac HServerListRequest] (0 = Mac Steam refused). */
+int gl_mms_request_list(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                        uint32_t respCap, uint32_t *respLen) {
+  static const char *const names[6] = {
+      "SteamAPI_ISteamMatchmakingServers_RequestInternetServerList",
+      "SteamAPI_ISteamMatchmakingServers_RequestLANServerList",
+      "SteamAPI_ISteamMatchmakingServers_RequestFriendsServerList",
+      "SteamAPI_ISteamMatchmakingServers_RequestFavoritesServerList",
+      "SteamAPI_ISteamMatchmakingServers_RequestHistoryServerList",
+      "SteamAPI_ISteamMatchmakingServers_RequestSpectatorServerList"};
+  typedef void *(*Req_t)(void *, uint32_t, void *, uint32_t, void *);
+  typedef void *(*Lan_t)(void *, uint32_t, void *);
+  static void *fn[6];
+  uint32_t variant, appId, nFilters;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || self == NULL || argLen < 12 || respCap < 8) return 1;
+  memcpy(&variant, args, 4);
+  memcpy(&appId, args + 4, 4);
+  memcpy(&nFilters, args + 8, 4);
+  if (variant > 5 || nFilters > GL_MMS_FILTER_MAX) return 1;
+  if (argLen != 12u + nFilters * 2u * GL_MMS_FILTER_BYTES) return 1;
+  if (variant == 1 && nFilters != 0) return 1;
+  for (uint32_t i = 0; i < nFilters * 2u; i++)
+    if (memchr(args + 12 + i * GL_MMS_FILTER_BYTES, 0, GL_MMS_FILTER_BYTES) == NULL) return 1;
+  if (fn[variant] == NULL) fn[variant] = gl_mms_sym(names[variant]);
+  if (fn[variant] == NULL) return 1;
+  /* MatchMakingKeyValuePair_t is two 256-byte char arrays; ppchFilters points at
+   * a pointer to the contiguous array. */
+  static uint8_t filters[GL_MMS_FILTER_MAX * 2 * GL_MMS_FILTER_BYTES];
+  void *pFilters = filters;
+  memset(filters, 0, sizeof filters);
+  if (nFilters != 0) memcpy(filters, args + 12, (size_t)nFilters * 2u * GL_MMS_FILTER_BYTES);
+  void *h = (variant == 1) ? ((Lan_t)fn[1])(self, appId, &g_mms_list_obj)
+                           : ((Req_t)fn[variant])(self, appId, &pFilters, nFilters, &g_mms_list_obj);
+  uint64_t out = (uint64_t)(uintptr_t)h;
+  if (out != 0 && !gl_mms_issue(out)) {
+    typedef void (*Rel_t)(void *, void *);
+    Rel_t rel = (Rel_t)gl_mms_sym("SteamAPI_ISteamMatchmakingServers_ReleaseRequest");
+    if (rel != NULL) rel(self, h);
+    out = 0;
+  }
+  memcpy(resp, &out, 8);
+  *respLen = 8;
+  return 0;
+}
+
+/* Shared body of the four per-server queries. Request (exact length): [u32 ip]
+ * [u32 port <= 65535]. Response: [i32 HServerQuery] (-1 = invalid). */
+static int gl_mms_query(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                        uint32_t respCap, uint32_t *respLen, int group, const char *symName) {
+  typedef int32_t (*Q_t)(void *, uint32_t, uint16_t, void *);
+  static void *fn[GL_MMS_G_COUNT];
+  uint32_t ip, port;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || self == NULL || argLen != 8 || respCap < 4) return 1;
+  memcpy(&ip, args, 4);
+  memcpy(&port, args + 4, 4);
+  if (port > 65535u) return 1;
+  if (fn[group] == NULL) fn[group] = gl_mms_sym(symName);
+  if (fn[group] == NULL) return 1;
+  gl_mms_objs_init();
+  int slot = gl_mms_obj_acquire(group);
+  int32_t q = ((Q_t)fn[group])(self, ip, (uint16_t)port, &g_mms_obj[group][slot]);
+  if (q == -1) {
+    gl_mms_obj_release(group, slot);
+  } else {
+    g_mms_bind[group][slot].handle = q;
+  }
+  memcpy(resp, &q, 4);
+  *respLen = 4;
+  return 0;
+}
+
+int gl_mms_ping_server(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                       uint32_t respCap, uint32_t *respLen) {
+  return gl_mms_query(self, args, argLen, resp, respCap, respLen, GL_MMS_G_PING,
+                      "SteamAPI_ISteamMatchmakingServers_PingServer");
+}
+int gl_mms_player_details(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                          uint32_t respCap, uint32_t *respLen) {
+  return gl_mms_query(self, args, argLen, resp, respCap, respLen, GL_MMS_G_PLAYERS,
+                      "SteamAPI_ISteamMatchmakingServers_PlayerDetails");
+}
+int gl_mms_server_rules(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                        uint32_t respCap, uint32_t *respLen) {
+  return gl_mms_query(self, args, argLen, resp, respCap, respLen, GL_MMS_G_RULES,
+                      "SteamAPI_ISteamMatchmakingServers_ServerRules");
+}
+int gl_mms_server_friends(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                          uint32_t respCap, uint32_t *respLen) {
+  return gl_mms_query(self, args, argLen, resp, respCap, respLen, GL_MMS_G_FRIENDS,
+                      "SteamAPI_ISteamMatchmakingServers_ServerFriends");
+}
+
+/* GetServerDetails. Request (exact length 12): [u64 hRequest][i32 iServer]. The
+ * handle must be one this helper issued and iServer must be inside the Mac
+ * server count. Response: [u32 present 0|1][380 bytes gameserveritem_t]
+ * (zero-filled when not present). */
+int gl_mms_get_server_details(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                              uint32_t respCap, uint32_t *respLen) {
+  typedef const uint8_t *(*Det_t)(void *, void *, int32_t);
+  typedef int32_t (*Cnt_t)(void *, void *);
+  static Det_t det;
+  static Cnt_t cnt;
+  uint64_t h;
+  int32_t iServer;
+  *respLen = 0;
+  if (args == NULL || resp == NULL || self == NULL || argLen != 12 || respCap < 4u + GL_MMS_GSI_SIZE)
+    return 1;
+  memcpy(&h, args, 8);
+  memcpy(&iServer, args + 8, 4);
+  if (det == NULL) det = (Det_t)gl_mms_sym("SteamAPI_ISteamMatchmakingServers_GetServerDetails");
+  if (cnt == NULL) cnt = (Cnt_t)gl_mms_sym("SteamAPI_ISteamMatchmakingServers_GetServerCount");
+  if (det == NULL || cnt == NULL) return 1;
+  memset(resp, 0, 4u + GL_MMS_GSI_SIZE);
+  *respLen = 4u + GL_MMS_GSI_SIZE;
+  if (!gl_mms_is_issued(h) || iServer < 0 || iServer >= cnt(self, (void *)(uintptr_t)h)) return 0;
+  const uint8_t *item = det(self, (void *)(uintptr_t)h, iServer);
+  if (item == NULL) return 0;
+  uint32_t one = 1;
+  memcpy(resp, &one, 4);
+  gl_mms_gsi_repack(item, resp + 4);
+  return 0;
+}
+
 // T-52-09: bound to 128 chars and replace non-printable bytes so a
 // game-controlled version string cannot inject log lines.
 
@@ -2022,6 +2350,31 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
         send_response(fd, requestId, STATUS_OK, cout, cn);
       }
       gl_cbq_secure_zero(cout, sizeof cout);
+      return;
+    }
+    if (slot == CONTROL_SLOT_DRAIN_SERVER_EVENTS) {
+      // Phase 58 (58-20, T-58-60/T-58-72): behind the auth gate above; argLen must
+      // be 0; one event per round trip; never sleeps; never logs; buffer zeroed.
+      if (argLen != 0 || g_bd_identity_only) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      uint8_t mout[GL_MMS_DRAIN_RESP_MAX_BYTES];
+      uint32_t mn;
+      if (g_inited && g_manual_dispatch) {
+        gl_manual_pump_into_ring();
+        mn = gl_mms_ev_pop(&g_mms, mout, sizeof mout);
+      } else {
+        uint32_t zero = 0;
+        memcpy(mout, &zero, 4);
+        mn = 4;
+      }
+      if (mn == 0) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+      } else {
+        send_response(fd, requestId, STATUS_OK, mout, mn);
+      }
+      gl_cbq_secure_zero(mout, sizeof mout);
       return;
     }
     send_response(fd, requestId, STATUS_ERR, NULL, 0); // unknown control slot

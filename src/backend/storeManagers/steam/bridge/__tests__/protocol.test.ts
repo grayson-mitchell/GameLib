@@ -473,3 +473,21 @@ describe('protocol -- CONTROL_SLOT.drainCallResults (58-07)', () => {
     expect(Number(helperValue![1])).toBe(CONTROL_SLOT.drainCallResults)
   })
 })
+
+describe('protocol -- CONTROL_SLOT.drainServerEvents (58-20)', () => {
+  it('is 12, equals the helper #define, leaves 13 to 58-19 and keeps slots distinct', () => {
+    expect(CONTROL_SLOT.drainServerEvents).toBe(12)
+    expect(Object.values(CONTROL_SLOT)).not.toContain(13)
+    const values = Object.values(CONTROL_SLOT)
+    expect(new Set(values).size).toBe(values.length)
+    const root = join(__dirname, '..', '..', '..', '..', '..', '..')
+    const helper = readFileSync(
+      join(root, 'native/steam-bridge/helper/bridge_helper.c'),
+      'utf-8'
+    )
+    const helperValue = /#define CONTROL_SLOT_DRAIN_SERVER_EVENTS (\d+)/.exec(
+      helper
+    )
+    expect(Number(helperValue![1])).toBe(CONTROL_SLOT.drainServerEvents)
+  })
+})

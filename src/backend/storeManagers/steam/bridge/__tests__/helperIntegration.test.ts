@@ -507,10 +507,11 @@ describeDarwinOnly(
           )
           expect(retired.status).toBe(STATUS_ERR)
 
-          // Unknown CONTROL slot (9 and 10 became real in quick k51, 11 in 58-07).
+          // Unknown CONTROL slot (9 and 10 became real in quick k51, 11 in
+          // 58-07, 12 in 58-20; 13 is reserved by 58-19, so probe 14).
           const unknownSlot = await sendFrameOnSocket(
             socket,
-            encodeRequest(2, CONTROL_ORDINAL, 12)
+            encodeRequest(2, CONTROL_ORDINAL, 14)
           )
           expect(unknownSlot.status).toBe(STATUS_ERR)
         } finally {
@@ -1304,7 +1305,8 @@ describeDarwinOnly(
             [10, CONTROL_SLOT.reportStubCall, stubCallBlob(0, 4, 'abcd', 'M')],
             [11, CONTROL_SLOT.requestCurrentStats, Buffer.alloc(0)],
             [12, CONTROL_SLOT.reportCbDispatch, cbDispatchBlob(1101, 1, 0)],
-            [13, CONTROL_SLOT.drainCallResults, Buffer.alloc(0)]
+            [13, CONTROL_SLOT.drainCallResults, Buffer.alloc(0)],
+            [14, CONTROL_SLOT.drainServerEvents, Buffer.alloc(0)]
           ] as const) {
             expect(
               (
@@ -1556,6 +1558,86 @@ describeDarwinOnly(
         h.child.kill()
       }
     }, 30000)
+
+    test('58-20 DRAIN_SERVER_EVENTS (slot 12): refused before HELLO, argLen 0 only, [u32 0] when idle, unknown slot 14 refused', async () => {
+      const h = await startAuthHelper('p58-mms-', authedEnv())
+      try {
+        const socket = await h.connect()
+        const slot12 = (id: number, blob = Buffer.alloc(0)) =>
+          encodeRequest(
+            id,
+            CONTROL_ORDINAL,
+            CONTROL_SLOT.drainServerEvents,
+            blob
+          )
+        try {
+          expect((await sendFrameOnSocket(socket, slot12(1))).status).toBe(
+            STATUS_ERR
+          )
+          await authenticate(socket)
+          const idle = await sendFrameOnSocket(socket, slot12(2))
+          expect(idle.status).toBe(STATUS_OK)
+          expect(Buffer.from(idle.retBlob).equals(Buffer.alloc(4))).toBe(true)
+          expect(
+            (await sendFrameOnSocket(socket, slot12(3, Buffer.alloc(4)))).status
+          ).toBe(STATUS_ERR)
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                encodeRequest(4, CONTROL_ORDINAL, 14)
+              )
+            ).status
+          ).toBe(STATUS_ERR)
+        } finally {
+          socket.destroy()
+        }
+      } finally {
+        h.child.kill()
+      }
+    }, 30000)
+
+    test('58-20 source pins: slot 12 is defined, never sleeps or logs, and no gl_mms_* function accepts a Windows pointer', () => {
+      const raw = readFileSync(HELPER_SOURCE_PATH, 'utf8')
+      const src = raw
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      expect(raw).toContain('#define CONTROL_SLOT_DRAIN_SERVER_EVENTS 12')
+      const start = src.indexOf('slot == CONTROL_SLOT_DRAIN_SERVER_EVENTS')
+      const end = src.indexOf(
+        'send_response(fd, requestId, STATUS_ERR, NULL, 0); // unknown control slot'
+      )
+      expect(start).toBeGreaterThan(-1)
+      expect(end).toBeGreaterThan(start)
+      const handler = src.slice(start, end)
+      expect(handler).not.toContain('usleep')
+      expect(handler).not.toContain('logts')
+      expect(handler).toContain('argLen != 0')
+      // The custom request functions decode integers and fixed string slots only.
+      const mmsStart = src.indexOf('int gl_mms_request_list(')
+      const mmsEnd = src.indexOf('static void sanitize_ver')
+      expect(mmsStart).toBeGreaterThan(-1)
+      expect(mmsEnd).toBeGreaterThan(mmsStart)
+      const mms = src.slice(mmsStart, mmsEnd)
+      for (const m of mms.matchAll(/memcpy\(&(\w+), args/g)) {
+        expect(mms).toMatch(
+          new RegExp(`(?:uint32_t|int32_t|uint64_t)[^;]*\\b${m[1]}\\b`)
+        )
+      }
+      expect(mms).not.toMatch(
+        /\(void \*\)args|\(uintptr_t\)args|\*\(void \*\*\)/
+      )
+      // A decoded handle reaches Mac Steam only after the issued-handle check.
+      const det = mms.slice(mms.indexOf('int gl_mms_get_server_details('))
+      expect(det.indexOf('gl_mms_is_issued(h)')).toBeGreaterThan(-1)
+      expect(det.indexOf('gl_mms_is_issued(h)')).toBeLessThan(
+        det.indexOf('(uintptr_t)h')
+      )
+      // The ring holds identities: no mms code path formats with %s or logs.
+      expect(src.slice(src.indexOf('Phase 58 (58-20)'), mmsEnd)).not.toMatch(
+        /logts/
+      )
+    })
 
     test('58-07 source pins: NET and CBQ log formats are literal with no %s, slot 11 is defined, the unlisted observation is wired', () => {
       const raw = readFileSync(HELPER_SOURCE_PATH, 'utf8')

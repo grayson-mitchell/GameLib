@@ -147,7 +147,12 @@ export const CONTROL_SLOT = {
   // reply [u32 count 0|1][u64 hAPICall][i32 iCallback][u32 ioFailure][u32 cub]
   // [cub bytes]. Nothing in the sidecar sends this; an old helper answers
   // STATUS_ERR.
-  drainCallResults: 11
+  drainCallResults: 11,
+  // Phase 58 (58-20): the shim pops one server-browser event (list, ping, players,
+  // rules) from the helper; reply [u32 count 0|1][u8 kind][u32 hRequest][i32 iServer]
+  // [i32 value][u32 cub][cub bytes]. Slot 13 is reserved (58-19); nothing in the
+  // sidecar sends this; an old helper answers STATUS_ERR.
+  drainServerEvents: 12
 } as const
 
 /** Env var carrying the per-spawn secret backend -> helper (never argv). */

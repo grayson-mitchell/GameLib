@@ -301,6 +301,80 @@ int main(void) {
     CHECK("unlisted_cap", cap_ok && gl_cbq_note_unlisted(5000) == 0);
   }
 
+  {
+    /* 58-20: server-browser event ring (slot 12). */
+    static gl_mms_ring mr;
+    uint8_t mout[GL_MMS_DRAIN_RESP_MAX_BYTES];
+    memset(&mr, 0, sizeof mr);
+    for (int32_t i = 0; i < 65; i++) gl_mms_ev_push(&mr, GL_MMS_EV_LIST_RESPONDED, 7, i, 0, NULL, 0);
+    CHECK("mms_ring_evicts_oldest", mr.count == 64 && mr.dropped_full == 1 &&
+                                        mr.ring[mr.head].iServer == 1);
+    uint32_t mn = gl_mms_ev_pop(&mr, mout, sizeof mout);
+    CHECK("mms_pop_layout", mn == 21 && rd32(mout) == 1 && mout[4] == GL_MMS_EV_LIST_RESPONDED &&
+                                rd32(mout + 5) == 7 && (int32_t)rd32(mout + 9) == 1 &&
+                                rd32(mout + 13) == 0 && rd32(mout + 17) == 0 && mr.count == 63);
+    CHECK("mms_pop_zeroes", all_zero((uint8_t *)&mr.ring[(mr.head + GL_MMS_RING_SLOTS - 1) % GL_MMS_RING_SLOTS],
+                                     sizeof mr.ring[0]));
+    CHECK("mms_pop_small_cap_keeps", gl_mms_ev_pop(&mr, mout, 3) == 0 && mr.count == 63 &&
+                                         gl_mms_ev_pop(&mr, mout, 20) == 0 && mr.count == 63);
+    memset(&mr, 0, sizeof mr);
+    mn = gl_mms_ev_pop(&mr, mout, sizeof mout);
+    CHECK("mms_pop_empty", mn == 4 && rd32(mout) == 0);
+
+    /* The evicted entry is zeroed before its slot is reused: an oversize or bad
+     * event never reaches the ring. */
+    char longstr[400];
+    memset(longstr, 'a', sizeof longstr);
+    longstr[sizeof longstr - 1] = 0;
+    char s255[256], s256[257];
+    memset(s255, 'b', 255);
+    s255[255] = 0;
+    memset(s256, 'c', 256);
+    s256[256] = 0;
+    CHECK("mms_ring_refuses_long_strings",
+          gl_mms_ev_push_strs(&mr, GL_MMS_EV_RULES_RESPONDED, 1, 0, 0, longstr, "v") == 0 &&
+              gl_mms_ev_push_strs(&mr, GL_MMS_EV_RULES_RESPONDED, 1, 0, 0, "k", longstr) == 0 &&
+              gl_mms_ev_push_strs(&mr, GL_MMS_EV_RULES_RESPONDED, 1, 0, 0, s256, "v") == 0 &&
+              gl_mms_ev_push_strs(&mr, GL_MMS_EV_RULES_RESPONDED, 1, 0, 0, NULL, "v") == 0 &&
+              mr.count == 0 && mr.refused == 4);
+    CHECK("mms_ring_accepts_255", gl_mms_ev_push_strs(&mr, GL_MMS_EV_RULES_RESPONDED, 9, 0, 3, s255, s255) == 1);
+    mn = gl_mms_ev_pop(&mr, mout, sizeof mout);
+    CHECK("mms_strs_layout", mn == 21 + 256 + 256 && rd32(mout + 17) == 512 && mout[21 + 255] == 0 &&
+                                 mout[21 + 256 + 255] == 0 && mout[21] == 'b' && (int32_t)rd32(mout + 13) == 3);
+    CHECK("mms_ring_refuses_bad_kind", gl_mms_ev_push(&mr, 0, 1, 0, 0, NULL, 0) == 0 &&
+                                           gl_mms_ev_push(&mr, 13, 1, 0, 0, NULL, 0) == 0 &&
+                                           gl_mms_ev_push(&mr, 4, 1, 0, 0, longstr, 513) == 0 && mr.count == 0);
+
+    /* gameserveritem_t repack at every measured field offset. */
+    static const struct { uint16_t off; uint16_t width; } gsi[] = {
+        {0, 8},   {8, 4},   {12, 1},  {13, 1},  {14, 32},  {46, 32},  {78, 64},
+        {144, 4}, {148, 4}, {152, 4}, {156, 4}, {160, 1},  {161, 1},  {164, 4},
+        {168, 4}, {172, 64}, {236, 128}, {364, 8}, {372, 4}, {376, 4}};
+    uint8_t macgsi[GL_MMS_GSI_SIZE], wingsi[GL_MMS_GSI_SIZE];
+    memset(macgsi, 0, sizeof macgsi);
+    for (size_t i = 0; i < sizeof gsi / sizeof gsi[0]; i++)
+      memset(macgsi + gsi[i].off, (int)(0x11 + i), gsi[i].width);
+    /* Unterminated strings: the repack must still NUL-terminate each. */
+    memset(wingsi, 0xEE, sizeof wingsi);
+    gl_mms_gsi_repack(macgsi, wingsi);
+    int gsi_ok = 1;
+    for (size_t i = 0; i < sizeof gsi / sizeof gsi[0]; i++) {
+      size_t n = gsi[i].width;
+      if (gsi[i].off == 14 || gsi[i].off == 46 || gsi[i].off == 78 || gsi[i].off == 172 ||
+          gsi[i].off == 236)
+        n--; /* last byte is the forced NUL */
+      for (size_t j = 0; j < n; j++)
+        if (wingsi[gsi[i].off + j] != (uint8_t)(0x11 + i)) gsi_ok = 0;
+    }
+    CHECK("mms_gsi_repack", gsi_ok && wingsi[14 + 31] == 0 && wingsi[46 + 31] == 0 &&
+                                wingsi[78 + 63] == 0 && wingsi[172 + 63] == 0 &&
+                                wingsi[236 + 127] == 0);
+    /* Padding bytes (142-143, 162-163) are zero, not the 0xEE the buffer held. */
+    CHECK("mms_gsi_padding_zero", wingsi[142] == 0 && wingsi[143] == 0 && wingsi[162] == 0 &&
+                                      wingsi[163] == 0 && wingsi[164 - 1] == 0);
+    CHECK("mms_gsi_rows", sizeof gsi / sizeof gsi[0] == sizeof gl_mms_gsi_map / sizeof gl_mms_gsi_map[0]);
+  }
+
 #if UINTPTR_MAX == 0xFFFFFFFFFFFFFFFFu
   CHECK("offsets", offsetof(gl_CallbackMsg_t, m_iCallback) == 4 &&
                        offsetof(gl_CallbackMsg_t, m_pubParam) == 8 &&
