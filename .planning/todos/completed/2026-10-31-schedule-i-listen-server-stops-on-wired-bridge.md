@@ -31,3 +31,14 @@ it calls at server start, and whether a bridge-side result (e.g. a socket listen
 a stub or a missing interface version) makes it stop. Player.log lives in the bottle under
 `drive_c/users/crossover/AppData/LocalLow/TVGS/Schedule I Free Sample/` and contains lobby ids;
 do not commit it.
+
+## Resolution (2026-10-31)
+
+Fixed by 58-18 (`0cdc658b1`), which served SteamNetworkingSockets012 — the older interface
+version Schedule I imports. Before it, the game had no 012 interface to create its listen socket on,
+so FishNet stopped without any helper-side call. Quick host check after 58-20/58-21 on a rebuilt
+bridge and restarted dev (operator: "game launched quickly and game loaded into world"):
+Player.log shows `Server connection state: Starting` then `Started and transport index: 1`, then
+`Starting FishySteamworks client connection`; the helper log shows
+`CALL SteamNetworkingSockets013.CreateListenSocketP2P` (012 served through the 013 helper path) and
+`CALL SteamFriends017.ActivateGameOverlayInviteDialog`. Peer join is scored in 58-23.
