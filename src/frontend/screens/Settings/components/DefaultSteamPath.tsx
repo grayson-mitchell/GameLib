@@ -19,7 +19,7 @@ const DefaultSteamPath = () => {
 
   const helpContent = t(
     'help.steam_path.info',
-    'This path lets GameLib determine what version of Proton Steam uses, for adding non-Steam games to Steam.'
+    'The folder where Steam is installed. GameLib reads your Steam libraries, download progress and connection status from here, and uses it to add non-Steam games to Steam. On Linux, it is also where GameLib finds Proton versions.'
   )
 
   hasHelp(
