@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 58 (steam-bridge-multiplayer) — EXECUTING
 Plan: 15 of 24
 Status: Ready to execute
-Last activity: 2026-10-31 - Completed quick task 261031-kqr: Rename Accessibility settings screen to Appearance
+Last activity: 2026-10-31 - Completed quick task 261031-l0y: settings help icon on label line
 
 Progress: [█████████░] 94%
 
@@ -545,6 +545,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261031-ixa | Phase 58 gap fix: Mac Steam broadcasts LobbyCreated_t (513) as well as completing CreateLobby's call result, and the helper dropped the broadcast as unlisted, so Schedule I never ran its lobby-created handler (blank host version). 513 is now relayed (repacked 12→16) on both paths, with per-id call-result/CBDISP logging and `callresult=` on unlisted drops. Live: SetLobbyData now called | 2026-10-31 | a0eae4319 | Verified | [261031-ixa-relay-lobbycreated-513-broadcast-gap-fix](./quick/261031-ixa-relay-lobbycreated-513-broadcast-gap-fix/) |
 | 261031-kqr | Settings: renamed the Accessibility screen to "Appearance" (user-visible strings only; route, keys and identifiers unchanged) and removed the duplicate ThemeSelector from General, so theme lives only on Appearance | 2026-10-31 | fb4ffde41 | | [261031-kqr-rename-accessibility-settings-screen-to-](./quick/261031-kqr-rename-accessibility-settings-screen-to-/) |
 | fast | Appearance: moved the Manage Accounts background picker from General to Appearance and put the theme selector first on the screen | 2026-10-31 | 66040573e | | — |
+| 261031-l0y | Settings help is now an icon-only ⓘ button on the field's label line (InfoBox `iconOnly` + FieldLabel + `labelHelp` on field components), rolled out to 11 settings sites; Manage Accounts background moved above the Appearance toggles. Untouched by design: ClearCache, ResetHeroic, SyncSaves, two WineVersionSelector notices, Sideload/GOG modify dialogs | 2026-10-31 | 752fa5d23 | Needs Review (live check light + dark theme) | [261031-l0y-settings-help-as-icon-only-on-the-field-](./quick/261031-l0y-settings-help-as-icon-only-on-the-field-/) |
 
 ## Session Continuity
 
