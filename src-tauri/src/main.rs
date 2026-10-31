@@ -8161,7 +8161,8 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         }
         // Bring the main window to the front before a bridge-notice dialog. Same three calls as
         // the tray About arm (`open_about_window_from_tray`); takes no args, so there is no
-        // injection surface. A missing window is reported, not fatal.
+        // injection surface. A missing window is reported, not fatal. Also used by the bridge
+        // invite picker (58-36).
         "main_window_raise" => {
             let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
                 return Err("main_window_raise:no-main-window".to_string());
@@ -8169,6 +8170,9 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             let _ = window.unminimize();
             let _ = window.show();
             let _ = window.set_focus();
+            // AppKit ignores this when GameLib is already active, so it only bounces the Dock icon when activation was declined with a game frontmost.
+            #[cfg(target_os = "macos")]
+            let _ = window.request_user_attention(Some(tauri::UserAttentionType::Critical));
             Ok(Value::Null)
         }
         // Swap the real Tauri tray's icon (Phase 34.1 Plan 06, D-11). Backs the sidecar's

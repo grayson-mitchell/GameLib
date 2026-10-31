@@ -61,9 +61,9 @@ import {
   steamBridgeHelperStateDir
 } from 'backend/constants/paths'
 import { sendFrontendMessage } from 'backend/ipc'
-import { getMainWindow } from 'backend/main_window'
 import { isMac } from 'backend/constants/environment'
-import { shell } from 'backend/platform'
+import { app, shell } from 'backend/platform'
+import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
 import { registerLongLivedChild } from 'backend/longLivedChildren'
 import {
   BRIDGE_SECRET_ENV,
@@ -445,8 +445,20 @@ function ensureHelperSpawned(
       return
     }
     entry.lastInviteRequestMs = now
-    sendFrontendMessage('steamBridgeInviteRequest', { appId })
-    getMainWindow()?.show()
+    // 58-36: fakeWindow.show is a no-op under Tauri, so 58-32's picker rendered
+    // into a window that stayed behind the game. Raise through the shell.
+    app.raiseMainWindow()
+    logInfo(`bridge invite [${appId}]: raise requested`, LogPrefix.Steam)
+    const ackId = newDialogAckId()
+    trackDialogDisplay(ackId, (result) =>
+      logInfo(
+        result.confirmed
+          ? `bridge invite [${appId}]: display=confirmed elapsedMs=${result.elapsedMs}`
+          : `bridge invite [${appId}]: display=unconfirmed timeout=${result.timeoutMs}`,
+        LogPrefix.Steam
+      )
+    )
+    sendFrontendMessage('steamBridgeInviteRequest', { appId, ackId })
   }
 
   // 261027-aue: same appid rule and own-stream rule as LISTEN/READY (T-aue-01).

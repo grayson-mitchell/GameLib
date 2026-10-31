@@ -264,6 +264,9 @@ export const RUST_APP_HIDE = 'app_hide' as const
  * (`unminimize()` + `show()` + `set_focus()`). Backs `electronStub.ts`'s
  * `app.raiseMainWindow()`, called before a bridge-notice dialog so a failure
  * that happens while a game is in front is not rendered into a hidden window.
+ * Callers: the bridge notice, and the bridge invite picker (58-36). On macOS the
+ * arm also requests Critical user attention as a fallback (Dock bounce) when
+ * activation is declined with a game frontmost.
  * Takes no args; resolves null. Never called for unrelated dialogs.
  */
 export const RUST_MAIN_WINDOW_RAISE = 'main_window_raise' as const

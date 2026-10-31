@@ -53,7 +53,8 @@ import {
   shutdownLongLivedChildren,
   __resetLongLivedChildrenForTests
 } from 'backend/longLivedChildren'
-import { shell } from 'backend/platform'
+import { app, shell } from 'backend/platform'
+import { acknowledgeDialogDisplay } from 'backend/dialog/displayAck'
 import { stripSourceComments } from '../../../../testUtils/stripSourceComments'
 
 jest.mock('backend/logger', () => ({
@@ -65,15 +66,11 @@ jest.mock('backend/logger', () => ({
 
 // 261027-aue: the default Steam starter calls shell.openExternal on macOS only.
 jest.mock('backend/platform', () => ({
-  shell: { openExternal: jest.fn().mockResolvedValue(undefined) }
+  shell: { openExternal: jest.fn().mockResolvedValue(undefined) },
+  app: { raiseMainWindow: jest.fn() }
 }))
 
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
-
-const mockShow = jest.fn()
-jest.mock('backend/main_window', () => ({
-  getMainWindow: () => ({ show: mockShow })
-}))
 
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn()
@@ -896,7 +893,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       Buffer.from(`[2026-11-01T00:00:00Z] INVITE dialog appid=${appId}\n`)
     beforeEach(() => {
       mockedSendFrontendMessage.mockClear()
-      mockShow.mockClear()
+      ;(app.raiseMainWindow as jest.Mock).mockClear()
     })
     const inviteCalls = () =>
       mockedSendFrontendMessage.mock.calls.filter(
@@ -909,9 +906,50 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       void ensureBridgeHelperReady('3205720')
       child.stderr.emit('data', invite('3205720'))
       expect(inviteCalls()).toEqual([
-        ['steamBridgeInviteRequest', { appId: '3205720' }]
+        [
+          'steamBridgeInviteRequest',
+          { appId: '3205720', ackId: expect.stringMatching(/.+/) }
+        ]
       ])
-      expect(mockShow).toHaveBeenCalledTimes(1)
+      const raise = app.raiseMainWindow as jest.Mock
+      expect(raise).toHaveBeenCalledTimes(1)
+      expect(raise.mock.invocationCallOrder[0]).toBeLessThan(
+        mockedSendFrontendMessage.mock.invocationCallOrder[0]
+      )
+    })
+
+    test('no ack -> display=unconfirmed after the bounded timeout', () => {
+      jest.useFakeTimers()
+      try {
+        const child = new FakeChildProcess()
+        mockedSpawn.mockReturnValue(child)
+        ;(logInfo as jest.Mock).mockClear()
+        void ensureBridgeHelperReady('3205720')
+        child.stderr.emit('data', invite('3205720'))
+        jest.advanceTimersByTime(15_000)
+        expect(logInfo).toHaveBeenCalledWith(
+          'bridge invite [3205720]: display=unconfirmed timeout=15000',
+          'Steam'
+        )
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test('ack before the timeout -> display=confirmed', () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      ;(logInfo as jest.Mock).mockClear()
+      void ensureBridgeHelperReady('3205720')
+      child.stderr.emit('data', invite('3205720'))
+      const ackId = inviteCalls()[0][1].ackId
+      expect(acknowledgeDialogDisplay(ackId)).toBe(true)
+      expect(logInfo).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /^bridge invite \[3205720\]: display=confirmed elapsedMs=\d+$/
+        ),
+        'Steam'
+      )
     })
 
     test('a line naming another appid does nothing', () => {
@@ -920,7 +958,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       void ensureBridgeHelperReady('3205720')
       child.stderr.emit('data', invite('999'))
       expect(inviteCalls()).toHaveLength(0)
-      expect(mockShow).not.toHaveBeenCalled()
+      expect(app.raiseMainWindow).not.toHaveBeenCalled()
     })
 
     test('a line from a stale child does nothing', () => {
@@ -939,7 +977,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       child.stderr.emit('data', invite('3205720'))
       child.stderr.emit('data', invite('3205720'))
       expect(inviteCalls()).toHaveLength(1)
-      expect(mockShow).toHaveBeenCalledTimes(1)
+      expect(app.raiseMainWindow).toHaveBeenCalledTimes(1)
     })
   })
 

@@ -826,7 +826,7 @@ interface FrontendMessages {
   steamEngineStateChanged: (payload: SteamEngineState) => void
   // Phase 58 Plan 31 (M-01): helperProcess.ts pushes this when the game opens
   // its invite dialog; the friend picker subscribes.
-  steamBridgeInviteRequest: (payload: { appId: string }) => void
+  steamBridgeInviteRequest: (payload: { appId: string; ackId: string }) => void
   steamBridgeRouteNotice: (payload: {
     appName: string
     reason: SteamBridgeRouteReason
