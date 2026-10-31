@@ -754,7 +754,7 @@ Plans:
 
 **Wave 16** *(blocked on Wave 15 completion)*
 
-- [ ] 58-23-PLAN.md — TCP live gate run (runner)
+- [x] 58-23-PLAN.md — TCP live gate run (runner) — Verdict: FAIL (Direction A unreachable; route /gsd-plan-phase 58 --gaps)
 
 **Wave 17** *(blocked on Wave 16 completion)*
 
