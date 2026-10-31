@@ -28,6 +28,8 @@ import { GlobalConfig } from 'backend/config'
 import { logWarning } from 'backend/logger'
 import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
 import { runWineCommand } from 'backend/launcher'
+import { DXVK } from 'backend/tools'
+import { writeCxbottleConf } from '../engine/adoptBottle'
 import { steamBottleConfigStore } from '../electronStores'
 import { library } from '../state'
 import {
@@ -51,6 +53,8 @@ import {
   isBridgeBottleReady,
   getBridgeBottleSettings,
   provisionBridgeBottle,
+  CROSSOVER_CREATE_TIMEOUT,
+  CROSSOVER_MISSING,
   bridgeBottleNameFor,
   resolveBridgeBottleName,
   listReadyBridgeBottleNames,
@@ -117,6 +121,14 @@ jest.mock('backend/utils', () => ({
 
 jest.mock('backend/launcher', () => ({
   runWineCommand: jest.fn()
+}))
+
+// Phase 59: bottle creation with the fallback engine installs DXVK and writes the conf.
+jest.mock('backend/tools', () => ({
+  DXVK: { installRemove: jest.fn() }
+}))
+jest.mock('../engine/adoptBottle', () => ({
+  writeCxbottleConf: jest.fn()
 }))
 
 // quick 261027-tot: setupDownloads.ts (the SteamSetup.exe fetch wrapper) emits
@@ -2988,6 +3000,174 @@ describe('Phase 59 engine registry', () => {
         pinned.wineserverBin,
         pinned.wineserverBin
       ])
+    })
+  })
+  describe('provisionBridgeBottle with a fallback engine (D-01/D-02/D-03/D-12)', () => {
+    const engine = {
+      wineBin: '/pins/bin/wine',
+      wineserverBin: '/pins/bin/wineserver',
+      label: 'Pinned Wine',
+      version: '9.0',
+      dxvk: { dir: '/pins/dxvk', version: '2.4' }
+    }
+    const name = 'GameLibSteamBridge-620'
+    const order: string[] = []
+    const mockedInstallRemove = DXVK.installRemove as jest.Mock
+    const mockedWriteConf = writeCxbottleConf as jest.Mock
+    let dxvkMarker: boolean
+
+    beforeEach(() => {
+      order.length = 0
+      dxvkMarker = false
+      mockedExistsSync.mockReset()
+      mockedExistsSync.mockImplementation((p: string) =>
+        String(p).endsWith('current_dxvk-macOS') ? dxvkMarker : false
+      )
+      mockedSpawnAsync.mockImplementation(
+        async (bin: string, args: string[]) => {
+          order.push(`${bin.split('/').pop()} ${args.join(' ')}`)
+          return { code: 0, stdout: '', stderr: '' }
+        }
+      )
+      mockedInstallRemove.mockImplementation(async () => {
+        order.push('dxvk')
+        dxvkMarker = true
+        return true
+      })
+      mockedWriteConf.mockImplementation(() => {
+        order.push('conf')
+        return true
+      })
+    })
+
+    test('creates the bottle itself in the right order, never spawning cxbottle', async () => {
+      cxState.binDir = undefined
+      const result = await provisionBridgeBottle({
+        bottleName: name,
+        fallbackEngine: engine
+      })
+      cxState.binDir = CX_BIN_DIR
+      expect(result).toEqual({ status: 'done' })
+      expect(order).toEqual([
+        'wine wineboot -i',
+        'wineserver -w',
+        'dxvk',
+        'conf',
+        'wineserver -k'
+      ])
+      expect(mockedMkdirSync).toHaveBeenCalledWith(
+        dirnameOf(getBottleDir(name)),
+        { recursive: true }
+      )
+      const [, , bootOpts] = mockedSpawnAsync.mock.calls[0]
+      expect(bootOpts.env).toMatchObject({
+        WINEPREFIX: getBottleDir(name),
+        USER: 'crossover',
+        WINEDLLOVERRIDES: 'mscoree,mshtml=',
+        WINEDEBUG: '-all'
+      })
+      expect(bootOpts.timeout).toBe(180_000)
+      expect(mockedSpawnAsync.mock.calls[1][2].timeout).toBe(60_000)
+      expect(mockedInstallRemove.mock.calls[0][1]).toBe('dxvk')
+      expect(mockedInstallRemove.mock.calls[0][2]).toBe('backup')
+      expect(mockedInstallRemove.mock.calls[0][3]).toBe(engine.dxvk)
+      expect(
+        mockedSpawnAsync.mock.calls.some((c) =>
+          String(c[0]).includes('cxbottle')
+        )
+      ).toBe(false)
+    })
+
+    test.each([1, null])(
+      'wineboot exit code %p -> error, partial dir removed, no conf',
+      async (code) => {
+        mockedSpawnAsync.mockImplementation(async (bin: string) =>
+          bin === engine.wineBin
+            ? { code, stdout: '', stderr: 'boom' }
+            : { code: 0, stdout: '', stderr: '' }
+        )
+        const result = await provisionBridgeBottle({
+          bottleName: name,
+          fallbackEngine: engine
+        })
+        expect(result.status).toBe('error')
+        expect(mockedWriteConf).not.toHaveBeenCalled()
+        expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(name), {
+          recursive: true,
+          force: true
+        })
+      }
+    )
+
+    test('does not remove a bottle dir that existed before the call', async () => {
+      mockedExistsSync.mockImplementation(
+        (p: string) => String(p) === getBottleDir(name)
+      )
+      mockedSpawnAsync.mockResolvedValue({ code: 1, stdout: '', stderr: '' })
+      const result = await provisionBridgeBottle({
+        bottleName: name,
+        fallbackEngine: engine
+      })
+      expect(result.status).toBe('error')
+      expect(mockedRmSync).not.toHaveBeenCalled()
+    })
+
+    test('an already ready bottle short-circuits with no spawn', async () => {
+      mockedExistsSync.mockImplementation((p: string) =>
+        String(p).endsWith('cxbottle.conf')
+      )
+      const result = await provisionBridgeBottle({
+        bottleName: name,
+        fallbackEngine: engine
+      })
+      expect(result).toEqual({ status: 'done' })
+      expect(mockedSpawnAsync).not.toHaveBeenCalled()
+    })
+
+    test('a toolkit wineVersion without a fallback engine is still rejected', async () => {
+      const result = await provisionBridgeBottle({
+        bottleName: name,
+        wineVersion: { bin: '/x/gptk', name: 'GPTK', type: 'toolkit' }
+      })
+      expect(result.status).toBe('error')
+      expect(mockedSpawnAsync).not.toHaveBeenCalled()
+    })
+
+    test('CrossOver absent and no fallback engine is still CROSSOVER_MISSING', async () => {
+      cxState.binDir = undefined
+      const result = await provisionBridgeBottle({ bottleName: name })
+      cxState.binDir = CX_BIN_DIR
+      expect(result.errorCode).toBe(CROSSOVER_MISSING)
+    })
+
+    test('cxbottle --create timing out returns CROSSOVER_CREATE_TIMEOUT, kills the wineserver, removes the new dir', async () => {
+      mockedSpawnAsync.mockImplementation(
+        async (bin: string, args: string[]) => {
+          order.push(`${bin.split('/').pop()} ${args.join(' ')}`)
+          return bin.includes('cxbottle')
+            ? { code: null, stdout: '', stderr: '' }
+            : { code: 0, stdout: '', stderr: '' }
+        }
+      )
+      const result = await provisionBridgeBottle({
+        bottleName: name,
+        createTimeoutMs: 1000
+      })
+      expect(result.status).toBe('error')
+      expect(result.errorCode).toBe(CROSSOVER_CREATE_TIMEOUT)
+      expect(mockedSpawnAsync.mock.calls[0][2]).toEqual({ timeout: 1000 })
+      expect(order.some((o) => o.startsWith('wineserver -k'))).toBe(true)
+      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(name), {
+        recursive: true,
+        force: true
+      })
+    })
+
+    test('a minimal win64 conf reads back as win64 (Pitfall 7)', () => {
+      mockedReadFileSync.mockReturnValue(
+        '[Bottle]\n"BottleID" = "A"\n"WineArch" = "win64"\n'
+      )
+      expect(bottleWineArch(name)).toBe('win64')
     })
   })
 })
