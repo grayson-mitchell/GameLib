@@ -243,27 +243,27 @@ Every item names its sink and launch ordinal. All results are pending; plan 58-0
 
 ### 1. Component p58b installed
 expected: after launch 1 starts, `COMPDIR` exists and the sha256 of its six files (LICENSE.lsteamclient, NOTICE, detour-cx26.3.0.39832.bin, lsteamclient.dll, lsteamclient.so, steam.exe) equal the `files[]` pins of entry `26.3.0.39832` in `src/common/steamclientLayerCatalogue.ts` (the p58b values: archive sha256 `769d8532890613ea365c679d7fc1961b1960292cbee6b548125dac72081295e7`, 5368352 bytes, lsteamclient.dll `8257505948f8f5edc242...`). Sink: filesystem. Launch 1.
-result: pending
+result: pass. After launch 1 started, COMPDIR `steamclient-layer-cx26.3.0.39832` held all six files; the sha256 of LICENSE.lsteamclient, NOTICE, detour-cx26.3.0.39832.bin, lsteamclient.dll (prefix 8257505948f8f5edc242), lsteamclient.so and steam.exe each match a `files[]` pin in `src/common/steamclientLayerCatalogue.ts` (6/6 match, checked after launch 2 on the same untouched dir).
 
 ### 2. Direction A: GameLib hosts, peer joins
 expected: sub-checks, all from launch 1. (a) scored per D-08a (Raft is `1202-only`), on `trace-launch-1.log` (Mac is host; sink TRACEDIR raw file, cross-checked in SIDECAR re-log), with X = the `peer=` value of the first `role=game` `event=callback id=1202 peer=` line: (a1) that line exists; (a2) `grep -n 'role=game event=p2p op=accept peer=X'` is non-empty with a line number greater than the `id=1202 peer=X` line (the `ok=` value is recorded, not scored); (a3) `role=game event=p2p op=send peer=X bytes=N` with N > 0 AND `role=game event=p2p op=read peer=X bytes=N` with N > 0 (X identical on all four lines; also `role=game event=call name=` lines ending `_SendP2PPacket` and `_ReadP2PPacket`). The operator additionally confirms in (c) that the peer's account is the one that joined (X is only an ordinal, 1 for the first peer seen). Also record `id=337` presence (not scored). (b) `trace-launch-1.log` holds at least one `role=game event=call name=` for a send (e.g. SendP2PPacket / SendMessages) and one for a receive (e.g. ReadP2PPacket / ReceiveMessages), and no helper line is used. (c) The operator confirms both players are in the same world and each sees the other move. (d) run `pnpm bridge-census --multiplayer 648800 --drm | tee <session>/census-launch-1.txt` and record the output. It is expected to print `verified` with detail `game join (D-08a legacy P2P), send and receive observed`, and `join`, `send`, `recv` true; that output corroborates (a1)-(a3) and is scored with them (a census `unverified` here with a D-08a clause named is a FAIL of the matching sub-check). Path: from `lsof-launch-1.txt`, a LAN peer address means direct, a Valve relay address means relayed; the path is recorded, not scored (D-06).
-result: pending
+result: pass. Launch 1, Mac hosts. (a1) `trace-launch-1.log` line 62 `role=game event=callback id=1202 peer=1`, X = 1. (a2) line 64 `role=game event=p2p op=accept peer=1 ok=1`, greater than 62 (ok=1 recorded, not scored). (a3) line 68 `op=read peer=1 bytes=10` and line 71 `op=send peer=1 bytes=528`, N > 0, X identical on all four lines; call names `_ReadP2PPacket` (line 67) and `_SendP2PPacket` (line 70). The same lines appear in the SIDECAR re-log (`gamelib-launch-1.log` 176/179/184/189). id=337: absent (0 lines, not scored). (b) send and receive `role=game` call names present, no helper line (0 `role=helper`). (c) operator, after the launch-1 in-world reply `in world`, later said `in world, both saw each other move` and `this time i joined from pc rather than send an invite`; asked whether those referred to launch 1 the operator answered `yes` (operator statements, same world, mutual movement, peer joined via Join Game). (d) `census-launch-1.txt`: `multiplayer 648800 drm: verified join=1 send=1 recv=1 path=unknown oversize=0 — game join (D-08a legacy P2P), send and receive observed`. Path: `lsof-launch-1.txt` (32 UDP sockets, Raft.exe pid 24132) lists local bound sockets only, no remote peer address, so the path is unknown (recorded, not scored, D-06).
 
 ### 3. Direction B: peer hosts, GameLib joins
 expected: as item 2 from launch 2 (sinks `trace-launch-2.log`, `gamelib-launch-2.log`, `lsof-launch-2.txt`, `census-launch-2.txt`), joiner side only because the peer PC is the host and its trace is not captured: (a) scored per D-08a (2) only: in `trace-launch-2.log`, `role=game event=p2p op=send peer=X bytes=N` with N > 0 AND `role=game event=p2p op=read peer=X bytes=N` with N > 0, X identical on both lines (and `_SendP2PPacket` / `_ReadP2PPacket` call names). D-08a (1) is NOT observable from the Mac in this direction (the host is the peer PC) and stays UNSCORED here; it is covered by item 2 from launch 1 and by the operator's statement in (c) that the peer's session request was accepted. Record `id=337` presence (not scored). (b) one role=game send and one role=game receive call name. (c) operator confirms same world, mutual movement, and that the join succeeded via Join Game / invite on the Mac. (d) census output recorded, not scored: expected `unverified` with `no game-originated join` and `D-08a: no 1202 naming a peer` (the joiner has no 1202 to show), because (1) is host-side; `send` and `recv` should read true. Path recorded, not scored.
-result: pending
+result: pass. Launch 2, PC hosts, Mac joins (D-08a (2) only; (1) unscored here). (a) `trace-launch-2.log` line 66 `role=game event=p2p op=send peer=1 bytes=10` and line 68 `op=read peer=1 bytes=524`, N > 0, X = 1 on both; call names `_SendP2PPacket` (line 65) and `_ReadP2PPacket` (line 67). Same lines in `gamelib-launch-2.log` (278/279, pid 208). id=337: present (line 73, recorded only). (b) one send and one receive `role=game` call name, no helper line. (c) operator: `in world`; `joined by both methods, each worked` (the Mac joined via invite and via Join Game); `Raft quit, both saw each other move, yes`. (d) `census-launch-2.txt`: `multiplayer 648800 drm: unverified join=0 send=1 recv=1 path=unknown oversize=0 — no game-originated join; D-08a: no 1202 naming a peer` (the expected joiner-side output, recorded not scored; send and recv true). Path: `lsof-launch-2.txt` (29 UDP sockets, pid 46826) lists local bound sockets only, so the path is unknown (recorded, not scored). Note: the operator joined twice (invite, then Join Game); the archived trace holds one send/read pair for the single Raft process (pid 208) and the contract needs only N > 0 on both.
 
 ### 4. serialized005 decision (M-06)
 expected: `grep -c "Don't recognize interface name"` and `grep -c SteamNetworkingSocketsSerialized005` over every Raft capture (`wine-launch-1.log`, `wine-launch-2.log`, `trace-launch-1.log`, `trace-launch-2.log`, and each `gamelib-launch-N.log`), reported per file with each file's line count. Decision rule: zero hits in all captures AND items 2 and 3 pass = `not needed`; any hit during a join (a hit in a launch whose item 2 or 3 failed or whose hit line follows the join) = `carry serialized005.patch in a follow-up plan`. Items 2/3 failing for another reason with zero hits = `inconclusive`. Sinks: WINELOG and TRACEDIR. Launches 1 and 2.
-result: pending
+result: not needed. Zero hits of `Don't recognize interface name` and of `SteamNetworkingSocketsSerialized005` in every capture: wine-launch-1.log (10 lines) 0/0; wine-launch-2.log (10 lines) 0/0; trace-launch-1.log (76 lines) 0/0; trace-launch-2.log (74 lines) 0/0; gamelib-launch-1.log (196 lines) 0/0; gamelib-launch-2.log (291 lines, cumulative: includes the launch-1 re-log) 0/0. Items 2 and 3 pass, so the rule yields `not needed`: serialized005.patch is not carried.
 
 ### 5. Relay status observed
 expected: record whether the trace holds `event=call name=` containing `InitRelayNetworkAccess` or `event=callback id=1281`, per launch. Record-only. Sink TRACEDIR. Launches 1 and 2.
-result: pending
+result: pass (record-only). Launch 1: `InitRelayNetworkAccess` call 0, `callback id=1281` 1 line. Launch 2: `InitRelayNetworkAccess` call 0, `callback id=1281` 1 line (line 54).
 
 ### 6. Join-signal consistency
 expected: the join signal scored in items 2(a) and 3(a) is the one named by `## Pre-gate measurement` (`join signal: 1202-only`) and is scored against D-08a (adopted 2026-10-31, verbatim in `58-CONTEXT.md` and in the D-08 bar section above), not against 504 / 1221. Confirm from `trace-launch-N.log` that no `id=504` or `id=1221` line appears (the census applies D-08a only in that case) (if one does, record it: the measurement was wrong, and the standard D-08 item 1 then also applies as a cross-check). Confirm that every `peer=` value used in items 2 and 3 is the same single value per launch where D-08a requires it (compare, do not copy), and that nothing outside D-08a was widened: only `role=game` lines were used, `role=helper` lines and Mac Steam In-Game status were not. Sink: this file plus `trace-launch-N.log`. Launches 1 and 2.
-result: pending
+result: pass. Scored against D-08a (`join signal: 1202-only`): `id=504` / `id=1221` = 0 lines in both traces, so the census applied D-08a only. peer=1 is the single value on all D-08a lines per launch (launch 1: 62, 64, 68, 71; launch 2: 66, 68), compared not copied. Only `role=game` lines were used; 0 `role=helper` lines in either trace; Mac Steam In-Game status was not used. No 16+ digit value in either trace.
 
 ## 5. Gaps
 
@@ -271,7 +271,7 @@ result: pending
 
 ## 6. Verdict
 
-Verdict: pending
+Verdict: PASS
 
 ## 7. Run record
 
@@ -317,3 +317,20 @@ Session dir: `/tmp/gamelib-gate-20261031T023945Z/`
 - Peer identifiers are ordinals (`peer=1`); no 16+ digit value appears in the trace.
 - Serialized005 check, launch 1: `Don't recognize interface name` and `SteamNetworkingSocketsSerialized005` = 0 hits in wine (10 lines), trace (76 lines) and gamelib (196 lines).
 - Census (`census-launch-1.txt`), verbatim: `multiplayer 648800 drm: verified join=1 send=1 recv=1 path=unknown oversize=0 — game join (D-08a legacy P2P), send and receive observed`
+
+- Launch 1 operator observations (verbatim, added by the 58-09 continuation): after the in-world reply `in world`, the operator later said `in world, both saw each other move` and `this time i joined from pc rather than send an invite`; asked whether both statements referred to launch 1, the operator answered `yes`. (The earlier sentence above that the operator did not separately restate mutual movement is superseded by this.)
+
+### Interlude (unscored)
+
+Between launch 1 and launch 2 no Raft ran through GameLib (no delimiter, no trace); an orchestrator capture taken then found no Raft and was superseded by the real launch-2 captures.
+
+### Launch 2 (58-09, 2026-10-31, against p58b)
+
+- Delimiter: `terminal.log` line 253 `=== GATE LAUNCH 2 — 2026-10-31T05:57:49Z ===`; single gamelib-shell PID 63974 throughout (no dev restart); `pgrep -f target/debug/gamelib-shell` after launch 2 = 63974.
+- Direction B: the PC hosted, the Mac joined from Raft launched through GameLib (winewrapper 46543, steam.exe 46777, Raft.exe 46826, started 18:58:30 NZDT). Operator: `in world`; `joined by both methods, each worked`; `Raft quit, both saw each other move, yes`. Raft.exe no longer running at archive time.
+- In-world captures (orchestrator): `lsof-launch-2.txt` = 29 UDP sockets (pid 46826), `procs-launch-2.txt` = 22 lines.
+- Archived: `gamelib-launch-2.log` (291 lines, cumulative with launch 1), `trace-launch-2.log` (74 lines, `648800-1793426309359.log`, newer than launch 1's `648800-1793425837786.log`), `wine-launch-2.log` (10 lines).
+- Trace `role=game` lines: `op=build-id ret=0`, `op=build-id-given ret=22312909`; `p2p op=send peer=1 bytes=10`; `p2p op=read peer=1 bytes=524`; `callback id=337` present (record only); `callback id=1281` x1. No 1202, no 504/1221, no 16+ digit value.
+- Serialized005 check, launch 2: 0 hits in wine (10), trace (74), gamelib (291).
+- Census (`census-launch-2.txt`), verbatim: `multiplayer 648800 drm: unverified join=0 send=1 recv=1 path=unknown oversize=0 — no game-originated join; D-08a: no 1202 naming a peer`
+- Closing inventory: `inventory.txt` (ls -la plus wc -l of the session dir) written to the session dir. Session dir is still to be deleted by the operator (T-58-28).
