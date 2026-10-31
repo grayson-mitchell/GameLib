@@ -11,7 +11,14 @@
  * command starts and finishes. The prefix and tools tree are real directories under a
  * per-test `mkdtemp` root, so the file removal is observed on disk.
  */
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
 import { join } from 'path'
 import type { GameSettings } from 'common/types'
 
@@ -163,5 +170,46 @@ describe('DXVK.installRemove backup', () => {
     for (const end of adds) {
       expect(events.indexOf(end)).toBeLessThan(events.indexOf('resolved'))
     }
+  })
+})
+
+describe('DXVK.installRemove with a pinned source', () => {
+  const SRC_VERSION = 'pinned-1.10.3'
+  let srcDir: string
+
+  beforeEach(() => {
+    srcDir = mkdtempSync(join(root, 'src-'))
+    for (const arch of ['x32', 'x64']) {
+      mkdirSync(join(srcDir, arch), { recursive: true })
+      for (const dll of DLLS) writeFileSync(join(srcDir, arch, dll), arch)
+    }
+    // A pinned source needs no `.update-timestamp` and no `latest_dxvk`.
+    rmSync(join(prefix, '.update-timestamp'))
+    writeFileSync(join(prefix, 'system.reg'), '')
+    rmSync(join(toolsPath, 'dxvk'), { recursive: true, force: true })
+    for (const dir of ['system32', 'syswow64'])
+      for (const dll of DLLS)
+        rmSync(join(prefix, 'drive_c/windows', dir, dll), { force: true })
+  })
+
+  it('copies from the pinned dir synchronously and records the version before resolving', async () => {
+    const ok = await DXVK.installRemove(settings(), 'dxvk', 'backup', {
+      dir: srcDir,
+      version: SRC_VERSION
+    })
+    expect(ok).toBe(true)
+    for (const dll of DLLS) {
+      expect(
+        readFileSync(join(prefix, 'drive_c/windows/system32', dll), 'utf-8')
+      ).toBe('x64')
+      expect(
+        readFileSync(join(prefix, 'drive_c/windows/syswow64', dll), 'utf-8')
+      ).toBe('x32')
+    }
+    expect(readFileSync(join(prefix, 'current_dxvk'), 'utf-8')).toBe(
+      SRC_VERSION
+    )
+    // never consulted the tools-dir tree
+    expect(existsSync(join(toolsPath, 'dxvk', 'latest_dxvk'))).toBe(false)
   })
 })

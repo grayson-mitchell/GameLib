@@ -16,6 +16,7 @@ import {
   writeFileSync,
   readdirSync,
   copyFile,
+  copyFileSync,
   rm,
   mkdirSync,
   rmSync
@@ -227,7 +228,10 @@ export const DXVK = {
   installRemove: async (
     gameSettings: GameSettings,
     tool: 'dxvk' | 'dxvk-nvapi' | 'vkd3d' | 'dxvk-macOS',
-    action: 'backup' | 'restore'
+    action: 'backup' | 'restore',
+    // Phase 59: a GameLib-pinned DXVK for the Steam fallback engine. When given, the tools-dir
+    // `latest_<tool>` lookup (and DXVK.getLatest) is skipped and the copy is synchronous.
+    source?: { dir: string; version: string }
   ): Promise<boolean> => {
     if (gameSettings.wineVersion.bin.includes('toolkit')) {
       // we don't want to install dxvk on the toolkit prefix since it breaks Apple's implementation
@@ -253,7 +257,11 @@ export const DXVK = {
 
     const prefix = gameSettings.winePrefix
     const winePrefix = prefix.replace('~', userHome)
-    const isValidPrefix = existsSync(`${winePrefix}/.update-timestamp`)
+    // A source-pinned install targets a prefix GameLib just created, which has no
+    // `.update-timestamp` yet; system.reg is the prefix-exists check there.
+    const isValidPrefix = existsSync(
+      `${winePrefix}/${source ? 'system.reg' : '.update-timestamp'}`
+    )
 
     if (!isValidPrefix) {
       logWarning(
@@ -272,22 +280,28 @@ export const DXVK = {
       logWarning('32-bit prefix detected!', LogPrefix.ToolInstaller)
     }
 
-    if (!existsSync(`${toolsPath}/${tool}/latest_${tool}`)) {
+    if (!source && !existsSync(`${toolsPath}/${tool}/latest_${tool}`)) {
       logWarning('dxvk not found!', LogPrefix.ToolInstaller)
       await DXVK.getLatest()
     }
 
-    const globalVersion = readFileSync(`${toolsPath}/${tool}/latest_${tool}`)
-      .toString()
-      .split('\n')[0]
+    const globalVersion = source
+      ? source.version
+      : readFileSync(`${toolsPath}/${tool}/latest_${tool}`)
+          .toString()
+          .split('\n')[0]
 
-    const toolPathx32 = `${toolsPath}/${tool}/${globalVersion}/${
-      tool === 'vkd3d' ? 'x86' : 'x32'
-    }`
+    const toolPathx32 = source
+      ? join(source.dir, 'x32')
+      : `${toolsPath}/${tool}/${globalVersion}/${
+          tool === 'vkd3d' ? 'x86' : 'x32'
+        }`
 
     const dlls32 = readdirSync(toolPathx32)
 
-    const toolPathx64 = `${toolsPath}/${tool}/${globalVersion}/x64`
+    const toolPathx64 = source
+      ? join(source.dir, 'x64')
+      : `${toolsPath}/${tool}/${globalVersion}/x64`
     const dlls64 = readdirSync(toolPathx64)
 
     const currentVersionCheck = `${winePrefix}/current_${tool}`
@@ -384,7 +398,29 @@ export const DXVK = {
     }
 
     // copy the new dlls to the prefix
-    if (is64bitPrefix) {
+    if (source) {
+      // Synchronous so the caller can rely on completion (Phase 59 fallback bottle creation).
+      const dest32 = is64bitPrefix ? 'syswow64' : 'system32'
+      try {
+        for (const dll of dlls32)
+          copyFileSync(
+            `${toolPathx32}/${dll}`,
+            `${winePrefix}/drive_c/windows/${dest32}/${dll}`
+          )
+        if (is64bitPrefix)
+          for (const dll of dlls64)
+            copyFileSync(
+              `${toolPathx64}/${dll}`,
+              `${winePrefix}/drive_c/windows/system32/${dll}`
+            )
+      } catch (err) {
+        logError(
+          [`Error when copying ${tool} DLLs`, err],
+          LogPrefix.ToolInstaller
+        )
+        return false
+      }
+    } else if (is64bitPrefix) {
       dlls32.forEach((dll) => {
         copyFile(
           `${toolPathx32}/${dll}`,
@@ -503,6 +539,19 @@ export const DXVK = {
       } catch (err) {
         logError([`Error when finding nvngx.dll`, err], LogPrefix.ToolInstaller)
       }
+    }
+
+    if (source) {
+      try {
+        writeFileSync(currentVersionCheck, globalVersion)
+      } catch (err) {
+        logError(
+          [`Error when writing ${tool} version`, err],
+          LogPrefix.ToolInstaller
+        )
+        return false
+      }
+      return true
     }
 
     writeFile(currentVersionCheck, globalVersion, (err) => {
