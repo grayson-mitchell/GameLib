@@ -4,7 +4,7 @@ title: "winebus's IOHID path wedges winedevice on the PowerA Switch 2 wired pad"
 area: steam-bridge
 severity: major
 platform: macos
-ready: live-gate
+ready: blocked
 source: "debug session drm-stage-winebus-hid-spin, live gate 2026-10-29"
 files:
   - src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts
@@ -39,3 +39,11 @@ The samples are recorded in `.planning/debug/drm-stage-winebus-hid-spin.md`.
 ## 56-34 result
 
 Stays pending (out of scope for Phase 56). Evidence from the third live gate (2026-10-29): W1, launch 1, Grim Dawn first Play on a fresh bottle with the PowerA pad CONNECTED (USB count 1): the stage ran once (attempt 0 only), four `reg add`s succeeded, no `timed out after 15000 ms`, no `stage retry passed` line, game reached its menu. One connected-pad launch with no wedge neither confirms nor refutes the root cause; the wedge is intermittent. R1, launch 5, Ranch with the pad UNPLUGGED (count 0) and the first stage attempt forced to 300 ms: `bottle processes at timeout: 7819:0.3:wineserver,7817:4.5:winewrapper.exe`, `ended stage session, killed 0 leftover process(es)`, `stage retry passed on attempt 1`, then the DRM anchor, so the in-product retry mechanics recover from a stage timeout. The natural-wedge falsification test (does the retry's fresh session also enumerate the pad?) is still unrun.
+
+## Resolution (2026-10-31)
+
+Investigated in `.planning/debug/resolved/winebus-iohid-powera-wedge.md`. No fix is possible from GameLib, so this stays pending as a known limitation, `ready: blocked` on a future CrossOver release.
+
+The defect is not winebus's IOHID path. Any in-process consumer that opens the pad (20d6:a720) inside winedevice under CrossOver 26.3.0.39832 corrupts it: Apple GameController/GCHID, winebus IOHID, or SDL IOKit. It shows as a CPU spin or `c000001d` faults. A native IOHID probe (arm64 and x86_64/Rosetta) is clean. CrossOver 26.3.0 is the latest release and upstream wine has no fix.
+
+Levers eliminated live: `DisableHidraw=1`, an `SDL_GAMECONTROLLERCONFIG` mapping, `SDL_JOYSTICK_MFI=0`, `SDL_NO_SIGNAL_HANDLERS=1`. The stage retry in `stageDrmBottle.ts` stays as the mitigation for stage-time wedges. The pad is unsupported in DRM mode. Re-test when a CrossOver newer than 26.3.0 ships.
