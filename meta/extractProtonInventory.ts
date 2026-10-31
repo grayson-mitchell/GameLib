@@ -118,6 +118,12 @@ export interface WirePolicyMethodEntry {
   helperCustom?: string
   /** 58-10: the method returns a SteamAPICall_t completing as this callback id. */
   callResult?: number
+  /** 58-20: replaces the i386 stack width Proton's wrapper reports; needed
+   * where a policy retypes a pointer-width handle to uint64 on an x64-only
+   * interface (the wire cross-check sums the retyped widths). */
+  stackBytes?: number
+  /** 58-20: by-value handle param; 0 is answered shim-locally, no wire frame. */
+  zeroHandleParam?: string
   /** 58-10: a successful call is NET send/recv evidence. */
   evidence?: {
     kind: 'send' | 'recv'
@@ -654,6 +660,9 @@ export function applyWirePolicy(
     if (entry.shimLocal !== undefined) wired.shimLocal = entry.shimLocal
     if (entry.helperCustom !== undefined)
       wired.helperCustom = entry.helperCustom
+    if (entry.stackBytes !== undefined) wired.stackBytes = entry.stackBytes
+    if (entry.zeroHandleParam !== undefined)
+      wired.zeroHandleParam = entry.zeroHandleParam
     if (entry.callResult !== undefined) wired.callResult = entry.callResult
     if (entry.evidence !== undefined) wired.evidence = entry.evidence
     if (entry.helperNativeArgs !== undefined) {

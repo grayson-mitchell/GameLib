@@ -1384,5 +1384,80 @@
         }
       }
     }
+  },
+  "SteamMatchmakingServers": {
+    "ReleaseRequest": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_ReleaseRequest",
+      "stackBytes": 8,
+      "zeroHandleParam": "hRequest",
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "uint64",
+          "name": "hRequest"
+        }
+      }
+    },
+    "CancelQuery": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_CancelQuery",
+      "stackBytes": 8,
+      "zeroHandleParam": "hRequest",
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "uint64",
+          "name": "hRequest"
+        }
+      }
+    },
+    "RefreshQuery": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_RefreshQuery",
+      "stackBytes": 8,
+      "zeroHandleParam": "hRequest",
+      "params": {
+        "hRequest": {
+          "kind": "value",
+          "type": "uint64"
+        }
+      }
+    },
+    "IsRefreshing": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_IsRefreshing",
+      "stackBytes": 8,
+      "zeroHandleParam": "hRequest",
+      "params": {
+        "hRequest": {
+          "kind": "value",
+          "type": "uint64"
+        }
+      }
+    },
+    "GetServerCount": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_GetServerCount",
+      "stackBytes": 8,
+      "zeroHandleParam": "hRequest",
+      "params": {
+        "hRequest": {
+          "kind": "value",
+          "type": "uint64"
+        }
+      }
+    },
+    "RefreshServer": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_RefreshServer",
+      "stackBytes": 12,
+      "zeroHandleParam": "hRequest",
+      "params": {
+        "hRequest": {
+          "kind": "value",
+          "type": "uint64"
+        }
+      }
+    },
+    "CancelServerQuery": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_CancelServerQuery",
+      "stackBytes": 4,
+      "zeroHandleParam": "hServerQuery"
+    }
   }
 }

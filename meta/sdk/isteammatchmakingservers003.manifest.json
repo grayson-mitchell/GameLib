@@ -161,13 +161,17 @@
       "name": "ReleaseRequest",
       "returns": "void",
       "returnKind": "void",
-      "stackBytes": 4,
+      "stackBytes": 8,
       "params": [
         {
-          "name": "_unknownArg0",
-          "type": "uint32"
+          "name": "hRequest",
+          "type": "uint64",
+          "kind": "value"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_ReleaseRequest",
+      "zeroHandleParam": "hRequest"
     },
     {
       "slot": 7,
@@ -191,69 +195,89 @@
       "name": "CancelQuery",
       "returns": "void",
       "returnKind": "void",
-      "stackBytes": 4,
+      "stackBytes": 8,
       "params": [
         {
-          "name": "_unknownArg0",
-          "type": "uint32"
+          "name": "hRequest",
+          "type": "uint64",
+          "kind": "value"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_CancelQuery",
+      "zeroHandleParam": "hRequest"
     },
     {
       "slot": 9,
       "name": "RefreshQuery",
       "returns": "void",
       "returnKind": "void",
-      "stackBytes": 4,
+      "stackBytes": 8,
       "params": [
         {
           "name": "hRequest",
-          "type": "void*"
+          "type": "uint64",
+          "kind": "value"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_RefreshQuery",
+      "zeroHandleParam": "hRequest"
     },
     {
       "slot": 10,
       "name": "IsRefreshing",
       "returns": "bool",
       "returnKind": "int32",
-      "stackBytes": 4,
+      "stackBytes": 8,
       "params": [
         {
           "name": "hRequest",
-          "type": "void*"
+          "type": "uint64",
+          "kind": "value"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_IsRefreshing",
+      "zeroHandleParam": "hRequest"
     },
     {
       "slot": 11,
       "name": "GetServerCount",
       "returns": "int32",
       "returnKind": "int32",
-      "stackBytes": 4,
+      "stackBytes": 8,
       "params": [
         {
           "name": "hRequest",
-          "type": "void*"
+          "type": "uint64",
+          "kind": "value"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_GetServerCount",
+      "zeroHandleParam": "hRequest"
     },
     {
       "slot": 12,
       "name": "RefreshServer",
       "returns": "void",
       "returnKind": "void",
-      "stackBytes": 8,
+      "stackBytes": 12,
       "params": [
         {
           "name": "hRequest",
-          "type": "void*"
+          "type": "uint64",
+          "kind": "value"
         },
         {
           "name": "iServer",
           "type": "int32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_RefreshServer",
+      "zeroHandleParam": "hRequest"
     },
     {
       "slot": 13,
@@ -350,7 +374,10 @@
           "name": "hServerQuery",
           "type": "int32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_CancelServerQuery",
+      "zeroHandleParam": "hServerQuery"
     }
   ]
 }

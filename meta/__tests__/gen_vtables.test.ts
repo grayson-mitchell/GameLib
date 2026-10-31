@@ -4861,6 +4861,109 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
     })
   })
 
+  describe('zeroHandleParam (58-20)', () => {
+    const releaseMethod = {
+      name: 'Release',
+      returns: 'void',
+      returnKind: 'void' as const,
+      helperFlat: 'SteamAPI_IGameLibWire_Release',
+      zeroHandleParam: 'hReq',
+      params: [{ name: 'hReq', type: 'uint64', kind: 'value' as const }]
+    }
+    const countMethod = {
+      name: 'Count',
+      returns: 'int32',
+      helperFlat: 'SteamAPI_IGameLibWire_Count',
+      zeroHandleParam: 'hReq',
+      params: [{ name: 'hReq', type: 'uint64', kind: 'value' as const }]
+    }
+
+    it('emits a local early return before any pack or transact, void and non-void', () => {
+      const m = wireManifest([releaseMethod, countMethod])
+      expect(validateManifest(m)).toEqual([])
+      const shim = generateShimC([m])
+      const fnBody = (name: string): string => {
+        const at = shim.indexOf(`vt_GameLibWire001_${name}(`)
+        return shim.slice(at, shim.indexOf('\n}\n', at))
+      }
+      const rel = fnBody('Release')
+      expect(rel).toContain('if (hReq == 0) { return; }')
+      expect(rel.indexOf('if (hReq == 0)')).toBeLessThan(
+        rel.indexOf('bridge_transact')
+      )
+      const cnt = fnBody('Count')
+      expect(cnt).toContain('if (hReq == 0) { return 0; }')
+      expect(cnt.indexOf('if (hReq == 0)')).toBeLessThan(
+        cnt.indexOf('bridge_transact')
+      )
+    })
+
+    it('a method without zeroHandleParam has no guard', () => {
+      const m = wireManifest([{ ...releaseMethod, zeroHandleParam: undefined }])
+      expect(generateShimC([m])).not.toContain('zero handle, no wire call')
+    })
+
+    it('rejects an unknown, pointer-typed or non-value param, and a stub method', () => {
+      expect(
+        validateManifest(
+          wireManifest([{ ...releaseMethod, zeroHandleParam: 'nope' }])
+        ).join('\n')
+      ).toMatch(/zeroHandleParam "nope" must name a by-value non-pointer param/)
+      expect(
+        validateManifest(
+          wireManifest([
+            {
+              ...countMethod,
+              params: [
+                {
+                  name: 'hReq',
+                  type: 'uint32*',
+                  kind: 'out-value' as const,
+                  valueType: 'uint32' as const
+                }
+              ]
+            }
+          ])
+        ).join('\n')
+      ).toMatch(/zeroHandleParam "hReq" must name a by-value non-pointer param/)
+      const stub = {
+        ...wireManifest([releaseMethod]),
+        mode: 'stub' as const
+      }
+      expect(validateManifest(stub).join('\n')).toMatch(
+        /zeroHandleParam requires a wire method/
+      )
+    })
+
+    it('the real MatchMakingServers003 manifest wires the seven handle methods with a zero guard (nm-verified flat names)', () => {
+      const m = JSON.parse(
+        readFileSync(
+          join(SDK_DIR, 'isteammatchmakingservers003.manifest.json'),
+          'utf-8'
+        )
+      ) as InterfaceManifestV2
+      const wired = m.methods.filter((x) => x.mode === 'wire')
+      expect(wired.map((x) => x.name)).toEqual([
+        'ReleaseRequest',
+        'CancelQuery',
+        'RefreshQuery',
+        'IsRefreshing',
+        'GetServerCount',
+        'RefreshServer',
+        'CancelServerQuery'
+      ])
+      for (const x of wired) {
+        expect(x.helperFlat).toBe(`SteamAPI_ISteamMatchmakingServers_${x.name}`)
+        expect(x.zeroHandleParam).toBe(x.params[0].name)
+      }
+      // Request/query starters stay stubs until 58-21 wires them.
+      expect(
+        m.methods.find((x) => x.name === 'PingServer')?.mode
+      ).toBeUndefined()
+      expect(validateManifest(m)).toEqual([])
+    })
+  })
+
   describe('helper decode (bridge_dispatch.h)', () => {
     it('in-buffer refuses len > cap before touching bytes, checks remaining bytes, and pins lenParam', () => {
       const header = generateDispatchHeader([wireManifest([sendMethod])])

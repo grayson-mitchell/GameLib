@@ -183,7 +183,7 @@ Method modes:
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "d94ca9413681"
+#define BRIDGE_SHIM_TABLE_HASH "a41c94f5f60b"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -33548,11 +33548,15 @@ static void THISCALL vt_SteamMatchMakingServers003_RequestSpectatorServerList(vo
   gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "RequestSpectatorServerList", 5, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 6: ReleaseRequest(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
-static void THISCALL vt_SteamMatchMakingServers003_ReleaseRequest(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 6: ReleaseRequest(uint64 hRequest) -> void | __thiscall ret 8
+static void THISCALL vt_SteamMatchMakingServers003_ReleaseRequest(void *self, uint64_t hRequest) {
+  if (hRequest == 0) { return; } // 58-20: zero handle, no wire call
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "ReleaseRequest", 6, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hRequest, 8); argOff += 8;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(69, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
 // slot 7: GetServerDetails(uint32 _unknownArg0, uint32 _unknownArg1) -> void | __thiscall ret 8 (STUB)
@@ -33562,41 +33566,64 @@ static void THISCALL vt_SteamMatchMakingServers003_GetServerDetails(void *self, 
   gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "GetServerDetails", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 8: CancelQuery(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
-static void THISCALL vt_SteamMatchMakingServers003_CancelQuery(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 8: CancelQuery(uint64 hRequest) -> void | __thiscall ret 8
+static void THISCALL vt_SteamMatchMakingServers003_CancelQuery(void *self, uint64_t hRequest) {
+  if (hRequest == 0) { return; } // 58-20: zero handle, no wire call
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "CancelQuery", 8, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hRequest, 8); argOff += 8;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(69, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 9: RefreshQuery(void* hRequest) -> void | __thiscall ret 4 (STUB)
-static void THISCALL vt_SteamMatchMakingServers003_RefreshQuery(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 9: RefreshQuery(uint64 hRequest) -> void | __thiscall ret 8
+static void THISCALL vt_SteamMatchMakingServers003_RefreshQuery(void *self, uint64_t hRequest) {
+  if (hRequest == 0) { return; } // 58-20: zero handle, no wire call
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "RefreshQuery", 9, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hRequest, 8); argOff += 8;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(69, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
-// slot 10: IsRefreshing(void* hRequest) -> bool | __thiscall ret 4 (STUB)
-static int THISCALL vt_SteamMatchMakingServers003_IsRefreshing(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 10: IsRefreshing(uint64 hRequest) -> bool | __thiscall ret 8
+static int THISCALL vt_SteamMatchMakingServers003_IsRefreshing(void *self, uint64_t hRequest) {
+  if (hRequest == 0) { return 0; } // 58-20: zero handle, no wire call
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "IsRefreshing", 10, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hRequest, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(69, 10, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 11: GetServerCount(void* hRequest) -> int32 | __thiscall ret 4 (STUB)
-static int32_t THISCALL vt_SteamMatchMakingServers003_GetServerCount(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 11: GetServerCount(uint64 hRequest) -> int32 | __thiscall ret 8
+static int32_t THISCALL vt_SteamMatchMakingServers003_GetServerCount(void *self, uint64_t hRequest) {
+  if (hRequest == 0) { return 0; } // 58-20: zero handle, no wire call
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "GetServerCount", 11, GAMELIB_STUBCALL_KIND_STUB);
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hRequest, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(69, 11, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 12: RefreshServer(void* hRequest, int32 iServer) -> void | __thiscall ret 8 (STUB)
-static void THISCALL vt_SteamMatchMakingServers003_RefreshServer(void *self, uint32_t dummy0, uint32_t dummy1) {
-  static volatile LONG gamelib_sc[2];
+// slot 12: RefreshServer(uint64 hRequest, int32 iServer) -> void | __thiscall ret 12
+static void THISCALL vt_SteamMatchMakingServers003_RefreshServer(void *self, uint64_t hRequest, int32_t iServer) {
+  if (hRequest == 0) { return; } // 58-20: zero handle, no wire call
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "RefreshServer", 12, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[12];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hRequest, 8); argOff += 8;
+  memcpy(argbuf + argOff, &iServer, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(69, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
 // slot 13: PingServer(uint32 unIP, uint32 usPort, w_ISteamMatchmakingPingResponse* pRequestServersResponse) -> int32 | __thiscall ret 12 (STUB)
@@ -33631,11 +33658,15 @@ static int32_t THISCALL vt_SteamMatchMakingServers003_ServerFriends(void *self, 
   return 0;
 }
 
-// slot 17: CancelServerQuery(int32 hServerQuery) -> void | __thiscall ret 4 (STUB)
-static void THISCALL vt_SteamMatchMakingServers003_CancelServerQuery(void *self, uint32_t dummy0) {
-  static volatile LONG gamelib_sc[2];
+// slot 17: CancelServerQuery(int32 hServerQuery) -> void | __thiscall ret 4
+static void THISCALL vt_SteamMatchMakingServers003_CancelServerQuery(void *self, int32_t hServerQuery) {
+  if (hServerQuery == 0) { return; } // 58-20: zero handle, no wire call
   (void)self;
-  gamelib_stubcall_note(gamelib_sc, "SteamMatchMakingServers003", "CancelServerQuery", 17, GAMELIB_STUBCALL_KIND_STUB);
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hServerQuery, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(69, 17, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
 static vfn g_steammatchmakingservers003_vtbl[18] = {
@@ -41679,7 +41710,7 @@ void SteamAPI_ISteamMatchmakingServers_CancelQuery(void *self, uint64_t a1) {
   }
   if (self == (void *)&g_steammatchmakingservers003_instance) {
     vfn *vt = *(vfn **)self;
-    ((void (*)(void *, uint32_t))vt[8])(self, (uint32_t)(uint32_t)a1);
+    ((void (*)(void *, uint64_t))vt[8])(self, (uint64_t)a1);
     return;
   }
   return;
@@ -41699,14 +41730,14 @@ void SteamAPI_ISteamMatchmakingServers_CancelServerQuery(void *self, int32_t a1)
   return;
 }
 
-int32_t SteamAPI_ISteamMatchmakingServers_GetServerCount(void *self, void * a1) {
+int32_t SteamAPI_ISteamMatchmakingServers_GetServerCount(void *self, uint64_t a1) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *, void *))vt[11])(self, (void *)a1);
   }
   if (self == (void *)&g_steammatchmakingservers003_instance) {
     vfn *vt = *(vfn **)self;
-    return (int32_t)((int32_t (*)(void *, void *))vt[11])(self, (void *)a1);
+    return (int32_t)((int32_t (*)(void *, uint64_t))vt[11])(self, (uint64_t)a1);
   }
   return 0;
 }
@@ -41724,14 +41755,14 @@ void * SteamAPI_ISteamMatchmakingServers_GetServerDetails(void *self, uint64_t a
   return 0;
 }
 
-bool SteamAPI_ISteamMatchmakingServers_IsRefreshing(void *self, void * a1) {
+bool SteamAPI_ISteamMatchmakingServers_IsRefreshing(void *self, uint64_t a1) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, void *))vt[10])(self, (void *)a1);
   }
   if (self == (void *)&g_steammatchmakingservers003_instance) {
     vfn *vt = *(vfn **)self;
-    return (bool)((int (*)(void *, void *))vt[10])(self, (void *)a1);
+    return (bool)((int (*)(void *, uint64_t))vt[10])(self, (uint64_t)a1);
   }
   return 0;
 }
@@ -41760,7 +41791,7 @@ int32_t SteamAPI_ISteamMatchmakingServers_PlayerDetails(void *self, uint32_t a1,
   return 0;
 }
 
-void SteamAPI_ISteamMatchmakingServers_RefreshQuery(void *self, void * a1) {
+void SteamAPI_ISteamMatchmakingServers_RefreshQuery(void *self, uint64_t a1) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, void *))vt[9])(self, (void *)a1);
@@ -41768,13 +41799,13 @@ void SteamAPI_ISteamMatchmakingServers_RefreshQuery(void *self, void * a1) {
   }
   if (self == (void *)&g_steammatchmakingservers003_instance) {
     vfn *vt = *(vfn **)self;
-    ((void (*)(void *, void *))vt[9])(self, (void *)a1);
+    ((void (*)(void *, uint64_t))vt[9])(self, (uint64_t)a1);
     return;
   }
   return;
 }
 
-void SteamAPI_ISteamMatchmakingServers_RefreshServer(void *self, void * a1, int32_t a2) {
+void SteamAPI_ISteamMatchmakingServers_RefreshServer(void *self, uint64_t a1, int32_t a2) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, void *, int32_t))vt[12])(self, (void *)a1, (int32_t)a2);
@@ -41782,21 +41813,21 @@ void SteamAPI_ISteamMatchmakingServers_RefreshServer(void *self, void * a1, int3
   }
   if (self == (void *)&g_steammatchmakingservers003_instance) {
     vfn *vt = *(vfn **)self;
-    ((void (*)(void *, void *, int32_t))vt[12])(self, (void *)a1, (int32_t)a2);
+    ((void (*)(void *, uint64_t, int32_t))vt[12])(self, (uint64_t)a1, (int32_t)a2);
     return;
   }
   return;
 }
 
-void SteamAPI_ISteamMatchmakingServers_ReleaseRequest(void *self, uint32_t a1) {
+void SteamAPI_ISteamMatchmakingServers_ReleaseRequest(void *self, uint64_t a1) {
   if (self == (void *)&g_steammatchmakingservers002_instance) {
     vfn *vt = *(vfn **)self;
-    ((void (*)(void *, uint32_t))vt[6])(self, (uint32_t)a1);
+    ((void (*)(void *, uint32_t))vt[6])(self, (uint32_t)(uint32_t)a1);
     return;
   }
   if (self == (void *)&g_steammatchmakingservers003_instance) {
     vfn *vt = *(vfn **)self;
-    ((void (*)(void *, uint32_t))vt[6])(self, (uint32_t)a1);
+    ((void (*)(void *, uint64_t))vt[6])(self, (uint64_t)a1);
     return;
   }
   return;

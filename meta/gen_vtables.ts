@@ -231,6 +231,9 @@ export interface MethodSignature {
   /** 58-06: name of a hand-written helper function (`^gl_[a-z0-9_]{1,48}$`)
    * that replaces the generic decode/encode for this one method. */
   helperCustom?: string
+  /** 58-20: name of a by-value integer param holding an opaque handle. When it
+   * is 0 the shim answers locally (false / 0 / no-op) and sends no wire frame. */
+  zeroHandleParam?: string
   /** 58-10: the method returns a SteamAPICall_t (int64) that completes as this
    * callback id (a CALL_RESULT_TABLE id); the helper dispatch records the
    * handle with gl_helper_cr_track after a nonzero return. */
@@ -614,6 +617,26 @@ export function validateManifest(
       ) {
         errors.push(
           `${methodCtx}: shimLocal method has no SHIM_LOCAL_BODIES entry "${manifest.family}.${method.name}"`
+        )
+      }
+    }
+
+    if (method.zeroHandleParam !== undefined) {
+      const zp = method.params.find((q) => q.name === method.zeroHandleParam)
+      if ((method.mode ?? manifest.mode) !== 'wire') {
+        errors.push(`${methodCtx}: zeroHandleParam requires a wire method`)
+      } else if (
+        !zp ||
+        (zp.kind ?? 'value') !== 'value' ||
+        zp.type.endsWith('*')
+      ) {
+        errors.push(
+          `${methodCtx}: zeroHandleParam "${method.zeroHandleParam}" must name a by-value non-pointer param`
+        )
+      }
+      if (method.returnKind === 'class' || method.returnKind === 'string') {
+        errors.push(
+          `${methodCtx}: zeroHandleParam cannot be combined with a ${method.returnKind} return`
         )
       }
     }
@@ -5186,7 +5209,36 @@ function emitExtendedWireStub(
   return lines.join('\n') + '\n'
 }
 
+/**
+ * 58-20: a wire method naming `zeroHandleParam` answers a 0 handle locally. The
+ * guard is inserted as the first statement of the generated function, before
+ * any argument packing or bridge_transact, so no wire frame is sent.
+ */
 function emitVtableStub(
+  manifest: InterfaceManifest,
+  method: MethodSignature
+): string {
+  const text = emitVtableStubBody(manifest, method)
+  if (method.zeroHandleParam === undefined) return text
+  const open = text.indexOf(
+    ') {\n',
+    text.indexOf(`${'vt_' + manifest.interface}_${method.name}(`)
+  )
+  if (open < 0) {
+    throw new Error(
+      `emitVtableStub: ${manifest.interface}.${method.name} zeroHandleParam: function opening not found`
+    )
+  }
+  const at = open + ') {\n'.length
+  const ret = method.returnKind === 'void' ? 'return;' : 'return 0;'
+  return (
+    text.slice(0, at) +
+    `  if (${method.zeroHandleParam} == 0) { ${ret} } // 58-20: zero handle, no wire call\n` +
+    text.slice(at)
+  )
+}
+
+function emitVtableStubBody(
   manifest: InterfaceManifest,
   method: MethodSignature
 ): string {
