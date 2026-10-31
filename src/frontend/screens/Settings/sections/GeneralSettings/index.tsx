@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import LanguageSelector from 'frontend/components/UI/LanguageSelector'
-import { ThemeSelector } from 'frontend/components/UI/ThemeSelector'
 import {
   AutoUpdateGames,
   CheckUpdatesOnStartup,
@@ -32,8 +31,6 @@ export default function GeneralSettings() {
       <h3 className="settingSubheader">{t('settings.navbar.general')}</h3>
 
       <LanguageSelector />
-
-      <ThemeSelector />
 
       <LoginBackground />
 
