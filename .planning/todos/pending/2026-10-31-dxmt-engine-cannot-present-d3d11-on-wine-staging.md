@@ -52,3 +52,17 @@ This affects Epic, GOG and Amazon titles that run on `-DXMT`, not just Steam. A 
 A D3D11 title (The Planet Crafter, 1284190, is a known reproducer) renders on whatever `-DXMT`
 engine GameLib offers, or GameLib no longer offers one that cannot. Evidence:
 `.planning/spikes/057-wine-staging-real-title/logs/crafter-dxmt.{Player.log,wine.out}`.
+
+## Fix landed (quick 261031-rjv)
+
+Operator chose option 2. `src/backend/tools/dxmt.ts` now checks the source Wine's
+`lib/wine/x86_64-unix/winemac.so` before making a `-DXMT` copy and before updating one at boot. It
+passes if `_macdrv_functions` or all three `_macdrv_view_*` symbols are defined exports, read
+in-process by `src/backend/tools/machoExports.ts` (no `nm` spawn, which could prompt for the Command
+Line Tools on end-user Macs). A failing Wine logs a ToolInstaller warning naming the missing symbols
+and gets no copy and no DXMT download. Existing `-DXMT` copies are never deleted. Commits
+`657d5ae4a`, `91096d713`. Probe: the installed Gcenx Staging `winemac.so` fails with all four
+symbols missing; CrossOver's passes.
+
+Remaining live gate: restart `tauri dev`, install or reinstall Wine-Staging-macOS from the Wine
+Manager, and confirm no new `-DXMT` engine appears and the skip warning is in the log.
