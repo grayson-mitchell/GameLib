@@ -2781,6 +2781,13 @@ const DOWNLOAD_MANAGER_TSX = join(
   REPO_ROOT,
   'src/frontend/screens/DownloadManager/index.tsx'
 )
+// Phase 59 Plan 11: the game page's engine notices carry four pure
+// `.button.is-text` actions. They take the same theme-global pure .is-text
+// hover fix the DownloadManager site does, so they join the census here.
+const STEAM_ENGINE_NOTICES_TSX = join(
+  REPO_ROOT,
+  'src/frontend/screens/Game/GamePage/components/SteamEngineNotices.tsx'
+)
 const FRONTEND_DIR = join(REPO_ROOT, 'src/frontend')
 
 /**
@@ -3014,7 +3021,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     return resolved
   }
 
-  it('render-site census: re-derived F1 counts match exactly (23 total, 22 is-link, 21 GameSubMenu, 1 MainButton, 1 pure DownloadManager)', () => {
+  it('render-site census: re-derived F1 counts match exactly (27 total, 22 is-link, 21 GameSubMenu, 1 MainButton, 1 pure DownloadManager, 4 pure SteamEngineNotices)', () => {
     const allFiles = walkTsxFiles(FRONTEND_DIR)
     expect(allFiles.length).toBeGreaterThan(100) // walk sanity, same floor as navTourAnchorCensus
 
@@ -3023,7 +3030,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
       const matches = text.match(/className="[^"]*is-text[^"]*"/g) ?? []
       return matches.map(() => path)
     })
-    expect(isTextSites).toHaveLength(23)
+    expect(isTextSites).toHaveLength(27)
 
     // The is-link subset re-derived directly from file contents, not from
     // isTextSites, so a non-is-link site is never miscounted as one.
@@ -3045,6 +3052,9 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
       (path) => path === DOWNLOAD_MANAGER_TSX
     )
     expect(pureIsTextOccurrences).toHaveLength(1)
+    expect(
+      isTextSites.filter((path) => path === STEAM_ENGINE_NOTICES_TSX)
+    ).toHaveLength(4)
   })
 
   it('non-vacuity: global tokens, all 5 candidates, the game-menu surface and the hover declaration all resolved', () => {
