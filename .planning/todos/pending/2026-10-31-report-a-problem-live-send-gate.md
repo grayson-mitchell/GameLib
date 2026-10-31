@@ -8,19 +8,18 @@ files:
   - src-tauri/tauri.conf.json
 severity: medium
 platform: any
-ready: human
+ready: live-gate
 ---
 
 ## Problem
 
 The in-app "Report a problem" form (quick task 261031-s3g) is built and unit-tested, but
-`WEB3FORMS_ACCESS_KEY` in `src/frontend/helpers/reportProblem.ts` is deliberately `''`, so Send is
-disabled in every build and the live send has never been exercised. This is NOT verified.
+the live send has never been exercised. This is NOT verified. The access key was configured
+2026-10-31 (`162dbd357`), so Send is enabled.
 
 ## Steps
 
-1. Sign up at https://web3forms.com with the operator email and paste the Access Key (UUID) into
-   `WEB3FORMS_ACCESS_KEY`. Leave any "restrict to domain" option OFF (the webview origin is
+1. Done 2026-10-31: Access Key set in `WEB3FORMS_ACCESS_KEY` (`162dbd357`). Leave any "restrict to domain" option OFF (the webview origin is
    `tauri://localhost` / `http://tauri.localhost`, not a web domain).
 2. Build with `pnpm tauri:dev:packaged`. A bundled build is required because the CSP
    (`connect-src https://api.web3forms.com`) does not apply under `tauri dev`.
