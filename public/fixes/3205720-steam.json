@@ -1,0 +1,9 @@
+{
+  "title": "Schedule I",
+  "notes": {
+    "graphics-backend": "With saved Unity prefs of 3440x1440 FullScreenWindow (Use Native 1), Unity's DX11 player under CrossOver's D3DMetal backend logs 'Switching to resolution 3440x1440 failed' / 'Screen: DX11 could not switch resolution (3440x1440 fs=1 hz=0/1)'; two bridge launches on that path stopped after 21 s and 6 s (phase 58-37). With the same prefs, CrossOver with CX_GRAPHICS_BACKEND=dxvk and the pinned Wine-Staging + DXVK engine both start with no mode-switch error, and the pinned run filled the ultrawide display (measured 2026-11-01, see .planning/debug/fullscreen-3440-dx11-crossover.md)."
+  },
+  "envVariables": {
+    "CX_GRAPHICS_BACKEND": "dxvk"
+  }
+}

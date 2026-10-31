@@ -26,3 +26,17 @@ therefore ran windowed.
 
 - Understand why the CrossOver DX11 path cannot switch to the ultrawide native mode.
 - 58-34 should re-check the invite raise over a FULLSCREEN game once that is understood.
+
+## Findings (2026-11-01, debug session `fullscreen-3440-dx11-crossover`)
+
+- The mode-switch error is specific to CrossOver's D3DMetal backend. A direct CrossOver run with
+  `CX_GRAPHICS_BACKEND=d3dmetal` reproduces it. With `CX_GRAPHICS_BACKEND=dxvk`, the same prefs
+  produce no error, and the pinned Wine-Staging + DXVK engine runs them fullscreen at 3440x1440.
+- The 58-37 windowed run was confounded: a demo-status probe timeout had also moved the bottle
+  to the pinned engine. Filed as
+  `2026-11-01-demo-status-probe-timeout-flips-bottle-to-cx-broken.md`.
+- The error alone does not end the game. Both direct arms were still running at 60 s, so the
+  21 s and 6 s stops of the bridge launches remain unexplained.
+- Fix in place: `public/fixes/3205720-steam.json` sets `CX_GRAPHICS_BACKEND=dxvk`.
+- Still open: verify a GameLib CrossOver-engine fullscreen launch once the probe todo is fixed,
+  and the 58-34 fullscreen raise check.
