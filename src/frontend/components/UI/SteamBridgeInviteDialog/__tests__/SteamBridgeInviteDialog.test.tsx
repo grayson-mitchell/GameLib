@@ -20,6 +20,16 @@ jest.mock('frontend/components/UI/Dialog', () => ({
   DialogHeader: 'DialogHeader'
 }))
 jest.mock('../index.scss', () => ({}))
+// The component is called as a function (no renderer), so useEffect is
+// captured instead of run; tests execute the captured effect by hand.
+const effects: Array<{ fn: () => (() => void) | undefined; deps: unknown[] }> =
+  []
+jest.mock('react', () => ({
+  ...jest.requireActual('react'),
+  useEffect: (fn: () => (() => void) | undefined, deps: unknown[]) => {
+    effects.push({ fn, deps })
+  }
+}))
 const mockStore = jest.fn()
 jest.mock('frontend/state/SteamBridgeInvite', () => ({
   useSteamBridgeInvite: () => mockStore()
@@ -64,6 +74,27 @@ const state = (over: Record<string, unknown>) => ({
 })
 
 describe('SteamBridgeInviteDialog', () => {
+  const dialogDisplayed = jest.fn()
+  const docListeners: Record<string, () => void> = {}
+  const fakeDoc = {
+    visibilityState: 'visible',
+    addEventListener: (t: string, l: () => void) => {
+      docListeners[t] = l
+    },
+    removeEventListener: (t: string) => {
+      delete docListeners[t]
+    }
+  }
+  beforeEach(() => {
+    effects.length = 0
+    dialogDisplayed.mockClear()
+    fakeDoc.visibilityState = 'visible'
+    ;(globalThis as unknown as { window: unknown }).window = {
+      api: { dialogDisplayed }
+    }
+    ;(globalThis as unknown as { document: unknown }).document = fakeDoc
+  })
+
   it('renders nothing while closed', () => {
     mockStore.mockReturnValue(state({ isOpen: false }))
     expect(SteamBridgeInviteDialog()).toBeNull()
@@ -130,5 +161,49 @@ describe('SteamBridgeInviteDialog', () => {
       expect(sp).not.toHaveBeenCalled()
       sp.mockRestore()
     }
+  })
+  describe('display ack (58-36)', () => {
+    const render = (over: Record<string, unknown>) => {
+      effects.length = 0
+      mockStore.mockReturnValue(state(over))
+      SteamBridgeInviteDialog()
+      return effects[0]
+    }
+
+    it('acks once when visible', () => {
+      render({ ackId: 'a1' }).fn()
+      expect(dialogDisplayed).toHaveBeenCalledTimes(1)
+      expect(dialogDisplayed).toHaveBeenCalledWith('a1')
+    })
+
+    it('re-renders with new friends/rows keep the same deps (no second ack)', () => {
+      const first = render({ ackId: 'a1' })
+      const second = render({ ackId: 'a1', rows: { 1: 'sent' }, friends: [] })
+      expect(second.deps).toEqual(first.deps)
+    })
+
+    it('hidden: waits for visibilitychange, then acks once', () => {
+      fakeDoc.visibilityState = 'hidden'
+      render({ ackId: 'a1' }).fn()
+      expect(dialogDisplayed).not.toHaveBeenCalled()
+      fakeDoc.visibilityState = 'visible'
+      docListeners.visibilitychange()
+      expect(dialogDisplayed).toHaveBeenCalledTimes(1)
+      expect(dialogDisplayed).toHaveBeenCalledWith('a1')
+    })
+
+    it('cleanup before it becomes visible cancels the ack', () => {
+      fakeDoc.visibilityState = 'hidden'
+      const cleanup = render({ ackId: 'a1' }).fn()
+      cleanup?.()
+      expect(docListeners.visibilitychange).toBeUndefined()
+      expect(dialogDisplayed).not.toHaveBeenCalled()
+    })
+
+    it('no ackId or closed: no ack', () => {
+      expect(render({}).fn()).toBeUndefined()
+      expect(render({ isOpen: false, ackId: 'a1' }).fn()).toBeUndefined()
+      expect(dialogDisplayed).not.toHaveBeenCalled()
+    })
   })
 })

@@ -8,11 +8,12 @@ export type SteamBridgeInviteRow = 'pending' | BridgeInviteResult
 interface SteamBridgeInviteState {
   isOpen: boolean
   appId?: string
+  ackId?: string
   title?: string
   load: SteamBridgeInviteLoad
   friends: BridgeFriend[]
   rows: Record<number, SteamBridgeInviteRow>
-  open: (payload: { appId: string }) => void
+  open: (payload: { appId: string; ackId?: string }) => void
   close: () => void
   invite: (ordinal: number) => Promise<void>
 }
@@ -20,6 +21,7 @@ interface SteamBridgeInviteState {
 const CLOSED = {
   isOpen: false,
   appId: undefined,
+  ackId: undefined,
   title: undefined,
   load: 'idle' as SteamBridgeInviteLoad,
   friends: [] as BridgeFriend[],
@@ -38,11 +40,13 @@ export const sortFriends = (friends: BridgeFriend[]): BridgeFriend[] =>
 // backend `steamBridgeInviteRequest` push (the game's own invite control);
 // the one subscriber is GlobalState.tsx. Friend names are state for rendering
 // only: nothing in this file logs them.
+// 58-36: the push's ackId is kept so the dialog can echo it back once it is on
+// screen (dialogDisplayed); the backend then logs display=confirmed or unconfirmed.
 export const useSteamBridgeInvite = create<SteamBridgeInviteState>()(
   (set, get) => ({
     ...CLOSED,
-    open: ({ appId }) => {
-      set({ ...CLOSED, isOpen: true, appId, load: 'loading' })
+    open: ({ appId, ackId }) => {
+      set({ ...CLOSED, isOpen: true, appId, ackId, load: 'loading' })
       const stillCurrent = () => get().isOpen && get().appId === appId
 
       window.api
@@ -83,7 +87,7 @@ export const useSteamBridgeInvite = create<SteamBridgeInviteState>()(
 // Standalone so tests can simulate the push without mounting GlobalState.
 export const handleSteamBridgeInviteRequestSignal = (
   _e: IpcRendererEvent,
-  payload: { appId: string }
+  payload: { appId: string; ackId?: string }
 ): void => {
   useSteamBridgeInvite.getState().open(payload)
 }

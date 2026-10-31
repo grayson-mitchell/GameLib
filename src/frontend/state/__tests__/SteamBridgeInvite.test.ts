@@ -72,6 +72,22 @@ describe('useSteamBridgeInvite', () => {
     expect(useSteamBridgeInvite.getState().appId).toBe('2')
   })
 
+  it('open() stores the ackId, a new open replaces it, close() clears it', () => {
+    useSteamBridgeInvite.getState().open({ appId: '3205720', ackId: 'a1' })
+    expect(useSteamBridgeInvite.getState().ackId).toBe('a1')
+    useSteamBridgeInvite.getState().open({ appId: '3205720', ackId: 'a2' })
+    expect(useSteamBridgeInvite.getState().ackId).toBe('a2')
+    useSteamBridgeInvite.getState().close()
+    expect(useSteamBridgeInvite.getState().ackId).toBeUndefined()
+  })
+
+  it('open() without an ackId still loads friends', async () => {
+    useSteamBridgeInvite.getState().open({ appId: '1' })
+    expect(useSteamBridgeInvite.getState().ackId).toBeUndefined()
+    await flush()
+    expect(api.steamBridgeListFriends).toHaveBeenCalledWith('1')
+  })
+
   it('close() resets everything', async () => {
     useSteamBridgeInvite.getState().open({ appId: '1' })
     await flush()

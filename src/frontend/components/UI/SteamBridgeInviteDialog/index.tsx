@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ackWhenVisible } from 'frontend/components/UI/DialogHandler/ackWhenVisible'
 import {
   useSteamBridgeInvite,
   type SteamBridgeInviteRow
@@ -17,8 +19,15 @@ import './index.scss'
 // open for more. Names are rendered, never logged.
 const SteamBridgeInviteDialog = () => {
   const { t } = useTranslation('gamelib')
-  const { isOpen, appId, title, load, friends, rows, close, invite } =
+  const { isOpen, appId, ackId, title, load, friends, rows, close, invite } =
     useSteamBridgeInvite()
+
+  // 58-36: tell the backend the picker is on screen (rendered and visible).
+  // Keyed on isOpen/ackId only, so list or row updates never re-ack.
+  useEffect(() => {
+    if (!isOpen || !ackId) return undefined
+    return ackWhenVisible(ackId, window.api.dialogDisplayed, document)
+  }, [isOpen, ackId])
 
   if (!isOpen || !appId) return null
 
