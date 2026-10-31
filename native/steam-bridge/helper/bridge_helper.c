@@ -628,8 +628,9 @@ static int      g_p2p_path_seen[2];
 /* Fail-closed ReadP2PPacket (Pitfall 4). Request (generic encoding):
  * [u32 capacity][u32 cubDest][i32 nChannel]. Response: [i32 ret][u32 pcubMsgSize]
  * [u64 steamIDRemote][u32 len][len bytes]. A packet larger than
- * min(cubDest, 61440, capacity, response room) is left unread -- never
- * truncated. */
+ * min(cubDest, 61440, capacity, response room) and at most 1 MiB is consumed
+ * and discarded -- never truncated and never delivered -- so the channel does
+ * not stall. Above 1 MiB it is left unread. */
 int gl_net_read_p2p_packet(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
                            uint32_t respCap, uint32_t *respLen) {
   *respLen = 0;
@@ -655,6 +656,19 @@ int gl_net_read_p2p_packet(void *self, const uint8_t *args, uint32_t argLen, uin
   int have = g_bd_flat_SteamNetworking006_IsP2PPacketAvailable(self, &avail, chan) & 0xff;
   if (have) {
     if (avail > limit) {
+      /* CR-02: consume and discard so the channel head advances. Real Steam
+       * only pops a packet when cubDest >= its size. The scratch is capped at
+       * 1 MiB (T-58-82); above the cap the packet is left, recorded only. */
+      if (avail <= (1u << 20)) {
+        uint8_t *scratch = (uint8_t *)malloc(avail);
+        if (scratch != NULL) {
+          uint32_t dgot = 0;
+          uint64_t dremote = 0;
+          (void)g_bd_flat_SteamNetworking006_ReadP2PPacket(self, scratch, avail, &dgot, &dremote, chan);
+          gl_cbq_secure_zero(scratch, avail);
+          free(scratch);
+        }
+      }
       gl_net_evidence(1, GL_NET_KIND_OVERSIZE, GL_NET_IFACE_NETWORKING, 0, avail, GL_NET_PATH_UNKNOWN);
     } else {
       uint32_t got = 0;
@@ -1067,7 +1081,7 @@ static int gl_nets_receive(int which, void *self, const uint8_t *args, uint32_t 
   typedef int (*Recv_t)(void *, uint32_t, void **, int);
   static Recv_t fn[3];
   uint32_t handle, off = 4, limit;
-  const int iface = which == 2 ? GL_NET_IFACE_MESSAGES : iface;
+  const int iface = which == 2 ? GL_NET_IFACE_MESSAGES : GL_NET_IFACE_SOCKETS;
   int32_t nMax, n = 0;
   gl_nets_queue *slot;
   *respLen = 0;

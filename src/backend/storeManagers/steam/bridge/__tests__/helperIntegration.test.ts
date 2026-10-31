@@ -2186,6 +2186,9 @@ describeDarwinOnly(
         'SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel'
       )
       expect(body).toContain('which == 2 ? GL_NET_IFACE_MESSAGES')
+      // CR-01 (58-26): the else arm names Sockets and never self-references
+      expect(body).toContain('GL_NET_IFACE_MESSAGES : GL_NET_IFACE_SOCKETS')
+      expect(body).not.toMatch(/const int iface = [^;]*: iface;/)
       expect(body).toContain('gl_nets_queue_find(which, handle, 0)')
       expect(src).toContain('s->which == 2 ? GL_NET_IFACE_MESSAGES')
     })

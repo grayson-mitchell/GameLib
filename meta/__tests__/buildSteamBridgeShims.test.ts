@@ -94,6 +94,17 @@ describe('buildSteamBridgeShims', () => {
       expect(args).toContain(helperOutputPath('arm64'))
     })
 
+    it('carries -Werror=uninitialized after -O2 and before -o (CR-01, 58-26)', () => {
+      const { args } = buildHelperCompileArgv('arm64')
+      expect(args.filter((a) => a === '-Werror=uninitialized')).toHaveLength(1)
+      expect(args.indexOf('-O2')).toBeLessThan(
+        args.indexOf('-Werror=uninitialized')
+      )
+      expect(args.indexOf('-Werror=uninitialized')).toBeLessThan(
+        args.indexOf('-o')
+      )
+    })
+
     it('a chmod-755 step exists for the compiled helper (non-win32 downloadAsset convention)', () => {
       expect(sourceText).toMatch(/chmod\([^)]*helperOutputPath\(\)[^)]*0o755\)/)
     })

@@ -351,6 +351,9 @@ export function buildHelperCompileArgv(arch: string = resolveBridgeArch()): {
     command: 'clang',
     args: [
       '-O2',
+      // CR-01 (58-REVIEW): a self-initialised read (`int x = c ? a : x`) must
+      // fail the compile, not ship a mislabelled evidence line.
+      '-Werror=uninitialized',
       '-arch',
       machoArchFlag(arch),
       '-I',
