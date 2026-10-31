@@ -86,7 +86,7 @@
  * every interface ordinal answer STATUS_ERR (empty ret, connection kept
  * open) until a matching HELLO. The ring is bound to the launch secret, NOT to
  * a socket: it is never cleared on accept or close, because the shim
- * reconnects routinely (idle SO_RCVTIMEO close, WR-02 oversize drop) and the
+ * reconnects routinely (RECV_TIMEOUT_SECONDS inactivity close, WR-02 oversize drop) and the
  * next, re-authenticating connection is almost always the same game waiting
  * for its ticket. Threat model: other OS users and processes that cannot read
  * this user's files are in scope; a same-user attacker can read
@@ -165,6 +165,8 @@
 #include <time.h>
 #include <errno.h>
 #include <signal.h>
+#include <poll.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
@@ -241,8 +243,10 @@
 // At most this many `AUTH refused` log lines per process (hostile-client flood cap).
 #define AUTH_REFUSED_LOG_MAX 16
 
-// WR-02: bounds how long a single recv() call will block waiting for more
-// bytes of an in-progress frame. Generous relative to a legitimate
+// WR-02 / 58-35: per-connection bound -- a connection that sends no bytes for
+// this long is closed (mid-frame or idle), and a response send that cannot
+// complete within it (SO_SNDTIMEO) closes that connection, never the helper.
+// Previously bounded a blocking recv() waiting for more bytes of a frame. Generous relative to a legitimate
 // request's real latency (pump_callbacks alone sleeps up to 150ms) so this
 // never fires during normal operation, but bounded so a partial-send stall
 // (crashed bottle mid-frame, wedged/malicious loopback peer) cannot freeze
@@ -251,6 +255,14 @@
 // another game's bridge session either, since each appId already has its
 // own helper -- forever.
 #define RECV_TIMEOUT_SECONDS 5
+
+// 58-35: the connection table. The helper multiplexes the listen socket and
+// every open connection with ONE poll() loop on the main thread (Steam calls
+// keep their thread affinity). A connection accepted while the table is full
+// is closed at once; the "table full" ABORT line is logged at most
+// GL_CONN_CAP_LOG_MAX times per process.
+#define GL_MAX_CONNS 16
+#define GL_CONN_CAP_LOG_MAX 16
 
 // T-51-03: the longest digit-string this helper accepts as --appid. Real
 // Steam AppIDs are well under this; it exists purely to reject nonsense
@@ -356,7 +368,6 @@ static char g_appid[MAX_APPID_DIGITS + 1];
 // Fixed-size argument buffer -- T-24-03: sized to MAX_FRAME_BYTES exactly,
 // so an inbound frame's declared length is checked against this cap BEFORE
 // any recv() into it; never allocated/resized based on attacker input.
-static uint8_t g_argbuf[MAX_FRAME_BYTES];
 
 // 51-10: the single scratch buffer every bridge_dispatch call encodes
 // its response into -- bridge_dispatch itself never writes past
@@ -1649,38 +1660,20 @@ static void gl_manual_pump_into_ring(void) {
   }
 }
 
-// === Persistent-connection framing I/O (blocking, one client at a time --
-// matches spike 005b's single-threaded accept loop; R2's own acceptance bar
-// only requires >=2 SEQUENTIAL requests, no concurrency this phase) ===
+// === Persistent-connection framing I/O (58-35: one thread, one poll() loop
+// over a bounded connection table; see gl_serve_forever below) ===
 
-/* Reads exactly `len` bytes into `buf`, looping over short reads. Returns 1
- * on success, 0 on real EOF/error (caller must treat this as "close the
- * connection", never retry indefinitely). WR-05: a signal-interrupted
- * syscall (`errno == EINTR`) is recoverable and is retried, NOT treated as
- * EOF -- only `k == 0` (real EOF) or a non-EINTR error (including the
- * WR-02 SO_RCVTIMEO timeout, which surfaces as EAGAIN/EWOULDBLOCK and is
- * deliberately terminal here, not retried). */
-static int recv_all(int fd, void *buf, size_t len) {
-  uint8_t *p = (uint8_t *)buf;
-  size_t got = 0;
-  while (got < len) {
-    ssize_t k = recv(fd, p + got, len - got, 0);
-    if (k < 0) {
-      if (errno == EINTR) continue;
-      return 0;
-    }
-    if (k == 0) return 0; // real EOF
-    got += (size_t)k;
-  }
-  return 1;
-}
-
-/* WR-05: same EINTR-retry discipline as recv_all -- an interrupted send()
+/* WR-05: an EINTR-interrupted send()
  * is retried, not treated as a closed connection. WR-03: SIGPIPE is
  * ignored process-wide at startup (main()), so a send() to a peer that has
  * already closed its end returns -1/EPIPE here (handled like any other
  * terminal send error) instead of raising SIGPIPE and killing this
  * helper. */
+// 58-35: set by send_all on any terminal failure (including an SO_SNDTIMEO
+// EAGAIN) so the serving loop can close just that connection; the ~48
+// send_response call sites ignore the return value and need no edits.
+static int g_send_failed = 0;
+
 static int send_all(int fd, const void *buf, size_t len) {
   const uint8_t *p = (const uint8_t *)buf;
   size_t sent = 0;
@@ -1688,9 +1681,10 @@ static int send_all(int fd, const void *buf, size_t len) {
     ssize_t k = send(fd, p + sent, len - sent, 0);
     if (k < 0) {
       if (errno == EINTR) continue;
+      g_send_failed = 1;
       return 0;
     }
-    if (k == 0) return 0;
+    if (k == 0) { g_send_failed = 1; return 0; }
     sent += (size_t)k;
   }
   return 1;
@@ -2315,7 +2309,7 @@ static void sanitize_ver(const char *in, char *out, size_t outSize) {
  * (51-10), and sends the response. Never re-initializes Steamworks --
  * reads the g_inited flag and bridge_dispatch's own already-resolved
  * self/flat pointers only. `helloLogged` is connection-scoped state (owned
- * by `serve_connection`'s stack frame) so the HELLO log line fires once
+ * by a gl_conn slot) so the HELLO log line fires once
  * per connection, not once per request on that connection.
  */
 static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, uint16_t slot,
@@ -2777,51 +2771,152 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
 }
 
 /*
- * Serves one accepted connection in a persistent read loop -- decodes as
- * many sequential request frames as the peer sends, WITHOUT re-initializing
- * Steamworks between them (R2's own acceptance bar: >=2 sequential requests
- * over one persistent connection). Returns only when the peer disconnects
- * or sends a malformed frame (T-24-03 -- abort, never read unbounded).
+ * 58-35: per-connection state. Each slot decodes sequential request frames
+ * over its own persistent connection WITHOUT re-initializing Steamworks
+ * between them (R2). A slot closes on peer disconnect, a malformed frame
+ * (T-24-03 -- abort, never read unbounded), inactivity or a send failure.
  */
-static void serve_connection(int fd) {
-  int helloLogged = 0;
-  int authenticated = 0; // WR-03: per-connection, set only by a matching HELLO
-  for (;;) {
-    uint8_t lenField[LENGTH_FIELD_BYTES];
-    if (!recv_all(fd, lenField, sizeof lenField)) break; // peer closed / error
+struct gl_conn {
+  int fd; // -1 = free slot
+  int authenticated; // WR-03: per-connection, set only by a matching HELLO
+  int helloLogged;
+  uint32_t have;
+  time_t lastRxSec;
+  uint8_t buf[LENGTH_FIELD_BYTES + MAX_FRAME_BYTES];
+};
+static struct gl_conn g_conns[GL_MAX_CONNS];
+static int g_conn_cap_logged = 0;
 
-    uint32_t totalLen;
-    memcpy(&totalLen, lenField, 4);
+static time_t gl_now_sec(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return ts.tv_sec;
+}
 
-    // T-24-03: reject BEFORE reading the body, based on the declared length
-    // alone -- never allocate/recv past the cap.
-    if (totalLen > MAX_FRAME_BYTES) {
-      logts("ABORT", "inbound frame declared length exceeds MAX_FRAME_BYTES -- closing connection (T-24-03)");
-      break;
-    }
-    if (totalLen < REQUEST_HEADER_BYTES) {
-      logts("ABORT", "inbound frame declared length shorter than the request header -- malformed, closing connection");
-      break;
-    }
+static void gl_conn_close(struct gl_conn *c) {
+  if (c->fd >= 0) close(c->fd);
+  c->fd = -1;
+  c->have = 0;
+  c->authenticated = 0;
+  c->helloLogged = 0;
+}
 
-    uint8_t reqHeader[REQUEST_ID_BYTES + ORDINAL_BYTES + SLOT_BYTES];
-    if (!recv_all(fd, reqHeader, sizeof reqHeader)) break;
-
-    uint32_t requestId;
-    uint16_t ordinal, slot;
-    memcpy(&requestId, reqHeader + 0, 4);
-    memcpy(&ordinal, reqHeader + 4, 2);
-    memcpy(&slot, reqHeader + 6, 2);
-
-    uint32_t argLen = totalLen - REQUEST_HEADER_BYTES;
-    // argLen <= MAX_FRAME_BYTES - REQUEST_HEADER_BYTES < MAX_FRAME_BYTES,
-    // already bounds-checked above -- g_argbuf is sized to MAX_FRAME_BYTES,
-    // so this recv can never write past the buffer.
-    if (argLen > 0 && !recv_all(fd, g_argbuf, argLen)) break;
-
-    dispatch_and_respond(fd, requestId, ordinal, slot, g_argbuf, argLen, &helloLogged, &authenticated);
+// Reads at most one step of one frame from `c` (never past the current
+// frame; pipelined bytes stay in the kernel for the next poll pass) and
+// dispatches it once complete. Closes the slot on EOF, error, a malformed
+// length (T-24-03), or a failed response send.
+static void gl_conn_service(struct gl_conn *c) {
+  uint32_t want = LENGTH_FIELD_BYTES;
+  uint32_t totalLen = 0;
+  if (c->have >= LENGTH_FIELD_BYTES) {
+    memcpy(&totalLen, c->buf, 4);
+    want = LENGTH_FIELD_BYTES + totalLen;
   }
-  close(fd);
+  ssize_t k = recv(c->fd, c->buf + c->have, want - c->have, MSG_DONTWAIT);
+  if (k == 0) { gl_conn_close(c); return; }
+  if (k < 0) {
+    if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) return;
+    gl_conn_close(c);
+    return;
+  }
+  c->have += (uint32_t)k;
+  c->lastRxSec = gl_now_sec();
+  if (c->have < LENGTH_FIELD_BYTES) return;
+  memcpy(&totalLen, c->buf, 4);
+  // T-24-03: reject based on the declared length alone, before any body byte.
+  if (totalLen > MAX_FRAME_BYTES) {
+    logts("ABORT", "inbound frame declared length exceeds MAX_FRAME_BYTES -- closing connection (T-24-03)");
+    gl_conn_close(c);
+    return;
+  }
+  if (totalLen < REQUEST_HEADER_BYTES) {
+    logts("ABORT", "inbound frame declared length shorter than the request header -- malformed, closing connection");
+    gl_conn_close(c);
+    return;
+  }
+  if (c->have < LENGTH_FIELD_BYTES + totalLen) return; // partial frame
+
+  const uint8_t *hdr = c->buf + LENGTH_FIELD_BYTES;
+  uint32_t requestId;
+  uint16_t ordinal, slot;
+  memcpy(&requestId, hdr + 0, 4);
+  memcpy(&ordinal, hdr + 4, 2);
+  memcpy(&slot, hdr + 6, 2);
+  uint32_t argLen = totalLen - REQUEST_HEADER_BYTES;
+  g_send_failed = 0;
+  dispatch_and_respond(c->fd, requestId, ordinal, slot, hdr + REQUEST_HEADER_BYTES, argLen, &c->helloLogged, &c->authenticated);
+  c->have = 0;
+  if (g_send_failed) gl_conn_close(c);
+}
+
+// 58-35: the one serving loop (replaces the blocking accept -> serve one
+// connection until it closes). Single thread; Steam is only ever touched
+// inside dispatch_and_respond.
+static void gl_serve_forever(int listenFd) {
+  for (int i = 0; i < GL_MAX_CONNS; i++) g_conns[i].fd = -1;
+  int lf = fcntl(listenFd, F_GETFL, 0);
+  if (lf >= 0) fcntl(listenFd, F_SETFL, lf | O_NONBLOCK);
+
+  for (;;) {
+    // Inactivity close (mid-frame or idle): same cadence as the old SO_RCVTIMEO.
+    time_t now = gl_now_sec();
+    int anyUsed = 0;
+    for (int i = 0; i < GL_MAX_CONNS; i++) {
+      if (g_conns[i].fd < 0) continue;
+      if (now - g_conns[i].lastRxSec >= RECV_TIMEOUT_SECONDS) {
+        gl_conn_close(&g_conns[i]);
+        continue;
+      }
+      anyUsed = 1;
+    }
+
+    struct pollfd pfds[GL_MAX_CONNS + 1];
+    int slotOf[GL_MAX_CONNS + 1];
+    int n = 0;
+    pfds[n].fd = listenFd; pfds[n].events = POLLIN; pfds[n].revents = 0; slotOf[n] = -1; n++;
+    for (int i = 0; i < GL_MAX_CONNS; i++) {
+      if (g_conns[i].fd < 0) continue;
+      pfds[n].fd = g_conns[i].fd; pfds[n].events = POLLIN; pfds[n].revents = 0; slotOf[n] = i; n++;
+    }
+    int pr = poll(pfds, (nfds_t)n, anyUsed ? 500 : -1);
+    if (pr < 0) continue; // EINTR and friends: retry
+    if (pr == 0) continue;
+
+    for (int j = 1; j < n; j++) {
+      if (pfds[j].revents & (POLLIN | POLLHUP | POLLERR)) gl_conn_service(&g_conns[slotOf[j]]);
+    }
+
+    if (pfds[0].revents & POLLIN) {
+      int c = accept(listenFd, NULL, NULL);
+      if (c >= 0) {
+        // BSD/macOS: the accepted fd inherits O_NONBLOCK; send_all relies on
+        // blocking sends bounded by SO_SNDTIMEO.
+        int fl = fcntl(c, F_GETFL, 0);
+        if (fl >= 0) fcntl(c, F_SETFL, fl & ~O_NONBLOCK);
+        struct timeval sndTimeout;
+        sndTimeout.tv_sec = RECV_TIMEOUT_SECONDS;
+        sndTimeout.tv_usec = 0;
+        setsockopt(c, SOL_SOCKET, SO_SNDTIMEO, &sndTimeout, sizeof sndTimeout);
+        int free_i = -1;
+        for (int i = 0; i < GL_MAX_CONNS; i++) {
+          if (g_conns[i].fd < 0) { free_i = i; break; }
+        }
+        if (free_i < 0) {
+          if (g_conn_cap_logged < GL_CONN_CAP_LOG_MAX) {
+            g_conn_cap_logged++;
+            logts("ABORT", "connection table full -- closing new connection");
+          }
+          close(c);
+        } else {
+          g_conns[free_i].fd = c;
+          g_conns[free_i].authenticated = 0;
+          g_conns[free_i].helloLogged = 0;
+          g_conns[free_i].have = 0;
+          g_conns[free_i].lastRxSec = gl_now_sec();
+        }
+      }
+    }
+  }
 }
 
 int main(int argc, char **argv) {
@@ -2988,18 +3083,6 @@ int main(int argc, char **argv) {
   // accept loop follows it.
   logts_f("READY", "init=%s appid=%s", initOutcome, g_appid);
 
-  for (;;) {
-    int c = accept(s, NULL, NULL);
-    if (c < 0) continue;
-    // WR-02: bound how long recv_all() will block on this connection
-    // waiting for more bytes of an in-progress frame -- a partial-send
-    // stall (crashed peer mid-frame) times out and closes the connection
-    // (recv_all treats the resulting EAGAIN/EWOULDBLOCK as terminal, not
-    // EINTR-retried) instead of wedging this helper indefinitely.
-    struct timeval recvTimeout;
-    recvTimeout.tv_sec = RECV_TIMEOUT_SECONDS;
-    recvTimeout.tv_usec = 0;
-    setsockopt(c, SOL_SOCKET, SO_RCVTIMEO, &recvTimeout, sizeof recvTimeout);
-    serve_connection(c);
-  }
+  gl_serve_forever(s);
+  return 0;
 }

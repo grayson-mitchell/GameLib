@@ -71,6 +71,7 @@ import {
   HELLO_ROLE_PROBE,
   encodeControl,
   encodeHello,
+  encodeInviteFriendArgs,
   encodeRequest,
   decodeResponse,
   CONTROL_ORDINAL,
@@ -212,7 +213,7 @@ function sendControlHello(port: number, secret: string): Promise<number> {
  * and resolves with the decoded response -- unlike `sendControlHello`
  * above (which opens and tears down its own short-lived socket per call),
  * this reuses the SAME connection across multiple calls so a test can
- * prove the helper's `serve_connection()` read loop really does keep
+ * prove the helper's `gl_serve_forever()` poll loop really does keep
  * serving sequential frames after an error response (R2's own acceptance
  * bar: >=2 sequential requests over one persistent connection).
  */
@@ -1860,6 +1861,193 @@ describeDarwinOnly(
         h.child.kill()
       }
     }, 20000)
+
+    // ── 58-35: the helper serves several connections at once ──────────────
+    const timedFrame = async (socket: Socket, frame: Buffer) => {
+      const t0 = Date.now()
+      const res = await sendFrameOnSocket(socket, frame)
+      return { res, ms: Date.now() - t0 }
+    }
+    const waitClose = (socket: Socket) =>
+      new Promise<number>((resolvePromise) => {
+        const t0 = Date.now()
+        socket.once('close', () => resolvePromise(Date.now() - t0))
+        socket.resume()
+      })
+
+    test('58-35: held shim connection -- a second connection gets control slots 13/14 answered within 1000 ms while the shim stays open', async () => {
+      const h = await startAuthHelper('p58-35-held-', authedEnv())
+      const socks: Socket[] = []
+      try {
+        const shim = await h.connect()
+        socks.push(shim)
+        await authenticate(shim, 1)
+        await settle()
+        expect(h.getStderr()).toMatch(/HELLO {2}shim attached/)
+        const control = await h.connect()
+        socks.push(control)
+        const hello = await timedFrame(
+          control,
+          encodeHello(2, TEST_SECRET, HELLO_ROLE_PROBE)
+        )
+        expect(hello.res.status).toBe(STATUS_OK)
+        expect(hello.ms).toBeLessThan(1000)
+        const list = await timedFrame(
+          control,
+          encodeRequest(3, CONTROL_ORDINAL, CONTROL_SLOT.listFriends)
+        )
+        expect(list.ms).toBeLessThan(1000)
+        const invite = await timedFrame(
+          control,
+          encodeRequest(
+            5,
+            CONTROL_ORDINAL,
+            CONTROL_SLOT.inviteFriend,
+            encodeInviteFriendArgs(0)
+          )
+        )
+        expect(invite.ms).toBeLessThan(1000)
+        expect((await sendFrameOnSocket(shim, drainFrame(4))).status).toBe(
+          STATUS_OK
+        )
+      } finally {
+        socks.forEach((s) => s.destroy())
+        h.child.kill()
+      }
+    }, 15000)
+
+    test('58-35: auth isolation -- an unauthenticated or wrong-secret second socket is refused and never de-authenticates the shim', async () => {
+      const h = await startAuthHelper('p58-35-iso-', authedEnv())
+      const socks: Socket[] = []
+      try {
+        const shim = await h.connect()
+        socks.push(shim)
+        await authenticate(shim, 1)
+        const noHello = await h.connect()
+        socks.push(noHello)
+        expect((await sendFrameOnSocket(noHello, drainFrame(2))).status).toBe(
+          STATUS_ERR
+        )
+        const bad = await h.connect()
+        socks.push(bad)
+        expect(
+          (await sendFrameOnSocket(bad, encodeHello(3, WRONG_SECRET))).status
+        ).toBe(STATUS_ERR)
+        expect((await sendFrameOnSocket(shim, drainFrame(4))).status).toBe(
+          STATUS_OK
+        )
+        const probe = await h.connect()
+        socks.push(probe)
+        await sendFrameOnSocket(
+          probe,
+          encodeHello(5, TEST_SECRET, HELLO_ROLE_PROBE)
+        )
+        await settle()
+        expect(h.getStderr().match(/HELLO {2}shim attached/g)).toHaveLength(1)
+      } finally {
+        socks.forEach((s) => s.destroy())
+        h.child.kill()
+      }
+    }, 15000)
+
+    test('58-35: interleaving -- two authenticated sockets each receive exactly their own responses, in order', async () => {
+      const h = await startAuthHelper('p58-35-inter-', authedEnv())
+      const socks: Socket[] = []
+      try {
+        const a = await h.connect()
+        const b = await h.connect()
+        socks.push(a, b)
+        await authenticate(a, 100)
+        await authenticate(b, 200)
+        for (let i = 0; i < 5; i++) {
+          const [ra, rb] = await Promise.all([
+            sendFrameOnSocket(a, drainFrame(101 + i)),
+            sendFrameOnSocket(b, drainFrame(201 + i))
+          ])
+          expect(ra.status).toBe(STATUS_OK)
+          expect(rb.status).toBe(STATUS_OK)
+        }
+      } finally {
+        socks.forEach((s) => s.destroy())
+        h.child.kill()
+      }
+    }, 15000)
+
+    test('58-35: a stalled partial frame on one connection never blocks another, and is closed after RECV_TIMEOUT_SECONDS', async () => {
+      const h = await startAuthHelper('p58-35-stall-', authedEnv())
+      const socks: Socket[] = []
+      try {
+        const shim = await h.connect()
+        const stall = await h.connect()
+        socks.push(shim, stall)
+        await authenticate(shim, 1)
+        stall.write(Buffer.from([0x10, 0x00]))
+        const stallWrote = Date.now()
+        const closed = waitClose(stall)
+        for (let i = 0; i < 3; i++) {
+          const r = await timedFrame(shim, drainFrame(10 + i))
+          expect(r.res.status).toBe(STATUS_OK)
+          expect(r.ms).toBeLessThan(500)
+          await new Promise((res) => setTimeout(res, 600))
+        }
+        await closed
+        expect(Date.now() - stallWrote).toBeLessThan(7000)
+      } finally {
+        socks.forEach((s) => s.destroy())
+        h.child.kill()
+      }
+    }, 20000)
+
+    test('58-35: an idle authenticated connection is closed by the helper 4-7 s after its last frame (old SO_RCVTIMEO cadence)', async () => {
+      const h = await startAuthHelper('p58-35-idle-', authedEnv())
+      try {
+        const sock = await h.connect()
+        try {
+          await authenticate(sock, 1)
+          const ms = await waitClose(sock)
+          expect(ms).toBeGreaterThanOrEqual(4000)
+          expect(ms).toBeLessThanOrEqual(7000)
+        } finally {
+          sock.destroy()
+        }
+      } finally {
+        h.child.kill()
+      }
+    }, 20000)
+
+    test('58-35: connection cap -- the 17th connection is closed at once, the first stays served, one `connection table full` line', async () => {
+      const h = await startAuthHelper('p58-35-cap-', authedEnv())
+      const socks: Socket[] = []
+      try {
+        for (let i = 0; i < 16; i++) socks.push(await h.connect())
+        await authenticate(socks[0], 1)
+        const extra = await h.connect()
+        socks.push(extra)
+        const ms = await waitClose(extra)
+        expect(ms).toBeLessThan(1000)
+        expect((await sendFrameOnSocket(socks[0], drainFrame(2))).status).toBe(
+          STATUS_OK
+        )
+        expect(h.getStderr().match(/connection table full/g)).toHaveLength(1)
+      } finally {
+        socks.forEach((s) => s.destroy())
+        h.child.kill()
+      }
+    }, 20000)
+
+    test('58-35 source pins: single-threaded poll loop, non-blocking reads, bounded table, accepted fd made blocking again', () => {
+      const raw = readFileSync(HELPER_SOURCE_PATH, 'utf8')
+      const src = raw
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      expect(raw).toContain('#define GL_MAX_CONNS 16')
+      expect(src).toContain('MSG_DONTWAIT')
+      expect(src).toContain('SO_SNDTIMEO')
+      expect(src).toContain('& ~O_NONBLOCK')
+      expect(src).toMatch(/\bpoll\(/)
+      expect(src).not.toMatch(/pthread_create|\bfork\(/)
+      expect(src).not.toMatch(/setsockopt\([^)]*SO_RCVTIMEO/)
+    })
 
     const psEnvOf = (pid: number | undefined): string =>
       execFileSync('/bin/ps', ['eww', '-o', 'command=', '-p', String(pid)], {
