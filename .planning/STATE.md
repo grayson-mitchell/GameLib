@@ -546,6 +546,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261031-kqr | Settings: renamed the Accessibility screen to "Appearance" (user-visible strings only; route, keys and identifiers unchanged) and removed the duplicate ThemeSelector from General, so theme lives only on Appearance | 2026-10-31 | fb4ffde41 | | [261031-kqr-rename-accessibility-settings-screen-to-](./quick/261031-kqr-rename-accessibility-settings-screen-to-/) |
 | fast | Appearance: moved the Manage Accounts background picker from General to Appearance and put the theme selector first on the screen | 2026-10-31 | 66040573e | | — |
 | 261031-l0y | Settings help is now an icon-only ⓘ button on the field's label line (InfoBox `iconOnly` + FieldLabel + `labelHelp` on field components), rolled out to 11 settings sites; Manage Accounts background moved above the Appearance toggles. Untouched by design: ClearCache, ResetHeroic, SyncSaves, two WineVersionSelector notices, Sideload/GOG modify dialogs | 2026-10-31 | 752fa5d23 | Needs Review (live check light + dark theme) | [261031-l0y-settings-help-as-icon-only-on-the-field-](./quick/261031-l0y-settings-help-as-icon-only-on-the-field-/) |
+| fast | Label-line help icon now right-justified and uses the checkbox-row FontAwesome circle-info glyph/size | 2026-10-31 | 2550de301 | Needs Review (live check) | — |
 
 ## Session Continuity
 
