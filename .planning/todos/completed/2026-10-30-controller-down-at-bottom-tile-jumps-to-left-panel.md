@@ -68,3 +68,17 @@ presses.
 
 A re-fix must serialise or cancel in-flight reveal moves, and its live gate must include a ~3 s
 held stick to the bottom of the grid followed by Up presses, not only single presses.
+
+## Relanded and closed 2026-10-31
+
+The revert rested on the wrong diagnosis. The jumping came from the hover-seed handoff re-arming
+on the synthetic same-position mousemove WebKit fires when content scrolls under a resting pointer,
+fixed in `d5351646c`. Quick 261031-lrx and its follow-ups were relanded unchanged in `71e973269`;
+`40f8efd82` later made the card reveal minimal and instant.
+
+The "serialise or cancel in-flight reveal moves" requirement above is dropped: it followed from the
+wrong mechanism, and the held-stick gate passes without it.
+
+Live gate passed 2026-10-31 (operator, on main at `40f8efd82`): ~3 s held stick to the bottom of the
+grid, then Up presses. The grid scrolls row by row, focus never escapes to the left panel, and no
+jumping on the way back up.
