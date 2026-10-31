@@ -174,3 +174,7 @@ Operator notes (step 8):
 Operator replied "approved" on 2026-10-31: Schedule I: Free Sample (3205720) is confirmed as the TCP-mode test title. A1 and A4 stay open until 58-17/58-18 wire the invite family and a join is exercised. Outstanding precondition for 58-17: the operator did not explicitly confirm that the second account launched Schedule I to its main menu on the peer PC; this is not recorded as confirmed.
 
 Verdict: PROCEED
+
+## SteamGameServer scope
+
+D-10: not measured on the host path, not wired
