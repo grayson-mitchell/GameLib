@@ -33,3 +33,22 @@ over several presses, and whether Windows does it.
 Live on this Mac with the pad: in the library, press Left/Right along a row ten times, with both the
 D-pad and the stick. `main.content.scrollTop` does not change, and focus still lands on the next
 tile.
+
+## Fix landed (quick 261031-rwk, `97d9a3c34`)
+
+Cause: the first suspect, with the growth coming from `transform: scale(1.05)` on
+`.gameCard:focus-within` (`GameCard/index.css`), not the ring or the focus-row title. A bare
+`.focus()` made WebKit reveal the focused element using its scaled box, so a tile whose resting
+box sat fully on screen near the bottom of `main.content` poked a few pixels past the edge and
+every Left/Right press nudged the scroll down.
+
+`moveFocusDirectionally` now focuses through `focusTarget()`: the target's resting rect is
+measured before focusing, and when it is fully inside the viewport and every scrollable ancestor
+the focus uses `{ preventScroll: true }`. Off-screen targets keep the plain `.focus()` reveal.
+Pinned by three tests in `src/preload/__tests__/gamepadAction.test.ts`.
+
+## Closed 2026-10-31: live gate passed
+
+Operator, PowerA pad on this Mac, dev window reloaded on `97d9a3c34`: ten Left/Right presses
+along the lowest fully visible row with the D-pad and with the stick. The page stayed still and
+focus moved tile to tile. Windows was not checked.
