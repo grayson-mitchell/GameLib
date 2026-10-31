@@ -943,6 +943,12 @@ const IN_SCOPE_SUITES = [
  * `dismissedSignInNoticesSetting.test.ts`, whose harness it copies: a disposable per-file profile
  * under `os.tmpdir()`, no child process. Neither was classified by its landing commit; the
  * T-34.2-83 tripwire caught it (Phase 56 plan 30).
+ *
+ * `steamEngineFlows.test.ts` (Phase 59 Plan 08) is structurally contained on the same basis as
+ * `steamAuthFlows.test.ts`: it requires the real `../steamAuthFlowRegistration` with `../../platform`,
+ * the Steam store modules, the electron stores, `engineState`/`engineDecision` and `../../ipc` all
+ * replaced by `jest.mock` factories, so no path module, `homedir()`, filesystem or child process is
+ * reached. Its landing commit did not classify it; the T-34.2-83 tripwire caught it.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -1004,6 +1010,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'signInProbeBootWire.test.ts',
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',
+  'steamEngineFlows.test.ts',
   'steamFlows.test.ts',
   'steamFocusRefreshWire.test.ts',
   'steamgridSecretStore.test.ts',
