@@ -90,6 +90,9 @@ interface MonitorEntry {
   cancelled: boolean
   timers: Set<ReturnType<typeof setTimeout>>
   onStopped?: () => void
+  onFirstMatch?: () => void
+  /** Guards onFirstMatch to fire at most once per monitor. */
+  firstMatchFired: boolean
   /** True once any game process has matched (read by launcherExited). */
   everMatched: boolean
   matchedAt: number
@@ -128,6 +131,15 @@ export interface StartBottleProcessMonitorArgs {
    * loop's own cleanup.
    */
   onStopped?: () => void
+  /**
+   * Phase 59 (D-11): called EXACTLY ONCE, the first time a process belonging
+   * to this game is seen in the bottle (from either the poll loop or
+   * launcherExited()). Never called after the monitor is cancelled. Wrapped
+   * in try/catch so a throwing callback cannot break the monitor. The monitor
+   * itself still has no deadline (LD-4); the launch deadline that uses this
+   * signal lives in engine/launchDeadline.ts.
+   */
+  onFirstMatch?: () => void
 }
 
 /**
@@ -265,6 +277,17 @@ function recordFirstMatch(
 ): void {
   entry.everMatched = true
   entry.matchedAt = Date.now()
+  if (entry.onFirstMatch && !entry.cancelled && !entry.firstMatchFired) {
+    entry.firstMatchFired = true
+    try {
+      entry.onFirstMatch()
+    } catch (error) {
+      logWarning(
+        [`bottleProcessMonitor [${appId}]: onFirstMatch callback threw`, error],
+        LogPrefix.Steam
+      )
+    }
+  }
   logInfo(
     [
       `bottleProcessMonitor [${appId}]: matched process(es) — game started`,
@@ -464,6 +487,7 @@ export function startBottleProcessMonitor(
     bottleDir,
     pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
     onStopped,
+    onFirstMatch,
     kind = 'bottled-steam'
   } = args
 
@@ -487,6 +511,8 @@ export function startBottleProcessMonitor(
     cancelled: false,
     timers: new Set(),
     onStopped,
+    onFirstMatch,
+    firstMatchFired: false,
     everMatched: false,
     matchedAt: 0,
     stoppedFired: false,

@@ -615,6 +615,123 @@ describe('bottleProcessMonitor.ts', () => {
     })
   })
 
+  describe('onFirstMatch (D-11)', () => {
+    test('fires once on the first matching poll, not on later matching polls', async () => {
+      const onFirstMatch = jest.fn()
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: matchedPsLine,
+        stderr: ''
+      })
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge',
+        onFirstMatch
+      })
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(onFirstMatch).toHaveBeenCalledTimes(1)
+      await jest.advanceTimersByTimeAsync(1500 * 3)
+      await flushMicrotasks()
+      expect(onFirstMatch).toHaveBeenCalledTimes(1)
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+
+    test('fires once from launcherExited() when its final check matches', async () => {
+      const onFirstMatch = jest.fn()
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: matchedPsLine,
+        stderr: ''
+      })
+      jest.useFakeTimers()
+      const handle = startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge',
+        onFirstMatch
+      })
+      handle?.launcherExited()
+      await flushMicrotasks()
+      expect(onFirstMatch).toHaveBeenCalledTimes(1)
+      await jest.advanceTimersByTimeAsync(1500 * 2)
+      await flushMicrotasks()
+      expect(onFirstMatch).toHaveBeenCalledTimes(1)
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+
+    test('never fires when nothing matches or after stopBottleProcessMonitor', async () => {
+      const none = jest.fn()
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        onFirstMatch: none
+      })
+      await jest.advanceTimersByTimeAsync(1500 * 3)
+      await flushMicrotasks()
+      expect(none).not.toHaveBeenCalled()
+      stopBottleProcessMonitor('38410')
+
+      const cancelled = jest.fn()
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: matchedPsLine,
+        stderr: ''
+      })
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        onFirstMatch: cancelled
+      })
+      stopBottleProcessMonitor('38410')
+      await jest.advanceTimersByTimeAsync(1500 * 3)
+      await flushMicrotasks()
+      expect(cancelled).not.toHaveBeenCalled()
+      jest.useRealTimers()
+    })
+
+    test('a throwing onFirstMatch is logged; monitor still fires onStopped', async () => {
+      const onFirstMatch = jest.fn(() => {
+        throw new Error('boom')
+      })
+      const onStopped = jest.fn()
+      mockedSpawnAsync
+        .mockResolvedValueOnce({ code: 0, stdout: matchedPsLine, stderr: '' })
+        .mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge',
+        onFirstMatch,
+        onStopped
+      })
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(onFirstMatch).toHaveBeenCalledTimes(1)
+      expect(
+        mockedLogWarning.mock.calls.some((c) =>
+          JSON.stringify(c).includes('onFirstMatch callback threw')
+        )
+      ).toBe(true)
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(onStopped).toHaveBeenCalledTimes(1)
+      jest.useRealTimers()
+    })
+  })
+
   // Phase 51 Plan 23: launcherExited() handle + onStopped on every
   // non-supersede terminal path (51-UAT item 2, review WR-05).
   describe('launcherExited handle (51-23)', () => {
