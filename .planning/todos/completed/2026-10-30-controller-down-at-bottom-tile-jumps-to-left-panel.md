@@ -5,6 +5,7 @@ area: gamepad
 severity: medium
 platform: any
 ready: live-gate
+status: "RESOLVED 2026-10-31 by quick 261031-lrx (5fd6a3c60), live-tested once 261031-mj9 (d60cd6ccb) put the native pad reader on main. Live gate passed."
 source: "spike 051 live test 2026-10-30 (PowerA Switch 2 pad via the native-gamepad prototype on macOS)"
 files:
   - src/preload/api/tauriGamepadInput.ts
@@ -49,4 +50,4 @@ container one tile and polls up to 250ms for the newly rendered tile, then falls
 whole-document search once the container cannot scroll further. The keyboard comparison in "First
 step" is moot: WKWebView has no spatial navigation, so arrow keys never move focus there.
 
-This todo stays pending until the operator runs the Gate above live.
+Live gate passed 2026-10-31 (operator, PowerA Switch 2 pad on macOS, main at 8d0b59963).
