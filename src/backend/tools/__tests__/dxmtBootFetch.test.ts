@@ -68,11 +68,16 @@ jest.mock('graceful-fs', () => ({
   writeFileSync: jest.fn()
 }))
 
+jest.mock('../machoExports', () => ({
+  checkWinemacMetalViewExports: jest.fn()
+}))
+
 import { backendEvents } from 'backend/backend_events'
 import { isOnline } from 'backend/online_monitor'
 import { wineDownloaderInfoStore } from 'backend/wine/manager/utils'
 import { existsSync } from 'graceful-fs'
 import { installOrUpdateTool } from '../index'
+import { checkWinemacMetalViewExports } from '../machoExports'
 import type { ReleasesInfo, WineVersionInfo } from 'common/types'
 
 // Importing the module under test registers its three module-scope `backendEvents`
@@ -121,6 +126,7 @@ beforeEach(() => {
   // return is not taken) and keeps the post-download copy loop inert. The decision under
   // test is whether the FETCH is issued, not whether files are copied afterwards.
   existsSyncMock.mockReturnValue(false)
+  ;(checkWinemacMetalViewExports as jest.Mock).mockReturnValue({ ok: true })
 })
 
 describe('boot-time DXMT fetch is gated on there being an installed wine to update', () => {
@@ -148,8 +154,15 @@ describe('boot-time DXMT fetch is gated on there being an installed wine to upda
     expect(installOrUpdateToolMock).toHaveBeenCalledTimes(0)
   })
 
+  // Quick 261031-rjv: the census now also requires an existing `-DXMT` copy that passes
+  // the winemac export check, so this case provides the copy (existsSync true for it,
+  // still false for `latest_dxmt`) and a passing check.
   it('DOES fetch when an installed Wine-Staging-macOS exists (the update case)', async () => {
-    storeGetMock.mockReturnValue([makeWine({ isInstalled: true })])
+    const wine = makeWine({ isInstalled: true })
+    storeGetMock.mockReturnValue([wine])
+    existsSyncMock.mockImplementation(
+      (p: string) => p === `${wine.installDir}-DXMT`
+    )
 
     emitReleasesInfoReady()
     await flush()

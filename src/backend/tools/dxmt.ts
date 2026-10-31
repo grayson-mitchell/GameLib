@@ -15,6 +15,22 @@ import {
 } from 'graceful-fs'
 import { toolsPath } from 'backend/constants/paths'
 import { wineDownloaderInfoStore } from 'backend/wine/manager/utils'
+import { checkWinemacMetalViewExports } from './machoExports'
+import type { WinemacMetalCheck } from './machoExports'
+
+// Quick 261031-rjv: DXMT v0.80's winemetal.so resolves macdrv metal-view symbols that
+// Wine-Staging-macOS's winemac.so does not define, so D3D11 games cannot present on a
+// -DXMT copy of it. Existing copies are deliberately left alone.
+function logDXMTSkip(
+  action: 'creating' | 'updating',
+  versionLabel: string,
+  result: Extract<WinemacMetalCheck, { ok: false }>
+) {
+  logWarning(
+    `Not ${action} DXMT copy of ${versionLabel}: ${result.winemacPath} ${result.reason}; missing ${result.missing.join(', ')}. DXMT v0.80 needs _macdrv_functions or all three _macdrv_view_*_metal_* exports, so D3D11 games could not present on it. Existing -DXMT copies are left untouched.`,
+    LogPrefix.ToolInstaller
+  )
+}
 
 const DXMT = {
   getLatest: () => {
@@ -133,6 +149,13 @@ const DXMT = {
 
 backendEvents.on('wineVersionInstalled', async (versionInfo, installDir) => {
   if (isMac && versionInfo.type === 'Wine-Staging-macOS') {
+    const check = checkWinemacMetalViewExports(
+      join(installDir, versionInfo.version)
+    )
+    if (!check.ok) {
+      logDXMTSkip('creating', versionInfo.version, check)
+      return
+    }
     await DXMT.getLatest()
     await DXMT.copyWineAndConfigure(versionInfo, installDir)
   }
@@ -177,19 +200,31 @@ backendEvents.on('releasesInfoReady', async (releasesInfo) => {
   // installed Wine-Staging-macOS still provisions DXMT on demand. This listener only
   // ever UPDATES DXMT inside `-DXMT` wines that already exist, which is exactly what
   // its own header comment says it is for.
+  //
+  // Quick 261031-rjv: the census now also requires an existing `-DXMT` copy whose own
+  // winemac.so passes the export check, so a Wine with no usable `-DXMT` copy never
+  // triggers the boot fetch. Failing copies are deliberately left on disk (operator
+  // decision: games pinned to them must keep launching).
   const availableWines = wineDownloaderInfoStore.get('wine-releases', [])
   const installedWineStagingVersions = availableWines.filter(
     (wine) => wine.type === 'Wine-Staging-macOS' && wine.isInstalled
   )
 
-  if (installedWineStagingVersions.length === 0) return
+  const copiesToUpdate: string[] = []
+  installedWineStagingVersions.forEach((wine) => {
+    const wineWithDXMTFilePath = `${wine.installDir}-DXMT`
+    if (!existsSync(wineWithDXMTFilePath)) return
+    const check = checkWinemacMetalViewExports(wineWithDXMTFilePath)
+    if (check.ok) {
+      copiesToUpdate.push(wineWithDXMTFilePath)
+    } else {
+      logDXMTSkip('updating', wine.version, check)
+    }
+  })
+
+  if (copiesToUpdate.length === 0) return
 
   await DXMT.getLatest()
 
-  installedWineStagingVersions.forEach((wine) => {
-    const wineWithDXMTFilePath = `${wine.installDir}-DXMT`
-
-    if (existsSync(wineWithDXMTFilePath))
-      DXMT.copyLatestDXMTFiles(wineWithDXMTFilePath)
-  })
+  copiesToUpdate.forEach((path) => DXMT.copyLatestDXMTFiles(path))
 })
