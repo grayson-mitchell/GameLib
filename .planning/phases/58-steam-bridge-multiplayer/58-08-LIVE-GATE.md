@@ -1,7 +1,7 @@
 # Phase 58 Live Gate: Raft (648800) multiplayer in DRM mode through the steamclient layer
 
 Gate subject: Raft 648800 (SteamStub-wrapped), launched from GameLib through the macOS native Steam bridge in DRM mode
-(CrossOver 26.3.0.39832, component `steamclient-layer-cx26.3.0.39832`, asset `steamclient-layer-cx26.3.0.39832-p58.tar.gz`),
+(CrossOver 26.3.0.39832, component `steamclient-layer-cx26.3.0.39832`, asset `steamclient-layer-cx26.3.0.39832-p58b.tar.gz`),
 playing against the second account on the Windows/Linux peer PC (D-04, D-15), same LAN, any path accepted (D-06).
 Authored by: plan 58-08. Run by: plan 58-09.
 Decision D-E: the author never runs the gate. Plan 58-08 launches no game and fills no scored `result:` line.
@@ -25,6 +25,15 @@ lsteamclient.so and steam.exe are byte-equal to 58-04-SUMMARY; NOTICE is now sha
 lsteamclient.dll is now sha256 `ef252a424d13130ba504d55957ab81961a34873e357899171d0a71dc5128df70` size 33934643. The builder printed `pinned: MISMATCH (file NOTICE)` and exit 3, as
 for 58-04: the catalogue (`src/common/steamclientLayerCatalogue.ts`) still pins the Phase 56 archive until Task 4. Publish target: asset
 `steamclient-layer-cx26.3.0.39832-p58.tar.gz` added to the existing tag `steamclient-layer-cx26.3.0.39832` in grayson-mitchell/GameLib, no `--clobber`.
+
+**AMENDMENT 2026-10-31 (plan 58-09, before any scored launch): archive repinned p58 -> p58b.** The first launch-1 attempt failed with Raft "your game version does not match the host's"
+(unscored, see Run record). Debug session `.planning/debug/resolved/raft-drm-build-id-mismatch.md` confirmed the root cause: native Mac Steam has no install of the Windows-only
+Raft, so `ISteamApps::GetAppBuildId` returned 0 and the host advertised build 0. Fix commit `cda12da3f`: the DRM layer answers `GetAppBuildId` from the bottle `appmanifest_648800.acf`
+buildid (fallback Mac Steam). The operator approved uploading and repinning. Everything above that names the p58 archive (`4390a087...`) is HISTORY; the archive under gate is now
+`steamclient-layer-cx26.3.0.39832-p58b.tar.gz`, sha256 `769d8532890613ea365c679d7fc1961b1960292cbee6b548125dac72081295e7`, size 5368352, pinned in `src/common/steamclientLayerCatalogue.ts`.
+The p58 asset stays on the tag (no `--clobber`). New trace lines (`role=game`): `event=apps op=build-id ret=<raw>` (what Steam returned) and `event=apps op=build-id-given ret=<given>`
+(what the game was told). These are RECORDING-ONLY: record the `op=build-id-given` value (expected 22312909) in the Run record. No scored sub-check, expected line or pass/fail criterion was added or changed;
+items 2-6 are scored exactly as before. (A debug live run, not a gate launch, joined the same world with census `verified join=1 send=1 recv=1`; it is not scored here.)
 
 | Name                                      | Count in Assembly-CSharp |
 | ----------------------------------------- | ------------------------ |
@@ -88,7 +97,7 @@ Paths used below:
 - `COMPDIR` = `APPDIR/steam-bridge/drm/component/steamclient-layer-cx26.3.0.39832`
 - `BOTTLE(<id>)` = `~/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-<id>`
 - `WINELOG` = `TRACEDIR/<appId>-<launchId>.wine.log` (the wine child's output; path is logged in SIDECAR as `SteamGame: drm launch appId <id>: wine log <path>`, games.ts:4514; bottle-stage output is `<appId>-<launchId>.stage.wine.log`, stageWineLog.ts)
-- asset URL = `https://github.com/grayson-mitchell/GameLib/releases/download/steamclient-layer-cx26.3.0.39832/steamclient-layer-cx26.3.0.39832-p58.tar.gz`
+- asset URL = `https://github.com/grayson-mitchell/GameLib/releases/download/steamclient-layer-cx26.3.0.39832/steamclient-layer-cx26.3.0.39832-p58b.tar.gz`
 
 ## 1. Preconditions
 
@@ -100,9 +109,9 @@ Paths used below:
 | PC4  | Fresh build                                   | `pnpm build-steam-bridge`, `pnpm exec vite build`, `pnpm build:sidecar-sea`                                                                                                                                                                                                                                                   | All exit 0                                                                                                                                                                      |
 | PC5  | Session dir and archived prior logs           | `mkdir -p <session>`; `cp SIDECAR <session>/pre-session-gamelib.log`; `cp SIDECAR.old <session>/pre-session-gamelib.log.old`                                                                                                                                                                                                  | `ls -la <session>` shows the copies (a missing source is recorded, not an error)                                                                                                |
 | PC6  | Operator restarted dev under `tee -a <session>/terminal.log` (operator: "PC6 ready"). 58-09 2026-10-31: `pgrep -f target/debug/gamelib-shell \| wc -l` = 1, PID 43525 (started 15:48:20 NZDT); sidecar.js mtime 1793414897 > drmTrace.ts commit time 1793413469; `grep -c event=p2p build/main/sidecar.js` = 2; terminal.log being written (3331 B, sidecar lines present) | met |
-| PC7  | Old COMPDIR moved aside                       | `mkdir -p <session>/compdir-prior`; `stat -f %m COMPDIR`; `mv COMPDIR <session>/compdir-prior/` (skipped, recorded, if COMPDIR is absent)                                                                                                                                                                                       | `test ! -e COMPDIR` exits 0 and the mtime is recorded; the p58 asset is then fetched and verified at first launch                                                                | Re-confirmed by 58-09: `compdir-prior` present in the session dir.
+| PC7  | Old COMPDIR moved aside                       | `mkdir -p <session>/compdir-prior`; `stat -f %m COMPDIR`; `mv COMPDIR <session>/compdir-prior/` (skipped, recorded, if COMPDIR is absent)                                                                                                                                                                                       | `test ! -e COMPDIR` exits 0 and the mtime is recorded; the p58b asset is then fetched and verified at first launch                                                                | Re-confirmed by 58-09: `compdir-prior` present in the session dir.
 | PC8  | Raft bottle and manifest present              | `ls BOTTLE(648800)/drive_c/Program\ Files\ \(x86\)/Steam/steamapps/appmanifest_648800.acf`                                                                                                                                                                                                                                    | Manifest exists                                                                                                                                                                 |
-| PC9  | p58 asset reachable                           | `curl -fsSIL <asset URL>`                                                                                                                                                                                                                                                                                                     | HTTP 200 at the end of the redirects                                                                                                                                            |
+| PC9  | p58b asset reachable                           | `curl -fsSIL <asset URL>`                                                                                                                                                                                                                                                                                                     | HTTP 200 at the end of the redirects                                                                                                                                            |
 | PC10 | Operator statement 2026-10-31 (to 58-09): "yes" - peer PC second account signed in and online, friends with the main account, Raft launchable. Earlier 58-01-TITLES.md `## Account preflight` citation stands | met |
 | PC11 | Operator statement 2026-10-31: "wine listed as yes, no crossover, and steam no". Local Network: Wine = granted; CrossOver = absent; Steam = listed, denied. Record-only | recorded |
 
@@ -180,7 +189,7 @@ The trace writer dedups by hash and caps at GAMELIB_TRACE_MAX_LINES, so each dis
 | PC9 | release asset | HTTP 200 | T1 N/A; T4 R a missing asset gives 404; T5 R (58-08 Task 4 publishes before PC9 runs); T6 R | `curl -fsSIL` |
 | PC10 | Operator statement 2026-10-31 (to 58-09): "yes" - peer PC second account signed in and online, friends with the main account, Raft launchable. Earlier 58-01-TITLES.md `## Account preflight` citation stands | met |
 | PC11 | Operator statement 2026-10-31: "wine listed as yes, no crossover, and steam no". Local Network: Wine = granted; CrossOver = absent; Steam = listed, denied. Record-only | recorded |
-| Item 1 component | COMPDIR files | sums equal catalogue p58 pins | T3 R filesystem; T4 R falsifiable, a Phase 56 dir fails; T5 C pair {PC7 move, launch 1}: item 1 is read after launch 1's first install; T6 R positive observable is a present dir with matching sums; T7 N/A | `shasum -a 256` of the six files against steamclientLayerCatalogue.ts |
+| Item 1 component | COMPDIR files | sums equal catalogue p58b pins | T3 R filesystem; T4 R falsifiable, a Phase 56 dir fails; T5 C pair {PC7 move, launch 1}: item 1 is read after launch 1's first install; T6 R positive observable is a present dir with matching sums; T7 N/A | `shasum -a 256` of the six files against steamclientLayerCatalogue.ts |
 | Item 2 / 3 (a) | trace `role=game` 504 / 1221 | callback line | T3 R sink TRACEDIR + SIDECAR; T4 R falsifiable, no line = issue; T5 C pair {launch 2 relaunch, trace capture}: launch 2 gets its own TRACEDIR file and gamelib log copy before relaunch; T6 C depends on external state only (peer session); the 504/1221 gap is resolved by D-08a, see Review part e for what the trace can and cannot show; T7 R | `grep 'role=game event=callback id=504 resp=1'` etc. |
 | Item 2 / 3 (b) | trace `role=game` calls | send and receive names | T3 R sink as above; T4 R; T5 C same pair as (a); T6 C requires the game reaching in-session traffic, external state: peer PC session; T7 R | `grep 'role=game event=call name='` |
 | Item 2 / 3 (c) | operator observation | same world, mutual movement | T3 N/A not a log claim; T4 R operator can answer no; T6 C external state: peer PC, friendship, Raft save worlds, Local Network grant, a Raft session still open from a prior run (quit all before each launch); T7 R the invite and join gestures are Raft's own invite UI / Steam friends "Join Game" on both machines, which are the real surfaces | operator statement |
@@ -232,8 +241,8 @@ sub-checks; a peer whose first read/send is zero-length is still recorded once a
 
 Every item names its sink and launch ordinal. All results are pending; plan 58-09 fills them.
 
-### 1. Component p58 installed
-expected: after launch 1 starts, `COMPDIR` exists and the sha256 of its six files (LICENSE.lsteamclient, NOTICE, detour-cx26.3.0.39832.bin, lsteamclient.dll, lsteamclient.so, steam.exe) equal the `files[]` pins of entry `26.3.0.39832` in `src/common/steamclientLayerCatalogue.ts` (the p58 values). Sink: filesystem. Launch 1.
+### 1. Component p58b installed
+expected: after launch 1 starts, `COMPDIR` exists and the sha256 of its six files (LICENSE.lsteamclient, NOTICE, detour-cx26.3.0.39832.bin, lsteamclient.dll, lsteamclient.so, steam.exe) equal the `files[]` pins of entry `26.3.0.39832` in `src/common/steamclientLayerCatalogue.ts` (the p58b values: archive sha256 `769d8532890613ea365c679d7fc1961b1960292cbee6b548125dac72081295e7`, 5368352 bytes, lsteamclient.dll `8257505948f8f5edc242...`). Sink: filesystem. Launch 1.
 result: pending
 
 ### 2. Direction A: GameLib hosts, peer joins
@@ -272,6 +281,12 @@ Verdict: pending
 - Operator-approved hash: sha256 `4390a08746f70f6d6a47235b86a968396290e239b87a3538f32222e233c2f3b1`, 5365254 bytes. Downloaded back from the release: sha256 identical.
 - Catalogue and THIRD-PARTY-NOTICES.md pinned to it (NOTICE 289a6501..., lsteamclient.dll ef252a42...). `pnpm build:steamclient-layer-archive` prints `pinned: match`. DRM jest suites: 12 passed.
 - Never published: `0dd202aa...` (raw SteamID64 trace) and `53780308...` (58-04 archive).
+- SUPERSEDED 2026-10-31 by p58b (see the AMENDMENT note under Pre-gate measurement). The p58 asset remains on the tag as history; the gate runs p58b.
+
+### Aborted attempt 0 (unscored)
+
+First launch-1 attempt, run against p58 before the launch delimiter was written. NOT scored: no `result:` line is derived from it. Cause: Raft on the peer PC reported "your game version does not match the host's game version" because the host advertised build 0 (`GetAppBuildId` unanswered on a Mac with no Raft install; root cause confirmed in `.planning/debug/resolved/raft-drm-build-id-mismatch.md`, fix `cda12da3f`, p58b). Archived at `/tmp/gamelib-gate-20261031T023945Z/aborted-attempt-0/` and must not be picked up as the "newest trace". The debug live run's trace (`648800-1793418295115.log`) was moved to `/tmp/gamelib-debug-raft-buildid-20261031T032952Z/`.
+Operator observation (record-only): on the PC, Join Game when Raft is not running shows the Windows Steam launch and accept-arguments (`+connect <steamid>`) prompt, which is normal Steam behaviour.
 
 ### Preflight
 
@@ -285,8 +300,8 @@ Session dir: `/tmp/gamelib-gate-20261031T023945Z/`
 | PC4  | `pnpm build-steam-bridge`, `pnpm exec vite build`, `pnpm build:sidecar-sea` all exit 0 | met |
 | PC5  | `ls -la /tmp/gamelib-gate-20261031T023945Z` shows `pre-session-gamelib.log` (35261 B) and `pre-session-gamelib.log.old` (24339 B) | met |
 | PC6  | Operator restarted dev under `tee -a <session>/terminal.log` (operator: "PC6 ready"). 58-09 2026-10-31: `pgrep -f target/debug/gamelib-shell \| wc -l` = 1, PID 43525 (started 15:48:20 NZDT); sidecar.js mtime 1793414897 > drmTrace.ts commit time 1793413469; `grep -c event=p2p build/main/sidecar.js` = 2; terminal.log being written (3331 B, sidecar lines present) | met |
-| PC7  | COMPDIR existed, mtime epoch 1793237230, moved to `/tmp/gamelib-gate-20261031T023945Z/compdir-prior/`; `test ! -e COMPDIR` exit 0. Re-confirmed by 58-09: `compdir-prior` present in the session dir | met |
+| PC7  | COMPDIR existed, mtime epoch 1793237230, moved to `/tmp/gamelib-gate-20261031T023945Z/compdir-prior/`; `test ! -e COMPDIR` exit 0. Re-done after the repin: the p58b dir left by the debug run (mtime epoch 1793418292) moved to `compdir-prior-2/`, `test ! -e COMPDIR` exit 0, TRACEDIR holds no 648800 trace newer than the gate start; p58b is fetched and verified fresh at launch 1 | met |
 | PC8  | `appmanifest_648800.acf` present in `GameLibSteamBridge-648800` | met |
-| PC9  | `curl -fsSIL` asset URL: HTTP/2 302 then HTTP/2 200 | met |
+| PC9  | `curl -fsSIL` p58b asset URL: HTTP/2 302 then HTTP/2 200 (re-run after repin; the earlier p58 check is history) | met |
 | PC10 | Operator statement 2026-10-31 (to 58-09): "yes" - peer PC second account signed in and online, friends with the main account, Raft launchable. Earlier 58-01-TITLES.md `## Account preflight` citation stands | met |
 | PC11 | Operator statement 2026-10-31: "wine listed as yes, no crossover, and steam no". Local Network: Wine = granted; CrossOver = absent; Steam = listed, denied. Record-only | recorded |
