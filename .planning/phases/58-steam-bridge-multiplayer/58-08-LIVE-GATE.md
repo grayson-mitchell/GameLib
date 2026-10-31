@@ -266,4 +266,27 @@ Verdict: pending
 
 ## 7. Run record
 
-(empty)
+### Publish record (58-08 Task 4, 2026-10-31)
+
+- Uploaded `steamclient-layer-cx26.3.0.39832-p58.tar.gz` to release `steamclient-layer-cx26.3.0.39832` (no `--clobber`); the Phase 56 asset `steamclient-layer-cx26.3.0.39832.tar.gz` stays on the tag.
+- Operator-approved hash: sha256 `4390a08746f70f6d6a47235b86a968396290e239b87a3538f32222e233c2f3b1`, 5365254 bytes. Downloaded back from the release: sha256 identical.
+- Catalogue and THIRD-PARTY-NOTICES.md pinned to it (NOTICE 289a6501..., lsteamclient.dll ef252a42...). `pnpm build:steamclient-layer-archive` prints `pinned: match`. DRM jest suites: 12 passed.
+- Never published: `0dd202aa...` (raw SteamID64 trace) and `53780308...` (58-04 archive).
+
+### Preflight
+
+Session dir: `/tmp/gamelib-gate-20261031T023945Z/`
+
+| ID   | Observed | Status |
+| ---- | -------- | ------ |
+| PC1  | `pgrep -x steam_osx` printed 98746 | met |
+| PC2  | ps grep NOT empty: a Windows Steam is running in a CrossOver bottle (pid 47008 `C:\Program Files (x86)\Steam\steam.exe -silent -applaunch 264160`, up about 21h, with steamwebhelper.exe pids 47650/47979/47999/48111/55273 and steamservice.exe pid 47758) | NOT MET. Not killed by 58-08 (stale game-264160 session, not ours to stop). Operator must quit it before 58-09 launch 1 and PC2 must be re-run |
+| PC3  | CFBundleVersion `26.3.0.39832` | met |
+| PC4  | `pnpm build-steam-bridge`, `pnpm exec vite build`, `pnpm build:sidecar-sea` all exit 0 | met |
+| PC5  | `ls -la /tmp/gamelib-gate-20261031T023945Z` shows `pre-session-gamelib.log` (35261 B) and `pre-session-gamelib.log.old` (24339 B) | met |
+| PC6  | left for 58-09 | n/a |
+| PC7  | COMPDIR existed, mtime epoch 1793237230, moved to `/tmp/gamelib-gate-20261031T023945Z/compdir-prior/`; `test ! -e COMPDIR` exit 0 | met |
+| PC8  | `appmanifest_648800.acf` present in `GameLibSteamBridge-648800` | met |
+| PC9  | `curl -fsSIL` asset URL: HTTP/2 302 then HTTP/2 200 | met |
+| PC10 | Cited `58-01-TITLES.md` `## Account preflight`: second account signed in on the peer PC, friendship accepted, owns Raft (648800). That statement predates this run (peer PC was rebooted into Linux then); no fresh operator statement was taken, so 58-09 must reconfirm the peer is online and Raft launchable | recorded, reconfirm at 58-09 |
+| PC11 | Not readable from a shell (TCC.db authorization denied; no defaults domain). Operator must read System Settings > Privacy & Security > Local Network and note CrossOver / Wine entries | pending operator (record-only) |

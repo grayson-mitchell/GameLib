@@ -152,12 +152,12 @@ release page.
 
 ### Pinned sha256 sums
 
-| path                                    | licence                | sha256                                                           | size     |
-| --------------------------------------- | ---------------------- | ---------------------------------------------------------------- | -------- |
-| LICENSE.lsteamclient                    | licence-text           | 80fda9147f8ee707cd18d1d6d71b307063fa3a02057a7c789de47f7c003510f1 | 7435     |
-| NOTICE                                  | licence-text           | dd9c7c74ca5e2b62a82bb32926b45333d7b2fd7f1dd8a917b2feb0579f1c11bc | 4017     |
-| detour-cx26.3.0.39832.bin               | GPL-3.0                | e35b834408599c45f30b23a6d2bf38acfa5c3df4d15206617c471e23a4a01bfb | 832      |
-| lsteamclient.dll                        | Steamworks-SDK-License | 22bb19413ce1f66c771c2d54260f6811480375db66c74e60c66a02d307b5cb76 | 33904653 |
-| lsteamclient.so                         | Steamworks-SDK-License | dd48289787223d9e0f75a97da3cc15aa616faa382741e39a5a433fa5cfa5167d | 2388896  |
-| steam.exe                               | BSD-3-Clause           | 4a67c58a41792e8a784bea7338adaf3d7d3713dc6d20ccaf61895edfdb32e6ba | 193536   |
-| steamclient-layer-cx26.3.0.39832.tar.gz | archive                | c58a40c67c5d9093970227327bcceb5c2e457bc81b0a58559d9cb65777aeb187 | 5359548  |
+| path                                        | licence                | sha256                                                           | size     |
+| ------------------------------------------- | ---------------------- | ---------------------------------------------------------------- | -------- |
+| LICENSE.lsteamclient                        | licence-text           | 80fda9147f8ee707cd18d1d6d71b307063fa3a02057a7c789de47f7c003510f1 | 7435     |
+| NOTICE                                      | licence-text           | 289a650147ae83aff4f8412ac98323ab30720810b84349c37d10503a2c4995a9 | 4129     |
+| detour-cx26.3.0.39832.bin                   | GPL-3.0                | e35b834408599c45f30b23a6d2bf38acfa5c3df4d15206617c471e23a4a01bfb | 832      |
+| lsteamclient.dll                            | Steamworks-SDK-License | ef252a424d13130ba504d55957ab81961a34873e357899171d0a71dc5128df70 | 33934643 |
+| lsteamclient.so                             | Steamworks-SDK-License | dd48289787223d9e0f75a97da3cc15aa616faa382741e39a5a433fa5cfa5167d | 2388896  |
+| steam.exe                                   | BSD-3-Clause           | 4a67c58a41792e8a784bea7338adaf3d7d3713dc6d20ccaf61895edfdb32e6ba | 193536   |
+| steamclient-layer-cx26.3.0.39832-p58.tar.gz | archive                | 4390a08746f70f6d6a47235b86a968396290e239b87a3538f32222e233c2f3b1 | 5365254  |
