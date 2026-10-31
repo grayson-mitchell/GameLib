@@ -66,3 +66,12 @@ symbols missing; CrossOver's passes.
 
 Remaining live gate: restart `tauri dev`, install or reinstall Wine-Staging-macOS from the Wine
 Manager, and confirm no new `-DXMT` engine appears and the skip warning is in the log.
+
+## Closed 2026-10-31: live gate passed
+
+Operator restarted `tauri dev` and reinstalled Wine-Staging-macOS (Gcenx 11.20) from the Wine Manager
+on main at `acf4aaab5`. `gamelib.log` 20:01:24 has the ToolInstaller warning "Not creating DXMT copy
+of Wine-Staging-macOS-latest", naming all four missing symbols, with no DXMT download between the
+Wine download (20:01:09) and "Finished installation". `tools/wine/` holds only
+`Wine-Staging-macOS-latest`, no `-DXMT` copy. GameLib no longer offers a `-DXMT` engine that cannot
+present D3D11.
