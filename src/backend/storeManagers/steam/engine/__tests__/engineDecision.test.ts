@@ -12,7 +12,7 @@ import {
 import type { EngineDecisionDeps } from '../engineDecision'
 import { ENGINE_PINS } from '../enginePins'
 import { parseEngineOverride } from '../engineIds'
-import type { DemoStatusProbe } from '../demoStatus'
+import type { DemoStatus, DemoStatusProbe } from '../demoStatus'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -24,7 +24,7 @@ const CX_BIN =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
 const WM_ROOT = '/tools/wine'
 
-const ok = (status: DemoStatusProbe & { kind: 'ok' }['status']) =>
+const ok = (status: DemoStatus) =>
   ({ kind: 'ok', status, elapsedMs: 1 }) as DemoStatusProbe
 const failed = (reason: 'timeout' | 'spawn-error' | 'nonzero-exit') =>
   ({ kind: 'failed', reason, detail: 'x', elapsedMs: 1 }) as DemoStatusProbe
