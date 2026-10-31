@@ -59,6 +59,7 @@ export function armLaunchDeadline(args: {
 
   const startedAt = Date.now()
   let state: LaunchDeadline['state'] = 'armed'
+  // eslint-disable-next-line prefer-const -- assigned after the cancel closure that clears it
   let handle: ({ unref?: () => void } & object) | undefined
 
   const deadline: LaunchDeadline = {

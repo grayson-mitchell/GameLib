@@ -6655,7 +6655,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const sendGameStatusUpdate = jest.requireMock('backend/utils')
       .sendGameStatusUpdate as jest.Mock
     const statuses = () =>
-      (sendGameStatusUpdate as jest.Mock).mock.calls
+      sendGameStatusUpdate.mock.calls
         .map(([u]) => u)
         .filter((u) => u.status === 'engine-download')
         .map((u) => u.context)

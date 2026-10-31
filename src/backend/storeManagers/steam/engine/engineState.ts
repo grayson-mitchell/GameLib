@@ -61,27 +61,35 @@ export interface EngineStateDeps extends Partial<EngineDecisionDeps> {
   preflight(bottleName: string): Promise<CrossoverPreflight>
 }
 
+const lazyBottle = () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('../bottle') as typeof import('../bottle')
+
+type GameConfigShape = {
+  GameConfig: {
+    get(id: string): { config?: { steamEngineOverride?: unknown } }
+  }
+}
+const lazyGameConfig = () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('backend/game_config') as GameConfigShape
+
 function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
   return {
     isMac:
       deps?.isMac ??
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       (require('backend/constants/environment') as { isMac: boolean }).isMac,
     store:
       deps?.store ??
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       (require('../electronStores') as typeof import('../electronStores'))
         .steamEngineNoticeStore,
     bridgeBottleNameFor:
       deps?.bridgeBottleNameFor ??
-      ((id) =>
-        (
-          require('../bottle') as typeof import('../bottle')
-        ).bridgeBottleNameFor(id)),
+      ((id) => lazyBottle().bridgeBottleNameFor(id)),
     isBridgeBottleReady:
-      deps?.isBridgeBottleReady ??
-      ((n) =>
-        (
-          require('../bottle') as typeof import('../bottle')
-        ).isBridgeBottleReady(n)),
+      deps?.isBridgeBottleReady ?? ((n) => lazyBottle().isBridgeBottleReady(n)),
     preflight: deps?.preflight ?? ((n) => preflightCrossover(n, deps)),
     ...deps
   } as EngineStateDeps
@@ -90,13 +98,7 @@ function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
 function readOverride(appId: string, deps: EngineStateDeps): EngineOverrideId {
   const raw = deps.readOverride
     ? deps.readOverride(appId)
-    : (
-        require('backend/game_config') as {
-          GameConfig: {
-            get(id: string): { config?: { steamEngineOverride?: unknown } }
-          }
-        }
-      ).GameConfig.get(appId).config?.steamEngineOverride
+    : lazyGameConfig().GameConfig.get(appId).config?.steamEngineOverride
   return parseEngineOverride(raw)
 }
 
@@ -251,6 +253,7 @@ export async function dismissSteamEngineNotice(
 ): Promise<{ ok: boolean }> {
   const s =
     store ??
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     (require('../electronStores') as typeof import('../electronStores'))
       .steamEngineNoticeStore
   if (typeof args !== 'object' || args === null) return { ok: false }

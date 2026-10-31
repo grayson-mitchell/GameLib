@@ -145,8 +145,8 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
       return bottle.listReadyBridgeBottleNames()
     },
     wineManagerReleases() {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { wineDownloaderInfoStore } =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('backend/wine/manager/electronStores') as typeof import('backend/wine/manager/electronStores')
       return wineDownloaderInfoStore.get(
         'wine-releases',

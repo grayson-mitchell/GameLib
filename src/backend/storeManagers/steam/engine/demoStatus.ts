@@ -85,6 +85,7 @@ export async function probeDemoStatus(args: {
 
   return new Promise<DemoStatusProbe>((resolve) => {
     let settled = false
+    // eslint-disable-next-line prefer-const -- assigned after the settle closure that clears it
     let timer: NodeJS.Timeout | undefined
     const settle = (r: DemoStatusProbe) => {
       if (settled) return

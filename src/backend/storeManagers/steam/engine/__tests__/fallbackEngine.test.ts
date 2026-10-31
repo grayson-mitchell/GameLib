@@ -47,6 +47,7 @@ jest.mock('backend/utils', () => {
       strip: number
     }) => {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('child_process').execFileSync('tar', [
           '-xf',
           path,
@@ -79,12 +80,6 @@ import {
 import { ENGINE_PINS, type EnginePin } from '../enginePins'
 
 let work = ''
-
-function tar(dir: string, name: string, flag: string): string {
-  const out = join(work, name)
-  execFileSync('tar', [flag, out, '-C', work, dir])
-  return out
-}
 
 async function makePin(opts: { badHash?: boolean; escape?: boolean } = {}) {
   const w = join(work, 'wsrc', 'top')
