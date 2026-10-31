@@ -103,7 +103,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Quick 261030-o77 (2026-10-30): invoke 23 -> 22 -- that channel removed with the bottled-Steam finish handoff
   // Phase 54 Plan 07 (2026-10-27): invoke 21 -> 22 -- steamGoOfflineRetry, the guided Go Offline dialog's Continue
   // 54-REVIEW WR-05 (2026-10-28): invoke 22 -> 23 -- steamGoOfflineCancel, the guided Go Offline dialog's Cancel/close
-  'steamAuthFlowRegistration.ts': { invoke: 22, send: 1 },
+  // Phase 59 Plan 08 (2026-11-01): invoke 22 -> 25 -- getSteamEngineState, listSteamEngineOptions, dismissSteamEngineNotice
+  'steamAuthFlowRegistration.ts': { invoke: 25, send: 1 },
   // Quick 260908-ci2 (2026-09-08): send 0 -> 1 -- `shellWindowFocused`, restoring the
   // install-badge reconciliation trigger dropped in the Electron to Tauri cutover
   // (`mainWindow.on('focus', ...)`, `main.ts:272-274`, deleted in `5643c7583`). Shell-originated

@@ -60,6 +60,12 @@
  *   - `getSteamBridgeRoute` -> `getBridgeRouteVerdict(appId)` (`games.ts`),
  *     Phase 51 Plan 09/13, D-51-09: the composed bridge-vs-bottle route
  *     verdict for a single game (SteamBridgeRouteVerdict, common/types/steam.ts).
+ *   - `getSteamEngineState` -> `getSteamEngineState(args[0])`,
+ *     `listSteamEngineOptions` -> `listEngineOverrideOptions()` and
+ *     `dismissSteamEngineNotice` -> `dismissSteamEngineNotice(args[0])`
+ *     (`steam/engine/`), Phase 59 Plan 08, D-04/D-06/D-13/D-14/D-15: the
+ *     renderer's engine badge/notice/override reads. Plus the one-way push
+ *     `steamEngineStateChanged`, wired via `setEngineStatePublisher`.
  *   - `setSteamBridgeUserRoute` -> `handleSetSteamBridgeUserRoute(args[0])`
  *     (`installFormIpc.ts`), Phase 51 Plan 13, D-51-10/11: persists the
  *     user's own bridge/bottle override and/or notice acknowledgement.
@@ -147,6 +153,13 @@ import {
   persistInstallFormWineVersion,
   handleSetSteamBridgeUserRoute
 } from '../storeManagers/steam/installFormIpc'
+import {
+  getSteamEngineState,
+  dismissSteamEngineNotice,
+  setEngineStatePublisher
+} from '../storeManagers/steam/engine/engineState'
+import { listEngineOverrideOptions } from '../storeManagers/steam/engine/engineDecision'
+import { sendFrontendMessage } from '../ipc'
 import { removeAllSteamInstallCopies } from '../storeManagers/steam/removeAllCopies'
 import {
   checkGuidedOfflineReady,
@@ -341,6 +354,34 @@ export function registerSteamAuthFlows(): void {
     async (_event: unknown, ...args: unknown[]) => {
       return getBridgeRouteVerdict(args[0])
     }
+  )
+
+  // Phase 59 Plan 08 (D-04/D-06/D-13/D-14/D-15): engine state reads. args[0]
+  // is passed UNCAST -- engineState.ts's own guards (numeric appId, closed
+  // notice-kind set, build regex) are the validators (T-59-35).
+  ipcMain.handle(
+    'getSteamEngineState',
+    async (_event: unknown, ...args: unknown[]) => {
+      return getSteamEngineState(args[0])
+    }
+  )
+
+  // Ids and labels only, never paths (T-59-36); renderer args are ignored.
+  ipcMain.handle('listSteamEngineOptions', async () => {
+    return listEngineOverrideOptions()
+  })
+
+  ipcMain.handle(
+    'dismissSteamEngineNotice',
+    async (_event: unknown, ...args: unknown[]) => {
+      return dismissSteamEngineNotice(args[0])
+    }
+  )
+
+  // Registering a closure does no I/O and creates no timer/socket/handle, so
+  // it cannot hold the event loop open (sidecar exit contract).
+  setEngineStatePublisher((state) =>
+    sendFrontendMessage('steamEngineStateChanged', state)
   )
 
   ipcMain.handle(

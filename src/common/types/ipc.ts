@@ -73,6 +73,8 @@ import type {
   SteamGoOfflinePayload,
   SteamGoOfflineRetryResult,
   SteamBridgeRouteVerdict,
+  SteamEngineState,
+  SteamEngineOption,
   SteamSetupDownloadProgress,
   SteamUserData
 } from './steam'
@@ -343,6 +345,14 @@ interface AsyncIPCFunctions {
   // read here by 51-09's backend. See SteamBridgeRouteVerdict's own doc
   // comment (common/types/steam.ts) for the full field contract.
   getSteamBridgeRoute: (appId: string) => Promise<SteamBridgeRouteVerdict>
+  // Phase 59 (D-04/D-06/D-13/D-14/D-15)
+  getSteamEngineState: (appId: string) => Promise<SteamEngineState | null>
+  listSteamEngineOptions: () => Promise<SteamEngineOption[]>
+  dismissSteamEngineNotice: (
+    args:
+      | { kind: 'no-crossover' }
+      | { kind: 'untested-crossover'; build: string }
+  ) => Promise<{ ok: boolean }>
   // Phase 51 Plan 03 (D-51-10/11): persists the user's own bridge/bottle
   // override (D-51-10's install-dialog toggle, D-51-11's "Try the bridge
   // anyway" button) beside the scan verdict, via 51-09's bridgeVerdict.ts
@@ -804,6 +814,8 @@ interface FrontendMessages {
   // Phase 54: user.ts acquireAuthenticated emits when the go-offline wrap did
   // not see Mac Steam log off; SteamGoOfflineNotice.ts subscribes.
   steamGoOfflineRequired: (payload: SteamGoOfflinePayload) => void
+  // Phase 59 (D-04/D-06): the per-title engine display state changed
+  steamEngineStateChanged: (payload: SteamEngineState) => void
   steamBridgeRouteNotice: (payload: {
     appName: string
     reason: SteamBridgeRouteReason
