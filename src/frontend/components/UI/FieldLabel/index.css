@@ -1,5 +1,6 @@
 .fieldLabelRow {
   grid-area: label;
+  justify-self: stretch;
   display: flex;
   align-items: center;
   gap: var(--space-3xs);
@@ -13,6 +14,8 @@
 
 .fieldLabelRow .popover-wrapper {
   position: static;
+  /* Right-justified, matching the info icon on checkbox rows */
+  margin-inline-start: auto;
 }
 
 .fieldLabelRow .popover {
