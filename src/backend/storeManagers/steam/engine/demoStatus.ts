@@ -14,7 +14,7 @@ import { join } from 'path'
 import { logInfo, LogPrefix } from 'backend/logger'
 
 // Spike 060 measured 4.2 s cold, 0.9 s warm: about 3.5x headroom.
-export const DEMO_STATUS_CAP_MS = 15_000
+const DEMO_STATUS_CAP_MS = 15_000
 
 const OUTPUT_CAP = 64 * 1024
 const BOTTLE_RE = /^[A-Za-z0-9._-]{1,64}$/

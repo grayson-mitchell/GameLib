@@ -11,8 +11,6 @@ export type EngineOverrideId =
   | `pinned:${string}`
   | `wine-manager:${string}`
 
-export const ENGINE_OVERRIDE_DEFAULT: EngineOverrideId = 'automatic'
-
 const WM_VERSION_RE = /^[A-Za-z0-9._-]{1,64}$/
 
 export function parseEngineOverride(raw: unknown): EngineOverrideId {

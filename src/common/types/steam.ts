@@ -222,7 +222,7 @@ export interface SteamSetupDownloadProgress {
 }
 
 /** Phase 59: which engine a bridge title runs on (D-06, D-14). */
-export type SteamEngineKind = 'crossover' | 'builtin' | 'unsupported'
+type SteamEngineKind = 'crossover' | 'builtin' | 'unsupported'
 
 /** Phase 59: per-title engine display state for the game page. */
 export interface SteamEngineState {

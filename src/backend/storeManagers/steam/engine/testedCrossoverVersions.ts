@@ -8,12 +8,10 @@
 import { defaultRunTool } from 'backend/storeManagers/steam/bridge/drm/runnerClone'
 import type { RunTool } from 'backend/storeManagers/steam/bridge/drm/runnerClone'
 
-export type TestedCrossoverRow = { build: string; testedIn: string }
+type TestedCrossoverRow = { build: string; testedIn: string }
 
 // Keyed by CFBundleVersion, which equals the bottle conf `Version`.
-export const TESTED_CROSSOVER_BUILDS: Readonly<
-  Record<string, TestedCrossoverRow>
-> = {
+const TESTED_CROSSOVER_BUILDS: Readonly<Record<string, TestedCrossoverRow>> = {
   '26.3.0.39832': {
     build: '26.3.0.39832',
     testedIn: 'Phases 53/56 and spikes 056-060'

@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 232 |
-| Ported to sidecar | 77 |
+| Unique channels | 235 |
+| Ported to sidecar | 80 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -662,6 +662,20 @@ both numbers moved together by +2 and `Unported` (159) is unchanged.
 
 `getRunsForMeMap`
 `setRunsForMe`
+
+## Phase 59 — Steam engine fallback state and override (3 channels) — **PORTED**
+
+Added 2026-11-01 by Phase 59 plan 13 (gate fix). All three channels are BRAND NEW, invoke-kind
+(`makeHandlerInvoker`, `src/preload/api/steam.ts`), and registered only in the sidecar, in
+`steamAuthFlowRegistration.ts` (bodies in `storeManagers/steam/engine/engineState.ts`). There is
+no Electron leg, so `Ported to sidecar` rises along with `Unique channels`.
+
+**Unique channels raised 232 → 235, Ported to sidecar raised 77 → 80 (Phase 59, 2026-11-01):**
+all numbers moved together by +3 and `Unported` (159) is unchanged.
+
+`dismissSteamEngineNotice`
+`getSteamEngineState`
+`listSteamEngineOptions`
 
 ## Not an IPC channel, but blocks Phase 35
 
