@@ -1,0 +1,7 @@
+(version 1)
+(allow default)
+; Phase 59 UAT: hide CrossOver from the GameLib dev app and its children so the D-01/D-04
+; no-CrossOver paths can be exercised on a Mac that has it installed. Reads of the app bundle
+; are denied; nothing is renamed, moved or modified, so the install and licence are untouched.
+; Usage: sandbox-exec -f <this file> pnpm tauri:dev:run
+(deny file-read* (subpath "/Applications/CrossOver.app"))
