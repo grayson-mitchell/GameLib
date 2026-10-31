@@ -151,7 +151,8 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
       createRustStoreEmbedSeam().open(
         expected.url,
         { x: expected.x, y: expected.y, w: expected.w, h: expected.h },
-        'steam'
+        'steam',
+        expected.homeUrl
       ),
       RUST_STORE_EMBED_OPEN
     )

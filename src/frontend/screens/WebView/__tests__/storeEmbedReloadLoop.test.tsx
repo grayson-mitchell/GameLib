@@ -271,7 +271,7 @@ const computeRealStartUrl = new Function(
 // simulating a wiring the component no longer has.
 it('wires startUrl from the restore slice into useStoreEmbedHost the way the simulation does', () => {
   expect(indexSource).toMatch(
-    /useStoreEmbedHost\(\{\s*slotNode,\s*startUrl,\s*storeKey,\s*isStoreRoute,\s*platform,\s*signInState,\s*onStoreExit\s*\}\)/
+    /useStoreEmbedHost\(\{\s*slotNode,\s*startUrl,\s*storeKey,\s*(?:\/\/[^\n]*\n\s*)*homeUrl: [^,]+,\s*isStoreRoute,\s*platform,\s*signInState,\s*onStoreExit\s*\}\)/
   )
 })
 

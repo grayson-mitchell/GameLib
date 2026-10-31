@@ -372,6 +372,9 @@ export default function WebView() {
     slotNode,
     startUrl,
     storeKey,
+    // Quick 261031: the store's own route start page, also for a deep link resolved to it
+    // (D-35). Undefined for the wiki, which has no store home to seed beneath a restore.
+    homeUrl: urls[`/store/${storeKey}`],
     isStoreRoute,
     platform,
     signInState,

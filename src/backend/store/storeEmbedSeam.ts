@@ -96,8 +96,15 @@ export interface StoreEmbedSeam {
    * Phase 50 Plan 01 it IS forwarded over the wire (`storeKey` on the `store_embed_open` RPC
    * payload) — `store_embed_open_args` (main.rs) requires it to route macOS's Epic key to
    * `macos_epic_embed::open` before the existing Tauri-managed embed body runs (D-02).
+   * `homeUrl` (quick 261031) is the store's home page: Rust seeds it beneath a first open at a
+   * remembered page so Back reaches it. Omitted for the wiki, which has no store home.
    */
-  open(url: string, bounds: StoreEmbedBounds, storeKey: string): Promise<void>
+  open(
+    url: string,
+    bounds: StoreEmbedBounds,
+    storeKey: string,
+    homeUrl?: string
+  ): Promise<void>
   /**
    * Fire-and-forget re-bound (D-29): fires on every `ResizeObserver` tick and must not
    * accumulate promises. Logical px, courier-only — see `StoreEmbedBounds`'s own doc comment.

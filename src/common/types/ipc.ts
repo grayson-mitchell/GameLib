@@ -482,7 +482,8 @@ interface AsyncIPCFunctions {
   storeEmbedOpen: (
     url: string,
     bounds: StoreEmbedBounds,
-    storeKey: string
+    storeKey: string,
+    homeUrl?: string
   ) => Promise<{ status: 'ok' | 'error'; error?: string }>
   storeEmbedHide: () => Promise<{ status: 'ok' | 'error'; error?: string }>
   storeEmbedShow: () => Promise<{ status: 'ok' | 'error'; error?: string }>

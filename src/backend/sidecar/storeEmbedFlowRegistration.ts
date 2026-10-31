@@ -256,13 +256,21 @@ function assertFiniteBounds(bounds: StoreEmbedBounds): void {
  */
 export function createRustStoreEmbedSeam(): StoreEmbedSeam {
   return {
-    async open(url, bounds, storeKey) {
+    async open(url, bounds, storeKey, homeUrl) {
       // Phase 50 Plan 01: `storeKey` now crosses the wire -- `store_embed_open_args` (main.rs)
       // requires it to route macOS's Epic key to `macos_epic_embed::open` before the existing
       // Tauri-managed embed body runs (D-02). Every other store key/platform combination falls
       // through to the unchanged existing Rust body, which never reads the field for routing.
       const result = await requestRustInvoke(RUST_STORE_EMBED_OPEN, [
-        { url, x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h, storeKey }
+        {
+          url,
+          x: bounds.x,
+          y: bounds.y,
+          w: bounds.w,
+          h: bounds.h,
+          storeKey,
+          homeUrl
+        }
       ])
       if (result !== null) {
         throw new Error(
@@ -424,9 +432,14 @@ export function registerStoreEmbedFlows(): void {
   ipcMain.handle(
     'storeEmbedOpen',
     async (_event: unknown, ...args: unknown[]) => {
-      const [url, bounds, storeKey] = args as [string, StoreEmbedBounds, string]
+      const [url, bounds, storeKey, homeUrl] = args as [
+        string,
+        StoreEmbedBounds,
+        string,
+        string | undefined
+      ]
       return safeStatus('storeEmbedOpen', () =>
-        seam.open(url, bounds, storeKey)
+        seam.open(url, bounds, storeKey, homeUrl)
       )
     }
   )

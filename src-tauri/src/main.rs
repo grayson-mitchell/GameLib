@@ -6264,6 +6264,29 @@ impl StoreEmbedState {
         true
     }
 
+    /// PURE: called by `store_embed_open` after `select_store()`, before `url` loads.
+    ///
+    /// A store with no history yet that opens at a page other than its home (the last-URL
+    /// restore reopens it at its remembered game page) gets `home_url` as the entry beneath, so
+    /// Back reaches the store's home and stops there (quick 261031, live 2026-10-31: Steam
+    /// opened at its remembered game page with Back greyed). The page's own Finished push then
+    /// lands on top of it.
+    ///
+    /// A store reopened on the entry its history already points at reports that state now, not
+    /// after the page finishes loading, so the restored Back shows without the 1-2 s load wait.
+    fn prepare_open(&mut self, url: &str, home_url: Option<&str>) {
+        if self.history.is_empty() {
+            if let Some(home) = home_url.filter(|home| *home != url) {
+                self.history.push(home.to_string());
+                self.cursor = 0;
+            }
+            return;
+        }
+        if self.current_url().as_deref() == Some(url) {
+            self.enqueue_nav_event();
+        }
+    }
+
     /// PURE: derived from the cursor, never stored as an independent flag that could drift
     /// (Task 1 acceptance criteria).
     fn can_go_back(&self) -> bool {
@@ -6350,7 +6373,7 @@ fn store_embed_state() -> &'static Mutex<StoreEmbedState> {
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_open_args(
     args: &[Value],
-) -> Result<(tauri::Url, f64, f64, f64, f64, String), String> {
+) -> Result<(tauri::Url, f64, f64, f64, f64, String, Option<tauri::Url>), String> {
     let obj = args
         .first()
         .and_then(|v| v.as_object())
@@ -6383,7 +6406,21 @@ fn store_embed_open_args(
         .and_then(|v| v.as_str())
         .ok_or_else(|| "store_embed_open:bad-args:storeKey".to_string())?
         .to_string();
-    Ok((url, x, y, w, h, store_key))
+    // Optional (quick 261031): the store's home page, seeded beneath a first open at a remembered
+    // page. Absent or null means no seed; present but unparseable is an error, never a fallback.
+    let home_url = match obj.get("homeUrl") {
+        None | Some(Value::Null) => None,
+        Some(v) => {
+            let home_str = v
+                .as_str()
+                .ok_or_else(|| "store_embed_open:bad-args:homeUrl".to_string())?;
+            Some(
+                tauri::Url::parse(home_str)
+                    .map_err(|e| format!("store_embed_open:bad-home-url:{e}"))?,
+            )
+        }
+    };
+    Ok((url, x, y, w, h, store_key, home_url))
 }
 
 /// Disposition returned by `store_embed_navigation_policy` (D-29, T-40-04-02/03/09). Kept as an
@@ -6533,7 +6570,7 @@ fn store_embed_handoff_admitted(throttle: &Mutex<HandoffThrottle>) -> bool {
 /// `STORE_EMBED_LABEL` navigates it rather than creating a second child under the same label.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
-    let (url, x, y, w, h, store_key) = store_embed_open_args(args)?;
+    let (url, x, y, w, h, store_key, home_url) = store_embed_open_args(args)?;
 
     // Phase 50 Plan 01 (D-02): macOS routes the Epic store key to the raw-`WKWebView` surface
     // instead of this function's own Tauri-managed `add_child` embed below -- see
@@ -6566,11 +6603,13 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
             }
         }
     }
-    // Quick 261030-ts4: a switch to a different store drops the shared history BEFORE the new
-    // URL loads, so its `on_page_load` Finished push becomes the first entry (Back disabled).
-    // The macOS Epic surface returned above keeps its own native history and is unaffected.
+    // Quick 261030-ts4: a switch to a different store swaps in that store's own history BEFORE
+    // the new URL loads, so Back never crosses stores. Quick 261031: `prepare_open` then seeds
+    // the store's home beneath a first open at a remembered page. The macOS Epic surface
+    // returned above keeps its own native history and is unaffected.
     if let Ok(mut state) = store_embed_state().lock() {
         state.select_store(&store_key);
+        state.prepare_open(url.as_str(), home_url.as_ref().map(tauri::Url::as_str));
     } else {
         eprintln!("[shell] WARN: store_embed history registry poisoned -- continuing");
     }
@@ -13838,11 +13877,16 @@ mod tests {
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_wire_contract_open_parses_the_shipped_payload() {
-        let (url, x, y, w, h, store_key) = store_embed_open_args(&wire_args("store_embed_open"))
-            .expect("the shipped open payload must parse");
+        let (url, x, y, w, h, store_key, home_url) =
+            store_embed_open_args(&wire_args("store_embed_open"))
+                .expect("the shipped open payload must parse");
         assert_eq!(url.as_str(), "https://store.steampowered.com/");
         assert_eq!((x, y, w, h), (12.5, 64.0, 1280.25, 800.0));
         assert_eq!(store_key, "steam");
+        assert_eq!(
+            home_url.as_ref().map(tauri::Url::as_str),
+            Some("https://store.steampowered.com/")
+        );
     }
 
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
@@ -18753,6 +18797,80 @@ mod tests {
             Some("https://www.gog.com/en/"),
             "Back stays within GOG, never Steam"
         );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_first_open_at_a_remembered_page_seeds_the_home_beneath_it() {
+        // Live 2026-10-31: Steam's first open of the session restored its remembered game page
+        // onto an empty history, so Back was greyed instead of reaching the store home.
+        let mut state = StoreEmbedState::default();
+        state.select_store("steam");
+        let game = "https://store.steampowered.com/app/3164500/Schedule_I/";
+        state.prepare_open(game, Some("https://store.steampowered.com/"));
+        assert!(state.take_nav_events().is_empty(), "nothing has loaded yet");
+        state.push(game.to_string());
+        assert!(state.can_go_back());
+        assert_eq!(state.take_nav_events()[0]["canGoBack"], true);
+        assert_eq!(
+            state.go_back().as_deref(),
+            Some("https://store.steampowered.com/")
+        );
+        assert!(
+            !state.can_go_back(),
+            "the home page is the bottom of the stack"
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_prepare_open_seeds_nothing_at_home_without_a_home_or_mid_history() {
+        let home = "https://store.steampowered.com/";
+        let mut state = StoreEmbedState::default();
+        state.select_store("steam");
+        state.prepare_open(home, Some(home));
+        state.push(home.to_string());
+        assert!(
+            !state.can_go_back(),
+            "opening at home has nothing behind it"
+        );
+
+        let mut wiki = StoreEmbedState::default();
+        wiki.select_store("wiki");
+        wiki.prepare_open("https://github.com/x/wiki", None);
+        wiki.push("https://github.com/x/wiki".to_string());
+        assert!(!wiki.can_go_back(), "no home url, no seed");
+
+        // A store with history is never re-seeded: a different open URL is a normal push.
+        state.push("https://store.steampowered.com/app/1/".to_string());
+        state.prepare_open("https://store.steampowered.com/app/2/", Some(home));
+        state.push("https://store.steampowered.com/app/2/".to_string());
+        assert_eq!(
+            state.go_back().as_deref(),
+            Some("https://store.steampowered.com/app/1/")
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_reopen_on_the_current_entry_reports_state_before_the_load() {
+        // Live 2026-10-31: the restored Back arrow took 1-2 s to appear on a return, because the
+        // only event came from the reloaded page's Finished push.
+        let mut state = StoreEmbedState::default();
+        state.select_store("gog");
+        state.push("https://www.gog.com/en/".to_string());
+        state.push("https://www.gog.com/en/game/foo".to_string());
+        let _ = state.take_nav_events();
+
+        state.select_store("gog");
+        state.prepare_open(
+            "https://www.gog.com/en/game/foo",
+            Some("https://af.gog.com/"),
+        );
+        let events = state.take_nav_events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0]["canGoBack"], true);
+        assert_eq!(state.go_back().as_deref(), Some("https://www.gog.com/en/"));
     }
 
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]

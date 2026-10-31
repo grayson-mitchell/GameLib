@@ -303,6 +303,7 @@ interface MountOptions {
   slotRef: RefObject<HTMLDivElement>
   startUrl?: string
   storeKey?: string
+  homeUrl?: string
   isStoreRoute?: boolean
   /**
    * Defaults to a non-`darwin` platform (Phase 50 Plan 01) so every existing test's Epic-refusal
@@ -338,6 +339,7 @@ function invoke(options: MountOptions): StoreEmbedHostState {
     slotNode: options.slotRef.current,
     startUrl: options.startUrl ?? 'https://store.steampowered.com/',
     storeKey: options.storeKey ?? 'steam',
+    homeUrl: options.homeUrl,
     isStoreRoute: options.isStoreRoute ?? true,
     platform: options.platform ?? 'linux',
     signInState: options.signInState ?? 'connected',
@@ -411,7 +413,43 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(mockApi.storeEmbedOpen).toHaveBeenCalledWith(
       'https://store.steampowered.com/',
       { x: 10, y: 20, w: 300, h: 400 },
-      'steam'
+      'steam',
+      undefined
+    )
+  })
+
+  // Quick 261031: Rust seeds the store home beneath a first open at a remembered page, so the
+  // home must ride every open -- the first one and a store-switch re-open alike.
+  it('1b. every open forwards the homeUrl option as the fourth argument', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const gog: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://www.gog.com/en/game/foo',
+      storeKey: 'gog',
+      homeUrl: 'https://af.gog.com?as=1838482841',
+      platform: 'darwin'
+    }
+
+    mount(gog)
+    jest.advanceTimersByTime(40)
+    expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
+      'https://www.gog.com/en/game/foo',
+      { x: 0, y: 0, w: 100, h: 100 },
+      'gog',
+      'https://af.gog.com?as=1838482841'
+    )
+
+    reinvoke({
+      ...gog,
+      startUrl: 'https://store.steampowered.com/',
+      storeKey: 'steam',
+      homeUrl: 'https://store.steampowered.com/'
+    })
+    expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
+      'https://store.steampowered.com/',
+      { x: 0, y: 0, w: 100, h: 100 },
+      'steam',
+      'https://store.steampowered.com/'
     )
   })
 
@@ -928,7 +966,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(mockApi.storeEmbedOpen).toHaveBeenCalledWith(
       'https://af.gog.com?as=1838482841',
       { x: 0, y: 0, w: 100, h: 100 },
-      'gog'
+      'gog',
+      undefined
     )
   })
 
@@ -1654,7 +1693,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
       EPIC_URL,
       { x: 1, y: 2, w: 300, h: 400 },
-      'epic'
+      'epic',
+      undefined
     )
     expect(mockApi.storeEmbedNavigate).not.toHaveBeenCalled()
   })
@@ -1673,7 +1713,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
       EPIC_URL,
       { x: 1, y: 2, w: 300, h: 400 },
-      'epic'
+      'epic',
+      undefined
     )
 
     reinvoke({ ...epic, startUrl: GOG_URL, storeKey: 'gog' })
@@ -1682,7 +1723,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
       GOG_URL,
       { x: 1, y: 2, w: 300, h: 400 },
-      'gog'
+      'gog',
+      undefined
     )
     expect(mockApi.storeEmbedNavigate).not.toHaveBeenCalled()
   })
@@ -1729,7 +1771,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
       STEAM_URL,
       { x: 0, y: 0, w: 100, h: 100 },
-      'steam'
+      'steam',
+      undefined
     )
     expect(mockApi.storeEmbedNavigate).not.toHaveBeenCalled()
   })
@@ -1893,7 +1936,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
       EPIC_URL,
       { x: 0, y: 0, w: 100, h: 100 },
-      'epic'
+      'epic',
+      undefined
     )
     expect(mockApi.storeEmbedReload).toHaveBeenCalledTimes(1)
   })
@@ -1951,7 +1995,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       expect(mockApi.storeEmbedOpen).toHaveBeenCalledWith(
         'https://store.steampowered.com/',
         { x: 10, y: 20, w: 300, h: 400 },
-        'steam'
+        'steam',
+        undefined
       )
     })
 

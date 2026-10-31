@@ -142,6 +142,12 @@ interface UseStoreEmbedHostOptions {
   /** Which store the caller is opening (e.g. `'steam'`) — bookkeeping only, per `storeEmbedSeam.open`'s own doc comment. */
   storeKey: string
   /**
+   * The store's home page (quick 261031), forwarded on every open. Rust seeds it beneath a
+   * first open at a remembered page, so Back from that page reaches the store home. Undefined
+   * for the wiki.
+   */
+  homeUrl?: string
+  /**
    * True while the route currently rendering this hook is a store/wiki route. Guards the
    * suppression-release transition (T-40-08-02): a suppression released after the user has
    * already navigated away must not resurrect the embed on whatever screen they landed on next.
@@ -225,6 +231,7 @@ export function useStoreEmbedHost({
   slotNode,
   startUrl,
   storeKey,
+  homeUrl,
   isStoreRoute,
   platform,
   signInState,
@@ -453,8 +460,14 @@ export function useStoreEmbedHost({
   // The open branch in `flush()` reads the CURRENT render's values, not the ones captured when
   // the slot attached: since finding 1 it can also run later, from a store switch, while the
   // effect that created `flush()` (keyed on the slot element only) has not re-run.
-  const openArgsRef = useRef({ startUrl, storeKey, signInState, platform })
-  openArgsRef.current = { startUrl, storeKey, signInState, platform }
+  const openArgsRef = useRef({
+    startUrl,
+    storeKey,
+    homeUrl,
+    signInState,
+    platform
+  })
+  openArgsRef.current = { startUrl, storeKey, homeUrl, signInState, platform }
 
   useEffect(() => {
     const slot = slotNode
@@ -486,7 +499,7 @@ export function useStoreEmbedHost({
       lastSentFactor = factor
       const bounds = scaleRectForZoom(slot.getBoundingClientRect(), factor)
       if (!openedRef.current) {
-        const { startUrl, storeKey, signInState, platform } =
+        const { startUrl, storeKey, homeUrl, signInState, platform } =
           openArgsRef.current
         openedRef.current = true
         openedSurfaceRef.current = embedSurfaceFor(storeKey, platform)
@@ -506,7 +519,7 @@ export function useStoreEmbedHost({
           recordSignInBaseline(storeKey, signInState) &&
           embedSurfaceFor(storeKey, platform) === 'epic'
         window.api
-          .storeEmbedOpen(startUrl, bounds, storeKey)
+          .storeEmbedOpen(startUrl, bounds, storeKey, homeUrl)
           // Follow every successful open with a throttled bounds send (W8, quick 261012-gn8). On
           // macOS and Windows, `src-tauri/src/main.rs` `store_embed_open`'s existing-embed branch
           // shows and navigates but does not apply the rect, and on every return to a store route

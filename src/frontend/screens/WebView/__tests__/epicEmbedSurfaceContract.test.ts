@@ -151,7 +151,7 @@ describe('coerceNavState — surface field validation (Phase 50 Plan 01, raw-sou
 // pattern for functions that cannot be constructed/run in isolation.
 const openMethodSource = extractRawBetween(
   rawSource,
-  'async open(url, bounds, storeKey) {',
+  'async open(url, bounds, storeKey, homeUrl) {',
   'setBounds(bounds) {'
 )
 // No `s` (dotAll) flag: the pattern has no `.` metacharacter -- `[^}]*` already matches
@@ -167,7 +167,7 @@ describe('storeEmbedFlowRegistration — storeKey wire contract (Phase 50 Plan 0
   })
 
   it('negative control: a synthetic source with storeKey stripped from the payload fails the same assertion', () => {
-    const regressedSource = openMethodSource.replace(', storeKey }', ' }')
+    const regressedSource = openMethodSource.replace(/\n\s*storeKey,/, '')
     // Prove the strip actually removed the field, so a failed `.replace()` (e.g. after an
     // unrelated reformat of the real file) cannot make this control vacuously pass.
     expect(regressedSource).not.toBe(openMethodSource)
