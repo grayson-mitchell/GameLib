@@ -220,3 +220,35 @@ export interface SteamSetupDownloadProgress {
   bytes: number
   percent: number
 }
+
+/** Phase 59: which engine a bridge title runs on (D-06, D-14). */
+export type SteamEngineKind = 'crossover' | 'builtin' | 'unsupported'
+
+/** Phase 59: per-title engine display state for the game page. */
+export interface SteamEngineState {
+  appId: string
+  engine: SteamEngineKind | null
+  reason:
+    | 'cx-healthy'
+    | 'cx-missing'
+    | 'cx-expired'
+    | 'cx-broken'
+    | 'override'
+    | null
+  engineLabel: string | null
+  trialDaysRemaining: number | null
+  showTrialNotice: boolean
+  crossoverInstalled: boolean
+  showNoCrossoverNote: boolean
+  untestedCrossoverBuild: string | null
+}
+
+/** Phase 59: one choice in the per-game engine override picker (D-14). */
+export interface SteamEngineOption {
+  id: string
+  kind: 'automatic' | 'crossover' | 'pinned' | 'wine-manager'
+  label: string
+  available: boolean
+  installed: boolean
+  isPreviousPin: boolean
+}

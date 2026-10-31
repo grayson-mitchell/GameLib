@@ -81,7 +81,7 @@ const cxbottleIn = (binDir: string): string => join(binDir, 'cxbottle')
 const wineserverIn = (binDir: string): string => join(binDir, 'wineserver')
 const cxRootFrom = (binDir: string): string => dirname(binDir)
 
-function persistedWineBins(): string[] {
+export function persistedWineBins(): string[] {
   const bin = steamBottleConfigStore.get_nodefault('wineVersion')?.bin
   return bin ? [bin] : []
 }
