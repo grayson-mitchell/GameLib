@@ -69,6 +69,7 @@ import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
 import { handleSteamBridgeRouteNoticeSignal } from './SteamBridgeRouteNotice'
 import { handleSteamGoOfflineRequiredSignal } from './SteamGoOfflineNotice'
+import { handleSteamEngineStateChangedSignal } from './SteamEngineState'
 import {
   handleSteamBottleLaunchWaitingSignal,
   useBottleLaunchWaiting
@@ -1656,6 +1657,11 @@ class GlobalState extends PureComponent<Props> {
     // Phase 54: opens the guided Go Offline step when the backend's go-offline
     // wrap did not see Mac Steam log off; no logon happened.
     window.api.handleSteamGoOfflineRequired(handleSteamGoOfflineRequiredSignal)
+
+    // Phase 59 Plan 11: backend-computed per-title engine state for the game page.
+    window.api.handleSteamEngineStateChanged(
+      handleSteamEngineStateChangedSignal
+    )
 
     // Phase 51 Plan 08 (D-51-16, folded todo): single global listener that
     // records a bottled-Steam launch's "waiting for Steam" classification --
