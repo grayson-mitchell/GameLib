@@ -31,7 +31,7 @@
         "style-src": "'self' 'unsafe-inline'",
         "img-src": "'self' data: https: http:",
         "font-src": "'self' data:",
-        "connect-src": "'self' ipc: http://ipc.localhost https://steamgrid.usebottles.com",
+        "connect-src": "'self' ipc: http://ipc.localhost https://steamgrid.usebottles.com https://api.web3forms.com",
         "object-src": "'none'",
         "frame-src": "'none'",
         "worker-src": "'none'",

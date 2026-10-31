@@ -202,8 +202,11 @@ describe('tauri.conf.json updater plugin shape (D-07 / D-08)', () => {
  *     is `fetch('ipc://localhost/...')` (Windows: `http://ipc.localhost`) --
  *     `tauri-2.11.5/scripts/ipc-protocol.js` -- so connect-src MUST carry
  *     `ipc: http://ipc.localhost` or every invoke dies. i18n locale JSON is a
- *     relative fetch ('self'). The ONE direct remote call in the renderer is
- *     SideloadDialog's `axios.get('https://steamgrid.usebottles.com/...')`.
+ *     relative fetch ('self'). The direct remote calls in the renderer are
+ *     SideloadDialog's `axios.get('https://steamgrid.usebottles.com/...')` and
+ *     reportProblem's `fetch` POST to `https://api.web3forms.com/submit`. The
+ *     second is renderer-side because Web3Forms' free plan rejects
+ *     server-side submissions.
  *   - frames / objects / workers: none. Store embeds and login windows are
  *     NATIVE child webviews loading remote URLs -- not iframes, and Tauri does
  *     not apply this policy to remote documents at all.
@@ -267,10 +270,11 @@ describe('tauri.conf.json content security policy (quick task 261008-gf1)', () =
     expect(src).toContain('http://ipc.localhost')
   })
 
-  test("connect-src carries 'self' (i18n locale JSON) and the one direct remote call the renderer makes (steamgrid.usebottles.com), and no scheme-wide https:", () => {
+  test("connect-src carries 'self' (i18n locale JSON) and the two direct remote calls the renderer makes (steamgrid.usebottles.com, api.web3forms.com), and no scheme-wide https:", () => {
     const src = sources('connect-src')
     expect(src).toContain("'self'")
     expect(src).toContain('https://steamgrid.usebottles.com')
+    expect(src).toContain('https://api.web3forms.com')
     expect(src).not.toContain('https:')
     expect(src).not.toContain('http:')
   })
