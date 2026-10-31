@@ -1,4 +1,4 @@
-"""Spike 053: build a shadow tree of a real install inside a target prefix.
+"""Spike 057: build a shadow tree of a real install inside a target prefix.
 
 Every entry is a symlink into the real install EXCEPT the directory chain leading to each shim
 directory, which is made real so the shim + gamelib_bridge.cfg can be placed without touching the

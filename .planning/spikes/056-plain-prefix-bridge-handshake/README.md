@@ -1,5 +1,5 @@
 ---
-spike: 052
+spike: 056
 name: plain-prefix-bridge-handshake
 type: standard
 validates: "Given a fresh WINEPREFIX made by Wine-Staging-macOS's own `wineboot -i` (no cxbottle), when a game-shaped x86 and x64 PE loads the SHIPPED bridge shim with a per-run helper, then the helper logs HELLO, SteamAPI is ready, and the real SteamID64 round-trips through the MSVC vtable"
@@ -8,7 +8,7 @@ related: [005b, 005c, 006, 034, 035]
 tags: [steam, macos, bridge, wine, wine-staging, dxmt, wineprefix, crossover, engine]
 ---
 
-# Spike 052: plain-prefix-bridge-handshake
+# Spike 056: plain-prefix-bridge-handshake
 
 ## What This Validates
 
@@ -57,7 +57,7 @@ BAD_SECRET=1 ./run.sh staging   # negative control: cfg secret the helper never 
 ```
 
 Needs native Mac Steam running and signed in. Prefixes are created under `prefixes/` (gitignored,
-~330 MB each); the CX control clones `GameLibSteamBridge-206060` to `GameLibSpike052` and never
+~330 MB each); the CX control clones `GameLibSteamBridge-206060` to `GameLibSpike056` and never
 touches the real bottle.
 
 ## What to Expect
@@ -105,18 +105,18 @@ control and negative control all behaving as on CrossOver.
 | staging-x32/x64 badsecret | 0 | **no** | — | `AUTH refused`, fail-closed |
 
 `bloggedon=0` in **every** case, CrossOver included — not an engine difference. **Resolved in
-054 (2026-10-31):** an immediate re-run of staging + cx returned `bloggedon=1` everywhere; it
+058 (2026-10-31):** an immediate re-run of staging + cx returned `bloggedon=1` everywhere; it
 tracks Mac Steam's logon state at the time of the run.
 
-**Addendum (054):** `./run.sh gptk` adds a GPTK 3.0-3 engine (`wine64`, `WINEMSYNC=1
+**Addendum (058):** `./run.sh gptk` adds a GPTK 3.0-3 engine (`wine64`, `WINEMSYNC=1
 WINEESYNC=1` per `launcher.ts`) — PASS both arches (x86 via wine32on64).
 
 **What this does NOT prove:** a real game. The probe has no graphics, no game-side Steam-init
-log, no `steam_appid` beyond 480, no shared redists. That is spike 053.
+log, no `steam_appid` beyond 480, no shared redists. That is spike 057.
 
 **Surprises:** none at the engine level — the CrossOver coupling really is confined to bottle
 creation and runner selection. The two failures along the way were both probe-ABI mistakes,
 caught by running the CrossOver control first.
 
-**Impact on 053–055:** go. 053 can use `prefixes/staging` (and `prefixes/dxmt`) directly with a
+**Impact on 057–059:** go. 057 can use `prefixes/staging` (and `prefixes/dxmt`) directly with a
 shadow tree of a real install.

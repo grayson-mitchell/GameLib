@@ -1,21 +1,21 @@
 ---
-spike: 055
+spike: 059
 name: reuse-cx-bottle-vs-fresh-prefix
 type: comparison
 validates: "Given an existing CrossOver bridge bottle, when it is run by Wine-Staging via WINEPREFIX instead of a fresh wineboot prefix, then the bridge still works, CrossOver still works on it afterwards, and the side effects (registry, system DLLs, CrossOver files, user profile) are known"
 verdict: VALIDATED
-related: [052, 053, 054]
+related: [056, 057, 058]
 tags: [steam, macos, bridge, wine-staging, crossover, wineprefix, engine-switch, user-profile, saves]
 ---
 
-# Spike 055: reuse-cx-bottle-vs-fresh-prefix
+# Spike 059: reuse-cx-bottle-vs-fresh-prefix
 
 ## What This Validates
 
 A production "change engine" for an existing Steam game can either (a) run the game's existing
 CrossOver bridge bottle with the new engine (`WINEPREFIX=<bottle>`), or (b) create a fresh prefix
-(052's path) and move/reinstall the game. This spike measures (a): does it work, is it reversible,
-and what does it change. (b) is already proven by 052/053.
+(056's path) and move/reinstall the game. This spike measures (a): does it work, is it reversible,
+and what does it change. (b) is already proven by 056/057.
 
 ## Research
 
@@ -27,11 +27,11 @@ No external research. Wine runs a prefix **update** (`wineboot --update`) whenev
 
 ```bash
 ./run.sh                                         # snapshot -> staging -> snapshot -> crossover -> snapshot
-./run-username.sh                                # 055b: WINEUSERNAME=crossover (fresh clone)
-NAMEVAR=USER CLONE=GameLibSpike055c ./run-username.sh   # 055c: USER=crossover
+./run-username.sh                                # 059b: WINEUSERNAME=crossover (fresh clone)
+NAMEVAR=USER CLONE=GameLibSpike059c ./run-username.sh   # 059c: USER=crossover
 ```
 
-All work happens on APFS clones (`GameLibSpike055`, `055b`, `055c`) of
+All work happens on APFS clones (`GameLibSpike059`, `059b`, `059c`) of
 `GameLibSteamBridge-206060` (Avernum 6). Snapshots in `snapshots/`, events in `logs/events.log`.
 Self-verifying: the game is killed 3 s after its `GINIT`.
 
@@ -56,10 +56,10 @@ Self-verifying: the game is killed 3 s after its `GINIT`.
    `C:\users\<mac user>`; under CrossOver it is `C:\users\crossover`. Saves/configs in
    `Documents`, `AppData\Roaming`, `AppData\LocalLow` (Unity) would silently vanish on an engine
    switch and reappear on switching back.
-6. **055b: `WINEUSERNAME=crossover` — ignored** by Wine-Staging 11.20 (`USERPROFILE` still
+6. **059b: `WINEUSERNAME=crossover` — ignored** by Wine-Staging 11.20 (`USERPROFILE` still
    `C:\users\graysonmitchell`, the dir was created).
-7. **055c: `USER=crossover` — works.** `USERPROFILE=C:\users\crossover`, `USERNAME=crossover`,
-   no second profile created. (The first 055c invocation printed nothing because it ran during
+7. **059c: `USER=crossover` — works.** `USERPROFILE=C:\users\crossover`, `USERNAME=crossover`,
+   no second profile created. (The first 059c invocation printed nothing because it ran during
    the prefix update; the re-run is the evidence.) The update's
    `err:ntoskrnl ... dxgkrnl.sys / dxgmms1.sys`, `winebth`, `wineusb.inf` lines are one-off
    upgrade noise.
@@ -68,7 +68,7 @@ Self-verifying: the game is killed 3 s after its `GINIT`.
 
 **VALIDATED — reuse works, is reversible, and needs one env var.**
 
-| | Reuse existing CX bottle (`WINEPREFIX=<bottle>`) | Fresh `wineboot -i` prefix (052) |
+| | Reuse existing CX bottle (`WINEPREFIX=<bottle>`) | Fresh `wineboot -i` prefix (056) |
 |---|---|---|
 | Bridge works | yes (probe x86/x64 + real game GINIT) | yes |
 | Reversible to CrossOver | **yes** — CrossOver re-updates and runs | n/a |
@@ -87,6 +87,6 @@ Self-verifying: the game is killed 3 s after its `GINIT`.
   `err:` lines as a failure.
 - Readiness checks (`isBridgeBottleReady`) can stay keyed on the CrossOver bottle layout; a
   non-CrossOver engine only changes the runner + env (`WINEPREFIX`, `USER`).
-- Not covered: GPTK on a CX bottle (054 found GPTK unplayable for both titles anyway); repeated
+- Not covered: GPTK on a CX bottle (058 found GPTK unplayable for both titles anyway); repeated
   ping-pong over many switches; a game with saves already in `users/crossover` being read back
-  under Staging (implied by 055c's `%USERPROFILE%`, not exercised with a real save).
+  under Staging (implied by 059c's `%USERPROFILE%`, not exercised with a real save).

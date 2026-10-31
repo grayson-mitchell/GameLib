@@ -1,20 +1,20 @@
 ---
-spike: 054
+spike: 058
 name: gptk-engine-bridge
 type: standard
-validates: "Given Gcenx Game Porting Toolkit 3.0-3 installed via GameLib's Downloads tab, when spikes 052 (handshake probe) and 053 (real titles) are repeated in a fresh GPTK prefix, then the bridge is verified, or the exact blocker is named"
+validates: "Given Gcenx Game Porting Toolkit 3.0-3 installed via GameLib's Downloads tab, when spikes 056 (handshake probe) and 057 (real titles) are repeated in a fresh GPTK prefix, then the bridge is verified, or the exact blocker is named"
 verdict: PARTIAL
-related: [052, 053]
+related: [056, 057]
 tags: [steam, macos, bridge, gptk, d3dmetal, wine32on64, toolkit, unity, engine]
 ---
 
-# Spike 054: gptk-engine-bridge
+# Spike 058: gptk-engine-bridge
 
 ## What This Validates
 
 Given GPTK 3.0-3 (Gcenx `game-porting-toolkit`, installed by the operator through GameLib's own
-Downloads tab into `tools/game-porting-toolkit/Game-Porting-Toolkit-latest`), when 052's probe and
-053's two real titles run from a fresh GPTK `wineboot -i` prefix, then either the bridge is
+Downloads tab into `tools/game-porting-toolkit/Game-Porting-Toolkit-latest`), when 056's probe and
+057's two real titles run from a fresh GPTK `wineboot -i` prefix, then either the bridge is
 verified on the strict criterion or the blocker is named.
 
 ## Research
@@ -34,20 +34,20 @@ verified on the strict criterion or the blocker is named.
 ## How to Run
 
 ```bash
-../052-plain-prefix-bridge-handshake/run.sh gptk        # probe, x86 + x64
-../053-wine-staging-real-title/run.sh crafter gptk      # real titles (operator quits the game)
-../053-wine-staging-real-title/run.sh avernum6 gptk
+../056-plain-prefix-bridge-handshake/run.sh gptk        # probe, x86 + x64
+../057-wine-staging-real-title/run.sh crafter gptk      # real titles (operator quits the game)
+../057-wine-staging-real-title/run.sh avernum6 gptk
 ```
 
-The `gptk` engine lives in those two harnesses (prefix `052/prefixes/gptk`); evidence logs are
-in `053-wine-staging-real-title/logs/{crafter,avernum6}-gptk.*` and `052/logs/gptk-*`.
+The `gptk` engine lives in those two harnesses (prefix `056/prefixes/gptk`); evidence logs are
+in `057-wine-staging-real-title/logs/{crafter,avernum6}-gptk.*` and `056/logs/gptk-*`.
 
 ## Investigation Trail
 
-1. **Probe (052 harness) — PASS both arches.** Fresh prefix in 25 s (`#arch=win64`); x86 via
+1. **Probe (056 harness) — PASS both arches.** Fresh prefix in 25 s (`#arch=win64`); x86 via
    wine32on64 and x64: HELLO, `SteamAPI ready`, real SteamID64 via vtable.
-2. **`bloggedon=1` here vs `0` in 052's earlier runs** — re-ran staging + cx immediately: all
-   now `1`. It tracks Mac Steam's logon state at the time, not the engine (noted back in 052).
+2. **`bloggedon=1` here vs `0` in 056's earlier runs** — re-ran staging + cx immediately: all
+   now `1`. It tracks Mac Steam's logon state at the time, not the engine (noted back in 056).
 3. **Planet Crafter / gptk — crash before Steam (engine too old for Unity 6).** D3DMetal brought
    up D3D11 FL 11.1 (`Renderer: AMD Compatibility Mode` — D3DMetal's adapter identity). Then:
    `wine: Call from ... to unimplemented function USER32.dll.IsMouseInPointerEnabled, aborting`
@@ -77,7 +77,7 @@ title initialises Steam from the game process — but **neither real title is pl
 - GPTK is a **poor general-purpose target**: an old CrossOver-derived Wine whose 32-bit path
   (wine32on64) and USER32 surface trail modern titles. D3DMetal itself works.
 - Offering GPTK for Steam titles would need per-title evidence; it should not be a default and
-  is not a blanket alternative to CrossOver. Wine-Staging + DXVK (053) is the stronger
+  is not a blanket alternative to CrossOver. Wine-Staging + DXVK (057) is the stronger
   non-CrossOver path today.
 - The `toolkit` launch shape (`WINEPREFIX` + `wine64` + `WINEMSYNC`/`WINEESYNC`) needs no bridge
   changes; GPTK's Windows user is `crossover` — any per-prefix path logic (save/log lookup) must

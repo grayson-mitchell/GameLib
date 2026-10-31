@@ -1,5 +1,5 @@
 /*
- * Spike 052 probe: a game-shaped PE that imports the bridge shim the way a real title does
+ * Spike 056 probe: a game-shaped PE that imports the bridge shim the way a real title does
  * (SteamAPI_Init -> SteamAPI_SteamUser_v023() -> vtable), built for x86 and x64. It never links Valve code;
  * it links the shipped shim's import lib. Result -> probe.txt beside the exe (stdout can detach).
  * Vtable slots match native/steam-bridge/generated/bridge_dispatch.h (ISteamUser v023:

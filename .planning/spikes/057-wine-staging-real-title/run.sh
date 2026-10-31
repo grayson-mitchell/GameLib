@@ -1,8 +1,8 @@
 #!/bin/bash
-# Spike 053: launch a REAL bridge-verified title through the shipped shim from a plain (non-CrossOver)
+# Spike 057: launch a REAL bridge-verified title through the shipped shim from a plain (non-CrossOver)
 # prefix, then judge it with the census's own strict rules (meta/bridgeCensus.ts).
 # Usage: ./run.sh <game: avernum6|crafter> <engine: staging|dxmt|staging-dxvk|gptk|cx>
-#   staging/dxmt reuse spike 052's fresh `wineboot -i` prefixes; cx = APFS clone of the game's
+#   staging/dxmt reuse spike 056's fresh `wineboot -i` prefixes; cx = APFS clone of the game's
 #   real per-game bridge bottle (positive control). The real install and bottle are never written.
 # Blocks until the game exits (the operator plays, then quits). 30 min alarm.
 set -uo pipefail
@@ -25,10 +25,10 @@ ev() { echo "$(ts) [$LABEL] $1" | tee -a logs/events.log; }
 
 case "$ENG" in
   staging|dxmt|staging-dxvk)
-    # staging-dxvk = 052's staging prefix + production's DXVK-macOS install (./install-dxvk.sh)
-    PREFIX="$SPIKE/../052-plain-prefix-bridge-handshake/prefixes/$ENG"
+    # staging-dxvk = 056's staging prefix + production's DXVK-macOS install (./install-dxvk.sh)
+    PREFIX="$SPIKE/../056-plain-prefix-bridge-handshake/prefixes/$ENG"
     WBIN="$SW/Wine-Staging-macOS-latest$([ "$ENG" = dxmt ] && echo -DXMT)/Contents/Resources/wine/bin"
-    [ -f "$PREFIX/system.reg" ] || { ev "missing prefix $PREFIX -- run 052 first"; exit 3; }
+    [ -f "$PREFIX/system.reg" ] || { ev "missing prefix $PREFIX -- run 056 first"; exit 3; }
     GDIR="$PREFIX/drive_c/Program Files (x86)/Steam/steamapps/common/$DIR"
     python3 -I shadow.py "$SRC" "$GDIR" "$SHIMREL" >> logs/events.log
     # launcher.ts:1235 sets WINEMSYNC=1 for any -DXMT engine; plain staging gets wined3d (no DXVK here).
@@ -36,16 +36,16 @@ case "$ENG" in
     WINE=( env WINEPREFIX="$PREFIX" ${MS[@]+"${MS[@]}"} "$WBIN/wine" ); KILL=( env WINEPREFIX="$PREFIX" "$WBIN/wineserver" -k )
     USERS="$(ls -d "$PREFIX"/drive_c/users/*/AppData 2>/dev/null | grep -v /Public/ | head -1 | xargs -I{} dirname {})"; USERS="${USERS:-$PREFIX/drive_c/users/$USER}" ;;
   gptk)
-    # spike 054: GPTK 3.0-3 (wine64 only, wine32on64 for x86, D3DMetal); toolkit env per launcher.ts
-    PREFIX="$SPIKE/../052-plain-prefix-bridge-handshake/prefixes/gptk"
+    # spike 058: GPTK 3.0-3 (wine64 only, wine32on64 for x86, D3DMetal); toolkit env per launcher.ts
+    PREFIX="$SPIKE/../056-plain-prefix-bridge-handshake/prefixes/gptk"
     WBIN="$HOME/Library/Application Support/gamelib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin"
-    [ -f "$PREFIX/system.reg" ] || { ev "missing prefix $PREFIX -- run 052 ./run.sh gptk first"; exit 3; }
+    [ -f "$PREFIX/system.reg" ] || { ev "missing prefix $PREFIX -- run 056 ./run.sh gptk first"; exit 3; }
     GDIR="$PREFIX/drive_c/Program Files (x86)/Steam/steamapps/common/$DIR"
     python3 -I shadow.py "$SRC" "$GDIR" "$SHIMREL" >> logs/events.log
     WINE=( env WINEPREFIX="$PREFIX" WINEMSYNC=1 WINEESYNC=1 ${GPTK_EXTRA_ENV:-} "$WBIN/wine64" ); KILL=( env WINEPREFIX="$PREFIX" "$WBIN/wineserver" -k )
     USERS="$(ls -d "$PREFIX"/drive_c/users/*/AppData 2>/dev/null | grep -v /Public/ | head -1 | xargs -I{} dirname {})"; USERS="${USERS:-$PREFIX/drive_c/users/$USER}" ;;
   cx)
-    CLONE="GameLibSpike053-$APPID"; PREFIX="$BOTTLES/$CLONE"
+    CLONE="GameLibSpike057-$APPID"; PREFIX="$BOTTLES/$CLONE"
     [ -d "$PREFIX" ] || cp -cR "$SRCBOTTLE" "$PREFIX"
     GDIR="$PREFIX/drive_c/Program Files (x86)/Steam/steamapps/common/$DIR"
     WINE=( env CX_BOTTLE="$CLONE" "$CX/wine" ); KILL=( env WINEPREFIX="$PREFIX" "$CX/wineserver" -k )
@@ -56,7 +56,7 @@ esac
 # Current shipped shim, exactly as the launch-time shim refresh places it.
 rm -f "$GDIR/$SHIMREL/$DLL"; cp "$BIN/$DLL" "$GDIR/$SHIMREL/$DLL"
 # Fresh Player.log baseline so only this run's log is judged.
-find "$USERS/AppData/LocalLow" -name Player.log -exec mv {} {}.pre053 \; 2>/dev/null
+find "$USERS/AppData/LocalLow" -name Player.log -exec mv {} {}.pre057 \; 2>/dev/null
 
 secret=$(openssl rand -hex 32)
 ( cd state && GAMELIB_BRIDGE_SECRET="$secret" exec "$HELPER" --appid "$APPID" --port 0 ) 2> "logs/$LABEL.helper.log" &

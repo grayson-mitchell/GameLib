@@ -1,5 +1,5 @@
 #!/bin/bash
-# Spike 052: build the x86 + x64 probe against the SHIPPED shims' .def (the production artifacts in
+# Spike 056: build the x86 + x64 probe against the SHIPPED shims' .def (the production artifacts in
 # public/bin/arm64/darwin are what run; only their import libs are made here).
 set -euo pipefail
 cd "$(dirname "$0")"

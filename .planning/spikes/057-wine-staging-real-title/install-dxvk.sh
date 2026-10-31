@@ -1,11 +1,11 @@
 #!/bin/bash
-# Spike 053 run 5: reproduce production's macOS DXVK install (backend/tools/index.ts DXVK.installRemove,
-# tool 'dxvk-macOS', the `...repack.tar.gz` asset) into an APFS clone of 052's staging prefix:
+# Spike 057 run 5: reproduce production's macOS DXVK install (backend/tools/index.ts DXVK.installRemove,
+# tool 'dxvk-macOS', the `...repack.tar.gz` asset) into an APFS clone of 056's staging prefix:
 # x64 DLLs -> system32, x32 -> syswow64, native DllOverrides in HKCU. Download kept in dl/ (gitignored).
 set -euo pipefail
 cd "$(dirname "$0")"; SPIKE="$PWD"
-SRC="$SPIKE/../052-plain-prefix-bridge-handshake/prefixes/staging"
-DST="$SPIKE/../052-plain-prefix-bridge-handshake/prefixes/staging-dxvk"
+SRC="$SPIKE/../056-plain-prefix-bridge-handshake/prefixes/staging"
+DST="$SPIKE/../056-plain-prefix-bridge-handshake/prefixes/staging-dxvk"
 WBIN="$HOME/Library/Application Support/gamelib/tools/wine/Wine-Staging-macOS-latest/Contents/Resources/wine/bin"
 URL=https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz
 mkdir -p dl/dxvk

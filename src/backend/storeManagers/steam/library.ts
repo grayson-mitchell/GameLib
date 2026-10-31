@@ -2082,6 +2082,18 @@ const GAMELIB_HANDOFF_STATE_FLAGS = 1026
  */
 export const STEAM_BRIDGE_FINISHING_CONTEXT = 'steam-bridge-finishing'
 
+// installBridgeGame sets this just before its final 'done'; the bridge poller
+// then must not re-assert finishing (quick 261031-ihs, Schedule I 2026-10-31).
+const bridgeInstallFinalized = new Set<string>()
+export const markBridgeInstallFinalized = (appId: string): void => {
+  bridgeInstallFinalized.add(appId)
+}
+export const clearBridgeInstallFinalized = (appId: string): void => {
+  bridgeInstallFinalized.delete(appId)
+}
+export const isBridgeInstallFinalized = (appId: string): boolean =>
+  bridgeInstallFinalized.has(appId)
+
 /** Module-level registry of active install polls, keyed by appId string. */
 const activePolls = new Map<
   string,
@@ -3191,19 +3203,23 @@ export async function pollInstallOnce(
     // Quick 261029-exu: a bridge install keeps working after its manifest
     // lands (shared redists, DRM prefetch), so installBridgeGame owns the
     // final 'done' and the one "Installation Finished" toast. Until then the
-    // game reads as finishing, not playable.
+    // game reads as finishing, not playable. Quick 261031-ihs: once the
+    // installer has marked itself finalized, stay silent so the finishing
+    // status cannot overwrite its 'done'. Read synchronously at the send site.
     const installerOwnsCompletion = source === 'bridge'
-    sendFrontendMessage(
-      'gameStatusUpdate',
-      installerOwnsCompletion
-        ? {
-            appName: appId,
-            runner: 'steam',
-            status: 'installing',
-            context: STEAM_BRIDGE_FINISHING_CONTEXT
-          }
-        : { appName: appId, runner: 'steam', status: 'done' }
-    )
+    if (!(installerOwnsCompletion && isBridgeInstallFinalized(appId))) {
+      sendFrontendMessage(
+        'gameStatusUpdate',
+        installerOwnsCompletion
+          ? {
+              appName: appId,
+              runner: 'steam',
+              status: 'installing',
+              context: STEAM_BRIDGE_FINISHING_CONTEXT
+            }
+          : { appName: appId, runner: 'steam', status: 'done' }
+      )
+    }
     // GAME-02: fire the confirmed completion toast here (ACF state verified) so
     // the user gets exactly one "Installation Finished" notification per install.
     // The DM pipeline toast is suppressed for steam — this is the sole source,

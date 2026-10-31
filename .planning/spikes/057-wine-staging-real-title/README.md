@@ -1,18 +1,18 @@
 ---
-spike: 053
+spike: 057
 name: wine-staging-real-title
 type: standard
-validates: "Given a plain Wine-Staging prefix (052) plus a shadow tree of a real bridge-verified install, when the title is launched via WINEPREFIX + the engine's own wine with the shipped shim and a per-run helper, then it passes the strict bridge-verified criterion (HELLO + clean game-side Steam init) and plays"
+validates: "Given a plain Wine-Staging prefix (056) plus a shadow tree of a real bridge-verified install, when the title is launched via WINEPREFIX + the engine's own wine with the shipped shim and a per-run helper, then it passes the strict bridge-verified criterion (HELLO + clean game-side Steam init) and plays"
 verdict: VALIDATED
-related: [052, 035, 034]
+related: [056, 035, 034]
 tags: [steam, macos, bridge, wine, wine-staging, dxmt, dxvk, unity, d3d11, wineprefix, engine]
 ---
 
-# Spike 053: wine-staging-real-title
+# Spike 057: wine-staging-real-title
 
 ## What This Validates
 
-Given spike 052's fresh `wineboot -i` prefixes, when two titles already strict-verified on
+Given spike 056's fresh `wineboot -i` prefixes, when two titles already strict-verified on
 CrossOver (Phase 53 census) are launched from a **shadow tree** of their real install — the
 current shipped shim placed beside the game, a per-run helper on the real AppID, nothing from
 CrossOver in the process tree — then they pass the strict criterion
@@ -40,7 +40,7 @@ CrossOver in the process tree — then they pass the strict criterion
 ## How to Run
 
 ```bash
-./install-dxvk.sh                      # once: production's DXVK-macOS into a clone of 052's staging prefix
+./install-dxvk.sh                      # once: production's DXVK-macOS into a clone of 056's staging prefix
 ./run.sh <avernum6|crafter> <staging|dxmt|staging-dxvk|cx>
 ```
 
@@ -122,4 +122,4 @@ title with game-originated calls.
   `WINEPREFIX` + engine `wine`) needs no change from the CrossOver path beyond runner/env.
 
 **Not covered:** the `cx` control was not re-run (both titles are already census-verified on CX);
-32-bit D3D titles; GPTK (054); reusing an existing CX bottle (055).
+32-bit D3D titles; GPTK (058); reusing an existing CX bottle (059).

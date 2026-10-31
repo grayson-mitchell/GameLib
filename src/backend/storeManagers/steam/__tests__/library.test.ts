@@ -21,6 +21,9 @@ import SteamLibraryManager, {
   startInstallPolling,
   stopInstallPolling,
   pollInstallOnce,
+  markBridgeInstallFinalized,
+  clearBridgeInstallFinalized,
+  isBridgeInstallFinalized,
   pollUninstallOnce,
   startUninstallPolling,
   stopUninstallPolling,
@@ -5042,6 +5045,52 @@ describe('pollInstallOnce()', () => {
     it('fires neither the finished toast nor the restart-Steam toast', async () => {
       await pollInstallOnce('730', 'bridge')
       expect(notify).not.toHaveBeenCalled()
+    })
+
+    // ── quick 261031-ihs: the installer's done must not be overwritten ────
+    it('261031-ihs: installer finalized first -> poller flips and persists but sends no status', async () => {
+      markBridgeInstallFinalized('730')
+      await pollInstallOnce('730', 'bridge')
+      expect(library.get('730')?.is_installed).toBe(true)
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.anything()
+      )
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'gameStatusUpdate',
+        expect.anything()
+      )
+      expect(notify).not.toHaveBeenCalled()
+      clearBridgeInstallFinalized('730')
+    })
+
+    it('261031-ihs: poller first (marker unset) still reports finishing', async () => {
+      clearBridgeInstallFinalized('730')
+      await pollInstallOnce('730', 'bridge')
+      expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
+        appName: '730',
+        runner: 'steam',
+        status: 'installing',
+        context: 'steam-bridge-finishing'
+      })
+    })
+
+    it('261031-ihs: a cleared marker (reinstall) shows finishing again', async () => {
+      markBridgeInstallFinalized('730')
+      clearBridgeInstallFinalized('730')
+      await pollInstallOnce('730', 'bridge')
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'gameStatusUpdate',
+        expect.objectContaining({ context: 'steam-bridge-finishing' })
+      )
+    })
+
+    it('261031-ihs: the marker is per appId', () => {
+      markBridgeInstallFinalized('730')
+      expect(isBridgeInstallFinalized('730')).toBe(true)
+      expect(isBridgeInstallFinalized('440')).toBe(false)
+      clearBridgeInstallFinalized('730')
+      expect(isBridgeInstallFinalized('730')).toBe(false)
     })
   })
 

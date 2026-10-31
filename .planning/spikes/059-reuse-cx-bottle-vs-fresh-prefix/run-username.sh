@@ -1,9 +1,9 @@
 #!/bin/bash
-# Spike 055b/c: does WINEUSERNAME=crossover (055b) or USER=crossover (055c, NAMEVAR=USER CLONE=GameLibSpike055c) make Wine-Staging reuse CrossOver's profile in an existing
+# Spike 059b/c: does WINEUSERNAME=crossover (059b) or USER=crossover (059c, NAMEVAR=USER CLONE=GameLibSpike059c) make Wine-Staging reuse CrossOver's profile in an existing
 # bottle instead of creating users/$USER? Fresh APFS clone; the probe writes %USERPROFILE% + %APPDATA%.
 set -uo pipefail
 cd "$(dirname "$0")"
-BOTTLES="$HOME/Library/Application Support/CrossOver/Bottles"; CLONE=${CLONE:-GameLibSpike055b}; B="$BOTTLES/$CLONE"
+BOTTLES="$HOME/Library/Application Support/CrossOver/Bottles"; CLONE=${CLONE:-GameLibSpike059b}; B="$BOTTLES/$CLONE"
 SW="$HOME/Library/Application Support/gamelib/tools/wine/Wine-Staging-macOS-latest/Contents/Resources/wine/bin"
 [ -d "$B" ] || cp -cR "$BOTTLES/GameLibSteamBridge-206060" "$B"
 echo "before: users=$(ls "$B/drive_c/users" | tr '\n' ' ')"
