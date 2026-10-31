@@ -1242,9 +1242,7 @@ export default React.memo(function Library(): JSX.Element {
         : null}
       <LibraryTour />
 
-      {/* `data-gamepad-stop-down`: pad Down at the bottom of the library stays in the
-          grid instead of escaping to the left panel (tauriGamepadInput.ts). */}
-      <div className="listing" data-gamepad-stop-down="">
+      <div className="listing">
         <span id="top" />
 
         {/*
