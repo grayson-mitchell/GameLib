@@ -74,8 +74,11 @@ and never committed.
   (NotProton commit `1893a3a`, 2026-10-17). It adds `SteamNetworkingSocketsSerialized005`, which none
   of the three overlay files references; the Gcenx fork carries neither. GameLib does not carry them
   (D-01 names exactly three overlay files; the patch serves NotProton's Steam-side half). This may
-  differ from the configuration 044 most likely ran. Lead for 56-15: a Wine log naming
-  `SteamNetworkingSocketsSerialized005`.
+  differ from the configuration 044 most likely ran. Phase 58 (58-09, 2026-10-31): not needed -- a
+  two-launch Raft DRM-mode session (58-08-LIVE-GATE.md, Verdict: PASS) had 0
+  `SteamNetworkingSocketsSerialized005` and 0 `Don't recognize interface name` lines across 6
+  captures (wine-launch-1/2, trace-launch-1/2, gamelib-launch-1/2), so `serialized005.patch` is
+  not carried.
 
 ## Bases (D-19)
 

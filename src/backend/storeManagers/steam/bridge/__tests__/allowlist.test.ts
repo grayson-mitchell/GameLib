@@ -172,6 +172,21 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(parsed.knownBad).toEqual([])
   })
 
+  test('D-16: bundled knownBad is empty and p2p-required stays a category (Phase 58 D-12 no-op)', () => {
+    const raw = readFileSync(
+      join(__dirname, '..', 'bridge-allowlist.json'),
+      'utf-8'
+    )
+    expect(JSON.parse(raw).knownBad).toEqual([])
+    expect(
+      bridgeAllowlistSchema.safeParse({
+        version: 2,
+        seed: [{ appId: '1', title: 'seed' }],
+        knownBad: [{ appId: '2', title: 'x', reason: 'p2p-required' }]
+      }).success
+    ).toBe(true)
+  })
+
   // Evidence: quick 261027-n77 live gate (2026-10-27): the shipped gst-libav
   // overlay downloaded, GST_PLUGIN_PATH applied, main menu reached.
   test('Unclaimed World (284100) is no longer known-bad: its shipped gst-libav overlay profile makes it run (quick 261027-n77 live gate)', () => {
