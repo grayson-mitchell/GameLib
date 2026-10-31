@@ -61,6 +61,7 @@ import {
   steamBridgeHelperStateDir
 } from 'backend/constants/paths'
 import { sendFrontendMessage } from 'backend/ipc'
+import { getMainWindow } from 'backend/main_window'
 import { isMac } from 'backend/constants/environment'
 import { shell } from 'backend/platform'
 import { registerLongLivedChild } from 'backend/longLivedChildren'
@@ -100,6 +101,15 @@ const READY_LINE = /READY {2}init=(ok|failed|dylib-missing) appid=(\d+)/
 // Steam running` marker.
 const INIT_FAILED_LINE =
   /InitFlat failed r=-?\d+ err=(.*?) appid=(\d+) \(is Steam running/
+
+// Phase 58 Plan 31 (M-01): the helper logs this when the game calls
+// ActivateGameOverlayInviteDialog -- MUST match bridge_helper.c's
+// `logts_f("INVITE", "dialog appid=%s", ...)` (INVITE fills the 6-char
+// category column, so ONE space follows it). Carries no lobby or user ids.
+const INVITE_DIALOG_LINE = /INVITE dialog appid=(\d+)/
+
+// Backend debounce on top of the helper's own 1/2 s rate limit.
+const INVITE_REQUEST_DEBOUNCE_MS = 2000
 
 type InitFlatErrorCause = 'steam-not-running' | 'steam-not-signed-in'
 
@@ -222,6 +232,8 @@ interface BridgeHelperEntry {
    * via env only (never argv) and to the shim via gamelib_bridge.cfg. Never
    * logged. */
   secret: string
+  /** Phase 58 Plan 31: Date.now() of the last invite-dialog push (debounce). */
+  lastInviteRequestMs: number
 }
 
 // D-51-01: per-appId registry -- replaces the Phase 24 module-scoped
@@ -414,6 +426,27 @@ function ensureHelperSpawned(
     handleListenLine(line)
     handleInitFailedLine(line)
     handleReadyLine(line)
+    handleInviteDialogLine(line)
+  }
+
+  // Phase 58 Plan 31 (T-58-103): same appid rule and own-stream rule as
+  // LISTEN/READY. Debounced; not logged again (the relay already logged it).
+  const handleInviteDialogLine = (line: string) => {
+    const match = INVITE_DIALOG_LINE.exec(line)
+    if (!match) return
+    if (match[1] !== expectedListenAppId) return
+    const entry = helpers.get(appId)
+    if (!entry || entry.child !== child) return
+    const now = Date.now()
+    if (
+      entry.lastInviteRequestMs !== 0 &&
+      now - entry.lastInviteRequestMs < INVITE_REQUEST_DEBOUNCE_MS
+    ) {
+      return
+    }
+    entry.lastInviteRequestMs = now
+    sendFrontendMessage('steamBridgeInviteRequest', { appId })
+    getMainWindow()?.show()
   }
 
   // 261027-aue: same appid rule and own-stream rule as LISTEN/READY (T-aue-01).
@@ -546,7 +579,8 @@ function ensureHelperSpawned(
     initReady,
     unregister,
     identityOnly,
-    secret
+    secret,
+    lastInviteRequestMs: 0
   }
   helpers.set(appId, entry)
   return entry
@@ -1009,6 +1043,15 @@ export async function ensureBridgeHelperReady(
     error:
       'Bridge helper process is up but not initialized against a live Steam session'
   }
+}
+
+/** Phase 58 Plan 31: the live helper's port and secret, only when both are known. */
+export function getBridgeHelperConnection(
+  appId: string
+): { port: number; secret: string } | null {
+  const entry = helpers.get(appId)
+  if (!entry || entry.port === null || !entry.secret) return null
+  return { port: entry.port, secret: entry.secret }
 }
 
 /**

@@ -70,6 +70,11 @@ jest.mock('backend/platform', () => ({
 
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
 
+const mockShow = jest.fn()
+jest.mock('backend/main_window', () => ({
+  getMainWindow: () => ({ show: mockShow })
+}))
+
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
@@ -884,6 +889,60 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
   })
 
   // ── Invariant (D-51-01 assumption_delta_decision, Task 2): the singleton
+  // Phase 58 Plan 31 (T-58-103): the helper's INVITE dialog line becomes a
+  // frontend push, own-stream and own-appid only, debounced.
+  describe('INVITE dialog line', () => {
+    const invite = (appId: string) =>
+      Buffer.from(`[2026-11-01T00:00:00Z] INVITE dialog appid=${appId}\n`)
+    beforeEach(() => {
+      mockedSendFrontendMessage.mockClear()
+      mockShow.mockClear()
+    })
+    const inviteCalls = () =>
+      mockedSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'steamBridgeInviteRequest'
+      )
+
+    test('own appid -> one push and one window raise', () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      void ensureBridgeHelperReady('3205720')
+      child.stderr.emit('data', invite('3205720'))
+      expect(inviteCalls()).toEqual([
+        ['steamBridgeInviteRequest', { appId: '3205720' }]
+      ])
+      expect(mockShow).toHaveBeenCalledTimes(1)
+    })
+
+    test('a line naming another appid does nothing', () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      void ensureBridgeHelperReady('3205720')
+      child.stderr.emit('data', invite('999'))
+      expect(inviteCalls()).toHaveLength(0)
+      expect(mockShow).not.toHaveBeenCalled()
+    })
+
+    test('a line from a stale child does nothing', () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      void ensureBridgeHelperReady('3205720')
+      __resetBridgeHelperStateForTests()
+      child.stderr.emit('data', invite('3205720'))
+      expect(inviteCalls()).toHaveLength(0)
+    })
+
+    test('two lines within 2000 ms give one push', () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      void ensureBridgeHelperReady('3205720')
+      child.stderr.emit('data', invite('3205720'))
+      child.stderr.emit('data', invite('3205720'))
+      expect(inviteCalls()).toHaveLength(1)
+      expect(mockShow).toHaveBeenCalledTimes(1)
+    })
+  })
+
   // 53-13 WR-03 (relay side): one log call per non-empty stderr line, each
   // with its own appid prefix and no embedded newline.
   test('stderr chunk of 3 lines -> 3 logWarning calls, each prefixed with the appid, none multi-line', () => {

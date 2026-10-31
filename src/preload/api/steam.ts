@@ -40,6 +40,12 @@ export const steamGoOfflineRetry = makeHandlerInvoker('steamGoOfflineRetry')
 // 54-REVIEW WR-05: Cancel/close in the guided Go Offline dialog -- sidecar-only;
 // pays the goonline an abandoned guided step owes. Never logs on.
 export const steamGoOfflineCancel = makeHandlerInvoker('steamGoOfflineCancel')
+// Phase 58 Plan 31 (M-01 Direction A): the friend picker's list and invite channels -- sidecar-only.
+export const steamBridgeListFriends = makeHandlerInvoker('steamBridgeListFriends')
+export const steamBridgeInviteFriend = makeHandlerInvoker('steamBridgeInviteFriend')
+// Phase 58 Plan 31: one-way push -- helperProcess.ts emits when the game opens its invite
+// dialog; 58-32's SteamBridgeInvite.ts subscribes.
+export const handleSteamBridgeInviteRequest = frontendListenerSlot('steamBridgeInviteRequest')
 // Phase 54 Plan 07: one-way push -- user.ts acquireAuthenticated emits when the
 // go-offline wrap did not see Mac Steam log off; SteamGoOfflineNotice.ts subscribes.
 export const handleSteamGoOfflineRequired = frontendListenerSlot('steamGoOfflineRequired')

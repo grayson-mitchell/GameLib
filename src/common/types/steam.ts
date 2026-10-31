@@ -252,3 +252,25 @@ export interface SteamEngineOption {
   installed: boolean
   isPreviousPin: boolean
 }
+
+/** Phase 58 Plan 31 (M-01): one friend in the invite picker. Ordinal is the helper's own index; no SteamID. */
+export interface BridgeFriend {
+  ordinal: number
+  name: string
+  online: boolean
+  playingThisApp: boolean
+}
+
+/** Phase 58 Plan 31 (M-01): closed result words of an invite attempt. */
+export type BridgeInviteResult =
+  | 'sent'
+  | 'steam-refused'
+  | 'no-pending'
+  | 'expired'
+  | 'bad-ordinal'
+  | 'no-helper'
+  | 'error'
+
+export type BridgeListFriendsResult =
+  | { ok: true; friends: BridgeFriend[] }
+  | { ok: false; reason: 'no-helper' | 'error' }

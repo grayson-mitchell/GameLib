@@ -72,6 +72,8 @@ import type {
   SteamBridgeRouteReason,
   SteamGoOfflinePayload,
   SteamGoOfflineRetryResult,
+  BridgeListFriendsResult,
+  BridgeInviteResult,
   SteamBridgeRouteVerdict,
   SteamEngineState,
   SteamEngineOption,
@@ -379,6 +381,12 @@ interface AsyncIPCFunctions {
   // 54-REVIEW WR-05: sidecar-only. The guided Go Offline step's Cancel/close;
   // pays the goonline a ready-but-abandoned guided step owes.
   steamGoOfflineCancel: () => Promise<void>
+  // Phase 58 Plan 31 (M-01 Direction A): sidecar-only friend picker channels.
+  steamBridgeListFriends: (appId: string) => Promise<BridgeListFriendsResult>
+  steamBridgeInviteFriend: (
+    appId: string,
+    ordinal: number
+  ) => Promise<BridgeInviteResult>
   // Phase 34.13 (34.13-07), D-14: persists the install form's chosen wine
   // engine into steamBottleConfigStore via bottle.ts's own
   // persistBottleWineVersion() primitive, after validating the untrusted
@@ -816,6 +824,9 @@ interface FrontendMessages {
   steamGoOfflineRequired: (payload: SteamGoOfflinePayload) => void
   // Phase 59 (D-04/D-06): the per-title engine display state changed
   steamEngineStateChanged: (payload: SteamEngineState) => void
+  // Phase 58 Plan 31 (M-01): helperProcess.ts pushes this when the game opens
+  // its invite dialog; the friend picker subscribes.
+  steamBridgeInviteRequest: (payload: { appId: string }) => void
   steamBridgeRouteNotice: (payload: {
     appName: string
     reason: SteamBridgeRouteReason

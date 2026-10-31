@@ -74,6 +74,11 @@
  *     Steam title in one action, same shared-seam pattern as the pair above.
  *   - `steamGoOfflineRetry` -> `checkGuidedOfflineReady()` (`macSteamOffline.ts`),
  *     Phase 54 Plan 07 — the guided Go Offline dialog's Continue.
+ *   - `steamBridgeListFriends` -> `listBridgeFriends(appId)` and
+ *     `steamBridgeInviteFriend` -> `sendBridgeInvite(appId, ordinal)`
+ *     (`steam/bridge/inviteBridge.ts`), Phase 58 Plan 31, M-01 Direction A:
+ *     the friend picker's list and invite channels. appId (`/^\d{1,10}$/`)
+ *     and ordinal (non-negative integer) are validated here.
  *   - `steamGoOfflineCancel` -> `payAbandonedGuidedOffline('cancel')`
  *     (`macSteamOffline.ts`), 54-REVIEW WR-05 — the dialog's Cancel/close.
  *
@@ -160,6 +165,10 @@ import {
 } from '../storeManagers/steam/engine/engineState'
 import { listEngineOverrideOptions } from '../storeManagers/steam/engine/engineDecision'
 import { sendFrontendMessage } from '../ipc'
+import {
+  listBridgeFriends,
+  sendBridgeInvite
+} from '../storeManagers/steam/bridge/inviteBridge'
 import { removeAllSteamInstallCopies } from '../storeManagers/steam/removeAllCopies'
 import {
   checkGuidedOfflineReady,
@@ -404,6 +413,35 @@ export function registerSteamAuthFlows(): void {
   // validate; it only reads Mac Steam's state and arms the one-shot guided
   // restore. It never logs on.
   ipcMain.handle('steamGoOfflineRetry', async () => checkGuidedOfflineReady())
+
+  // Phase 58 Plan 31 (T-58-104): sidecar-only. Renderer input is untrusted, so
+  // validate before any helper socket is opened.
+  ipcMain.handle(
+    'steamBridgeListFriends',
+    async (_event: unknown, ...args: unknown[]) => {
+      const appId = args[0]
+      if (typeof appId !== 'string' || !/^\d{1,10}$/.test(appId)) {
+        return { ok: false, reason: 'error' } as const
+      }
+      return listBridgeFriends(appId)
+    }
+  )
+  ipcMain.handle(
+    'steamBridgeInviteFriend',
+    async (_event: unknown, ...args: unknown[]) => {
+      const [appId, ordinal] = args
+      if (
+        typeof appId !== 'string' ||
+        !/^\d{1,10}$/.test(appId) ||
+        typeof ordinal !== 'number' ||
+        !Number.isInteger(ordinal) ||
+        ordinal < 0
+      ) {
+        return 'error' as const
+      }
+      return sendBridgeInvite(appId, ordinal)
+    }
+  )
 
   // 54-REVIEW WR-05: sidecar-only, no renderer arguments. The guided dialog's
   // Cancel/close: pays the goonline a ready-but-abandoned guided step owes.
