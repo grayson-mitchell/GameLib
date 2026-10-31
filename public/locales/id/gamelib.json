@@ -411,6 +411,19 @@
                 "help": "Terpasang ke dalam klien Steam bersama dalam bottle. Mengubah ini nanti berarti menginstal ulang game.",
                 "label": "Gunakan klien Steam Windows sebagai gantinya"
             },
+            "invite": {
+                "close": "Close",
+                "expired": "Press the game's invite button again, then retry",
+                "intro": "Steam's in-game invite window is not available for games run through GameLib. Pick a friend to send a Steam invite. They accept it in Steam while the game is running.",
+                "invite": "Invite",
+                "noLobby": "The game has no session to invite to",
+                "offline": "Offline",
+                "playing": "Playing this game",
+                "sent": "Invite sent",
+                "steamRefused": "Steam did not send the invite",
+                "title": "Invite a friend to {{title}}",
+                "unavailable": "Inviting is not available right now"
+            },
             "knownBad": {
                 "doesNotRun": "tidak berjalan melalui jembatan",
                 "drmWrapped": "dilindungi oleh DRM di bawah API Steam",

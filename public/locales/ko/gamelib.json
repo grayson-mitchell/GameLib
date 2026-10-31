@@ -411,6 +411,19 @@
                 "help": "공유 bottle 안의 Steam 클라이언트에 설치됨. 나중에 이를 변경하면 게임을 재설치해야 함.",
                 "label": "대신 Windows Steam 클라이언트 사용"
             },
+            "invite": {
+                "close": "Close",
+                "expired": "Press the game's invite button again, then retry",
+                "intro": "Steam's in-game invite window is not available for games run through GameLib. Pick a friend to send a Steam invite. They accept it in Steam while the game is running.",
+                "invite": "Invite",
+                "noLobby": "The game has no session to invite to",
+                "offline": "Offline",
+                "playing": "Playing this game",
+                "sent": "Invite sent",
+                "steamRefused": "Steam did not send the invite",
+                "title": "Invite a friend to {{title}}",
+                "unavailable": "Inviting is not available right now"
+            },
             "knownBad": {
                 "doesNotRun": "브리지를 통해 작동하지 않음",
                 "drmWrapped": "Steam API 아래에서 DRM으로 보호됨",

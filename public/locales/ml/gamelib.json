@@ -411,6 +411,19 @@
                 "help": "പങ്കിട്ട ബോട്ടിലിലെ Steam ക്ലയന്റിലേക്ക് ഇൻസ്റ്റാൾ ചെയ്യുന്നു. ഇത് പിന്നീട് മാറ്റുന്നത് ഗെയിം വീണ്ടും ഇൻസ്റ്റാൾ ചെയ്യേണ്ടതിലേക്ക് നയിക്കും.",
                 "label": "പകരം Windows Steam ക്ലയന്റ് ഉപയോഗിക്കുക"
             },
+            "invite": {
+                "close": "Close",
+                "expired": "Press the game's invite button again, then retry",
+                "intro": "Steam's in-game invite window is not available for games run through GameLib. Pick a friend to send a Steam invite. They accept it in Steam while the game is running.",
+                "invite": "Invite",
+                "noLobby": "The game has no session to invite to",
+                "offline": "Offline",
+                "playing": "Playing this game",
+                "sent": "Invite sent",
+                "steamRefused": "Steam did not send the invite",
+                "title": "Invite a friend to {{title}}",
+                "unavailable": "Inviting is not available right now"
+            },
             "knownBad": {
                 "doesNotRun": "പാലം വഴി പ്രവർത്തിക്കുന്നില്ല",
                 "drmWrapped": "Steam API-യുടെ താഴെ DRM വഴി സംരക്ഷിച്ചിരിക്കുന്നു",

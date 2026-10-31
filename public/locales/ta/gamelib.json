@@ -411,6 +411,19 @@
                 "help": "பகிரப்பட்ட bottle-இல் உள்ள Steam கிளையண்டில் நிறுவப்படுகிறது. இதை பின்னர் மாற்றுவது விளையாட்டை மீண்டும் நிறுவுவதைக் குறிக்கும்.",
                 "label": "பதிலாக Windows Steam கிளையண்டைப் பயன்படுத்தவும்"
             },
+            "invite": {
+                "close": "Close",
+                "expired": "Press the game's invite button again, then retry",
+                "intro": "Steam's in-game invite window is not available for games run through GameLib. Pick a friend to send a Steam invite. They accept it in Steam while the game is running.",
+                "invite": "Invite",
+                "noLobby": "The game has no session to invite to",
+                "offline": "Offline",
+                "playing": "Playing this game",
+                "sent": "Invite sent",
+                "steamRefused": "Steam did not send the invite",
+                "title": "Invite a friend to {{title}}",
+                "unavailable": "Inviting is not available right now"
+            },
             "knownBad": {
                 "doesNotRun": "பாலம் வழியாக இயங்காது",
                 "drmWrapped": "Steam API-க்கு கீழே DRM ஆல் பாதுகாக்கப்பட்டுள்ளது",

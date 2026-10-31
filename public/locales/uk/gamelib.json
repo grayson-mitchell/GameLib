@@ -425,6 +425,19 @@
                 "help": "Встановлюється у спільний клієнт Steam у бутлі. Зміна цього пізніше означає перевстановлення гри.",
                 "label": "Натомість використовуйте клієнт Steam для Windows"
             },
+            "invite": {
+                "close": "Close",
+                "expired": "Press the game's invite button again, then retry",
+                "intro": "Steam's in-game invite window is not available for games run through GameLib. Pick a friend to send a Steam invite. They accept it in Steam while the game is running.",
+                "invite": "Invite",
+                "noLobby": "The game has no session to invite to",
+                "offline": "Offline",
+                "playing": "Playing this game",
+                "sent": "Invite sent",
+                "steamRefused": "Steam did not send the invite",
+                "title": "Invite a friend to {{title}}",
+                "unavailable": "Inviting is not available right now"
+            },
             "knownBad": {
                 "doesNotRun": "не працює через міст",
                 "drmWrapped": "захищено DRM нижче API Steam",

@@ -418,6 +418,19 @@
                 "help": "S'instal·la al client de Steam en bottle compartit. Canviar-ho més tard significa reinstal·lar el joc.",
                 "label": "Utilitza el client de Steam de Windows en el seu lloc"
             },
+            "invite": {
+                "close": "Close",
+                "expired": "Press the game's invite button again, then retry",
+                "intro": "Steam's in-game invite window is not available for games run through GameLib. Pick a friend to send a Steam invite. They accept it in Steam while the game is running.",
+                "invite": "Invite",
+                "noLobby": "The game has no session to invite to",
+                "offline": "Offline",
+                "playing": "Playing this game",
+                "sent": "Invite sent",
+                "steamRefused": "Steam did not send the invite",
+                "title": "Invite a friend to {{title}}",
+                "unavailable": "Inviting is not available right now"
+            },
             "knownBad": {
                 "doesNotRun": "no funciona a través del pont",
                 "drmWrapped": "protegit amb DRM per sota de l'API de Steam",

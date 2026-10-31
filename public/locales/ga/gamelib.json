@@ -432,6 +432,19 @@
                 "help": "Suiteáiltear isteach sa chliant Steam i mbuidéal roinnte é. Má athraítear é seo níos déanaí ciallaíonn sé an cluiche a athshuiteáil.",
                 "label": "Úsáid cliant Steam Windows ina ionad"
             },
+            "invite": {
+                "close": "Close",
+                "expired": "Press the game's invite button again, then retry",
+                "intro": "Steam's in-game invite window is not available for games run through GameLib. Pick a friend to send a Steam invite. They accept it in Steam while the game is running.",
+                "invite": "Invite",
+                "noLobby": "The game has no session to invite to",
+                "offline": "Offline",
+                "playing": "Playing this game",
+                "sent": "Invite sent",
+                "steamRefused": "Steam did not send the invite",
+                "title": "Invite a friend to {{title}}",
+                "unavailable": "Inviting is not available right now"
+            },
             "knownBad": {
                 "doesNotRun": "ní ritheann sé tríd an droichead",
                 "drmWrapped": "cosanta ag DRM faoi bhun API Steam",
