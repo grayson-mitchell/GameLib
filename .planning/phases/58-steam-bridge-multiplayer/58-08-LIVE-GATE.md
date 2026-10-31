@@ -305,3 +305,15 @@ Session dir: `/tmp/gamelib-gate-20261031T023945Z/`
 | PC9  | `curl -fsSIL` p58b asset URL: HTTP/2 302 then HTTP/2 200 (re-run after repin; the earlier p58 check is history) | met |
 | PC10 | Operator statement 2026-10-31 (to 58-09): "yes" - peer PC second account signed in and online, friends with the main account, Raft launchable. Earlier 58-01-TITLES.md `## Account preflight` citation stands | met |
 | PC11 | Operator statement 2026-10-31: "wine listed as yes, no crossover, and steam no". Local Network: Wine = granted; CrossOver = absent; Steam = listed, denied. Record-only | recorded |
+
+### Launch 1 (58-09, 2026-10-31, against p58b)
+
+- Delimiter written to `terminal.log` by the operator. Direction A: the Mac hosted a Raft world launched from GameLib, the PC joined. The operator replied "in world" to the prompt that asked them to reply "in world" once both were in the world; they did not separately restate mutual movement for this launch.
+- In-world captures (orchestrator, ~18:5x NZDT): Raft.exe pid 24132 (wrapper steam.exe pid 24068, winewrapper 23590, started 18:50:39); `lsof-launch-1.txt` = 32 UDP sockets, `procs-launch-1.txt` = 23 lines. Operator then reported "Raft quit"; Raft.exe no longer running.
+- Archived in the session dir: `gamelib-launch-1.log` (196 lines), `trace-launch-1.log` (76 lines, newest 648800 trace, 18:53 today), `wine-launch-1.log` (10 lines). The Oct 29 648800 traces were left in place, not used.
+- COMPDIR after launch 1: lsteamclient.dll sha256 prefix `8257505948f8f5edc242` (p58b).
+- Trace `role=game` lines: `op=build-id ret=0`, `op=build-id-given ret=22312909` (raw 0, given 22312909 as expected); `callback id=1202 peer=1`; `p2p op=accept peer=1 ok=1`; `p2p op=read peer=1 bytes=10`; `p2p op=send peer=1 bytes=528`.
+- `id=337` present in the trace: no (0 lines, recorded only). `id=504` / `id=1221` lines: none in this trace.
+- Peer identifiers are ordinals (`peer=1`); no 16+ digit value appears in the trace.
+- Serialized005 check, launch 1: `Don't recognize interface name` and `SteamNetworkingSocketsSerialized005` = 0 hits in wine (10 lines), trace (76 lines) and gamelib (196 lines).
+- Census (`census-launch-1.txt`), verbatim: `multiplayer 648800 drm: verified join=1 send=1 recv=1 path=unknown oversize=0 — game join (D-08a legacy P2P), send and receive observed`
