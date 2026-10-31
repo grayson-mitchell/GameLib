@@ -3722,6 +3722,34 @@ describe('callback delivery wiring (P55-6)', () => {
     )
   })
 
+  it('server-event transport is bridge_transact on slot 12 for the 64-bit shim (58-21)', () => {
+    expect(c).toContain('#define BRIDGE_CONTROL_SLOT_DRAIN_SERVER_EVENTS 12')
+    expect(CONTROL_SLOT.drainServerEvents).toBe(12)
+    const b = bodyOf('static int gl_cb_transport_drain_mms(')
+    expect(b).toContain(
+      'return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_SERVER_EVENTS, NULL, 0,'
+    )
+    expect(bodyOf('static int gl_mms_transport(')).toContain(
+      'bridge_transact(69, slot,'
+    )
+    // the request ordinal is the one ordinals.json assigned
+    const ords = JSON.parse(
+      readFileSync(join(SDK_DIR, 'ordinals.json'), 'utf-8')
+    ) as Record<string, number>
+    expect(ords.SteamMatchMakingServers003).toBe(69)
+  })
+
+  it('drains slot 12 from RunCallbacks and RunFrame (58-21)', () => {
+    const rc = bodyOf('static void gl_cb_run_callbacks(')
+    const rf = bodyOf('static void gl_md_run_frame(')
+    expect(rc).toContain('GL_MMS_DRAIN(now);')
+    expect(rf).toContain('GL_MMS_DRAIN(now);')
+    expect(c).toContain('!GL_NET_CB_ANY() && !GL_MMS_ACTIVE()')
+    expect(SHIM_LOCAL_BODIES['SteamNetworkingSockets.RunCallbacks']).toContain(
+      'gl_cb_run_callbacks();'
+    )
+  })
+
   it('embeds the registry exactly once, after bridge_transact', () => {
     const reg = generateCallbackRegistryC()
     expect(c.split(reg).length - 1).toBe(1)
@@ -4861,6 +4889,47 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
     })
   })
 
+  describe('unmapHandle (58-21)', () => {
+    const rel = {
+      name: 'Release',
+      returns: 'void',
+      returnKind: 'void' as const,
+      helperFlat: 'SteamAPI_IGameLibWire_Release',
+      zeroHandleParam: 'hReq',
+      unmapHandle: 'list' as const,
+      params: [{ name: 'hReq', type: 'uint64', kind: 'value' as const }]
+    }
+    it('drops the mapping before the zero guard and the wire call', () => {
+      const m = wireManifest([rel])
+      expect(validateManifest(m)).toEqual([])
+      const shim = generateShimC([m])
+      const at = shim.indexOf('vt_GameLibWire001_Release(')
+      const body = shim.slice(at, shim.indexOf('\n}\n', at))
+      const u = body.indexOf('gl_mms_unmap(GL_MMS_CLS_LIST, (uint32_t)hReq);')
+      expect(u).toBeGreaterThan(-1)
+      expect(u).toBeLessThan(body.indexOf('if (hReq == 0)'))
+      expect(u).toBeLessThan(body.indexOf('bridge_transact'))
+    })
+    it('query handles use the query class', () => {
+      const shim = generateShimC([
+        wireManifest([{ ...rel, unmapHandle: 'query' as const }])
+      ])
+      expect(shim).toContain('gl_mms_unmap(GL_MMS_CLS_QUERY, (uint32_t)hReq);')
+    })
+    it('requires zeroHandleParam and a known class', () => {
+      expect(
+        validateManifest(
+          wireManifest([{ ...rel, zeroHandleParam: undefined }])
+        ).join('\n')
+      ).toMatch(/unmapHandle requires zeroHandleParam/)
+      expect(
+        validateManifest(
+          wireManifest([{ ...rel, unmapHandle: 'x' as unknown as 'list' }])
+        ).join('\n')
+      ).toMatch(/unmapHandle must be "list" or "query"/)
+    })
+  })
+
   describe('zeroHandleParam (58-20)', () => {
     const releaseMethod = {
       name: 'Release',
@@ -4935,7 +5004,7 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       )
     })
 
-    it('the real MatchMakingServers003 manifest wires the seven handle methods with a zero guard (nm-verified flat names)', () => {
+    it('the real MatchMakingServers003 manifest wires all eighteen methods (nm-verified flat names, 58-21)', () => {
       const m = JSON.parse(
         readFileSync(
           join(SDK_DIR, 'isteammatchmakingservers003.manifest.json'),
@@ -4943,7 +5012,9 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
         )
       ) as InterfaceManifestV2
       const wired = m.methods.filter((x) => x.mode === 'wire')
-      expect(wired.map((x) => x.name)).toEqual([
+      expect(wired).toHaveLength(18)
+      const handle = wired.filter((x) => x.zeroHandleParam !== undefined)
+      expect(handle.map((x) => x.name)).toEqual([
         'ReleaseRequest',
         'CancelQuery',
         'RefreshQuery',
@@ -4952,14 +5023,29 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
         'RefreshServer',
         'CancelServerQuery'
       ])
-      for (const x of wired) {
+      for (const x of handle) {
         expect(x.helperFlat).toBe(`SteamAPI_ISteamMatchmakingServers_${x.name}`)
         expect(x.zeroHandleParam).toBe(x.params[0].name)
       }
-      // Request/query starters stay stubs until 58-21 wires them.
+      // Release and CancelServerQuery also retire the shim's response mapping.
       expect(
-        m.methods.find((x) => x.name === 'PingServer')?.mode
-      ).toBeUndefined()
+        m.methods
+          .filter((x) => x.unmapHandle !== undefined)
+          .map((x) => [x.name, x.unmapHandle])
+      ).toEqual([
+        ['ReleaseRequest', 'list'],
+        ['CancelServerQuery', 'query']
+      ])
+      // The eleven request methods are shim-local and reach the helper only
+      // through its custom functions.
+      const req = wired.filter((x) => x.shimLocal === true)
+      expect(req).toHaveLength(11)
+      for (const x of req) {
+        expect(x.helperCustom).toMatch(/^gl_mms_/)
+        expect(
+          SHIM_LOCAL_BODIES[`SteamMatchmakingServers.${x.name}`]
+        ).toBeDefined()
+      }
       expect(validateManifest(m)).toEqual([])
     })
   })
@@ -5053,13 +5139,19 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       expect(header).not.toContain('arg_pData_len')
     })
 
-    it('real manifests declare exactly the 58-13, 58-14 and 58-15 custom prototypes', () => {
+    it('real manifests declare exactly the 58-13, 58-14, 58-15 and 58-21 custom prototypes', () => {
       const protos = [
         ...generateDispatchHeader(real).matchAll(
           /^int (gl_[a-z0-9_]+)\(void \*self,/gm
         )
       ].map((m) => m[1])
       expect(protos.sort()).toEqual([
+        'gl_mms_get_server_details',
+        'gl_mms_ping_server',
+        'gl_mms_player_details',
+        'gl_mms_request_list',
+        'gl_mms_server_friends',
+        'gl_mms_server_rules',
         'gl_net_check_ping_data',
         'gl_net_configure_lanes',
         'gl_net_convert_ping_location',

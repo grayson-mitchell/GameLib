@@ -124,6 +124,8 @@ export interface WirePolicyMethodEntry {
   stackBytes?: number
   /** 58-20: by-value handle param; 0 is answered shim-locally, no wire frame. */
   zeroHandleParam?: string
+  /** 58-21: also drop the shim's server-browser response mapping for it. */
+  unmapHandle?: 'list' | 'query'
   /** 58-10: a successful call is NET send/recv evidence. */
   evidence?: {
     kind: 'send' | 'recv'
@@ -663,6 +665,7 @@ export function applyWirePolicy(
     if (entry.stackBytes !== undefined) wired.stackBytes = entry.stackBytes
     if (entry.zeroHandleParam !== undefined)
       wired.zeroHandleParam = entry.zeroHandleParam
+    if (entry.unmapHandle !== undefined) wired.unmapHandle = entry.unmapHandle
     if (entry.callResult !== undefined) wired.callResult = entry.callResult
     if (entry.evidence !== undefined) wired.evidence = entry.evidence
     if (entry.helperNativeArgs !== undefined) {

@@ -123,13 +123,31 @@ Method modes:
 // tuples BRIDGE_SHIM_TABLE_HASH (steam_api_shim.c) embeds -- a drift
 // between the two means the shim and this dispatch table disagree about
 // what is on the wire.
-#define BRIDGE_DISPATCH_TABLE_HASH "a41c94f5f60b"
+#define BRIDGE_DISPATCH_TABLE_HASH "5a10c20bc906"
 
 // Response scratch -- bridge_dispatch() never writes past respCap, which
 // the caller (bridge_helper.c) sizes to this constant.
 #define BRIDGE_DISPATCH_RESP_SCRATCH_BYTES 61456
 
 typedef void *(*BDAccessorFn_t)(void);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_mms_get_server_details(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_mms_ping_server(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_mms_player_details(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_mms_request_list(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_mms_server_friends(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_mms_server_rules(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
 
 // 58-06: hand-written in bridge_helper.c; returns 0 for ok.
 int gl_net_check_ping_data(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
@@ -1410,9 +1428,30 @@ static BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner_t g_bd_flat_STEAMAPPS
 #define BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId 23
 typedef int32_t (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId_t)(void *);
 static BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId;
+#define BD_SLOT_SteamMatchMakingServers003_RequestInternetServerList 0
+typedef void * (*BDFlatFn_SteamMatchMakingServers003_RequestInternetServerList_t)(void *, uint32_t, void *, uint32_t, void *);
+static BDFlatFn_SteamMatchMakingServers003_RequestInternetServerList_t g_bd_flat_SteamMatchMakingServers003_RequestInternetServerList;
+#define BD_SLOT_SteamMatchMakingServers003_RequestLANServerList 1
+typedef void * (*BDFlatFn_SteamMatchMakingServers003_RequestLANServerList_t)(void *, uint32_t, void *);
+static BDFlatFn_SteamMatchMakingServers003_RequestLANServerList_t g_bd_flat_SteamMatchMakingServers003_RequestLANServerList;
+#define BD_SLOT_SteamMatchMakingServers003_RequestFriendsServerList 2
+typedef void * (*BDFlatFn_SteamMatchMakingServers003_RequestFriendsServerList_t)(void *, uint32_t, void *, uint32_t, void *);
+static BDFlatFn_SteamMatchMakingServers003_RequestFriendsServerList_t g_bd_flat_SteamMatchMakingServers003_RequestFriendsServerList;
+#define BD_SLOT_SteamMatchMakingServers003_RequestFavoritesServerList 3
+typedef void * (*BDFlatFn_SteamMatchMakingServers003_RequestFavoritesServerList_t)(void *, uint32_t, void *, uint32_t, void *);
+static BDFlatFn_SteamMatchMakingServers003_RequestFavoritesServerList_t g_bd_flat_SteamMatchMakingServers003_RequestFavoritesServerList;
+#define BD_SLOT_SteamMatchMakingServers003_RequestHistoryServerList 4
+typedef void * (*BDFlatFn_SteamMatchMakingServers003_RequestHistoryServerList_t)(void *, uint32_t, void *, uint32_t, void *);
+static BDFlatFn_SteamMatchMakingServers003_RequestHistoryServerList_t g_bd_flat_SteamMatchMakingServers003_RequestHistoryServerList;
+#define BD_SLOT_SteamMatchMakingServers003_RequestSpectatorServerList 5
+typedef void * (*BDFlatFn_SteamMatchMakingServers003_RequestSpectatorServerList_t)(void *, uint32_t, void *, uint32_t, void *);
+static BDFlatFn_SteamMatchMakingServers003_RequestSpectatorServerList_t g_bd_flat_SteamMatchMakingServers003_RequestSpectatorServerList;
 #define BD_SLOT_SteamMatchMakingServers003_ReleaseRequest 6
 typedef void (*BDFlatFn_SteamMatchMakingServers003_ReleaseRequest_t)(void *, uint64_t);
 static BDFlatFn_SteamMatchMakingServers003_ReleaseRequest_t g_bd_flat_SteamMatchMakingServers003_ReleaseRequest;
+#define BD_SLOT_SteamMatchMakingServers003_GetServerDetails 7
+typedef void * (*BDFlatFn_SteamMatchMakingServers003_GetServerDetails_t)(void *, uint64_t, int32_t);
+static BDFlatFn_SteamMatchMakingServers003_GetServerDetails_t g_bd_flat_SteamMatchMakingServers003_GetServerDetails;
 #define BD_SLOT_SteamMatchMakingServers003_CancelQuery 8
 typedef void (*BDFlatFn_SteamMatchMakingServers003_CancelQuery_t)(void *, uint64_t);
 static BDFlatFn_SteamMatchMakingServers003_CancelQuery_t g_bd_flat_SteamMatchMakingServers003_CancelQuery;
@@ -1428,6 +1467,18 @@ static BDFlatFn_SteamMatchMakingServers003_GetServerCount_t g_bd_flat_SteamMatch
 #define BD_SLOT_SteamMatchMakingServers003_RefreshServer 12
 typedef void (*BDFlatFn_SteamMatchMakingServers003_RefreshServer_t)(void *, uint64_t, int32_t);
 static BDFlatFn_SteamMatchMakingServers003_RefreshServer_t g_bd_flat_SteamMatchMakingServers003_RefreshServer;
+#define BD_SLOT_SteamMatchMakingServers003_PingServer 13
+typedef int32_t (*BDFlatFn_SteamMatchMakingServers003_PingServer_t)(void *, uint32_t, uint32_t, void *);
+static BDFlatFn_SteamMatchMakingServers003_PingServer_t g_bd_flat_SteamMatchMakingServers003_PingServer;
+#define BD_SLOT_SteamMatchMakingServers003_PlayerDetails 14
+typedef int32_t (*BDFlatFn_SteamMatchMakingServers003_PlayerDetails_t)(void *, uint32_t, uint32_t, void *);
+static BDFlatFn_SteamMatchMakingServers003_PlayerDetails_t g_bd_flat_SteamMatchMakingServers003_PlayerDetails;
+#define BD_SLOT_SteamMatchMakingServers003_ServerRules 15
+typedef int32_t (*BDFlatFn_SteamMatchMakingServers003_ServerRules_t)(void *, uint32_t, uint32_t, void *);
+static BDFlatFn_SteamMatchMakingServers003_ServerRules_t g_bd_flat_SteamMatchMakingServers003_ServerRules;
+#define BD_SLOT_SteamMatchMakingServers003_ServerFriends 16
+typedef int32_t (*BDFlatFn_SteamMatchMakingServers003_ServerFriends_t)(void *, uint32_t, uint32_t, void *);
+static BDFlatFn_SteamMatchMakingServers003_ServerFriends_t g_bd_flat_SteamMatchMakingServers003_ServerFriends;
 #define BD_SLOT_SteamMatchMakingServers003_CancelServerQuery 17
 typedef void (*BDFlatFn_SteamMatchMakingServers003_CancelServerQuery_t)(void *, int32_t);
 static BDFlatFn_SteamMatchMakingServers003_CancelServerQuery_t g_bd_flat_SteamMatchMakingServers003_CancelServerQuery;
@@ -2124,12 +2175,23 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetAppBuildId");
   g_bd_accessor_steammatchmakingservers003 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamMatchmakingServers_v003");
   g_bd_self_steammatchmakingservers003 = g_bd_accessor_steammatchmakingservers003 ? g_bd_accessor_steammatchmakingservers003() : NULL;
+  g_bd_flat_SteamMatchMakingServers003_RequestInternetServerList = (BDFlatFn_SteamMatchMakingServers003_RequestInternetServerList_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_RequestInternetServerList");
+  g_bd_flat_SteamMatchMakingServers003_RequestLANServerList = (BDFlatFn_SteamMatchMakingServers003_RequestLANServerList_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_RequestLANServerList");
+  g_bd_flat_SteamMatchMakingServers003_RequestFriendsServerList = (BDFlatFn_SteamMatchMakingServers003_RequestFriendsServerList_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_RequestFriendsServerList");
+  g_bd_flat_SteamMatchMakingServers003_RequestFavoritesServerList = (BDFlatFn_SteamMatchMakingServers003_RequestFavoritesServerList_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_RequestFavoritesServerList");
+  g_bd_flat_SteamMatchMakingServers003_RequestHistoryServerList = (BDFlatFn_SteamMatchMakingServers003_RequestHistoryServerList_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_RequestHistoryServerList");
+  g_bd_flat_SteamMatchMakingServers003_RequestSpectatorServerList = (BDFlatFn_SteamMatchMakingServers003_RequestSpectatorServerList_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_RequestSpectatorServerList");
   g_bd_flat_SteamMatchMakingServers003_ReleaseRequest = (BDFlatFn_SteamMatchMakingServers003_ReleaseRequest_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_ReleaseRequest");
+  g_bd_flat_SteamMatchMakingServers003_GetServerDetails = (BDFlatFn_SteamMatchMakingServers003_GetServerDetails_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_GetServerDetails");
   g_bd_flat_SteamMatchMakingServers003_CancelQuery = (BDFlatFn_SteamMatchMakingServers003_CancelQuery_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_CancelQuery");
   g_bd_flat_SteamMatchMakingServers003_RefreshQuery = (BDFlatFn_SteamMatchMakingServers003_RefreshQuery_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_RefreshQuery");
   g_bd_flat_SteamMatchMakingServers003_IsRefreshing = (BDFlatFn_SteamMatchMakingServers003_IsRefreshing_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_IsRefreshing");
   g_bd_flat_SteamMatchMakingServers003_GetServerCount = (BDFlatFn_SteamMatchMakingServers003_GetServerCount_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_GetServerCount");
   g_bd_flat_SteamMatchMakingServers003_RefreshServer = (BDFlatFn_SteamMatchMakingServers003_RefreshServer_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_RefreshServer");
+  g_bd_flat_SteamMatchMakingServers003_PingServer = (BDFlatFn_SteamMatchMakingServers003_PingServer_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_PingServer");
+  g_bd_flat_SteamMatchMakingServers003_PlayerDetails = (BDFlatFn_SteamMatchMakingServers003_PlayerDetails_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_PlayerDetails");
+  g_bd_flat_SteamMatchMakingServers003_ServerRules = (BDFlatFn_SteamMatchMakingServers003_ServerRules_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_ServerRules");
+  g_bd_flat_SteamMatchMakingServers003_ServerFriends = (BDFlatFn_SteamMatchMakingServers003_ServerFriends_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_ServerFriends");
   g_bd_flat_SteamMatchMakingServers003_CancelServerQuery = (BDFlatFn_SteamMatchMakingServers003_CancelServerQuery_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_CancelServerQuery");
   g_bd_accessor_steamnetworkingsockets013 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamNetworkingSockets_SteamAPI_v013");
   g_bd_self_steamnetworkingsockets013 = g_bd_accessor_steamnetworkingsockets013 ? g_bd_accessor_steamnetworkingsockets013() : NULL;
@@ -2224,7 +2286,7 @@ int bridge_dispatch_init(void *dylibHandle) {
 
 // 53-06 (D-53-13): game-originated call trace tables. Not a wire tuple,
 // so BRIDGE_DISPATCH_TABLE_HASH is unaffected.
-#define BD_CALL_COUNT 462
+#define BD_CALL_COUNT 473
 static int bd_call_index(uint16_t ordinal, uint16_t slot) {
   switch (((uint32_t)ordinal << 16) | (uint32_t)slot) {
     case (((uint32_t)BD_ORDINAL_SteamUser023 << 16) | (uint32_t)BD_SLOT_SteamUser023_GetHSteamUser): return 0;
@@ -2602,93 +2664,104 @@ static int bd_call_index(uint16_t ordinal, uint16_t slot) {
     case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_BIsAppInstalled): return 372;
     case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner): return 373;
     case (((uint32_t)BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION007 << 16) | (uint32_t)BD_SLOT_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId): return 374;
-    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_ReleaseRequest): return 375;
-    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_CancelQuery): return 376;
-    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_RefreshQuery): return 377;
-    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_IsRefreshing): return 378;
-    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_GetServerCount): return 379;
-    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_RefreshServer): return 380;
-    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_CancelServerQuery): return 381;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CreateListenSocketIP): return 382;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ConnectByIPAddress): return 383;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CreateListenSocketP2P): return 384;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ConnectP2P): return 385;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_AcceptConnection): return 386;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CloseConnection): return 387;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CloseListenSocket): return 388;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_SetConnectionUserData): return 389;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetConnectionUserData): return 390;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_SetConnectionName): return 391;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetConnectionName): return 392;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_SendMessageToConnection): return 393;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_FlushMessagesOnConnection): return 394;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ReceiveMessagesOnConnection): return 395;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetConnectionInfo): return 396;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetConnectionRealTimeStatus): return 397;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetDetailedConnectionStatus): return 398;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetListenSocketAddress): return 399;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CreateSocketPair): return 400;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ConfigureConnectionLanes): return 401;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetIdentity): return 402;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_InitAuthentication): return 403;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetAuthenticationStatus): return 404;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CreatePollGroup): return 405;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_DestroyPollGroup): return 406;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_SetConnectionPollGroup): return 407;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ReceiveMessagesOnPollGroup): return 408;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ResetIdentity): return 409;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetRelayNetworkStatus): return 410;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetLocalPingLocation): return 411;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations): return 412;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost): return 413;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_ConvertPingLocationToString): return 414;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_ParsePingLocationString): return 415;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_CheckPingDataUpToDate): return 416;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetPingToDataCenter): return 417;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetDirectPingToPOP): return 418;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetPOPCount): return 419;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetPOPList): return 420;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetLocalTimestamp): return 421;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetIPv4FakeIPType): return 422;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetRealIdentityForFakeIP): return 423;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_SetConfigValue): return 424;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetConfigValue): return 425;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetConfigValueInfo): return 426;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_IterateGenericEditableConfigValues): return 427;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_SendMessageToUser): return 428;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_ReceiveMessagesOnChannel): return 429;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_AcceptSessionWithUser): return 430;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_CloseSessionWithUser): return 431;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_CloseChannelWithUser): return 432;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_GetSessionConnectionInfo): return 433;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CreateListenSocketIP): return 434;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ConnectByIPAddress): return 435;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CreateListenSocketP2P): return 436;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ConnectP2P): return 437;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_AcceptConnection): return 438;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CloseConnection): return 439;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CloseListenSocket): return 440;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_SetConnectionUserData): return 441;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetConnectionUserData): return 442;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_SetConnectionName): return 443;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetConnectionName): return 444;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_SendMessageToConnection): return 445;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_FlushMessagesOnConnection): return 446;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ReceiveMessagesOnConnection): return 447;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetConnectionInfo): return 448;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetConnectionRealTimeStatus): return 449;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetDetailedConnectionStatus): return 450;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetListenSocketAddress): return 451;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CreateSocketPair): return 452;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ConfigureConnectionLanes): return 453;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetIdentity): return 454;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_InitAuthentication): return 455;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetAuthenticationStatus): return 456;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CreatePollGroup): return 457;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_DestroyPollGroup): return 458;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_SetConnectionPollGroup): return 459;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ReceiveMessagesOnPollGroup): return 460;
-    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ResetIdentity): return 461;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_RequestInternetServerList): return 375;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_RequestLANServerList): return 376;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_RequestFriendsServerList): return 377;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_RequestFavoritesServerList): return 378;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_RequestHistoryServerList): return 379;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_RequestSpectatorServerList): return 380;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_ReleaseRequest): return 381;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_GetServerDetails): return 382;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_CancelQuery): return 383;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_RefreshQuery): return 384;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_IsRefreshing): return 385;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_GetServerCount): return 386;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_RefreshServer): return 387;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_PingServer): return 388;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_PlayerDetails): return 389;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_ServerRules): return 390;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_ServerFriends): return 391;
+    case (((uint32_t)BD_ORDINAL_SteamMatchMakingServers003 << 16) | (uint32_t)BD_SLOT_SteamMatchMakingServers003_CancelServerQuery): return 392;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CreateListenSocketIP): return 393;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ConnectByIPAddress): return 394;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CreateListenSocketP2P): return 395;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ConnectP2P): return 396;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_AcceptConnection): return 397;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CloseConnection): return 398;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CloseListenSocket): return 399;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_SetConnectionUserData): return 400;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetConnectionUserData): return 401;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_SetConnectionName): return 402;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetConnectionName): return 403;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_SendMessageToConnection): return 404;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_FlushMessagesOnConnection): return 405;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ReceiveMessagesOnConnection): return 406;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetConnectionInfo): return 407;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetConnectionRealTimeStatus): return 408;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetDetailedConnectionStatus): return 409;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetListenSocketAddress): return 410;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CreateSocketPair): return 411;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ConfigureConnectionLanes): return 412;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetIdentity): return 413;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_InitAuthentication): return 414;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_GetAuthenticationStatus): return 415;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_CreatePollGroup): return 416;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_DestroyPollGroup): return 417;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_SetConnectionPollGroup): return 418;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ReceiveMessagesOnPollGroup): return 419;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets013 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets013_ResetIdentity): return 420;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetRelayNetworkStatus): return 421;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetLocalPingLocation): return 422;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_EstimatePingTimeBetweenTwoLocations): return 423;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_EstimatePingTimeFromLocalHost): return 424;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_ConvertPingLocationToString): return 425;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_ParsePingLocationString): return 426;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_CheckPingDataUpToDate): return 427;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetPingToDataCenter): return 428;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetDirectPingToPOP): return 429;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetPOPCount): return 430;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetPOPList): return 431;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetLocalTimestamp): return 432;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetIPv4FakeIPType): return 433;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetRealIdentityForFakeIP): return 434;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_SetConfigValue): return 435;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetConfigValue): return 436;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_GetConfigValueInfo): return 437;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingUtils004 << 16) | (uint32_t)BD_SLOT_SteamNetworkingUtils004_IterateGenericEditableConfigValues): return 438;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_SendMessageToUser): return 439;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_ReceiveMessagesOnChannel): return 440;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_AcceptSessionWithUser): return 441;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_CloseSessionWithUser): return 442;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_CloseChannelWithUser): return 443;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingMessages002 << 16) | (uint32_t)BD_SLOT_SteamNetworkingMessages002_GetSessionConnectionInfo): return 444;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CreateListenSocketIP): return 445;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ConnectByIPAddress): return 446;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CreateListenSocketP2P): return 447;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ConnectP2P): return 448;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_AcceptConnection): return 449;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CloseConnection): return 450;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CloseListenSocket): return 451;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_SetConnectionUserData): return 452;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetConnectionUserData): return 453;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_SetConnectionName): return 454;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetConnectionName): return 455;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_SendMessageToConnection): return 456;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_FlushMessagesOnConnection): return 457;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ReceiveMessagesOnConnection): return 458;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetConnectionInfo): return 459;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetConnectionRealTimeStatus): return 460;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetDetailedConnectionStatus): return 461;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetListenSocketAddress): return 462;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CreateSocketPair): return 463;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ConfigureConnectionLanes): return 464;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetIdentity): return 465;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_InitAuthentication): return 466;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_GetAuthenticationStatus): return 467;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_CreatePollGroup): return 468;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_DestroyPollGroup): return 469;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_SetConnectionPollGroup): return 470;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ReceiveMessagesOnPollGroup): return 471;
+    case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ResetIdentity): return 472;
     default: return -1;
   }
 }
@@ -3069,93 +3142,104 @@ static const char *bd_call_name(int idx) {
     case 372: return "STEAMAPPS_INTERFACE_VERSION007.BIsAppInstalled";
     case 373: return "STEAMAPPS_INTERFACE_VERSION007.GetAppOwner";
     case 374: return "STEAMAPPS_INTERFACE_VERSION007.GetAppBuildId";
-    case 375: return "SteamMatchMakingServers003.ReleaseRequest";
-    case 376: return "SteamMatchMakingServers003.CancelQuery";
-    case 377: return "SteamMatchMakingServers003.RefreshQuery";
-    case 378: return "SteamMatchMakingServers003.IsRefreshing";
-    case 379: return "SteamMatchMakingServers003.GetServerCount";
-    case 380: return "SteamMatchMakingServers003.RefreshServer";
-    case 381: return "SteamMatchMakingServers003.CancelServerQuery";
-    case 382: return "SteamNetworkingSockets013.CreateListenSocketIP";
-    case 383: return "SteamNetworkingSockets013.ConnectByIPAddress";
-    case 384: return "SteamNetworkingSockets013.CreateListenSocketP2P";
-    case 385: return "SteamNetworkingSockets013.ConnectP2P";
-    case 386: return "SteamNetworkingSockets013.AcceptConnection";
-    case 387: return "SteamNetworkingSockets013.CloseConnection";
-    case 388: return "SteamNetworkingSockets013.CloseListenSocket";
-    case 389: return "SteamNetworkingSockets013.SetConnectionUserData";
-    case 390: return "SteamNetworkingSockets013.GetConnectionUserData";
-    case 391: return "SteamNetworkingSockets013.SetConnectionName";
-    case 392: return "SteamNetworkingSockets013.GetConnectionName";
-    case 393: return "SteamNetworkingSockets013.SendMessageToConnection";
-    case 394: return "SteamNetworkingSockets013.FlushMessagesOnConnection";
-    case 395: return "SteamNetworkingSockets013.ReceiveMessagesOnConnection";
-    case 396: return "SteamNetworkingSockets013.GetConnectionInfo";
-    case 397: return "SteamNetworkingSockets013.GetConnectionRealTimeStatus";
-    case 398: return "SteamNetworkingSockets013.GetDetailedConnectionStatus";
-    case 399: return "SteamNetworkingSockets013.GetListenSocketAddress";
-    case 400: return "SteamNetworkingSockets013.CreateSocketPair";
-    case 401: return "SteamNetworkingSockets013.ConfigureConnectionLanes";
-    case 402: return "SteamNetworkingSockets013.GetIdentity";
-    case 403: return "SteamNetworkingSockets013.InitAuthentication";
-    case 404: return "SteamNetworkingSockets013.GetAuthenticationStatus";
-    case 405: return "SteamNetworkingSockets013.CreatePollGroup";
-    case 406: return "SteamNetworkingSockets013.DestroyPollGroup";
-    case 407: return "SteamNetworkingSockets013.SetConnectionPollGroup";
-    case 408: return "SteamNetworkingSockets013.ReceiveMessagesOnPollGroup";
-    case 409: return "SteamNetworkingSockets013.ResetIdentity";
-    case 410: return "SteamNetworkingUtils004.GetRelayNetworkStatus";
-    case 411: return "SteamNetworkingUtils004.GetLocalPingLocation";
-    case 412: return "SteamNetworkingUtils004.EstimatePingTimeBetweenTwoLocations";
-    case 413: return "SteamNetworkingUtils004.EstimatePingTimeFromLocalHost";
-    case 414: return "SteamNetworkingUtils004.ConvertPingLocationToString";
-    case 415: return "SteamNetworkingUtils004.ParsePingLocationString";
-    case 416: return "SteamNetworkingUtils004.CheckPingDataUpToDate";
-    case 417: return "SteamNetworkingUtils004.GetPingToDataCenter";
-    case 418: return "SteamNetworkingUtils004.GetDirectPingToPOP";
-    case 419: return "SteamNetworkingUtils004.GetPOPCount";
-    case 420: return "SteamNetworkingUtils004.GetPOPList";
-    case 421: return "SteamNetworkingUtils004.GetLocalTimestamp";
-    case 422: return "SteamNetworkingUtils004.GetIPv4FakeIPType";
-    case 423: return "SteamNetworkingUtils004.GetRealIdentityForFakeIP";
-    case 424: return "SteamNetworkingUtils004.SetConfigValue";
-    case 425: return "SteamNetworkingUtils004.GetConfigValue";
-    case 426: return "SteamNetworkingUtils004.GetConfigValueInfo";
-    case 427: return "SteamNetworkingUtils004.IterateGenericEditableConfigValues";
-    case 428: return "SteamNetworkingMessages002.SendMessageToUser";
-    case 429: return "SteamNetworkingMessages002.ReceiveMessagesOnChannel";
-    case 430: return "SteamNetworkingMessages002.AcceptSessionWithUser";
-    case 431: return "SteamNetworkingMessages002.CloseSessionWithUser";
-    case 432: return "SteamNetworkingMessages002.CloseChannelWithUser";
-    case 433: return "SteamNetworkingMessages002.GetSessionConnectionInfo";
-    case 434: return "SteamNetworkingSockets012.CreateListenSocketIP";
-    case 435: return "SteamNetworkingSockets012.ConnectByIPAddress";
-    case 436: return "SteamNetworkingSockets012.CreateListenSocketP2P";
-    case 437: return "SteamNetworkingSockets012.ConnectP2P";
-    case 438: return "SteamNetworkingSockets012.AcceptConnection";
-    case 439: return "SteamNetworkingSockets012.CloseConnection";
-    case 440: return "SteamNetworkingSockets012.CloseListenSocket";
-    case 441: return "SteamNetworkingSockets012.SetConnectionUserData";
-    case 442: return "SteamNetworkingSockets012.GetConnectionUserData";
-    case 443: return "SteamNetworkingSockets012.SetConnectionName";
-    case 444: return "SteamNetworkingSockets012.GetConnectionName";
-    case 445: return "SteamNetworkingSockets012.SendMessageToConnection";
-    case 446: return "SteamNetworkingSockets012.FlushMessagesOnConnection";
-    case 447: return "SteamNetworkingSockets012.ReceiveMessagesOnConnection";
-    case 448: return "SteamNetworkingSockets012.GetConnectionInfo";
-    case 449: return "SteamNetworkingSockets012.GetConnectionRealTimeStatus";
-    case 450: return "SteamNetworkingSockets012.GetDetailedConnectionStatus";
-    case 451: return "SteamNetworkingSockets012.GetListenSocketAddress";
-    case 452: return "SteamNetworkingSockets012.CreateSocketPair";
-    case 453: return "SteamNetworkingSockets012.ConfigureConnectionLanes";
-    case 454: return "SteamNetworkingSockets012.GetIdentity";
-    case 455: return "SteamNetworkingSockets012.InitAuthentication";
-    case 456: return "SteamNetworkingSockets012.GetAuthenticationStatus";
-    case 457: return "SteamNetworkingSockets012.CreatePollGroup";
-    case 458: return "SteamNetworkingSockets012.DestroyPollGroup";
-    case 459: return "SteamNetworkingSockets012.SetConnectionPollGroup";
-    case 460: return "SteamNetworkingSockets012.ReceiveMessagesOnPollGroup";
-    case 461: return "SteamNetworkingSockets012.ResetIdentity";
+    case 375: return "SteamMatchMakingServers003.RequestInternetServerList";
+    case 376: return "SteamMatchMakingServers003.RequestLANServerList";
+    case 377: return "SteamMatchMakingServers003.RequestFriendsServerList";
+    case 378: return "SteamMatchMakingServers003.RequestFavoritesServerList";
+    case 379: return "SteamMatchMakingServers003.RequestHistoryServerList";
+    case 380: return "SteamMatchMakingServers003.RequestSpectatorServerList";
+    case 381: return "SteamMatchMakingServers003.ReleaseRequest";
+    case 382: return "SteamMatchMakingServers003.GetServerDetails";
+    case 383: return "SteamMatchMakingServers003.CancelQuery";
+    case 384: return "SteamMatchMakingServers003.RefreshQuery";
+    case 385: return "SteamMatchMakingServers003.IsRefreshing";
+    case 386: return "SteamMatchMakingServers003.GetServerCount";
+    case 387: return "SteamMatchMakingServers003.RefreshServer";
+    case 388: return "SteamMatchMakingServers003.PingServer";
+    case 389: return "SteamMatchMakingServers003.PlayerDetails";
+    case 390: return "SteamMatchMakingServers003.ServerRules";
+    case 391: return "SteamMatchMakingServers003.ServerFriends";
+    case 392: return "SteamMatchMakingServers003.CancelServerQuery";
+    case 393: return "SteamNetworkingSockets013.CreateListenSocketIP";
+    case 394: return "SteamNetworkingSockets013.ConnectByIPAddress";
+    case 395: return "SteamNetworkingSockets013.CreateListenSocketP2P";
+    case 396: return "SteamNetworkingSockets013.ConnectP2P";
+    case 397: return "SteamNetworkingSockets013.AcceptConnection";
+    case 398: return "SteamNetworkingSockets013.CloseConnection";
+    case 399: return "SteamNetworkingSockets013.CloseListenSocket";
+    case 400: return "SteamNetworkingSockets013.SetConnectionUserData";
+    case 401: return "SteamNetworkingSockets013.GetConnectionUserData";
+    case 402: return "SteamNetworkingSockets013.SetConnectionName";
+    case 403: return "SteamNetworkingSockets013.GetConnectionName";
+    case 404: return "SteamNetworkingSockets013.SendMessageToConnection";
+    case 405: return "SteamNetworkingSockets013.FlushMessagesOnConnection";
+    case 406: return "SteamNetworkingSockets013.ReceiveMessagesOnConnection";
+    case 407: return "SteamNetworkingSockets013.GetConnectionInfo";
+    case 408: return "SteamNetworkingSockets013.GetConnectionRealTimeStatus";
+    case 409: return "SteamNetworkingSockets013.GetDetailedConnectionStatus";
+    case 410: return "SteamNetworkingSockets013.GetListenSocketAddress";
+    case 411: return "SteamNetworkingSockets013.CreateSocketPair";
+    case 412: return "SteamNetworkingSockets013.ConfigureConnectionLanes";
+    case 413: return "SteamNetworkingSockets013.GetIdentity";
+    case 414: return "SteamNetworkingSockets013.InitAuthentication";
+    case 415: return "SteamNetworkingSockets013.GetAuthenticationStatus";
+    case 416: return "SteamNetworkingSockets013.CreatePollGroup";
+    case 417: return "SteamNetworkingSockets013.DestroyPollGroup";
+    case 418: return "SteamNetworkingSockets013.SetConnectionPollGroup";
+    case 419: return "SteamNetworkingSockets013.ReceiveMessagesOnPollGroup";
+    case 420: return "SteamNetworkingSockets013.ResetIdentity";
+    case 421: return "SteamNetworkingUtils004.GetRelayNetworkStatus";
+    case 422: return "SteamNetworkingUtils004.GetLocalPingLocation";
+    case 423: return "SteamNetworkingUtils004.EstimatePingTimeBetweenTwoLocations";
+    case 424: return "SteamNetworkingUtils004.EstimatePingTimeFromLocalHost";
+    case 425: return "SteamNetworkingUtils004.ConvertPingLocationToString";
+    case 426: return "SteamNetworkingUtils004.ParsePingLocationString";
+    case 427: return "SteamNetworkingUtils004.CheckPingDataUpToDate";
+    case 428: return "SteamNetworkingUtils004.GetPingToDataCenter";
+    case 429: return "SteamNetworkingUtils004.GetDirectPingToPOP";
+    case 430: return "SteamNetworkingUtils004.GetPOPCount";
+    case 431: return "SteamNetworkingUtils004.GetPOPList";
+    case 432: return "SteamNetworkingUtils004.GetLocalTimestamp";
+    case 433: return "SteamNetworkingUtils004.GetIPv4FakeIPType";
+    case 434: return "SteamNetworkingUtils004.GetRealIdentityForFakeIP";
+    case 435: return "SteamNetworkingUtils004.SetConfigValue";
+    case 436: return "SteamNetworkingUtils004.GetConfigValue";
+    case 437: return "SteamNetworkingUtils004.GetConfigValueInfo";
+    case 438: return "SteamNetworkingUtils004.IterateGenericEditableConfigValues";
+    case 439: return "SteamNetworkingMessages002.SendMessageToUser";
+    case 440: return "SteamNetworkingMessages002.ReceiveMessagesOnChannel";
+    case 441: return "SteamNetworkingMessages002.AcceptSessionWithUser";
+    case 442: return "SteamNetworkingMessages002.CloseSessionWithUser";
+    case 443: return "SteamNetworkingMessages002.CloseChannelWithUser";
+    case 444: return "SteamNetworkingMessages002.GetSessionConnectionInfo";
+    case 445: return "SteamNetworkingSockets012.CreateListenSocketIP";
+    case 446: return "SteamNetworkingSockets012.ConnectByIPAddress";
+    case 447: return "SteamNetworkingSockets012.CreateListenSocketP2P";
+    case 448: return "SteamNetworkingSockets012.ConnectP2P";
+    case 449: return "SteamNetworkingSockets012.AcceptConnection";
+    case 450: return "SteamNetworkingSockets012.CloseConnection";
+    case 451: return "SteamNetworkingSockets012.CloseListenSocket";
+    case 452: return "SteamNetworkingSockets012.SetConnectionUserData";
+    case 453: return "SteamNetworkingSockets012.GetConnectionUserData";
+    case 454: return "SteamNetworkingSockets012.SetConnectionName";
+    case 455: return "SteamNetworkingSockets012.GetConnectionName";
+    case 456: return "SteamNetworkingSockets012.SendMessageToConnection";
+    case 457: return "SteamNetworkingSockets012.FlushMessagesOnConnection";
+    case 458: return "SteamNetworkingSockets012.ReceiveMessagesOnConnection";
+    case 459: return "SteamNetworkingSockets012.GetConnectionInfo";
+    case 460: return "SteamNetworkingSockets012.GetConnectionRealTimeStatus";
+    case 461: return "SteamNetworkingSockets012.GetDetailedConnectionStatus";
+    case 462: return "SteamNetworkingSockets012.GetListenSocketAddress";
+    case 463: return "SteamNetworkingSockets012.CreateSocketPair";
+    case 464: return "SteamNetworkingSockets012.ConfigureConnectionLanes";
+    case 465: return "SteamNetworkingSockets012.GetIdentity";
+    case 466: return "SteamNetworkingSockets012.InitAuthentication";
+    case 467: return "SteamNetworkingSockets012.GetAuthenticationStatus";
+    case 468: return "SteamNetworkingSockets012.CreatePollGroup";
+    case 469: return "SteamNetworkingSockets012.DestroyPollGroup";
+    case 470: return "SteamNetworkingSockets012.SetConnectionPollGroup";
+    case 471: return "SteamNetworkingSockets012.ReceiveMessagesOnPollGroup";
+    case 472: return "SteamNetworkingSockets012.ResetIdentity";
     default: return "";
   }
 }
@@ -9485,12 +9569,54 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
       *respLen = 4;
       return 0;
     }
+    case (((uint32_t)69) << 16 | 0u): { // SteamMatchMakingServers003.RequestInternetServerList
+      if (g_bd_flat_SteamMatchMakingServers003_RequestInternetServerList == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_mms_request_list
+        if (gl_mms_request_list(g_bd_self_steammatchmakingservers003, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)69) << 16 | 1u): { // SteamMatchMakingServers003.RequestLANServerList
+      if (g_bd_flat_SteamMatchMakingServers003_RequestLANServerList == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_mms_request_list
+        if (gl_mms_request_list(g_bd_self_steammatchmakingservers003, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)69) << 16 | 2u): { // SteamMatchMakingServers003.RequestFriendsServerList
+      if (g_bd_flat_SteamMatchMakingServers003_RequestFriendsServerList == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_mms_request_list
+        if (gl_mms_request_list(g_bd_self_steammatchmakingservers003, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)69) << 16 | 3u): { // SteamMatchMakingServers003.RequestFavoritesServerList
+      if (g_bd_flat_SteamMatchMakingServers003_RequestFavoritesServerList == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_mms_request_list
+        if (gl_mms_request_list(g_bd_self_steammatchmakingservers003, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)69) << 16 | 4u): { // SteamMatchMakingServers003.RequestHistoryServerList
+      if (g_bd_flat_SteamMatchMakingServers003_RequestHistoryServerList == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_mms_request_list
+        if (gl_mms_request_list(g_bd_self_steammatchmakingservers003, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)69) << 16 | 5u): { // SteamMatchMakingServers003.RequestSpectatorServerList
+      if (g_bd_flat_SteamMatchMakingServers003_RequestSpectatorServerList == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_mms_request_list
+        if (gl_mms_request_list(g_bd_self_steammatchmakingservers003, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
     case (((uint32_t)69) << 16 | 6u): { // SteamMatchMakingServers003.ReleaseRequest
       if (g_bd_flat_SteamMatchMakingServers003_ReleaseRequest == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
       if (argLen < 0u + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
       uint64_t arg_hRequest; memcpy(&arg_hRequest, arg + 0u, 8);
       g_bd_flat_SteamMatchMakingServers003_ReleaseRequest(g_bd_self_steammatchmakingservers003, arg_hRequest);
       *respLen = 0; return 0;
+    }
+    case (((uint32_t)69) << 16 | 7u): { // SteamMatchMakingServers003.GetServerDetails
+      if (g_bd_flat_SteamMatchMakingServers003_GetServerDetails == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_mms_get_server_details
+        if (gl_mms_get_server_details(g_bd_self_steammatchmakingservers003, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
     }
     case (((uint32_t)69) << 16 | 8u): { // SteamMatchMakingServers003.CancelQuery
       if (g_bd_flat_SteamMatchMakingServers003_CancelQuery == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
@@ -9534,6 +9660,30 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
       int32_t arg_iServer; memcpy(&arg_iServer, arg + (0u + 8), 4);
       g_bd_flat_SteamMatchMakingServers003_RefreshServer(g_bd_self_steammatchmakingservers003, arg_hRequest, arg_iServer);
       *respLen = 0; return 0;
+    }
+    case (((uint32_t)69) << 16 | 13u): { // SteamMatchMakingServers003.PingServer
+      if (g_bd_flat_SteamMatchMakingServers003_PingServer == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_mms_ping_server
+        if (gl_mms_ping_server(g_bd_self_steammatchmakingservers003, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)69) << 16 | 14u): { // SteamMatchMakingServers003.PlayerDetails
+      if (g_bd_flat_SteamMatchMakingServers003_PlayerDetails == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_mms_player_details
+        if (gl_mms_player_details(g_bd_self_steammatchmakingservers003, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)69) << 16 | 15u): { // SteamMatchMakingServers003.ServerRules
+      if (g_bd_flat_SteamMatchMakingServers003_ServerRules == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_mms_server_rules
+        if (gl_mms_server_rules(g_bd_self_steammatchmakingservers003, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
+    }
+    case (((uint32_t)69) << 16 | 16u): { // SteamMatchMakingServers003.ServerFriends
+      if (g_bd_flat_SteamMatchMakingServers003_ServerFriends == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      { uint32_t customLen = 0; // helperCustom gl_mms_server_friends
+        if (gl_mms_server_friends(g_bd_self_steammatchmakingservers003, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
     }
     case (((uint32_t)69) << 16 | 17u): { // SteamMatchMakingServers003.CancelServerQuery
       if (g_bd_flat_SteamMatchMakingServers003_CancelServerQuery == NULL || g_bd_self_steammatchmakingservers003 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called

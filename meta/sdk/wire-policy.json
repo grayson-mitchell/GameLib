@@ -1396,7 +1396,8 @@
           "type": "uint64",
           "name": "hRequest"
         }
-      }
+      },
+      "unmapHandle": "list"
     },
     "CancelQuery": {
       "helperFlat": "SteamAPI_ISteamMatchmakingServers_CancelQuery",
@@ -1457,7 +1458,226 @@
     "CancelServerQuery": {
       "helperFlat": "SteamAPI_ISteamMatchmakingServers_CancelServerQuery",
       "stackBytes": 4,
-      "zeroHandleParam": "hServerQuery"
+      "zeroHandleParam": "hServerQuery",
+      "unmapHandle": "query"
+    },
+    "RequestInternetServerList": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_RequestInternetServerList",
+      "shimLocal": true,
+      "helperCustom": "gl_mms_request_list",
+      "returns": {
+        "type": "void*",
+        "kind": "pointer"
+      },
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "iApp"
+        },
+        "_unknownArg1": {
+          "kind": "value",
+          "type": "void*",
+          "name": "ppchFilters"
+        },
+        "_unknownArg2": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "nFilters"
+        },
+        "_unknownArg3": {
+          "kind": "value",
+          "type": "void*",
+          "name": "pRequestServersResponse"
+        }
+      }
+    },
+    "RequestFriendsServerList": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_RequestFriendsServerList",
+      "shimLocal": true,
+      "helperCustom": "gl_mms_request_list",
+      "returns": {
+        "type": "void*",
+        "kind": "pointer"
+      },
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "iApp"
+        },
+        "_unknownArg1": {
+          "kind": "value",
+          "type": "void*",
+          "name": "ppchFilters"
+        },
+        "_unknownArg2": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "nFilters"
+        },
+        "_unknownArg3": {
+          "kind": "value",
+          "type": "void*",
+          "name": "pRequestServersResponse"
+        }
+      }
+    },
+    "RequestFavoritesServerList": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_RequestFavoritesServerList",
+      "shimLocal": true,
+      "helperCustom": "gl_mms_request_list",
+      "returns": {
+        "type": "void*",
+        "kind": "pointer"
+      },
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "iApp"
+        },
+        "_unknownArg1": {
+          "kind": "value",
+          "type": "void*",
+          "name": "ppchFilters"
+        },
+        "_unknownArg2": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "nFilters"
+        },
+        "_unknownArg3": {
+          "kind": "value",
+          "type": "void*",
+          "name": "pRequestServersResponse"
+        }
+      }
+    },
+    "RequestHistoryServerList": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_RequestHistoryServerList",
+      "shimLocal": true,
+      "helperCustom": "gl_mms_request_list",
+      "returns": {
+        "type": "void*",
+        "kind": "pointer"
+      },
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "iApp"
+        },
+        "_unknownArg1": {
+          "kind": "value",
+          "type": "void*",
+          "name": "ppchFilters"
+        },
+        "_unknownArg2": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "nFilters"
+        },
+        "_unknownArg3": {
+          "kind": "value",
+          "type": "void*",
+          "name": "pRequestServersResponse"
+        }
+      }
+    },
+    "RequestSpectatorServerList": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_RequestSpectatorServerList",
+      "shimLocal": true,
+      "helperCustom": "gl_mms_request_list",
+      "returns": {
+        "type": "void*",
+        "kind": "pointer"
+      },
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "iApp"
+        },
+        "_unknownArg1": {
+          "kind": "value",
+          "type": "void*",
+          "name": "ppchFilters"
+        },
+        "_unknownArg2": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "nFilters"
+        },
+        "_unknownArg3": {
+          "kind": "value",
+          "type": "void*",
+          "name": "pRequestServersResponse"
+        }
+      }
+    },
+    "RequestLANServerList": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_RequestLANServerList",
+      "shimLocal": true,
+      "helperCustom": "gl_mms_request_list",
+      "returns": {
+        "type": "void*",
+        "kind": "pointer"
+      },
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "uint32",
+          "name": "iApp"
+        },
+        "_unknownArg1": {
+          "kind": "value",
+          "type": "void*",
+          "name": "pRequestServersResponse"
+        }
+      }
+    },
+    "GetServerDetails": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_GetServerDetails",
+      "shimLocal": true,
+      "helperCustom": "gl_mms_get_server_details",
+      "stackBytes": 12,
+      "returns": {
+        "type": "void*",
+        "kind": "pointer"
+      },
+      "params": {
+        "_unknownArg0": {
+          "kind": "value",
+          "type": "uint64",
+          "name": "hRequest"
+        },
+        "_unknownArg1": {
+          "kind": "value",
+          "type": "int32",
+          "name": "iServer"
+        }
+      }
+    },
+    "PingServer": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_PingServer",
+      "shimLocal": true,
+      "helperCustom": "gl_mms_ping_server"
+    },
+    "PlayerDetails": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_PlayerDetails",
+      "shimLocal": true,
+      "helperCustom": "gl_mms_player_details"
+    },
+    "ServerRules": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_ServerRules",
+      "shimLocal": true,
+      "helperCustom": "gl_mms_server_rules"
+    },
+    "ServerFriends": {
+      "helperFlat": "SteamAPI_ISteamMatchmakingServers_ServerFriends",
+      "shimLocal": true,
+      "helperCustom": "gl_mms_server_friends"
     }
   }
 }

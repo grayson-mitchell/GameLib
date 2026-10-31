@@ -275,10 +275,14 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   // GetListenSocketInfo; no measured need, D-09).
   ['SteamNetworking006', { family: 'SteamNetworking', mode: 'wire' }],
   // 58-03 (D-07): current-version baseline for the multiplayer families, each
-  // extracted from its own Proton block, x64 only (D-11), stub until wired.
+  // extracted from its own Proton block, x64 only (D-11).
+  // 58-21: the server browser is wired (all 18 methods; response objects are
+  // relayed from the helper through CONTROL slot 12). D-07 baseline served it
+  // unconditionally (plan-check decision), although 58-17 measured
+  // MMServers as not observed for Schedule I.
   [
     'SteamMatchMakingServers003',
-    { family: 'SteamMatchMakingServers', mode: 'stub' }
+    { family: 'SteamMatchMakingServers', mode: 'wire' }
   ],
   // D-07 / 58-15: connect, listen, accept, close, send, receive, info, status,
   // identity, authentication, poll groups, lanes and ResetIdentity are wired;

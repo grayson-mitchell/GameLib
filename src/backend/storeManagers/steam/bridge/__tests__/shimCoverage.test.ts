@@ -1452,7 +1452,7 @@ describe('quick 261026-mhg: classifyUnservableInterfaceVersions', () => {
 const PRE_58_03_SHIM_EXPORT_SET_VERSION = 'e5c8d97c6a2e'
 
 // 58-03 (D-07, D-11): the multiplayer current-version baseline is served on x64
-// only, as stubs until its wiring plans flip methods to wire.
+// only; each wiring plan flipped its family to wire (58-21 the server browser).
 describe('58-03 multiplayer baseline served tables', () => {
   const NEW_KEYS = [
     'SteamMatchMakingServers003',
@@ -1460,11 +1460,9 @@ describe('58-03 multiplayer baseline served tables', () => {
     'SteamNetworkingUtils004',
     'SteamNetworkingMessages002'
   ]
-  test('the four new versions are served on x64 (Utils004 wired by 58-14, Sockets013 by 58-15, Messages002 by 58-16, MatchMakingServers003 a stub) and never on x86', () => {
+  test('the four new versions are served wire on x64 (Utils004 by 58-14, Sockets013 by 58-15, Messages002 by 58-16, MatchMakingServers003 by 58-21) and never on x86', () => {
     for (const k of NEW_KEYS) {
-      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(k)?.mode).toBe(
-        k === 'SteamMatchMakingServers003' ? 'stub' : 'wire'
-      )
+      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(k)?.mode).toBe('wire')
       expect(SHIM_SERVED_INTERFACE_VERSIONS.has(k)).toBe(false)
     }
   })
@@ -1559,5 +1557,21 @@ describe('58-12 SteamMatchMaking009 coverage verdicts (D-13)', () => {
     expect(
       computeExportSetVersion({ ...inputs, x64ServedVersions: stubbed })
     ).not.toBe(SHIM_EXPORT_SET_VERSION)
+  })
+})
+
+// 58-21 (D-07): the server browser is wired. SteamMatchMakingServers002 stays a
+// stub: the regenerated 58-01 row names no 002 method (not observed).
+describe('58-21 SteamMatchMakingServers served entries', () => {
+  test('003 is wire and 002 stays a stub on x64, neither on x86', () => {
+    expect(
+      SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamMatchMakingServers003')
+    ).toEqual({ family: 'SteamMatchMakingServers', mode: 'wire' })
+    expect(
+      SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamMatchMakingServers002')?.mode
+    ).toBe('stub')
+    expect(
+      SHIM_SERVED_INTERFACE_VERSIONS.has('SteamMatchMakingServers003')
+    ).toBe(false)
   })
 })
