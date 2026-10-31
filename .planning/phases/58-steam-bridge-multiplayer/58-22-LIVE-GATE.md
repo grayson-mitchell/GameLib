@@ -15,6 +15,8 @@ behaviour is recorded.
 
 Reference: `.claude/skills/spike-findings-gamelib/references/live-gate-contract-authoring.md`.
 
+Operator approval: the operator was shown a summary of items 1-8, including the host self-join caveat (item 2 (a): the host's own lobby-create yields the `kind=join` line, so a send/recv pair after the peer-join moment is what proves a peer), and answered verbatim "Approve" on 2026-10-31. Contract approved for plan 58-23 to run.
+
 ## Pre-gate state (read, not measured by this plan)
 
 Everything below is copied from existing planning artifacts; this plan launched nothing.
