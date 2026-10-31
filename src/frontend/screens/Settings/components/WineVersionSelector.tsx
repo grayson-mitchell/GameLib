@@ -152,6 +152,42 @@ export default function WineVersionSelector() {
         )
       }
       value={wineVersion.name}
+      labelHelp={
+        isLinux ? (
+          <InfoBox text="infobox.help" iconOnly>
+            <span>{t('help.wine.part1')}</span>
+            <ul>
+              <li>
+                <i>~/.config/GameLib/tools/wine</i>
+              </li>
+              <li>
+                <i>~/.config/GameLib/tools/proton</i>
+              </li>
+              <li>
+                <i>~/.steam/root/compatibilitytools.d</i>
+              </li>
+              <li>
+                <i>~/.steam/steamapps/common</i>
+              </li>
+              <li>
+                <i>~/.local/share/lutris/runners/wine</i>
+              </li>
+              <li>
+                <i>
+                  {tGamelib(
+                    'gamelib:settings.wineFlatpakPath',
+                    '~/.var/app/com.valvesoftware.Steam (Steam Flatpak)'
+                  )}
+                </i>
+              </li>
+              <li>
+                <i>/usr/share/steam</i>
+              </li>
+            </ul>
+            <span>{t('help.wine.part2')}</span>
+          </InfoBox>
+        ) : undefined
+      }
       afterSelect={
         <>
           {!refreshing && !altWine.length && (
@@ -188,40 +224,6 @@ export default function WineVersionSelector() {
           {isLinux && (
             <InfoBox text={t('infobox.wine-path', 'Wine Path')}>
               <span>{wineVersion.bin}</span>
-            </InfoBox>
-          )}
-          {isLinux && (
-            <InfoBox text="infobox.help">
-              <span>{t('help.wine.part1')}</span>
-              <ul>
-                <li>
-                  <i>~/.config/GameLib/tools/wine</i>
-                </li>
-                <li>
-                  <i>~/.config/GameLib/tools/proton</i>
-                </li>
-                <li>
-                  <i>~/.steam/root/compatibilitytools.d</i>
-                </li>
-                <li>
-                  <i>~/.steam/steamapps/common</i>
-                </li>
-                <li>
-                  <i>~/.local/share/lutris/runners/wine</i>
-                </li>
-                <li>
-                  <i>
-                    {tGamelib(
-                      'gamelib:settings.wineFlatpakPath',
-                      '~/.var/app/com.valvesoftware.Steam (Steam Flatpak)'
-                    )}
-                  </i>
-                </li>
-                <li>
-                  <i>/usr/share/steam</i>
-                </li>
-              </ul>
-              <span>{t('help.wine.part2')}</span>
             </InfoBox>
           )}
         </>

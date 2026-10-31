@@ -37,7 +37,7 @@ const LauncherArgs = () => {
   }
 
   const launcherArgsInfo = (
-    <InfoBox text="infobox.help">
+    <InfoBox text="infobox.help" iconOnly>
       <span>
         {t('help.other.part4')}
         <strong>{t('help.other.part5')}</strong>
@@ -63,12 +63,8 @@ const LauncherArgs = () => {
       placeholder={t('options.gameargs.placeholder')}
       value={launcherArgs}
       onChange={handleLauncherArgs}
-      afterInput={
-        <>
-          {errorDiv}
-          {launcherArgsInfo}
-        </>
-      }
+      afterInput={errorDiv}
+      labelHelp={launcherArgsInfo}
     />
   )
 }

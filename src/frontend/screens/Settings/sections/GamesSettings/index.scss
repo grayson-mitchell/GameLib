@@ -5,12 +5,14 @@
 }
 
 .toggleWithInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   label {
     padding-bottom: 0px !important;
   }
   .popover-wrapper {
-    margin-inline-start: 3rem;
-    padding-bottom: var(--space-md);
+    padding-bottom: 0;
   }
 }
 

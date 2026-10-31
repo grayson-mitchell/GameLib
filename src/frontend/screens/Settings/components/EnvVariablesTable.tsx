@@ -32,7 +32,7 @@ const EnvVariablesTable = () => {
   }
 
   const envVariablesInfo = (
-    <InfoBox text="infobox.help">
+    <InfoBox text="infobox.help" iconOnly>
       {t(
         'options.env_variables.info',
         'Set environment variables to append to the command.'
@@ -88,7 +88,7 @@ const EnvVariablesTable = () => {
           'E.g.: Path/To/ExtraFiles'
         )
       }}
-      afterInput={envVariablesInfo}
+      labelHelp={envVariablesInfo}
     />
   )
 }

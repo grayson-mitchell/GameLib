@@ -40,7 +40,7 @@ const NvidiaPrime = () => {
         )}
       />
 
-      <InfoBox text={t('infobox.help')}>
+      <InfoBox text={t('infobox.help')} iconOnly>
         {t(
           'help.nvidiaprime.details',
           'Use dedicated graphics card to render game on multi-GPU systems. Only needed on gaming laptops or desktops that use a headless GPU for rendering (NVIDIA Optimus, AMD Dynamic Switchable Graphics)'

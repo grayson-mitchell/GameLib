@@ -83,19 +83,21 @@ const EgsSettings = () => {
   // On macOS/Linux, we have to give Legendary the path to the Wineprefix
   // the EGL is installed in
   return (
-    <>
-      <PathSelectionBox
-        type={'directory'}
-        onPathChange={handleSync}
-        path={egsPath}
-        placeholder={t('placeholder.egs-prefix')}
-        pathDialogTitle={t('box.choose-egs-prefix')}
-        canEditPath={!isSyncing}
-        label={t('setting.egs-sync')}
-        htmlId="set_epic_sync_path"
-      />
-      <InfoBox text="infobox.help">{t('help.general')}</InfoBox>
-    </>
+    <PathSelectionBox
+      type={'directory'}
+      onPathChange={handleSync}
+      path={egsPath}
+      placeholder={t('placeholder.egs-prefix')}
+      pathDialogTitle={t('box.choose-egs-prefix')}
+      canEditPath={!isSyncing}
+      label={t('setting.egs-sync')}
+      htmlId="set_epic_sync_path"
+      labelHelp={
+        <InfoBox text="infobox.help" iconOnly>
+          {t('help.general')}
+        </InfoBox>
+      }
+    />
   )
 }
 

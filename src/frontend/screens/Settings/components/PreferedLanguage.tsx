@@ -9,7 +9,7 @@ const PreferedLanguage = () => {
   const handleLanguageCode = (newValue: string) => setLanguageCode(newValue)
 
   const languageInfo = (
-    <InfoBox text="infobox.help">
+    <InfoBox text="infobox.help" iconOnly>
       {t(
         'help.game_language.fallback',
         "Leave blank to use GameLib's language."
@@ -40,7 +40,7 @@ const PreferedLanguage = () => {
       )}
       value={languageCode}
       onChange={handleLanguageCode}
-      afterInput={languageInfo}
+      labelHelp={languageInfo}
     />
   )
 }

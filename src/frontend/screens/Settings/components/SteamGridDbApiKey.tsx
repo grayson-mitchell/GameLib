@@ -78,8 +78,8 @@ export default function SteamGridDbApiKey() {
       htmlId="steamgriddb-api-key"
       type="password"
       disabled={unavailable}
-      afterInput={
-        <InfoBox text={t('settings.advanced.details', 'Details')}>
+      labelHelp={
+        <InfoBox text={t('settings.advanced.details', 'Details')} iconOnly>
           <span style={{ userSelect: 'text' }}>
             {unavailable
               ? tGamelib(

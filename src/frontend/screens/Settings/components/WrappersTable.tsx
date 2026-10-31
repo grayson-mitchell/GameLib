@@ -37,7 +37,7 @@ const WrappersTable = () => {
   }
 
   const wrapperInfo = (
-    <InfoBox text="infobox.help">
+    <InfoBox text="infobox.help" iconOnly>
       {t(
         'options.wrapper.arguments_example',
         'Arguments example: --arg; --extra-file="file-path/ with/spaces"'
@@ -68,7 +68,7 @@ const WrappersTable = () => {
           )}`}
         </span>
       }
-      afterInput={wrapperInfo}
+      labelHelp={wrapperInfo}
     />
   )
 }

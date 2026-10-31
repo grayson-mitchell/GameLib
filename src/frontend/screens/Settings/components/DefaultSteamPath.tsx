@@ -28,7 +28,11 @@ const DefaultSteamPath = () => {
     <p>{helpContent}</p>
   )
 
-  const steamPathInfo = <InfoBox text="infobox.help">{helpContent}</InfoBox>
+  const steamPathInfo = (
+    <InfoBox text="infobox.help" iconOnly>
+      {helpContent}
+    </InfoBox>
+  )
 
   return (
     <PathSelectionBox
@@ -40,7 +44,7 @@ const DefaultSteamPath = () => {
       label={t('setting.default-steam-path', 'Default Steam path')}
       htmlId="default_steam_path"
       noDeleteButton
-      afterInput={steamPathInfo}
+      labelHelp={steamPathInfo}
     />
   )
 }
