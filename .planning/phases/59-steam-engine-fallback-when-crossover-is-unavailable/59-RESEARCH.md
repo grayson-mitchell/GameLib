@@ -430,12 +430,16 @@ Additional integration facts the planner needs:
 | A7 | Default deadline of 180 s and pre-flight cap of 15 s are adequate | Discretion | Too tight kills slow-but-healthy starts; make them constants and tune from UAT |
 | A8 | Staging 11.20 sha256 from GitHub `digest` equals the asset that spikes 056-059 used (installed copy reports 11.20) | Pins | Pin mismatch fails the first download; verify by hashing at plan time |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does `--demo-status` work when CrossOver is installed but the user has never created any CX bottle?** It needs `CX_BOTTLE`. Recommendation: probe an existing bottle if any; otherwise rely on the create timeout.
+   RESOLVED: no probe is attempted when no GameLib bridge bottle exists; bottle creation goes to CrossOver bounded by `CX_CREATE_CAP_MS` (120 s), and the game-page state for a licensed/trial CrossOver with no ready bottle is engine/reason null with no trial notice (D-13 is per bottle) — owned by 59-07 Task 1 (`decideCreationEngine`, probed false, probe never called) and 59-07 Task 2 (`getSteamEngineState` null-preflight behavior).
 2. **Where does the trial notice get its number between launches?** `--demo-status` costs 1-4 s. Recommendation: run it at game-page open (cached for the session, invalidated on launch) and again at launch; D-07 still requires a fresh check per launch.
+   RESOLVED: as recommended — page display uses a once-per-bottle-per-session cached preflight with a shared in-flight promise, replaced by each launch's fresh preflight via `recordLaunchDecision` — owned by 59-07 Task 2; the fresh per-launch probe is owned by 59-10 Task 1 (`decideLaunchEngine` on every launch).
 3. **Should `previous` ship populated in the first release?** Recommendation: no (empty), unless the user wants 11.18 as a rollback target; either way the schema supports it.
+   RESOLVED: ship `previous: null` (no earlier GameLib release shipped a pin, so there is no rollback target); the next pin bump moves `current` into `previous` — owned by 59-03 Task 1.
 4. **What happens to a fallback-created bottle if the user later *uninstalls* GameLib's pinned engine on a new release (re-pin)?** The bottle is just a prefix; the next engine performs the usual silent update. No action, but include in UAT.
+   RESOLVED: no code change; accepted as a live UAT item — 59-13 Task 1 writes UAT item 11 (fallback-made bottle launched on a different Wine-Staging build via the override, silent prefix update, save intact, then back to the pin), run by 59-13 Task 2.
 
 ## Environment Availability
 

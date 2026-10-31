@@ -37,22 +37,23 @@ created: 2026-10-31
 
 ## Per-Task Verification Map
 
-Task IDs are filled in by the planner; rows below map each decision to its check.
+Task IDs are `<plan>-<task>` (e.g. `59-02-01` = plan 59-02, Task 1); rows below map each decision to the task that creates or extends its check.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | TBD | D-09 | — | Unrecognised `--demo-status` output never treated as licensed | unit | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/demoStatus.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | D-07, D-09 | — | N/A | unit (stub `bin/wine` under `createFakeHomeProfile()`) | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/engineDecision.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | D-01, D-02, D-03 | — | Conf written last; bottle not "ready" until complete | unit (tmp Bottles dir) | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/adoptBottle.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | D-05, D-08 | — | sha256 mismatch aborts and deletes the download | unit (fixture tarball, mocked `downloadFile`) | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/fallbackEngine.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | D-10, D-11 | — | Timers unref'd; no fallback retry after deadline | unit (fake timers) | `npx jest --runTestsByPath src/backend/storeManagers/steam/__tests__/bottleProcessMonitor.test.ts src/backend/storeManagers/steam/engine/__tests__/launchDeadline.test.ts` | partial (monitor exists) | ⬜ pending |
-| TBD | TBD | TBD | D-10 | — | Kill uses the engine's own wineserver | unit | `npx jest --runTestsByPath src/backend/storeManagers/steam/__tests__/bottle.test.ts -t wineserver` | ✅ extend | ⬜ pending |
-| TBD | TBD | TBD | registry | — | DRM registry still wins over fallback | unit | `npx jest --runTestsByPath src/backend/storeManagers/steam/__tests__/bottle.test.ts` | ✅ extend | ⬜ pending |
-| TBD | TBD | TBD | D-13 | — | N/A | unit (frontend) | `npx jest src/frontend/screens/Game/GamePage/components/__tests__` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | D-06, D-14 | — | Override engine id validated in backend (paths rejected) | unit (frontend + backend validator) | `npx jest <frontend badge/override tests> <backend validator test>` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | D-15 | — | Never blocks a launch | unit | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/testedCrossoverVersions.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | D-04 | — | DRM/bottled routes still return CrossOver-required | unit | `npx jest src/backend/storeManagers/steam/__tests__/games.test.ts -t crossover` (verify file) | ✅ extend | ⬜ pending |
-| TBD | TBD | TBD | hygiene | — | No new un-unref'd sidecar handles; no boot work | smoke | `pnpm smoke:sidecar` | ✅ | ⬜ pending |
+| 59-02-01 | 59-02 | 1 | D-09 | — | Unrecognised `--demo-status` output never treated as licensed | unit | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/demoStatus.test.ts` | ❌ W0 | ⬜ pending |
+| 59-07-01 | 59-07 | 3 | D-07, D-09 | — | N/A | unit (stub `bin/wine` under `createFakeHomeProfile()`) | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/engineDecision.test.ts` | ❌ W0 | ⬜ pending |
+| 59-06-01 | 59-06 | 3 | D-01, D-02, D-03 | — | Conf written last; bottle not "ready" until complete | unit (tmp Bottles dir) | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/adoptBottle.test.ts` | ❌ W0 | ⬜ pending |
+| 59-03-02 | 59-03 | 1 | D-05, D-08 | — | sha256 mismatch aborts and deletes the download | unit (fixture tarball, mocked `downloadFile`) | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/fallbackEngine.test.ts` | ❌ W0 | ⬜ pending |
+| 59-04-01, 59-04-02 | 59-04 | 1 | D-10, D-11 | — | Timers unref'd; no fallback retry after deadline | unit (fake timers) | `npx jest --runTestsByPath src/backend/storeManagers/steam/__tests__/bottleProcessMonitor.test.ts src/backend/storeManagers/steam/engine/__tests__/launchDeadline.test.ts` | partial (monitor exists) | ⬜ pending |
+| 59-05-02 | 59-05 | 2 | D-10 | — | Kill uses the engine's own wineserver | unit | `npx jest --runTestsByPath src/backend/storeManagers/steam/__tests__/bottle.test.ts -t wineserver` | ✅ extend | ⬜ pending |
+| 59-05-01 | 59-05 | 2 | registry | — | DRM registry still wins over fallback | unit | `npx jest --runTestsByPath src/backend/storeManagers/steam/__tests__/bottle.test.ts` | ✅ extend | ⬜ pending |
+| 59-11-01 | 59-11 | 5 | D-13 | — | N/A | unit (frontend) | `npx jest src/frontend/screens/Game/GamePage/components/__tests__` | ❌ W0 | ⬜ pending |
+| 59-07-02 | 59-07 | 3 | D-13, D-04, D-15 | — | Notice only at <=7 days and only for a ready bottle; dismissals validated (closed kind set, build regex) | unit | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/engineState.test.ts` | ❌ W0 | ⬜ pending |
+| 59-03-01, 59-11-01, 59-12-01 | 59-03, 59-11, 59-12 | 1, 5, 5 | D-06, D-14 | — | Override engine id validated in backend (paths rejected) | unit (frontend + backend validator) | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/engineIds.test.ts src/frontend/screens/Game/GamePage/components/__tests__/EngineBadge.test.tsx src/frontend/screens/Settings/components/__tests__/SteamEngineOverride.test.tsx` | ❌ W0 | ⬜ pending |
+| 59-02-02 | 59-02 | 1 | D-15 | — | Never blocks a launch | unit | `npx jest --runTestsByPath src/backend/storeManagers/steam/engine/__tests__/testedCrossoverVersions.test.ts` | ❌ W0 | ⬜ pending |
+| 59-09-01 | 59-09 | 5 | D-04 | — | DRM/bottled routes still return CrossOver-required | unit | `npx jest --runTestsByPath src/backend/storeManagers/steam/__tests__/games.test.ts` | ✅ extend | ⬜ pending |
+| 59-13-01 | 59-13 | 7 | hygiene | — | No new un-unref'd sidecar handles; no boot work | smoke | `pnpm smoke:sidecar` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -80,6 +81,7 @@ Task IDs are filled in by the planner; rows below map each decision to its check
 | Process-monitor match on Staging | D-11 | Needs a live game process | Launch on fallback; confirm `onFirstMatch` fires |
 | Near-expiry nag, expired dialog, `cxbottle --create` under expiry | D-12 | Licence state | Spike-060 `sandbox-exec` harness (`./run.sh status\|launch\|create`), attended |
 | No-CrossOver end-to-end install and launch | D-01, D-04, D-05 | Needs CrossOver hidden | `sandbox-exec` denying the app path; never touch the real install |
+| Fallback-made bottle survives a different engine build (re-pin; RESEARCH Open Question 4) | D-05, D-08 | Needs a second installed Wine-Staging build and a live game | 59-UAT.md item 11 (59-13 Task 1/2): override to another Wine Manager Wine-Staging-macOS build under no-crossover.sb, then back to Automatic |
 | Toast wording, badges, 7-day notice, "Game didn't start" dialog | D-06, D-10, D-13, D-14 | Visual | Live app UAT |
 
 ---
