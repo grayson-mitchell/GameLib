@@ -6,6 +6,25 @@ interface PopoverComponentProps {
   children: React.ReactElement | React.ReactNode | React.ReactNode[]
 }
 
+export function bindPopoverDismiss(
+  doc: EventTarget,
+  isInside: (target: EventTarget | null) => boolean,
+  close: (reason: 'escape' | 'outside') => void
+): () => void {
+  const onClick = (event: Event) => {
+    if (!isInside(event.target)) close('outside')
+  }
+  const onKeyDown = (event: Event) => {
+    if ((event as KeyboardEvent).key === 'Escape') close('escape')
+  }
+  doc.addEventListener('click', onClick)
+  doc.addEventListener('keydown', onKeyDown)
+  return () => {
+    doc.removeEventListener('click', onClick)
+    doc.removeEventListener('keydown', onKeyDown)
+  }
+}
+
 const PopoverComponent: React.FC<PopoverComponentProps> = ({
   item,
   children
@@ -18,29 +37,28 @@ const PopoverComponent: React.FC<PopoverComponentProps> = ({
   }
 
   useEffect(() => {
-    if (open) {
-      // add a click listener to close the popover when clicking outside
-      const callback = (event: MouseEvent) => {
-        if (!wrapper.current!.contains(event.target as HTMLElement)) {
-          setOpen(false)
+    if (!open) return
+    // listeners exist only while the popover is open; unbind on close/unmount
+    return bindPopoverDismiss(
+      document,
+      (t) => !!wrapper.current?.contains(t as Node),
+      (reason) => {
+        setOpen(false)
+        if (reason === 'escape') {
+          // keep keyboard users on the trigger instead of dropping to <body>
+          wrapper.current
+            ?.querySelector<HTMLElement>('button, [tabindex]')
+            ?.focus()
         }
       }
-
-      document.addEventListener('click', callback)
-
-      return () => {
-        // remove the listener when the popover is closed
-        document.removeEventListener('click', callback)
-      }
-    } else {
-      return () => ''
-    }
+    )
   }, [open])
 
   return (
     <div className="popover-wrapper" ref={wrapper}>
       {React.cloneElement(item, {
         onClick: handleClick,
+        'aria-expanded': open,
         style: { cursor: 'pointer' }
       })}
       {open && (

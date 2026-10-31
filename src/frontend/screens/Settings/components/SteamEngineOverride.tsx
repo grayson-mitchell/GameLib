@@ -6,7 +6,11 @@ import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
 import type { SteamEngineOption } from 'common/types/steam'
 
-type T = (key: string, defaultValue: string, opts?: object) => string
+type T = (
+  key: string,
+  defaultValue: string,
+  opts?: Record<string, unknown>
+) => string
 
 /**
  * D-14: the per-game engine override. Advanced, collapsed, defaults to

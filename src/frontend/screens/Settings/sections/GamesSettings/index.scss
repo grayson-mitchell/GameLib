@@ -126,3 +126,16 @@ details {
 .Field {
   text-align: left;
 }
+
+.steamEngineOverride {
+  margin-top: 1rem;
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  &[open] summary {
+    margin-bottom: 0.5rem;
+  }
+}
