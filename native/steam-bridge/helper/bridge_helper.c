@@ -224,8 +224,11 @@
 #define CONTROL_SLOT_REPORT_CB_DISPATCH 10
 // Phase 58 (58-07): the shim drains one completed call result (CreateLobby, JoinLobby, RequestLobbyList) per round trip.
 #define CONTROL_SLOT_DRAIN_CALL_RESULTS 11
-// Phase 58 (58-20): the shim drains one server-browser event (list, ping, players, rules) per round trip. Slot 13 is reserved (58-19).
+// Phase 58 (58-20): the shim drains one server-browser event (list, ping, players, rules) per round trip.
 #define CONTROL_SLOT_DRAIN_SERVER_EVENTS 12
+// Phase 58 (58-29): GameLib's own UI lists the signed-in account's friends (ordinals, never SteamIDs) and invites one to the lobby the game asked to invite to.
+#define CONTROL_SLOT_LIST_FRIENDS 13
+#define CONTROL_SLOT_INVITE_FRIEND 14
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
@@ -2074,6 +2077,177 @@ int gl_mms_get_server_details(void *self, const uint8_t *args, uint32_t argLen, 
   return 0;
 }
 
+/* === 58-29: invite path ====================================================
+ * The game's "+" control calls ActivateGameOverlayInviteDialog(lobby), which
+ * Mac Steam cannot show for a Wine game. The helper keeps that lobby (set ONLY
+ * by the game's own call, never by a wire request carrying an id) and exposes
+ * an authenticated friend snapshot plus an invite action to GameLib's own UI.
+ * This helper is single-threaded (one accept loop, see main), so this state
+ * needs no mutex. SteamIDs and the lobby id are never logged. */
+
+#define GL_INVITE_FRIENDS_MAX 100u
+#define GL_INVITE_NAME_MAX 128u
+#define GL_INVITE_EXPIRY_MS 600000ull
+#define GL_INVITE_DIALOG_LOG_MAX 16u
+#define GL_INVITE_DIALOG_LOG_GAP_MS 2000ull
+#define GL_INVITE_FRIENDS_RESP_MAX (4u + GL_INVITE_FRIENDS_MAX * (8u + GL_INVITE_NAME_MAX))
+
+static uint64_t g_invite_lobby = 0;
+static uint64_t g_invite_born_ms = 0;
+static unsigned g_invite_dialog_logged = 0;
+static uint64_t g_invite_last_log_ms = 0;
+static uint64_t g_friend_snapshot[GL_INVITE_FRIENDS_MAX];
+static uint32_t g_friend_snapshot_n = 0;
+static int g_friend_snapshot_taken = 0;
+
+static uint64_t gl_invite_now_ms(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (uint64_t)ts.tv_sec * 1000ull + (uint64_t)ts.tv_nsec / 1000000ull;
+}
+
+/* helperCustom for SteamFriends017.ActivateGameOverlayInviteDialog. Request
+ * (generic encoding): [u64 steamIDLobby]. Void response. */
+int gl_friends_invite_dialog(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
+                             uint32_t respCap, uint32_t *respLen) {
+  uint64_t lobby;
+  uint64_t now;
+  (void)resp; (void)respCap;
+  *respLen = 0;
+  if (args == NULL || argLen != 8) return 1;
+  if (self == NULL || g_bd_flat_SteamFriends017_ActivateGameOverlayInviteDialog == NULL) return 1;
+  memcpy(&lobby, args, 8);
+  now = gl_invite_now_ms();
+  g_invite_lobby = lobby;
+  g_invite_born_ms = now;
+  g_bd_flat_SteamFriends017_ActivateGameOverlayInviteDialog(self, lobby);
+  if (g_invite_dialog_logged < GL_INVITE_DIALOG_LOG_MAX &&
+      (g_invite_dialog_logged == 0 || now - g_invite_last_log_ms >= GL_INVITE_DIALOG_LOG_GAP_MS)) {
+    g_invite_dialog_logged++;
+    g_invite_last_log_ms = now;
+    logts_f("INVITE", "dialog appid=%s", g_appid);
+  }
+  return 0;
+}
+
+/* Record-only lobby-shape measurement: integer arguments, never the lobby id.
+ * CreateLobby [u32 type][i32 max]; SetLobbyType [u64 lobby][u32 type];
+ * SetLobbyJoinable [u64 lobby][i32 value]. Each op logs at most 4 lines. */
+static void gl_mms_lobby_log(int ci, const uint8_t *args, uint32_t argLen) {
+  static unsigned n[3];
+  int32_t a = 0, b = 0;
+  if (ci < 0 || args == NULL) return;
+  if (ci == bd_call_index(BD_ORDINAL_SteamMatchMaking009, BD_SLOT_SteamMatchMaking009_CreateLobby)) {
+    if (argLen < 8 || n[0] >= 4) return;
+    n[0]++;
+    memcpy(&a, args, 4);
+    memcpy(&b, args + 4, 4);
+    logts_f("MMS", "lobby op=create type=%d max=%d", (int)a, (int)b);
+  } else if (ci == bd_call_index(BD_ORDINAL_SteamMatchMaking009, BD_SLOT_SteamMatchMaking009_SetLobbyType)) {
+    if (argLen < 12 || n[1] >= 4) return;
+    n[1]++;
+    memcpy(&a, args + 8, 4);
+    logts_f("MMS", "lobby op=set-type type=%d", (int)a);
+  } else if (ci == bd_call_index(BD_ORDINAL_SteamMatchMaking009, BD_SLOT_SteamMatchMaking009_SetLobbyJoinable)) {
+    if (argLen < 12 || n[2] >= 4) return;
+    n[2]++;
+    memcpy(&a, args + 8, 4);
+    logts_f("MMS", "lobby op=set-joinable value=%d", (int)a);
+  }
+}
+
+/* Slot 13. Response: [u32 count] then per friend
+ * [u32 ordinal][u8 online][u8 playingThisApp][u16 nameLen][name]. Returns 0 on
+ * success, 1 when Mac Steam's friends API is unavailable. */
+static int gl_invite_list_friends(void *friendsSelf, uint8_t *out, uint32_t cap, uint32_t *outLen) {
+  typedef int (*Count_t)(void *, int);
+  typedef uint64_t (*ByIdx_t)(void *, int, int);
+  typedef int (*State_t)(void *, uint64_t);
+  typedef int (*Played_t)(void *, uint64_t, void *);
+  static Count_t cnt;
+  static ByIdx_t byIdx;
+  static State_t state;
+  static Played_t played;
+  uint32_t n = 0, off = 4;
+  int total;
+  *outLen = 0;
+  if (cnt == NULL) cnt = (Count_t)gl_nets_sym("SteamAPI_ISteamFriends_GetFriendCount");
+  if (byIdx == NULL) byIdx = (ByIdx_t)gl_nets_sym("SteamAPI_ISteamFriends_GetFriendByIndex");
+  if (state == NULL) state = (State_t)gl_nets_sym("SteamAPI_ISteamFriends_GetFriendPersonaState");
+  if (played == NULL) played = (Played_t)gl_nets_sym("SteamAPI_ISteamFriends_GetFriendGamePlayed");
+  if (friendsSelf == NULL || cap < 4 || cnt == NULL || byIdx == NULL || state == NULL || played == NULL ||
+      g_bd_flat_SteamFriends017_GetFriendPersonaName == NULL)
+    return 1;
+  total = cnt(friendsSelf, 0x04 /* k_EFriendFlagImmediate */);
+  g_friend_snapshot_n = 0;
+  g_friend_snapshot_taken = 1;
+  for (int i = 0; i < total && n < GL_INVITE_FRIENDS_MAX; i++) {
+    uint64_t id = byIdx(friendsSelf, i, 0x04);
+    const char *name = g_bd_flat_SteamFriends017_GetFriendPersonaName(friendsSelf, id);
+    uint8_t info[64];
+    size_t nl = 0;
+    uint8_t online, playing = 0;
+    uint16_t nl16;
+    uint32_t ord = n;
+    if (id == 0) continue;
+    if (name != NULL) {
+      while (nl < GL_INVITE_NAME_MAX + 1 && name[nl] != '\0') nl++;
+      if (nl > GL_INVITE_NAME_MAX) {
+        nl = GL_INVITE_NAME_MAX;
+        while (nl > 0 && ((uint8_t)name[nl] & 0xC0) == 0x80) nl--;
+      }
+    }
+    if (off + 8u + (uint32_t)nl > cap) break;
+    online = state(friendsSelf, id) != 0 ? 1 : 0;
+    memset(info, 0, sizeof info);
+    if (played(friendsSelf, id, info) & 0xff) {
+      uint64_t gid;
+      memcpy(&gid, info, 8);
+      playing = (gid & 0xFFFFFFull) == g_appid_u64 ? 1 : 0;
+    }
+    nl16 = (uint16_t)nl;
+    memcpy(out + off, &ord, 4);
+    out[off + 4] = online;
+    out[off + 5] = playing;
+    memcpy(out + off + 6, &nl16, 2);
+    if (nl > 0) memcpy(out + off + 8, name, nl);
+    off += 8u + (uint32_t)nl;
+    g_friend_snapshot[n++] = id;
+  }
+  g_friend_snapshot_n = n;
+  memcpy(out, &n, 4);
+  *outLen = off;
+  logts_f("INVITE", "friends n=%u", (unsigned)n);
+  return 0;
+}
+
+#define GL_INVITE_NO_PENDING (-1)
+#define GL_INVITE_EXPIRED (-2)
+#define GL_INVITE_BAD_ORDINAL (-3)
+
+/* Slot 14. Returns the result code for [i32 result]. */
+static int32_t gl_invite_send(void *mmSelf, uint32_t ordinal) {
+  int ok;
+  if (g_invite_lobby == 0) {
+    logts("INVITE", "refused reason=no-pending");
+    return GL_INVITE_NO_PENDING;
+  }
+  if (gl_invite_now_ms() - g_invite_born_ms >= GL_INVITE_EXPIRY_MS) {
+    logts("INVITE", "refused reason=expired");
+    return GL_INVITE_EXPIRED;
+  }
+  if (!g_friend_snapshot_taken || ordinal >= g_friend_snapshot_n) {
+    logts("INVITE", "refused reason=bad-ordinal");
+    return GL_INVITE_BAD_ORDINAL;
+  }
+  ok = (mmSelf != NULL && g_bd_flat_SteamMatchMaking009_InviteUserToLobby != NULL &&
+        (g_bd_flat_SteamMatchMaking009_InviteUserToLobby(mmSelf, g_invite_lobby, g_friend_snapshot[ordinal]) & 0xff))
+           ? 1
+           : 0;
+  logts_f("INVITE", "sent ok=%d", ok);
+  return ok;
+}
+
 // T-52-09: bound to 128 chars and replace non-printable bytes so a
 // game-controlled version string cannot inject log lines.
 
@@ -2483,6 +2657,34 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       gl_cbq_secure_zero(mout, sizeof mout);
       return;
     }
+    if (slot == CONTROL_SLOT_LIST_FRIENDS) {
+      // Phase 58 (58-29, T-58-95/96): behind the auth gate above; argLen must be 0;
+      // SteamIDs stay in the helper snapshot, only ordinals and names leave.
+      uint8_t fout[GL_INVITE_FRIENDS_RESP_MAX];
+      uint32_t fn = 0;
+      if (argLen != 0 || !g_inited || g_bd_identity_only ||
+          gl_invite_list_friends(g_bd_self_steamfriends017, fout, sizeof fout, &fn) != 0) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+      } else {
+        send_response(fd, requestId, STATUS_OK, fout, fn);
+      }
+      gl_cbq_secure_zero(fout, sizeof fout);
+      return;
+    }
+    if (slot == CONTROL_SLOT_INVITE_FRIEND) {
+      // Phase 58 (58-29, T-58-97/98): the request carries an ordinal only; the
+      // target lobby is the one the game itself named.
+      uint32_t ord;
+      int32_t result;
+      if (argLen != 4 || argBlob == NULL || !g_inited || g_bd_identity_only) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      memcpy(&ord, argBlob, 4);
+      result = gl_invite_send(g_bd_self_steammatchmaking009, ord);
+      send_response(fd, requestId, STATUS_OK, (const uint8_t *)&result, 4);
+      return;
+    }
     send_response(fd, requestId, STATUS_ERR, NULL, 0); // unknown control slot
     return;
   }
@@ -2515,6 +2717,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
   uint32_t respLen = 0;
   uint8_t status = bridge_dispatch(ordinal, slot, argBlob, argLen,
                                     g_dispatch_respbuf, sizeof(g_dispatch_respbuf), &respLen);
+  if (status == STATUS_OK) gl_mms_lobby_log(ci, argBlob, argLen);
   if (status == STATUS_OK && ci >= 0 && !g_call_seen[ci]) {
     g_call_seen[ci] = 1;
     logts("CALL", bd_call_name(ci));

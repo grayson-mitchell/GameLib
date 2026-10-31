@@ -4766,7 +4766,8 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
             m.interface !== 'SteamNetworkingUtils004' &&
             m.interface !== 'SteamNetworkingSockets013' &&
             m.interface !== 'SteamNetworkingSockets012' &&
-            m.interface !== 'SteamNetworkingMessages002'
+            m.interface !== 'SteamNetworkingMessages002' &&
+            m.interface !== 'SteamFriends017'
         )
         .map((m) => ({
           ...m,
@@ -5153,6 +5154,7 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
         )
       ].map((m) => m[1])
       expect(protos.sort()).toEqual([
+        'gl_friends_invite_dialog',
         'gl_mms_get_server_details',
         'gl_mms_ping_server',
         'gl_mms_player_details',
@@ -5888,6 +5890,8 @@ describe('58-18 older-version signature equality (T-58-56)', () => {
     expect(inv.helperFlat).toBe(
       'SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog'
     )
+    // 58-29: the helper remembers the lobby the game asked to invite to
+    expect(inv.helperCustom).toBe('gl_friends_invite_dialog')
     // rich presence was not observed: nothing wired for it
     for (const n of ['SetRichPresence', 'GetFriendRichPresence']) {
       expect(f.methods.find((m) => m.name === n)?.mode).not.toBe('wire')

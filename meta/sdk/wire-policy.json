@@ -47,7 +47,8 @@
       "helperFlat": "SteamAPI_ISteamFriends_GetPersonaState"
     },
     "ActivateGameOverlayInviteDialog": {
-      "helperFlat": "SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog"
+      "helperFlat": "SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog",
+      "helperCustom": "gl_friends_invite_dialog"
     }
   },
   "SteamUtils": {

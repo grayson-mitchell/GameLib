@@ -123,13 +123,16 @@ Method modes:
 // tuples BRIDGE_SHIM_TABLE_HASH (steam_api_shim.c) embeds -- a drift
 // between the two means the shim and this dispatch table disagree about
 // what is on the wire.
-#define BRIDGE_DISPATCH_TABLE_HASH "15a20aada86e"
+#define BRIDGE_DISPATCH_TABLE_HASH "31f348033073"
 
 // Response scratch -- bridge_dispatch() never writes past respCap, which
 // the caller (bridge_helper.c) sizes to this constant.
 #define BRIDGE_DISPATCH_RESP_SCRATCH_BYTES 61456
 
 typedef void *(*BDAccessorFn_t)(void);
+
+// 58-06: hand-written in bridge_helper.c; returns 0 for ok.
+int gl_friends_invite_dialog(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
 
 // 58-06: hand-written in bridge_helper.c; returns 0 for ok.
 int gl_mms_get_server_details(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp, uint32_t respCap, uint32_t *respLen);
@@ -8441,10 +8444,9 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
     }
     case (((uint32_t)28) << 16 | 33u): { // SteamFriends017.ActivateGameOverlayInviteDialog
       if (g_bd_flat_SteamFriends017_ActivateGameOverlayInviteDialog == NULL || g_bd_self_steamfriends017 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
-      if (argLen < 0u + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
-      uint64_t arg_steamIDLobby; memcpy(&arg_steamIDLobby, arg + 0u, 8);
-      g_bd_flat_SteamFriends017_ActivateGameOverlayInviteDialog(g_bd_self_steamfriends017, arg_steamIDLobby);
-      *respLen = 0; return 0;
+      { uint32_t customLen = 0; // helperCustom gl_friends_invite_dialog
+        if (gl_friends_invite_dialog(g_bd_self_steamfriends017, arg, argLen, resp, respCap, &customLen) != 0 || customLen > respCap) { *respLen = 0; return 1; }
+        *respLen = customLen; return 0; }
     }
     case (((uint32_t)29) << 16 | 0u): { // SteamUtils010.GetSecondsSinceAppActive
       if (g_bd_flat_SteamUtils010_GetSecondsSinceAppActive == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called

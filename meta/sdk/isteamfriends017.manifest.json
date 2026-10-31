@@ -509,7 +509,8 @@
         }
       ],
       "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog"
+      "helperFlat": "SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog",
+      "helperCustom": "gl_friends_invite_dialog"
     },
     {
       "slot": 34,

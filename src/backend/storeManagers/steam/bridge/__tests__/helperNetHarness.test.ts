@@ -145,5 +145,67 @@ describeDarwinOnly(
       const { out } = runBoth('nets-destroy-pg-clears')
       expect(out).toContain('found=0 connfound=1 destroys=1 ret=1 rl=4')
     })
+
+    test('invite-dialog: forwards once, logs one INVITE dialog line with no id', () => {
+      const { out, err } = runBoth('invite-dialog')
+      expect(out).toContain('dialog calls=1 match=1 rl=0 bad=1')
+      expect(lines(err, /INVITE +dialog appid=3205720$/)).toHaveLength(1)
+      expect(err).not.toMatch(/[0-9]{17}/)
+    })
+
+    test('invite-dialog-ratelimit: a burst logs once, the process total is capped at 16', () => {
+      const { out, err } = runBoth('invite-dialog-ratelimit')
+      expect(out).toContain('dialog calls=60')
+      expect(lines(err, /INVITE +dialog appid=/)).toHaveLength(16)
+    })
+
+    test('mms-lobby-args: integer lobby shape only, 4 lines per op', () => {
+      const { err } = runBoth('mms-lobby-args')
+      expect(lines(err, /MMS {2,}lobby op=create type=1 max=4$/)).toHaveLength(
+        4
+      )
+      expect(lines(err, /MMS {2,}lobby op=set-joinable value=1$/)).toHaveLength(
+        1
+      )
+      expect(lines(err, /MMS {2,}lobby op=set-type type=1$/)).toHaveLength(1)
+      expect(err).not.toMatch(/[0-9]{17}/)
+    })
+
+    test('list-friends: ordinals, flags and names, never a SteamID', () => {
+      const { out, err } = runBoth('list-friends')
+      expect(out).toContain('rc=0')
+      expect(out).toContain('leak=0')
+      expect(out).toContain('count=3')
+      expect(out).toContain('f ord=0 online=1 playing=0 name=Alice')
+      expect(out).toContain('f ord=1 online=0 playing=0 name=Bob')
+      expect(out).toContain('f ord=2 online=1 playing=1 name=Cara')
+      expect(lines(err, /INVITE +friends n=3$/)).toHaveLength(1)
+      expect(err).not.toMatch(/[0-9]{17}/)
+    })
+
+    test('invite-ok: invites the snapshot friend to the game-set lobby', () => {
+      const { out, err } = runBoth('invite-ok')
+      expect(out).toContain('r=1 calls=1 lobbyok=1 targetok=1')
+      expect(lines(err, /INVITE +sent ok=1$/)).toHaveLength(1)
+    })
+
+    test('invite-refusals: no-pending, expired, bad-ordinal, bad length', () => {
+      const { out, err } = runBoth('invite-refusals')
+      expect(out).toContain(
+        'nopending=-1 expired=-2 nosnap=-3 badord=-3 calls=0'
+      )
+      expect(out).toContain('badlen status=1')
+      expect(lines(err, /reason=no-pending$/)).toHaveLength(1)
+      expect(lines(err, /reason=expired$/)).toHaveLength(1)
+      expect(lines(err, /reason=bad-ordinal$/)).toHaveLength(2)
+    })
+
+    test('control-unauth: slots 13 and 14 refuse an unauthenticated connection', () => {
+      const { out } = runBoth('control-unauth')
+      expect(out).toContain('unauth13 status=1 n=0')
+      expect(out).toContain('unauth14 status=1 n=0')
+      expect(out).toContain('auth13 status=0')
+      expect(out).toContain('auth14 status=0 n=4')
+    })
   }
 )

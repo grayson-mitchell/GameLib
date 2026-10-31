@@ -108,9 +108,221 @@ static void queue_n(int which, uint32_t handle, int n) {
   }
 }
 
+/* 58-29: invite path fakes. Fake SteamIDs are 17-digit decimals so a log leak
+ * is detectable; the response must not contain their little-endian bytes. */
+static int g_dialog_calls = 0;
+static uint64_t g_dialog_lobby = 0;
+static void fake_dialog(void *self, uint64_t lobby) {
+  (void)self;
+  g_dialog_calls++;
+  g_dialog_lobby = lobby;
+}
+static const uint64_t k_fid[3] = {76561198000000001ull, 76561198000000002ull, 76561198000000003ull};
+static int fake_friend_count(void *self, int flags) {
+  (void)self; (void)flags;
+  return 3;
+}
+static uint64_t fake_friend_by_index(void *self, int i, int flags) {
+  (void)self; (void)flags;
+  return k_fid[i];
+}
+static int fake_friend_state(void *self, uint64_t id) {
+  (void)self;
+  return id == k_fid[1] ? 0 : 1;
+}
+static int fake_friend_played(void *self, uint64_t id, void *info) {
+  uint64_t gid = 3205720ull;
+  (void)self;
+  if (id != k_fid[2]) return 0;
+  memcpy(info, &gid, 8);
+  return 1;
+}
+static const char *fake_friend_name(void *self, uint64_t id) {
+  (void)self;
+  return id == k_fid[0] ? "Alice" : id == k_fid[1] ? "Bob" : "Cara";
+}
+static int g_inv_calls = 0;
+static uint64_t g_inv_lobby = 0, g_inv_target = 0;
+static int fake_invite(void *self, uint64_t lobby, uint64_t invitee) {
+  (void)self;
+  g_inv_calls++;
+  g_inv_lobby = lobby;
+  g_inv_target = invitee;
+  return 1;
+}
+
+static void setup_invite_fakes(void) {
+  g_bd_flat_SteamFriends017_ActivateGameOverlayInviteDialog = fake_dialog;
+  g_bd_flat_SteamFriends017_GetFriendPersonaName = fake_friend_name;
+  g_bd_flat_SteamMatchMaking009_InviteUserToLobby = fake_invite;
+}
+int SteamAPI_ISteamFriends_GetFriendCount(void *self, int f) { return fake_friend_count(self, f); }
+uint64_t SteamAPI_ISteamFriends_GetFriendByIndex(void *self, int i, int f) { return fake_friend_by_index(self, i, f); }
+int SteamAPI_ISteamFriends_GetFriendPersonaState(void *self, uint64_t id) { return fake_friend_state(self, id); }
+int SteamAPI_ISteamFriends_GetFriendGamePlayed(void *self, uint64_t id, void *info) { return fake_friend_played(self, id, info); }
+
+static int read_frame(int fd, uint8_t *status, uint8_t *body, uint32_t cap) {
+  uint8_t h[9];
+  uint32_t total;
+  size_t got = 0;
+  while (got < sizeof h) {
+    ssize_t r = read(fd, h + got, sizeof h - got);
+    if (r <= 0) return -1;
+    got += (size_t)r;
+  }
+  memcpy(&total, h, 4);
+  *status = h[8];
+  if (total < 5 || total - 5 > cap) return -1;
+  got = 0;
+  while (got < total - 5) {
+    ssize_t r = read(fd, body + got, (total - 5) - got);
+    if (r <= 0) return -1;
+    got += (size_t)r;
+  }
+  return (int)(total - 5);
+}
+
+static int control_call(int authenticated, uint16_t slot, const uint8_t *arg, uint32_t argLen, uint8_t *status,
+                        uint8_t *body, uint32_t cap) {
+  int sv[2], hl = 0, auth = authenticated, n;
+  socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
+  dispatch_and_respond(sv[0], 1, CONTROL_ORDINAL, slot, arg, argLen, &hl, &auth);
+  n = read_frame(sv[1], status, body, cap);
+  close(sv[0]);
+  close(sv[1]);
+  return n;
+}
+
 int main(int argc, char **argv) {
   const char *c = argc > 1 ? argv[1] : "";
   g_dylib_handle = RTLD_DEFAULT;
+  if (strncmp(c, "invite-", 7) == 0 || strcmp(c, "list-friends") == 0 || strcmp(c, "control-unauth") == 0 ||
+      strcmp(c, "mms-lobby-args") == 0) {
+    uint8_t body[GL_INVITE_FRIENDS_RESP_MAX];
+    uint8_t status = 9;
+    uint8_t arg[16];
+    uint32_t ord;
+    int n;
+    setup_invite_fakes();
+    g_bd_self_steamfriends017 = (void *)1;
+    g_bd_self_steammatchmaking009 = (void *)2;
+    g_appid_u64 = 3205720ull;
+    strcpy(g_appid, "3205720");
+    if (strcmp(c, "invite-dialog") == 0) {
+      uint64_t lobby = 109775240000000001ull;
+      uint32_t rl = 0;
+      memcpy(arg, &lobby, 8);
+      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
+      printf("dialog calls=%d match=%d rl=%u bad=%d\n", g_dialog_calls, g_dialog_lobby == lobby, rl,
+             gl_friends_invite_dialog((void *)1, arg, 7, body, sizeof body, &rl));
+      return 0;
+    }
+    if (strcmp(c, "invite-dialog-ratelimit") == 0) {
+      uint64_t lobby = 109775240000000001ull;
+      uint32_t rl = 0;
+      memcpy(arg, &lobby, 8);
+      for (int i = 0; i < 20; i++) gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
+      /* cap: pretend 2 s passed between every call */
+      for (int i = 0; i < 40; i++) {
+        g_invite_last_log_ms -= 3000;
+        gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
+      }
+      printf("dialog calls=%d\n", g_dialog_calls);
+      return 0;
+    }
+    if (strcmp(c, "mms-lobby-args") == 0) {
+      uint8_t a[12];
+      int32_t type = 1, max = 4, v = 1;
+      uint64_t lobby = 109775240000000001ull;
+      int ciCreate = bd_call_index(BD_ORDINAL_SteamMatchMaking009, BD_SLOT_SteamMatchMaking009_CreateLobby);
+      int ciJoin = bd_call_index(BD_ORDINAL_SteamMatchMaking009, BD_SLOT_SteamMatchMaking009_SetLobbyJoinable);
+      int ciType = bd_call_index(BD_ORDINAL_SteamMatchMaking009, BD_SLOT_SteamMatchMaking009_SetLobbyType);
+      memcpy(a, &type, 4);
+      memcpy(a + 4, &max, 4);
+      for (int i = 0; i < 5; i++) gl_mms_lobby_log(ciCreate, a, 8);
+      memcpy(a, &lobby, 8);
+      memcpy(a + 8, &v, 4);
+      gl_mms_lobby_log(ciJoin, a, 12);
+      gl_mms_lobby_log(ciType, a, 12);
+      return 0;
+    }
+    if (strcmp(c, "list-friends") == 0) {
+      uint32_t fn = 0;
+      int rc;
+      g_dispatch_respbuf[0] = 0;
+      rc = gl_invite_list_friends((void *)1, body, sizeof body, &fn);
+      printf("rc=%d len=%u leak=", rc, fn);
+      {
+        int leak = 0;
+        for (int k = 0; k < 3; k++)
+          for (uint32_t o = 0; o + 8 <= fn; o++)
+            if (memcmp(body + o, &k_fid[k], 8) == 0) leak = 1;
+        printf("%d\n", leak);
+      }
+      {
+        uint32_t cnt, off = 4;
+        memcpy(&cnt, body, 4);
+        printf("count=%u\n", cnt);
+        for (uint32_t i = 0; i < cnt; i++) {
+          uint32_t o;
+          uint16_t nl;
+          memcpy(&o, body + off, 4);
+          memcpy(&nl, body + off + 6, 2);
+          printf("f ord=%u online=%u playing=%u name=%.*s\n", o, body[off + 4], body[off + 5], (int)nl,
+                 (const char *)body + off + 8);
+          off += 8u + nl;
+        }
+      }
+      return 0;
+    }
+    if (strcmp(c, "invite-ok") == 0) {
+      uint64_t lobby = 109775240000000001ull;
+      uint32_t rl = 0, fn = 0;
+      int32_t r;
+      memcpy(arg, &lobby, 8);
+      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
+      gl_invite_list_friends((void *)1, body, sizeof body, &fn);
+      r = gl_invite_send((void *)2, 2);
+      printf("r=%d calls=%d lobbyok=%d targetok=%d\n", r, g_inv_calls, g_inv_lobby == lobby, g_inv_target == k_fid[2]);
+      return 0;
+    }
+    if (strcmp(c, "invite-refusals") == 0) {
+      uint64_t lobby = 109775240000000001ull;
+      uint32_t rl = 0, fn = 0;
+      int32_t a1, a2, a3, a4;
+      a1 = gl_invite_send((void *)2, 0);
+      memcpy(arg, &lobby, 8);
+      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
+      a3 = gl_invite_send((void *)2, 0); /* no snapshot yet */
+      gl_invite_list_friends((void *)1, body, sizeof body, &fn);
+      a4 = gl_invite_send((void *)2, 3);
+      g_invite_born_ms = gl_invite_now_ms() - 601000ull;
+      a2 = gl_invite_send((void *)2, 0);
+      printf("nopending=%d expired=%d nosnap=%d badord=%d calls=%d\n", a1, a2, a3, a4, g_inv_calls);
+      {
+        uint8_t st = 9;
+        g_invite_born_ms = gl_invite_now_ms();
+        ord = 0;
+        memcpy(arg, &ord, 4);
+        n = control_call(1, CONTROL_SLOT_INVITE_FRIEND, arg, 3, &st, body, sizeof body);
+        printf("badlen status=%u\n", st);
+      }
+      return 0;
+    }
+    /* control-unauth */
+    g_inited = 1;
+    n = control_call(0, CONTROL_SLOT_LIST_FRIENDS, NULL, 0, &status, body, sizeof body);
+    printf("unauth13 status=%u n=%d\n", status, n);
+    ord = 0;
+    memcpy(arg, &ord, 4);
+    n = control_call(0, CONTROL_SLOT_INVITE_FRIEND, arg, 4, &status, body, sizeof body);
+    printf("unauth14 status=%u n=%d\n", status, n);
+    n = control_call(1, CONTROL_SLOT_LIST_FRIENDS, NULL, 0, &status, body, sizeof body);
+    printf("auth13 status=%u n=%d\n", status, n);
+    n = control_call(1, CONTROL_SLOT_INVITE_FRIEND, arg, 4, &status, body, sizeof body);
+    printf("auth14 status=%u n=%d\n", status, n);
+    return 0;
+  }
   if (strcmp(c, "net-budget") == 0) {
     for (int i = 0; i < 40; i++) gl_net_evidence(1, GL_NET_KIND_SEND, GL_NET_IFACE_SOCKETS, 0, 5, GL_NET_PATH_UNKNOWN);
     gl_net_evidence(1, GL_NET_KIND_JOIN, GL_NET_IFACE_SOCKETS, 1221, 0, GL_NET_PATH_UNKNOWN);
