@@ -1,0 +1,11 @@
+2026-10-31T00:42:35.493Z [setup] fake HOME /Users/graysonmitchell/Projects/GameLib/.planning/spikes/060-crossover-trial-expiry/state/home; cloned GameLibSteamBridge-206060 -> SpikeTrial060
+2026-10-31T00:42:36.450Z [status] rc=0 0.9s: Standard version 
+2026-10-31T00:42:36.510Z [status] trial key: system.reg:[Software\\CodeWeavers\\CrossOver\\cxoffice] 1792652890 
+2026-10-31T00:43:01.552Z [status] rc=0 0.9s: Standard version 
+2026-10-31T00:43:01.614Z [status] trial key: system.reg:[Software\\CodeWeavers\\CrossOver\\cxoffice] 1792652890 
+2026-10-31T00:43:28.345Z [status] rc=0 0.9s: Demo version (15 days remaining) 
+2026-10-31T00:43:28.407Z [status] trial key: system.reg:[Software\\CodeWeavers\\CrossOver\\cxoffice] 1792652890 
+InstallTime 6148e3ae -> 612156ae (orig 6148e3ae)
+2026-10-31T00:44:01.098Z [status] rc=0 0.9s: Demo version (expired 52 days ago) 
+2026-10-31T00:44:01.159Z [status] trial key: system.reg:[Software\\CodeWeavers\\CrossOver\\cxoffice] 1793407408 system.reg-"InstallTime"=dword:612156ae 
+2026-10-31T00:45:41.497Z [launch] rc=142 90.1s probe.txt=NONE | out: wineserver crashed, please enable coredumps (ulimit -c unlimited) and restart. 
