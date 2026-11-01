@@ -16,5 +16,5 @@ Moved the existing SettingsButton from the game page top row to directly after t
 - eslint: 0 errors on touched files (pre-existing warnings only); tsc: no errors in touched files; prettier clean; one `<SettingsButton` in index.tsx.
 - `public/locales/en/translation.json` untouched/unstaged.
 
-## Pending for the user
-- Human check NOT performed: restart `tauri dev`; open an installed Steam game and an installed Epic/GOG game; confirm a gear sits right of Play, aligned, opening the settings modal; uninstalled game shows none; top row has no gear.
+## Live check
+- PASSED 2026-11-02: user confirmed in the running app that the gear beside Play works.
