@@ -65,3 +65,11 @@ Default Steam path) to re-run UAT 4a/4b on the Windows box. Check:
 - Record the results on items 4a/4b in
   `.planning/milestones/v0.7-phases/21-steam-native-install/21-UAT.md`, then move this todo to
   completed.
+
+## Resolution (live gate passed 2026-11-02, real Windows)
+
+Covered by the D-UAT-17 4a re-run (03:06 onward, build containing b6d8bb7c8 and a87c0e91d), run
+with Default Steam path = an empty folder. With the client absent, Install went straight to the
+D-10 consent prompt; after the hand-off to Valve's installer, the never-launched state showed the
+D-11 launch-once prompt (03:08:58 onward). The library-missing notice did not appear in either
+state. Operator: passed. Recorded on 4a/4b and the D-UAT-15 finding in 21-UAT.md.

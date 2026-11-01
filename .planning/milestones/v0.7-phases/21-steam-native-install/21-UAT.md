@@ -4,7 +4,7 @@ plan: 12
 artifact: uat
 status: complete
 parked_todos: [2026-10-16-phase-21-d-uat-10-bottled-steam-launch-uninstall.md]
-disposition: "WINDOWS CLIENT-SETUP PASS 2026-11-02: 4a/4b/4c PASS (4a first ran ISSUE on D-UAT-17 installer spawn EACCES; fixed in quick 261102-0yc and re-verified the same day; findings D-UAT-15..18), run with Default Steam path = an empty folder (quick 261101-whs). WINDOWS PASS 2026-10-29: 1c/1d/2b/2c PASS (findings D-UAT-11..14); D-UAT-13 fixed (128148bf3) and D-UAT-07 re-verified PASS on Windows 2026-10-29; PRIOR: native-install UAT (1c/1d/2b/2c/4a/4b/4c) DEFERRED to Windows post-production (2026-07-20 user decision); D-UAT-10 bottled-Steam launch/uninstall RESOLVED, real-HW verified 2026-10-16. macOS hardware pass: 1a/1b/2a PASS, D-UAT-05/06/08 resolved."
+disposition: "WINDOWS CLIENT-SETUP PASS 2026-11-02: 4a/4b/4c PASS (4a first ran ISSUE on D-UAT-17 installer spawn EACCES; fixed in quick 261102-0yc and re-verified the same day; findings D-UAT-15..18; D-UAT-15 fixed in quick 261102-21x and verified in the same 4a re-run), run with Default Steam path = an empty folder (quick 261101-whs). WINDOWS PASS 2026-10-29: 1c/1d/2b/2c PASS (findings D-UAT-11..14); D-UAT-13 fixed (128148bf3) and D-UAT-07 re-verified PASS on Windows 2026-10-29; PRIOR: native-install UAT (1c/1d/2b/2c/4a/4b/4c) DEFERRED to Windows post-production (2026-07-20 user decision); D-UAT-10 bottled-Steam launch/uninstall RESOLVED, real-HW verified 2026-10-16. macOS hardware pass: 1a/1b/2a PASS, D-UAT-05/06/08 resolved."
 total_items: 11
 pending_items: 0
 passed_items: 10
@@ -13,7 +13,7 @@ open_macos_bug_items: 0
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (RESOLVED — code fix ab0500c6 real-HW verified on Windows 2026-10-29 once D-UAT-13 made the waiting state reachable; tile hint not separately observed), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (RESOLVED — real-HW verified on Windows 2026-10-29 via item 1d: incomplete install shows Resume Install, never Play), D-UAT-10 (DEFERRED tracked-debt 2026-07-20 — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven; macOS-only, revisit via /gsd-debug or later phase; NOT blocking Phase 21), D-UAT-11 (MINOR open — stale progress % after Delete Files cancel; code fix 14f572a2a quick-261029-o5a, awaiting Windows re-test), D-UAT-12 (MINOR open — library card shows plain Install for an incomplete install; code fix e704b397e quick-261029-ocq, awaiting Windows re-test), D-UAT-13 (RESOLVED — fix 128148bf3 real-HW verified on Windows 2026-10-29: hold at finalize, released when the old Steam exited, Play launched with no install dialog; open edge: hold is in-memory, lost on a GameLib restart while the old Steam runs), D-UAT-14 (MAJOR open — cross-app depotfromapp content depot skipped), D-UAT-15 (MINOR open — library-missing notice shown before the D-10/D-11 prompt when the client is absent), D-UAT-16 (WITHDRAWN 2026-11-02 — filed in error: the missing cancel was in the Steam client, not GameLib), D-UAT-17 (RESOLVED — fix 3f0df053c quick-261102-0yc real-HW verified on Windows 2026-11-02: UAC Yes opens the installer, No shows the error and Try again recovers), D-UAT-18 (MINOR open — client-setup banner Done silently cancels auto-continue; banner styling inconsistent)]
+open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (RESOLVED — code fix ab0500c6 real-HW verified on Windows 2026-10-29 once D-UAT-13 made the waiting state reachable; tile hint not separately observed), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (RESOLVED — real-HW verified on Windows 2026-10-29 via item 1d: incomplete install shows Resume Install, never Play), D-UAT-10 (DEFERRED tracked-debt 2026-07-20 — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven; macOS-only, revisit via /gsd-debug or later phase; NOT blocking Phase 21), D-UAT-11 (MINOR open — stale progress % after Delete Files cancel; code fix 14f572a2a quick-261029-o5a, awaiting Windows re-test), D-UAT-12 (MINOR open — library card shows plain Install for an incomplete install; code fix e704b397e quick-261029-ocq, awaiting Windows re-test), D-UAT-13 (RESOLVED — fix 128148bf3 real-HW verified on Windows 2026-10-29: hold at finalize, released when the old Steam exited, Play launched with no install dialog; open edge: hold is in-memory, lost on a GameLib restart while the old Steam runs), D-UAT-14 (MAJOR open — cross-app depotfromapp content depot skipped), D-UAT-15 (RESOLVED — fix b6d8bb7c8/a87c0e91d quick-261102-21x real-HW verified on Windows 2026-11-02 in the 4a re-run: client-absent and never-launched states went straight to the D-10/D-11 prompt, no library-missing notice), D-UAT-16 (WITHDRAWN 2026-11-02 — filed in error: the missing cancel was in the Steam client, not GameLib), D-UAT-17 (RESOLVED — fix 3f0df053c quick-261102-0yc real-HW verified on Windows 2026-11-02: UAC Yes opens the installer, No shows the error and Try again recovers), D-UAT-18 (MINOR open — client-setup banner Done silently cancels auto-continue; banner styling inconsistent)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-11-02
 audit_acknowledged:
@@ -362,7 +362,8 @@ per-OS as described. GameLib does not attempt any silent/unattended install.
 prompt appeared; Yes opened Valve's installer, No showed "The Steam installer did not open…" with
 Try again, and Try again → Yes opened it. The installer was run, Steam was launched and signed in,
 and the download then started with no click. First run the same day was ISSUE (spawn EACCES while
-GameLib reported success, D-UAT-17, now resolved).
+GameLib reported success, D-UAT-17, now resolved). The re-run build also carried the D-UAT-15 fix
+(quick 261102-21x): no library-missing notice before the consent prompt or the later launch-once prompt.
 **OS tested:** Windows 11 (Default Steam path = empty `C:\SteamUAT`, quick 261101-whs recipe)
 **Evidence:** `gamelib.log` appId 2706020: 03:06:49 and 03:08:52 `startGuidedClientInstall: launched
 the native Steam installer non-silently`; 03:07:57 `startGuidedClientInstall: powershell exited with
@@ -389,7 +390,8 @@ launched" polls; 03:12:20 `ensureSteamClientReady took 2ms` (ready, download sta
 
 **Result:** PASS (2026-11-02, real Windows) — "Steam installed but has not been launched yet"
 prompt shown, not the D-10 consent; `libraryfolders.vdf` absent. Preceded again by the
-library-missing notice (D-UAT-15). Steam was installed by running the downloaded `SteamSetup.exe` by
+library-missing notice (D-UAT-15, since fixed in quick 261102-21x; the never-launched state was
+re-checked without the notice in the 4a re-run, 03:08:58 onward). Steam was installed by running the downloaded `SteamSetup.exe` by
 hand into `C:\SteamUAT` because of D-UAT-17.
 **Evidence:** `C:\SteamUAT\Steam.exe` present, `C:\SteamUAT\steamapps\libraryfolders.vdf` absent
 (checked after the prompt); `gamelib.log` 00:25:18 onward `ensureSteamClientReady: Steam installed
@@ -857,6 +859,12 @@ reads as absent.
 > the D-10 consent body (`SteamClientSetup.tsx:188`), which is the correct one for this state. With
 > no client installed, the library-missing degrade should not fire (the client-absent state should
 > win), and the "Reconnect the drive" sentence assumes a removable drive. Not yet root-caused.
+>
+> **Resolved 2026-11-02 (quick 261102-21x, b6d8bb7c8 + a87c0e91d):** a library-missing quick-install
+> verdict now asks `steamClientSetupRecheck` first, so an absent or never-launched client goes
+> straight to the D-10/D-11 prompt; the notice copy no longer assumes a removable drive. Verified on
+> real Windows in the 4a re-run (operator: passed). Console Mode gap tracked separately
+> (`2026-11-02-console-mode-steam-client-setup-unreachable.md`).
 
 > **⚪ D-UAT-16 (WITHDRAWN 2026-11-02 — filed in error) — a native download in progress offered no
 > cancel control.**
@@ -934,8 +942,8 @@ reads as absent.
 | 2b | Byte-correctness spot-check | SNI-01 | PASS (Windows 2026-10-29) | Steam "Verify integrity of game files" on the 81 GB PHARAOH DYNASTIES install: passed, nothing re-acquired. |
 | 2c | Real multi-depot game | SNI-01 (A2) | PASS with finding (Windows 2026-10-29) | PHARAOH DYNASTIES, 3 Windows depots ~81 GB summed; Steam adopted with GameLib's depot gids intact, no collision, no full re-download. Steam fetched a missed cross-app depot 372531 (204 MB) as an update → D-UAT-14 (major). |
 | 3 | Bottled Steam adoption | SNI-08 (A3) | PARTIAL | Portal 2 (620) into GameLibSteam bottle. Install + adoption ✅ (Windows depot streamed to bottle, portal2.exe, StateFlags→4, 12GB, install record correct). Launch/uninstall/detail ✅ D-UAT-10 fixed and real-HW verified 2026-10-16 (Fallout 2 Play via bottle, Child of Light uninstall stays uninstalled; detail shows CrossOver). Step 4 launch-through-bottle verified. |
-| 4a | D-10 guided client install | SNI-06 (partial) | PASS (Windows 2026-11-02, re-run) | First run: `SteamSetup.exe` failed to spawn (EACCES, needs elevation) while GameLib reported success → D-UAT-17 (major). Fixed in 261102-0yc; re-run: UAC Yes opened the installer, No showed the error with a working Try again, and the download auto-continued after first launch. Library-missing notice shown first → D-UAT-15 (minor). Run with Default Steam path = empty `C:\SteamUAT` (quick 261101-whs). |
-| 4b | D-11 prompt-to-launch | SNI-06 (partial) | PASS (Windows 2026-11-02) | Launch-once prompt shown; `libraryfolders.vdf` never written by GameLib. Steam installed by hand into `C:\SteamUAT` (D-UAT-17). D-UAT-15 reproduced. |
+| 4a | D-10 guided client install | SNI-06 (partial) | PASS (Windows 2026-11-02, re-run) | First run: `SteamSetup.exe` failed to spawn (EACCES, needs elevation) while GameLib reported success → D-UAT-17 (major). Fixed in 261102-0yc; re-run: UAC Yes opened the installer, No showed the error with a working Try again, and the download auto-continued after first launch. Library-missing notice shown first → D-UAT-15 (minor), fixed in 261102-21x and absent in the re-run. Run with Default Steam path = empty `C:\SteamUAT` (quick 261101-whs). |
+| 4b | D-11 prompt-to-launch | SNI-06 (partial) | PASS (Windows 2026-11-02) | Launch-once prompt shown; `libraryfolders.vdf` never written by GameLib. Steam installed by hand into `C:\SteamUAT` (D-UAT-17). D-UAT-15 reproduced; fixed in 261102-21x, never-launched state re-checked clean in the 4a re-run. |
 | 4c | Continue-to-download | SNI-06 (partial) | PASS (Windows 2026-11-02) | Auto-continued with no click: vdf 00:33:18 → first bytes 00:33:49. First attempt lost to the banner's "Done" cancelling the poll → D-UAT-18 (minor). |
 | D-UAT-07 | GamePage "Restart Steam to finish" | SNI-04 | PASS (Windows 2026-10-29) | Was blocked by D-UAT-13. With the D-UAT-13 fix `128148bf3` the waiting state is entered on finalize while Steam runs and the detail page shows the disabled "Restart Steam to finish" (button fix `ab0500c6` exercised live); Play appeared only after Steam was exited and relaunched, and launched with no install dialog. Library tile hint not separately observed. |
 
