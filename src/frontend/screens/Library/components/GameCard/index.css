@@ -393,14 +393,16 @@ body.keyboardNav .gameCard:hover:not(:focus-within) {
    play/install shortcut in gamepad.ts (.playIcon / .downIcon .click(), which
    fires on display:none elements) keeps working.
    Scope: every grid-card mount (main grid, Favourites/Recently-Played, the
-   FocusRowStrip and its just-played hero) renders through GamesList, which
+   FocusRowStrip) renders through GamesList, which
    carries the .cleanTiles class. List rows (.gameListItem) are deliberately
-   untouched: their .icons is the table's Action column. */
-.cleanTiles .gameCard {
+   untouched: their .icons is the table's Action column.
+   Exception: the Recently Played just-played hero (.justPlayed) keeps its bar
+   -- the operator wants that one tile to stay a direct launch point. */
+.cleanTiles .gameCard:not(.justPlayed) {
   --game-card-bar-height: 0px;
 }
 
-.cleanTiles .gameCard > .icons {
+.cleanTiles .gameCard:not(.justPlayed) > .icons {
   display: none;
 }
 

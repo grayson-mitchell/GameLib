@@ -34,14 +34,20 @@ describe('clean tile mode', () => {
 
   it('collapses --game-card-bar-height to zero under .cleanTiles .gameCard', () => {
     expect(css).toMatch(
-      /\.cleanTiles \.gameCard\s*\{[^}]*--game-card-bar-height:\s*0(px)?\s*;/
+      /\.cleanTiles \.gameCard:not\(\.justPlayed\)\s*\{[^}]*--game-card-bar-height:\s*0(px)?\s*;/
     )
   })
 
   it('hides the grid bar under .cleanTiles .gameCard > .icons', () => {
     expect(css).toMatch(
-      /\.cleanTiles \.gameCard > \.icons\s*\{[^}]*display:\s*none\s*;/
+      /\.cleanTiles \.gameCard:not\(\.justPlayed\) > \.icons\s*\{[^}]*display:\s*none\s*;/
     )
+  })
+
+  it('exempts the Recently Played just-played hero, which keeps its bar', () => {
+    const selectors =
+      cssNoComments.match(/[^{}]*\.cleanTiles[^{}]*(?=\{)/g) ?? []
+    for (const s of selectors) expect(s).toContain(':not(.justPlayed)')
   })
 
   it('never targets the list layout', () => {
