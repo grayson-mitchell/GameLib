@@ -78,6 +78,7 @@ jest.mock('../tauriTransport', () => ({
 import { applyFramelessDecorations, installDragRegionHandlers } from '../api/tauriWindowChrome'
 import { snapshotGet, send } from '../tauriTransport'
 import { setSetting } from '../api/settings'
+import { handleFramelessChanged } from '../api/misc'
 
 const mockedSnapshotGet = snapshotGet as jest.MockedFunction<typeof snapshotGet>
 const mockedTauriSend = send as jest.MockedFunction<typeof send>
@@ -471,5 +472,97 @@ describe('setSetting wrapper (REQ-34.1-03)', () => {
   it('REQ-34.1-03/WR-05: a zero-argument call does not throw', () => {
     const noArgs = setSetting as unknown as () => void
     expect(() => noArgs()).not.toThrow()
+  })
+})
+
+// Quick 261102-dma: the toggle applied the native frame live but `isFrameless` in React was seeded
+// once at mount, so GameLib's own WindowControls stayed next to the native ones on Windows. The
+// fix pushes the WRITTEN value from setSetting to every `handleFramelessChanged` subscriber. The
+// listener set is module state that outlives a single test, so every unsubscribe is drained below.
+describe('frameless change push (quick 261102-dma)', () => {
+  const unsubscribes: Array<() => void> = []
+
+  function subscribe(listener: (frameless: boolean) => void): () => void {
+    const unsubscribe = handleFramelessChanged(listener)
+    unsubscribes.push(unsubscribe)
+    return unsubscribe
+  }
+
+  afterEach(() => {
+    while (unsubscribes.length) unsubscribes.pop()?.()
+    jest.restoreAllMocks()
+  })
+
+  it.each<[WebviewPlatform]>([['Win32'], ['Linux x86_64']])(
+    'F1: on %s, framelessWindow=false pushes false synchronously and the native frame agrees',
+    (platform) => {
+      setWebviewPlatform(platform)
+      const listener = jest.fn()
+      subscribe(listener)
+      setSetting({ appName: 'default', key: 'framelessWindow', value: false })
+      expect(listener).toHaveBeenCalledTimes(1)
+      expect(listener).toHaveBeenCalledWith(false)
+      expect(mockWindow.setDecorations).toHaveBeenCalledWith(true)
+    }
+  )
+
+  it('F2: on Win32, framelessWindow=true pushes true and removes the native frame', () => {
+    const listener = jest.fn()
+    subscribe(listener)
+    setSetting({ appName: 'default', key: 'framelessWindow', value: true })
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(listener).toHaveBeenCalledWith(true)
+    expect(mockWindow.setDecorations).toHaveBeenCalledWith(false)
+  })
+
+  it('F3: on macOS, the push still fires (macOverlayTitlebar needs it) alongside setTitleBarStyle', () => {
+    setWebviewPlatform('MacIntel')
+    const listener = jest.fn()
+    subscribe(listener)
+    setSetting({ appName: 'default', key: 'framelessWindow', value: false })
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(listener).toHaveBeenCalledWith(false)
+    expect(mockWindow.setTitleBarStyle).toHaveBeenCalledWith('visible')
+  })
+
+  it('F4: other keys and game-scoped writes push nothing', () => {
+    const listener = jest.fn()
+    subscribe(listener)
+    setSetting({ appName: 'default', key: 'language', value: 'en' })
+    setSetting({ appName: 'some-game', key: 'framelessWindow', value: true })
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('F5: after the returned unsubscribe, further writes do not reach the listener', () => {
+    const listener = jest.fn()
+    const unsubscribe = subscribe(listener)
+    unsubscribe()
+    setSetting({ appName: 'default', key: 'framelessWindow', value: false })
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('F6: a throwing listener neither throws out of setSetting nor starves the next listener', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    subscribe(() => {
+      throw new Error('boom')
+    })
+    const second = jest.fn()
+    subscribe(second)
+    expect(() => setSetting({ appName: 'default', key: 'framelessWindow', value: false })).not.toThrow()
+    expect(second).toHaveBeenCalledWith(false)
+    expect(mockedTauriSend).toHaveBeenCalledWith('setSetting', [
+      { appName: 'default', key: 'framelessWindow', value: false }
+    ])
+    expect(warnSpy.mock.calls.some((call) => String(call[0]).includes('framelessChangeListener'))).toBe(true)
+  })
+
+  it('F7: malformed calls stay total and push nothing', () => {
+    const listener = jest.fn()
+    subscribe(listener)
+    const malformed = [undefined, null] as unknown as [Parameters<typeof setSetting>[0]]
+    for (const bad of malformed) {
+      expect(() => setSetting(bad)).not.toThrow()
+    }
+    expect(listener).not.toHaveBeenCalled()
   })
 })
