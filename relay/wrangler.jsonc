@@ -3,7 +3,7 @@
 {
   "name": "gamelib-fix-relay",
   "main": "src/index.ts",
-  "compatibility_date": "2026-10-31",
+  "compatibility_date": "2026-10-30",
   // No request logging: IPs and headers must not be retained.
   "observability": { "enabled": false },
   "workers_dev": true,
