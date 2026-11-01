@@ -57,7 +57,7 @@ describeDarwinOnly(
     })
 
     // WR-07 legacy-P2P fallback (host harness only; no legacy-TCP-mode title is live-tested).
-    const pfbBase = 76561198100000000n
+    const pfbBase = BigInt('76561198100000000')
 
     test('p2pfb-order: each report accepts the remote of the 1202 it reports', () => {
       const { out } = runBoth('p2pfb-order')
@@ -68,7 +68,7 @@ describeDarwinOnly(
       const { out, err } = runBoth('p2pfb-stranger')
       expect(out).toContain('stranger accepts=0')
       expect(err).toContain('p2p-accept src=helper action=refused')
-      const x = pfbBase + 77n
+      const x = pfbBase + BigInt(77)
       expect(err).not.toContain(x.toString())
       expect(err).not.toContain(x.toString(16))
     })
