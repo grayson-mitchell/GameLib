@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 57 context gathered
-last_updated: "2026-11-01T21:29:34.199Z"
+last_updated: "2026-11-01T21:43:47.053Z"
 last_activity: 2026-11-01
 progress:
   total_phases: 9
   completed_phases: 7
   total_plans: 204
-  completed_plans: 201
+  completed_plans: 202
   percent: 78
 ---
 
@@ -72,7 +72,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 57 (opt-in-known-fix-sharing-via-relay) — EXECUTING
-Plan: 11 of 12
+Plan: 12 of 12
 Status: Ready to execute
 Last activity: 2026-11-01
 
@@ -217,6 +217,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 57 P02 | 15m | 3 tasks | 8 files |
 | Phase 57 P05 | 10m | 2 tasks | 4 files |
 | Phase 57 P08 | 10m | 2 tasks | 4 files |
+| Phase 57 P11 | 10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -311,6 +312,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 58]: 58-24 close-out (2026-11-01): DRM mode Raft PASS (58-08-LIVE-GATE); TCP mode Schedule I gate Verdict FAIL — Direction A (Mac hosts) no working invite path (overlay invite dialog call reaches Mac Steam but shows nothing; friends-list Invite to Game and Join Game missing), Direction B (PC hosts) PASS with the 333 GameLobbyJoinRequested_t relay proven live, path unknown (58-22-LIVE-GATE). serialized005 not needed (M-06); D-12 no-op per D-16; D-13 unchanged; x86 multiplayer deferred. Open gaps in 58-22-LIVE-GATE.md section 5. Phase 58 NOT done — next: `/gsd-plan-phase 58 --gaps`.
 - [Phase 59-06]: Fallback bottle cxbottle.conf written last; DXVK restore runs on CrossOver (59-01)
 - [Phase 57]: 57-08: CEG report precedes forced-bridge return; no Mach-O retry seam (D-18)
+- [Phase 57]: [57-11] wrangler 4.156.0 user-approved; compatibility_date 2026-10-30 (workerd limit)
 
 ### Pending Todos
 
@@ -478,7 +480,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-01T21:29:34.193Z
+Last session: 2026-11-01T21:43:42.355Z
 Stopped at: Phase 57 context gathered
 Resume file: None
 
