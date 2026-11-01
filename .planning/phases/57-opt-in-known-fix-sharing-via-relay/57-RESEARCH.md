@@ -474,14 +474,20 @@ Not a rename/refactor/migration phase (greenfield relay + additive client hooks)
 | A8 | Cloudflare account/Workers Free needs no payment method | Operator Checklist | Operator surprise only |
 | A9 | `CF-Connecting-IP` is always present for client requests to a workers.dev route | Pattern 4 | If absent, fall back to a single shared bucket (fail safe) |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **32-bit/removal retry (Pitfall 1).** What we know: the Mach-O detector fires once per install. Unclear: whether the user wants a retry seam. Recommendation: accept best-effort, state it in the plan.
+   RESOLVED: D-18 - Mach-O reports are best effort, one shot; no pending-report store, no launch-time retry. Only the CEG report retries naturally. Implemented in plans 04 (send logic) and 08 (hooks).
 2. **429/408 handling (Pitfall 2).** Recommendation: not-marked/retryable; needs a one-line confirmation because D-16 says "a 4xx is also marked".
+   RESOLVED: D-17 - 408 and 429 are retryable (not marked); every other 4xx is marked. Implemented in plan 04 status mapping.
 3. **Operator-closed PRs.** Recommendation: count and suppress (A3); confirm with the user.
+   RESOLVED: D-20 - a PR closed unmerged suppresses later reports for the same appId+key+op; they are counted in relay state and never reopen it or open a new PR. Implemented in plans 09 and 10 (relay state + PR flow).
 4. **Delisted/region-locked titles** fail the canonical-title check (D-14); acceptable? Recommendation: yes, log-only.
-5. **`title` on the wire.** D-14 means the relay never uses it, yet D-09 lists the title as sent. Recommendation: keep it (matches locked help text), schema `optional`, ignored; dropping it would be a pure privacy gain if the user prefers.
-6. **Hook placement for `verifyMacArchGroundTruth`.** Recommend after the badge-flip/`logInfo` block, before `void promptI386Recovery(appId)`: `reportDetectedFix({ appId, title: library.get(appId)?.title, key:'macArch', value:'32', op:'add', detector:'macho' })`; and in the `wasKnownFix32 && verdict === '64'` block with `op:'remove'`.
+   RESOLVED: accepted as log-only per D-14; the relay answers 422 for an app Steam does not know. Implemented in plan 05 (canonical title lookup).
+5. **`title` on the wire.** ~~Recommendation: keep it, schema `optional`, ignored.~~ Superseded.
+   RESOLVED: D-19 - the payload drops `title`; it carries v, store, appId, key, value, op and gamelibVersion only, and the strict schema rejects a `title` key. The relay looks up the title from Steam (D-14) and the D-09 help text says so. Implemented in plan 01 (schema), plan 02 (help text) and plan 04 (body).
+6. **Hook placement for `verifyMacArchGroundTruth`.** After the badge-flip/`logInfo` block, before `void promptI386Recovery(appId)`, and in the `wasKnownFix32 && verdict === '64'` block with `op:'remove'`.
+   RESOLVED: placement as above, but per D-19 the call carries no title: `reportDetectedFix({ appId, key:'macArch', op:'add', detector:'macho' })` (value derived from the key) and the same with `op:'remove'` in the 64-vs-curated-32 block. Implemented in plan 08.
 
 ## Environment Availability
 

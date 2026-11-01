@@ -37,7 +37,26 @@ created: 2026-11-02
 
 ## Per-Task Verification Map
 
-Task IDs are filled by the planner. Decision-level map:
+Task IDs are filled by the planner. Decision-level map (plan-task owning each row):
+
+| Row | Plan-Task |
+|-----|-----------|
+| D-03 drift | 57-01-T2 |
+| D-03/D-19 schema | 57-01-T1 |
+| D-04 url (env override, sentinel no-send) | 57-04-T1/T2; deployed-URL sentinel test 57-12-T2 |
+| D-09/D-10 toggle | 57-02-T2 (default 57-02-T1) |
+| D-10 gate, D-12 skip, D-16/D-17 sent, exit-contract abort | 57-04-T1/T2 |
+| hooks / D-18 | 57-08-T1 (Mach-O), 57-08-T2 (CEG) |
+| D-05..D-08 fileEdit | 57-05-T1 |
+| D-06 pr, D-20 closed, D-11 bundled | 57-09-T2 (REST shapes 57-07) |
+| D-13 repeat | 57-10-T1/T2 (body 57-09-T1) |
+| D-14 title | 57-05-T2, 57-10-T2 |
+| D-15 limits | 57-06-T2, 57-10-T2 |
+| D-02 jwt | 57-06-T1 |
+| D-01 wrangler dev rejects `{}` | 57-11-T2 (automated locally) |
+| Live done-when | 57-12-T3 (57-UAT.md) |
+
+Relay test commands use explicit paths (e.g. `pnpm jest relay/src/__tests__/fileEdit.test.ts`) or the whole Relay project (`pnpm jest relay`).
 
 | Decision | Behavior | Test Type | Automated Command | File Exists | Status |
 |----------|----------|-----------|-------------------|-------------|--------|
