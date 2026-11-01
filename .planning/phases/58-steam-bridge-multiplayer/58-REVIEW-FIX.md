@@ -7,6 +7,7 @@ findings_in_scope: 5
 fixed: 5
 skipped: 0
 status: all_fixed
+live_verified: 2026-11-01
 ---
 
 # Phase 58: Code Review Fix Report
@@ -40,15 +41,19 @@ Verification for every fix: `pnpm build-steam-bridge` (native helper plus both s
 
 **Files modified:** `native/steam-bridge/helper/bridge_helper.c`
 **Commit:** 4bb27b5fe
-**Status:** fixed: requires human verification
+**Status:** fixed: live-verified 2026-11-01
 **Applied fix:** This is the review's "smaller step", not a POLLOUT redesign. `SO_SNDTIMEO` drops from 5 s to 250 ms (`GL_SEND_TIMEOUT_USEC`). `SO_SNDBUF` is raised to at least 2 x (4 + `MAX_FRAME_BYTES`) when the default is smaller. The largest reply is about 61 KB and fits in an empty send buffer. Every legitimate client reads each reply before sending its next request, so a send only blocks when a peer lets replies pile up unread. That peer is now dropped after 250 ms through `send_all`'s existing EAGAIN close path. With WR-02 in place, unauthenticated peers only ever get tiny replies, so a stall also requires the launch secret. **Human check:** confirm on a live bridge session (Wine game plus invite path) that no slow-reading legitimate client is dropped. No automated test reproduces a stalled reader, because a large reply needs live Steam.
+
+**Live-verified 2026-11-01:** Two Schedule I: Free Sample (3205720) sessions in TCP shim mode, hosted on the Mac with the PC peer, ran 16:00:48-16:03:27 (2m39s) and 16:07:40-16:09:45 (2m05s). There was no mid-session callback 1221 state change until the host's own LeaveLobby. There was one `HELLO shim attached` per launch across 3 launches, so the shim never reconnected. There were 0 `connection table full` lines and 0 AUTH refused. The operator reported the game worked. Caveat: a send-timeout drop writes no log line, so this is evidence from session continuity, not a direct drop counter. Build: the helper and sidecar.js were rebuilt at 15:16, after the fix commits.
 
 ### WR-04: Friend ordinals are re-assigned on every list call, so a stale picker can invite the wrong friend
 
 **Files modified:** `native/steam-bridge/helper/bridge_helper.c`, `src/backend/storeManagers/steam/bridge/__tests__/fixtures/net_harness_driver.c`, `src/backend/storeManagers/steam/bridge/__tests__/helperNetHarness.test.ts`, `src/common/types/steam.ts`
 **Commit:** 56f46ff7a
-**Status:** fixed: requires human verification
+**Status:** fixed: live-verified 2026-11-01
 **Applied fix:** The wire `ordinal` is now an opaque per-snapshot token, `(generation << 8) | index`. Each `gl_invite_list_friends` call increments a 24-bit generation that skips 0, so a bare index is never valid. `gl_invite_send` returns `GL_INVITE_BAD_ORDINAL` when the generation does not match. A `_Static_assert` keeps `GL_INVITE_FRIENDS_MAX` within the 8-bit index field. SteamIDs stay inside the helper. No TS wire change was needed: the ordinal was already an opaque u32 from the sidecar validation through `inviteBridge.ts` to the UI, where it is only a key and a pass-back value. The `BridgeFriend` doc comment now says this. New harness cases cover a stale token, a bare index (both refused) and a current token (sent to the correct friend). **Human check:** one live picker invite to confirm the token round-trips through the UI unchanged.
+
+**Live-verified 2026-11-01:** `INVITE sent ok=1` at 15:24:58, 16:00:34 and 16:06:47. Each send came from a freshly listed snapshot taken after an earlier list in the same launch, so an earlier generation had been superseded. There were 0 `refused reason=bad-ordinal`. The token round-tripped through the UI unchanged.
 
 ### WR-05: `INVITE dialog` regex is unanchored, so any log line containing the text triggers the picker
 
