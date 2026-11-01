@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 59
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-01 - Completed quick task 261101-mmt: Phase 58 WR-03/WR-04 live-verified, 3 follow-up todos filed
+Last activity: 2026-11-01 - Completed quick task 261101-mv3: invite dialog with lobby 0 adopts the lobby id from LobbyCreated_t (513)
 
 Progress: [██████████] 99%
 
@@ -383,6 +383,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261101-jbm | A single --demo-status timeout is now inconclusive: preflightCrossover kills the wineserver and re-probes once; only two consecutive timeouts give cx-broken (pinned engine + bottle rewrite). Definitive answers (expired, nonzero-exit, spawn-error, invalid-bottle, unrecognised) still demote on the first probe. Todo closed. | 2026-11-01 | d3f83e677 | Jest pass (87 tests, 3 engine suites); codecheck: 2 pre-existing TS2737 in helperNetHarness.test.ts; live launch pending | [261101-jbm-single-demo-status-probe-timeout-must-no](./quick/261101-jbm-single-demo-status-probe-timeout-must-no/) |
 | 261101-llf | Bridge invite picker now opens in its own focused `bridge-invite` Tauri window (scoped capability, 4 permissions) instead of raising the main window; focus returns to the game on close; bridge-notice dialogs keep `main_window_raise`. | 2026-11-01 | 7cebc8c99 | cargo + touched Jest suites pass; live gate (7 items, frameless OFF/ON) pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
 | 261101-mmt | Phase 58 live checks recorded: WR-03 (two Schedule I sessions, 2m39s + 2m05s, no mid-session drop or shim reconnect) and WR-04 (3 invites from fresh snapshots, 0 bad-ordinal) marked live-verified in 58-REVIEW-FIX.md; filed todos: main-menu invite as a supported host path (supersedes 58-33 decision 5), lobby-0 invite dialog refuses every invite, quitting GameLib kills a hosted bridge session | 2026-11-01 | 413df5b28 | Live-verified; planning-gates 11/12 (state-sdk-field-anchor fails on pre-existing `Plan: Not started`) | [261101-mmt-record-phase-58-live-check-results-and-f](./quick/261101-mmt-record-phase-58-live-check-results-and-f/) |
+| 261101-mv3 | Invite dialog opened with lobby 0 (Schedule I calls ActivateGameOverlayInviteDialog in the same instant as CreateLobby) now waits and adopts the lobby id from the first successful LobbyCreated_t (513), call-result or broadcast path, once per dialog, never overriding an explicit lobby; Invite before 513 logs `refused reason=lobby-pending` (wire code unchanged). Todo moved to completed (`ready: live-gate`) | 2026-11-01 | fb9cf3974 | build-steam-bridge + 112 jest pass, codecheck clean; live check owed (first main-menu '+' sends) | [261101-mv3-fix-lobby-0-invite-dialog-adopt-lobby-id](./quick/261101-mv3-fix-lobby-0-invite-dialog-adopt-lobby-id/) |
 | fast | Invite picker header X removed (showCloseButton=false); the picker window closes via the traffic lights or the footer Close button. | 2026-11-01 | 821b996ec | 2 suites pass (16 tests); live check pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
 
 ## Deferred Items
