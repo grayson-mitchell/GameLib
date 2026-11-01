@@ -1,0 +1,16 @@
+{
+  "name": "gamelib-fix-relay",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "migrate:local": "wrangler d1 migrations apply gamelib-fix-relay --local",
+    "migrate:remote": "wrangler d1 migrations apply gamelib-fix-relay --remote"
+  },
+  "devDependencies": {
+    "wrangler": "4.156.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

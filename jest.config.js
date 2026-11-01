@@ -32,7 +32,8 @@ module.exports = {
     '<rootDir>/src/common',
     '<rootDir>/src/frontend',
     '<rootDir>/src/preload',
-    '<rootDir>/meta'
+    '<rootDir>/meta',
+    '<rootDir>/relay'
   ],
 
   rootDir: '.'
