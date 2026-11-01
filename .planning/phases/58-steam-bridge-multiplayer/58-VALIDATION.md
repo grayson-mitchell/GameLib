@@ -1,10 +1,11 @@
 ---
 phase: 58
 slug: steam-bridge-multiplayer
-status: draft
+status: validated
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-10-30
+validated: 2026-11-02
 ---
 
 # Phase 58 — Validation Strategy
@@ -40,17 +41,17 @@ created: 2026-10-30
 
 | Req | Behavior | Test Type | Automated Command | File Exists | Status |
 |-----|----------|-----------|-------------------|-------------|--------|
-| M-03 | New manifests validate; wire policy resolves; generated dispatch has new param kinds; `WIRE_LAYOUT_DOC` pins | unit | `pnpm exec jest meta/__tests__/gen_vtables.test.ts meta/__tests__/extractProtonInventory.test.ts` | ✅ extend | ⬜ pending |
-| M-03 | Callback and message layout rows (mac vs msvc, both triples) | unit (zig arm) | `pnpm exec jest meta/__tests__/msvcCallbackBaseLayout.test.ts` | ✅ extend fixture | ⬜ pending |
-| M-03 | Call-result register / hold / dispatch / late-register race | host C harness | `pnpm exec jest meta/__tests__/callbackRegistryHost.test.ts` | ✅ extend | ⬜ pending |
-| M-03 | CBQ allowlist rows with mac and wire size, repack, zero-on-pop | host C harness | `pnpm exec jest src/backend/storeManagers/steam/bridge/__tests__/cbqueue.test.ts` | ✅ extend | ⬜ pending |
-| M-03, M-04 | New CONTROL slot, frame shapes, old/new peer tolerance, cap-before-alloc refusal | unit + helper integration (fake HOME) | `pnpm exec jest src/backend/storeManagers/steam/bridge/__tests__/protocol.test.ts src/backend/storeManagers/steam/bridge/__tests__/helperIntegration.test.ts` | ✅ extend | ⬜ pending |
-| M-03 | Shim ABI and compile gate for new stubs (x86 and x64 `ret N`) | gate | `pnpm exec jest meta/__tests__/shimAbiGate.test.ts` | ✅ | ⬜ pending |
-| M-03 | Served-version tables, export-set version bump, `isScanVerdictNowCovered` | unit | `pnpm exec jest src/backend/storeManagers/steam/bridge/__tests__/shimCoverage` | ⚠ confirm name | ⬜ pending |
-| M-05 | `NET` and `[drm-trace] event=callback` grammar; closed vocabulary; no SteamID/IP/handle/payload | unit + source pin | `pnpm exec jest meta/__tests__/bridgeCensus.test.ts src/backend/storeManagers/steam/bridge/drm/__tests__/drmTrace.test.ts` | ✅ extend | ⬜ pending |
-| M-06 | DRM trace block present; strip rule reproduces upstream bytes (six blocks) | unit | `pnpm exec jest meta/__tests__/buildLsteamclient.test.ts` | ✅ update count | ⬜ pending |
-| M-07 | D-12 recorded as a no-op (`knownBad: []`); D-13 notice unchanged | unit | `pnpm exec jest src/backend/storeManagers/steam/bridge/__tests__/allowlist.test.ts src/frontend/state/__tests__/SteamBridgeRouteNotice.test.ts` | ✅ | ⬜ pending |
-| M-01, M-02 | Host and join with the second account, both directions, both modes (D-05, D-08) | operator-run live gate | `58-NN-LIVE-GATE.md` UAT items; evidence via `pnpm bridge-census` | ❌ authored in-phase | ⬜ pending |
+| M-03 | New manifests validate; wire policy resolves; generated dispatch has new param kinds; `WIRE_LAYOUT_DOC` pins | unit | `pnpm exec jest meta/__tests__/gen_vtables.test.ts meta/__tests__/extractProtonInventory.test.ts` | ✅ extend | ✅ green |
+| M-03 | Callback and message layout rows (mac vs msvc, both triples) | unit (zig arm) | `pnpm exec jest meta/__tests__/msvcCallbackBaseLayout.test.ts` | ✅ extend fixture | ✅ green |
+| M-03 | Call-result register / hold / dispatch / late-register race | host C harness | `pnpm exec jest meta/__tests__/callbackRegistryHost.test.ts` | ✅ extend | ✅ green |
+| M-03 | CBQ allowlist rows with mac and wire size, repack, zero-on-pop | host C harness | `pnpm exec jest src/backend/storeManagers/steam/bridge/__tests__/cbqueue.test.ts` | ✅ extend | ✅ green |
+| M-03, M-04 | New CONTROL slot, frame shapes, old/new peer tolerance, cap-before-alloc refusal | unit + helper integration (fake HOME) | `pnpm exec jest src/backend/storeManagers/steam/bridge/__tests__/protocol.test.ts src/backend/storeManagers/steam/bridge/__tests__/helperIntegration.test.ts` | ✅ extend | ✅ green |
+| M-03 | Shim ABI and compile gate for new stubs (x86 and x64 `ret N`) | gate | `pnpm exec jest meta/__tests__/shimAbiGate.test.ts` | ✅ | ✅ green |
+| M-03 | Served-version tables, export-set version bump, `isScanVerdictNowCovered` | unit | `pnpm exec jest src/backend/storeManagers/steam/bridge/__tests__/shimCoverage.test.ts` | ✅ `shimCoverage.test.ts` | ✅ green |
+| M-05 | `NET` and `[drm-trace] event=callback` grammar; closed vocabulary; no SteamID/IP/handle/payload | unit + source pin | `pnpm exec jest meta/__tests__/bridgeCensus.test.ts src/backend/storeManagers/steam/bridge/drm/__tests__/drmTrace.test.ts` | ✅ extend | ✅ green |
+| M-06 | DRM trace block present; strip rule reproduces upstream bytes (six blocks) | unit | `pnpm exec jest meta/__tests__/buildLsteamclient.test.ts` | ✅ update count | ✅ green |
+| M-07 | D-12 recorded as a no-op (`knownBad: []`); D-13 notice unchanged | unit | `pnpm exec jest src/backend/storeManagers/steam/bridge/__tests__/allowlist.test.ts src/frontend/state/__tests__/SteamBridgeRouteNotice.test.ts` | ✅ | ✅ green |
+| M-01, M-02 | Host and join with the second account, both directions, both modes (D-05, D-08) | operator-run live gate | `58-NN-LIVE-GATE.md` UAT items; evidence via `pnpm bridge-census` | ✅ 58-08, 58-22, 58-33 | ✅ green (live: 58-08 Raft DRM `Verdict: PASS`; 58-33 Schedule I TCP re-gate `Verdict: PASS`, run by 58-34; 58-22 `Verdict: FAIL` superseded by 58-33) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -58,10 +59,10 @@ created: 2026-10-30
 
 ## Wave 0 Requirements
 
-- [ ] Extend `meta/__tests__/fixtures/steam_callback_structs.cpp` (+ `.layout.txt`) with every relayed callback struct and `SteamNetworkingMessage_t`; generalise `msvcCallbackLayout.ts` beyond `USER_STATS_RECEIVED_LAYOUT`.
-- [ ] Add a call-result case set to `callbackRegistryHost.test.ts` (register, complete, late-register hold, unregister race).
-- [ ] Fixture log text for `NET` and `[drm-trace] event=callback` lines for the census tests.
-- [ ] No new framework install.
+- [x] Extend `meta/__tests__/fixtures/steam_callback_structs.cpp` (+ `.layout.txt`) with every relayed callback struct and `SteamNetworkingMessage_t`; generalise `msvcCallbackLayout.ts` beyond `USER_STATS_RECEIVED_LAYOUT`.
+- [x] Add a call-result case set to `callbackRegistryHost.test.ts` (register, complete, late-register hold, unregister race).
+- [x] Fixture log text for `NET` and `[drm-trace] event=callback` lines for the census tests.
+- [x] No new framework install.
 
 ---
 
@@ -79,11 +80,23 @@ created: 2026-10-30
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or are explicit checkpoints (58-09 and the other live-gate plans are `checkpoint:human-*`)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags (0 `--watch` in any `<automated>` block)
+- [x] Feedback latency < 120s (the quick run's four Meta suites; the slowest mapped suites are `shimAbiGate` ~27 s and `helperIntegration` ~23 s)
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** validated 2026-11-02 (validate-phase audit below)
+
+---
+
+## Validation Audit 2026-11-02
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+Run on HEAD `b0b6e37da`: all 14 suites named in the Per-Task Map green (1,039 of 1,039 tests, 0 skipped). Wave 0 on disk: `steam_callback_structs.cpp` carries the relayed lobby, P2P, Sockets, Messages and join-request structs plus `SteamNetworkingMessage_t`, and `msvcCallbackLayout.ts` exports `CALLBACK_LAYOUTS` beyond `USER_STATS_RECEIVED_LAYOUT`; `callbackRegistryHost.test.ts` has the `cr_late_register_hold`, `cr_unregister_race` and `md_callresult*` cases; the census and drm-trace suites carry `NET` and `event=callback` fixture text. Row notes: `buildLsteamclient.test.ts` now pins seven trace blocks (the plan said six); D-12 is pinned by `allowlist.test.ts` asserting `knownBad` is `[]`. The Manual-Only rows were closed by the live gates (58-01 titles and preflight, 58-08 Raft DRM PASS, 58-33/58-34 Schedule I TCP PASS with the 333 relay proven in Direction B). Post-phase review fixes (58-REVIEW-FIX, all_fixed; WR-03/WR-04 live-verified 2026-11-01) and quick 261101-mv3 added harness cases that ran green in the same suites.
