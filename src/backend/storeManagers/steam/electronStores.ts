@@ -56,6 +56,15 @@ export const steamRestartHoldStore = new CacheStore<unknown>(
   null
 )
 
+// ── Phase 57: persisted "known-fix report sent" records (D-16/D-17) ─────────
+// Consumed only through the lazy `require` in backend/knownFixReport.ts, which
+// ts-prune cannot trace. The export is deliberate.
+// ts-prune-ignore-next
+export const steamKnownFixReportStore = new CacheStore<unknown>(
+  'steam_known_fix_reports',
+  null
+)
+
 export interface SteamMetadataCacheEntry {
   art_cover: string
   art_square: string
