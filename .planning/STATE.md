@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
-status: ready_to_plan
-stopped_at: Phase 58 complete (37/37) — ready to discuss Phase 59
-last_updated: 2026-11-01T01:49:18.475Z
-last_activity: 2026-11-01
+status: planning
+stopped_at: Phase 57 context gathered
+last_updated: "2026-11-01T19:33:53.364Z"
+last_activity: "2026-11-01 - Completed quick task 261101-tsq: hide titles toggle"
 progress:
   total_phases: 9
   completed_phases: 7
@@ -474,9 +474,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-01T01:45:23.886Z
-Stopped at: Phase 59 context gathered
-Resume file: None
+Last session: 2026-11-01T19:33:53.358Z
+Stopped at: Phase 57 context gathered
+Resume file: .planning/phases/57-opt-in-known-fix-sharing-via-relay/57-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
