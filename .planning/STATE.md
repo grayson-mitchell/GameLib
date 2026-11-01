@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 58 (steam-bridge-multiplayer) — EXECUTING
 Plan: 4 of 37
 Status: Ready to execute
-Last activity: 2026-11-01 - Completed quick task 261101-j03: DRM GetAppBuildId resolves the running game's library and parses ACF as KeyValues (WR-02), shipped as -p58c
+Last activity: 2026-11-01 - Completed quick task 261101-jbm: a single --demo-status probe timeout no longer flips the bridge bottle to cx-broken
 
 Progress: [██████████] 98%
 
@@ -380,6 +380,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261101-iah | WR-07 fixed: legacy P2P fallback accepts a 1202 only for the remote that 1202 reported (per-1202 FIFO filled at slot-6 drain; pump-time `g_p2p_last_remote` deleted) and only if the game sent it a P2P packet or it is a member of a lobby the game entered; unresolved remotes refused; full tables evict oldest (never accept-all); accept-once table removed. Todo closed; shim 4-report budget filed as follow-up; M-03 stays verified-with-caveats. | 2026-11-01 | 2238d27c6 | Harness pass (165 tests, 9 new p2pfb-*); build-steam-bridge both arches OK; no legacy-TCP-mode title under live test | [261101-iah-legacy-p2p-fallback-accept-only-the-repo](./quick/261101-iah-legacy-p2p-fallback-accept-only-the-repo/) |
 | 261101-ip5 | Shim `gl_cb_report_dispatch` exempts 1202 (P2PSessionRequest_t) from the per-id report budget of 4, so the slot-10 report stays one-per-1202 and the helper's legacy-P2P served FIFO stays paired past the fourth 1202; other ids keep budget 4; helper CBDISP log budget still bounds the log. Pinned on generator and committed shim; todo closed. | 2026-11-01 | 4c0ce026b | Harness pass (505 tests across 4 suites, new p2pfb-many: 8 pairs accept, 4 CBDISP lines); build-steam-bridge both arches OK; gen-vtables drift clean; no legacy-TCP-mode title under live test | [261101-ip5-exempt-1202-from-shim-per-id-report-budg](./quick/261101-ip5-exempt-1202-from-shim-per-id-report-budg/) |
 | 261101-j03 | WR-02 fixed: DRM-mode lsteamclient GetAppBuildId resolves the manifest from the running exe's library, then the default library, then libraryfolders.vdf (max 8), and takes only top-level AppState.buildid via a KeyValues tokenizer, read to EOF (256 KiB bound). Shipped as -p58c (archive 330076c4..., 5381345 B; only lsteamclient.dll changed), catalogue repinned; todo closed. | 2026-11-01 | 79a77eb1b | Host parser test + buildLsteamclient pass (45), DRM/notice suites pass (389); upload round-trip match, pinned: match; live Raft gate on p58c pending | [261101-j03-drm-getappbuildid-appmanifest-lookup-res](./quick/261101-j03-drm-getappbuildid-appmanifest-lookup-res/) |
+| 261101-jbm | A single --demo-status timeout is now inconclusive: preflightCrossover kills the wineserver and re-probes once; only two consecutive timeouts give cx-broken (pinned engine + bottle rewrite). Definitive answers (expired, nonzero-exit, spawn-error, invalid-bottle, unrecognised) still demote on the first probe. Todo closed. | 2026-11-01 | d3f83e677 | Jest pass (87 tests, 3 engine suites); codecheck: 2 pre-existing TS2737 in helperNetHarness.test.ts; live launch pending | [261101-jbm-single-demo-status-probe-timeout-must-no](./quick/261101-jbm-single-demo-status-probe-timeout-must-no/) |
 
 ## Deferred Items
 
