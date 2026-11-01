@@ -1633,6 +1633,8 @@ static void gl_p2p_on_report(uint32_t dn, uint32_t dheld) {
   remote = 0;
 }
 
+static void gl_invite_note_lobby_created(int32_t id, const uint8_t *mac);
+
 /* Records a join seen by the pump (latest wins); resolved by the shim's slot-10
  * report for the same id. `mac` is the raw Mac buffer, size already checked. */
 static void gl_note_join_from_mac(int32_t id, const uint8_t *mac) {
@@ -1726,6 +1728,7 @@ static void gl_manual_pump_into_ring(void) {
             bool got = g_md_get_api_call_result(g_hpipe, done.m_hAsyncCall, buf,
                                                 (int)macSize, crId, &failed);
             if (got && !failed) {
+              gl_invite_note_lobby_created(crId, buf);
               if (gl_cr_complete(&g_cr, done.m_hAsyncCall, buf, macSize, 0)) {
                 gl_note_join_from_mac(crId, buf);
                 if (gl_logbudget_take(&g_cr_done_budget, crId, 1) == 1)
@@ -1759,6 +1762,7 @@ static void gl_manual_pump_into_ring(void) {
         gl_cbq_repack_fields(msg.m_pubParam, win, row);
         queued = gl_cbq_offer(&g_cbq, msg.m_iCallback, win, (int32_t)row->winSize);
         if (msg.m_iCallback == GL_CBQ_ID_LOBBY_ENTER) gl_p2p_note_lobby_from_mac(msg.m_iCallback, msg.m_pubParam);
+        gl_invite_note_lobby_created(msg.m_iCallback, msg.m_pubParam);
         if (queued) gl_note_join_from_mac(msg.m_iCallback, msg.m_pubParam);
         gl_cbq_secure_zero(win, sizeof win);
       } else {
@@ -2251,6 +2255,10 @@ int gl_mms_get_server_details(void *self, const uint8_t *args, uint32_t argLen, 
 
 static uint64_t g_invite_lobby = 0;
 static uint64_t g_invite_born_ms = 0;
+/* Set when the game opened the dialog with lobby 0 in the same instant as
+ * CreateLobby; cleared by adoption or by the next dialog call. The helper is
+ * single-threaded, so no mutex. */
+static int g_invite_await_lobby = 0;
 static unsigned g_invite_dialog_logged = 0;
 static uint64_t g_invite_last_log_ms = 0;
 static uint64_t g_friend_snapshot[GL_INVITE_FRIENDS_MAX];
@@ -2273,6 +2281,27 @@ static uint64_t gl_invite_now_ms(void) {
   return (uint64_t)ts.tv_sec * 1000ull + (uint64_t)ts.tv_nsec / 1000000ull;
 }
 
+/* Adopts the lobby id from the first successful LobbyCreated_t (513) seen after
+ * a dialog that arrived with lobby 0. Mac pack-4 layout (gl_cbq_map_513):
+ * m_eResult int32 at 0, m_ulSteamIDLobby u64 at 4. Never logs the id.
+ * g_invite_born_ms is deliberately NOT reset: the expiry measures the game's
+ * dialog request, so a late or stray 513 can never extend the window. */
+static void gl_invite_note_lobby_created(int32_t id, const uint8_t *mac) {
+  int32_t result;
+  uint64_t lobby;
+  if (id != GL_CBQ_ID_LOBBY_CREATED || mac == NULL) return;
+  if (!g_invite_await_lobby || g_invite_lobby != 0) return;
+  if (gl_invite_now_ms() - g_invite_born_ms >= GL_INVITE_EXPIRY_MS) return;
+  memcpy(&result, mac + 0, 4);
+  memcpy(&lobby, mac + 4, 8);
+  if (result == 1 && lobby != 0) {
+    g_invite_lobby = lobby;
+    g_invite_await_lobby = 0;
+    logts("INVITE", "lobby adopted");
+  }
+  lobby = 0;
+}
+
 /* helperCustom for SteamFriends017.ActivateGameOverlayInviteDialog. Request
  * (generic encoding): [u64 steamIDLobby]. Void response. */
 int gl_friends_invite_dialog(void *self, const uint8_t *args, uint32_t argLen, uint8_t *resp,
@@ -2287,6 +2316,7 @@ int gl_friends_invite_dialog(void *self, const uint8_t *args, uint32_t argLen, u
   now = gl_invite_now_ms();
   g_invite_lobby = lobby;
   g_invite_born_ms = now;
+  g_invite_await_lobby = (lobby == 0);
   g_bd_flat_SteamFriends017_ActivateGameOverlayInviteDialog(self, lobby);
   /* This line is the backend's picker trigger (helperProcess.ts), not just a
    * log line, so it is never capped by count: every call past the 2 s gap
@@ -2403,6 +2433,10 @@ static int32_t gl_invite_send(void *mmSelf, uint32_t ordinal) {
   int ok;
   uint32_t idx = ordinal & GL_INVITE_TOKEN_IDX_MASK;
   uint32_t gen = ordinal >> GL_INVITE_TOKEN_IDX_BITS;
+  if (g_invite_lobby == 0 && g_invite_await_lobby) {
+    logts("INVITE", "refused reason=lobby-pending");
+    return GL_INVITE_NO_PENDING;
+  }
   if (g_invite_lobby == 0) {
     logts("INVITE", "refused reason=no-pending");
     return GL_INVITE_NO_PENDING;
