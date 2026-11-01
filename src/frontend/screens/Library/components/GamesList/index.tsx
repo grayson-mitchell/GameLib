@@ -31,8 +31,13 @@ const GamesList = ({
   isFavourite = false,
   ariaLabel
 }: Props): JSX.Element => {
-  const { gameUpdates, allTilesInColor, titlesAlwaysVisible, cleanTiles } =
-    useContext(ContextProvider)
+  const {
+    gameUpdates,
+    allTilesInColor,
+    titlesAlwaysVisible,
+    hideTitles,
+    cleanTiles
+  } = useContext(ContextProvider)
   const { t } = useTranslation()
   const listRef = useRef<HTMLDivElement | null>(null)
   const { activeController } = useContext(ContextProvider)
@@ -68,6 +73,7 @@ const GamesList = ({
         firstLane: isFirstLane,
         allTilesInColor,
         titlesAlwaysVisible,
+        hideTitles,
         cleanTiles
       })}
       ref={listRef}

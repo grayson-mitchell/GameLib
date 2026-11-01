@@ -326,6 +326,18 @@ body.keyboardNav .gameCard:hover:not(:focus-within) {
   transform: translateY(0);
 }
 
+/* Hide titles (quick 261101-tsq): a third title state, never shown, beside
+   hover-only and always-visible, for a console-like look. It must stay AFTER
+   the reveal rule above: it ties the hover selector's specificity (0,3,0), so
+   source order makes it win, and it beats always-visible's (0,2,0). It also
+   covers controller and keyboard focus, which only reveal the title through
+   :hover. Scoped to .gameCard so list rows (.gameListItem .gameTitle, the name
+   column) are untouched. The .gameListInfo status label and the already-hidden
+   .runner are left alone, and the cover img alt keeps the accessible name. */
+.hideTitles .gameCard .gameTitle {
+  display: none;
+}
+
 /* `play` leads and `store` trails: the play/download control sits at the
    leading edge, and the store badge takes the trailing slot play used to
    hold. Only the grid-card variants below are reordered -- the list layout
