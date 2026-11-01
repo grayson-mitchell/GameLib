@@ -219,7 +219,8 @@ export default React.memo(function GamePage(): JSX.Element | null {
   >('info')
 
   // Phase 59 (D-04/D-06/D-13/D-14/D-15): the engine state is computed by the
-  // backend; fetch it once per title and once when a launch ends (no polling).
+  // backend; fetch it once per title, once when a launch ends, and when the
+  // settings modal opens or closes (59-UAT G11: an override change) -- no polling.
   const engineState = useSteamEngineState((s) => s.byAppId[appName])
   const wasLaunchingOrPlaying = useRef(false)
   const launchEnded =
@@ -234,7 +235,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
     return () => {
       cancelled = true
     }
-  }, [appName, runner, isMac, launchEnded])
+  }, [appName, runner, isMac, launchEnded, settingsModalProps.isOpen])
 
   const previousIsPlaying = useRef<boolean>(isPlaying)
   useEffect(() => {

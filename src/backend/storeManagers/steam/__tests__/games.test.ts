@@ -7544,6 +7544,28 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     expect(gameConfigGetMock).not.toHaveBeenCalled()
   })
 
+  it('getSettings() for a bottle-eligible game carries its own engine override (59-UAT G11)', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'GameLibSteam'
+    })
+    ;(existsSync as jest.Mock).mockImplementation((p: string) =>
+      String(p).endsWith(`GamesConfig/${APP_ID}.json`)
+    )
+    const gameConfigGetMock = jest.requireMock('backend/game_config').GameConfig
+      .get as jest.Mock
+    gameConfigGetMock.mockReturnValueOnce({
+      config: { steamEngineOverride: 'pinned:wine-staging-11.20' }
+    })
+
+    const settings = await new SteamGame(APP_ID).getSettings()
+
+    expect(settings).toEqual({
+      wineCrossoverBottle: 'GameLibSteam',
+      steamEngineOverride: 'pinned:wine-staging-11.20'
+    })
+  })
+
   it('D2: isNative() is false for a forced game — launcher.ts must run checkWineBeforeLaunch', () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
     const game = new SteamGame(APP_ID)
