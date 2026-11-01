@@ -134,7 +134,7 @@ describe('steamclientLayerCatalogue', () => {
     expect(e?.release).toEqual({
       repo: 'grayson-mitchell/GameLib',
       tag: `steamclient-layer-cx${BUILD}`,
-      asset: `steamclient-layer-cx${BUILD}-p58b.tar.gz`
+      asset: `steamclient-layer-cx${BUILD}-p58c.tar.gz`
     })
     for (const k of ['__proto__', 'constructor', '26.3', 42]) {
       expect(lookupSteamclientLayer(k)).toBeUndefined()
@@ -147,7 +147,7 @@ describe('steamclientLayerCatalogue', () => {
       `https://github.com/grayson-mitchell/GameLib/releases/tag/steamclient-layer-cx${BUILD}`
     )
     expect(steamclientLayerArchiveUrl(e)).toBe(
-      `https://github.com/grayson-mitchell/GameLib/releases/download/steamclient-layer-cx${BUILD}/steamclient-layer-cx${BUILD}-p58b.tar.gz`
+      `https://github.com/grayson-mitchell/GameLib/releases/download/steamclient-layer-cx${BUILD}/steamclient-layer-cx${BUILD}-p58c.tar.gz`
     )
   })
 
