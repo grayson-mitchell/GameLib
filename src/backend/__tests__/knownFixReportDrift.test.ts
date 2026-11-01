@@ -33,7 +33,7 @@ describe('known-fix report drift (D-03)', () => {
     'filterTier1KnownFixes keeps %s=%s',
     (k, v) => {
       const out = filterTier1KnownFixes('x', 'test', { [k]: v })
-      expect((out as Record<string, unknown>)?.[k]).toBe(v)
+      expect((out as unknown as Record<string, unknown>)?.[k]).toBe(v)
     }
   )
 
@@ -42,7 +42,9 @@ describe('known-fix report drift (D-03)', () => {
     ['drm', 'none']
   ])('a wrong %s value is dropped by the filter and the schema', (k, v) => {
     const out = filterTier1KnownFixes('x', 'test', { [k]: v })
-    expect((out as Record<string, unknown> | null)?.[k]).toBeUndefined()
+    expect(
+      (out as unknown as Record<string, unknown> | null)?.[k]
+    ).toBeUndefined()
     expect(parseKnownFixReport(report(k, v)).ok).toBe(false)
   })
 })
