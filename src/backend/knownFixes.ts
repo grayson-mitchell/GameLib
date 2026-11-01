@@ -111,7 +111,8 @@ export function isValidExeOverrideShape(value: unknown): value is string {
  * Keys that only change where a title is installed or launched from; they are
  * not a fix and never make the GameLib row claim one (quick 261027-gtd).
  */
-const TIER1_ROUTING_KEYS = ['macArch', 'drm'] as const
+// ts-prune-ignore-next -- exported for the D-03 drift test (knownFixReportDrift.test.ts)
+export const TIER1_ROUTING_KEYS = ['macArch', 'drm'] as const
 
 // `overlays` was added by quick 261027-n77, `dllOverrides` by quick
 // 261029-gow. `platforms` joins this list when implemented.
@@ -316,6 +317,37 @@ export function readKnownFixes(
     if (parsed === null) continue
     const filtered = filterTier1KnownFixes(appName, label, parsed)
     if (filtered !== null) return filtered
+  }
+  return null
+}
+
+export type KnownFixLayer = 'local' | 'bundled' | 'remote'
+
+/**
+ * Like readKnownFixes, but also reports which layer won. Used by the D-12
+ * client skip rule, which must skip reports when the winning layer is 'local'
+ * (a user-private override). Never throws.
+ */
+export function readKnownFixesWithLayer(
+  appName: string,
+  runner: Runner
+): { fix: KnowFixesInfo; layer: KnownFixLayer } | null {
+  const layers: [string, KnownFixLayer][] = [
+    [localFixesPath, 'local'],
+    [bundledFixesPath, 'bundled'],
+    [fixesPath, 'remote']
+  ]
+  for (const [dir, label] of layers) {
+    const parsed = readFixesFileWithin(
+      dir,
+      appName,
+      runner,
+      TIER1_FILE_SUFFIX,
+      label
+    )
+    if (parsed === null) continue
+    const filtered = filterTier1KnownFixes(appName, label, parsed)
+    if (filtered !== null) return { fix: filtered, layer: label }
   }
   return null
 }
