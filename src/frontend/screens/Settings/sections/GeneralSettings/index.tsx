@@ -9,6 +9,7 @@ import {
   DiscordRPC,
   EgsSettings,
   EnableSteamNativeInstall,
+  ShareDetectedFixes,
   HideChangelogOnStartup,
   MaxWorkers,
   MinimizeOnGameLaunch,
@@ -38,6 +39,7 @@ export default function GeneralSettings() {
       <DefaultSteamPath />
 
       <EnableSteamNativeInstall />
+      <ShareDetectedFixes />
 
       <EgsSettings />
 
