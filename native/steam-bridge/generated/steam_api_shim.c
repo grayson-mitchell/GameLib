@@ -2183,12 +2183,26 @@ static int gl_cr_read_reply(uint8_t *buf, uint32_t now, uint64_t *h,
 #define GL_MMS_STR_MAX 255
 #define GL_MMS_DRAIN_RESP_MAX_BYTES (GL_MMS_EV_HEADER + GL_MMS_GSI_SIZE + 132)
 #define GL_MMS_SLOT_DETAILS 7
+#ifndef GL_MMS_ALLOC
+#define GL_MMS_ALLOC(n) calloc(1, (n))
+#define GL_MMS_FREE(p) free(p)
+#endif
+/* At most this many details buffers per request (live plus superseded),
+ * ~392 bytes each: ~400 KB per request, ~25 MB worst case across all 64
+ * mapped requests. Never grows past it. */
+#define GL_MMS_DETAILS_CAP 1024
 #define GL_MMS_CLS_LIST 0
 #define GL_MMS_CLS_QUERY 1
 #define GL_MMS_Q_PING 1
 #define GL_MMS_Q_PLAYERS 2
 #define GL_MMS_Q_RULES 3
 #define GL_MMS_Q_FRIENDS 4
+
+typedef struct gl_mms_det {
+  struct gl_mms_det *next;
+  int32_t iServer;
+  uint8_t gsi[GL_MMS_GSI_SIZE];
+} gl_mms_det;
 
 typedef struct {
   int state; /* 0 free, 1 reserved by an in-flight request, 2 live */
@@ -2197,7 +2211,8 @@ typedef struct {
   uint32_t key;
   uint64_t h64;
   void *obj;
-  uint8_t details[GL_MMS_GSI_SIZE];
+  gl_mms_det *det; /* newest first */
+  uint32_t det_n;
 } gl_mms_ent;
 
 static gl_mms_ent gl_mms_tab[GL_MMS_MAP_CAP];
@@ -2209,7 +2224,18 @@ static uint32_t gl_mms_dropped;
 static gl_mms_ent *gl_mms_busy;
 static uint32_t gl_mms_busy_tid;
 
-/* Returns a reserved slot index, or -1 when the table is full. */
+/* Frees a detached details chain. NULL-safe; call with NO lock held. */
+static void gl_mms_det_free_chain(gl_mms_det *d) {
+  while (d != NULL) {
+    gl_mms_det *n = d->next;
+    GL_MMS_FREE(d);
+    d = n;
+  }
+}
+
+/* Returns a reserved slot index, or -1 when the table is full. Only state-0
+ * slots are zeroed here; by the free-at-every-zero-site invariant they never
+ * own a details chain. */
 static int gl_mms_reserve(void) {
   uint32_t i;
   int r = -1;
@@ -2227,9 +2253,12 @@ static int gl_mms_reserve(void) {
 }
 
 static void gl_mms_abort(int idx) {
+  gl_mms_det *chain;
   GL_CB_LOCK();
+  chain = gl_mms_tab[idx].det;
   gl_cb_zero(&gl_mms_tab[idx], (uint32_t)sizeof(gl_mms_tab[idx]));
   GL_CB_UNLOCK();
+  gl_mms_det_free_chain(chain);
 }
 
 /* Caller holds the lock. */
@@ -2243,10 +2272,16 @@ static int gl_mms_find_locked(int cls, uint32_t key) {
 
 static void gl_mms_commit(int idx, int cls, int qkind, uint32_t key, uint64_t h64, void *obj) {
   int dup;
+  gl_mms_det *chain = NULL, *chain2;
   GL_CB_LOCK();
   dup = gl_mms_find_locked(cls, key);
+  chain2 = gl_mms_tab[idx].det;
   if (dup >= 0) {
-    /* the same handle issued again: the newest response object wins */
+    /* the same handle issued again: the newest response object wins, and the
+     * old request's server indices are stale so its buffers are dropped */
+    chain = gl_mms_tab[dup].det;
+    gl_mms_tab[dup].det = NULL;
+    gl_mms_tab[dup].det_n = 0;
     gl_mms_tab[dup].obj = obj;
     gl_mms_tab[dup].h64 = h64;
     gl_mms_tab[dup].qkind = qkind;
@@ -2259,14 +2294,18 @@ static void gl_mms_commit(int idx, int cls, int qkind, uint32_t key, uint64_t h6
     gl_mms_tab[idx].h64 = h64;
     gl_mms_tab[idx].obj = obj;
     gl_mms_count++;
+    chain2 = NULL;
   }
   GL_CB_UNLOCK();
+  gl_mms_det_free_chain(chain);
+  gl_mms_det_free_chain(chain2);
 }
 
-/* ReleaseRequest / CancelServerQuery: drops the mapping (and its details
- * slot). Waits while another thread is delivering to this very object; a
+/* ReleaseRequest / CancelServerQuery: drops the mapping and frees every
+ * details buffer it handed out. Waits while another thread is delivering to this very object; a
  * handler unmapping itself never waits. */
 static void gl_mms_unmap(int cls, uint32_t key) {
+  gl_mms_det *chain = NULL;
   GL_CB_LOCK();
   for (;;) {
     int f = gl_mms_find_locked(cls, key);
@@ -2277,11 +2316,13 @@ static void gl_mms_unmap(int cls, uint32_t key) {
       GL_CB_LOCK();
       continue;
     }
+    chain = gl_mms_tab[f].det;
     gl_cb_zero(&gl_mms_tab[f], (uint32_t)sizeof(gl_mms_tab[f]));
     gl_mms_count--;
     break;
   }
   GL_CB_UNLOCK();
+  gl_mms_det_free_chain(chain);
 }
 
 /* Request*ServerList. variant 0..5 = Internet, LAN, Friends, Favorites,
@@ -2349,14 +2390,23 @@ static int32_t gl_mms_query(uint16_t slot, int qkind, uint32_t ip, uint32_t port
   return q;
 }
 
-/* GetServerDetails: a pointer to the request's own details slot (valid until
- * ReleaseRequest; overwritten by the next call for that request), or NULL. */
+/* GetServerDetails: a stable pointer per (request, iServer), never rewritten
+ * after return, valid until ReleaseRequest (or the handle being reissued);
+ * NULL when absent, the index is negative, the cap is reached for a new
+ * index, or allocation fails.
+ * Design: one singly linked list per request, newest node first; the first
+ * node whose iServer matches is the current one. Each index gets its own node
+ * (no aliasing) and a returned node is never written again. When a later
+ * fetch of the same index brings different bytes (e.g. after RefreshServer) a
+ * new node is prepended; the old one stays, shadowed, so a pointer the game
+ * still holds stays valid and unchanged. */
 static void *gl_mms_get_server_details(uint64_t hRequest, int32_t iServer) {
   uint8_t req[12];
   uint8_t resp[4 + GL_MMS_GSI_SIZE];
   uint32_t rlen = 0, present;
   void *out = NULL;
   int f, ok;
+  if (iServer < 0) return NULL;
   GL_CB_LOCK();
   f = gl_mms_find_locked(GL_MMS_CLS_LIST, (uint32_t)hRequest);
   if (f >= 0 && gl_mms_tab[f].h64 != hRequest) f = -1;
@@ -2368,13 +2418,32 @@ static void *gl_mms_get_server_details(uint64_t hRequest, int32_t iServer) {
   if (ok && rlen == sizeof resp) {
     memcpy(&present, resp, 4);
     if (present == 1) {
+      gl_mms_det *cand = (gl_mms_det *)GL_MMS_ALLOC(sizeof(gl_mms_det));
+      if (cand != NULL) {
+        cand->iServer = iServer;
+        memcpy(cand->gsi, resp + 4, GL_MMS_GSI_SIZE);
+      }
       GL_CB_LOCK();
       f = gl_mms_find_locked(GL_MMS_CLS_LIST, (uint32_t)hRequest);
-      if (f >= 0) {
-        memcpy(gl_mms_tab[f].details, resp + 4, GL_MMS_GSI_SIZE);
-        out = gl_mms_tab[f].details;
+      if (f >= 0 && gl_mms_tab[f].h64 == hRequest) {
+        gl_mms_det *cur = gl_mms_tab[f].det;
+        while (cur != NULL && cur->iServer != iServer) cur = cur->next;
+        if (cur != NULL && memcmp(cur->gsi, resp + 4, GL_MMS_GSI_SIZE) == 0) {
+          out = cur->gsi;
+        } else if (cand == NULL) {
+          out = NULL;
+        } else if (gl_mms_tab[f].det_n >= GL_MMS_DETAILS_CAP) {
+          out = cur != NULL ? (void *)cur->gsi : NULL;
+        } else {
+          cand->next = gl_mms_tab[f].det;
+          gl_mms_tab[f].det = cand;
+          gl_mms_tab[f].det_n++;
+          out = cand->gsi;
+          cand = NULL;
+        }
       }
       GL_CB_UNLOCK();
+      if (cand != NULL) GL_MMS_FREE(cand);
     }
   }
   gl_cb_zero(resp, (uint32_t)sizeof resp);
@@ -2407,6 +2476,7 @@ static int gl_mms_deliver(uint8_t kind, uint32_t hreq, int32_t iServer, int32_t 
   void **vt;
   uint64_t h64;
   gl_mms_ent *e;
+  gl_mms_det *retire_chain = NULL;
   int f, called = 0;
   char s1[GL_MMS_STR_MAX + 1], s2[GL_MMS_STR_MAX + 1];
   uint8_t item[GL_MMS_GSI_SIZE];
@@ -2477,10 +2547,12 @@ static int gl_mms_deliver(uint8_t kind, uint32_t hreq, int32_t iServer, int32_t 
   GL_CB_LOCK();
   gl_mms_busy = NULL;
   if (terminal && e->state == 2 && e->cls == cls && e->key == hreq && e->obj == obj) {
+    retire_chain = e->det;
     gl_cb_zero(e, (uint32_t)sizeof(*e));
     gl_mms_count--;
   }
   GL_CB_UNLOCK();
+  gl_mms_det_free_chain(retire_chain);
   gl_cb_zero(item, (uint32_t)sizeof item);
   gl_cb_zero(s1, (uint32_t)sizeof s1);
   gl_cb_zero(s2, (uint32_t)sizeof s2);

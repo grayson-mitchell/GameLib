@@ -72,7 +72,10 @@ const CASES = [
   'mms_rules_strings',
   'mms_unknown_handle_dropped',
   'mms_release_unmaps',
-  'mms_details_slot',
+  'mms_details_stable',
+  'mms_details_dup_reissue',
+  'mms_details_bounds',
+  'mms_details_alloc_fail',
   'mms_capacity',
   'mms_ping_terminal',
   'mms_malformed_ignored'
