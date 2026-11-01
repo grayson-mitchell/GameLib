@@ -263,6 +263,11 @@
 // GL_CONN_CAP_LOG_MAX times per process.
 #define GL_MAX_CONNS 16
 #define GL_CONN_CAP_LOG_MAX 16
+// 58 WR-02: a connection that has not authenticated with HELLO within this
+// many seconds of accept() is closed, however actively it trickles bytes.
+// Every legitimate client (shim, backend probe, invite control client)
+// sends HELLO immediately after connecting, so this only reaps squatters.
+#define GL_AUTH_DEADLINE_SECONDS RECV_TIMEOUT_SECONDS
 
 // T-51-03: the longest digit-string this helper accepts as --appid. Real
 // Steam AppIDs are well under this; it exists purely to reject nonsense
@@ -2887,6 +2892,7 @@ struct gl_conn {
   int helloLogged;
   uint32_t have;
   time_t lastRxSec;
+  time_t acceptedSec; // 58 WR-02: pre-auth deadline is measured from here
   uint8_t buf[LENGTH_FIELD_BYTES + MAX_FRAME_BYTES];
 };
 static struct gl_conn g_conns[GL_MAX_CONNS];
@@ -2972,6 +2978,12 @@ static void gl_serve_forever(int listenFd) {
         gl_conn_close(&g_conns[i]);
         continue;
       }
+      // 58 WR-02: lastRxSec is refreshed on every byte, so a pre-auth peer
+      // trickling bytes would otherwise hold its slot forever.
+      if (!g_conns[i].authenticated && now - g_conns[i].acceptedSec >= GL_AUTH_DEADLINE_SECONDS) {
+        gl_conn_close(&g_conns[i]);
+        continue;
+      }
       anyUsed = 1;
     }
 
@@ -3007,6 +3019,20 @@ static void gl_serve_forever(int listenFd) {
           if (g_conns[i].fd < 0) { free_i = i; break; }
         }
         if (free_i < 0) {
+          // 58 WR-02: a full table evicts its oldest unauthenticated slot
+          // rather than refusing, so pre-auth squatters cannot lock the
+          // shim and the invite client out. Authenticated slots are kept.
+          int victim = -1;
+          for (int i = 0; i < GL_MAX_CONNS; i++) {
+            if (g_conns[i].authenticated) continue;
+            if (victim < 0 || g_conns[i].acceptedSec < g_conns[victim].acceptedSec) victim = i;
+          }
+          if (victim >= 0) {
+            gl_conn_close(&g_conns[victim]);
+            free_i = victim;
+          }
+        }
+        if (free_i < 0) {
           if (g_conn_cap_logged < GL_CONN_CAP_LOG_MAX) {
             g_conn_cap_logged++;
             logts("ABORT", "connection table full -- closing new connection");
@@ -3018,6 +3044,7 @@ static void gl_serve_forever(int listenFd) {
           g_conns[free_i].helloLogged = 0;
           g_conns[free_i].have = 0;
           g_conns[free_i].lastRxSec = gl_now_sec();
+          g_conns[free_i].acceptedSec = g_conns[free_i].lastRxSec;
         }
       }
     }

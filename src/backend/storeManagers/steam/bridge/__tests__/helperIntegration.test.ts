@@ -2015,12 +2015,36 @@ describeDarwinOnly(
       }
     }, 20000)
 
-    test('58-35: connection cap -- the 17th connection is closed at once, the first stays served, one `connection table full` line', async () => {
+    test('58 WR-02: a full table evicts its oldest unauthenticated slot for a new connection, the authenticated one stays served', async () => {
       const h = await startAuthHelper('p58-35-cap-', authedEnv())
       const socks: Socket[] = []
       try {
         for (let i = 0; i < 16; i++) socks.push(await h.connect())
         await authenticate(socks[0], 1)
+        const evicted = waitClose(socks[1])
+        const extra = await h.connect()
+        socks.push(extra)
+        expect(await evicted).toBeLessThan(1000)
+        await authenticate(extra, 3)
+        expect((await sendFrameOnSocket(socks[0], drainFrame(2))).status).toBe(
+          STATUS_OK
+        )
+        expect(h.getStderr()).not.toMatch(/connection table full/)
+      } finally {
+        socks.forEach((s) => s.destroy())
+        h.child.kill()
+      }
+    }, 20000)
+
+    test('58-35: connection cap -- with every slot authenticated the 17th connection is closed at once, the first stays served, one `connection table full` line', async () => {
+      const h = await startAuthHelper('p58-35-capauth-', authedEnv())
+      const socks: Socket[] = []
+      try {
+        for (let i = 0; i < 16; i++) {
+          const s = await h.connect()
+          socks.push(s)
+          await authenticate(s, 100 + i)
+        }
         const extra = await h.connect()
         socks.push(extra)
         const ms = await waitClose(extra)
@@ -2031,6 +2055,29 @@ describeDarwinOnly(
         expect(h.getStderr().match(/connection table full/g)).toHaveLength(1)
       } finally {
         socks.forEach((s) => s.destroy())
+        h.child.kill()
+      }
+    }, 20000)
+
+    test('58 WR-02: a connection trickling bytes without HELLO is closed 4-7 s after accept, not kept alive by each byte', async () => {
+      const h = await startAuthHelper('p58-wr02-trickle-', authedEnv())
+      const sock = await h.connect()
+      const frame = Buffer.alloc(4)
+      frame.writeUInt32LE(100, 0)
+      let i = 0
+      const tick = setInterval(() => {
+        if (sock.destroyed) return
+        if (i < frame.length) sock.write(frame.subarray(i, i + 1))
+        else sock.write(Buffer.from([0]))
+        i++
+      }, 1000)
+      try {
+        const ms = await waitClose(sock)
+        expect(ms).toBeGreaterThanOrEqual(4000)
+        expect(ms).toBeLessThanOrEqual(7000)
+      } finally {
+        clearInterval(tick)
+        sock.destroy()
         h.child.kill()
       }
     }, 20000)
