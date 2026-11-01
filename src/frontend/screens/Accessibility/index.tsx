@@ -31,6 +31,8 @@ const Accessibility = React.memo(function Accessibility() {
     setAllTilesInColor,
     titlesAlwaysVisible,
     setTitlesAlwaysVisible,
+    hideTitles,
+    setHideTitles,
     cleanTiles,
     setCleanTiles,
     setPrimaryFontFamily,
@@ -225,12 +227,29 @@ const Accessibility = React.memo(function Accessibility() {
             <ToggleSwitch
               htmlId="setTitlesAlwaysVisible"
               value={titlesAlwaysVisible}
+              disabled={hideTitles}
               handleChange={() => {
                 setTitlesAlwaysVisible(!titlesAlwaysVisible)
               }}
               title={t(
                 'accessibility.titles_always_visible',
                 'Always show titles in library'
+              )}
+            />
+          </label>
+        </span>
+
+        <span className="setting">
+          <label className={classNames('toggleWrapper', { isRTL: isRTL })}>
+            <ToggleSwitch
+              htmlId="setHideTitles"
+              value={hideTitles}
+              handleChange={() => {
+                setHideTitles(!hideTitles)
+              }}
+              title={t(
+                'accessibility.hide_titles',
+                'Hide titles (never show game names on tiles)'
               )}
             />
           </label>

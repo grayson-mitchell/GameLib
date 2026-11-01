@@ -38,6 +38,7 @@ export interface StoreStructure {
     actionsFontFamily: string
     allTilesInColor: boolean
     titlesAlwaysVisible: boolean
+    hideTitles: boolean
     cleanTiles: boolean
     disableDialogBackdropClose: boolean
     disableAnimations: boolean

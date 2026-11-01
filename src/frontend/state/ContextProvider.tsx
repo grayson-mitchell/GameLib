@@ -92,6 +92,8 @@ const initialContext: ContextType = {
   setAllTilesInColor: () => null,
   titlesAlwaysVisible: false,
   setTitlesAlwaysVisible: () => null,
+  hideTitles: false,
+  setHideTitles: () => null,
   cleanTiles: false,
   setCleanTiles: () => null,
   sidebarCollapsed: false,

@@ -194,6 +194,7 @@ interface StateProps {
   secondaryFontFamily: string
   allTilesInColor: boolean
   titlesAlwaysVisible: boolean
+  hideTitles: boolean
   cleanTiles: boolean
   sidebarCollapsed: boolean
   activeController: string
@@ -546,6 +547,7 @@ class GlobalState extends PureComponent<Props> {
       ),
     allTilesInColor: configStore.get('allTilesInColor', false),
     titlesAlwaysVisible: configStore.get('titlesAlwaysVisible', false),
+    hideTitles: configStore.get('hideTitles', false),
     cleanTiles: configStore.get('cleanTiles', false),
     activeController: '',
     connectivity: { status: 'offline', retryIn: 0 },
@@ -630,6 +632,11 @@ class GlobalState extends PureComponent<Props> {
   setTitlesAlwaysVisible = (value: boolean) => {
     configStore.set('titlesAlwaysVisible', value)
     this.setState({ titlesAlwaysVisible: value })
+  }
+
+  setHideTitles = (value: boolean) => {
+    configStore.set('hideTitles', value)
+    this.setState({ hideTitles: value })
   }
 
   setCleanTiles = (value: boolean) => {
@@ -2195,6 +2202,7 @@ class GlobalState extends PureComponent<Props> {
           setZoomPercent: this.setZoomPercent,
           setAllTilesInColor: this.setAllTilesInColor,
           setTitlesAlwaysVisible: this.setTitlesAlwaysVisible,
+          setHideTitles: this.setHideTitles,
           setCleanTiles: this.setCleanTiles,
           setSideBarCollapsed: this.setSideBarCollapsed,
           setPrimaryFontFamily: this.setPrimaryFontFamily,
