@@ -1,8 +1,9 @@
 # GameLib Privacy Policy
 
 GameLib is a desktop game library manager. It runs on your device and has no account system of its
-own. The maintainer does not operate a server that receives your data. GameLib contains no
-telemetry, analytics or crash reporting. It does make network requests, mostly to the stores and
+own. The maintainer operates one small server, an opt-in relay that is used only when you turn on
+Share detected game fixes (macOS); otherwise no server run by the maintainer receives your data.
+GameLib contains no telemetry, analytics or crash reporting. It does make network requests, mostly to the stores and
 public data sources it needs to show and install your games, and some of those requests happen
 without a click from you. This document says what is stored locally, what is sent and to whom, and
 where the limits of that statement are.
@@ -98,6 +99,16 @@ file that includes the game's app name) when you refresh or install Epic games.
 `github.com`, `store.epicgames.com`, `gog.com` and `cloudflare-dns.com` to find out whether you are
 online. No account data is sent.
 
+**Known-fix relay (opt-in, macOS only).** Off by default. Turning on Share detected game fixes in
+General settings is the only consent; nothing is sent while it is off.
+
+| Destination                                                                                 | When                                                                                                                                                                                       | What is sent                                                                                                  |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| The maintainer's relay, a Cloudflare Worker on `workers.dev` (exact URL added after deploy) | Only on macOS, only when the setting is on, and only when a detector reaches a definitive verdict: a 32-bit Mac build, Steam CEG DRM, or a curated 32-bit entry that turns out to be wrong | The Steam app id, the store, the detected fix key and value, whether to add or remove it, the GameLib version |
+
+It never sends a user id, the game title, a file path or a log. The relay looks the title up from
+Steam itself.
+
 ## Telemetry, analytics and crash reporting
 
 GameLib contains no telemetry, analytics or crash reporting. The source and both dependency
@@ -108,8 +119,8 @@ project it derives from, and that call was deleted.
 
 ## Servers the maintainer controls
 
-GameLib does not operate a server of its own. The maintainer publishes files as GitHub release
-assets in `https://github.com/grayson-mitchell/GameLib`, and GitHub serves them. GameLib fetches two:
+The maintainer operates one server, the opt-in known-fix relay described above, and otherwise
+publishes files as GitHub release assets in `https://github.com/grayson-mitchell/GameLib`, and GitHub serves them. GameLib fetches two:
 
 - The CrossOver compatibility index, `crossover-index.json.gz`, on macOS only. It is refreshed at
   most once a day, when the app builds CrossOver ratings for your library.
@@ -118,6 +129,14 @@ assets in `https://github.com/grayson-mitchell/GameLib`, and GitHub serves them.
   source contains no code that requests that feed, so GameLib does not currently check for updates
   on its own. If a check is added, the request goes to GitHub, and GitHub sees your IP address and
   the client's User-Agent.
+
+The relay runs on Cloudflare. It sees the IP address of each request. It stores only a SHA-256 hash
+of that address, salted per day, in a rate-limit bucket that expires after about two hours, and it
+never writes the address or its hash to GitHub. For each app id, fix key and add/remove operation it
+stores a report count, first and last seen times, the last GameLib version and the number of the
+pull request or issue. It uses a GitHub App credential to open pull requests and issues on
+`grayson-mitchell/known-fixes`, which are public. Cloudflare's own handling of requests is governed
+by Cloudflare's policy.
 
 ## Things that happen only when you ask
 
@@ -150,10 +169,12 @@ visit there can set cookies, and GameLib does not control what they do.
 - The operators of `heroic.legendary.gl` and the third-party sites listed were identified by domain
   name only. Each third party's own privacy policy governs what it does with the requests it
   receives.
+- Cloudflare's handling of requests to the relay (logging, retention) is governed by Cloudflare's
+  own policy and was not audited.
 - Anything the census could not confirm is listed here and not stated as fact.
 
 ## Contact
 
 Open an issue at https://github.com/grayson-mitchell/GameLib/issues.
 
-This document was checked against the GameLib source at commit `f32ad5aaa` on 2026-09-30.
+This document was checked against the GameLib source at commit `f08a83040` on 2026-11-02.
