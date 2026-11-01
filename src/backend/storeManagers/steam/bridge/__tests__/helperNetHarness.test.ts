@@ -312,6 +312,23 @@ describeDarwinOnly(
       expect(lines(err, /reason=bad-ordinal$/)).toHaveLength(4)
     })
 
+    test('invite-zero-adopt: dialog with lobby 0 adopts the id from the first 513', () => {
+      const { out, err } = runBoth('invite-zero-adopt')
+      expect(out).toContain('pre=-1 r=1 calls=1 lobbyok=1 targetok=1')
+      expect(lines(err, /INVITE +sent ok=1$/)).toHaveLength(1)
+      expect(lines(err, /INVITE +lobby adopted$/)).toHaveLength(1)
+      expect(lines(err, /reason=lobby-pending$/)).toHaveLength(1)
+      expect(lines(err, /reason=no-pending/)).toHaveLength(0)
+      expect(err).not.toMatch(/[0-9]{17}/)
+    })
+
+    test('invite-zero-guards: failed result, zero lobby, explicit lobby, call result, one-shot', () => {
+      const { out, err } = runBoth('invite-zero-guards')
+      expect(out).toContain('badres=0 zerolobby=0 explicit=1 cr=1 oneshot=1')
+      expect(lines(err, /INVITE +lobby adopted$/)).toHaveLength(1)
+      expect(err).not.toMatch(/[0-9]{17}/)
+    })
+
     test('control-unauth: slots 13 and 14 refuse an unauthenticated connection', () => {
       const { out } = runBoth('control-unauth')
       expect(out).toContain('unauth13 status=1 n=0')
