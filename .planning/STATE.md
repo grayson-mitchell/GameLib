@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 59
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-02 - Completed quick task 261102-0yc: D-UAT-17 Windows Steam installer launches elevated and reports a failed launch
+Last activity: 2026-11-02 - Completed quick task 261102-21x: D-UAT-15 client-setup prompt now precedes the library-missing notice
 
 Progress: [██████████] 99%
 
@@ -386,6 +386,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast | Invite picker header X removed (showCloseButton=false); the picker window closes via the traffic lights or the footer Close button. | 2026-11-01 | 821b996ec | 2 suites pass (16 tests); live check pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
 | 261101-whs | Windows isSteamClientInstalled() now probes <Default Steam path>/steam.exe (the same root as the D-11 libraryfolders.vdf gate); Phase 21 UAT todo gets a no-uninstall 4a/4b/4c recipe and ready: live-gate. | 2026-11-01 | 8b305b0f9 | 3 suites pass (158 tests); tsc/deadcode/lint ceiling OK; live 4a/4b/4c not yet run | [261101-whs-windows-steam-client-install-check-honor](./quick/261101-whs-windows-steam-client-install-check-honor/) |
 | 261102-0yc | D-UAT-17 fixed: Windows guided Steam install launches SteamSetup.exe via PowerShell Start-Process -Verb RunAs (UAC) and awaits the launch outcome; a declined or failed launch returns an error instead of "started". | 2026-11-02 | 3f0df053c | clientSetup + fakeHomeIsolation pass (25 tests); argv quoting checked live; live 4a re-run pending | [261102-0yc-fix-d-uat-17-windows-guided-steam-instal](./quick/261102-0yc-fix-d-uat-17-windows-guided-steam-instal/) |
+| 261102-21x | D-UAT-15 fixed: a library-missing quick-install verdict first asks steamClientSetupRecheck; Steam absent/never-launched goes straight to the D-10/D-11 client-setup prompt instead of the "library couldn't be reached" dialog. Library-missing copy no longer assumes a removable drive; Console Mode follow-up todo filed. | 2026-11-02 | b6d8bb7c8 | 3 targeted suites 190/190 (Group U1-U8 added); tsc/eslint/prettier clean; live 4a/4b re-run pending | [261102-21x-d-uat-15-library-missing-notice-before-s](./quick/261102-21x-d-uat-15-library-missing-notice-before-s/) |
 
 ## Deferred Items
 
