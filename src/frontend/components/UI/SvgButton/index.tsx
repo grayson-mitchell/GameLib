@@ -8,6 +8,7 @@ interface Props {
   className?: string
   disabled?: boolean
   title?: string
+  'aria-label'?: string
 }
 
 export default function SvgButton({
@@ -15,11 +16,13 @@ export default function SvgButton({
   children,
   className = '',
   disabled = false,
-  title = undefined
+  title = undefined,
+  'aria-label': ariaLabel = undefined
 }: Props) {
   return (
     <button
       title={title}
+      aria-label={ariaLabel}
       disabled={disabled}
       className={`svg-button ${className}`}
       onClick={onClick}
