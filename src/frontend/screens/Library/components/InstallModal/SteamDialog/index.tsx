@@ -679,7 +679,7 @@ export default function SteamDialog({
                   )
                 : tGamelib(
                     'gamelib:steam.install.libraryMissingOnlyNotice',
-                    "Your Steam library couldn't be reached. Reconnect the drive, then try again."
+                    "Your Steam library folder couldn't be found. Check that it still exists and that its drive is connected, then try again."
                   )
               : gating.libraryDropdown
                 ? tGamelib(

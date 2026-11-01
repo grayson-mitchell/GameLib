@@ -17,6 +17,14 @@ import {
  * (`resolveQuickInstallTarget`, `evaluateQuickInstallTarget`) directly — one
  * definition of the check, two degrade shapes (the desktop options dialog vs.
  * this module's terminal in-place failure card).
+ *
+ * It also does NOT run the D-UAT-15 client-setup recheck that the desktop
+ * quick install now runs on a library-missing verdict. `SteamClientSetup` is
+ * mounted only in `App.tsx`'s non-console branch, so the backend push would
+ * open its store with nothing rendered under `/console`: a silent failure
+ * that D-29 forbids, followed by a stray desktop dialog on leaving Console
+ * Mode. That is why the library-missing card's copy names the client cause
+ * (installed, opened at least once) as well as the drive.
  */
 
 export type ConsoleFocusKey = 'platform' | 'wine' | 'cancel' | 'install'
@@ -134,7 +142,7 @@ const STEAM_BLOCKED_MESSAGES: Record<
 > = {
   'library-missing': [
     'consoleMode.steamInstallLibraryMissing',
-    "Your Steam library folder isn't available right now. Reconnect the drive and try again."
+    "Your Steam library folder couldn't be found. Check that Steam is installed and has been opened at least once, and that the library's drive is connected."
   ],
   'library-full': [
     'consoleMode.steamInstallLibraryFull',
