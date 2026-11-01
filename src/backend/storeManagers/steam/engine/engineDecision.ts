@@ -4,7 +4,8 @@
  * Decides, per launch and per bottle creation, which engine runs a bridge
  * title. Stateless on purpose (D-07): CrossOver is probed afresh on every call
  * and nothing is stored here, so a title returns to CrossOver on the first
- * launch after CrossOver becomes healthy.
+ * launch after CrossOver becomes healthy. A --demo-status timeout is retried
+ * once within the same preflight; only two timeouts in a row count as broken.
  *
  * Nothing runs at import; heavy collaborators are reached through injectable
  * deps whose defaults are built lazily inside each function.
@@ -34,6 +35,16 @@ import {
 
 /** Bounds the D-12 create-under-expiry case; a normal cxbottle create is well under a minute. */
 export const CX_CREATE_CAP_MS = 120_000
+
+/**
+ * A --demo-status timeout must be corroborated before CrossOver counts as
+ * broken (todo 2026-11-01 demo-status-probe-timeout; the 2026-11-01 Schedule I
+ * launches flipped the bottle to the pinned engine on one transient hang).
+ * D-09: a hang is broken, but only when seen on two consecutive capped
+ * attempts. D-07: the corroboration lives inside one preflight call; nothing
+ * is stored between launches.
+ */
+const PROBE_TIMEOUT_ATTEMPTS = 2
 
 export type CrossoverPreflight =
   | {
@@ -185,26 +196,50 @@ export async function preflightCrossover(
       detail: 'CrossOver bin/wine is not executable'
     }
   }
-  const [build, probe] = await Promise.all([
-    d.readBuild(binDir).catch(() => null),
+  const runProbe = () =>
     d.probe({
       binDir,
       bottleName,
       baseEnv: d.probeEnv,
       timeoutMs: d.probeTimeoutMs
     })
+  const stopWineserver = async () => {
+    try {
+      await d.killCrossoverWineserver(bottleName, binDir)
+    } catch (e) {
+      logWarning(
+        `SteamEngine: could not stop wineserver after probe timeout: ${String(e)}`,
+        LogPrefix.Steam
+      )
+    }
+  }
+  const [build, firstProbe] = await Promise.all([
+    d.readBuild(binDir).catch(() => null),
+    runProbe()
   ])
-  if (probe.kind === 'failed') {
-    if (probe.reason === 'timeout') {
-      try {
-        await d.killCrossoverWineserver(bottleName, binDir)
-      } catch (e) {
-        logWarning(
-          `SteamEngine: could not stop wineserver after probe timeout: ${String(e)}`,
-          LogPrefix.Steam
-        )
+  let probe = firstProbe
+  // A single timeout is inconclusive: stop the wineserver and probe again.
+  for (
+    let attempt = 1;
+    probe.kind === 'failed' && probe.reason === 'timeout';
+    attempt++
+  ) {
+    await stopWineserver()
+    if (attempt >= PROBE_TIMEOUT_ATTEMPTS) {
+      return {
+        kind: 'broken',
+        binDir,
+        build,
+        detail: `--demo-status timeout on ${PROBE_TIMEOUT_ATTEMPTS} consecutive attempts: ${probe.detail}`
       }
     }
+    logWarning(
+      `SteamEngine: --demo-status timed out for bottle ${bottleName.slice(0, 64)} (attempt ${attempt}/${PROBE_TIMEOUT_ATTEMPTS}); inconclusive, retrying once`,
+      LogPrefix.Steam
+    )
+    probe = await runProbe()
+  }
+  if (probe.kind === 'failed') {
     return {
       kind: 'broken',
       binDir,
