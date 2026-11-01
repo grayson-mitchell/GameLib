@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 59
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-01 - Completed quick task 261101-llf: bridge invite picker in its own window
+Last activity: 2026-11-01 - Completed quick task 261101-mmt: Phase 58 WR-03/WR-04 live-verified, 3 follow-up todos filed
 
 Progress: [██████████] 99%
 
@@ -382,6 +382,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261101-j03 | WR-02 fixed: DRM-mode lsteamclient GetAppBuildId resolves the manifest from the running exe's library, then the default library, then libraryfolders.vdf (max 8), and takes only top-level AppState.buildid via a KeyValues tokenizer, read to EOF (256 KiB bound). Shipped as -p58c (archive 330076c4..., 5381345 B; only lsteamclient.dll changed), catalogue repinned; todo closed. | 2026-11-01 | 79a77eb1b | Host parser test + buildLsteamclient pass (45), DRM/notice suites pass (389); upload round-trip match, pinned: match; live Raft gate on p58c pending | [261101-j03-drm-getappbuildid-appmanifest-lookup-res](./quick/261101-j03-drm-getappbuildid-appmanifest-lookup-res/) |
 | 261101-jbm | A single --demo-status timeout is now inconclusive: preflightCrossover kills the wineserver and re-probes once; only two consecutive timeouts give cx-broken (pinned engine + bottle rewrite). Definitive answers (expired, nonzero-exit, spawn-error, invalid-bottle, unrecognised) still demote on the first probe. Todo closed. | 2026-11-01 | d3f83e677 | Jest pass (87 tests, 3 engine suites); codecheck: 2 pre-existing TS2737 in helperNetHarness.test.ts; live launch pending | [261101-jbm-single-demo-status-probe-timeout-must-no](./quick/261101-jbm-single-demo-status-probe-timeout-must-no/) |
 | 261101-llf | Bridge invite picker now opens in its own focused `bridge-invite` Tauri window (scoped capability, 4 permissions) instead of raising the main window; focus returns to the game on close; bridge-notice dialogs keep `main_window_raise`. | 2026-11-01 | 7cebc8c99 | cargo + touched Jest suites pass; live gate (7 items, frameless OFF/ON) pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
+| 261101-mmt | Phase 58 live checks recorded: WR-03 (two Schedule I sessions, 2m39s + 2m05s, no mid-session drop or shim reconnect) and WR-04 (3 invites from fresh snapshots, 0 bad-ordinal) marked live-verified in 58-REVIEW-FIX.md; filed todos: main-menu invite as a supported host path (supersedes 58-33 decision 5), lobby-0 invite dialog refuses every invite, quitting GameLib kills a hosted bridge session | 2026-11-01 | 413df5b28 | Live-verified; planning-gates 11/12 (state-sdk-field-anchor fails on pre-existing `Plan: Not started`) | [261101-mmt-record-phase-58-live-check-results-and-f](./quick/261101-mmt-record-phase-58-live-check-results-and-f/) |
 | fast | Invite picker header X removed (showCloseButton=false); the picker window closes via the traffic lights or the footer Close button. | 2026-11-01 | 821b996ec | 2 suites pass (16 tests); live check pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
 
 ## Deferred Items
