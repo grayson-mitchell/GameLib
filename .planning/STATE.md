@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 59
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-01 - Completed quick task 261101-whs: Windows Steam install check honors Default Steam path; Phase 21 UAT recipe
+Last activity: 2026-11-02 - Completed quick task 261102-0yc: D-UAT-17 Windows Steam installer launches elevated and reports a failed launch
 
 Progress: [██████████] 99%
 
@@ -385,6 +385,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261101-mmt | Phase 58 live checks recorded: WR-03 (two Schedule I sessions, 2m39s + 2m05s, no mid-session drop or shim reconnect) and WR-04 (3 invites from fresh snapshots, 0 bad-ordinal) marked live-verified in 58-REVIEW-FIX.md; filed todos: main-menu invite as a supported host path (supersedes 58-33 decision 5), lobby-0 invite dialog refuses every invite, quitting GameLib kills a hosted bridge session | 2026-11-01 | 413df5b28 | Live-verified; planning-gates 11/12 (state-sdk-field-anchor fails on pre-existing `Plan: Not started`) | [261101-mmt-record-phase-58-live-check-results-and-f](./quick/261101-mmt-record-phase-58-live-check-results-and-f/) |
 | fast | Invite picker header X removed (showCloseButton=false); the picker window closes via the traffic lights or the footer Close button. | 2026-11-01 | 821b996ec | 2 suites pass (16 tests); live check pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
 | 261101-whs | Windows isSteamClientInstalled() now probes <Default Steam path>/steam.exe (the same root as the D-11 libraryfolders.vdf gate); Phase 21 UAT todo gets a no-uninstall 4a/4b/4c recipe and ready: live-gate. | 2026-11-01 | 8b305b0f9 | 3 suites pass (158 tests); tsc/deadcode/lint ceiling OK; live 4a/4b/4c not yet run | [261101-whs-windows-steam-client-install-check-honor](./quick/261101-whs-windows-steam-client-install-check-honor/) |
+| 261102-0yc | D-UAT-17 fixed: Windows guided Steam install launches SteamSetup.exe via PowerShell Start-Process -Verb RunAs (UAC) and awaits the launch outcome; a declined or failed launch returns an error instead of "started". | 2026-11-02 | 3f0df053c | clientSetup + fakeHomeIsolation pass (25 tests); argv quoting checked live; live 4a re-run pending | [261102-0yc-fix-d-uat-17-windows-guided-steam-instal](./quick/261102-0yc-fix-d-uat-17-windows-guided-steam-instal/) |
 
 ## Deferred Items
 
