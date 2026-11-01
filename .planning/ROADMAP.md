@@ -671,7 +671,7 @@ Gap closure round 3 (56-VERIFICATION gaps_found, live gate 56-25 FAIL at item 3:
 **Goal:** Fixes GameLib already detects on a user's machine reach the `grayson-mitchell/known-fixes` repo without anyone pasting a log line. A new setting, **Share detected game fixes**, is off by default. When it is on and an existing detector reaches a definitive verdict, GameLib sends a minimal report to a serverless relay. The detectors are: the post-install Mach-O check (`verifyMacArchGroundTruth`, `steam/library.ts`) finding a 32-bit Mac build (`macArch: "32"`, quick 261027-bqe); the PE CEG scan (`bridge/peSteamDrm.ts`) finding Steam CEG DRM (`drm: "ceg"`, quick 261027-gtd); and the Mach-O check finding a 64-bit build that a curated `macArch: "32"` entry claims is 32-bit, which is a removal report. Today each of these only writes a log line (`formatMacArch32KnownFixEntry`, the contradiction warning). A report carries the appId, the title, the detected key and value, and the GameLib version. It never carries a user id, a path or a log. The client skips a report it has already sent, and skips one when a fix file for that title already exists. The relay holds the GitHub credential, so no secret ships in the app. It accepts only tier-1 routing keys with their single allowed values, rate-limits, dedupes, and opens a pull request on `grayson-mitchell/known-fixes` with the fix file already written. Nothing reaches users until the operator merges. Transport chosen by the operator 2026-10-29: automatic via relay, not a pre-filled GitHub issue. Open for discuss-phase: where the relay is hosted (the operator must create the hosting account and the GitHub App), PR or issue, and whether turning the setting on shows a one-time consent prompt. Done when: on this Mac, with the setting on, a fresh install of a 32-bit Mac title opens a PR carrying the correct `steam/<appId>-steam.json`, and with the setting off nothing is sent.
 **Requirements**: TBD
 **Depends on:** None (builds on quick 261027-bqe and 261027-gtd)
-**Plans:** 5/12 plans executed
+**Plans:** 6/12 plans executed
 
 Plans:
 **Wave 1**
@@ -684,7 +684,7 @@ Plans:
 
 - [x] 57-04-PLAN.md — sidecar client reportDetectedFix: gates, D-12 skip, D-16/D-17 sent record, abortable bounded send
 - [x] 57-05-PLAN.md — relay fileEdit (D-07/D-08 bytes, UTF-8 base64) + Steam canonical title (D-14)
-- [ ] 57-06-PLAN.md — relay GitHub App JWT/installation token (D-02) + D1 rate limits (D-15)
+- [x] 57-06-PLAN.md — relay GitHub App JWT/installation token (D-02) + D1 rate limits (D-15)
 
 **Wave 3**
 
