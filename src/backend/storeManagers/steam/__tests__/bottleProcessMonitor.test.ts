@@ -915,6 +915,38 @@ describe('bottleProcessMonitor.ts', () => {
       jest.useRealTimers()
     })
 
+    test('a game shown by its host path (plain Wine engine) still matches; a sibling directory does not (59-UAT G8)', async () => {
+      const onFirstMatch = jest.fn()
+      const sibling = `${installPath} Remaster`
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: `  77 ${sibling}/fallout2.exe\n`,
+        stderr: ''
+      })
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge',
+        onFirstMatch
+      })
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(onFirstMatch).not.toHaveBeenCalled()
+
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: `  78 ${installPath}/fallout2.exe -windowed\n`,
+        stderr: ''
+      })
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(onFirstMatch).toHaveBeenCalledTimes(1)
+      stopBottleProcessMonitor('38410')
+      jest.useRealTimers()
+    })
+
     test('a throwing onStopped is caught on the launcherExited path', async () => {
       const onStopped = jest.fn(() => {
         throw new Error('boom')

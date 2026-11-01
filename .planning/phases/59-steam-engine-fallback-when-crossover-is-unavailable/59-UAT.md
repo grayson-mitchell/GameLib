@@ -36,11 +36,11 @@ result: pass — retest after 5a6f4f877: engine switch `pinned:wine-staging-11.2
 
 ### 5. D3D11 title on the built-in engine
 expected: (D-05, D-07) Planet Crafter or Avernum 6 under no-crossover.sb renders, then returns cleanly to CrossOver when launched without the profile.
-result: pending
+result: pass — The Planet Crafter under no-crossover.sb: engine switch `crossover -> pinned:wine-staging-11.20` installed dxvk-macOS, `engine=pinned … reason=cx-missing`, deadline cancelled at first match, renders fine; back under the normal profile the switch `pinned -> crossover` removed DXVK (`current_dxvk-macOS` gone, marker crossover) and it ran on `engine=crossover build=26.3.0.39832 reason=cx-healthy`.
 
 ### 6. Trial notice at 7 days or fewer
 expected: (D-13) With operator approval, under nolicence.sb, backdate ONE throwaway bridge bottle with spike-060 backdate.py to 5 days remaining: its game page shows a notice with "5 days remaining" and Buy CrossOver. Backdate to 10 days remaining: no notice.
-result: pending
+result: pass — operator-approved throwaway bottle GameLibSteamBridge-38400 (Fallout), system.reg backed up first. Under nolicence.sb, `--demo-status` read 15 days remaining fresh (InstallTime 0x614a692d; encoding is Unix time XOR 0x0badda6d). At 0x6177c54f ("5 days remaining") the page showed the notice with Buy CrossOver (probe `status=trial`); at 0x614d629b ("10 days remaining") no notice. No other bottle gained a trial clock.
 
 ### 7. Expired trial routes to the built-in engine
 expected: (D-06, D-09, D-12) The same bottle backdated past expiry, under nolicence.sb: launch shows "CrossOver trial expired — using built-in engine" and the game runs.

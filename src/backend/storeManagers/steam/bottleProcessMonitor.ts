@@ -219,11 +219,11 @@ async function processListing(): Promise<string> {
 
 /**
  * Run one `ps` snapshot and return every pid+command whose command starts
- * with `lowerPrefix` (case-insensitive) and does not name one of Steam's
- * own client binaries.
+ * with one of `lowerPrefixes` (case-insensitive) and does not name one of
+ * Steam's own client binaries.
  */
 async function matchedProcesses(
-  lowerPrefix: string
+  lowerPrefixes: string[]
 ): Promise<Array<{ pid: string; command: string }>> {
   const stdout = await processListing()
   const matches: Array<{ pid: string; command: string }> = []
@@ -231,7 +231,8 @@ async function matchedProcesses(
     const parsed = parsePsLine(line)
     if (!parsed) continue
     const lowerCommand = parsed.command.toLowerCase()
-    if (!lowerCommand.startsWith(lowerPrefix)) continue
+    if (!lowerPrefixes.some((prefix) => lowerCommand.startsWith(prefix)))
+      continue
     const isSteamClientBinary = STEAM_CLIENT_PROCESS_NAMES.some((name) =>
       lowerCommand.endsWith(name.toLowerCase())
     )
@@ -350,7 +351,7 @@ function recordFirstMatch(
 async function runPollLoop(
   appId: string,
   entry: MonitorEntry,
-  lowerPrefix: string,
+  lowerPrefixes: string[],
   pollIntervalMs: number,
   bottleDir: string
 ): Promise<void> {
@@ -384,7 +385,7 @@ async function runPollLoop(
 
     let matches: Array<{ pid: string; command: string }>
     try {
-      matches = await matchedProcesses(lowerPrefix)
+      matches = await matchedProcesses(lowerPrefixes)
       consecutiveFailures = 0
     } catch (error) {
       consecutiveFailures++
@@ -543,7 +544,13 @@ export function startBottleProcessMonitor(
     )
     return null
   }
-  const lowerPrefix = prefix.toLowerCase()
+  // 59-UAT G8: CrossOver's winewrapper shows the game as `C:\...`, but a
+  // plain Wine engine (the built-in Wine-Staging) keeps the host path GameLib
+  // launched it with, so match the install root's host form too.
+  const lowerPrefixes = [
+    prefix.toLowerCase(),
+    `${installPath.replace(/[\\/]+$/, '')}${sep}`.toLowerCase()
+  ]
 
   cancelMonitor(appId)
 
@@ -576,7 +583,7 @@ export function startBottleProcessMonitor(
 
   void (async () => {
     try {
-      await runPollLoop(appId, entry, lowerPrefix, pollIntervalMs, bottleDir)
+      await runPollLoop(appId, entry, lowerPrefixes, pollIntervalMs, bottleDir)
     } catch (error) {
       logWarning(
         [`bottleProcessMonitor [${appId}]: poll loop failed`, error],
@@ -595,7 +602,7 @@ export function startBottleProcessMonitor(
         try {
           let matches: Array<{ pid: string; command: string }> = []
           try {
-            matches = await matchedProcesses(lowerPrefix)
+            matches = await matchedProcesses(lowerPrefixes)
           } catch {
             // A ps failure counts as "no match".
           }
