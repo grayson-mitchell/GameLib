@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 59
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-01 - Completed quick task 261101-mv3: invite dialog with lobby 0 adopts the lobby id from LobbyCreated_t (513)
+Last activity: 2026-11-01 - Completed quick task 261101-t66: main-menu '+' invite scored as a supported Direction A host path (D-17)
 
 Progress: [██████████] 99%
 
@@ -385,6 +385,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261101-mmt | Phase 58 live checks recorded: WR-03 (two Schedule I sessions, 2m39s + 2m05s, no mid-session drop or shim reconnect) and WR-04 (3 invites from fresh snapshots, 0 bad-ordinal) marked live-verified in 58-REVIEW-FIX.md; filed todos: main-menu invite as a supported host path (supersedes 58-33 decision 5), lobby-0 invite dialog refuses every invite, quitting GameLib kills a hosted bridge session | 2026-11-01 | 413df5b28 | Live-verified; planning-gates 11/12 (state-sdk-field-anchor fails on pre-existing `Plan: Not started`) | [261101-mmt-record-phase-58-live-check-results-and-f](./quick/261101-mmt-record-phase-58-live-check-results-and-f/) |
 | 261101-mv3 | Invite dialog opened with lobby 0 (Schedule I calls ActivateGameOverlayInviteDialog in the same instant as CreateLobby) now waits and adopts the lobby id from the first successful LobbyCreated_t (513), call-result or broadcast path, once per dialog, never overriding an explicit lobby; Invite before 513 logs `refused reason=lobby-pending` (wire code unchanged). Todo moved to completed (`ready: live-gate`) | 2026-11-01 | fb9cf3974 | build-steam-bridge + 112 jest pass, codecheck clean; live check owed (first main-menu '+' sends) | [261101-mv3-fix-lobby-0-invite-dialog-adopt-lobby-id](./quick/261101-mv3-fix-lobby-0-invite-dialog-adopt-lobby-id/) |
 | fast | Invite picker header X removed (showCloseButton=false); the picker window closes via the traffic lights or the footer Close button. | 2026-11-01 | 821b996ec | 2 suites pass (16 tests); live check pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
+| 261101-t66 | Main-menu '+' invite scored as a supported Direction A host path: D-17 in 58-CONTEXT.md supersedes 58-33 scope decision 5 and item 2(e) (incl. the operator amendment) for the next bridge gate; 58-33 contract untouched; no code change (census scores `host=` from AcceptConnection). Todo stays pending (`ready: live-gate`) | 2026-11-01 | 37cfa575a | docs-only; planning-gates 11/12 (pre-existing STATE `Plan: Not started` anchor failure); live gate owed | [261101-t66-score-the-game-s-main-menu-invite-as-a-s](./quick/261101-t66-score-the-game-s-main-menu-invite-as-a-s/) |
 
 ## Deferred Items
 
