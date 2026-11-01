@@ -341,6 +341,7 @@ class GlobalConfigV0 extends GlobalConfig {
 
     const settings: Partial<AppSettings> = {
       notifyHumbleExpirations: true,
+      shareDetectedFixes: false,
       checkUpdatesInterval: 10,
       enableUpdates: false,
       addDesktopShortcuts: false,

@@ -111,6 +111,8 @@ export type ExperimentalFeatures = {
 
 export interface AppSettings extends GameSettings {
   notifyHumbleExpirations: boolean
+  // Phase 57 D-09: opt-in known-fix report sharing (macOS only); off by default
+  shareDetectedFixes: boolean
   addDesktopShortcuts: boolean
   addStartMenuShortcuts: boolean
   addSteamShortcuts: boolean
