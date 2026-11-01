@@ -1,0 +1,15 @@
+2026-11-01T22:20:06Z == spike 062 run5 overlayui=0 shim=0 steampid=40643
+2026-11-01T22:20:06Z helper pid=14342 port=51503
+2026-11-01T22:20:06Z CX_ENV=DYLD_INSERT_LIBRARIES='/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib' SteamOverlayGameId=3205720 SteamGameId=3205720 SteamAppId=3205720
+2026-11-01T22:20:06Z wine wrapper pid=14369
+2026-11-01T22:20:08Z game window pid=14425
+  PID  PPID COMM
+14425     1 C:\Program Files (x86)\Steam\steamapps\common\Schedule I Demo\Schedule I Free Sample.exe
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/49c5e90ef431555ead73d7708900f2cbee5b00607aa9dafb5ae2509a18891c58/steamloader.dylib.aot
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/98514ab721332332f2e87068a6e7fa85d660778777adfef14b2edb540d2867db/gameoverlayrenderer.dylib.aot
+Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib
+Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib
+2026-11-01T22:20:11Z waiting for the game to exit; press Shift+Tab in game, then quit it
+2026-11-01T22:22:07Z wine wrapper exited
+2026-11-01T22:22:07Z restored cfgs, stopped helper
+operator: overlay drew fine, clicks worked (shim=0: Steam dylibs only)

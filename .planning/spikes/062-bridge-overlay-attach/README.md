@@ -83,6 +83,11 @@ window and, with `overlayui=1`, starts `gameoverlayui` for it. It also runs 061'
 - **Run 4 (`overlayui=0`, isolates Steam's attach).** The harness started nothing. Steam started
   `gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720` by itself 6 s
   after launch. Operator: "it drew fine again, clicks worked".
+- **Run 5 (`overlayui=0 shim=0`, Steam's dylibs alone).** Only `steamloader.dylib` and
+  `gameoverlayrenderer.dylib` were mapped in the game (no `overlay_shim` lines). Steam again
+  attached `gameoverlayui -pid 14425` by itself. Operator: "it drew fine, clicks worked". The
+  DXVK `Failed to compile pipeline` errors (2–3 per run) appear in every run, including run 2 with
+  nothing injected, so they are unrelated.
 - **Screenshots are not evidence here.** Every in-game frame in run 3 came out byte-identical
   (2,420,498 bytes), including while the overlay was open, so `screencapture -l` returned a stale
   copy of the Metal surface. The verdict rests on the operator's report plus the process and
@@ -98,6 +103,7 @@ takes clicks), with no Steam-side patching.
 | 2 | no (stripped by `bin/wineloader`) | yes | no | nothing happened |
 | 3 | yes | yes | **yes** | drew, clicks worked |
 | 4 | yes | no | **yes** | drew, clicks worked |
+| 5 | yes, **without NotProton's shim** | no | **yes** | drew, clicks worked |
 
 **What it settles:**
 
@@ -111,15 +117,19 @@ takes clicks), with no Steam-side patching.
    kills it. No patched ntdll is needed. This is the same trust widening GameLib's DRM-mode clone
    already accepts, applied to one more binary.
 3. **The default bridge is unaffected.** The helper, the TCP shim and the cfg handshake worked
-   unchanged on the clone (`HELLO` + `GINIT ok=1` in runs 2–4).
+   unchanged on the clone (`HELLO` + `GINIT ok=1` in runs 2–5).
+4. **NotProton's shim is not needed on the DXVK path.** Steam's own `steamloader.dylib` +
+   `gameoverlayrenderer.dylib` drew a working overlay alone (run 5). The build injects only
+   Valve's files from the user's own Steam install and takes no dependency on NotProton's binary or
+   code, so its licence does not matter here.
 
 **Open questions for the build (not tested here):**
 
-- **Is NotProton's shim required?** Every successful run included `overlay-shim.dylib`. `shim=0`
-  (Steam's dylibs alone) is the next test, and it decides whether the build depends on NotProton's
-  binary or code. Licence not checked.
-- **Other render paths:** only DXVK → MoltenVK was tried (Grim Dawn in 061, Schedule I here).
-  D3DMetal, DXMT and WineD3D-GL titles are untested. The shim also has GL hooks (`CGLFlushDrawable`).
+- **Other render paths:** only DXVK → MoltenVK was tried (Grim Dawn in 061, Schedule I here), and
+  only run 5 went without the shim. D3DMetal, DXMT and WineD3D-GL titles are untested. NotProton
+  ships the shim for some reason (its strings name `WineMetalLayer` pixel-format and colour-space
+  fixes, Metal 4 queues and GL `CGLFlushDrawable`), so expect it may matter on another path, HDR
+  or 10-bit formats, or Metal 4.
 - **Fullscreen:** run windowed or at the menu only. The 58-33 fullscreen raise path is untested
   with the overlay on top.
 - **Interplay with GameLib's own picker (58-29..36):** the overlay's invite dialog and GameLib's
@@ -130,7 +140,7 @@ takes clicks), with no Steam-side patching.
 - `run.sh`: the harness (helper spawn, cfg swap and restore, `CX_ENV` injection, optional
   `gameoverlayui`).
 - `winshot.swift`: window pid lookup (`winshot <owner> -`) and capture.
-- `logs/run{1..4}/`: `run.log` (with the operator's verdict line), `helper.log`, `wine.log` (shim
+- `logs/run{1..5}/`: `run.log` (with the operator's verdict line), `helper.log`, `wine.log` (shim
   trace), `overlayui.log`, `console_log.tail.txt`, `watch.log`.
 - The clone and its entitlement plists live in the session scratchpad (`cx062/`) and are not
   committed. Recreate them from How to Run.
