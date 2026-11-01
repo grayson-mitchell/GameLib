@@ -24,9 +24,6 @@
  */
 import type { ReactElement, ReactNode } from 'react'
 
-// RED-phase only: the component still imports its co-located stylesheet.
-jest.mock('../SteamClientSetup.scss', () => ({}))
-
 jest.mock('react-i18next', () => {
   const { makeFaithfulT } = jest.requireActual<
     typeof import('./faithfulTranslate')
@@ -82,7 +79,7 @@ jest.mock('frontend/state/SteamClientSetup', () => ({
   useSteamClientSetup: () => mockStore
 }))
 
-const mockInstallSteamGame = jest.fn()
+const mockInstallSteamGame = jest.fn<Promise<void>, unknown[]>()
 
 jest.mock('frontend/state/InstallGameModal', () => ({
   installSteamGame: (...args: unknown[]) => mockInstallSteamGame(...args),
@@ -161,9 +158,9 @@ jest.mock('react', () => {
   }
 })
 
-const mockGetGameInfo = jest.fn()
-const mockRecheck = jest.fn()
-const mockStart = jest.fn()
+const mockGetGameInfo = jest.fn<Promise<unknown>, unknown[]>()
+const mockRecheck = jest.fn<Promise<unknown>, unknown[]>()
+const mockStart = jest.fn<Promise<unknown>, unknown[]>()
 ;(globalThis as unknown as { window: unknown }).window = {
   api: {
     getGameInfo: (...args: unknown[]) => mockGetGameInfo(...args),

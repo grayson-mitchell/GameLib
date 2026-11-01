@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader
 } from 'frontend/components/UI/Dialog'
-import './SteamClientSetup.scss'
 
 type Phase = 'consent' | 'waiting' | 'error'
 
@@ -25,20 +24,28 @@ const RECHECK_POLL_INTERVAL_MS = 3000
 // Distinct from SteamBottleSetup.tsx (the macOS CrossOver BOTTLE flow):
 // this component targets the NATIVE Steam client on Win/macOS/Linux.
 //
-//  - reason 'install' (D-10): a blocking consent Dialog (explicit
-//    confirmation required before GameLib downloads anything), then
-//    switches to a non-blocking banner while the user clicks through the
-//    real Valve installer — mirrors SteamBottleSetup.tsx's own
-//    consent-then-background-task shape so it never fights the installer
-//    window for focus.
+// D-UAT-18 (operator decision 2026-11-02): the consent, waiting and error
+// states ALL render in the same shared Dialog (one root, one className), so
+// the window the user just consented in is the window that then says GameLib
+// is waiting. The earlier non-modal rationale no longer holds: Valve's
+// installer and the Steam client are separate OS windows that a GameLib modal
+// does not block, and the old bottom-right toast's only button was read as an
+// acknowledgement while it silently abandoned the install (close() stops the
+// poll, C-17).
+//
+//  - reason 'install' (D-10): a consent step (explicit confirmation required
+//    before GameLib downloads anything), then the waiting state while the
+//    user clicks through the real Valve installer.
 //  - reason 'launch-once' (D-11): no consent needed (Steam is already
-//    installed) — goes straight to the banner, prompting the user to
+//    installed) — goes straight to the waiting state, prompting the user to
 //    launch Steam themselves. GameLib never authors libraryfolders.vdf
 //    (T-21-21) — this component only ever reads readiness state via
 //    steamClientSetupRecheck, never writes anything Steam-related.
 //
-// Both branches poll steamClientSetupRecheck while the banner is open and
-// automatically retry the install once the backend reports 'ready'.
+// The waiting state has ONE button, "Cancel install", and the header X,
+// Escape and a backdrop click all do the same thing: close(). There is no
+// hide or minimise path. While it is open it polls steamClientSetupRecheck and
+// automatically retries the install once the backend reports 'ready'.
 const SteamClientSetup = () => {
   const { t } = useTranslation('gamepage')
   const { isOpen, appName, reason, close } = useSteamClientSetup()
@@ -73,7 +80,7 @@ const SteamClientSetup = () => {
       })
   }, [isOpen, appName, reason])
 
-  // Poll for readiness while the banner ('waiting') is open — covers BOTH
+  // Poll for readiness while the waiting dialog ('waiting') is open — covers BOTH
   // the post-consent D-10 install-in-progress case and the D-11
   // launch-once case. On 'ready', retry the install and close.
   //
@@ -83,11 +90,11 @@ const SteamClientSetup = () => {
   // it `return null`, it never unmounts — and `close()` is
   // `set({ isOpen: false })`, touching neither `phase` nor `appName`, while
   // zustand's `close` identity is stable. So `[phase, appName, close]` never
-  // changed when the user dismissed the banner: the effect did not re-run,
+  // changed when the user dismissed the dialog: the effect did not re-run,
   // its cleanup never fired, and `steamClientSetupRecheck` kept being invoked
   // every 3s for the remaining life of the app. Here the `'ready'` branch
   // calls `installSteamGame(...)`, so the consequence was not a wasted timer:
-  // dismiss the banner, open Steam hours later for an unrelated reason, and
+  // cancel the dialog, open Steam hours later for an unrelated reason, and
   // GameLib silently queued a multi-GB download for a game the user
   // explicitly walked away from.
   useEffect(() => {
@@ -171,81 +178,97 @@ const SteamClientSetup = () => {
     }
   }
 
-  if (phase === 'consent') {
-    return (
-      <Dialog
-        onClose={handleCancel}
-        showCloseButton
-        className="steamClientSetupDialog"
-      >
-        <DialogHeader onClose={handleCancel}>
-          {t('clientSetup.consent.title', 'Set up the Steam client')}
-        </DialogHeader>
-        <DialogContent>
-          <p>
-            {t(
-              'clientSetup.consent.body',
-              'GameLib could not find the Steam client on this computer. Downloading this game requires the official Steam client to adopt and manage the install afterward. GameLib will download the official Steam installer and run it — you complete the install yourself in the window that opens.'
-            )}
-          </p>
-        </DialogContent>
-        <DialogFooter>
-          <button
-            onClick={() => void handleConfirm()}
-            className="button is-primary"
-          >
-            {t('clientSetup.consent.confirm', 'Install Steam')}
-          </button>
-          <button
-            onClick={handleCancel}
-            className="button is-secondary outline"
-          >
-            {t('clientSetup.consent.cancel', 'Not now')}
-          </button>
-        </DialogFooter>
-      </Dialog>
-    )
-  }
-
-  // Non-blocking banner (D-10 post-consent / D-11 launch-once) — deliberately
-  // not a MUI Dialog so it never blocks/competes with the real Steam
-  // installer window or the user launching Steam themselves.
   return (
-    <div className="steamClientSetupToast" role="status">
-      {phase === 'error' ? (
+    <Dialog
+      onClose={handleCancel}
+      showCloseButton
+      className="steamClientSetupDialog"
+    >
+      {phase === 'consent' ? (
         <>
-          <span className="steamClientSetupMessage">
-            {t('clientSetup.errorMessage', {
-              defaultValue: 'Steam setup could not start: {{error}}',
-              error: error ?? ''
-            })}
-          </span>
-          <button
-            className="steamClientSetupAction"
-            onClick={() => setPhase('consent')}
-          >
-            {t('clientSetup.retry', 'Try again')}
-          </button>
+          <DialogHeader onClose={handleCancel}>
+            {t('clientSetup.consent.title', 'Set up the Steam client')}
+          </DialogHeader>
+          <DialogContent>
+            <p>
+              {t(
+                'clientSetup.consent.body',
+                'GameLib could not find the Steam client on this computer. Downloading this game requires the official Steam client to adopt and manage the install afterward. GameLib will download the official Steam installer and run it — you complete the install yourself in the window that opens.'
+              )}
+            </p>
+          </DialogContent>
+          <DialogFooter>
+            <button
+              onClick={() => void handleConfirm()}
+              className="button is-primary"
+            >
+              {t('clientSetup.consent.confirm', 'Install Steam')}
+            </button>
+            <button
+              onClick={handleCancel}
+              className="button is-secondary outline"
+            >
+              {t('clientSetup.consent.cancel', 'Not now')}
+            </button>
+          </DialogFooter>
         </>
-      ) : reason === 'launch-once' ? (
-        <span className="steamClientSetupMessage">
-          {t(
-            'clientSetup.launchOnce.message',
-            'Steam is installed but has not been launched yet. Open Steam once — GameLib will continue the install automatically once it detects Steam is ready.'
-          )}
-        </span>
+      ) : phase === 'error' ? (
+        <>
+          <DialogHeader onClose={handleCancel}>
+            {t('clientSetup.consent.title', 'Set up the Steam client')}
+          </DialogHeader>
+          <DialogContent>
+            <p>
+              {t('clientSetup.errorMessage', {
+                defaultValue: 'Steam setup could not start: {{error}}',
+                error: error ?? ''
+              })}
+            </p>
+          </DialogContent>
+          <DialogFooter>
+            <button
+              onClick={() => setPhase('consent')}
+              className="button is-primary"
+            >
+              {t('clientSetup.retry', 'Try again')}
+            </button>
+            <button
+              onClick={handleCancel}
+              className="button is-secondary outline"
+            >
+              {t('clientSetup.cancelInstall', 'Cancel install')}
+            </button>
+          </DialogFooter>
+        </>
       ) : (
-        <span className="steamClientSetupMessage">
-          {t(
-            'clientSetup.installing.message',
-            'Installing the Steam client — finish the installer window that opened, then GameLib will continue automatically.'
-          )}
-        </span>
+        <>
+          <DialogHeader onClose={handleCancel}>
+            {t('clientSetup.waiting.title', 'Waiting for Steam')}
+          </DialogHeader>
+          <DialogContent>
+            <p>
+              {reason === 'launch-once'
+                ? t(
+                    'clientSetup.launchOnce.message',
+                    "Steam is installed but hasn't been opened yet. Open Steam once — GameLib will continue the download automatically."
+                  )
+                : t(
+                    'clientSetup.installing.message',
+                    'Finish the Steam installer that opened. GameLib will continue the download automatically.'
+                  )}
+            </p>
+          </DialogContent>
+          <DialogFooter>
+            <button
+              onClick={handleCancel}
+              className="button is-secondary outline"
+            >
+              {t('clientSetup.cancelInstall', 'Cancel install')}
+            </button>
+          </DialogFooter>
+        </>
       )}
-      <button className="steamClientSetupDismiss" onClick={handleCancel}>
-        {t('clientSetup.done', 'Done')}
-      </button>
-    </div>
+    </Dialog>
   )
 }
 

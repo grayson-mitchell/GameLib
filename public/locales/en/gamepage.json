@@ -137,21 +137,24 @@
         "update": "Update"
     },
     "clientSetup": {
+        "cancelInstall": "Cancel install",
         "consent": {
             "body": "GameLib could not find the Steam client on this computer. Downloading this game requires the official Steam client to adopt and manage the install afterward. GameLib will download the official Steam installer and run it — you complete the install yourself in the window that opens.",
             "cancel": "Not now",
             "confirm": "Install Steam",
             "title": "Set up the Steam client"
         },
-        "done": "Done",
         "errorMessage": "Steam setup could not start: {{error}}",
         "installing": {
-            "message": "Installing the Steam client — finish the installer window that opened, then GameLib will continue automatically."
+            "message": "Finish the Steam installer that opened. GameLib will continue the download automatically."
         },
         "launchOnce": {
-            "message": "Steam is installed but has not been launched yet. Open Steam once — GameLib will continue the install automatically once it detects Steam is ready."
+            "message": "Steam is installed but hasn't been opened yet. Open Steam once — GameLib will continue the download automatically."
         },
-        "retry": "Try again"
+        "retry": "Try again",
+        "waiting": {
+            "title": "Waiting for Steam"
+        }
     },
     "cloud_save_unsupported": "Unsupported",
     "disabled": "Disabled",
