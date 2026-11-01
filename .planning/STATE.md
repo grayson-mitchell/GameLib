@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 59
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-01 - Completed quick task 261101-t66: main-menu '+' invite scored as a supported Direction A host path (D-17)
+Last activity: 2026-11-01 - Completed quick task 261101-tjv: clean tile mode toggle
 
 Progress: [██████████] 99%
 
@@ -386,6 +386,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261101-mv3 | Invite dialog opened with lobby 0 (Schedule I calls ActivateGameOverlayInviteDialog in the same instant as CreateLobby) now waits and adopts the lobby id from the first successful LobbyCreated_t (513), call-result or broadcast path, once per dialog, never overriding an explicit lobby; Invite before 513 logs `refused reason=lobby-pending` (wire code unchanged). Todo moved to completed (`ready: live-gate`) | 2026-11-01 | fb9cf3974 | build-steam-bridge + 112 jest pass, codecheck clean; live check owed (first main-menu '+' sends) | [261101-mv3-fix-lobby-0-invite-dialog-adopt-lobby-id](./quick/261101-mv3-fix-lobby-0-invite-dialog-adopt-lobby-id/) |
 | fast | Invite picker header X removed (showCloseButton=false); the picker window closes via the traffic lights or the footer Close button. | 2026-11-01 | 821b996ec | 2 suites pass (16 tests); live check pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
 | 261101-t66 | Main-menu '+' invite scored as a supported Direction A host path: D-17 in 58-CONTEXT.md supersedes 58-33 scope decision 5 and item 2(e) (incl. the operator amendment) for the next bridge gate; 58-33 contract untouched; no code change (census scores `host=` from AcceptConnection). Todo stays pending (`ready: live-gate`) | 2026-11-01 | 37cfa575a | docs-only; planning-gates 11/12 (pre-existing STATE `Plan: Not started` anchor failure); live gate owed | [261101-t66-score-the-game-s-main-menu-invite-as-a-s](./quick/261101-t66-score-the-game-s-main-menu-invite-as-a-s/) |
+| 261101-tjv | Clean tile mode: `cleanTiles` pref (default off) + Accessibility toggle under "Always show titles"; grid tiles hide the bottom button bar (store badge included) and collapse to bare 3:4 art, click tile to open game page and launch there; list view Action column unchanged; right-click menu and controller shortcuts intact | 2026-11-01 | 41299c88b | tsc clean, 125 jest pass; live tauri dev check owed | [261101-tjv-clean-tile-mode-setting-hide-tile-button](./quick/261101-tjv-clean-tile-mode-setting-hide-tile-button/) |
 
 ## Deferred Items
 
