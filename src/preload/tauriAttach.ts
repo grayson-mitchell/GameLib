@@ -32,6 +32,7 @@ import api from './api'
 import { applyFramelessDecorations, installDragRegionHandlers } from './api/tauriWindowChrome'
 import { installNativeGamepads } from './api/tauriNativeGamepad'
 import { isMacWebview, isWindowsWebview } from './platformDetect'
+import { isBridgeInvitePickerWindow } from 'common/bridgeInvitePicker'
 
 // Proof-of-execution marker (Phase 27 Plan 05): the literal first console line so we can
 // confirm this attach module evaluates BEFORE the renderer renders / lazy-loads App (whose
@@ -86,19 +87,26 @@ window.flatpakRuntimeVersion = undefined
 // second, deliberately redundant layer, because a throw anywhere in this attach
 // path blanks the window (SEAM Invariant A) and no window-chrome failure is worth
 // that risk.
-try {
-  applyFramelessDecorations()
-} catch (error) {
-  console.warn('[GameLib] applyFramelessDecorations failed:', error)
-}
-try {
-  installDragRegionHandlers()
-} catch (error) {
-  console.warn('[GameLib] installDragRegionHandlers failed:', error)
+//
+// Quick 261101-llf: the bridge invite picker window (`?window=bridge-invite`) skips all window
+// chrome. It is a standard decorated window that looks the same whether frameless is OFF or ON,
+// and its capability grants no window-chrome commands (set-decorations, start-dragging, ...).
+const isPickerWindow = isBridgeInvitePickerWindow(window.location?.search ?? '')
+if (!isPickerWindow) {
+  try {
+    applyFramelessDecorations()
+  } catch (error) {
+    console.warn('[GameLib] applyFramelessDecorations failed:', error)
+  }
+  try {
+    installDragRegionHandlers()
+  } catch (error) {
+    console.warn('[GameLib] installDragRegionHandlers failed:', error)
+  }
 }
 // Quick task 261031-mj9 (spike 051): WKWebView does not expose pads Apple's GameController
 // framework does not claim, so on macOS natively-read pads are merged into navigator.getGamepads().
-if (isMacWebview()) {
+if (!isPickerWindow && isMacWebview()) {
   try {
     installNativeGamepads()
   } catch (error) {

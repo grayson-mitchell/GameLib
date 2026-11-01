@@ -69,7 +69,8 @@ const app = {
   // calls `jest.mock('backend/platform')`) rather than getting a TypeError
   // from an undefined member.
   hide: jest.fn(),
-  raiseMainWindow: jest.fn()
+  raiseMainWindow: jest.fn(),
+  openBridgeInvitePicker: jest.fn().mockResolvedValue(true)
 }
 
 class Notification {

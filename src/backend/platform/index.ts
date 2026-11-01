@@ -84,6 +84,7 @@ import {
   RUST_APP_EXIT,
   RUST_APP_HIDE,
   RUST_MAIN_WINDOW_RAISE,
+  RUST_BRIDGE_INVITE_PICKER_OPEN,
   RUST_APP_RELAUNCH,
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_DIALOG_MESSAGE,
@@ -391,7 +392,24 @@ export const app = {
         error instanceof Error ? error.message : String(error)
       )
     })
-  }
+  },
+  // Opens the dedicated `bridge-invite` window for the invite picker (quick 261101-llf) so the
+  // main window is not raised over the game. Resolves true on success, false (after a warn) on
+  // failure. Never throws.
+  openBridgeInvitePicker: (payload: {
+    appId: string
+    ackId: string
+  }): Promise<boolean> =>
+    requestRustInvoke(RUST_BRIDGE_INVITE_PICKER_OPEN, [payload]).then(
+      () => true,
+      (error) => {
+        console.warn(
+          `[electronStub] app.openBridgeInvitePicker(): ${RUST_BRIDGE_INVITE_PICKER_OPEN} failed:`,
+          error instanceof Error ? error.message : String(error)
+        )
+        return false
+      }
+    )
 }
 
 // ---- dialog --------------------------------------------------------------------

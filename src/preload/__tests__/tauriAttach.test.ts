@@ -121,6 +121,55 @@ describe('tauriAttach (BLOCKER-1 fix, 27-01)', () => {
     expect(win.isSteamDeckGameMode).toBe(false)
   })
 
+  // Quick 261101-llf: the bridge invite picker window attaches window.api but installs no
+  // window chrome, so it looks the same whether frameless is OFF or ON.
+  describe('bridge invite picker window (261101-llf)', () => {
+    const mockChrome = () => {
+      const chrome = {
+        applyFramelessDecorations: jest.fn(),
+        installDragRegionHandlers: jest.fn()
+      }
+      const gamepads = { installNativeGamepads: jest.fn() }
+      jest.doMock('../api/tauriWindowChrome', () => ({
+        ...jest.requireActual('../api/tauriWindowChrome'),
+        ...chrome
+      }))
+      jest.doMock('../api/tauriNativeGamepad', () => ({
+        ...jest.requireActual('../api/tauriNativeGamepad'),
+        ...gamepads
+      }))
+      jest.doMock('@tauri-apps/api/core', () => ({ invoke: jest.fn() }))
+      return { chrome, gamepads }
+    }
+
+    it('attaches window.api but installs no frameless, drag-region or native-gamepad handling', async () => {
+      installWindowStub()
+      ;(readWindowStub() as { location?: unknown }).location = {
+        search: '?window=bridge-invite&appId=3205720&ackId=abc-123'
+      }
+      const { chrome, gamepads } = mockChrome()
+
+      await import('../tauriAttach')
+
+      expect(typeof readWindowStub().api).toBe('object')
+      expect(chrome.applyFramelessDecorations).not.toHaveBeenCalled()
+      expect(chrome.installDragRegionHandlers).not.toHaveBeenCalled()
+      expect(gamepads.installNativeGamepads).not.toHaveBeenCalled()
+    })
+
+    it('without picker params the chrome installs still run', async () => {
+      installWindowStub()
+      ;(readWindowStub() as { location?: unknown }).location = { search: '' }
+      const { chrome, gamepads } = mockChrome()
+
+      await import('../tauriAttach')
+
+      expect(chrome.applyFramelessDecorations).toHaveBeenCalled()
+      expect(chrome.installDragRegionHandlers).toHaveBeenCalled()
+      expect(gamepads.installNativeGamepads).toHaveBeenCalled()
+    })
+  })
+
   // Phase 35 gap closure, plan 35-22 (CR-03): window.platform's three-arm derivation.
   // These pin all three reachable outcomes plus the never-throw contract, so the
   // 'win32' arm cannot silently regress back to always-'linux'.
