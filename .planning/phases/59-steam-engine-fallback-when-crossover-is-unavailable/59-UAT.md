@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 phase: 59-steam-engine-fallback-when-crossover-is-unavailable
 source: [59-13-PLAN.md]
 ---
@@ -56,17 +56,20 @@ result: pass — retest after 5cc3007a3: section collapsed with Automatic by def
 
 ### 10. DRM title without CrossOver
 expected: (D-09 discretion) Under no-crossover.sb a SteamStub title shows the CrossOver-required message and never hangs.
-result: pending
+result: pass — Grim Dawn (219990, SteamStub `.bind` on its exes; Raft 648800 also qualifies) under no-crossover.sb: both Play presses showed "This game uses Steam DRM support that needs CrossOver (CrossOver not found)…", logged `drm launch needs CrossOver but pre-flight is missing; not launching (no built-in engine, no fallback)` (12:33:29, 12:33:52), no wine command or monitor started, no hang.
 
 ### 11. Fallback-made bottle survives a different engine build
 expected: (RESEARCH Open Question 4) Set the item 3 title's override to an installed Wine Manager Wine-Staging-macOS build other than 11.20, under no-crossover.sb: wine does a silent prefix update, the game launches, the item 3 save is present, and after setting the override back to Automatic it launches on the pinned build again. If no other Wine-Staging-macOS build is installed, record skipped with that reason.
-result: pending
+result: skipped — no other Wine-Staging-macOS build is installed: Wine Manager's `Wine-Staging-macOS-latest` is also 11.20 (`wine-11.20 (Staging)`), the same build as the pin.
 
 ### 12. Sidecar exits after quit
 expected: (sidecar exit contract) After quitting the app following items 2-11, `pgrep -f sidecar` is empty within 10 s.
-result: pending
+result: pass — after Cmd-Q the sidecar (`build/main/sidecar.js`) was gone 0.0 s after `gamelib-shell` exited and `pgrep -f sidecar` was empty (the one transient match was the pnpm `tauri:dev:run` wrapper command line).
 
 ## Restore
+
+Done 2026-11-02: GameLibSteamBridge-38400's system.reg restored from the pre-test copy (cmp identical), `InstallTime.orig` removed, `--demo-status` with the licence visible reads "Standard version"; licence file unchanged (304 bytes, Oct 22 19:57) before and after. The bottle's engine marker is pinned from item 9; its next Automatic launch switches it back to CrossOver.
+
 
 Undo the throwaway bottle's backdate by re-running spike-060 `backdate.py`, or delete that bottle with GameLib's uninstall, as the operator chooses. Confirm the licence file mtime is unchanged.
 
