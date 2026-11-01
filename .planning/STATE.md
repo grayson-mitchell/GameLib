@@ -397,6 +397,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast | Clean tiles exception: Recently Played just-played hero keeps its button bar (`.cleanTiles .gameCard:not(.justPlayed)`) | 2026-11-01 | bf39f3d03 | 79 GameCard jest pass | — |
 | fast | Clean tiles: just-played hero art shrinks by the bar height (and its placeholder matches) so hero + bar equals neighbours' bare-art height | 2026-11-01 | 8ca8a6700 | 259 GameCard/FocusRowStrip jest pass | — |
 | 261102-fvg | Game page settings gear moved beside Play (inside .buttons, after MainButton); shown for every runner incl. Steam under the library card's rule (installed, not uninstalling, not Browser); title/aria-label from submenu.settings. | 2026-11-02 | 7032a414d | GamePage jest pass (441 tests, 9 new); live check passed (user, 2026-11-02) | [261102-fvg-in-the-game-page-add-a-settings-button-n](./quick/261102-fvg-in-the-game-page-add-a-settings-button-n/) |
+| fast | Closed todo `2026-10-26-route-steam-installs-by-platform-and-protect-authenticated-logons` as resolved by Phase 54: go-offline wrap shipped, spike completed, the steam://install routing half deliberately not built | 2026-11-02 | dcf2e752f | Verified (planning-gates 12/12) | — |
 
 ## Deferred Items
 
