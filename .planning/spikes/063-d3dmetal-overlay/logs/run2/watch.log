@@ -1,0 +1,477 @@
+2026-11-01T23:04:10Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd ]
+no window matched planet crafter
+2026-11-01T23:04:13Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd ]
+no window matched planet crafter
+2026-11-01T23:04:16Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 3;
+    Y = 31;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/003.png status=0
+2026-11-01T23:04:19Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd 28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 3;
+    Y = 31;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/004.png status=0
+2026-11-01T23:04:22Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd 28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 3;
+    Y = 31;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/005.png status=0
+2026-11-01T23:04:26Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd 28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/006.png status=0
+2026-11-01T23:04:29Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd 28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/007.png status=0
+2026-11-01T23:04:32Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd 28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/008.png status=0
+2026-11-01T23:04:35Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd 28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/009.png status=0
+2026-11-01T23:04:39Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd 28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/010.png status=0
+2026-11-01T23:04:42Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd 28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/011.png status=0
+2026-11-01T23:04:45Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd 28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/012.png status=0
+2026-11-01T23:04:49Z game=28625 gameoverlayui=[28605 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 40; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run2; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah|^/'"'"' | cut -c1-170; grep -c -i -E '"'"'d3dmetal|apple_gptk'"'"' $L/run.log; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c '"'"'D3D11DXGIDevice\|DXVK'"'"' $L/wine.log; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-f686-cwd 28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/013.png status=0
+2026-11-01T23:04:52Z game=28625 gameoverlayui=[28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/014.png status=0
+2026-11-01T23:04:55Z game=28625 gameoverlayui=[28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12288 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12287 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12286 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12285 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=26 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12281 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/015.png status=0
+2026-11-01T23:04:59Z game=28625 gameoverlayui=[28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12288 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12287 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12286 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12285 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/016.png status=0
+2026-11-01T23:05:02Z game=28625 gameoverlayui=[28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12288 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12287 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12286 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12285 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/017.png status=0
+2026-11-01T23:05:05Z game=28625 gameoverlayui=[28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12288 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12287 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12286 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12285 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/018.png status=0
+2026-11-01T23:05:08Z game=28625 gameoverlayui=[28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12288 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12287 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12286 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12285 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12282 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/019.png status=0
+2026-11-01T23:05:12Z game=28625 gameoverlayui=[28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12288 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12287 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12286 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12285 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=26 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12281 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/020.png status=0
+2026-11-01T23:05:15Z game=28625 gameoverlayui=[28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12288 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12287 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12286 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12285 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=26 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12281 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/021.png status=0
+2026-11-01T23:05:18Z game=28625 gameoverlayui=[28753 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 28679 -steampid 40643 -manuallyclearframes 0 -gameid 1284190 ]
+window id=12288 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12287 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12286 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12285 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12282 owner=Planet Crafter.exe pid=28679 layer=26 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12281 owner=Planet Crafter.exe pid=28679 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12281 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run2/shots/022.png status=0
+2026-11-01T23:05:22Z game gone, stopping

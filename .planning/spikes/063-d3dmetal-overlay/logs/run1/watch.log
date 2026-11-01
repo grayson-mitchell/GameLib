@@ -1,0 +1,99 @@
+2026-11-01T23:02:47Z game=27102 gameoverlayui=[27081 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 35; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run1; grep -v CX_ENV $L/run.log | cut -c1-170; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); vmmap $p 2>/dev/null | grep -i -E '"'"'d3dmetal|apple_gptk|dxvk|molten|d3d11|gameoverlay'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | head; grep -i -E '"'"'adapter|AMD Compat|Apple M|GeForce|Direct3D'"'"' "$L/../../../../../Users" 2>/dev/null; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b26c-cwd ]
+no window matched schedule i free
+2026-11-01T23:02:50Z game=27102 gameoverlayui=[27081 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 35; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run1; grep -v CX_ENV $L/run.log | cut -c1-170; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); vmmap $p 2>/dev/null | grep -i -E '"'"'d3dmetal|apple_gptk|dxvk|molten|d3d11|gameoverlay'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | head; grep -i -E '"'"'adapter|AMD Compat|Apple M|GeForce|Direct3D'"'"' "$L/../../../../../Users" 2>/dev/null; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b26c-cwd ]
+window id=12268 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12268 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run1/shots/002.png status=0
+2026-11-01T23:02:53Z game=27102 gameoverlayui=[27081 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 35; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run1; grep -v CX_ENV $L/run.log | cut -c1-170; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); vmmap $p 2>/dev/null | grep -i -E '"'"'d3dmetal|apple_gptk|dxvk|molten|d3d11|gameoverlay'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | head; grep -i -E '"'"'adapter|AMD Compat|Apple M|GeForce|Direct3D'"'"' "$L/../../../../../Users" 2>/dev/null; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b26c-cwd ]
+window id=12268 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12268 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run1/shots/003.png status=0
+2026-11-01T23:02:56Z game=27102 gameoverlayui=[27081 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 35; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run1; grep -v CX_ENV $L/run.log | cut -c1-170; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); vmmap $p 2>/dev/null | grep -i -E '"'"'d3dmetal|apple_gptk|dxvk|molten|d3d11|gameoverlay'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | head; grep -i -E '"'"'adapter|AMD Compat|Apple M|GeForce|Direct3D'"'"' "$L/../../../../../Users" 2>/dev/null; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b26c-cwd ]
+window id=12272 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 225;
+    Width = 384;
+    X = 1528;
+    Y = 606;
+} onscreen=1
+window id=12271 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12268 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12271 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run1/shots/004.png status=0
+2026-11-01T23:02:59Z game=27102 gameoverlayui=[27081 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 35; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run1; grep -v CX_ENV $L/run.log | cut -c1-170; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); vmmap $p 2>/dev/null | grep -i -E '"'"'d3dmetal|apple_gptk|dxvk|molten|d3d11|gameoverlay'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | head; grep -i -E '"'"'adapter|AMD Compat|Apple M|GeForce|Direct3D'"'"' "$L/../../../../../Users" 2>/dev/null; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b26c-cwd ]
+window id=12272 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 225;
+    Width = 384;
+    X = 1528;
+    Y = 606;
+} onscreen=1
+window id=12271 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12268 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12271 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run1/shots/005.png status=0
+2026-11-01T23:03:03Z game=27102 gameoverlayui=[27081 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 35; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run1; grep -v CX_ENV $L/run.log | cut -c1-170; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); vmmap $p 2>/dev/null | grep -i -E '"'"'d3dmetal|apple_gptk|dxvk|molten|d3d11|gameoverlay'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | head; grep -i -E '"'"'adapter|AMD Compat|Apple M|GeForce|Direct3D'"'"' "$L/../../../../../Users" 2>/dev/null; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b26c-cwd ]
+window id=12272 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 225;
+    Width = 384;
+    X = 1528;
+    Y = 606;
+} onscreen=1
+window id=12271 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12268 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12271 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run1/shots/006.png status=0
+2026-11-01T23:03:06Z game=27102 gameoverlayui=[27081 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 35; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/063-d3dmetal-overlay/logs/run1; grep -v CX_ENV $L/run.log | cut -c1-170; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); vmmap $p 2>/dev/null | grep -i -E '"'"'d3dmetal|apple_gptk|dxvk|molten|d3d11|gameoverlay'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | head; grep -i -E '"'"'adapter|AMD Compat|Apple M|GeForce|Direct3D'"'"' "$L/../../../../../Users" 2>/dev/null; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b26c-cwd ]
+window id=12272 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 225;
+    Width = 384;
+    X = 1528;
+    Y = 606;
+} onscreen=1
+window id=12271 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12268 owner=Schedule I Free Sample.exe pid=27161 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12271 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../063-d3dmetal-overlay/logs/run1/shots/007.png status=0
+2026-11-01T23:03:09Z game gone, stopping

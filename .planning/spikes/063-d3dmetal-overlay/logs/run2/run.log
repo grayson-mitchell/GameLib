@@ -1,0 +1,25 @@
+2026-11-01T23:04:09Z == spike 062 ../../063-d3dmetal-overlay/logs/run2 overlayui=0 shim=0 backend=d3dmetal args=[-screen-fullscreen 0] steampid=40643
+2026-11-01T23:04:10Z helper pid=28593 port=52386
+2026-11-01T23:04:10Z CX_ENV=DYLD_INSERT_LIBRARIES='/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib' SteamOverlayGameId=1284190 SteamGameId=1284190 SteamAppId=1284190
+2026-11-01T23:04:10Z wine wrapper pid=28625
+2026-11-01T23:04:14Z game window pid=28679
+  PID  PPID COMM
+28679     1 C:\Program Files (x86)\Steam\steamapps\common\The Planet Crafter\Planet Crafter.exe
+/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/wine/x86_64-windows/d3d11.dll
+/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/wine/x86_64-windows/d3d12.dll
+/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/wine/x86_64-windows/dxgi.dll
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/49c5e90ef431555ead73d7708900f2cbee5b00607aa9dafb5ae2509a18891c58/steamloader.dylib.aot
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/89126e2050cfe25c9995ec6d67f5d3ccf62b92bf99b6ef82175b87defe760a5a/D3DMetal.aot
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/98514ab721332332f2e87068a6e7fa85d660778777adfef14b2edb540d2867db/gameoverlayrenderer.dylib.aot
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/cc90d735c7404f515c41a1142dde811e5a943885a49f9c69ebf0b0bb8ff92a1d/libMoltenVK.dylib.aot
+/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/external/D3DMetal.framework/Versions/A/D3DMetal
+/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/external/D3DMetal.framework/Versions/A/Resources/libdxccontainer.dylib
+/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/external/D3DMetal.framework/Versions/A/Resources/libmetalirconverter.dylib
+/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/external/libd3dshared.dylib
+/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/libMoltenVK.dylib
+Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib
+Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib
+2026-11-01T23:04:17Z waiting for the game to exit; press Shift+Tab in game, then quit it
+2026-11-01T23:05:21Z wine wrapper exited
+2026-11-01T23:05:21Z restored cfgs, stopped helper
+operator: shift-tab worked and was responsive (D3DMetal, shim=0, overlayui=0)
