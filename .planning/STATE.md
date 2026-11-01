@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 57 context gathered
-last_updated: "2026-11-01T20:30:58.196Z"
-last_activity: 2026-11-01 -- Phase 57 planning complete
+last_updated: "2026-11-01T21:07:01.368Z"
+last_activity: 2026-11-01
 progress:
   total_phases: 9
   completed_phases: 7
   total_plans: 204
-  completed_plans: 191
+  completed_plans: 192
   percent: 78
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 59 — steam engine fallback when crossover is unavailable
+**Current focus:** Phase 57 — opt-in-known-fix-sharing-via-relay
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -71,12 +71,12 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 59
-Plan: Not started
+Phase: 57 (opt-in-known-fix-sharing-via-relay) — EXECUTING
+Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-11-01 -- Phase 57 planning complete
+Last activity: 2026-11-01
 
-Progress: [██████████] 99%
+Progress: [█████████░] 94%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
