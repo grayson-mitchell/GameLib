@@ -45,3 +45,7 @@ Operator live gate (NOT yet run; this todo stays pending until it passes). Run o
 6. Repeat 1 and 5 with frameless OFF and with frameless ON.
 7. If the picker shows a bootstrap error naming an ACL-denied command, add exactly that one permission to bridge-invite-picker.json and its pin.
 Not covered: a game in a native macOS fullscreen Space. Record what happens there as an observation, not a pass or fail.
+
+## Related
+
+`2026-11-01-quitting-gamelib-kills-a-hosted-bridge-session.md`. The raised main window is how the accidental close in that todo happens.
