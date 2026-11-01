@@ -12,7 +12,8 @@ import {
   tauriSetZoomFactor,
   tauriHandleMaximized,
   tauriHandleUnmaximized,
-  tauriHandleFullscreen
+  tauriHandleFullscreen,
+  tauriHandleFramelessChanged
 } from './tauriWindowChrome'
 import type { IpcRendererEvent } from 'backend/platform'
 import { tauriGamepadAction } from './tauriGamepadInput'
@@ -39,6 +40,10 @@ export const openGithubSponsorsPage = makeListenerCaller('openGithubSponsorsPage
 // that called it) is dead code and has been removed rather than left unreachable.
 export const isFullscreen = () => tauriIsFullscreen()
 export const isFrameless = () => tauriIsFrameless()
+// Subscribe side of the frameless-change push (quick 261102-dma); consumed by GlobalState.tsx.
+// No fake IpcRendererEvent argument: this channel has no Electron precedent to stay in parity with.
+export const handleFramelessChanged = (listener: (isFrameless: boolean) => void): (() => void) =>
+  tauriHandleFramelessChanged(listener)
 export const isMinimized = () => tauriIsMinimized()
 export const isMaximized = () => tauriIsMaximized()
 export const minimizeWindow = () => tauriMinimizeWindow()

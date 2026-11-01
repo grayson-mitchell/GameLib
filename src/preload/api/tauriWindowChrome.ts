@@ -101,7 +101,8 @@ export const tauriIsFullscreen = (): Promise<boolean> => {
  * `settings.framelessWindow` at window-creation time (`main_window.ts:43-53`) -- so
  * reading the setting directly is the faithful Tauri equivalent, and the snapshot is a
  * boot-time read, matching Electron's own read-once-at-startup behavior. This function
- * must NEVER call the Window API for this reason -- verified by test.
+ * must NEVER call the Window API for this reason -- verified by test. It is still the
+ * boot-time read: live changes after boot arrive through `tauriHandleFramelessChanged`.
  */
 export const tauriIsFrameless = (): Promise<boolean> => {
   return Promise.resolve(readFramelessSetting())
@@ -280,6 +281,36 @@ export const __resetMaximizeWatcherForTests = (): void => {
   maximizeListeners.clear()
   maximizeWatcherStarted = false
   lastMaximized = undefined
+}
+
+/**
+ * Frameless-change push (quick 261102-dma). The toggle applies live (gap G2), but
+ * `isFrameless` in React was seeded once at mount and never refreshed, which left GameLib's
+ * WindowControls next to the native frame on Windows. `setSetting` calls
+ * `notifyFramelessChanged` with the WRITTEN value, because the settings snapshot
+ * `tauriIsFrameless` reads is only patched when the sidecar's STORE_CHANGED push comes back,
+ * so a re-read straight after the toggle would race it. Only `setSetting` fires the push;
+ * `window.api` exposes the subscribe side alone.
+ */
+type FramelessChangeListener = (frameless: boolean) => void
+
+const framelessListeners = new Set<FramelessChangeListener>()
+
+export const tauriHandleFramelessChanged = (listener: FramelessChangeListener): (() => void) => {
+  framelessListeners.add(listener)
+  return () => {
+    framelessListeners.delete(listener)
+  }
+}
+
+export const notifyFramelessChanged = (frameless: boolean): void => {
+  for (const listener of [...framelessListeners]) {
+    try {
+      listener(frameless)
+    } catch (error) {
+      warn('framelessChangeListener', error)
+    }
+  }
 }
 
 /**
