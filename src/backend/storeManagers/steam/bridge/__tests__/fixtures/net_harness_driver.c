@@ -444,6 +444,13 @@ static int run_pfb_case(const char *c) {
       pfb_report(0);
     }
     pfb_print("flood");
+  } else if (strcmp(c, "p2pfb-many") == 0) {
+    for (int k = 1; k <= 8; k++) pfb_sent(PFB_BASE + 4000 + k);
+    for (int k = 1; k <= 8; k++) {
+      pfb_serve(PFB_BASE + 4000 + k);
+      pfb_report(0);
+    }
+    pfb_print("many");
   } else {
     return 2;
   }

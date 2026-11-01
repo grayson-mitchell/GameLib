@@ -112,6 +112,22 @@ describeDarwinOnly(
       expect(out).toContain('flood accepts=0')
     })
 
+    test("p2pfb-many: every 1202 report pairs past the shim's old cap of four; CBDISP log stays capped", () => {
+      const { out, err } = runBoth('p2pfb-many')
+      expect(out).toContain(
+        'many accepts=8 idx=4001,4002,4003,4004,4005,4006,4007,4008,'
+      )
+      const lines = err.split('\n')
+      expect(
+        lines.filter((l) =>
+          l.includes('CBDISP iCallback=1202 targets=0 held=0')
+        )
+      ).toHaveLength(4)
+      expect(
+        lines.filter((l) => l.includes('CBDISP cap reached iCallback=1202'))
+      ).toHaveLength(1)
+    })
+
     test('sockets-conn: Sockets recv is labelled iface=Sockets', () => {
       const { out, err } = runBoth('sockets-conn')
       expect(err).toContain('role=game kind=recv iface=Sockets')

@@ -597,7 +597,12 @@ static int gl_mms_transport(uint16_t slot, const uint8_t *req, uint32_t reqLen, 
  * 2 call result delivered (quick 261031-ixa). Per-id budget of 4: one
  * process-wide cap of 16 was spent by early 1281/1222 traffic and by refused
  * 703 reports. Ids outside gl_cb_report_ids[] (703, which the helper refuses)
- * spend nothing. The registry calls this with no lock held. The result is
+ * spend nothing. quick-261101-ip5: 1202 (P2PSessionRequest_t) is exempt from
+ * the budget, because the helper's legacy-P2P fallback pops one served remote
+ * per 1202 report (WR-07, quick-261101-iah) and a capped report would stop
+ * pairing after four; the helper's per-id CBDISP log budget still bounds the
+ * log, and a 1202 report is one round trip per 1202, bounded by the drain's
+ * per-run cap. The registry calls this with no lock held. The result is
  * ignored. */
 static const int32_t gl_cb_report_ids[] = { 168, 1101, 503, 504, 505, 506, 507, 512, 513, 333, 1202, 1203, 1221, 1222, 1251, 1252, 1281, 510 };
 static volatile LONG g_gl_cb_report_n[18];
@@ -607,7 +612,7 @@ static void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched, uint32_t hel
   uint32_t i;
   for (i = 0; i < 18u; i++) if (gl_cb_report_ids[i] == id) break;
   if (i == 18u) return;
-  if (InterlockedIncrement(&g_gl_cb_report_n[i]) > 4) return;
+  if (id != 1202 && InterlockedIncrement(&g_gl_cb_report_n[i]) > 4) return;
   memcpy(req, &id, 4);
   memcpy(req + 4, &ndispatched, 4);
   memcpy(req + 8, &held, 4);
