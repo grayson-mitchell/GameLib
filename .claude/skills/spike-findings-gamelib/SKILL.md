@@ -1,6 +1,6 @@
 ---
 name: spike-findings-gamelib
-description: Implementation blueprint from GameLib spike experiments — verified patterns, requirements, and gotchas for (a) Steam native depot install + ACF adoption, (b) the macOS native Steam bridge, (c) the Rust/Tauri v2 rearchitecture (Node sidecar, Electron-API parity, preload seam, the login webview / cookie-read surface, and the embedded in-app store browser via the unstable multiwebview API), and (d) login-window UX on macOS (modal child-window attachment, Keychain/password-manager autofill channels, and a local OAuth test store). Auto-loaded during Steam, macOS, Tauri, or login/auth implementation work.
+description: Implementation blueprint from GameLib spike experiments — verified patterns, requirements, and gotchas for (a) Steam native depot install + ACF adoption, (b) the macOS native Steam bridge, (c) the Rust/Tauri v2 rearchitecture (Node sidecar, Electron-API parity, preload seam, the login webview / cookie-read surface, and the embedded in-app store browser via the unstable multiwebview API), (d) login-window UX on macOS (modal child-window attachment, Keychain/password-manager autofill channels, and a local OAuth test store), and (e) the Steam overlay in bridged (bottled) games on macOS (dylib injection via CX_ENV on a re-signed CrossOver clone, Steam self-attaching gameoverlayui, and the 10-bit/Metal 4 overlay-shim fix). Auto-loaded during Steam, macOS, Tauri, or login/auth implementation work.
 ---
 
 <context>
@@ -19,7 +19,8 @@ window work could proceed without real stores' anti-bot surfaces.
 
 Spike sessions wrapped: 2026-07-14 → 2026-07-18 (bridge line through 008), 2026-07-20 (Tauri
 feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 2026-08-03
-(embedded in-app store browser 016–018), 2026-08-04 (login-window UX 019–022).
+(embedded in-app store browser 016–018), 2026-08-04 (login-window UX 019–022),
+2026-11-02 (Steam overlay in bridged games 061–064; spikes 023–060 not yet wrapped).
 </context>
 
 <requirements>
@@ -107,6 +108,18 @@ feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 20
 - **Capture OAuth codes by navigation observation** (`on_page_load` Started / pristine's
   `decidePolicyForNavigationAction`), never a callback server or remote-page IPC.
 - **Scripted login tests need a logout preamble** — the jar is sticky across restarts.
+
+### Steam overlay in bridged games (061–064)
+
+- **Inject, don't spawn**: `steamloader.dylib` + `gameoverlayrenderer.dylib` (+ `SteamOverlayGameId`)
+  in the game process make Mac Steam attach `gameoverlayui` itself. GameLib never starts it.
+- **`CX_ENV` on a clone**: re-sign BOTH `bin/wineloader` and `lib/wine/x86_64-unix/wine` with
+  `allow-dyld-environment-variables` (keep stock keys); clone the inner `SharedSupport/CrossOver`,
+  never the `.app`, or Gatekeeper kills it.
+- **Vendor NotProton's `overlay_shim.m` (GPLv3)** for non-BGRA8 layers: Steam's BGRA8 overlay pipeline
+  draws corrupted on a 10-bit `RGB10A2Unorm` layer (Manor Lords D3D12/D3DMetal); the shim also
+  covers HDR and D3DMetal's Metal 4 queue. Overlay correctness is operator-verified only;
+  `screencapture` returns stale Metal frames.
 </requirements>
 
 <findings_index>
@@ -121,6 +134,7 @@ feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 20
 | Tauri embedded store browser | references/tauri-embedded-store-browser.md | In-app store browser VALIDATED: `add_child` embeds a child webview in the config-created main window (real Steam store composited, screenshot-proven); renderer must be the sole bounds owner; one shared jar per process across all windows/children |
 | Login-window UX on macOS | references/login-window-ux-macos.md | Child-window attachment makes the login un-losable (sheets trap the user); inline Keychain autofill is platform-blocked, but a **synthesized right-click from an in-field key glyph pops the real AutoFill menu** — the panel can never be opened directly |
 | OAuth login test harness | references/oauth-login-test-harness.md | **DummyStore**: a zero-dep local OAuth 2.0 code-grant provider (port 17940) with a hot-editable login form, PKCE + replay enforcement and an `/events` oracle — the offline fixture for all login/form work |
+| Steam overlay in bridged games | references/steam-overlay-in-bottles.md | Mac Steam's own overlay works in GameLib-bridged games: inject Steam's dylibs via `CX_ENV` on a CrossOver clone with both loaders re-signed for dyld, and Steam attaches `gameoverlayui` itself. BGRA8 layers need nothing else (DXVK, D3DMetal D3D11); 10-bit layers (D3D12/D3DMetal) need NotProton's GPLv3 Metal shim |
 | Live-gate contract authoring | references/live-gate-contract-authoring.md | Five defect-class tests for reviewing a blocking live-gate contract BEFORE its first run — Test 5's unit of review is the requirement **PAIR** (does satisfying A destroy B's evidence: restart/truncate/clear/reset/env-var/one-shot-resource), and a dual-sink **append-and-archive** capture standard (`tee -a`, per-launch delimiters, `gamelib.log` archived before it rotates) so both the transcript and sidecar-log sinks survive every launch |
 
 ## Source Files
@@ -133,7 +147,9 @@ runnable Tauri multiwebview harness with `SPIKE_AUTORUN=1`, JSONL run.log, and w
 screenshot evidence, shared by 017/018; 019 = the runnable **DummyStore** OAuth server +
 login-flow harness, reused as the fixture by 020–022; 021 = runtime child/sheet attachment with
 an `NSApp.orderedWindows` layering oracle; 022 = a `WKWebView` subclass hooking
-`willOpenMenu:` + event synthesis, incl. `menu-with-autofill.png`).
+`willOpenMenu:` + event synthesis, incl. `menu-with-autofill.png`; 061 = Mac Steam staging +
+window-capture loop; 062 = `run.sh`, the reusable bridged-game overlay harness (helper spawn, cfg
+swap/restore, `CX_ENV` injection, env-selected game and backend); 063/064 = READMEs only).
 </findings_index>
 
 <metadata>
@@ -166,4 +182,8 @@ an `NSApp.orderedWindows` layering oracle; 022 = a `WKWebView` subclass hooking
 - 020-keychain-autofill-login-webview
 - 021-modal-login-window
 - 022-programmatic-autofill-trigger
+- 061-notproton-overlay-render
+- 062-bridge-overlay-attach
+- 063-d3dmetal-overlay
+- 064-d3dmetal-d3d12-overlay
 </metadata>

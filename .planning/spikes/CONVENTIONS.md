@@ -45,6 +45,18 @@ question requires otherwise.
   even when occluded or on another display, which full-screen grabs repeatedly failed at
   (and full-screen grabs also sweep in the user's unrelated windows — delete those on
   sight). Established in 016.
+  **Exception: a Wine game's Metal surface.** `screencapture -l` returned byte-identical stale
+  frames of D3D/Metal game windows, even with the Steam overlay open (062 run 3), so pixels
+  cannot prove what a bottled game draws. Use the operator's report, appended to the run's
+  `run.log` as an `operator: …` line, plus process and log evidence (`vmmap`, Steam's
+  `console_log.txt`), and a control run where the expected effect must be absent (062 run 2,
+  064 run 1). Established in 061–064.
+- **Live bottled-game spikes: one background harness per run, operator at the keyboard.** The
+  harness launches the game, finds its pid by its largest on-screen window (`CGWindowList`; a
+  game may own a thin strip first), accepts only a numeric pid, restores every file it touched
+  in an `EXIT` trap, and stops on game exit. Never edit a `/bin/sh` script while a run of it is
+  live: sh reads incrementally, and a rewrite corrupts the running tail. Pass the title and
+  backend as env vars so one harness serves every title (062's `run.sh`, reused by 063/064).
 - **Truncate logged evidence AFTER the discriminating byte.** A 60-char UA prefix cut at
   `AppleWebKit/` made a *working* Chrome-UA spoof look failed in 016's first log pass —
   Chrome and default WebKit UAs are identical up to exactly that point. When a field exists

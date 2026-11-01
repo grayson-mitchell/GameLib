@@ -1,8 +1,8 @@
 # Spike Wrap-Up Summary
 
-**Date:** 2026-08-04 (updated — login-window UX 019–022 wrapped)
-**Spikes processed:** 27
-**Feature areas:** Steam native install; macOS native Steam bridge; Tauri/Rust rearchitecture; Tauri login webview + cookies; Tauri embedded store browser; login-window UX on macOS; OAuth login test harness
+**Date:** 2026-11-02 (updated — Steam overlay in bridged games 061–064 wrapped; 023–060 not yet wrapped)
+**Spikes processed:** 31
+**Feature areas:** Steam native install; macOS native Steam bridge; Tauri/Rust rearchitecture; Tauri login webview + cookies; Tauri embedded store browser; login-window UX on macOS; OAuth login test harness; Steam overlay in bridged games
 **Skill output:** `./.claude/skills/spike-findings-gamelib/`
 
 ## Processed Spikes
@@ -36,6 +36,10 @@
 | 020 | keychain-autofill-login-webview | standard | ⚠ PARTIAL | Login-window UX on macOS |
 | 021 | modal-login-window | standard | ✓ VALIDATED | Login-window UX on macOS |
 | 022 | programmatic-autofill-trigger | standard | ⚠ PARTIAL | Login-window UX on macOS |
+| 061 | notproton-overlay-render | standard | ✓ VALIDATED | Steam overlay in bridged games |
+| 062 | bridge-overlay-attach | standard | ✓ VALIDATED | Steam overlay in bridged games |
+| 063 | d3dmetal-overlay | standard | ✓ VALIDATED | Steam overlay in bridged games |
+| 064 | d3dmetal-d3d12-overlay | standard | ⚠ PARTIAL | Steam overlay in bridged games |
 
 ## Key Findings
 
@@ -138,3 +142,21 @@ panel can never be opened *directly*: the AutoFill item is injected at menu **di
 is absent from the NSMenu even for a genuine user right-click (proven by subclassing `WKWebView`
 and hooking `willOpenMenu:`, plus a post-display re-dump), and `WKWebView` exposes no autofill
 selector — only the W3C digital-credentials picker.
+
+**Steam overlay in bridged games (061–064, 2026-11-02):** Mac Steam's own overlay works inside
+GameLib-bridged Wine games, with no Steam-side patching. Loading Steam's `steamloader.dylib` +
+`gameoverlayrenderer.dylib` (with `SteamOverlayGameId`) into the game is the whole trigger: Steam
+attaches `gameoverlayui` to the game's pid by itself, even though it launched nothing and only
+knows the bridge helper (062 run 4). The obstacle is code signing. CrossOver's `bin/wine` execs
+two hardened loaders (`bin/wineloader`, `lib/wine/x86_64-unix/wine`) that drop `DYLD_*`, so the
+insert list must travel through `CX_ENV` on a clone of the inner `SharedSupport/CrossOver` with
+**both** loaders ad-hoc re-signed with `allow-dyld-environment-variables`. Re-signing inside a
+copied `.app` gets the launch killed by Gatekeeper (-67018). On 8-bit BGRA8 layers that is enough
+(DXVK: Schedule I; D3DMetal D3D11: The Planet Crafter). On a **10-bit `RGB10A2Unorm`** layer
+(Manor Lords, D3D12 on D3DMetal) Steam's BGRA8 overlay pipeline draws corrupted, and NotProton's
+`overlay_shim.m` fixes it by substituting a matching pipeline (it also covers HDR and D3DMetal's
+Metal 4 queue). It is **GPLv3**, compatible with GameLib's `GPL-3.0-only`, so vendor and build
+it. Overlay correctness is operator-verified: `screencapture -l` returns stale Metal frames.
+Untested: HDR titles, DXMT, WineD3D-GL, non-CrossOver engines, fullscreen on the D3D11 paths, and
+the overlay's invite dialog vs GameLib's picker. Blueprint:
+`references/steam-overlay-in-bottles.md`. Spikes 023–060 remain unwrapped.

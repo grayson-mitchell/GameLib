@@ -87,7 +87,7 @@ file) and follow the patterns already in the codebase.
 
 ## Project Skills
 
-- **Spike findings for GameLib** (implementation patterns, constraints, gotchas for Steam native install + macOS native Steam bridge + the Rust/Tauri rearchitecture and its login-webview/cookie surface + login-window UX on macOS: modal attachment, Keychain autofill channels, and the local OAuth test store) → `Skill("spike-findings-gamelib")`
+- **Spike findings for GameLib** (implementation patterns, constraints, gotchas for Steam native install + macOS native Steam bridge + the Rust/Tauri rearchitecture and its login-webview/cookie surface + login-window UX on macOS: modal attachment, Keychain autofill channels, and the local OAuth test store + the Steam overlay in bridged games: CX_ENV dylib injection on a re-signed CrossOver clone and the 10-bit/Metal 4 overlay-shim fix) → `Skill("spike-findings-gamelib")`
 - **Sketch findings for GameLib** (validated design decisions, CSS patterns, visual direction: app-level card/folder tabs replacing the sidebar, the two-tier nav structure, the 78px macOS traffic-light inset, multi-theme survival rules, and the Games library filter panel) → `Skill("sketch-findings-gamelib")`
 - **GameLib repo conventions** (the full text of the five rules indexed under Conventions above: todo triage frontmatter, fake-HOME isolation, the sidecar exit contract, UAT item shape, and the `<verify>` formatter check — with the measurements and incidents behind each) → `Skill("gamelib-conventions")`
 <!-- GSD:skills-end -->
