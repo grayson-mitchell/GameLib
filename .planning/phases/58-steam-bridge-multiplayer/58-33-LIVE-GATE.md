@@ -285,4 +285,23 @@ Verdict rule: items 1, 2 and 3 must all be `pass` for `Verdict: PASS`. Any of it
 
 ## 7. Run record
 
-(empty: filled by plan 58-34)
+### Preflight
+
+Run by plan 58-34 Task 1, 2026-11-01, before any dev restart or launch. Session dir: `/tmp/gamelib-gate-20261101T011235Z` (never committed).
+
+| ID | Observed |
+| -- | -------- |
+| PC1 | `pgrep -x steam_osx` printed one pid |
+| PC2 | nothing printed (no Windows Steam in any bottle) |
+| PC3 | `26.3.0.39832` |
+| PC4 | HEAD `588dd9a59`; `git status --short native src meta public/fixes` clean. `BRIDGE_NEWEST` = `6be6009a2`, epoch 1793495264 (public/fixes/3205720-steam.json). The pre-existing artifacts were older (helper 1793493148, shim 1793493150, sidecar.js 1793495038), so the full rebuild was run in order (`gen-vtables`, `build-steam-bridge`, `vite build`, `build:sidecar-sea`), all exit 0. New mtimes: helper 1793495530, shim 1793495531, sidecar.js 1793495543, all newer than `BRIDGE_NEWEST`. `strings` helper `connection table full` = 1; `grep -c 'raise requested' build/main/sidecar.js` = 1 |
+| PC5 | `pre-session-gamelib.log` (6810 B) and `pre-session-gamelib.log.old` (28998 B) copied. Note: the already-running dev app auto-restarted at 14:12:31 on the rebuild, so `gamelib.log` had already rotated once before the copy |
+| PC6 | pending operator. A dev app (pid 19719, started 14:12:31, no `tee`) is running and must be stopped and restarted under `tee -a` |
+| PC7 | built and installed shim sha256 equal (`8bde93f7...abd0a4`); `steam_api64.dll.gamelib-orig` present |
+| PC8 | pending operator |
+| PC9 | pending operator |
+| PC10 | `objdump -h ... \| grep -c '\.bind'` = 0 |
+| PC11 | `pnpm bridge-census --multiplayer 3205720 --log pre-session-gamelib.log` exit 0, printed ` host=0 client=0` (`unverified`, no HELLO) |
+| PC12 | `user.reg` Screenmanager: Fullscreen mode = 1, width 0xd70 (3440), height 0x5a0 (1440); fix file carries `CX_GRAPHICS_BACKEND=dxvk`. Applied-line check and mode-switch literals are measured at launch |
+
+Baselines before launch 1: HELLO count in `gamelib.log` = 0. PLAYERLOG counts: `Server connection state: Started` 0, `Starting FishySteamworks client connection` 0, `Entered lobby` 1, `Switching to resolution` 0, `could not switch resolution` 0.
