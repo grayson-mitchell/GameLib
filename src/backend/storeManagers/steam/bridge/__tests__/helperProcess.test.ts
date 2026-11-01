@@ -970,6 +970,24 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       expect(inviteCalls()).toHaveLength(0)
     })
 
+    test('58 WR-05: the text embedded inside another line does nothing', () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      void ensureBridgeHelperReady('3205720')
+      child.stderr.emit(
+        'data',
+        Buffer.from(
+          '[2026-11-01T00:00:00Z] VER    name=x INVITE dialog appid=3205720\n'
+        )
+      )
+      child.stderr.emit(
+        'data',
+        Buffer.from('INVITE dialog appid=3205720 trailing\n')
+      )
+      expect(inviteCalls()).toHaveLength(0)
+      expect(app.raiseMainWindow).not.toHaveBeenCalled()
+    })
+
     test('two lines within 2000 ms give one push', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)

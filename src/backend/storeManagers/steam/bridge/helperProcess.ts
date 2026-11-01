@@ -106,7 +106,10 @@ const INIT_FAILED_LINE =
 // ActivateGameOverlayInviteDialog -- MUST match bridge_helper.c's
 // `logts_f("INVITE", "dialog appid=%s", ...)` (INVITE fills the 6-char
 // category column, so ONE space follows it). Carries no lobby or user ids.
-const INVITE_DIALOG_LINE = /INVITE dialog appid=(\d+)/
+// 58 WR-05: anchored to logts's whole-line shape `[ts] CAT    msg` so another
+// line merely containing this text (a game-controlled string) cannot raise
+// the window. `\r?` tolerates a CRLF split.
+const INVITE_DIALOG_LINE = /^\[[^\]]*\] INVITE +dialog appid=(\d+)\r?$/
 
 // Backend debounce on top of the helper's own 1/2 s rate limit.
 const INVITE_REQUEST_DEBOUNCE_MS = 2000
