@@ -164,11 +164,30 @@ describe('capabilities/default.json D-12 child-window grant (REQ-34.1-08)', () =
     expect(conf.windows).toEqual(['main'])
   })
 
-  test('REQ-34.1-08: src-tauri/capabilities/ contains exactly one .json file', () => {
-    const jsonFiles = readdirSync(CAPABILITIES_DIR).filter((f) =>
-      f.endsWith('.json')
-    )
-    expect(jsonFiles).toEqual(['default.json'])
+  // Quick 261101-llf: a SECOND capability file now exists, for the local-only
+  // `bridge-invite` invite-picker window. It is NOT a child-window grant: it never names
+  // `about` or `external-<n>` (those keep ZERO command access, per default.json), and it is
+  // pinned below to one label, four permissions, no `remote` and no `webviews` key.
+  test('REQ-34.1-08: src-tauri/capabilities/ contains exactly default.json and bridge-invite-picker.json', () => {
+    const jsonFiles = readdirSync(CAPABILITIES_DIR)
+      .filter((f) => f.endsWith('.json'))
+      .sort()
+    expect(jsonFiles).toEqual(['bridge-invite-picker.json', 'default.json'])
+  })
+
+  test('261101-llf: bridge-invite-picker.json is scoped to exactly the bridge-invite label with four permissions and no remote/webviews key', () => {
+    const conf = JSON.parse(
+      readFileSync(join(CAPABILITIES_DIR, 'bridge-invite-picker.json'), 'utf8')
+    ) as Record<string, unknown>
+    expect(conf.windows).toEqual(['bridge-invite'])
+    expect(conf).not.toHaveProperty('remote')
+    expect(conf).not.toHaveProperty('webviews')
+    expect(conf.permissions).toEqual([
+      'core:event:allow-listen',
+      'core:event:allow-unlisten',
+      'core:window:allow-close',
+      'notification:allow-is-permission-granted'
+    ])
   })
 
   test('REQ-34.1-08: no entry matches the bare core:webview:allow-create-webview identifier (without the -window suffix)', () => {

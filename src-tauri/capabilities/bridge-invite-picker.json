@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "bridge-invite-picker",
+  "description": "Capability scoped to the local-only Steam bridge invite picker window (quick 261101-llf). It grants exactly the plugin commands the app bundle calls at boot -- the notification init-script probe (plugin:notification|is_permission_granted) and event listen/unlisten for tauriTransport -- plus core:window:allow-close for the picker's own Close. There is deliberately no remote key and no webviews key, and the window's on_navigation hook pins it to the app origin. This is NOT a capability for the about or external-<n> child windows: default.json's REQ-34.1-08 rule that those labels get zero command access still stands.",
+  "windows": ["bridge-invite"],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:window:allow-close",
+    "notification:allow-is-permission-granted"
+  ]
+}
