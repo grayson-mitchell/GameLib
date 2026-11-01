@@ -655,14 +655,28 @@ int gl_helper_cr_track(uint64_t hCall, int32_t iCallback) {
 /* === 58-13: legacy ISteamNetworking 006 P2P helpers ======================= */
 
 #define GL_P2P_MAX_READ 61440u
-#define GL_P2P_REMOTE_MAX 16
-
-/* Remotes this helper has itself accepted (fallback below). Never logged. */
-static uint64_t g_p2p_accepted[GL_P2P_REMOTE_MAX];
-static unsigned g_p2p_accepted_n = 0;
-/* Latest 1202 remote seen by the pump; helper-only, never logged. */
-static uint64_t g_p2p_last_remote = 0;
-static int      g_p2p_last_valid = 0;
+/* WR-07 legacy-P2P fallback state. Helper-only; SteamIDs are NEVER logged.
+ * Every bounded table fails CLOSED when full: the sent-to and lobby rings evict
+ * the oldest (an evicted peer is refused), the served FIFO overflow is skipped in
+ * step (g_p2p_served_skip) so later reports still pair with their own 1202. There
+ * is no accept-once table any more: with one report per 1202 there is no duplicate
+ * to suppress, a 1202 means Steam holds no session with that peer (a real listener
+ * would accept again), and after the allowlist it is no longer a security gate. */
+#define GL_P2P_SERVED_MAX 32
+#define GL_P2P_SENT_MAX 64
+#define GL_P2P_LOBBY_MAX 4
+#define GL_P2P_LOBBY_MEMBERS_MAX 250
+#define GL_P2P_LOG_MAX 16
+static uint64_t g_p2p_served[GL_P2P_SERVED_MAX];
+static unsigned g_p2p_served_head = 0;
+static unsigned g_p2p_served_count = 0;
+static unsigned g_p2p_served_skip = 0;
+static uint64_t g_p2p_sent[GL_P2P_SENT_MAX];
+static unsigned g_p2p_sent_next = 0;
+static unsigned g_p2p_sent_n = 0;
+static uint64_t g_p2p_lobbies[GL_P2P_LOBBY_MAX];
+static unsigned g_p2p_lobby_next = 0;
+static unsigned g_p2p_lobby_n = 0;
 static int      g_p2p_path_seen[2];
 
 /* Fail-closed ReadP2PPacket (Pitfall 4). Request (generic encoding):
@@ -1499,20 +1513,111 @@ int gl_net_sockets_open(void *self, const uint8_t *args, uint32_t argLen, uint8_
   return 0;
 }
 
-/* M-04 fallback: the shim reported a 1202 with no listener (ndispatched 0,
- * held 0), so accept the remote ourselves, once per remote. Helper-originated:
- * logged as src=helper and never counted as evidence. */
-static void gl_p2p_fallback_accept(void) {
-  if (!g_p2p_last_valid || g_bd_self_steamnetworking006 == NULL ||
-      g_bd_flat_SteamNetworking006_AcceptP2PSessionWithUser == NULL)
+/* Inserts into a bounded ring: skips a duplicate, otherwise overwrites the oldest. */
+static void gl_p2p_ring_add(uint64_t *ring, unsigned cap, unsigned *next, unsigned *n, uint64_t v) {
+  for (unsigned i = 0; i < *n; i++)
+    if (ring[i] == v) return;
+  ring[*next] = v;
+  *next = (*next + 1) % cap;
+  if (*n < cap) (*n)++;
+}
+
+/* Slot-6 serve time: remember the remote of each 1202 handed to the shim, in order.
+ * `out` is the encoded [u32 count][i32 id][u32 cub][cub bytes] message. */
+static void gl_p2p_note_served(const uint8_t *out, uint32_t n) {
+  int32_t id;
+  uint32_t cub;
+  if (n != 12 + GL_CBQ_P2PSESSIONREQUEST_WIN_SIZE) return;
+  memcpy(&id, out + 4, 4);
+  memcpy(&cub, out + 8, 4);
+  if (id != GL_CBQ_ID_P2P_SESSION_REQUEST || cub != GL_CBQ_P2PSESSIONREQUEST_WIN_SIZE) return;
+  if (g_p2p_served_count == GL_P2P_SERVED_MAX) {
+    g_p2p_served[g_p2p_served_head] = 0;
+    g_p2p_served_head = (g_p2p_served_head + 1) % GL_P2P_SERVED_MAX;
+    g_p2p_served_count--;
+    g_p2p_served_skip++;
+  }
+  memcpy(&g_p2p_served[(g_p2p_served_head + g_p2p_served_count) % GL_P2P_SERVED_MAX], out + 12, 8);
+  g_p2p_served_count++;
+}
+
+/* SendP2PPacket success: Steam implicitly accepts a peer the game sends to. */
+static void gl_p2p_note_call(int ci, const uint8_t *args, uint32_t argLen) {
+  if (ci < 0 || ci != bd_call_index(BD_ORDINAL_SteamNetworking006, BD_SLOT_SteamNetworking006_SendP2PPacket))
     return;
-  uint64_t remote = g_p2p_last_remote;
-  g_p2p_last_valid = 0;
-  for (unsigned i = 0; i < g_p2p_accepted_n; i++)
-    if (g_p2p_accepted[i] == remote) return;
-  if (g_p2p_accepted_n < GL_P2P_REMOTE_MAX) g_p2p_accepted[g_p2p_accepted_n++] = remote;
-  (void)g_bd_flat_SteamNetworking006_AcceptP2PSessionWithUser(g_bd_self_steamnetworking006, remote);
-  logts("CBQ", "p2p-accept src=helper");
+  if (args == NULL || argLen < 8) return;
+  uint64_t remote;
+  memcpy(&remote, args, 8);
+  if (remote == 0) return;
+  gl_p2p_ring_add(g_p2p_sent, GL_P2P_SENT_MAX, &g_p2p_sent_next, &g_p2p_sent_n, remote);
+}
+
+/* LobbyEnter with response 1: the game is in that lobby (membership is checked live). */
+static void gl_p2p_note_lobby_from_mac(int32_t id, const uint8_t *mac) {
+  int32_t resp;
+  uint64_t lobby;
+  if (id != GL_CBQ_ID_LOBBY_ENTER) return;
+  memcpy(&resp, mac + GL_CBQ_LOBBYENTER_MAC_OFF_RESPONSE, 4);
+  if (resp != 1) return;
+  memcpy(&lobby, mac, 8);
+  if (lobby == 0) return;
+  gl_p2p_ring_add(g_p2p_lobbies, GL_P2P_LOBBY_MAX, &g_p2p_lobby_next, &g_p2p_lobby_n, lobby);
+}
+
+static int gl_p2p_allowed(uint64_t remote) {
+  if (remote == 0) return 0;
+  for (unsigned i = 0; i < g_p2p_sent_n; i++)
+    if (g_p2p_sent[i] == remote) return 1;
+  if (g_bd_self_steammatchmaking009 == NULL || g_bd_flat_SteamMatchMaking009_GetNumLobbyMembers == NULL ||
+      g_bd_flat_SteamMatchMaking009_GetLobbyMemberByIndex == NULL)
+    return 0;
+  for (unsigned l = 0; l < g_p2p_lobby_n; l++) {
+    int32_t cnt = g_bd_flat_SteamMatchMaking009_GetNumLobbyMembers(g_bd_self_steammatchmaking009, g_p2p_lobbies[l]);
+    if (cnt < 0) cnt = 0;
+    if (cnt > GL_P2P_LOBBY_MEMBERS_MAX) cnt = GL_P2P_LOBBY_MEMBERS_MAX;
+    for (int32_t i = 0; i < cnt; i++)
+      if (g_bd_flat_SteamMatchMaking009_GetLobbyMemberByIndex(g_bd_self_steammatchmaking009,
+                                                                g_p2p_lobbies[l], i) == remote)
+        return 1;
+  }
+  return 0;
+}
+
+/* M-04 fallback (58-REVIEW WR-07): the shim reported a 1202 with no listener
+ * (ndispatched 0, held 0). Accept the remote of THAT 1202, and only if the game
+ * already sends to it or shares a live lobby with it (Steam's implicit-accept
+ * rule). Helper-originated: logged as src=helper, fixed strings only, never
+ * counted as evidence. */
+static void gl_p2p_fallback_accept(uint64_t remote) {
+  static int accepted_logs = 0, refused_logs = 0;
+  if (g_bd_self_steamnetworking006 == NULL || g_bd_flat_SteamNetworking006_AcceptP2PSessionWithUser == NULL)
+    return;
+  if (gl_p2p_allowed(remote)) {
+    (void)g_bd_flat_SteamNetworking006_AcceptP2PSessionWithUser(g_bd_self_steamnetworking006, remote);
+    if (accepted_logs < GL_P2P_LOG_MAX) {
+      accepted_logs++;
+      logts("CBQ", "p2p-accept src=helper");
+    }
+  } else if (refused_logs < GL_P2P_LOG_MAX) {
+    refused_logs++;
+    logts("CBQ", "p2p-accept src=helper action=refused");
+  }
+}
+
+/* Every validated 1202 report pops exactly one served remote (skip first). */
+static void gl_p2p_on_report(uint32_t dn, uint32_t dheld) {
+  uint64_t remote;
+  if (g_p2p_served_skip > 0) {
+    g_p2p_served_skip--;
+    return;
+  }
+  if (g_p2p_served_count == 0) return;
+  remote = g_p2p_served[g_p2p_served_head];
+  g_p2p_served[g_p2p_served_head] = 0;
+  g_p2p_served_head = (g_p2p_served_head + 1) % GL_P2P_SERVED_MAX;
+  g_p2p_served_count--;
+  if (dn == 0 && dheld == 0) gl_p2p_fallback_accept(remote);
+  remote = 0;
 }
 
 /* Records a join seen by the pump (latest wins); resolved by the shim's slot-10
@@ -1640,10 +1745,7 @@ static void gl_manual_pump_into_ring(void) {
         uint8_t win[GL_CBQ_MAX_PARAM_BYTES];
         gl_cbq_repack_fields(msg.m_pubParam, win, row);
         queued = gl_cbq_offer(&g_cbq, msg.m_iCallback, win, (int32_t)row->winSize);
-        if (msg.m_iCallback == GL_CBQ_ID_P2P_SESSION_REQUEST && msg.m_cubParam == 8) {
-          memcpy(&g_p2p_last_remote, msg.m_pubParam, 8);
-          g_p2p_last_valid = 1;
-        }
+        if (msg.m_iCallback == GL_CBQ_ID_LOBBY_ENTER) gl_p2p_note_lobby_from_mac(msg.m_iCallback, msg.m_pubParam);
         if (queued) gl_note_join_from_mac(msg.m_iCallback, msg.m_pubParam);
         gl_cbq_secure_zero(win, sizeof win);
       } else {
@@ -2594,7 +2696,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
         send_response(fd, requestId, STATUS_ERR, NULL, 0);
         return;
       }
-      if (did == GL_CBQ_ID_P2P_SESSION_REQUEST && dn == 0 && dheld == 0) gl_p2p_fallback_accept();
+      if (did == GL_CBQ_ID_P2P_SESSION_REQUEST) gl_p2p_on_report(dn, dheld);
       // D-08: promote a pending join to role=game only when the shim says it
       // dispatched the callback to at least one registered target.
       if (g_join_note.valid && g_join_note.id == did) {
@@ -2629,6 +2731,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       if (g_inited && g_manual_dispatch) {
         gl_manual_pump_into_ring();
         n = gl_cbq_pop_encode(&g_cbq, out, sizeof out);
+        gl_p2p_note_served(out, n);
       } else {
         uint32_t zero = 0;
         memcpy(out, &zero, 4);
@@ -2761,6 +2864,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
   uint8_t status = bridge_dispatch(ordinal, slot, argBlob, argLen,
                                     g_dispatch_respbuf, sizeof(g_dispatch_respbuf), &respLen);
   if (status == STATUS_OK) gl_mms_lobby_log(ci, argBlob, argLen);
+  if (status == STATUS_OK) gl_p2p_note_call(ci, argBlob, argLen);
   if (status == STATUS_OK && ci >= 0 && !g_call_seen[ci]) {
     g_call_seen[ci] = 1;
     logts("CALL", bd_call_name(ci));

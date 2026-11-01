@@ -2219,17 +2219,26 @@ describeDarwinOnly(
       expect(body).toContain('GL_NET_KIND_OVERSIZE')
     })
 
-    test('58-13 source pin: the 1202 fallback logs only a fixed line, with no %s, and stores at most 16 remotes', () => {
+    test('WR-07 source pin: the 1202 fallback logs fixed lines only, is paired per report, and every table fails closed', () => {
       const raw = readFileSync(HELPER_SOURCE_PATH, 'utf8')
       const src = raw
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/^\s*\/\/.*$/gm, '')
       expect(src).toContain('logts("CBQ", "p2p-accept src=helper")')
-      expect(src).toContain('#define GL_P2P_REMOTE_MAX 16')
-      expect(src).toContain('g_p2p_accepted_n < GL_P2P_REMOTE_MAX')
+      expect(src).toContain('#define GL_P2P_SERVED_MAX 32')
+      expect(src).toContain('#define GL_P2P_SENT_MAX 64')
+      expect(src).toContain('#define GL_P2P_LOBBY_MAX 4')
+      expect(src).not.toContain('g_p2p_last_remote')
+      expect(src).not.toContain('g_p2p_accepted')
       expect(src).not.toMatch(/logts(?:_f)?\("(NET|CBQ)",[^;]*%s/)
       const fb = src.slice(src.indexOf('static void gl_p2p_fallback_accept'))
       expect(fb.slice(0, fb.indexOf('\n}\n'))).not.toMatch(/logts_f/)
+      const drain = src.slice(src.indexOf('CONTROL_SLOT_DRAIN_CALLBACKS) {'))
+      const served = drain.indexOf('gl_p2p_note_served(')
+      expect(served).toBeGreaterThan(-1)
+      expect(served).toBeLessThan(drain.indexOf('gl_cbq_secure_zero(out'))
+      expect(src).toContain('gl_p2p_on_report(')
+      expect(src).toContain('gl_p2p_note_call(ci, argBlob, argLen)')
     })
 
     const strippedHelper = (): string =>

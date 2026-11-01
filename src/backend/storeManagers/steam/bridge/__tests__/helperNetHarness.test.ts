@@ -56,6 +56,62 @@ describeDarwinOnly(
       profile?.dispose()
     })
 
+    // WR-07 legacy-P2P fallback (host harness only; no legacy-TCP-mode title is live-tested).
+    const pfbBase = 76561198100000000n
+
+    test('p2pfb-order: each report accepts the remote of the 1202 it reports', () => {
+      const { out } = runBoth('p2pfb-order')
+      expect(out).toContain('order accepts=2 idx=1,2,')
+    })
+
+    test('p2pfb-stranger: a never-sent-to, lobby-less remote is refused and never logged', () => {
+      const { out, err } = runBoth('p2pfb-stranger')
+      expect(out).toContain('stranger accepts=0')
+      expect(err).toContain('p2p-accept src=helper action=refused')
+      const x = pfbBase + 77n
+      expect(err).not.toContain(x.toString())
+      expect(err).not.toContain(x.toString(16))
+    })
+
+    test('p2pfb-lobby: lobby co-members are accepted; response!=1 and left lobbies are refused', () => {
+      const { out } = runBoth('p2pfb-lobby')
+      expect(out).toContain('member accepts=1 idx=5,')
+      expect(out).toContain('response2 accepts=1 idx=5,')
+      expect(out).toContain('left accepts=1 idx=5,')
+    })
+
+    test('p2pfb-listener: the report that reached a listener consumes its own 1202', () => {
+      const { out } = runBoth('p2pfb-listener')
+      expect(out).toContain('listener accepts=1 idx=2,')
+    })
+
+    test('p2pfb-empty: a report with nothing served accepts nothing', () => {
+      const { out } = runBoth('p2pfb-empty')
+      expect(out).toContain('empty accepts=0')
+    })
+
+    test('p2pfb-reaccept: no accept-once table, a reconnecting peer is accepted again', () => {
+      const { out } = runBoth('p2pfb-reaccept')
+      expect(out).toContain('reaccept accepts=2 idx=1,1,')
+    })
+
+    test('p2pfb-sent-evict: the sent-to ring evicts oldest and fails closed', () => {
+      const { out } = runBoth('p2pfb-sent-evict')
+      expect(out).toContain('evicted accepts=0')
+      expect(out).toContain('newest accepts=1 idx=1064,')
+    })
+
+    test('p2pfb-overflow: served-FIFO overflow is skipped in step so pairing stays exact', () => {
+      const { out } = runBoth('p2pfb-overflow')
+      expect(out).toContain('skipped accepts=0')
+      expect(out).toContain('ninth accepts=1')
+    })
+
+    test('p2pfb-strangers-flood: 40 strangers never reopen accept-all', () => {
+      const { out } = runBoth('p2pfb-strangers-flood')
+      expect(out).toContain('flood accepts=0')
+    })
+
     test('sockets-conn: Sockets recv is labelled iface=Sockets', () => {
       const { out, err } = runBoth('sockets-conn')
       expect(err).toContain('role=game kind=recv iface=Sockets')
