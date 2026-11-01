@@ -20,9 +20,14 @@ import { existsSync, mkdirSync } from 'graceful-fs'
 import { join } from 'path'
 import { GlobalConfig } from 'backend/config'
 import { downloadFile, openUrlOrFile, spawnAsync } from 'backend/utils'
+import { logError, logInfo } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
 import { SteamUser } from '../user'
-import { STEAM_DOWNLOAD_URL, STEAM_SETUP_EXE_URL } from '../constants'
+import {
+  STEAM_DOWNLOAD_URL,
+  STEAM_SETUP_EXE_URL,
+  steamSupportPath
+} from '../constants'
 import {
   ensureSteamClientReady,
   startGuidedClientInstall
@@ -58,6 +63,14 @@ jest.mock('../../../ipc', () => ({
 
 jest.mock('../user')
 
+// Pin steamSupportPath to a path holding a space AND an apostrophe so the
+// PowerShell single-quote escaping is exercised (T-0yc-01). The spread keeps
+// STEAM_INSTALL_PATHS / STEAM_DOWNLOAD_URL / STEAM_SETUP_EXE_URL real.
+jest.mock('../constants', () => ({
+  ...jest.requireActual('../constants'),
+  steamSupportPath: "/Users/Jane O'Brien/AppData/Roaming/gamelib/steam_store"
+}))
+
 // Mutable double, defaults to Windows (mirrors games.test.ts's envMock
 // pattern) — individual tests flip isMac/isLinux via jest.requireMock.
 jest.mock('backend/constants/environment', () => ({
@@ -75,6 +88,12 @@ const mockedSpawnAsync = spawnAsync as jest.Mock
 const mockedIsSteamClientInstalled =
   SteamUser.isSteamClientInstalled as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
+const mockedLogError = logError as jest.Mock
+const mockedLogInfo = logInfo as jest.Mock
+
+const WINDOWS_LAUNCH_FAILED =
+  'The Steam installer did not open (administrator permission was declined or the launch failed)'
+const MAC_LAUNCH_FAILED = 'The Steam installer disk image did not open'
 
 describe('clientSetup.ts', () => {
   let envMock: any
@@ -88,6 +107,8 @@ describe('clientSetup.ts', () => {
     mockedSpawnAsync.mockReset()
     mockedIsSteamClientInstalled.mockReset()
     mockedSendFrontendMessage.mockReset()
+    mockedLogError.mockReset()
+    mockedLogInfo.mockReset()
 
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isWindows = true
@@ -225,7 +246,7 @@ describe('clientSetup.ts', () => {
   })
 
   describe('startGuidedClientInstall', () => {
-    it('D-10/T-21-20: Windows downloads the official SteamSetup.exe over HTTPS and spawns it with no silent/quiet flag', async () => {
+    it('D-10/D-UAT-17: Windows downloads the official SteamSetup.exe over HTTPS and launches it elevated through PowerShell RunAs', async () => {
       mockedExistsSync.mockReturnValue(false)
 
       const result = await startGuidedClientInstall()
@@ -235,12 +256,118 @@ describe('clientSetup.ts', () => {
         expect.objectContaining({ url: STEAM_SETUP_EXE_URL })
       )
       expect(STEAM_SETUP_EXE_URL.startsWith('https://')).toBe(true)
-      const [spawnedCommand, spawnedArgs] = mockedSpawnAsync.mock.calls[0]
-      expect(spawnedCommand).toContain('SteamSetup.exe')
-      // No /S, /VERYSILENT, or any other unattended flag — the user sees the
-      // real Valve installer window (T-21-20).
-      expect(spawnedArgs).toEqual([])
+      const installerPath = join(steamSupportPath, 'redist', 'SteamSetup.exe')
+      expect(mockedSpawnAsync).toHaveBeenCalledTimes(1)
+      const [spawnedCommand, spawnedArgs, spawnedOptions] =
+        mockedSpawnAsync.mock.calls[0]
+      expect(spawnedCommand).toBe('powershell')
+      expect(spawnedArgs).toEqual([
+        '-NoProfile',
+        '-NonInteractive',
+        'Start-Process',
+        '-FilePath',
+        `'${installerPath.replaceAll("'", "''")}'`,
+        '-Verb',
+        'RunAs',
+        '-ErrorAction',
+        'Stop'
+      ])
+      expect(spawnedOptions).toEqual(
+        expect.objectContaining({ windowsHide: true })
+      )
+      expect(spawnedOptions).not.toHaveProperty('env')
+      expect(mockedLogInfo).toHaveBeenCalledWith(
+        expect.stringContaining('launched'),
+        'Steam'
+      )
+      expect(mockedLogError).not.toHaveBeenCalled()
       expect(mockedOpenUrlOrFile).not.toHaveBeenCalled()
+    })
+
+    it('D-UAT-17/T-0yc-01: the installer path reaches PowerShell as one single-quoted literal with apostrophes doubled', async () => {
+      mockedExistsSync.mockReturnValue(true)
+
+      await startGuidedClientInstall()
+
+      const [, spawnedArgs] = mockedSpawnAsync.mock.calls[0]
+      const filePath: string = spawnedArgs[spawnedArgs.indexOf('-FilePath') + 1]
+      expect(filePath.startsWith("'")).toBe(true)
+      expect(filePath.endsWith("'")).toBe(true)
+      expect(filePath).toContain("Jane O''Brien")
+      // Every apostrophe inside the quotes is doubled, so none can close the
+      // literal early.
+      expect(filePath.slice(1, -1).replaceAll("''", '')).not.toContain("'")
+    })
+
+    it('D-10/T-21-20: the Windows launch passes no wait, argument-list or silent/quiet flag', async () => {
+      mockedExistsSync.mockReturnValue(true)
+
+      await startGuidedClientInstall()
+
+      const [, spawnedArgs] = mockedSpawnAsync.mock.calls[0]
+      for (const forbidden of [
+        '-Wait',
+        '-ArgumentList',
+        '/S',
+        '/SILENT',
+        '/VERYSILENT',
+        '/quiet',
+        '/q',
+        '/passive'
+      ]) {
+        expect(spawnedArgs).not.toContain(forbidden)
+      }
+    })
+
+    it('D-UAT-17: a declined UAC prompt returns status "error" and never logs "launched"', async () => {
+      mockedExistsSync.mockReturnValue(true)
+      mockedSpawnAsync.mockResolvedValue({
+        code: 1,
+        stdout: '',
+        stderr:
+          'Start-Process : This command cannot be run due to the error: The operation was canceled by the user.'
+      })
+
+      const result = await startGuidedClientInstall()
+
+      expect(result).toEqual({
+        status: 'error',
+        error: WINDOWS_LAUNCH_FAILED
+      })
+      expect(mockedLogError).toHaveBeenCalled()
+      expect(mockedLogInfo).not.toHaveBeenCalledWith(
+        expect.stringContaining('launched'),
+        expect.anything()
+      )
+    })
+
+    it('D-UAT-17: a PowerShell spawn rejection returns status "error" and never logs "launched"', async () => {
+      mockedExistsSync.mockReturnValue(true)
+      mockedSpawnAsync.mockRejectedValue(new Error('spawn powershell ENOENT'))
+
+      const result = await startGuidedClientInstall()
+
+      expect(result).toEqual({
+        status: 'error',
+        error: WINDOWS_LAUNCH_FAILED
+      })
+      expect(mockedLogError).toHaveBeenCalled()
+      expect(mockedLogInfo).not.toHaveBeenCalledWith(
+        expect.stringContaining('launched'),
+        expect.anything()
+      )
+    })
+
+    it('D-UAT-17: a null exit code (launcher killed by a signal) returns status "error"', async () => {
+      mockedExistsSync.mockReturnValue(true)
+      mockedSpawnAsync.mockResolvedValue({ code: null, stdout: '', stderr: '' })
+
+      const result = await startGuidedClientInstall()
+
+      expect(result).toEqual({
+        status: 'error',
+        error: WINDOWS_LAUNCH_FAILED
+      })
     })
 
     it('D-10: macOS downloads the official .dmg over HTTPS and opens it (mount + Finder), never spawns it directly', async () => {
@@ -259,6 +386,23 @@ describe('clientSetup.ts', () => {
       expect(spawnedCommand).toBe('open')
       expect(spawnedArgs[0]).toContain('.dmg')
       expect(mockedOpenUrlOrFile).not.toHaveBeenCalled()
+    })
+
+    it('D-UAT-17: macOS reports a failed `open` as status "error"', async () => {
+      envMock.isWindows = false
+      envMock.isMac = true
+      envMock.isLinux = false
+      mockedExistsSync.mockReturnValue(true)
+      mockedSpawnAsync.mockResolvedValue({ code: 1, stdout: '', stderr: '' })
+
+      const result = await startGuidedClientInstall()
+
+      expect(result).toEqual({ status: 'error', error: MAC_LAUNCH_FAILED })
+      expect(mockedLogError).toHaveBeenCalled()
+      expect(mockedLogInfo).not.toHaveBeenCalledWith(
+        expect.stringContaining('launched'),
+        expect.anything()
+      )
     })
 
     it('D-10: Linux never downloads/spawns anything — opens the official Steam download page instead', async () => {
