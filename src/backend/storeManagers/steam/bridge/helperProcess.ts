@@ -1110,6 +1110,15 @@ export function stopBridgeHelper(appId: string): void {
 }
 
 /**
+ * True while any bridge helper is alive. A helper lives exactly as long as its game
+ * (`stopBridgeHelper` runs when the game's process exits), so this is "a bridged game is
+ * running and may be hosting a session" -- the quit path asks before ending that.
+ */
+export function hasLiveBridgeHelper(): boolean {
+  return helpers.size > 0
+}
+
+/**
  * Tears down every currently-running bridge helper, regardless of appId --
  * the full-app-quit fan-out. Each individual appId is ALSO independently
  * registered on `backend/longLivedChildren`'s own registry (via

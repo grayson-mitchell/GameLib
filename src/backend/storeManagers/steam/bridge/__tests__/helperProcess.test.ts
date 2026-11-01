@@ -42,6 +42,7 @@ import {
 import {
   ensureBridgeHelperReady,
   stopBridgeHelper,
+  hasLiveBridgeHelper,
   shutdownAllBridgeHelpers,
   classifyInitFlatError,
   __setSteamWaitScheduleForTests,
@@ -770,6 +771,23 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     // A second stop for the already-removed appId is a no-op.
     stopBridgeHelper(APP_ID_A)
     expect(childA.kill).toHaveBeenCalledTimes(1)
+  })
+
+  test('hasLiveBridgeHelper() is true from spawn until that appId is stopped (the quit confirm keys off it)', async () => {
+    expect(hasLiveBridgeHelper()).toBe(false)
+
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValueOnce(child)
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A)
+    await pending
+
+    expect(hasLiveBridgeHelper()).toBe(true)
+    stopBridgeHelper(APP_ID_A)
+    expect(hasLiveBridgeHelper()).toBe(false)
   })
 
   // 51-REVIEW WR-06 (sidecar exit contract): the child handle and both piped

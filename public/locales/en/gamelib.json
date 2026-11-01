@@ -42,6 +42,9 @@
                 "noArguments": "(none)"
             }
         },
+        "quit": {
+            "bridgeHosting": "A game is running through the Steam bridge. Quitting GameLib ends any multiplayer session it is hosting. Quit anyway?"
+        },
         "shortcuts": {
             "messageMacDesktop": "Shortcuts were created in the Applications folder and on the Desktop",
             "messageRemoveMacDesktop": "Shortcuts were removed from the Applications folder and the Desktop"

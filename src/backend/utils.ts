@@ -45,6 +45,7 @@ import {
 import gogPresence from './storeManagers/gog/presence'
 import { libraryManagerMap } from './storeManagers'
 import { SteamUser } from './storeManagers/steam/user'
+import { hasLiveBridgeHelper } from './storeManagers/steam/bridge/helperProcess'
 import { resolveTitleForGame } from './utils/gameTitle'
 import {
   installStore as nileInstallStore,
@@ -276,7 +277,9 @@ async function handleExit() {
   const isLocked = existsSync(join(gamesConfigPath, 'lock'))
   const mainWindow = getMainWindow()
 
-  if ((isLocked || isRunning()) && mainWindow) {
+  const isBridgeHosting = hasLiveBridgeHelper()
+
+  if ((isLocked || isRunning() || isBridgeHosting) && mainWindow) {
     const { response } = await dialog.showMessageBox(mainWindow, {
       buttons: [tOrFallback('box.no', 'No'), tOrFallback('box.yes', 'Yes')],
       // CR-04: `cancelId` is LOAD-BEARING, not cosmetic. This dialog's sense is
@@ -295,10 +298,16 @@ async function handleExit() {
       // dialog-dismiss). Before that, a dismissal on Windows/Linux came back as
       // buttons[1], so Esc here meant "Yes, kill everything and quit".
       cancelId: 0,
-      message: tOrFallback(
-        'box.quit.message',
-        'There are pending operations, are you sure?'
-      ),
+      message:
+        isBridgeHosting && !isLocked && !isRunning()
+          ? tOrFallback(
+              'box.quit.bridgeHosting',
+              'A game is running through the Steam bridge. Quitting GameLib ends any multiplayer session it is hosting. Quit anyway?'
+            )
+          : tOrFallback(
+              'box.quit.message',
+              'There are pending operations, are you sure?'
+            ),
       title: tOrFallback('box.quit.title', 'Exit')
     })
 
