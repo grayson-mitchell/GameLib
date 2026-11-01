@@ -406,6 +406,18 @@ body.keyboardNav .gameCard:hover:not(:focus-within) {
   display: none;
 }
 
+/* The hero keeps its bar, so in clean mode its art box gives up the bar's
+   height: art plus bar then equals a neighbour's bare art, and the hero's
+   bottom edge lines up with the row. Its pre-reveal placeholder takes the same
+   neighbour height. */
+.cleanTiles .gameCard.justPlayed .justPlayedImg {
+  block-size: calc(var(--game-card-art-height) - var(--game-card-bar-height));
+}
+
+.cleanTiles .gameCard.justPlayed:empty {
+  block-size: var(--game-card-art-height);
+}
+
 .gameCard > .icons > .svg-button {
   justify-self: center;
 }

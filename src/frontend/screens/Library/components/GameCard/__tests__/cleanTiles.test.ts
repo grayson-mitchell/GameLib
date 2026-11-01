@@ -47,7 +47,17 @@ describe('clean tile mode', () => {
   it('exempts the Recently Played just-played hero, which keeps its bar', () => {
     const selectors =
       cssNoComments.match(/[^{}]*\.cleanTiles[^{}]*(?=\{)/g) ?? []
-    for (const s of selectors) expect(s).toContain(':not(.justPlayed)')
+    const plain = selectors.filter((s) => !s.includes('.justPlayed'))
+    expect(plain).toEqual([])
+  })
+
+  it('shrinks the hero art by the bar height so the hero matches its neighbours', () => {
+    expect(css).toMatch(
+      /\.cleanTiles \.gameCard\.justPlayed \.justPlayedImg\s*\{[^}]*block-size:\s*calc\(var\(--game-card-art-height\) - var\(--game-card-bar-height\)\)\s*;/
+    )
+    expect(css).toMatch(
+      /\.cleanTiles \.gameCard\.justPlayed:empty\s*\{[^}]*block-size:\s*var\(--game-card-art-height\)\s*;/
+    )
   })
 
   it('never targets the list layout', () => {
