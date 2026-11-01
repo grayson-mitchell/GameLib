@@ -42,6 +42,8 @@ Harness case for dialog-with-0 then 513, then a live check: first main-menu '+' 
 
 2026-11-01 (quick 261101-mv3): A dialog that arrives with lobby 0 now arms `g_invite_await_lobby`. The first successful LobbyCreated_t (513) the pump sees adopts the lobby id, from either the call result or the broadcast, and adoption is not gated on ring space. Adoption is one-shot, never overwrites an explicit lobby, and does not reset `born_ms`, so a late or stray 513 can never extend a dialog's 10-minute window. A click before 513 returns -1 (wire and UI unchanged) and logs `refused reason=lobby-pending`. Harness cases: `invite-zero-adopt` and `invite-zero-guards`.
 
-Live check still owed: first main-menu '+' press in Schedule I, pick a friend, expect `INVITE lobby adopted` then `INVITE sent ok=1`, and zero `refused reason=no-pending` / `lobby-pending`. Until then this stays open in spirit.
+Live check (owed at fix time, now satisfied below): first main-menu '+' press in Schedule I, pick a friend, expect `INVITE lobby adopted` then `INVITE sent ok=1`, and zero `refused reason=no-pending` / `lobby-pending`.
 
 Live verified by the operator 2026-11-01 (20:56 run, `gamelib.log`, one HELLO): first main-menu '+' press gave `INVITE dialog` 20:56:25, `INVITE lobby adopted` 20:56:26, `INVITE sent ok=1` 20:56:29, and zero `refused reason=` lines. The PC then joined after Continue (see `2026-11-01-main-menu-invite-is-a-supported-host-path.md`).
+
+Second live run by the operator 2026-11-02 08:35 (`gamelib.log`, one HELLO): one main-menu '+' press gave `INVITE dialog` 08:35:02, `INVITE lobby adopted` 08:35:03, `INVITE sent ok=1` 08:35:08, and zero `no-pending` / `lobby-pending`. Across both runs: 2 dialogs, 2 adoptions, 2 sends, 0 refusals, and no 17-digit number in any `INVITE` line. Closed live-verified.
