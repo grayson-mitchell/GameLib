@@ -6,8 +6,8 @@
   "arches": ["x64"],
   "mode": "stub",
   "complete": true,
-  "flatAccessor": "SteamAPI_SteamClient_v021",
   "helperInterface": "SteamClient",
+  "flatAccessor": "SteamAPI_SteamClient_v021",
   "source": {
     "kind": "proton-lsteamclient",
     "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
@@ -22,7 +22,7 @@
       "stackBytes": 0,
       "params": [],
       "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_CreateSteamPipe"
+      "helperFallback": 1
     },
     {
       "slot": 1,
@@ -35,9 +35,7 @@
           "name": "hSteamPipe",
           "type": "int32"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_BReleaseSteamPipe"
+      ]
     },
     {
       "slot": 2,
@@ -52,7 +50,7 @@
         }
       ],
       "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_ConnectToGlobalUser"
+      "helperFallback": 1
     },
     {
       "slot": 3,
@@ -63,17 +61,13 @@
       "params": [
         {
           "name": "phSteamPipe",
-          "type": "int32*",
-          "kind": "out-value",
-          "valueType": "int32"
+          "type": "int32*"
         },
         {
           "name": "eAccountType",
           "type": "uint32"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_CreateLocalUser"
+      ]
     },
     {
       "slot": 4,
@@ -90,9 +84,7 @@
           "name": "hUser",
           "type": "int32"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_ReleaseUser"
+      ]
     },
     {
       "slot": 5,
@@ -111,12 +103,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamUser"
+      ]
     },
     {
       "slot": 6,
@@ -135,12 +124,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamGameServer"
+      ]
     },
     {
       "slot": 7,
@@ -176,12 +162,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamFriends"
+      ]
     },
     {
       "slot": 9,
@@ -196,12 +179,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamUtils"
+      ]
     },
     {
       "slot": 10,
@@ -220,12 +200,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamMatchmaking"
+      ]
     },
     {
       "slot": 11,
@@ -244,12 +221,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamMatchmakingServers"
+      ]
     },
     {
       "slot": 12,
@@ -268,12 +242,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamGenericInterface"
+      ]
     },
     {
       "slot": 13,
@@ -292,12 +263,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamUserStats"
+      ]
     },
     {
       "slot": 14,
@@ -316,12 +284,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamGameServerStats"
+      ]
     },
     {
       "slot": 15,
@@ -340,12 +305,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamApps"
+      ]
     },
     {
       "slot": 16,
@@ -364,12 +326,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamNetworking"
+      ]
     },
     {
       "slot": 17,
@@ -388,12 +347,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamRemoteStorage"
+      ]
     },
     {
       "slot": 18,
@@ -412,12 +368,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamScreenshots"
+      ]
     },
     {
       "slot": 19,
@@ -446,9 +399,7 @@
       "returns": "void",
       "returnKind": "void",
       "stackBytes": 0,
-      "params": [],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_RunFrame"
+      "params": []
     },
     {
       "slot": 21,
@@ -456,9 +407,7 @@
       "returns": "uint32",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": [],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetIPCCallCount"
+      "params": []
     },
     {
       "slot": 22,
@@ -479,9 +428,7 @@
       "returns": "bool",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": [],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_BShutdownIfAllPipesClosed"
+      "params": []
     },
     {
       "slot": 24,
@@ -500,12 +447,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamHTTP"
+      ]
     },
     {
       "slot": 25,
@@ -524,12 +468,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamController"
+      ]
     },
     {
       "slot": 26,
@@ -548,12 +489,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamUGC"
+      ]
     },
     {
       "slot": 27,
@@ -572,12 +510,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamMusic"
+      ]
     },
     {
       "slot": 28,
@@ -596,12 +531,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamMusicRemote"
+      ]
     },
     {
       "slot": 29,
@@ -620,12 +552,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamHTMLSurface"
+      ]
     },
     {
       "slot": 30,
@@ -683,12 +612,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamInventory"
+      ]
     },
     {
       "slot": 34,
@@ -707,12 +633,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamVideo"
+      ]
     },
     {
       "slot": 35,
@@ -731,12 +654,9 @@
         },
         {
           "name": "pchVersion",
-          "type": "const char*",
-          "kind": "in-string"
+          "type": "const char*"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamClient_GetISteamParentalSettings"
+      ]
     },
     {
       "slot": 36,

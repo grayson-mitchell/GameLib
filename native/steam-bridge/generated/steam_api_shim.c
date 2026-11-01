@@ -185,7 +185,7 @@ Method modes:
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "b83c888ed949"
+#define BRIDGE_SHIM_TABLE_HASH "e0eae15e3690"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -12833,179 +12833,70 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION010 g_steamremotestorage_i
 #if defined(__x86_64__)
 // === SteamClient017 (ordinal 16, family SteamClient) ===
 
-// slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0
+// slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0 (HELPER FALLBACK)
 static int32_t THISCALL vt_SteamClient017_CreateSteamPipe(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_FALLBACK);
   return 1;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(16, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
-static int THISCALL vt_SteamClient017_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamClient017_BReleaseSteamPipe(void *self, uint32_t dummy0) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(16, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
+// slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4 (HELPER FALLBACK)
 static int32_t THISCALL vt_SteamClient017_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_FALLBACK);
   return 1;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(16, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
-static int32_t THISCALL vt_SteamClient017_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamClient017_CreateLocalUser(void *self, uint32_t dummy0, uint32_t dummy1) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
-  uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(16, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
-    if (phSteamPipe != NULL) *phSteamPipe = 0;
-    return 0;
-  }
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  uint32_t respOff = 4;
-  if (phSteamPipe != NULL && retlen >= respOff + 4) {
-    int32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
-    *phSteamPipe = outVal;
-  }
-  respOff += 4;
-  return ret;
-#endif
 }
 
-// slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
-static void THISCALL vt_SteamClient017_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamClient017_ReleaseUser(void *self, uint32_t dummy0, uint32_t dummy1) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
-  return;
-#else
-  uint8_t argbuf[8];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hUser, 4); argOff += 4;
-  uint8_t retbuf[1]; uint32_t retlen = 0;
-  bridge_transact(16, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
-#endif
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12
+// slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamUser(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12
+// slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamGameServer(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -13016,473 +12907,172 @@ static void THISCALL vt_SteamClient017_SetLocalIPBinding(void *self, uint32_t du
   gamelib_stubcall_note(gamelib_sc, "SteamClient017", "SetLocalIPBinding", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12
+// slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamFriends(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8
+// slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamUtils(void *self, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4104];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12
+// slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamMatchmaking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 10, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12
+// slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamMatchmakingServers(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 11, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
+// slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamGenericInterface(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12
+// slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamUserStats(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12
+// slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamGameServerStats(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12
+// slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamApps(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12
+// slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamNetworking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 16, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12
+// slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamRemoteStorage(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 17, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12
+// slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamScreenshots(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 18, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 19: RunFrame() -> void | __thiscall ret 0
+// slot 19: RunFrame() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamClient017_RunFrame(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "RunFrame", 19, GAMELIB_STUBCALL_KIND_OFFPATH);
-  return;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[1]; uint32_t retlen = 0;
-  bridge_transact(16, 19, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
-#endif
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "RunFrame", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 20: GetIPCCallCount() -> uint32 | __thiscall ret 0
+// slot 20: GetIPCCallCount() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamClient017_GetIPCCallCount(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "GetIPCCallCount", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "GetIPCCallCount", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(16, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  uint32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
 // slot 21: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
@@ -13492,339 +13082,123 @@ static void THISCALL vt_SteamClient017_SetWarningMessageHook(void *self, uint32_
   gamelib_stubcall_note(gamelib_sc, "SteamClient017", "SetWarningMessageHook", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 22: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
+// slot 22: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamClient017_BShutdownIfAllPipesClosed(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "BShutdownIfAllPipesClosed", 22, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient017", "BShutdownIfAllPipesClosed", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(16, 22, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 23: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12
+// slot 23: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamHTTP(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 23, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 24: DEPRECATED_GetISteamUnifiedMessages(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
+// slot 24: DEPRECATED_GetISteamUnifiedMessages(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_DEPRECATED_GetISteamUnifiedMessages(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 24, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 25: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12
+// slot 25: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamController(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 25, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 26: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12
+// slot 26: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamUGC(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 26, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 27: GetISteamAppList(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamAppList*/* | __thiscall ret 12
+// slot 27: GetISteamAppList(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamAppList*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamAppList(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 27, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 28: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12
+// slot 28: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamMusic(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 28, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 29: GetISteamMusicRemote(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusicRemote*/* | __thiscall ret 12
+// slot 29: GetISteamMusicRemote(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusicRemote*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamMusicRemote(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 29, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 30: GetISteamHTMLSurface(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTMLSurface*/* | __thiscall ret 12
+// slot 30: GetISteamHTMLSurface(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTMLSurface*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamHTMLSurface(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 30, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -13849,123 +13223,45 @@ static void THISCALL vt_SteamClient017_Set_SteamAPI_CCheckCallbackRegisteredInPr
   gamelib_stubcall_note(gamelib_sc, "SteamClient017", "Set_SteamAPI_CCheckCallbackRegisteredInProcess", 33, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 34: GetISteamInventory(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInventory*/* | __thiscall ret 12
+// slot 34: GetISteamInventory(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInventory*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamInventory(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 34, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 35: GetISteamVideo(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamVideo*/* | __thiscall ret 12
+// slot 35: GetISteamVideo(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamVideo*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamVideo(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 35, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 36: GetISteamParentalSettings(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParentalSettings*/* | __thiscall ret 12
+// slot 36: GetISteamParentalSettings(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParentalSettings*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient017_GetISteamParentalSettings(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(16, 36, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -16128,179 +15424,70 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION013 g_steamremotestorage_i
 #if defined(__x86_64__)
 // === SteamClient014 (ordinal 22, family SteamClient) ===
 
-// slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0
+// slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0 (HELPER FALLBACK)
 static int32_t THISCALL vt_SteamClient014_CreateSteamPipe(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_FALLBACK);
   return 1;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(22, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
-static int THISCALL vt_SteamClient014_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamClient014_BReleaseSteamPipe(void *self, uint32_t dummy0) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(22, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
+// slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4 (HELPER FALLBACK)
 static int32_t THISCALL vt_SteamClient014_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_FALLBACK);
   return 1;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(22, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
-static int32_t THISCALL vt_SteamClient014_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamClient014_CreateLocalUser(void *self, uint32_t dummy0, uint32_t dummy1) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
-  uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(22, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
-    if (phSteamPipe != NULL) *phSteamPipe = 0;
-    return 0;
-  }
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  uint32_t respOff = 4;
-  if (phSteamPipe != NULL && retlen >= respOff + 4) {
-    int32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
-    *phSteamPipe = outVal;
-  }
-  respOff += 4;
-  return ret;
-#endif
 }
 
-// slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
-static void THISCALL vt_SteamClient014_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamClient014_ReleaseUser(void *self, uint32_t dummy0, uint32_t dummy1) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
-  return;
-#else
-  uint8_t argbuf[8];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hUser, 4); argOff += 4;
-  uint8_t retbuf[1]; uint32_t retlen = 0;
-  bridge_transact(22, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
-#endif
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12
+// slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamUser(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12
+// slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamGameServer(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -16311,473 +15498,172 @@ static void THISCALL vt_SteamClient014_SetLocalIPBinding(void *self, uint32_t du
   gamelib_stubcall_note(gamelib_sc, "SteamClient014", "SetLocalIPBinding", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12
+// slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamFriends(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8
+// slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamUtils(void *self, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4104];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12
+// slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamMatchmaking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 10, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12
+// slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamMatchmakingServers(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 11, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
+// slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamGenericInterface(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12
+// slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamUserStats(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12
+// slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamGameServerStats(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12
+// slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamApps(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12
+// slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamNetworking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 16, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12
+// slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamRemoteStorage(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 17, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12
+// slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamScreenshots(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 18, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 19: RunFrame() -> void | __thiscall ret 0
+// slot 19: RunFrame() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamClient014_RunFrame(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "RunFrame", 19, GAMELIB_STUBCALL_KIND_OFFPATH);
-  return;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[1]; uint32_t retlen = 0;
-  bridge_transact(22, 19, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
-#endif
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "RunFrame", 19, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 20: GetIPCCallCount() -> uint32 | __thiscall ret 0
+// slot 20: GetIPCCallCount() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamClient014_GetIPCCallCount(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "GetIPCCallCount", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "GetIPCCallCount", 20, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(22, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  uint32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
 // slot 21: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
@@ -16787,259 +15673,95 @@ static void THISCALL vt_SteamClient014_SetWarningMessageHook(void *self, uint32_
   gamelib_stubcall_note(gamelib_sc, "SteamClient014", "SetWarningMessageHook", 21, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 22: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
+// slot 22: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamClient014_BShutdownIfAllPipesClosed(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "BShutdownIfAllPipesClosed", 22, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient014", "BShutdownIfAllPipesClosed", 22, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(22, 22, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 23: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12
+// slot 23: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamHTTP(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 23, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 24: GetISteamUnifiedMessages(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUnifiedMessages*/* | __thiscall ret 12
+// slot 24: GetISteamUnifiedMessages(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUnifiedMessages*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamUnifiedMessages(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 24, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 25: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12
+// slot 25: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamController(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 25, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 26: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12
+// slot 26: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamUGC(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 26, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 27: GetISteamAppList(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamAppList*/* | __thiscall ret 12
+// slot 27: GetISteamAppList(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamAppList*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamAppList(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 27, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 28: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12
+// slot 28: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient014_GetISteamMusic(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(22, 28, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -18102,179 +16824,70 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION016 g_steamremotestorage_i
 #if defined(__x86_64__)
 // === SteamClient020 (ordinal 25, family SteamClient) ===
 
-// slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0
+// slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0 (HELPER FALLBACK)
 static int32_t THISCALL vt_SteamClient020_CreateSteamPipe(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_FALLBACK);
   return 1;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(25, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
-static int THISCALL vt_SteamClient020_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamClient020_BReleaseSteamPipe(void *self, uint32_t dummy0) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(25, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
+// slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4 (HELPER FALLBACK)
 static int32_t THISCALL vt_SteamClient020_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_FALLBACK);
   return 1;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(25, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
-static int32_t THISCALL vt_SteamClient020_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamClient020_CreateLocalUser(void *self, uint32_t dummy0, uint32_t dummy1) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
-  uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(25, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
-    if (phSteamPipe != NULL) *phSteamPipe = 0;
-    return 0;
-  }
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  uint32_t respOff = 4;
-  if (phSteamPipe != NULL && retlen >= respOff + 4) {
-    int32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
-    *phSteamPipe = outVal;
-  }
-  respOff += 4;
-  return ret;
-#endif
 }
 
-// slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
-static void THISCALL vt_SteamClient020_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamClient020_ReleaseUser(void *self, uint32_t dummy0, uint32_t dummy1) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
-  return;
-#else
-  uint8_t argbuf[8];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hUser, 4); argOff += 4;
-  uint8_t retbuf[1]; uint32_t retlen = 0;
-  bridge_transact(25, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
-#endif
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12
+// slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamUser(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12
+// slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamGameServer(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -18285,442 +16898,156 @@ static void THISCALL vt_SteamClient020_SetLocalIPBinding(void *self, uint32_t du
   gamelib_stubcall_note(gamelib_sc, "SteamClient020", "SetLocalIPBinding", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12
+// slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamFriends(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8
+// slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamUtils(void *self, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4104];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12
+// slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamMatchmaking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 10, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12
+// slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamMatchmakingServers(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 11, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
+// slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamGenericInterface(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12
+// slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamUserStats(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12
+// slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamGameServerStats(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12
+// slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamApps(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12
+// slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamNetworking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 16, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12
+// slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamRemoteStorage(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 17, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12
+// slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamScreenshots(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 18, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -18738,34 +17065,19 @@ static void * THISCALL vt_SteamClient020_GetISteamGameSearch(void *self, int32_t
 #endif
 }
 
-// slot 20: RunFrame() -> void | __thiscall ret 0
+// slot 20: RunFrame() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamClient020_RunFrame(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "RunFrame", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
-  return;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[1]; uint32_t retlen = 0;
-  bridge_transact(25, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
-#endif
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "RunFrame", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 21: GetIPCCallCount() -> uint32 | __thiscall ret 0
+// slot 21: GetIPCCallCount() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamClient020_GetIPCCallCount(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "GetIPCCallCount", 21, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "GetIPCCallCount", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(25, 21, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  uint32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
 // slot 22: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
@@ -18775,339 +17087,123 @@ static void THISCALL vt_SteamClient020_SetWarningMessageHook(void *self, uint32_
   gamelib_stubcall_note(gamelib_sc, "SteamClient020", "SetWarningMessageHook", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 23: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
+// slot 23: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamClient020_BShutdownIfAllPipesClosed(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "BShutdownIfAllPipesClosed", 23, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient020", "BShutdownIfAllPipesClosed", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(25, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 24: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12
+// slot 24: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamHTTP(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 24, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 25: DEPRECATED_GetISteamUnifiedMessages(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
+// slot 25: DEPRECATED_GetISteamUnifiedMessages(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_DEPRECATED_GetISteamUnifiedMessages(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 25, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 26: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12
+// slot 26: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamController(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 26, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 27: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12
+// slot 27: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamUGC(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 27, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 28: GetISteamAppList(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamAppList*/* | __thiscall ret 12
+// slot 28: GetISteamAppList(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamAppList*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamAppList(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 28, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 29: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12
+// slot 29: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamMusic(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 29, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 30: GetISteamMusicRemote(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusicRemote*/* | __thiscall ret 12
+// slot 30: GetISteamMusicRemote(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusicRemote*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamMusicRemote(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 30, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 31: GetISteamHTMLSurface(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTMLSurface*/* | __thiscall ret 12
+// slot 31: GetISteamHTMLSurface(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTMLSurface*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamHTMLSurface(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 31, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -19132,123 +17228,45 @@ static void THISCALL vt_SteamClient020_Set_SteamAPI_CCheckCallbackRegisteredInPr
   gamelib_stubcall_note(gamelib_sc, "SteamClient020", "Set_SteamAPI_CCheckCallbackRegisteredInProcess", 34, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 35: GetISteamInventory(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInventory*/* | __thiscall ret 12
+// slot 35: GetISteamInventory(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInventory*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamInventory(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 35, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 36: GetISteamVideo(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamVideo*/* | __thiscall ret 12
+// slot 36: GetISteamVideo(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamVideo*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamVideo(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 36, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 37: GetISteamParentalSettings(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParentalSettings*/* | __thiscall ret 12
+// slot 37: GetISteamParentalSettings(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParentalSettings*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient020_GetISteamParentalSettings(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(25, 37, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -19352,179 +17370,70 @@ static struct FakeSteamClient020 g_steamclient020_instance = { g_steamclient020_
 #if defined(__x86_64__)
 // === SteamClient021 (ordinal 26, family SteamClient) ===
 
-// slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0
+// slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0 (HELPER FALLBACK)
 static int32_t THISCALL vt_SteamClient021_CreateSteamPipe(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "CreateSteamPipe", 0, GAMELIB_STUBCALL_KIND_FALLBACK);
   return 1;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(26, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
-static int THISCALL vt_SteamClient021_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamClient021_BReleaseSteamPipe(void *self, uint32_t dummy0) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "BReleaseSteamPipe", 1, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(26, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
+// slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4 (HELPER FALLBACK)
 static int32_t THISCALL vt_SteamClient021_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "ConnectToGlobalUser", 2, GAMELIB_STUBCALL_KIND_FALLBACK);
   return 1;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(26, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
-static int32_t THISCALL vt_SteamClient021_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamClient021_CreateLocalUser(void *self, uint32_t dummy0, uint32_t dummy1) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "CreateLocalUser", 3, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  uint8_t argbuf[4];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
-  uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(26, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
-    if (phSteamPipe != NULL) *phSteamPipe = 0;
-    return 0;
-  }
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  uint32_t respOff = 4;
-  if (phSteamPipe != NULL && retlen >= respOff + 4) {
-    int32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
-    *phSteamPipe = outVal;
-  }
-  respOff += 4;
-  return ret;
-#endif
 }
 
-// slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
-static void THISCALL vt_SteamClient021_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
-  (void)self;
-#if defined(__x86_64__)
+// slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamClient021_ReleaseUser(void *self, uint32_t dummy0, uint32_t dummy1) {
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_OFFPATH);
-  return;
-#else
-  uint8_t argbuf[8];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hUser, 4); argOff += 4;
-  uint8_t retbuf[1]; uint32_t retlen = 0;
-  bridge_transact(26, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
-#endif
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "ReleaseUser", 4, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12
+// slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamUser(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12
+// slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamGameServer(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -19535,442 +17444,156 @@ static void THISCALL vt_SteamClient021_SetLocalIPBinding(void *self, uint32_t du
   gamelib_stubcall_note(gamelib_sc, "SteamClient021", "SetLocalIPBinding", 7, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12
+// slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamFriends(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8
+// slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamUtils(void *self, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4104];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12
+// slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamMatchmaking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 10, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12
+// slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamMatchmakingServers(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 11, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
+// slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamGenericInterface(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12
+// slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamUserStats(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12
+// slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamGameServerStats(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12
+// slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamApps(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12
+// slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamNetworking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 16, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12
+// slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamRemoteStorage(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 17, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12
+// slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamScreenshots(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 18, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -19988,34 +17611,19 @@ static void * THISCALL vt_SteamClient021_GetISteamGameSearch(void *self, int32_t
 #endif
 }
 
-// slot 20: RunFrame() -> void | __thiscall ret 0
+// slot 20: RunFrame() -> void | __thiscall ret 0 (STUB)
 static void THISCALL vt_SteamClient021_RunFrame(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "RunFrame", 20, GAMELIB_STUBCALL_KIND_OFFPATH);
-  return;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[1]; uint32_t retlen = 0;
-  bridge_transact(26, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
-#endif
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "RunFrame", 20, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 21: GetIPCCallCount() -> uint32 | __thiscall ret 0
+// slot 21: GetIPCCallCount() -> uint32 | __thiscall ret 0 (STUB)
 static uint32_t THISCALL vt_SteamClient021_GetIPCCallCount(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "GetIPCCallCount", 21, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "GetIPCCallCount", 21, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(26, 21, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  uint32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
 // slot 22: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
@@ -20025,259 +17633,95 @@ static void THISCALL vt_SteamClient021_SetWarningMessageHook(void *self, uint32_
   gamelib_stubcall_note(gamelib_sc, "SteamClient021", "SetWarningMessageHook", 22, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 23: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
+// slot 23: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0 (STUB)
 static int THISCALL vt_SteamClient021_BShutdownIfAllPipesClosed(void *self) {
-  (void)self;
-#if defined(__x86_64__)
   static volatile LONG gamelib_sc[2];
-  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "BShutdownIfAllPipesClosed", 23, GAMELIB_STUBCALL_KIND_OFFPATH);
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "SteamClient021", "BShutdownIfAllPipesClosed", 23, GAMELIB_STUBCALL_KIND_STUB);
   return 0;
-#else
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(26, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int ret; memcpy(&ret, retbuf, 4);
-  return ret;
-#endif
 }
 
-// slot 24: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12
+// slot 24: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamHTTP(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 24, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 25: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12
+// slot 25: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamController(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 25, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 26: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12
+// slot 26: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamUGC(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 26, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 27: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12
+// slot 27: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamMusic(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 27, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 28: GetISteamMusicRemote(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusicRemote*/* | __thiscall ret 12
+// slot 28: GetISteamMusicRemote(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusicRemote*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamMusicRemote(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 28, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 29: GetISteamHTMLSurface(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTMLSurface*/* | __thiscall ret 12
+// slot 29: GetISteamHTMLSurface(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTMLSurface*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamHTMLSurface(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 29, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
@@ -20302,123 +17746,45 @@ static void THISCALL vt_SteamClient021_Set_SteamAPI_CCheckCallbackRegisteredInPr
   gamelib_stubcall_note(gamelib_sc, "SteamClient021", "Set_SteamAPI_CCheckCallbackRegisteredInProcess", 32, GAMELIB_STUBCALL_KIND_STUB);
 }
 
-// slot 33: GetISteamInventory(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInventory*/* | __thiscall ret 12
+// slot 33: GetISteamInventory(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInventory*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamInventory(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 33, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 34: GetISteamVideo(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamVideo*/* | __thiscall ret 12
+// slot 34: GetISteamVideo(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamVideo*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamVideo(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 34, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
-// slot 35: GetISteamParentalSettings(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParentalSettings*/* | __thiscall ret 12
+// slot 35: GetISteamParentalSettings(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParentalSettings*/* | __thiscall ret 12 (STUB)
 static void * THISCALL vt_SteamClient021_GetISteamParentalSettings(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
   (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
 #if defined(__x86_64__)
-  void *local = resolve_iface_by_exact_version(pchVersion);
-  return local != NULL ? local : x64_null_object_for_version(pchVersion);
+  return x64_null_object_for_version(pchVersion);
 #else
-  uint8_t argbuf[4108];
-  uint32_t argOff = 0;
-  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
-  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
-  {
-    uint32_t strLen;
-    if (pchVersion == NULL) {
-      strLen = 0xFFFFFFFFu;
-      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-    } else {
-      size_t rawLen = strlen(pchVersion);
-      if (rawLen > WIRE_IN_STRING_MAX_BYTES) {
-        // 55 WR-04: never truncate -- a cut string is a DIFFERENT string (for
-        // GetAuthTicketForWebApi, a different audience identity). Send the
-        // over-limit length with no bytes; the helper refuses it and this
-        // method returns its failure value.
-        strLen = WIRE_IN_STRING_MAX_BYTES + 1u;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-      } else {
-        strLen = (uint32_t)rawLen;
-        memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
-        memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
-      }
-    }
-  }
-  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
-  if (!bridge_transact(26, 35, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
-  memcpy(&present, retbuf, 4);
-  if (present == 0) return NULL;
-  return resolve_iface_by_exact_version(pchVersion);
+  return NULL;
 #endif
 }
 
