@@ -80,3 +80,15 @@ Default Steam path) to re-run UAT 4a and 4c on the Windows box. Check:
 - Record the results on items 4a/4c and the D-UAT-18 finding in
   `.planning/milestones/v0.7-phases/21-steam-native-install/21-UAT.md`, then move this todo to
   completed.
+
+## Resolution (live gate passed 2026-11-02, real Windows)
+
+Re-ran UAT 4a/4c with Default Steam path = an empty `C:\SteamUAT` on a dev build at 7f47c64a9.
+After consent the waiting step was the "Waiting for Steam" dialog in the consent dialog's style with
+only Cancel install, and after the installer finished its copy switched to the launch-once wording
+(operator: yes to both; `gamelib.log` 05:47:38 installer launched, 05:47:47 onward D-11 polls). With
+the dialog open, Steam wrote `libraryfolders.vdf` at 05:50:26 and the depot download started by
+05:50:34 with no click; the dialog closed by itself. Cancel check on appId 228280: Cancel install
+closed the dialog (last poll 05:53:54), `libraryfolders.vdf` was restored at 05:54:04, and nothing
+was logged in the next 30 s, so no install started (C-17 holds). Recorded on 4a/4c and the D-UAT-18
+finding in 21-UAT.md. The first attempt of this re-run surfaced D-UAT-19 (native install was OFF).
