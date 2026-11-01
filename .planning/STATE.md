@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 58 (steam-bridge-multiplayer) — EXECUTING
 Plan: 4 of 37
 Status: Ready to execute
-Last activity: 2026-11-01 - Completed quick task 261101-i00: WR-05 stable GetServerDetails buffers
+Last activity: 2026-11-01 - Completed quick task 261101-iah: WR-07 legacy P2P fallback accepts only the reported, allowlisted remote
 
 Progress: [██████████] 98%
 
@@ -377,6 +377,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261101-d55 | Settings info icons made consistent: hover-only InfoIcon now renders the InfoBox iconOnly click popover (API unchanged, 0 call sites touched); PopoverComponent gains Esc-to-close + aria-expanded. | 2026-11-01 | bff0189f4 | Jest pass (11 tests); Esc helper landed inside 0608ce7ad via concurrent 59-12 commit; live click check pending | [261101-d55-make-settings-info-icons-consistent-hove](./quick/261101-d55-make-settings-info-icons-consistent-hove/) |
 | 261101-h8l | Pre-push gate green again for the 282 unpushed commits: 4 lint errors fixed, test-scope warnings 714 -> 610 (ceiling 648, no disables, ceilings unchanged), 8 dead exports resolved at source, gamepage.json committed in i18next key order. | 2026-11-01 | 3b09e3e26 | pre-push line-2 chain exit 0; 6 touched suites pass (1178 tests) | [261101-h8l-make-the-pre-push-gate-pass-so-main-can-](./quick/261101-h8l-make-the-pre-push-gate-pass-so-main-can-/) |
 | 261101-i00 | WR-05 fixed: SteamMatchMakingServers GetServerDetails returns a stable heap buffer per (request, iServer), never rewritten once returned, freed on ReleaseRequest / dup-handle reissue / abort / terminal retire (cap 1024 per request); todo closed. | 2026-11-01 | 9793f4039 | Harness pass (420 tests); build-steam-bridge both arches OK; no live title exercises the server browser | [261101-i00-fix-wr-05-per-request-iserver-stable-get](./quick/261101-i00-fix-wr-05-per-request-iserver-stable-get/) |
+| 261101-iah | WR-07 fixed: legacy P2P fallback accepts a 1202 only for the remote that 1202 reported (per-1202 FIFO filled at slot-6 drain; pump-time `g_p2p_last_remote` deleted) and only if the game sent it a P2P packet or it is a member of a lobby the game entered; unresolved remotes refused; full tables evict oldest (never accept-all); accept-once table removed. Todo closed; shim 4-report budget filed as follow-up; M-03 stays verified-with-caveats. | 2026-11-01 | 2238d27c6 | Harness pass (165 tests, 9 new p2pfb-*); build-steam-bridge both arches OK; no legacy-TCP-mode title under live test | [261101-iah-legacy-p2p-fallback-accept-only-the-repo](./quick/261101-iah-legacy-p2p-fallback-accept-only-the-repo/) |
 
 ## Deferred Items
 
