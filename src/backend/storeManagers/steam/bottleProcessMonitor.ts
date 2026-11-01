@@ -91,6 +91,7 @@ interface MonitorEntry {
   timers: Set<ReturnType<typeof setTimeout>>
   onStopped?: () => void
   onFirstMatch?: () => void
+  onUnavailable?: () => void
   /** Guards onFirstMatch to fire at most once per monitor. */
   firstMatchFired: boolean
   /** True once any game process has matched (read by launcherExited). */
@@ -140,6 +141,13 @@ export interface StartBottleProcessMonitorArgs {
    * signal lives in engine/launchDeadline.ts.
    */
   onFirstMatch?: () => void
+  /**
+   * Phase 59 UAT (G3): called once when the monitor gives up because it
+   * cannot list processes at all, before onStopped. The game may well be
+   * running, so a caller holding a launch deadline must stand it down rather
+   * than let it stop a game nobody can see.
+   */
+  onUnavailable?: () => void
 }
 
 /**
@@ -192,6 +200,24 @@ function parsePsLine(line: string): { pid: string; command: string } | null {
 }
 
 /**
+ * Phase 59 UAT (G4): `ps` is setuid root, and a sandboxed process cannot exec
+ * a setuid binary (`spawn EPERM`, seen under the UAT sandbox profiles).
+ * `pgrep -lf .` is not setuid and prints the same `pid command` lines, so it
+ * stands in when `ps` cannot spawn. The `ps` error is rethrown if both fail.
+ */
+async function processListing(): Promise<string> {
+  try {
+    return (await spawnAsync('ps', ['-axo', 'pid=,command='])).stdout
+  } catch (psError) {
+    try {
+      return (await spawnAsync('pgrep', ['-lf', '.'])).stdout
+    } catch {
+      throw psError
+    }
+  }
+}
+
+/**
  * Run one `ps` snapshot and return every pid+command whose command starts
  * with `lowerPrefix` (case-insensitive) and does not name one of Steam's
  * own client binaries.
@@ -199,7 +225,7 @@ function parsePsLine(line: string): { pid: string; command: string } | null {
 async function matchedProcesses(
   lowerPrefix: string
 ): Promise<Array<{ pid: string; command: string }>> {
-  const { stdout } = await spawnAsync('ps', ['-axo', 'pid=,command='])
+  const stdout = await processListing()
   const matches: Array<{ pid: string; command: string }> = []
   for (const line of stdout.split('\n')) {
     const parsed = parsePsLine(line)
@@ -375,6 +401,19 @@ async function runPollLoop(
           LogPrefix.Steam
         )
         sendTerminalDoneOnce(appId, entry)
+        if (entry.onUnavailable) {
+          try {
+            entry.onUnavailable()
+          } catch (error) {
+            logWarning(
+              [
+                `bottleProcessMonitor [${appId}]: onUnavailable callback threw`,
+                error
+              ],
+              LogPrefix.Steam
+            )
+          }
+        }
         // Review WR-05: the give-up path must also stop the helper.
         fireStoppedOnce(appId, entry)
         clearEntry(appId, entry)
@@ -488,6 +527,7 @@ export function startBottleProcessMonitor(
     pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
     onStopped,
     onFirstMatch,
+    onUnavailable,
     kind = 'bottled-steam'
   } = args
 
@@ -512,6 +552,7 @@ export function startBottleProcessMonitor(
     timers: new Set(),
     onStopped,
     onFirstMatch,
+    onUnavailable,
     firstMatchFired: false,
     everMatched: false,
     matchedAt: 0,

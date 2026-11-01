@@ -26,6 +26,7 @@ export type DeadlineCancelReason =
   | 'launcher-exited'
   | 'launch-error'
   | 'superseded'
+  | 'monitor-unavailable'
 
 export interface LaunchDeadline {
   readonly appId: string

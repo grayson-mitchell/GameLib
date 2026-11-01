@@ -868,6 +868,53 @@ describe('bottleProcessMonitor.ts', () => {
       jest.useRealTimers()
     })
 
+    test('ps give-up fires onUnavailable once, before onStopped (59-UAT G3)', async () => {
+      const order: string[] = []
+      mockedSpawnAsync.mockRejectedValue(new Error('spawn EPERM'))
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge',
+        onUnavailable: () => order.push('unavailable'),
+        onStopped: () => order.push('stopped')
+      })
+
+      for (let i = 0; i < 25; i++) {
+        await jest.advanceTimersByTimeAsync(1500)
+        await flushMicrotasks()
+      }
+      expect(order).toEqual(['unavailable', 'stopped'])
+      jest.useRealTimers()
+    })
+
+    test('ps that cannot spawn falls back to pgrep and still matches the game (59-UAT G4)', async () => {
+      const onFirstMatch = jest.fn()
+      const onUnavailable = jest.fn()
+      mockedSpawnAsync.mockImplementation(async (cmd: string) => {
+        if (cmd === 'ps') throw new Error('spawn EPERM')
+        return { code: 0, stdout: `${matchedPsLine}\n`, stderr: '' }
+      })
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge',
+        onFirstMatch,
+        onUnavailable
+      })
+
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(onFirstMatch).toHaveBeenCalledTimes(1)
+      expect(onUnavailable).not.toHaveBeenCalled()
+      expect(mockedSpawnAsync).toHaveBeenCalledWith('pgrep', ['-lf', '.'])
+      stopBottleProcessMonitor('38410')
+      jest.useRealTimers()
+    })
+
     test('a throwing onStopped is caught on the launcherExited path', async () => {
       const onStopped = jest.fn(() => {
         throw new Error('boom')

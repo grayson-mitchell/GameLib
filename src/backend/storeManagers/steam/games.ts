@@ -4014,14 +4014,17 @@ export default class SteamGame implements Game {
    * would hide the problem the user needs to see.
    */
   private async onBridgeLaunchDeadline(
-    clearLaunchRecord: () => void
+    clearLaunchRecord: () => void,
+    armedSelection: EngineSelection | undefined
   ): Promise<void> {
     const { stopBottleProcessMonitor } = await import('./bottleProcessMonitor')
     const { clearEngineSelection, getEngineSelection } =
       await import('./engine/engineRegistry')
     const { engineLogLabel } = await import('./engine/engineTypes')
     const { LAUNCH_DEADLINE_MS } = await import('./engine/launchDeadline')
-    const sel = getEngineSelection(this.appId)
+    // Phase 59 UAT (G5): the monitor's onStopped can clear the registry entry
+    // before the deadline fires, so fall back to the selection seen at arm time.
+    const sel = getEngineSelection(this.appId) ?? armedSelection
     logWarning(
       `SteamGame: appId ${this.appId} launch deadline fired (${sel ? engineLogLabel(sel) : 'engine=crossover'}); stopping the bottle`,
       LogPrefix.Steam
@@ -4722,7 +4725,7 @@ export default class SteamGame implements Game {
       } else {
         deadline = armLaunchDeadline({
           appId: this.appId,
-          onDeadline: () => this.onBridgeLaunchDeadline(clearLaunchRecord)
+          onDeadline: () => this.onBridgeLaunchDeadline(clearLaunchRecord, sel)
         })
       }
 
@@ -4903,6 +4906,7 @@ export default class SteamGame implements Game {
           bottleDir: getBottleDir(bridgeBottleSettings.wineCrossoverBottle),
           kind: 'bridge',
           onFirstMatch: () => deadline?.cancel('first-match'),
+          onUnavailable: () => deadline?.cancel('monitor-unavailable'),
           onStopped: () => {
             clearLaunchRecord()
             stopBridgeHelper(this.appId)

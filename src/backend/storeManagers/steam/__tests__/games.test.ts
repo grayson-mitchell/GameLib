@@ -13031,5 +13031,45 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       await new SteamGame(ID).launch({} as any)
       expect(__activeLaunchDeadlineCount()).toBe(1)
     })
+
+    it('the monitor giving up stands the deadline down: a game nobody can see is never stopped (59-UAT G3)', async () => {
+      await timerSafe(async () => {
+        let onUnavailable: (() => void) | undefined
+        ;(startBottleProcessMonitor as jest.Mock).mockImplementation(
+          (a: any) => {
+            onUnavailable = a.onUnavailable
+            return { launcherExited: jest.fn() }
+          }
+        )
+        expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+        expect(__activeLaunchDeadlineCount()).toBe(1)
+        onUnavailable?.()
+        expect(__activeLaunchDeadlineCount()).toBe(0)
+        await jest.advanceTimersByTimeAsync(200_000)
+        expect(killBridgeBottleWineServer).not.toHaveBeenCalled()
+      })
+    })
+
+    it('a deadline firing after the registry was cleared logs the engine chosen at arm time (59-UAT G5)', async () => {
+      await timerSafe(async () => {
+        ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
+          pinnedDecision('cx-missing')
+        )
+        ;(startBottleProcessMonitor as jest.Mock).mockReturnValue({
+          launcherExited: jest.fn()
+        })
+        expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+        clearEngineSelection(ID)
+        await jest.advanceTimersByTimeAsync(180_000)
+        const warnings = (
+          jest.requireMock('backend/logger').logWarning as jest.Mock
+        ).mock.calls.map((c) => String(c[0]))
+        const fired = warnings.find((m) =>
+          m.startsWith(`SteamGame: appId ${ID} launch deadline fired`)
+        )
+        expect(fired).toContain('engine=pinned')
+        expect(fired).not.toContain('engine=crossover')
+      })
+    })
   })
 })

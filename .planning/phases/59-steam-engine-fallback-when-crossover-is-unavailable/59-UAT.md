@@ -20,15 +20,15 @@ source: [59-13-PLAN.md]
 
 ### 1. Healthy CrossOver launch stays on CrossOver
 expected: (D-07, D-14) With a healthy CrossOver and no profile, launching an installed bridge title shows no badge and no download, the launch log has `engine=crossover build=26.3.0.39832 reason=cx-healthy`, and there is no untested-build line.
-result: pending
+result: pass — Hoard (63000): `SteamEngine: appId 63000 uses engine=crossover build=26.3.0.39832 reason=cx-healthy`, no badge, no download.
 
 ### 2. No-CrossOver install downloads the built-in engine
 expected: (D-01, D-02, D-05) Under no-crossover.sb, installing a small not-yet-installed bridge title (operator's choice) shows "Downloading built-in engine (N%)"; `~/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-<appid>/cxbottle.conf` has the seven minimal lines and `drive_c/users/crossover` exists.
-result: pending
+result: issue — bottle correct (cxbottle.conf has the 7 minimal lines, drive_c/users/crossover exists, Hoard installed after Steam re-sign-in), but the progress label showed only "Downloading built-in engine (0%)" throughout; see gaps G1, G2.
 
 ### 3. No-CrossOver launch runs on the built-in engine
 expected: (D-04, D-06, D-11) Under no-crossover.sb the launch toast reads "CrossOver not found — using built-in engine", the "Built-in engine (best-effort)" badge shows, the no-CrossOver note is dismissible and stays dismissed after reopening the page, and the game keeps running past 180 s. Make a save in this session.
-result: pending
+result: issue — Hoard launched on the built-in engine (`engine=pinned … version=11.20 reason=cx-missing`), reached its main menu, badge "Built-in engine (best-effort)" and the Get-CrossOver panel showed; but no toast appeared (G6) and at 180 s GameLib showed "HOARD did not start within 180 seconds" and stopped the running game (G3, G4, G5). Retest after the fix.
 
 ### 4. CrossOver adopts the fallback-made bottle
 expected: (D-03, D-07) Restart without the profile and launch the same title: it runs on CrossOver, cxbottle.conf gains a Timestamp line, `current_dxvk-macOS` is gone, the item 3 save is present, and the badge is gone.
@@ -72,4 +72,9 @@ Undo the throwaway bottle's backdate by re-running spike-060 `backdate.py`, or d
 
 ## Gaps
 
-None recorded yet.
+- G1 (item 2, major): the engine-download label never shows real progress. The backend logged 5% → 100% (09:44:12–09:44:24) and ensureBuiltInEngineForInstall sends `engine-download` with the rounded percent, but the operator saw only 0%. Ruled out: GlobalState.handleGameStatus (updates on context change), hasStatus deps, sendGameStatusUpdate (no dedupe). Also: verifying/extracting emit `percentage` undefined → 0, so the label resets to 0% for the ~40 s extract + DXVK install and still says "Downloading". Needs a phase label (verifying/extracting/setting up) and the cause of the missing updates.
+- G2 (item 2, minor): the Steam sign-in check runs after the engine download and bottle creation. With an expired Steam session the bottle was built (09:44:12–09:45:05) and only then was the install refused (`install refused, no authenticated Steam session (logon-rejected)`, 09:45:09). The auth precondition should run first.
+- G3 (item 3, major): the launch deadline kills a running game when the process monitor has given up. bottleProcessMonitor logged `giving up after 20 consecutive ps failures` at 09:50:31, then at 09:52:59 `launch deadline fired … (no game process seen)` stopped the bottle while Hoard was at its main menu. When process detection is unavailable the deadline must stand down, not fire.
+- G4 (item 3, major for UAT): bottleProcessMonitor spawns only `ps`, which is setuid root; a sandboxed process cannot exec setuid binaries (`spawn EPERM` under both no-crossover.sb and nolicence.sb). `/usr/bin/pgrep` is not setuid and runs under both profiles. Fall back to pgrep when ps cannot spawn.
+- G5 (item 3, minor): the deadline log says `launch deadline fired (engine=crossover)` on a launch whose decision was `engine=pinned`.
+- G6 (item 3, minor): the "CrossOver not found — using built-in engine" toast is only a macOS notification (`notify(): "HOARD" handed to tauri-plugin-notification (delivery not confirmable)`); none was seen. Operator to check whether GameLib notifications show at all (native install).
