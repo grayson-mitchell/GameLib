@@ -298,10 +298,13 @@ Run by plan 58-34 Task 1, 2026-11-01, before any dev restart or launch. Session 
 | PC5 | `pre-session-gamelib.log` (6810 B) and `pre-session-gamelib.log.old` (28998 B) copied. Note: the already-running dev app auto-restarted at 14:12:31 on the rebuild, so `gamelib.log` had already rotated once before the copy |
 | PC6 | Operator replied "PC6 ready". Verified by the runner: the earlier un-teed dev app (pid 19719) is gone; exactly 1 `target/debug/gamelib-shell` (pid 74561, started 14:16:10), sidecar node pid 74820 running `build/main/sidecar.js`; `terminal.log` in the session dir is non-empty and growing (57 lines). `stat -f %m build/main/sidecar.js` = 1793495768 (dev's own `build:sidecar` at start rewrote it), older than the app start and newer than the helper mtime 1793495530 |
 | PC7 | built and installed shim sha256 equal (`8bde93f7...abd0a4`); `steam_api64.dll.gamelib-orig` present |
-| PC8 | pending operator |
-| PC9 | pending operator |
+| PC8 | Operator, verbatim: "PC8 - yes" |
+| PC9 | Operator, verbatim: "PC9 - we have alread cheecked this (multiple times) yes to all". Interpreted as Steam on, Wine on, CrossOver on. Stated as previously checked, not re-read from System Settings at run time |
 | PC10 | `objdump -h ... \| grep -c '\.bind'` = 0 |
 | PC11 | `pnpm bridge-census --multiplayer 3205720 --log pre-session-gamelib.log` exit 0, printed ` host=0 client=0` (`unverified`, no HELLO) |
 | PC12 | `user.reg` Screenmanager: Fullscreen mode = 1, width 0xd70 (3440), height 0x5a0 (1440); fix file carries `CX_GRAPHICS_BACKEND=dxvk`. Applied-line check and mode-switch literals are measured at launch |
 
 Baselines before launch 1: HELLO count in `gamelib.log` = 0. PLAYERLOG counts: `Server connection state: Started` 0, `Starting FishySteamworks client connection` 0, `Entered lobby` 1, `Switching to resolution` 0, `could not switch resolution` 0.
+
+
+Launch 1 pre-launch: one gamelib-shell (pid 74561, same as PC6), H_before = 0, no Schedule I or helper process running, delimiter `=== GATE LAUNCH 1 — 2026-11-01T01:18:06Z ===` written to terminal.log (line 58).
