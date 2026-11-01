@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 57 context gathered
-last_updated: "2026-11-01T21:19:26.666Z"
+last_updated: "2026-11-01T21:21:45.312Z"
 last_activity: 2026-11-01
 progress:
   total_phases: 9
   completed_phases: 7
   total_plans: 204
-  completed_plans: 198
+  completed_plans: 199
   percent: 78
 ---
 
@@ -72,11 +72,11 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 57 (opt-in-known-fix-sharing-via-relay) — EXECUTING
-Plan: 8 of 12
+Plan: 9 of 12
 Status: Ready to execute
 Last activity: 2026-11-01
 
-Progress: [██████████] 97%
+Progress: [██████████] 98%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -216,6 +216,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 58 P37 | operator-gated | 2 tasks | 1 files |
 | Phase 57 P02 | 15m | 3 tasks | 8 files |
 | Phase 57 P05 | 10m | 2 tasks | 4 files |
+| Phase 57 P08 | 10m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -309,6 +310,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 58]: D-08a: Raft legacy-P2P joins scored by 1202+Accept+game P2P send/read; DRM trace uses peer ordinals not SteamID64
 - [Phase 58]: 58-24 close-out (2026-11-01): DRM mode Raft PASS (58-08-LIVE-GATE); TCP mode Schedule I gate Verdict FAIL — Direction A (Mac hosts) no working invite path (overlay invite dialog call reaches Mac Steam but shows nothing; friends-list Invite to Game and Join Game missing), Direction B (PC hosts) PASS with the 333 GameLobbyJoinRequested_t relay proven live, path unknown (58-22-LIVE-GATE). serialized005 not needed (M-06); D-12 no-op per D-16; D-13 unchanged; x86 multiplayer deferred. Open gaps in 58-22-LIVE-GATE.md section 5. Phase 58 NOT done — next: `/gsd-plan-phase 58 --gaps`.
 - [Phase 59-06]: Fallback bottle cxbottle.conf written last; DXVK restore runs on CrossOver (59-01)
+- [Phase 57]: 57-08: CEG report precedes forced-bridge return; no Mach-O retry seam (D-18)
 
 ### Pending Todos
 
@@ -476,7 +478,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-01T21:19:26.659Z
+Last session: 2026-11-01T21:21:40.456Z
 Stopped at: Phase 57 context gathered
 Resume file: None
 
