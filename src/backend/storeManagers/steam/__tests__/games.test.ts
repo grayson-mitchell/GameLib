@@ -579,6 +579,17 @@ jest.mock('../installLocation', () => ({
     jest.requireActual('../installLocation').UnsafeInstalldirError
 }))
 
+// D-UAT-19 (quick 261102-dkw): the delegated steam://install branch now gates
+// on ensureSteamClientReady too. Default every test to a ready client so the
+// hand-off tests below keep exercising openExternal; a test that needs another
+// verdict overrides this in its own setup (describe/it beforeEach runs later).
+beforeEach(() => {
+  ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({
+    status: 'ready',
+    ready: true
+  })
+})
+
 // ── aborthandler mock — controls the AbortController create/call/delete
 // lifecycle for the native depot-download path (D-02).
 jest.mock('backend/utils/aborthandler/aborthandler', () => ({
@@ -3930,6 +3941,51 @@ describe('SteamGame.install() — GAME-02', () => {
     await badGame.install({} as any)
     expect(startInstallPollingSpy).not.toHaveBeenCalled()
   })
+
+  // D-UAT-19 (quick 261102-dkw): with no Steam client to handle steam://,
+  // Windows showed a bare "no app handles this link" error and the poller
+  // kept the game "installing" ~30 min. The hand-off is now gated on the
+  // client, like the native path.
+  it.each(['needs-install', 'needs-launch'] as const)(
+    'D-UAT-19: a %s client defers to guided setup — no openExternal, no poller, no finished entry',
+    async (status) => {
+      ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({
+        status,
+        ready: false
+      })
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(ensureSteamClientReady).toHaveBeenCalledWith(APP_ID)
+      expect(result).toEqual({ status: 'done', deferredToSetup: true })
+      expect(shellOpenExternal).not.toHaveBeenCalled()
+      expect(startInstallPollingSpy).not.toHaveBeenCalled()
+    }
+  )
+
+  it('D-UAT-19: a client check that reports an error is an install error, not a hand-off', async () => {
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({
+      status: 'needs-install',
+      ready: false,
+      error: 'boom'
+    })
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(result).toEqual({ status: 'error', error: 'boom' })
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(startInstallPollingSpy).not.toHaveBeenCalled()
+  })
+
+  it('D-UAT-19: a ready client still hands off — ensureSteamClientReady runs before openExternal', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    const readyOrder = (ensureSteamClientReady as jest.Mock).mock
+      .invocationCallOrder[0]
+    const openOrder = shellOpenExternal.mock.invocationCallOrder[0]
+    expect(readyOrder).toBeLessThan(openOrder)
+  })
 })
 
 // ── steam-startup-resume-crash (2026-07-18) / D-04 softened ────────────────
@@ -4065,7 +4121,9 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
 
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
     expect(downloadSteamDepots).not.toHaveBeenCalled()
-    expect(ensureSteamClientReady).not.toHaveBeenCalled()
+    // D-UAT-19: OFF still checks the client (a hand-off with no client to
+    // handle steam:// is the bug), but never resolves a depot target.
+    expect(ensureSteamClientReady).toHaveBeenCalledWith(APP_ID)
     expect(resolveSteamInstallTarget).not.toHaveBeenCalled()
     expect(result).toEqual({ status: 'done' })
   })

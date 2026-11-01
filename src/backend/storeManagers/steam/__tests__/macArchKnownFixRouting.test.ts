@@ -229,6 +229,10 @@ const env = () =>
 
 beforeEach(() => {
   store.clear()
+  // D-UAT-19: the delegated steam://install branch gates on the client too.
+  ;(
+    jest.requireMock('../clientSetup').ensureSteamClientReady as jest.Mock
+  ).mockResolvedValue({ status: 'ready', ready: true })
   ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
     ok: true,
     client: {},
