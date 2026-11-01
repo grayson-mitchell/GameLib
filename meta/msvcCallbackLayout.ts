@@ -160,7 +160,10 @@ export const USER_STATS_RECEIVED_LAYOUT = {
   x64: { gameID: 0, eResult: 8, steamID: 16, size: 24 },
   x86: { gameID: 0, eResult: 8, steamID: 16, size: 24 },
   mac: { gameID: 0, eResult: 8, steamID: 12, size: 20 }
-} as const satisfies Record<string, UserStatsReceivedLayout>
+} as const
+
+// Compile-time shape check (kept off the export: ts-prune reads `satisfies` / `Record` there as export names).
+USER_STATS_RECEIVED_LAYOUT satisfies Record<string, UserStatsReceivedLayout>
 
 // ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export type UserStatsTriple =
@@ -911,7 +914,10 @@ export const CALLBACK_LAYOUTS = {
       }
     }
   }
-} as const satisfies Record<string, CallbackLayoutEntry>
+} as const
+
+// Compile-time shape check (kept off the export for the same ts-prune reason as USER_STATS_RECEIVED_LAYOUT).
+CALLBACK_LAYOUTS satisfies Record<string, CallbackLayoutEntry>
 
 const CALLBACK_LAYOUT_TRIPLES: readonly {
   triple: UserStatsTriple
