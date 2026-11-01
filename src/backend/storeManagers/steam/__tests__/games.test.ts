@@ -148,11 +148,14 @@ import {
 } from 'node:fs'
 import { join as realJoin } from 'node:path'
 import { tmpdir } from 'node:os'
+import { reportDetectedFix } from 'backend/knownFixReport'
 import {
   createAbortController,
   callAbortController,
   deleteAbortController
 } from 'backend/utils/aborthandler/aborthandler'
+
+jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 jest.mock('backend/logger', () => ({
@@ -2637,6 +2640,12 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         ([id, value]) => id === CEG_APP_ID && value?.bridge?.drm === 'ceg'
       )
       expect(drmPersistCall).toBeDefined()
+      expect(reportDetectedFix).toHaveBeenCalledWith({
+        appId: CEG_APP_ID,
+        key: 'drm',
+        op: 'add',
+        detector: 'ceg'
+      })
 
       // Breaker armed: the next launch skips the bridge.
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
@@ -2673,6 +2682,40 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       expect(sendFrontendMessage).not.toHaveBeenCalledWith(
         'steamBridgeSetupRequired',
         expect.anything()
+      )
+      // Phase 57: a forced-bridge title still reports (Pitfall 6).
+      expect(reportDetectedFix).toHaveBeenCalledWith({
+        appId: CEG_APP_ID,
+        key: 'drm',
+        op: 'add',
+        detector: 'ceg'
+      })
+    })
+
+    it('does not report when drm is null (parsed, not CEG)', async () => {
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'already-placed',
+        shimPath: RESOLVED_EXE_PATH,
+        drm: null
+      })
+
+      await new SteamGame(CEG_APP_ID).launch({} as any)
+
+      expect(reportDetectedFix).not.toHaveBeenCalled()
+    })
+
+    it('still resolves the launch when the report hook never settles', async () => {
+      ;(reportDetectedFix as jest.Mock).mockImplementation(
+        () => new Promise(() => undefined)
+      )
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'already-placed',
+        shimPath: RESOLVED_EXE_PATH,
+        drm: CEG_DRM
+      })
+
+      await expect(new SteamGame(CEG_APP_ID).launch({} as any)).resolves.toBe(
+        false
       )
     })
   })
@@ -5679,6 +5722,12 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         }
       )
       expect(library.get(APP_ID)?.is_installed).not.toBe(true)
+      expect(reportDetectedFix).toHaveBeenCalledWith({
+        appId: APP_ID,
+        key: 'drm',
+        op: 'add',
+        detector: 'ceg'
+      })
 
       // The breaker is armed: a later install() of the same appId is routed
       // away from the bridge (failed-this-session -> bottled Steam).
@@ -5711,6 +5760,12 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       )
       expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
       expect(library.get(APP_ID)?.is_installed).toBe(true)
+      expect(reportDetectedFix).toHaveBeenCalledWith({
+        appId: APP_ID,
+        key: 'drm',
+        op: 'add',
+        detector: 'ceg'
+      })
     })
 
     it("drm null clears a persisted drm 'ceg' and completes normally", async () => {

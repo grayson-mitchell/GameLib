@@ -37,6 +37,7 @@ import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { parseMetacriticScore } from 'common/metacriticScore'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { reportDetectedFix } from 'backend/knownFixReport'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
 import { getFileSize, sendGameStatusUpdate } from 'backend/utils'
@@ -2600,6 +2601,16 @@ export default class SteamGame implements Game {
     if (drm === undefined) return null
     writeBridgeDrmVerdict(this.appId, drm ? 'ceg' : undefined)
     if (drm?.kind !== 'ceg') return null
+    // Phase 57 detector 2: before the forced-bridge return so a forced title
+    // still reports (Pitfall 6); covers installBridgeGame and launchBridgeGame;
+    // retried naturally on the next install or launch via the client's sent
+    // record (D-16/D-18). Fire-and-forget, never awaited.
+    reportDetectedFix({
+      appId: this.appId,
+      key: 'drm',
+      op: 'add',
+      detector: 'ceg'
+    })
     if (readBridgeVerdict(this.appId)?.userRoute === 'bridge') {
       logWarning(
         `SteamGame: ${caller} found Steam CEG DRM for appId ${this.appId} (${drm.markers.join(', ')}) but the user forced the bridge -- continuing`,
