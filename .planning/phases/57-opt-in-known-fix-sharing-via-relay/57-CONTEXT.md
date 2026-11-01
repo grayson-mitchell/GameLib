@@ -96,6 +96,18 @@ a PR carrying the correct `steam/<appId>-steam.json`; with the setting off nothi
   network error, timeout or 5xx is not marked; the next time the detector fires (the next
   install or launch) it retries. There is **no background retry queue**.
 
+### Refinements after research (operator-confirmed 2026-11-02)
+- **D-17:** Refines D-16: the client treats relay **408 and 429 as retryable** (not marked).
+  Every other 4xx is marked so it is never resent.
+- **D-18:** The Mach-O reports (32-bit add, removal) are **best effort, one shot**:
+  `verifyMacArchGroundTruth` fires once per install, so a failed send waits for a reinstall.
+  No pending-report store and no launch-time retry. Only the CEG report retries naturally.
+- **D-19:** The payload **drops `title`**. It carries appId, store, key, value, op and the
+  GameLib version only. The relay looks up the title from Steam (D-14), and D-09's help text
+  says so.
+- **D-20:** A PR the operator **closed unmerged** suppresses later reports for the same
+  appId+key+op. They are counted in relay state and never reopen it or open a new PR.
+
 ### Claude's Discretion
 - KV vs D1 for relay state; exact rate-limit numbers; the PR title, body and labels (it
   should cite the detector and the GameLib version, and show the repeat-report count).
