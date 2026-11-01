@@ -38,3 +38,7 @@ Live gate on the Mac host with the PC peer: send the invite from the main menu, 
 ## Related
 
 `2026-11-01-invite-dialog-with-lobby-0-refuses-every-invite.md`. Lobby 0 is what makes the first menu press fail.
+
+## Status (2026-11-01)
+
+The spec change is now recorded as D-17 in `.planning/phases/58-steam-bridge-multiplayer/58-CONTEXT.md` (quick 261101-t66), and the next bridge live gate inherits it. No code change was needed: the lobby-0 fix `6ab500d6a` makes the send succeed, and `bridgeCensus.ts` scores `host=` from the game's `AcceptConnection`. What remains is the live gate in `## Verify`, so this todo stays in pending/.
