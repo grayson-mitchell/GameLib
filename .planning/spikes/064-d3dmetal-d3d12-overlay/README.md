@@ -83,7 +83,18 @@ pipeline-format fix, which NotProton's shim supplies.
 - **Workaround not tried:** forcing the game or D3DMetal onto a BGRA8 swapchain would sidestep the
   mismatch but costs the game its 10-bit output.
 
-**Open:** NotProton's licence; DXMT and WineD3D-GL paths; HDR (`RGBA16Float`) titles; Manor Lords
+**Licence (checked 2026-11-02):** the shim is `overlay-shim/overlay_shim.m` in
+NotProtonNot/NotProton (one 1,058-line Objective-C file, last changed `0c798e714`, 2026-10-29). It
+has no per-file header, and the repo `NOTICE` lists only `lsteamclient` (Steamworks SDK licence),
+`steam-shim` (BSD-3), fonts, Sparkle and the JsonCpp/cJSON files as exceptions, so the shim is under
+the repo's **GPLv3**. That is compatible with GameLib's `GPL-3.0-only` (`package.json`). Shipping it
+or porting it carries the usual GPL duties: keep NotProton's copyright and licence notice, and
+provide the source (GameLib's public repo covers that). Its header says it covers more than the
+10-bit fix: "fixes HDR stuff and Metal 4" (D3DMetal 4 commits frames on `MTL4CommandQueue`, which
+Valve's overlay does not hook; run 2 logged `ensure_mtl4_queue_hooks`). Prefer vendoring the source
+and building it in GameLib's pipeline over shipping NotProton's prebuilt binary.
+
+**Open:** DXMT and WineD3D-GL paths; HDR (`RGBA16Float`) titles; Manor Lords
 through GameLib's normal stub launch with the bridge attached.
 
 ## Artifacts
