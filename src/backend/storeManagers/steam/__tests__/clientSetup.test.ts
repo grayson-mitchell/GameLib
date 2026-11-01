@@ -12,8 +12,12 @@
  *    (jest.requireMock, mirrors games.test.ts's own envMock pattern) so the
  *    D-10 Windows/macOS/Linux installer branches can each be exercised
  *    within the same file.
+ *  - the win32 cross-gate describe delegates the automocked
+ *    isSteamClientInstalled to jest.requireActual('../user'), so the D-10 and
+ *    D-11 gates are driven through the REAL Windows install probe.
  */
 import { existsSync, mkdirSync } from 'graceful-fs'
+import { join } from 'path'
 import { GlobalConfig } from 'backend/config'
 import { downloadFile, openUrlOrFile, spawnAsync } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
@@ -148,6 +152,74 @@ describe('clientSetup.ts', () => {
       expect(result.ready).toBe(false)
       expect(result.error).toContain('Invalid appId')
       expect(mockedIsSteamClientInstalled).not.toHaveBeenCalled()
+      expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('on win32 the D-10 and D-11 gates share the Default Steam path root (quick 261101-whs)', () => {
+    const root = 'C:\\SteamUAT'
+    const programFilesSteam = 'C:\\Program Files (x86)\\Steam\\Steam.exe'
+    let savedPlatform: NodeJS.Platform
+
+    const existsOnly = (...present: string[]) =>
+      mockedExistsSync.mockImplementation((p: string) => present.includes(p))
+
+    beforeEach(() => {
+      savedPlatform = process.platform
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true
+      })
+      const ActualSteamUser =
+        jest.requireActual<typeof import('../user')>('../user').SteamUser
+      mockedIsSteamClientInstalled.mockImplementation(() =>
+        ActualSteamUser.isSteamClientInstalled()
+      )
+      mockedGlobalConfigGet.mockReturnValue({
+        getSettings: () => ({ defaultSteamPath: root })
+      })
+    })
+
+    afterEach(() => {
+      Object.defineProperty(process, 'platform', {
+        value: savedPlatform,
+        configurable: true
+      })
+    })
+
+    it('steam.exe under the root but no libraryfolders.vdf -> needs-launch', async () => {
+      existsOnly(join(root, 'steam.exe'))
+
+      const result = await ensureSteamClientReady('123')
+
+      expect(result).toEqual({ status: 'needs-launch', ready: false })
+      expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
+        'steamClientSetupRequired',
+        { appName: '123', reason: 'launch-once' }
+      )
+    })
+
+    it('only the old Program Files Steam.exe exists -> needs-install', async () => {
+      existsOnly(programFilesSteam)
+
+      const result = await ensureSteamClientReady('123')
+
+      expect(result).toEqual({ status: 'needs-install', ready: false })
+      expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
+        'steamClientSetupRequired',
+        { appName: '123', reason: 'install' }
+      )
+    })
+
+    it('steam.exe and libraryfolders.vdf under the root -> ready, no frontend message', async () => {
+      existsOnly(
+        join(root, 'steam.exe'),
+        join(root, 'steamapps', 'libraryfolders.vdf')
+      )
+
+      const result = await ensureSteamClientReady('123')
+
+      expect(result).toEqual({ status: 'ready', ready: true })
       expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
     })
   })
