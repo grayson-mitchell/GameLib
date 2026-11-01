@@ -268,6 +268,14 @@
 // Every legitimate client (shim, backend probe, invite control client)
 // sends HELLO immediately after connecting, so this only reaps squatters.
 #define GL_AUTH_DEADLINE_SECONDS RECV_TIMEOUT_SECONDS
+// 58 WR-03: per-stall bound on a blocking send() in the single serving thread.
+// The largest response (BRIDGE_DISPATCH_RESP_SCRATCH_BYTES + header, ~61 KB)
+// fits in an empty loopback send buffer (macOS default 128 KB), and every
+// legitimate client reads each reply before its next request, so a send only
+// blocks when a peer has let replies pile up unread. That peer is dropped
+// after this stall (send_all's EAGAIN path) instead of freezing every other
+// connection and the Steam pump for 5 s.
+#define GL_SEND_TIMEOUT_USEC 250000
 
 // T-51-03: the longest digit-string this helper accepts as --appid. Real
 // Steam AppIDs are well under this; it exists purely to reject nonsense
@@ -3011,9 +3019,19 @@ static void gl_serve_forever(int listenFd) {
         int fl = fcntl(c, F_GETFL, 0);
         if (fl >= 0) fcntl(c, F_SETFL, fl & ~O_NONBLOCK);
         struct timeval sndTimeout;
-        sndTimeout.tv_sec = RECV_TIMEOUT_SECONDS;
-        sndTimeout.tv_usec = 0;
+        sndTimeout.tv_sec = 0;
+        sndTimeout.tv_usec = GL_SEND_TIMEOUT_USEC; // 58 WR-03
         setsockopt(c, SOL_SOCKET, SO_SNDTIMEO, &sndTimeout, sizeof sndTimeout);
+        // 58 WR-03: guarantee the "one reply fits in an empty buffer"
+        // premise above instead of trusting the net.inet.tcp.sendspace
+        // default. Only ever raises the buffer.
+        {
+          int sndBuf = 0;
+          socklen_t sbLen = sizeof sndBuf;
+          int wantBuf = 2 * (LENGTH_FIELD_BYTES + MAX_FRAME_BYTES);
+          if (getsockopt(c, SOL_SOCKET, SO_SNDBUF, &sndBuf, &sbLen) == 0 && sndBuf < wantBuf)
+            setsockopt(c, SOL_SOCKET, SO_SNDBUF, &wantBuf, sizeof wantBuf);
+        }
         int free_i = -1;
         for (int i = 0; i < GL_MAX_CONNS; i++) {
           if (g_conns[i].fd < 0) { free_i = i; break; }
