@@ -296,7 +296,7 @@ Run by plan 58-34 Task 1, 2026-11-01, before any dev restart or launch. Session 
 | PC3 | `26.3.0.39832` |
 | PC4 | HEAD `588dd9a59`; `git status --short native src meta public/fixes` clean. `BRIDGE_NEWEST` = `6be6009a2`, epoch 1793495264 (public/fixes/3205720-steam.json). The pre-existing artifacts were older (helper 1793493148, shim 1793493150, sidecar.js 1793495038), so the full rebuild was run in order (`gen-vtables`, `build-steam-bridge`, `vite build`, `build:sidecar-sea`), all exit 0. New mtimes: helper 1793495530, shim 1793495531, sidecar.js 1793495543, all newer than `BRIDGE_NEWEST`. `strings` helper `connection table full` = 1; `grep -c 'raise requested' build/main/sidecar.js` = 1 |
 | PC5 | `pre-session-gamelib.log` (6810 B) and `pre-session-gamelib.log.old` (28998 B) copied. Note: the already-running dev app auto-restarted at 14:12:31 on the rebuild, so `gamelib.log` had already rotated once before the copy |
-| PC6 | pending operator. A dev app (pid 19719, started 14:12:31, no `tee`) is running and must be stopped and restarted under `tee -a` |
+| PC6 | Operator replied "PC6 ready". Verified by the runner: the earlier un-teed dev app (pid 19719) is gone; exactly 1 `target/debug/gamelib-shell` (pid 74561, started 14:16:10), sidecar node pid 74820 running `build/main/sidecar.js`; `terminal.log` in the session dir is non-empty and growing (57 lines). `stat -f %m build/main/sidecar.js` = 1793495768 (dev's own `build:sidecar` at start rewrote it), older than the app start and newer than the helper mtime 1793495530 |
 | PC7 | built and installed shim sha256 equal (`8bde93f7...abd0a4`); `steam_api64.dll.gamelib-orig` present |
 | PC8 | pending operator |
 | PC9 | pending operator |
