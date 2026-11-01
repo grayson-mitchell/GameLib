@@ -253,7 +253,12 @@ export interface SteamEngineOption {
   isPreviousPin: boolean
 }
 
-/** Phase 58 Plan 31 (M-01): one friend in the invite picker. Ordinal is the helper's own index; no SteamID. */
+/**
+ * Phase 58 Plan 31 (M-01): one friend in the invite picker. No SteamID.
+ * `ordinal` is an opaque helper token bound to the list call that produced it
+ * (58 WR-04): pass it back unchanged; a token from an older list is refused
+ * as `bad-ordinal`.
+ */
 export interface BridgeFriend {
   ordinal: number
   name: string

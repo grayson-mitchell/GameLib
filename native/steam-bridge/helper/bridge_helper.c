@@ -2256,6 +2256,16 @@ static uint64_t g_invite_last_log_ms = 0;
 static uint64_t g_friend_snapshot[GL_INVITE_FRIENDS_MAX];
 static uint32_t g_friend_snapshot_n = 0;
 static int g_friend_snapshot_taken = 0;
+/* 58 WR-04: the "ordinal" on the wire is an opaque per-snapshot token,
+ * (generation << GL_INVITE_TOKEN_IDX_BITS) | index. Every list call bumps the
+ * generation, so an invite carrying a token from an older rendered list is
+ * refused as bad-ordinal instead of indexing a re-ordered snapshot and
+ * inviting someone else. No SteamID leaves the helper. */
+#define GL_INVITE_TOKEN_IDX_BITS 8u
+#define GL_INVITE_TOKEN_IDX_MASK ((1u << GL_INVITE_TOKEN_IDX_BITS) - 1u)
+#define GL_INVITE_TOKEN_GEN_MASK (0xFFFFFFFFu >> GL_INVITE_TOKEN_IDX_BITS)
+_Static_assert(GL_INVITE_FRIENDS_MAX <= (1u << GL_INVITE_TOKEN_IDX_BITS), "friend index must fit the token");
+static uint32_t g_friend_snapshot_gen = 0;
 
 static uint64_t gl_invite_now_ms(void) {
   struct timespec ts;
@@ -2316,7 +2326,7 @@ static void gl_mms_lobby_log(int ci, const uint8_t *args, uint32_t argLen) {
 }
 
 /* Slot 13. Response: [u32 count] then per friend
- * [u32 ordinal][u8 online][u8 playingThisApp][u16 nameLen][name]. Returns 0 on
+ * [u32 ordinal (58 WR-04: per-snapshot token)][u8 online][u8 playingThisApp][u16 nameLen][name]. Returns 0 on
  * success, 1 when Mac Steam's friends API is unavailable. */
 static int gl_invite_list_friends(void *friendsSelf, uint8_t *out, uint32_t cap, uint32_t *outLen) {
   typedef int (*Count_t)(void *, int);
@@ -2340,6 +2350,10 @@ static int gl_invite_list_friends(void *friendsSelf, uint8_t *out, uint32_t cap,
   total = cnt(friendsSelf, 0x04 /* k_EFriendFlagImmediate */);
   g_friend_snapshot_n = 0;
   g_friend_snapshot_taken = 1;
+  // 58 WR-04: a new snapshot invalidates every token handed out before it.
+  // Generation 0 is skipped so a bare positional index is never valid.
+  g_friend_snapshot_gen = (g_friend_snapshot_gen + 1u) & GL_INVITE_TOKEN_GEN_MASK;
+  if (g_friend_snapshot_gen == 0) g_friend_snapshot_gen = 1;
   for (int i = 0; i < total && n < GL_INVITE_FRIENDS_MAX; i++) {
     uint64_t id = byIdx(friendsSelf, i, 0x04);
     const char *name = g_bd_flat_SteamFriends017_GetFriendPersonaName(friendsSelf, id);
@@ -2347,7 +2361,7 @@ static int gl_invite_list_friends(void *friendsSelf, uint8_t *out, uint32_t cap,
     size_t nl = 0;
     uint8_t online, playing = 0;
     uint16_t nl16;
-    uint32_t ord = n;
+    uint32_t ord = (g_friend_snapshot_gen << GL_INVITE_TOKEN_IDX_BITS) | n;
     if (id == 0) continue;
     if (name != NULL) {
       while (nl < GL_INVITE_NAME_MAX + 1 && name[nl] != '\0') nl++;
@@ -2387,6 +2401,8 @@ static int gl_invite_list_friends(void *friendsSelf, uint8_t *out, uint32_t cap,
 /* Slot 14. Returns the result code for [i32 result]. */
 static int32_t gl_invite_send(void *mmSelf, uint32_t ordinal) {
   int ok;
+  uint32_t idx = ordinal & GL_INVITE_TOKEN_IDX_MASK;
+  uint32_t gen = ordinal >> GL_INVITE_TOKEN_IDX_BITS;
   if (g_invite_lobby == 0) {
     logts("INVITE", "refused reason=no-pending");
     return GL_INVITE_NO_PENDING;
@@ -2395,12 +2411,13 @@ static int32_t gl_invite_send(void *mmSelf, uint32_t ordinal) {
     logts("INVITE", "refused reason=expired");
     return GL_INVITE_EXPIRED;
   }
-  if (!g_friend_snapshot_taken || ordinal >= g_friend_snapshot_n) {
+  // 58 WR-04: a token from a superseded snapshot is refused, never re-indexed.
+  if (!g_friend_snapshot_taken || gen != g_friend_snapshot_gen || idx >= g_friend_snapshot_n) {
     logts("INVITE", "refused reason=bad-ordinal");
     return GL_INVITE_BAD_ORDINAL;
   }
   ok = (mmSelf != NULL && g_bd_flat_SteamMatchMaking009_InviteUserToLobby != NULL &&
-        (g_bd_flat_SteamMatchMaking009_InviteUserToLobby(mmSelf, g_invite_lobby, g_friend_snapshot[ordinal]) & 0xff))
+        (g_bd_flat_SteamMatchMaking009_InviteUserToLobby(mmSelf, g_invite_lobby, g_friend_snapshot[idx]) & 0xff))
            ? 1
            : 0;
   logts_f("INVITE", "sent ok=%d", ok);

@@ -534,7 +534,8 @@ int main(int argc, char **argv) {
           uint16_t nl;
           memcpy(&o, body + off, 4);
           memcpy(&nl, body + off + 6, 2);
-          printf("f ord=%u online=%u playing=%u name=%.*s\n", o, body[off + 4], body[off + 5], (int)nl,
+          /* 58 WR-04: the ordinal is a (generation << 8) | index token. */
+          printf("f idx=%u gen=%u online=%u playing=%u name=%.*s\n", o & 0xffu, o >> 8, body[off + 4], body[off + 5], (int)nl,
                  (const char *)body + off + 8);
           off += 8u + nl;
         }
@@ -548,7 +549,7 @@ int main(int argc, char **argv) {
       memcpy(arg, &lobby, 8);
       gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
       gl_invite_list_friends((void *)1, body, sizeof body, &fn);
-      r = gl_invite_send((void *)2, 2);
+      r = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 2u);
       printf("r=%d calls=%d lobbyok=%d targetok=%d\n", r, g_inv_calls, g_inv_lobby == lobby, g_inv_target == k_fid[2]);
       return 0;
     }
@@ -561,9 +562,20 @@ int main(int argc, char **argv) {
       gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
       a3 = gl_invite_send((void *)2, 0); /* no snapshot yet */
       gl_invite_list_friends((void *)1, body, sizeof body, &fn);
-      a4 = gl_invite_send((void *)2, 3);
+      a4 = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 3u);
+      {
+        /* 58 WR-04: a token from a superseded snapshot, a bare index and a
+         * current token. Only the last one reaches InviteUserToLobby. */
+        uint32_t stale = (g_friend_snapshot_gen << 8) | 0u;
+        int32_t s1, s2, s3;
+        gl_invite_list_friends((void *)1, body, sizeof body, &fn);
+        s1 = gl_invite_send((void *)2, stale);
+        s2 = gl_invite_send((void *)2, 0);
+        s3 = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 0u);
+        printf("stale=%d bare=%d current=%d target0=%d\n", s1, s2, s3, g_inv_target == k_fid[0]);
+      }
       g_invite_born_ms = gl_invite_now_ms() - 601000ull;
-      a2 = gl_invite_send((void *)2, 0);
+      a2 = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 0u);
       printf("nopending=%d expired=%d nosnap=%d badord=%d calls=%d\n", a1, a2, a3, a4, g_inv_calls);
       {
         uint8_t st = 9;

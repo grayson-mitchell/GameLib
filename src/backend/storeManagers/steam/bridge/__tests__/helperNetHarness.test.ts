@@ -286,9 +286,9 @@ describeDarwinOnly(
       expect(out).toContain('rc=0')
       expect(out).toContain('leak=0')
       expect(out).toContain('count=3')
-      expect(out).toContain('f ord=0 online=1 playing=0 name=Alice')
-      expect(out).toContain('f ord=1 online=0 playing=0 name=Bob')
-      expect(out).toContain('f ord=2 online=1 playing=1 name=Cara')
+      expect(out).toContain('f idx=0 gen=1 online=1 playing=0 name=Alice')
+      expect(out).toContain('f idx=1 gen=1 online=0 playing=0 name=Bob')
+      expect(out).toContain('f idx=2 gen=1 online=1 playing=1 name=Cara')
       expect(lines(err, /INVITE +friends n=3$/)).toHaveLength(1)
       expect(err).not.toMatch(/[0-9]{17}/)
     })
@@ -299,15 +299,17 @@ describeDarwinOnly(
       expect(lines(err, /INVITE +sent ok=1$/)).toHaveLength(1)
     })
 
-    test('invite-refusals: no-pending, expired, bad-ordinal, bad length', () => {
+    test('invite-refusals: no-pending, expired, bad-ordinal, stale snapshot token, bad length', () => {
       const { out, err } = runBoth('invite-refusals')
+      // 58 WR-04: a token from an earlier list and a bare index are refused.
+      expect(out).toContain('stale=-3 bare=-3 current=1 target0=1')
       expect(out).toContain(
-        'nopending=-1 expired=-2 nosnap=-3 badord=-3 calls=0'
+        'nopending=-1 expired=-2 nosnap=-3 badord=-3 calls=1'
       )
       expect(out).toContain('badlen status=1')
       expect(lines(err, /reason=no-pending$/)).toHaveLength(1)
       expect(lines(err, /reason=expired$/)).toHaveLength(1)
-      expect(lines(err, /reason=bad-ordinal$/)).toHaveLength(2)
+      expect(lines(err, /reason=bad-ordinal$/)).toHaveLength(4)
     })
 
     test('control-unauth: slots 13 and 14 refuse an unauthenticated connection', () => {
