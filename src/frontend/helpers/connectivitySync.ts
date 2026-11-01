@@ -8,7 +8,7 @@ import type { ConnectivitySnapshot, ConnectivityStatus } from 'common/types'
  */
 export const CONNECTIVITY_RESYNC_MS = 20_000
 
-export interface ConnectivityView {
+interface ConnectivityView {
   status: ConnectivityStatus
   retryIn: number
 }
