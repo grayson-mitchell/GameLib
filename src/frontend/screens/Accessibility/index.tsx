@@ -31,6 +31,8 @@ const Accessibility = React.memo(function Accessibility() {
     setAllTilesInColor,
     titlesAlwaysVisible,
     setTitlesAlwaysVisible,
+    cleanTiles,
+    setCleanTiles,
     setPrimaryFontFamily,
     setSecondaryFontFamily,
     disableDialogBackdropClose,
@@ -229,6 +231,22 @@ const Accessibility = React.memo(function Accessibility() {
               title={t(
                 'accessibility.titles_always_visible',
                 'Always show titles in library'
+              )}
+            />
+          </label>
+        </span>
+
+        <span className="setting">
+          <label className={classNames('toggleWrapper', { isRTL: isRTL })}>
+            <ToggleSwitch
+              htmlId="setCleanTiles"
+              value={cleanTiles}
+              handleChange={() => {
+                setCleanTiles(!cleanTiles)
+              }}
+              title={t(
+                'accessibility.clean_tiles',
+                'Clean tiles (hide the button bar; click a tile to open its page)'
               )}
             />
           </label>

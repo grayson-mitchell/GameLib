@@ -8,6 +8,7 @@
         "fonts": "Fonts",
         "title": "Appearance",
         "titles_always_visible": "Always show titles in library",
+        "clean_tiles": "Clean tiles (hide the button bar; click a tile to open its page)",
         "zoom": "Zoom"
     },
     "add_game": "Add Game",

@@ -194,6 +194,7 @@ interface StateProps {
   secondaryFontFamily: string
   allTilesInColor: boolean
   titlesAlwaysVisible: boolean
+  cleanTiles: boolean
   sidebarCollapsed: boolean
   activeController: string
   connectivity: { status: ConnectivityStatus; retryIn: number }
@@ -545,6 +546,7 @@ class GlobalState extends PureComponent<Props> {
       ),
     allTilesInColor: configStore.get('allTilesInColor', false),
     titlesAlwaysVisible: configStore.get('titlesAlwaysVisible', false),
+    cleanTiles: configStore.get('cleanTiles', false),
     activeController: '',
     connectivity: { status: 'offline', retryIn: 0 },
     showInstallModal: {
@@ -628,6 +630,11 @@ class GlobalState extends PureComponent<Props> {
   setTitlesAlwaysVisible = (value: boolean) => {
     configStore.set('titlesAlwaysVisible', value)
     this.setState({ titlesAlwaysVisible: value })
+  }
+
+  setCleanTiles = (value: boolean) => {
+    configStore.set('cleanTiles', value)
+    this.setState({ cleanTiles: value })
   }
 
   setDisableDialogBackdropClose = (value: boolean) => {
@@ -2188,6 +2195,7 @@ class GlobalState extends PureComponent<Props> {
           setZoomPercent: this.setZoomPercent,
           setAllTilesInColor: this.setAllTilesInColor,
           setTitlesAlwaysVisible: this.setTitlesAlwaysVisible,
+          setCleanTiles: this.setCleanTiles,
           setSideBarCollapsed: this.setSideBarCollapsed,
           setPrimaryFontFamily: this.setPrimaryFontFamily,
           setSecondaryFontFamily: this.setSecondaryFontFamily,

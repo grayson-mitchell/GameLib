@@ -148,6 +148,8 @@ export interface ContextType {
   setAllTilesInColor: (value: boolean) => void
   titlesAlwaysVisible: boolean
   setTitlesAlwaysVisible: (value: boolean) => void
+  cleanTiles: boolean
+  setCleanTiles: (value: boolean) => void
   setSideBarCollapsed: (value: boolean) => void
   sidebarCollapsed: boolean
   activeController: string

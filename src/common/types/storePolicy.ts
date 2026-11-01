@@ -97,6 +97,7 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
     'actionsFontFamily',
     'allTilesInColor',
     'titlesAlwaysVisible',
+    'cleanTiles',
     'disableDialogBackdropClose',
     'disableAnimations',
     'language',
