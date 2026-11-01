@@ -52,6 +52,17 @@ const SteamClientSetup = () => {
 
   const [phase, setPhase] = useState<Phase>('consent')
   const [error, setError] = useState<string>()
+  // The last NON-ready verdict steamClientSetupRecheck returned (LD-3). Two
+  // channels tell this component what it is waiting for: the store's `reason`
+  // (set by the backend `steamClientSetupRequired` push, which fires on every
+  // non-ready recheck — clientSetup.ts — and can flip `reason`, re-running the
+  // reset effect) and this, the recheck's own return value. The direct channel
+  // keeps the copy right whether or not that push re-render lands: on the 4a
+  // re-run the copy stayed on the installer wording while the log showed
+  // needs-launch polls every 3s.
+  const [liveStatus, setLiveStatus] = useState<
+    'needs-install' | 'needs-launch'
+  >()
 
   const pollRef = useRef<ReturnType<typeof setInterval>>()
   // Ref (not state) — the retry-install payload doesn't need to trigger a
@@ -64,6 +75,7 @@ const SteamClientSetup = () => {
   useEffect(() => {
     if (!isOpen || !appName) return
     setError(undefined)
+    setLiveStatus(undefined)
     gameInfoRef.current = null
     setPhase(reason === 'launch-once' ? 'waiting' : 'consent')
     void window.api
@@ -106,11 +118,21 @@ const SteamClientSetup = () => {
       return
     }
 
+    // An in-flight recheck can resolve AFTER this effect was torn down (cancel,
+    // or a new session reopening). Its verdict belongs to the old session: it
+    // must neither leak a stale live status into the new one nor — worse —
+    // dispatch the install the user just cancelled (C-17).
+    let cancelled = false
+
     const poll = () => {
       void window.api
         .steamClientSetupRecheck(appName)
         .then((result) => {
-          if (result.status !== 'ready') return
+          if (cancelled) return
+          if (result.status !== 'ready') {
+            setLiveStatus(result.status)
+            return
+          }
           if (pollRef.current) {
             clearInterval(pollRef.current)
             pollRef.current = undefined
@@ -141,6 +163,7 @@ const SteamClientSetup = () => {
     pollRef.current = setInterval(poll, RECHECK_POLL_INTERVAL_MS)
 
     return () => {
+      cancelled = true
       if (pollRef.current) {
         clearInterval(pollRef.current)
         pollRef.current = undefined
@@ -177,6 +200,11 @@ const SteamClientSetup = () => {
       setPhase('error')
     }
   }
+
+  // LD-3: the live recheck verdict wins; until the first one lands, fall back
+  // to what the session opened with.
+  const waitingStatus =
+    liveStatus ?? (reason === 'launch-once' ? 'needs-launch' : 'needs-install')
 
   return (
     <Dialog
@@ -247,7 +275,7 @@ const SteamClientSetup = () => {
           </DialogHeader>
           <DialogContent>
             <p>
-              {reason === 'launch-once'
+              {waitingStatus === 'needs-launch'
                 ? t(
                     'clientSetup.launchOnce.message',
                     "Steam is installed but hasn't been opened yet. Open Steam once — GameLib will continue the download automatically."
