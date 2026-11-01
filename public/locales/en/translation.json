@@ -528,6 +528,7 @@
         },
         "preferSystemLibs": "Custom Wine versions (Wine-GE, Wine-Lutris) are shipped with their library dependencies. By enabling this option, these shipped libraries will be ignored and Wine will load system libraries instead. Warning! Issues may occur if dependencies are not met.",
         "steam_native_install": "Downloads Steam games in GameLib with real progress and cancel. When off, Steam installs games that have a Mac version. Games without one always download in GameLib.",
+        "steam_native_install_other": "Downloads Steam games in GameLib with real progress and cancel. When off, GameLib hands installs to the Steam client.",
         "steam_path": {
             "info": "The folder where Steam is installed. GameLib reads your Steam libraries, download progress and connection status from here, and uses it to add non-Steam games to Steam. On Linux, it is also where GameLib finds Proton versions."
         },
