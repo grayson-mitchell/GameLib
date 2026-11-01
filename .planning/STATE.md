@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 58 (steam-bridge-multiplayer) — EXECUTING
 Plan: 4 of 37
 Status: Ready to execute
-Last activity: 2026-10-31
+Last activity: 2026-11-01 - Completed quick task 261101-i00: WR-05 stable GetServerDetails buffers
 
 Progress: [██████████] 98%
 
@@ -376,6 +376,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261101-d0h | Archived the 113 oldest Quick Tasks Completed rows (112 in bfeccdc21, 1 more when this row was added) from STATE.md to quick/COMPLETED-INDEX.md, verbatim and in order; STATE keeps the newest 20. | 2026-11-01 | bfeccdc21 | 757 rows conserved; moved rows byte-identical | [261101-d0h-archive-old-quick-task-rows-to-completed](./quick/261101-d0h-archive-old-quick-task-rows-to-completed/) |
 | 261101-d55 | Settings info icons made consistent: hover-only InfoIcon now renders the InfoBox iconOnly click popover (API unchanged, 0 call sites touched); PopoverComponent gains Esc-to-close + aria-expanded. | 2026-11-01 | bff0189f4 | Jest pass (11 tests); Esc helper landed inside 0608ce7ad via concurrent 59-12 commit; live click check pending | [261101-d55-make-settings-info-icons-consistent-hove](./quick/261101-d55-make-settings-info-icons-consistent-hove/) |
 | 261101-h8l | Pre-push gate green again for the 282 unpushed commits: 4 lint errors fixed, test-scope warnings 714 -> 610 (ceiling 648, no disables, ceilings unchanged), 8 dead exports resolved at source, gamepage.json committed in i18next key order. | 2026-11-01 | 3b09e3e26 | pre-push line-2 chain exit 0; 6 touched suites pass (1178 tests) | [261101-h8l-make-the-pre-push-gate-pass-so-main-can-](./quick/261101-h8l-make-the-pre-push-gate-pass-so-main-can-/) |
+| 261101-i00 | WR-05 fixed: SteamMatchMakingServers GetServerDetails returns a stable heap buffer per (request, iServer), never rewritten once returned, freed on ReleaseRequest / dup-handle reissue / abort / terminal retire (cap 1024 per request); todo closed. | 2026-11-01 | 9793f4039 | Harness pass (420 tests); build-steam-bridge both arches OK; no live title exercises the server browser | [261101-i00-fix-wr-05-per-request-iserver-stable-get](./quick/261101-i00-fix-wr-05-per-request-iserver-stable-get/) |
 
 ## Deferred Items
 
