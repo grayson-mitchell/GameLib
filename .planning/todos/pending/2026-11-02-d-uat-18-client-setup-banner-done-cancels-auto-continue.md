@@ -19,3 +19,10 @@ shouldn't it be a standard window like the previous one."
 Needs a design call (hence `ready: human`): at minimum relabel to "Cancel"/"Cancel install" and say
 GameLib is waiting; possibly keep it non-modal but styled as the same family as the consent dialog.
 Keep C-17's guarantee that a dismissed prompt never starts a download later.
+
+## Also seen 2026-11-02 (4a re-run): banner copy goes stale
+
+After the installer finished, the banner still read "Installing the Steam client" while GameLib was
+actually waiting on D-11 (Steam installed, never launched; `gamelib.log` polled "installed but never
+launched" every 3s from 03:08:58). Nothing told the operator to start Steam. The banner should switch
+to the launch-once wording when the recheck moves from needs-install to needs-launch.

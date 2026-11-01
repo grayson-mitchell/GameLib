@@ -60,3 +60,12 @@ Default Steam path) to re-run UAT 4a on the Windows box. Check:
   startGuidedClientInstall error with exit code 1. Try again prompts again.
 - Record the result on item 4a in `.planning/milestones/v0.7-phases/21-steam-native-install/21-UAT.md`,
   then move this todo to completed.
+
+## Resolution (live gate passed 2026-11-02, real Windows)
+
+Re-ran UAT 4a with Default Steam path = an empty folder. After consent the UAC prompt appeared. Yes
+opened Valve's installer (`gamelib.log` 03:06:49 and 03:08:52, "launched"). No logged
+`powershell exited with code 1 ... The operation was canceled` (03:07:57), and the banner showed the
+error with Try again, which prompted again. After the install and Steam's first launch and sign-in,
+the download started with no click (03:12:20, `ensureSteamClientReady took 2ms`). 4a recorded PASS
+in 21-UAT.md.
