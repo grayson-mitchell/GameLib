@@ -1,0 +1,895 @@
+2026-11-01T22:05:34Z game=8704 gameoverlayui=[]
+no window matched schedule i free
+2026-11-01T22:05:37Z game=8704 gameoverlayui=[]
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12058 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/002.png status=0
+2026-11-01T22:05:41Z game=8704 gameoverlayui=[8809 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 30; cd /Users/graysonmitchell/Projects/GameLib/.planning/spikes/062-bridge-overlay-attach && grep -v CX_ENV logs/run4/run.log | grep -E '"'"'==|game window|started|waiting'"'"' | cut -c1-160; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-230; grep '"'"'GameOverlay'"'"' "$HOME/Library/Application Support/Steam/logs/console_log.txt" | tail -1 | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-a140-cwd ]
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12058 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/003.png status=0
+2026-11-01T22:05:44Z game=8704 gameoverlayui=[8809 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 30; cd /Users/graysonmitchell/Projects/GameLib/.planning/spikes/062-bridge-overlay-attach && grep -v CX_ENV logs/run4/run.log | grep -E '"'"'==|game window|started|waiting'"'"' | cut -c1-160; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-230; grep '"'"'GameOverlay'"'"' "$HOME/Library/Application Support/Steam/logs/console_log.txt" | tail -1 | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-a140-cwd 8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/004.png status=0
+2026-11-01T22:05:47Z game=8704 gameoverlayui=[8809 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 30; cd /Users/graysonmitchell/Projects/GameLib/.planning/spikes/062-bridge-overlay-attach && grep -v CX_ENV logs/run4/run.log | grep -E '"'"'==|game window|started|waiting'"'"' | cut -c1-160; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-230; grep '"'"'GameOverlay'"'"' "$HOME/Library/Application Support/Steam/logs/console_log.txt" | tail -1 | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-a140-cwd 8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/005.png status=0
+2026-11-01T22:05:50Z game=8704 gameoverlayui=[8809 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 30; cd /Users/graysonmitchell/Projects/GameLib/.planning/spikes/062-bridge-overlay-attach && grep -v CX_ENV logs/run4/run.log | grep -E '"'"'==|game window|started|waiting'"'"' | cut -c1-160; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-230; grep '"'"'GameOverlay'"'"' "$HOME/Library/Application Support/Steam/logs/console_log.txt" | tail -1 | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-a140-cwd 8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/006.png status=0
+2026-11-01T22:05:53Z game=8704 gameoverlayui=[8809 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 30; cd /Users/graysonmitchell/Projects/GameLib/.planning/spikes/062-bridge-overlay-attach && grep -v CX_ENV logs/run4/run.log | grep -E '"'"'==|game window|started|waiting'"'"' | cut -c1-160; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-230; grep '"'"'GameOverlay'"'"' "$HOME/Library/Application Support/Steam/logs/console_log.txt" | tail -1 | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-a140-cwd 8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/007.png status=0
+2026-11-01T22:05:57Z game=8704 gameoverlayui=[8809 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 30; cd /Users/graysonmitchell/Projects/GameLib/.planning/spikes/062-bridge-overlay-attach && grep -v CX_ENV logs/run4/run.log | grep -E '"'"'==|game window|started|waiting'"'"' | cut -c1-160; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-230; grep '"'"'GameOverlay'"'"' "$HOME/Library/Application Support/Steam/logs/console_log.txt" | tail -1 | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-a140-cwd 8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/008.png status=0
+2026-11-01T22:06:00Z game=8704 gameoverlayui=[8809 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 30; cd /Users/graysonmitchell/Projects/GameLib/.planning/spikes/062-bridge-overlay-attach && grep -v CX_ENV logs/run4/run.log | grep -E '"'"'==|game window|started|waiting'"'"' | cut -c1-160; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-230; grep '"'"'GameOverlay'"'"' "$HOME/Library/Application Support/Steam/logs/console_log.txt" | tail -1 | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-a140-cwd 8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/009.png status=0
+2026-11-01T22:06:03Z game=8704 gameoverlayui=[8809 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 30; cd /Users/graysonmitchell/Projects/GameLib/.planning/spikes/062-bridge-overlay-attach && grep -v CX_ENV logs/run4/run.log | grep -E '"'"'==|game window|started|waiting'"'"' | cut -c1-160; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-230; grep '"'"'GameOverlay'"'"' "$HOME/Library/Application Support/Steam/logs/console_log.txt" | tail -1 | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-a140-cwd 8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/010.png status=0
+2026-11-01T22:06:07Z game=8704 gameoverlayui=[8809 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 30; cd /Users/graysonmitchell/Projects/GameLib/.planning/spikes/062-bridge-overlay-attach && grep -v CX_ENV logs/run4/run.log | grep -E '"'"'==|game window|started|waiting'"'"' | cut -c1-160; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-230; grep '"'"'GameOverlay'"'"' "$HOME/Library/Application Support/Steam/logs/console_log.txt" | tail -1 | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-a140-cwd 8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/011.png status=0
+2026-11-01T22:06:10Z game=8704 gameoverlayui=[8809 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 30; cd /Users/graysonmitchell/Projects/GameLib/.planning/spikes/062-bridge-overlay-attach && grep -v CX_ENV logs/run4/run.log | grep -E '"'"'==|game window|started|waiting'"'"' | cut -c1-160; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-230; grep '"'"'GameOverlay'"'"' "$HOME/Library/Application Support/Steam/logs/console_log.txt" | tail -1 | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-a140-cwd 8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/012.png status=0
+2026-11-01T22:06:13Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/013.png status=0
+2026-11-01T22:06:17Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/014.png status=0
+2026-11-01T22:06:20Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=26 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12058 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/015.png status=0
+2026-11-01T22:06:23Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=26 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12058 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/016.png status=0
+2026-11-01T22:06:26Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=26 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12058 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/017.png status=0
+2026-11-01T22:06:30Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=26 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12058 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/018.png status=0
+2026-11-01T22:06:33Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/019.png status=0
+2026-11-01T22:06:36Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/020.png status=0
+2026-11-01T22:06:40Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/021.png status=0
+2026-11-01T22:06:43Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/022.png status=0
+2026-11-01T22:06:46Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/023.png status=0
+2026-11-01T22:06:49Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/024.png status=0
+2026-11-01T22:06:53Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/025.png status=0
+2026-11-01T22:06:56Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/026.png status=0
+2026-11-01T22:06:59Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/027.png status=0
+2026-11-01T22:07:03Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/028.png status=0
+2026-11-01T22:07:06Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/029.png status=0
+2026-11-01T22:07:09Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/030.png status=0
+2026-11-01T22:07:13Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/031.png status=0
+2026-11-01T22:07:16Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12061 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/032.png status=0
+2026-11-01T22:07:19Z game=8704 gameoverlayui=[8842 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 8764 -steampid 40643 -manuallyclearframes 0 -gameid 3205720 ]
+window id=12065 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12064 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12063 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12061 owner=Schedule I Free Sample.exe pid=8764 layer=26 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12062 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12058 owner=Schedule I Free Sample.exe pid=8764 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12058 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run4/shots/033.png status=0
+2026-11-01T22:07:22Z game gone, stopping

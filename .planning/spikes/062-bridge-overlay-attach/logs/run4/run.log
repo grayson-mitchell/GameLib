@@ -1,0 +1,43 @@
+2026-11-01T22:05:34Z == spike 062 run4 overlayui=0 shim=1 steampid=40643
+2026-11-01T22:05:34Z helper pid=8679 port=51405
+2026-11-01T22:05:34Z CX_ENV=DYLD_INSERT_LIBRARIES='/Users/graysonmitchell/Library/Application Support/notproton/overlay-shim.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib' SteamOverlayGameId=3205720 SteamGameId=3205720 SteamAppId=3205720 NOTPROTON_OVERLAY_SHIM='/Users/graysonmitchell/Library/Application Support/notproton/overlay-shim.dylib'
+2026-11-01T22:05:34Z wine wrapper pid=8704
+2026-11-01T22:05:36Z game window pid=8764
+  PID  PPID COMM
+ 8764     1 C:\Program Files (x86)\Steam\steamapps\common\Schedule I Demo\Schedule I Free Sample.exe
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/49c5e90ef431555ead73d7708900f2cbee5b00607aa9dafb5ae2509a18891c58/steamloader.dylib.aot
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/98514ab721332332f2e87068a6e7fa85d660778777adfef14b2edb540d2867db/gameoverlayrenderer.dylib.aot
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/d06409e8cc843efa4a32b2a7ad4e336b649e31fd985b586add01d2585fc7768a/overlay-shim.dylib.aot
+Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib
+Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib
+Support/notproton/overlay-shim.dylib
+2026-11-01T22:05:40Z waiting for the game to exit; press Shift+Tab in game, then quit it
+2026-11-01T22:07:21Z wine wrapper exited
+   8 overlay_shim image_added: overlay text 0x208653000-0x20867a000
+   5 overlay_shim image_added: overlay text 0x208652000-0x208679000
+   3 overlay_shim ensure_queue_hooks: AGXG17XFamilyCommandQueue hooks=2
+   3 overlay_shim ensure_device_hooks: AGXG17DDevice hooks=4
+   3 overlay_shim ensure_command_buffer_hooks: AGXG17XFamilyCommandBuffer hooks=1 overlay_commit=missing
+   2 overlay_shim_load: pid=8704 exe=wineloader layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=9458 exe=UnityCrashHandler64.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=8768 exe=UnityCrashHandler64.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=8764 exe=Schedule I Free Sample.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=8756 exe=rpcss.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=8750 exe=winedevice.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=8748 exe=svchost.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=8746 exe=plugplay.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=8744 exe=explorer.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=8742 exe=winedevice.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=8738 exe=services.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=8735 exe=winemenubuilder.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=8733 exe=wineboot.exe layer_hooks=3 overlay=present
+   1 overlay_shim record_overlay_pipeline: overlay pipeline 0x7faeba10e000 format BGRA8Unorm_sRGB
+   1 overlay_shim record_overlay_pipeline: overlay pipeline 0x7faeba106e00 format BGRA8Unorm
+   1 overlay_shim record_overlay_pipeline: overlay pipeline 0x7faeba103800 format BGR10A2Unorm
+   1 overlay_shim record_overlay_pipeline: overlay pipeline 0x7faeba101600 format RGBA16Float
+   1 overlay_shim image_added: overlay text 0x108ea8000-0x108ecf000
+   1 overlay_shim hook_set_pixel_format: layer=WineMetalLayer format=80 (BGRA8Unorm) overlay_pipeline=present
+   1 overlay_shim hook_set_colorspace: layer=WineMetalLayer colorspace=kCGColorSpaceSRGB
+   1 overlay_shim ensure_encoder_hooks: AGXG17XFamilyRenderContext hooks=2
+2026-11-01T22:07:21Z restored cfgs, stopped helper
+operator: overlay drew fine again, clicks worked (no gameoverlayui started by harness)

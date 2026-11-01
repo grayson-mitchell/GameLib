@@ -1,0 +1,334 @@
+overlay_shim image_added: overlay text 0x108ea8000-0x108ecf000
+overlay_shim_load: pid=8704 exe=wineloader layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=8704 exe=wineloader layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=8733 exe=wineboot.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=8735 exe=winemenubuilder.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=8738 exe=services.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=8742 exe=winedevice.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=8744 exe=explorer.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=8746 exe=plugplay.exe layer_hooks=3 overlay=present
+overlay_shim ensure_device_hooks: AGXG17DDevice hooks=4
+overlay_shim ensure_queue_hooks: AGXG17XFamilyCommandQueue hooks=2
+overlay_shim ensure_command_buffer_hooks: AGXG17XFamilyCommandBuffer hooks=1 overlay_commit=missing
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=8748 exe=svchost.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=8750 exe=winedevice.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=8756 exe=rpcss.exe layer_hooks=3 overlay=present
+overlay_shim ensure_device_hooks: AGXG17DDevice hooks=4
+overlay_shim ensure_queue_hooks: AGXG17XFamilyCommandQueue hooks=2
+overlay_shim ensure_command_buffer_hooks: AGXG17XFamilyCommandBuffer hooks=1 overlay_commit=missing
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=8764 exe=Schedule I Free Sample.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=8768 exe=UnityCrashHandler64.exe layer_hooks=3 overlay=present
+overlay_shim ensure_device_hooks: AGXG17DDevice hooks=4
+overlay_shim ensure_queue_hooks: AGXG17XFamilyCommandQueue hooks=2
+overlay_shim ensure_command_buffer_hooks: AGXG17XFamilyCommandBuffer hooks=1 overlay_commit=missing
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=4194304"
+    "memorysetup-bucket-allocator-block-count=1"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=4194304"
+    "memorysetup-profiler-bucket-allocator-block-count=1"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=4194304"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=262144"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gfx=262144"
+warn:  D3D11CoreCreateDevice: Adapter is not a DXVK adapter
+info:  Game: Schedule I Free Sample.exe
+info:  DXVK: v1.10.3-20230507-async (macOS)
+info:  Built-in extension providers:
+info:    Win32 WSI
+info:    OpenVR
+info:    OpenXR
+info:  OpenVR: could not open registry key, status 2
+info:  OpenVR: Failed to locate module
+info:  Enabled instance extensions:
+info:    VK_KHR_get_surface_capabilities2
+info:    VK_KHR_surface
+info:    VK_KHR_win32_surface
+info:  D3D11CoreCreateDevice: Probing D3D_FEATURE_LEVEL_11_1
+info:  D3D11CoreCreateDevice: Probing D3D_FEATURE_LEVEL_11_0
+info:  D3D11CoreCreateDevice: Using feature level D3D_FEATURE_LEVEL_11_0
+info:  Device properties:
+info:    Device name:     : Apple M5 Ultra
+info:    Driver version   : 0.2.2018
+info:  Enabled device extensions:
+info:    VK_EXT_4444_formats
+info:    VK_EXT_extended_dynamic_state
+info:    VK_EXT_host_query_reset
+info:    VK_EXT_robustness2
+info:    VK_EXT_shader_demote_to_helper_invocation
+info:    VK_EXT_shader_stencil_export
+info:    VK_EXT_shader_viewport_index_layer
+info:    VK_EXT_transform_feedback
+info:    VK_EXT_vertex_attribute_divisor
+info:    VK_KHR_create_renderpass2
+info:    VK_KHR_depth_stencil_resolve
+info:    VK_KHR_driver_properties
+info:    VK_KHR_image_format_list
+info:    VK_KHR_sampler_mirror_clamp_to_edge
+info:    VK_KHR_shader_float_controls
+info:    VK_KHR_swapchain
+info:    VK_KHR_timeline_semaphore
+info:  Device features:
+info:    robustBufferAccess                     : 1
+info:    fullDrawIndexUint32                    : 1
+info:    imageCubeArray                         : 1
+info:    independentBlend                       : 1
+info:    geometryShader                         : 1
+info:    tessellationShader                     : 1
+info:    sampleRateShading                      : 1
+info:    dualSrcBlend                           : 1
+info:    logicOp                                : 0
+info:    multiDrawIndirect                      : 1
+info:    drawIndirectFirstInstance              : 1
+info:    depthClamp                             : 1
+info:    depthBiasClamp                         : 1
+info:    fillModeNonSolid                       : 1
+info:    depthBounds                            : 0
+info:    multiViewport                          : 1
+info:    samplerAnisotropy                      : 1
+info:    textureCompressionBC                   : 1
+info:    occlusionQueryPrecise                  : 1
+info:    pipelineStatisticsQuery                : 1
+info:    vertexPipelineStoresAndAtomics         : 0
+info:    fragmentStoresAndAtomics               : 1
+info:    shaderImageGatherExtended              : 1
+info:    shaderStorageImageExtendedFormats      : 0
+info:    shaderStorageImageReadWithoutFormat    : 1
+info:    shaderStorageImageWriteWithoutFormat   : 1
+info:    shaderClipDistance                     : 1
+info:    shaderCullDistance                     : 1
+info:    shaderFloat64                          : 0
+info:    shaderInt64                            : 1
+info:    variableMultisampleRate                : 0
+info:  VK_EXT_4444_formats
+info:    formatA4R4G4B4                         : 1
+info:    formatA4B4G4R4                         : 1
+info:  VK_EXT_custom_border_color
+info:    customBorderColors                     : 0
+info:    customBorderColorWithoutFormat         : 0
+info:  VK_EXT_depth_clip_enable
+info:    depthClipEnable                        : 0
+info:  VK_EXT_extended_dynamic_state
+info:    extendedDynamicState                   : 1
+info:  VK_EXT_host_query_reset
+info:    hostQueryReset                         : 1
+info:  VK_EXT_memory_priority
+info:    memoryPriority                         : 0
+info:  VK_EXT_non_seamless_cube_map
+info:    nonSeamlessCubeMap                     : 0
+info:  VK_EXT_robustness2
+info:    robustBufferAccess2                    : 0
+info:    robustImageAccess2                     : 1
+info:    nullDescriptor                         : 0
+info:  VK_EXT_shader_demote_to_helper_invocation
+info:    shaderDemoteToHelperInvocation         : 1
+info:  VK_EXT_transform_feedback
+info:    transformFeedback                      : 1
+info:    geometryStreams                        : 0
+info:  VK_EXT_vertex_attribute_divisor
+info:    vertexAttributeInstanceRateDivisor     : 1
+info:    vertexAttributeInstanceRateZeroDivisor : 1
+info:  VK_KHR_buffer_device_address
+info:    bufferDeviceAddress                    : 0
+info:  VK_KHR_timeline_semaphore
+info:    timelineSemaphore                      : 1
+info:  Queue families:
+info:    Graphics : 0
+info:    Transfer : 0
+warn:  DXVK: No state cache file found
+info:  DXVK: Read 905 valid state cache entries
+info:  DXGI: VK_FORMAT_D24_UNORM_S8_UINT -> VK_FORMAT_D32_SFLOAT_S8_UINT
+overlay_shim ensure_encoder_hooks: AGXG17XFamilyRenderContext hooks=2
+warn:  D3D11CoreCreateDevice: Adapter is not a DXVK adapter
+info:  Game: Schedule I Free Sample.exe
+info:  DXVK: v1.10.3-20230507-async (macOS)
+info:  Built-in extension providers:
+info:    Win32 WSI
+info:    OpenVR
+info:    OpenXR
+info:  OpenVR: could not open registry key, status 2
+info:  OpenVR: Failed to locate module
+info:  Enabled instance extensions:
+info:    VK_KHR_get_surface_capabilities2
+info:    VK_KHR_surface
+info:    VK_KHR_win32_surface
+info:  D3D11CoreCreateDevice: Probing D3D_FEATURE_LEVEL_11_0
+info:  D3D11CoreCreateDevice: Using feature level D3D_FEATURE_LEVEL_11_0
+info:  Device properties:
+info:    Device name:     : Apple M5 Ultra
+info:    Driver version   : 0.2.2018
+info:  Enabled device extensions:
+info:    VK_EXT_4444_formats
+info:    VK_EXT_extended_dynamic_state
+info:    VK_EXT_host_query_reset
+info:    VK_EXT_robustness2
+info:    VK_EXT_shader_demote_to_helper_invocation
+info:    VK_EXT_shader_stencil_export
+info:    VK_EXT_shader_viewport_index_layer
+info:    VK_EXT_transform_feedback
+info:    VK_EXT_vertex_attribute_divisor
+info:    VK_KHR_create_renderpass2
+info:    VK_KHR_depth_stencil_resolve
+info:    VK_KHR_driver_properties
+info:    VK_KHR_image_format_list
+info:    VK_KHR_sampler_mirror_clamp_to_edge
+info:    VK_KHR_shader_float_controls
+info:    VK_KHR_swapchain
+info:    VK_KHR_timeline_semaphore
+info:  Device features:
+info:    robustBufferAccess                     : 1
+info:    fullDrawIndexUint32                    : 1
+info:    imageCubeArray                         : 1
+info:    independentBlend                       : 1
+info:    geometryShader                         : 1
+info:    tessellationShader                     : 1
+info:    sampleRateShading                      : 1
+info:    dualSrcBlend                           : 1
+info:    logicOp                                : 0
+info:    multiDrawIndirect                      : 1
+info:    drawIndirectFirstInstance              : 1
+info:    depthClamp                             : 1
+info:    depthBiasClamp                         : 1
+info:    fillModeNonSolid                       : 1
+info:    depthBounds                            : 0
+info:    multiViewport                          : 1
+info:    samplerAnisotropy                      : 1
+info:    textureCompressionBC                   : 1
+info:    occlusionQueryPrecise                  : 1
+info:    pipelineStatisticsQuery                : 1
+info:    vertexPipelineStoresAndAtomics         : 0
+info:    fragmentStoresAndAtomics               : 1
+info:    shaderImageGatherExtended              : 1
+info:    shaderStorageImageExtendedFormats      : 0
+info:    shaderStorageImageReadWithoutFormat    : 1
+info:    shaderStorageImageWriteWithoutFormat   : 1
+info:    shaderClipDistance                     : 1
+info:    shaderCullDistance                     : 1
+info:    shaderFloat64                          : 0
+info:    shaderInt64                            : 1
+info:    variableMultisampleRate                : 0
+info:  VK_EXT_4444_formats
+info:    formatA4R4G4B4                         : 1
+info:    formatA4B4G4R4                         : 1
+info:  VK_EXT_custom_border_color
+info:    customBorderColors                     : 0
+info:    customBorderColorWithoutFormat         : 0
+info:  VK_EXT_depth_clip_enable
+info:    depthClipEnable                        : 0
+info:  VK_EXT_extended_dynamic_state
+info:    extendedDynamicState                   : 1
+info:  VK_EXT_host_query_reset
+info:    hostQueryReset                         : 1
+info:  VK_EXT_memory_priority
+info:    memoryPriority                         : 0
+info:  VK_EXT_non_seamless_cube_map
+info:    nonSeamlessCubeMap                     : 0
+info:  VK_EXT_robustness2
+info:    robustBufferAccess2                    : 0
+info:    robustImageAccess2                     : 1
+info:    nullDescriptor                         : 0
+info:  VK_EXT_shader_demote_to_helper_invocation
+info:    shaderDemoteToHelperInvocation         : 1
+info:  VK_EXT_transform_feedback
+info:    transformFeedback                      : 1
+info:    geometryStreams                        : 0
+info:  VK_EXT_vertex_attribute_divisor
+info:    vertexAttributeInstanceRateDivisor     : 1
+info:    vertexAttributeInstanceRateZeroDivisor : 1
+info:  VK_KHR_buffer_device_address
+info:    bufferDeviceAddress                    : 0
+info:  VK_KHR_timeline_semaphore
+info:    timelineSemaphore                      : 1
+info:  Queue families:
+info:    Graphics : 0
+info:    Transfer : 0
+warn:  DXVK: No state cache file found
+info:  DXVK: Read 905 valid state cache entries
+info:  DXGI: VK_FORMAT_D24_UNORM_S8_UINT -> VK_FORMAT_D32_SFLOAT_S8_UINT
+info:  Presenter: Actual swap chain properties:
+info:    Format:       VK_FORMAT_B8G8R8A8_UNORM
+info:    Present mode: VK_PRESENT_MODE_IMMEDIATE_KHR
+info:    Buffer size:  3440x1440
+info:    Image count:  3
+info:    Exclusive FS: 1
+overlay_shim hook_set_pixel_format: layer=WineMetalLayer format=80 (BGRA8Unorm) overlay_pipeline=present
+overlay_shim hook_set_colorspace: layer=WineMetalLayer colorspace=kCGColorSpaceSRGB
+info:  DXVK: Using 20 compiler threads
+info:  Presenter: Actual swap chain properties:
+info:    Format:       VK_FORMAT_B8G8R8A8_UNORM
+info:    Present mode: VK_PRESENT_MODE_IMMEDIATE_KHR
+info:    Buffer size:  3440x1440
+info:    Image count:  3
+info:    Exclusive FS: 1
+overlay_shim record_overlay_pipeline: overlay pipeline 0x7faeba101600 format RGBA16Float
+overlay_shim record_overlay_pipeline: overlay pipeline 0x7faeba103800 format BGR10A2Unorm
+overlay_shim record_overlay_pipeline: overlay pipeline 0x7faeba106e00 format BGRA8Unorm
+overlay_shim record_overlay_pipeline: overlay pipeline 0x7faeba10e000 format BGRA8Unorm_sRGB
+info:  Presenter: Actual swap chain properties:
+info:    Format:       VK_FORMAT_B8G8R8A8_UNORM
+info:    Present mode: VK_PRESENT_MODE_FIFO_KHR
+info:    Buffer size:  3440x1440
+info:    Image count:  3
+info:    Exclusive FS: 1
+warn:  DxgiSwapChain::GetFrameStatistics: Semi-stub
+[mvk-error] VK_ERROR_INITIALIZATION_FAILED: Render pipeline compile failed (Error code 3):
+Fragment input(s) `user(locn3)` mismatching vertex shader output type(s) or not written by vertex shader.
+[mvk-error] VK_ERROR_INITIALIZATION_FAILED: Render pipeline compile failed (Error code 3):
+Fragment input(s) `user(locn3)` mismatching vertex shader output type(s) or not written by vertex shader.
+err:   DxvkGraphicsPipeline: Failed to compile pipeline
+err:     vs  : VS_3f28b5980dd300a70f126bd230922cc8918fb04a
+err:     fs  : FS_fcf5405a9f9b1a36678ee47de2e3397a8e34e5d5
+err:     attr 0 : location 0, binding 0, format VK_FORMAT_R32G32B32_SFLOAT, offset 0
+err:     attr 1 : location 1, binding 0, format VK_FORMAT_R32G32B32_SFLOAT, offset 12
+err:     attr 2 : location 2, binding 0, format VK_FORMAT_R32G32_SFLOAT, offset 40
+err:     binding 0 : binding 0, stride 56, rate 0, divisor 0
+err:   DxvkGraphicsPipeline: Failed to compile pipeline
+err:     vs  : VS_3f28b5980dd300a70f126bd230922cc8918fb04a
+err:     fs  : FS_7d098a6141102e6db22b723894e3ba9476eff200
+err:     attr 0 : location 0, binding 0, format VK_FORMAT_R32G32B32_SFLOAT, offset 0
+err:     attr 1 : location 1, binding 0, format VK_FORMAT_R32G32B32_SFLOAT, offset 12
+err:     attr 2 : location 2, binding 0, format VK_FORMAT_R32G32_SFLOAT, offset 40
+err:     binding 0 : binding 0, stride 56, rate 0, divisor 0
+[mvk-error] VK_ERROR_INITIALIZATION_FAILED: Render pipeline compile failed (Error code 3):
+Fragment input(s) `user(locn3)` mismatching vertex shader output type(s) or not written by vertex shader.
+err:   DxvkGraphicsPipeline: Failed to compile pipeline
+err:     vs  : VS_3f28b5980dd300a70f126bd230922cc8918fb04a
+err:     fs  : FS_fcf5405a9f9b1a36678ee47de2e3397a8e34e5d5
+err:     attr 0 : location 0, binding 0, format VK_FORMAT_R32G32B32_SFLOAT, offset 0
+err:     attr 1 : location 1, binding 0, format VK_FORMAT_R32G32B32_SFLOAT, offset 12
+err:     attr 2 : location 2, binding 0, format VK_FORMAT_R32G32_SFLOAT, offset 40
+err:     binding 0 : binding 0, stride 56, rate 0, divisor 0
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=9458 exe=UnityCrashHandler64.exe layer_hooks=3 overlay=present

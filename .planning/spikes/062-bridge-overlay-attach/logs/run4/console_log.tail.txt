@@ -1,0 +1,300 @@
+[2026-11-01 14:43:08] ThreadGetProcessExitCode: no such process 4012 - 10
+[2026-11-01 14:50:32] STARTUP SlowJSMethodCall Apps.GetIsSubscribedApp took 11.2ms
+[2026-11-01 14:57:22] ExecuteSteamURL: "steam://open/steam://exit"
+
+
+[2026-11-01 15:22:14] Client version: 1792618285
+[2026-11-01 15:22:14] Loaded SDL version 3.4.0-1576-gab5541ec5
+[2026-11-01 15:22:14] ChildProcessQuery: failed with code 16777211
+[2026-11-01 15:22:14] CGpuTopology: failed to run gpu topology query
+[2026-11-01 15:22:14] Added HIDAPI device 'PowerA Advantage Wired Controller for Nintendo Switch 2' VID 0x20d6, PID 0xa720, bluetooth 0, version 274, serial D112623246797322, interface 0, interface_class 0, interface_subclass 0, interface_protocol 0, usage page 0x0001, usage 0x0005, path = DevSrvsID:4295118060, driver = NONE (DISABLED)
+[2026-11-01 15:22:14] WARNING: unable to link protobuf_parse_stats and protobuf_parse_stats because one or more is a ConCommand.
+[2026-11-01 15:22:14] Failed to init SteamVR because it isn't installed
+[2026-11-01 15:22:14] Console Log Start
+[2026-11-01 15:22:15] STARTUP SlowJSMethodCall System.IsSteamInTournamentMode took 11.3ms
+[2026-11-01 15:22:16] STARTUP SlowJSMethodCall SharedConnection.RegisterOnLogonInfoChanged took 2.1ms
+[2026-11-01 15:22:16] STARTUP SlowJSMethodCall UI.RegisterForUIModeChanged took 11.1ms
+[2026-11-01 15:22:16] STARTUP SlowJSMethodCall Auth.IsSecureComputer took 11.1ms
+[2026-11-01 15:22:16] STARTUP SlowJSMethodCall User.RegisterForCurrentUserChanges took 3.0ms
+[2026-11-01 15:22:16] local (potentially out of sync) copy of roaming config loaded - 385 bytes.
+[2026-11-01 15:22:19] roaming config store loaded successfully - 385 bytes.
+[2026-11-01 15:22:19] BGetAudioDeviceName() failed: 560947818
+[2026-11-01 15:22:19] System startup time: 4.46 seconds
+[2026-11-01 15:22:19] STARTUP SlowJSMethodCall Apps.RegisterForAppOverviewChanges took 1.5ms
+[2026-11-01 15:22:19] Game process added : AppID 3205720 "", ProcID 74880, IP 0.0.0.0:0
+[2026-11-01 15:22:19] STARTUP SlowJSMethodCall Storage.GetString took 10.3ms
+[2026-11-01 15:22:19] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-01 15:22:20] STARTUP SlowJSMethodCall Storage.GetString took 11.1ms
+[2026-11-01 15:22:20] STARTUP SlowJSMethodCall RemotePlay.RegisterForDevicesChanges took 1.5ms
+[2026-11-01 15:22:20] STARTUP SlowJSMethodCall Storage.GetString took 11.1ms
+[2026-11-01 15:22:20] ExecCommandLine: "'/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam_osx' 'steam://open/main'"
+[2026-11-01 15:22:20] ExecuteSteamURL: "steam://open/main"
+[2026-11-01 15:22:20] STARTUP SlowJSMethodCall UI.NotifyAppInitialized took 6.7ms
+[2026-11-01 15:22:21] STARTUP SlowJSMethodCall Storage.SetString took 10.3ms
+[2026-11-01 15:22:21] STARTUP SlowJSMethodCall Storage.SetString took 11.1ms
+[2026-11-01 15:22:21] STARTUP SlowJSMethodCall Storage.SetString took 11.2ms
+[2026-11-01 15:23:23] ExecuteSteamURL: "steam://open/steam://open/friends"
+[2026-11-01 15:25:35] Game process removed: AppID 3205720 "", ProcID 74880 
+[2026-11-01 15:25:35] ThreadGetProcessExitCode: no such process 74880 - 10
+[2026-11-01 15:38:01] Game process added : AppID 3205720 "", ProcID 99494, IP 0.0.0.0:0
+[2026-11-01 15:38:01] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-01 15:45:10] Game process removed: AppID 3205720 "", ProcID 99494 
+[2026-11-01 15:45:10] ThreadGetProcessExitCode: no such process 99494 - 10
+[2026-11-01 15:51:51] Game process added : AppID 3205720 "", ProcID 96286, IP 0.0.0.0:0
+[2026-11-01 15:51:51] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-01 15:55:49] Removing HIDAPI device 'PowerA Advantage Wired Controller for Nintendo Switch 2' VID 0x20d6, PID 0xa720, bluetooth 0, version 274, serial D112623246797322, interface 0, interface_class 0, interface_subclass 0, interface_protocol 0, usage page 0x0001, usage 0x0005, path = DevSrvsID:4295118060, driver = NONE (DISABLED)
+[2026-11-01 15:56:17] Game process removed: AppID 3205720 "", ProcID 96286 
+[2026-11-01 15:56:17] ThreadGetProcessExitCode: no such process 96286 - 10
+[2026-11-01 15:58:13] Game process added : AppID 3205720 "", ProcID 56900, IP 0.0.0.0:0
+[2026-11-01 15:58:13] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-01 15:58:14] STARTUP SlowJSMethodCall RemotePlay.BCanCreateInviteForGame took 10.6ms
+[2026-11-01 16:03:35] Game process removed: AppID 3205720 "", ProcID 56900 
+[2026-11-01 16:03:35] ThreadGetProcessExitCode: no such process 56900 - 10
+[2026-11-01 16:03:36] STARTUP SlowJSMethodCall RemotePlay.BCanCreateInviteForGame took 11.1ms
+[2026-11-01 16:05:07] Game process added : AppID 3205720 "", ProcID 60760, IP 0.0.0.0:0
+[2026-11-01 16:05:08] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-01 16:09:58] Game process removed: AppID 3205720 "", ProcID 60760 
+[2026-11-01 16:09:58] ThreadGetProcessExitCode: no such process 60760 - 10
+[2026-11-01 16:10:10] Game process added : AppID 3205720 "", ProcID 64247, IP 0.0.0.0:0
+[2026-11-01 16:10:11] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-01 16:11:16] Game process removed: AppID 3205720 "", ProcID 64247 
+[2026-11-01 16:11:16] ThreadGetProcessExitCode: no such process 64247 - 10
+[2026-11-01 16:11:17] STARTUP SlowJSMethodCall RemotePlay.BCanCreateInviteForGame took 11.1ms
+[2026-11-01 20:56:09] Game process added : AppID 3205720 "", ProcID 82569, IP 0.0.0.0:0
+[2026-11-01 20:56:09] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-01 21:11:38] Game process removed: AppID 3205720 "", ProcID 82569 
+[2026-11-01 21:11:38] ThreadGetProcessExitCode: no such process 82569 - 10
+[2026-11-01 21:27:14] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.9ms
+[2026-11-01 21:27:14] STARTUP SlowJSMethodCall FamilySharing.GetAvailableLenders took 10.4ms
+[2026-11-01 21:27:15] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.2ms
+[2026-11-01 21:27:17] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.0ms
+[2026-11-01 21:27:17] STARTUP SlowJSMethodCall FamilySharing.GetAvailableLenders took 11.1ms
+[2026-11-01 21:27:18] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.6ms
+[2026-11-01 21:27:20] STARTUP SlowJSMethodCall SharedConnection.SendMsg took 2.9ms
+[2026-11-01 21:27:20] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.1ms
+[2026-11-01 21:27:20] STARTUP SlowJSMethodCall FamilySharing.GetAvailableLenders took 11.1ms
+[2026-11-01 21:27:22] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.3ms
+[2026-11-01 21:27:22] STARTUP SlowJSMethodCall FamilySharing.GetAvailableLenders took 11.1ms
+[2026-11-01 21:27:23] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.7ms
+[2026-11-01 21:27:25] STARTUP SlowJSMethodCall FamilySharing.GetAvailableLenders took 11.1ms
+[2026-11-01 21:27:26] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 2.4ms
+[2026-11-01 21:27:27] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.0ms
+[2026-11-01 21:27:35] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.1ms
+[2026-11-01 21:27:36] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.4ms
+[2026-11-01 21:27:37] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.9ms
+[2026-11-01 21:27:38] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.2ms
+[2026-11-01 21:27:42] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.4ms
+[2026-11-01 21:27:43] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.0ms
+[2026-11-01 21:27:44] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.2ms
+[2026-11-01 21:27:45] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 2.4ms
+[2026-11-01 21:43:05] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.2ms
+[2026-11-01 21:56:26] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.3ms
+[2026-11-02 08:34:46] Game process added : AppID 3205720 "", ProcID 31980, IP 0.0.0.0:0
+[2026-11-02 08:34:46] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-02 08:35:19] Game process removed: AppID 3205720 "", ProcID 31980 
+[2026-11-02 08:35:19] ThreadGetProcessExitCode: no such process 31980 - 10
+[2026-11-02 08:53:25] ExecuteSteamURL: "steam://open/steam://exit"
+
+
+[2026-11-02 09:00:22] Client version: 1792618285
+[2026-11-02 09:00:22] Loaded SDL version 3.4.0-1576-gab5541ec5
+[2026-11-02 09:00:22] ChildProcessQuery: failed with code 16777211
+[2026-11-02 09:00:22] CGpuTopology: failed to run gpu topology query
+[2026-11-02 09:00:22] WARNING: unable to link protobuf_parse_stats and protobuf_parse_stats because one or more is a ConCommand.
+[2026-11-02 09:00:22] Failed to init SteamVR because it isn't installed
+[2026-11-02 09:00:22] Console Log Start
+[2026-11-02 09:00:24] STARTUP SlowJSMethodCall System.UI.RegisterForOverlayGameWindowFocusChanged took 10.7ms
+[2026-11-02 09:00:24] STARTUP SlowJSMethodCall OpenVR.RegisterForVRModeChange took 11.0ms
+[2026-11-02 09:00:24] STARTUP SlowJSMethodCall OpenVR.RegisterForVRModeChange took 11.0ms
+[2026-11-02 09:00:25] STARTUP SlowJSMethodCall Auth.IsSecureComputer took 11.1ms
+[2026-11-02 09:00:25] local (potentially out of sync) copy of roaming config loaded - 385 bytes.
+[2026-11-02 09:00:27] Waiting for compat in post-logon took: 0.050068s
+[2026-11-02 09:00:28] AppID 2278520 does not advertise linux as a supported platform, but a linux specific depot is present.
+[2026-11-02 09:00:28] This could be a misconfiguration or intentional - forcing linux as a supported platform.
+[2026-11-02 09:00:28] roaming config store loaded successfully - 385 bytes.
+[2026-11-02 09:00:28] BGetAudioDeviceName() failed: 560947818
+[2026-11-02 09:00:28] System startup time: 6.16 seconds
+[2026-11-02 09:00:28] STARTUP SlowJSMethodCall Storage.GetString took 1.0ms
+[2026-11-02 09:00:28] STARTUP SlowJSMethodCall System.IsSteamInTournamentMode took 11.0ms
+[2026-11-02 09:00:28] STARTUP SlowJSMethodCall Apps.RegisterForAppOverviewChanges took 18.2ms
+[2026-11-02 09:00:29] STARTUP SlowJSMethodCall Storage.GetString took 11.0ms
+[2026-11-02 09:00:29] STARTUP SlowJSMethodCall Storage.GetString took 10.1ms
+[2026-11-02 09:00:29] STARTUP SlowJSMethodCall Storage.GetString took 11.1ms
+[2026-11-02 09:00:29] STARTUP SlowJSMethodCall WebChat.GetPushToTalkEnabled took 11.2ms
+[2026-11-02 09:00:29] STARTUP SlowJSMethodCall RemotePlay.RegisterForSettingsChanges took 12.0ms
+[2026-11-02 09:00:29] STARTUP SlowJSMethodCall RemotePlay.RegisterForAdditionalParentalBlocks took 11.0ms
+[2026-11-02 09:00:30] ExecCommandLine: "'/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam_osx'"
+[2026-11-02 09:00:31] STARTUP SlowJSMethodCall Storage.SetString took 10.9ms
+[2026-11-02 09:00:42] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.7ms
+[2026-11-02 09:00:42] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-02 09:00:52] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 2.1ms
+[2026-11-02 09:00:52] STARTUP SlowJSMethodCall Apps.GetLaunchOptionsForApp took 10.2ms
+[2026-11-02 09:00:52] STARTUP SlowJSMethodCall RoamingStorage.GetJSON took 10.8ms
+[2026-11-02 09:00:54] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to ShowLaunchOption with ""
+[2026-11-02 09:00:54] GameAction [AppID 219990, ActionID 1] : LaunchApp waiting for user response to ShowLaunchOption ""
+[2026-11-02 09:00:54] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:00:56] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-11-02 09:01:01] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-11-02 09:01:02] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:01:07] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:01:12] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-11-02 09:01:12] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:01:18] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.5ms
+[2026-11-02 09:01:20] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:01:20] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:01:28] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-11-02 09:01:28] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:02:17] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-11-02 09:02:21] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-11-02 09:02:30] GameAction [AppID 219990, ActionID 1] : LaunchApp continues with user response "1"
+[2026-11-02 09:02:30] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to DownloadingDepots with ""
+[2026-11-02 09:02:30] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to DownloadingDepots with ""
+[2026-11-02 09:02:32] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.6ms
+[2026-11-02 09:02:32] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:02:32] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.2ms
+[2026-11-02 09:02:33] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 1.1ms
+[2026-11-02 09:02:33] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.4ms
+[2026-11-02 09:02:36] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:02:37] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:02:39] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:02:39] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:02:40] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.7ms
+[2026-11-02 09:02:40] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 6.1ms
+[2026-11-02 09:02:42] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 10.4ms
+[2026-11-02 09:02:44] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to ProcessingInstallScript with ""
+[2026-11-02 09:02:44] Running install script evaluator for AppID 219990, 6 step(s)  '/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run run '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/legacycompat/iscriptevaluator.exe' 'legacycompat\evaluatorscript_219990.vdf'
+[2026-11-02 09:02:44] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.1ms
+[2026-11-02 09:02:45] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-11-02 09:02:46] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-11-02 09:02:46] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-11-02 09:02:47] STARTUP SlowJSMethodCall Apps.GetGameActionDetails took 11.0ms
+[2026-11-02 09:02:47] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to SynchronizingCloud with ""
+[2026-11-02 09:02:48] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to SynchronizingStats with ""
+[2026-11-02 09:02:48] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to ShowInterstitials with ""
+[2026-11-02 09:02:48] GameAction [AppID 219990, ActionID 1] : LaunchApp waiting for user response to ShowInterstitials ""
+[2026-11-02 09:02:48] GameAction [AppID 219990, ActionID 1] : LaunchApp continues with user response "ShowInterstitials"
+[2026-11-02 09:02:48] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to SiteLicenseSeatCheckout with ""
+[2026-11-02 09:02:49] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to DelayLaunch with ""
+[2026-11-02 09:02:49] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to CreatingProcess with ""
+[2026-11-02 09:02:49] GameAction [AppID 219990, ActionID 1] : LaunchApp waiting for user response to CreatingProcess ""
+[2026-11-02 09:02:49] GameAction [AppID 219990, ActionID 1] : LaunchApp continues with user response "CreatingProcess"
+[2026-11-02 09:02:49] /bin/sh\0-c\0'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'\0
+[2026-11-02 09:02:49] Game process added : AppID 219990 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'", ProcID 41261, IP 0.0.0.0:0
+[2026-11-02 09:02:49] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to WaitingGameWindow with ""
+[2026-11-02 09:02:49] GameAction [AppID 219990, ActionID 1] : LaunchApp changed task to Completed with ""
+[2026-11-02 09:02:54] Game process updated : AppID 219990 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'", ProcID 41547, IP 0.0.0.0:0
+[2026-11-02 09:02:55] ThreadGetProcessExitCode: no such process 41553 - 10
+[2026-11-02 09:02:56] Game process updated : AppID 219990 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'", ProcID 41590, IP 0.0.0.0:0
+[2026-11-02 09:02:56] Game process updated : AppID 219990 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'", ProcID 41590, IP 0.0.0.0:0
+[2026-11-02 09:03:05] GameOverlay: started '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui' (pid 41644) for game process 41590
+[2026-11-02 09:03:06] STARTUP SlowJSMethodCall Settings.RegisterForTimeZoneChange took 11.0ms
+[2026-11-02 09:03:06] STARTUP SlowJSMethodCall ServerBrowser.GetMultiplayerGames took 1.8ms
+[2026-11-02 09:03:06] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-02 09:04:19] Game process removed: AppID 219990 "'/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'", ProcID 41590 
+[2026-11-02 09:04:19] ThreadGetProcessExitCode: no such process 41594 - 10
+[2026-11-02 09:04:19] ThreadGetProcessExitCode: no such process 41590 - 10
+[2026-11-02 09:04:19] ThreadGetProcessExitCode: no such process 41584 - 10
+[2026-11-02 09:04:19] ThreadGetProcessExitCode: no such process 41580 - 10
+[2026-11-02 09:04:19] ThreadGetProcessExitCode: no such process 41575 - 10
+[2026-11-02 09:04:19] ThreadGetProcessExitCode: no such process 41564 - 10
+[2026-11-02 09:04:19] ThreadGetProcessExitCode: no such process 41561 - 10
+[2026-11-02 09:04:19] ThreadGetProcessExitCode: no such process 41556 - 10
+[2026-11-02 09:04:19] ThreadGetProcessExitCode: no such process 41547 - 10
+[2026-11-02 09:11:23] Game process added : AppID 3205720 "", ProcID 45491, IP 0.0.0.0:0
+[2026-11-02 09:11:23] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-02 09:11:23] STARTUP SlowJSMethodCall RemotePlay.BCanCreateInviteForGame took 11.1ms
+[2026-11-02 09:14:59] Game process removed: AppID 3205720 "", ProcID 45491 
+[2026-11-02 09:14:59] ThreadGetProcessExitCode: no such process 45491 - 10
+[2026-11-02 09:15:46] Game process added : AppID 3205720 "", ProcID 48299, IP 0.0.0.0:0
+[2026-11-02 09:18:12] Game process removed: AppID 3205720 "", ProcID 48299 
+[2026-11-02 09:18:12] ThreadGetProcessExitCode: no such process 48299 - 10
+[2026-11-02 09:18:13] STARTUP SlowJSMethodCall RemotePlay.BCanCreateInviteForGame took 10.6ms
+[2026-11-02 09:19:34] Game process added : AppID 3205720 "", ProcID 50167, IP 0.0.0.0:0
+[2026-11-02 09:19:35] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-02 09:19:36] ThreadGetProcessExitCode: no such process 50231 - 10
+[2026-11-02 09:19:36] ThreadGetProcessExitCode: no such process 50233 - 10
+[2026-11-02 09:19:42] GameOverlay: started '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui' (pid 50332) for game process 50261
+[2026-11-02 09:19:42] STARTUP SlowJSMethodCall Broadcast.RegisterForBroadcastStatus took 10.4ms
+[2026-11-02 09:19:42] STARTUP SlowJSMethodCall Settings.RegisterForTimeZoneChange took 10.6ms
+[2026-11-02 09:19:42] STARTUP SlowJSMethodCall ServerBrowser.GetMultiplayerGames took 1.9ms
+[2026-11-02 09:19:43] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-02 09:39:20] ThreadGetProcessExitCode: no such process 58413 - 10
+[2026-11-02 09:39:20] ThreadGetProcessExitCode: no such process 50263 - 10
+[2026-11-02 09:39:20] ThreadGetProcessExitCode: no such process 50199 - 10
+[2026-11-02 09:39:21] STARTUP SlowJSMethodCall WebChat.GetOverlayChatBrowserInfo took 10.1ms
+[2026-11-02 09:39:21] STARTUP SlowJSMethodCall Storage.SetString took 11.1ms
+[2026-11-02 09:39:21] STARTUP SlowJSMethodCall Storage.SetString took 11.1ms
+[2026-11-02 09:39:26] Game process removed: AppID 3205720 "", ProcID 50261 
+[2026-11-02 09:39:26] ThreadGetProcessExitCode: no such process 50261 - 10
+[2026-11-02 09:39:26] ThreadGetProcessExitCode: no such process 50259 - 10
+[2026-11-02 09:39:26] ThreadGetProcessExitCode: no such process 50255 - 10
+[2026-11-02 09:39:26] ThreadGetProcessExitCode: no such process 50246 - 10
+[2026-11-02 09:39:26] ThreadGetProcessExitCode: no such process 50241 - 10
+[2026-11-02 09:39:26] ThreadGetProcessExitCode: no such process 50239 - 10
+[2026-11-02 09:39:26] ThreadGetProcessExitCode: no such process 50237 - 10
+[2026-11-02 09:39:26] ThreadGetProcessExitCode: no such process 50235 - 10
+[2026-11-02 09:39:26] ThreadGetProcessExitCode: no such process 50167 - 10
+[2026-11-02 09:39:41] Game process added : AppID 63000 "", ProcID 58518, IP 0.0.0.0:0
+[2026-11-02 09:39:41] STARTUP SlowJSMethodCall RemotePlay.BCanCreateInviteForGame took 10.9ms
+[2026-11-02 09:40:36] Game process removed: AppID 63000 "", ProcID 58518 
+[2026-11-02 09:40:36] ThreadGetProcessExitCode: no such process 58518 - 10
+[2026-11-02 09:45:05] ExecuteSteamURL: "steam://open/steam://open/gooffline"
+[2026-11-02 09:45:05] ExecuteSteamURL: "steam://open/gooffline"
+[2026-11-02 09:45:09] ExecuteSteamURL: "steam://open/steam://open/goonline"
+[2026-11-02 09:45:09] ExecuteSteamURL: "steam://open/goonline"
+[2026-11-02 09:45:10] STARTUP SlowJSMethodCall Settings.SetSetting took 2.8ms
+[2026-11-02 09:45:10] STARTUP SlowJSMethodCall UI.GetDesiredSteamUIWindows took 11.0ms
+[2026-11-02 09:45:10] Waiting for compat in post-logon took: 0.098901s
+[2026-11-02 09:46:33] ExecuteSteamURL: "steam://open/steam://open/gooffline"
+[2026-11-02 09:46:33] ExecuteSteamURL: "steam://open/gooffline"
+[2026-11-02 09:46:37] ExecuteSteamURL: "steam://open/steam://open/goonline"
+[2026-11-02 09:46:37] ExecuteSteamURL: "steam://open/goonline"
+[2026-11-02 09:46:39] Waiting for compat in post-logon took: 0.051748s
+[2026-11-02 09:46:39] STARTUP SlowJSMethodCall Storage.SetString took 11.1ms
+[2026-11-02 09:49:59] Game process added : AppID 63000 "", ProcID 61660, IP 0.0.0.0:0
+[2026-11-02 09:50:33] Game process removed: AppID 63000 "", ProcID 61660 
+[2026-11-02 09:50:33] ThreadGetProcessExitCode: no such process 61660 - 10
+[2026-11-02 10:09:39] Game process added : AppID 63000 "", ProcID 69795, IP 0.0.0.0:0
+[2026-11-02 10:09:39] STARTUP SlowJSMethodCall RemotePlay.BCanCreateInviteForGame took 10.1ms
+[2026-11-02 10:23:54] Game process removed: AppID 63000 "", ProcID 69795 
+[2026-11-02 10:23:54] ThreadGetProcessExitCode: no such process 69795 - 10
+[2026-11-02 10:24:21] ExecuteSteamURL: "steam://open/steam://install/264160"
+[2026-11-02 10:24:21] ExecuteSteamURL: "steam://install/264160"
+[2026-11-02 10:24:22] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 2.2ms
+[2026-11-02 10:24:24] STARTUP SlowJSMethodCall Installs.ContinueInstall took 71.6ms
+[2026-11-02 10:24:28] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.9ms
+[2026-11-02 10:24:41] ExecuteSteamURL: "steam://open/steam://uninstall/264160"
+[2026-11-02 10:24:41] ExecuteSteamURL: "steam://uninstall/264160"
+[2026-11-02 10:25:12] STARTUP SlowJSMethodCall Installs.OpenUninstallWizard took 1.9ms
+[2026-11-02 10:25:36] ExecuteSteamURL: "steam://open/steam://open/gooffline"
+[2026-11-02 10:25:36] ExecuteSteamURL: "steam://open/gooffline"
+[2026-11-02 10:25:39] ExecuteSteamURL: "steam://open/steam://open/goonline"
+[2026-11-02 10:25:39] ExecuteSteamURL: "steam://open/goonline"
+[2026-11-02 10:25:41] Waiting for compat in post-logon took: 0.050249s
+[2026-11-02 10:25:41] STARTUP SlowJSMethodCall Storage.SetString took 10.3ms
+[2026-11-02 10:25:41] STARTUP SlowJSMethodCall Storage.SetString took 11.1ms
+[2026-11-02 10:29:27] Game process added : AppID 63000 "", ProcID 94085, IP 0.0.0.0:0
+[2026-11-02 10:29:28] STARTUP SlowJSMethodCall RemotePlay.BCanCreateInviteForGame took 11.1ms
+[2026-11-02 10:33:48] Game process removed: AppID 63000 "", ProcID 94085 
+[2026-11-02 10:33:48] ThreadGetProcessExitCode: no such process 94085 - 10
+[2026-11-02 10:38:19] Game process added : AppID 63000 "", ProcID 98720, IP 0.0.0.0:0
+[2026-11-02 10:39:01] Game process removed: AppID 63000 "", ProcID 98720 
+[2026-11-02 10:39:01] ThreadGetProcessExitCode: no such process 98720 - 10
+[2026-11-02 10:39:02] STARTUP SlowJSMethodCall RemotePlay.BCanCreateInviteForGame took 11.0ms
+[2026-11-02 10:43:14] Game process added : AppID 1284190 "", ProcID 1864, IP 0.0.0.0:0
+[2026-11-02 10:43:39] Game process removed: AppID 1284190 "", ProcID 1864 
+[2026-11-02 10:43:39] ThreadGetProcessExitCode: no such process 1864 - 10
+[2026-11-02 10:43:40] STARTUP SlowJSMethodCall Storage.SetString took 10.4ms
+[2026-11-02 10:44:49] Game process added : AppID 1284190 "", ProcID 3491, IP 0.0.0.0:0
+[2026-11-02 10:45:05] Game process removed: AppID 1284190 "", ProcID 3491 
+[2026-11-02 10:45:05] ThreadGetProcessExitCode: no such process 3491 - 10
+[2026-11-02 10:45:06] STARTUP SlowJSMethodCall Storage.SetString took 11.1ms
+[2026-11-02 11:05:34] Game process added : AppID 3205720 "", ProcID 8679, IP 0.0.0.0:0
+[2026-11-02 11:05:34] CAPIJobRequestUserStats - Server response failed 2
+[2026-11-02 11:05:36] ThreadGetProcessExitCode: no such process 8735 - 10
+[2026-11-02 11:05:36] ThreadGetProcessExitCode: no such process 8733 - 10
+[2026-11-02 11:05:42] GameOverlay: started '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui' (pid 8842) for game process 8764
+[2026-11-02 11:05:42] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.5ms
+[2026-11-02 11:05:43] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 1.4ms
+[2026-11-02 11:05:43] STARTUP SlowJSMethodCall ServerBrowser.GetMultiplayerGames took 1.9ms
+[2026-11-02 11:05:43] CAPIJobRequestUserStats - Server response failed 2

@@ -1,0 +1,581 @@
+2026-11-01T20:15:47Z game=48324 gameoverlayui=[]
+no window matched schedule i free
+2026-11-01T20:15:50Z game=48324 gameoverlayui=[]
+no window matched schedule i free
+2026-11-01T20:15:53Z game=48324 gameoverlayui=[]
+no window matched schedule i free
+2026-11-01T20:15:56Z game=48324 gameoverlayui=[]
+no window matched schedule i free
+2026-11-01T20:15:59Z game=48324 gameoverlayui=[]
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11572 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/005.png status=0
+2026-11-01T20:16:02Z game=48324 gameoverlayui=[]
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11572 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/006.png status=0
+2026-11-01T20:16:06Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/007.png status=0
+2026-11-01T20:16:09Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/008.png status=0
+2026-11-01T20:16:12Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/009.png status=0
+2026-11-01T20:16:15Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/010.png status=0
+2026-11-01T20:16:19Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/011.png status=0
+2026-11-01T20:16:22Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/012.png status=0
+2026-11-01T20:16:25Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/013.png status=0
+2026-11-01T20:16:29Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/014.png status=0
+2026-11-01T20:16:32Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/015.png status=0
+2026-11-01T20:16:35Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/016.png status=0
+2026-11-01T20:16:38Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/017.png status=0
+2026-11-01T20:16:42Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/018.png status=0
+2026-11-01T20:16:45Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/019.png status=0
+2026-11-01T20:16:48Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/020.png status=0
+2026-11-01T20:16:52Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/021.png status=0
+2026-11-01T20:16:55Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/022.png status=0
+2026-11-01T20:16:58Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/023.png status=0
+2026-11-01T20:17:02Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/024.png status=0
+2026-11-01T20:17:05Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/025.png status=0
+2026-11-01T20:17:08Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/026.png status=0
+2026-11-01T20:17:11Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/027.png status=0
+2026-11-01T20:17:15Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/028.png status=0
+2026-11-01T20:17:18Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/029.png status=0
+2026-11-01T20:17:21Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/030.png status=0
+2026-11-01T20:17:25Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/031.png status=0
+2026-11-01T20:17:28Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/032.png status=0
+2026-11-01T20:17:31Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/033.png status=0
+2026-11-01T20:17:35Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/034.png status=0
+2026-11-01T20:17:38Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/035.png status=0
+2026-11-01T20:17:41Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/036.png status=0
+2026-11-01T20:17:44Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/037.png status=0
+2026-11-01T20:17:48Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/038.png status=0
+2026-11-01T20:17:51Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/039.png status=0
+2026-11-01T20:17:54Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/040.png status=0
+2026-11-01T20:17:58Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/041.png status=0
+2026-11-01T20:18:01Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/042.png status=0
+2026-11-01T20:18:04Z game=48324 gameoverlayui=[]
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11575 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/043.png status=0
+2026-11-01T20:18:08Z game=48324 gameoverlayui=[]
+window id=11579 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11577 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11580 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11578 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11575 owner=Schedule I Free Sample.exe pid=48484 layer=26 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11572 owner=Schedule I Free Sample.exe pid=48484 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 11572 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/run2/shots/044.png status=0
+2026-11-01T20:18:11Z game gone, stopping

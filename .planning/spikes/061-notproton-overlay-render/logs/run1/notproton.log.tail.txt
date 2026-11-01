@@ -1,0 +1,60 @@
+2026-11-02 09:00:22 [notproton] info resolver: 'CDRM::OnDRMDownloadJobFinish' -> 0x11f76bc20 [anchor]
+2026-11-02 09:00:22 [notproton] info resolver: steamclient.dylib 18/18 signatures resolved, 3/3 optional
+2026-11-02 09:00:22 [notproton] info install_thread: signatures 18/18 resolved
+2026-11-02 09:00:22 [notproton] info [launch] V_ParseShellCommandLinePOSIX: 1 import slot(s) rebound
+2026-11-02 09:00:22 [notproton] info np_compat_probe_tool_layout: tool fields from install onward are +8 from the baseline (appid 0x68, install 0x60)
+2026-11-02 09:00:22 [notproton] info np_compat_probe_enabled_off: enabled flag at 0x810, +96 from the baseline
+2026-11-02 09:00:22 [notproton] info np_compat_probe_windows_only_off: windows-only table at 0x698
+2026-11-02 09:00:22 [notproton] info np_usershortcuts_bind: root 0x38 nodes 0x50 stride 32 key 0x10 value 0x18 exe 0x10 remote 0x68
+2026-11-02 09:00:22 [notproton] info webui: registry 0x1209abf68 via accessor 0x11f213bdc, agreed by 28 of the client's own route registrations
+2026-11-02 09:00:22 [notproton] info [compat] CCompatManager::Init: hooked @ 0x11f82dac8
+2026-11-02 09:00:22 [notproton] info [compat] CCompatManager::BIsCompatibilityToolEnabled: hooked @ 0x11f825c40
+2026-11-02 09:00:22 [notproton] info [compat] CCompatManager::FindToolForTargetApp: hooked @ 0x11f825348
+2026-11-02 09:00:22 [notproton] info [compat] CCompatManager::WindowsOnlyLookup: hooked @ 0x11f7e8044
+2026-11-02 09:00:22 [notproton] info [compat] CCompatManager::InternalSpecifyCompatTool: hooked @ 0x11f824218
+2026-11-02 09:00:22 [notproton] info [compat] CCompatManager::GetOSListOverrideForApp.oslist_gate: instrumented @ 0x11f82585c
+2026-11-02 09:00:22 [notproton] info [compat] CCompatManager::ResolveCompatToolForApp.local_redirect: instrumented @ 0x11f82594c
+2026-11-02 09:00:22 [notproton] info [compat] CAppManager::TerminateProcessByPid: hooked @ 0x11f25d5f8
+2026-11-02 09:00:22 [notproton] info [webui] CWebUITransport::RouteLookup: instrumented @ 0x11f214140
+2026-11-02 09:00:22 [notproton] info [launch] LaunchBuilder::SteamVRSupportCheck: hooked @ 0x11fca56e8
+2026-11-02 09:00:22 [notproton] info [ceg] CDRM::RequestCustomBinary: instrumented @ 0x11f76bdfc
+2026-11-02 09:00:22 [notproton] info [ceg] CClientDRMDownloadJob::ExtractGUIDsFromFile: hooked @ 0x11f7b2024
+2026-11-02 09:00:22 [notproton] info [ceg] CDRM::OnDRMDownloadJobFinish: instrumented @ 0x11f76bc20
+2026-11-02 09:00:22 [notproton] info hooks: 13/13 installed
+2026-11-02 09:00:22 [notproton] info install_thread: ready, 13/13 hooks installed
+2026-11-02 09:00:22 [notproton] info resolver: scanning steamui.dylib __TEXT @ 0x112774000 (14794752 bytes)
+2026-11-02 09:00:22 [notproton] info resolver: 'steamui::ShortcutExtensionMatches' -> 0x112819484 [anchor]
+2026-11-02 09:00:22 [notproton] info resolver: 'steamui::ShortcutIconRender' -> 0x112819608 [anchor]
+2026-11-02 09:00:22 [notproton] info resolver: 'steamui::ShortcutCreate' -> 0x112d01fd4 [anchor]
+2026-11-02 09:00:22 [notproton] info resolver: steamui.dylib 3/3 signatures resolved, 0/0 optional
+2026-11-02 09:00:22 [notproton] info install_thread: steamui.dylib signatures 3/3 resolved
+2026-11-02 09:00:22 [notproton] info [shortcut] shortcut-exe: hooked @ 0x112819484
+2026-11-02 09:00:22 [notproton] info [icon] shortcut-icon: hooked @ 0x112819608
+2026-11-02 09:00:22 [notproton] info [bundle] shortcut-bundle-icon: hooked @ 0x112d01fd4
+2026-11-02 09:00:22 [notproton] info hooks: steamui 3/3 installed
+2026-11-02 09:00:22 [notproton] info install_thread: steamui.dylib ready, 3/3 hooks installed
+2026-11-02 09:00:22 [notproton] info resolver: scanning steamservice.dylib __TEXT @ 0x11206c000 (4358144 bytes)
+2026-11-02 09:00:22 [notproton] info resolver: 'CWorkItemFunctionCall::ThreadProcess' -> 0x11207e7b8 [anchor]
+2026-11-02 09:00:22 [notproton] info resolver: steamservice.dylib 0/0 signatures resolved, 1/1 optional
+2026-11-02 09:00:22 [notproton] info install_thread: steamservice.dylib signatures 0/0 resolved
+2026-11-02 09:00:22 [notproton] info [ceg] service calls run from /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS
+2026-11-02 09:00:22 [notproton] info [ceg] CWorkItemFunctionCall::ThreadProcess: hooked @ 0x11207e7b8
+2026-11-02 09:00:22 [notproton] info hooks: steamservice 1/1 installed
+2026-11-02 09:00:22 [notproton] info install_thread: steamservice.dylib ready, 1/1 hooks installed
+2026-11-02 09:00:24 [notproton] info webpatch: Windows library filter button added
+2026-11-02 09:00:24 [notproton] info webpatch: [selecttool] 11 gates, 4 fixes applied
+2026-11-02 09:00:24 [notproton] info webpatch: served patched compat chunk (/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamui/sp.js) to Steam Helper pid 40664
+2026-11-02 09:00:24 [notproton] info webui: job built like the client's own TransportAuth.Authenticate#1, vtable 0x12083e9f8 cloned over 17 virtuals with the handler in slot 14
+2026-11-02 09:00:24 [notproton] info webui: serving CompatManager.GetCompatTools#1
+2026-11-02 09:00:24 [notproton] info webui: serving CompatManager.SpecifyCompatTool#1
+2026-11-02 09:00:24 [notproton] info webui: serving NotProton.SetDefaults#1
+2026-11-02 09:00:24 [notproton] info webui: serving NotProton.SetToolDefaults#1
+2026-11-02 09:00:24 [notproton] info webui: serving NotProton.ApplyToolDefaults#1
+2026-11-02 09:00:24 [notproton] info webui: serving NotProton.PrefixState#1
+2026-11-02 09:00:24 [notproton] info webui: serving NotProton.RebuildPrefix#1
+2026-11-02 09:00:24 [notproton] info webui: serving NotProton.BackupAndRebuildPrefix#1
+2026-11-02 09:00:24 [notproton] error webui: no room left to serve NotProton.OpenPrefixLog#1
+2026-11-02 09:00:24 [notproton] warn compatsvc: the Compatibility page cannot rebuild prefixes
+2026-11-02 09:00:25 [notproton] info np_compat_force_enable: compat layer force-enabled (this+0x810: 0 -> 1)
+2026-11-02 09:00:25 [notproton] info np_compat_register_crossover: notproton-26.3 already registered from disk, skipping the runtime entry
+2026-11-02 09:02:49 [notproton] info [launch] handed to /bin/sh -c: '/Users/graysonmitchell/Library/Application Support/Steam/compatibilitytools.d/notproton-26.3/.'/run waitforexitandrun  '/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Grim Dawn/compat/grim dawn.exe'

@@ -1,0 +1,36 @@
+[2026-11-01T20:19:34Z] LISTEN 127.0.0.1:52847 appid=3205720 mode=full
+[S_API] SteamAPI_Init(): Loaded '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamclient.dylib' OK.
+Setting breakpad minidump AppID = 3205720
+SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561197995867096 [API loaded no]
+[2026-11-01T20:19:34Z] INIT   manual dispatch ready
+[2026-11-01T20:19:34Z] INIT   SteamAPI ready (single InitFlat call, real appid=3205720)
+[2026-11-01T20:19:34Z] READY  init=ok appid=3205720
+[2026-11-01T20:19:45Z] HELLO  shim attached appid=3205720
+[2026-11-01T20:19:45Z] GINIT  fn=SteamInternal_SteamAPI_Init ret=0 ok=1 session=1
+[2026-11-01T20:19:45Z] STUBCALL SteamClient021.SetWarningMessageHook slot=22 kind=stub
+[2026-11-01T20:19:45Z] CALL   SteamUser023.GetSteamID
+[2026-11-01T20:19:45Z] STUBCALL SteamFriends017.GetMediumFriendAvatar slot=35 kind=stub
+[2026-11-01T20:19:45Z] STUBCALL SteamUtils010.GetImageSize slot=5 kind=stub
+[2026-11-01T20:19:45Z] CBQ    queued iCallback=1281 cub=272
+[2026-11-01T20:19:45Z] CBQ    queued iCallback=1222 cub=260
+[2026-11-01T20:19:45Z] CBQ    queued iCallback=1281 cub=272
+[2026-11-01T20:19:45Z] CBQ    unlisted iCallback=1040044 action=drop callresult=0
+[2026-11-01T20:19:45Z] CBQ    unlisted iCallback=1270006 action=drop callresult=0
+[2026-11-01T20:19:45Z] CBQ    unlisted iCallback=1270009 action=drop callresult=0
+[2026-11-01T20:19:45Z] CBQ    stats iCallback=1101 src=callback result=2 app=own action=queued
+[2026-11-01T20:19:45Z] CBQ    unlisted iCallback=1040011 action=drop callresult=0
+[2026-11-01T20:19:45Z] CBQ    unlisted iCallback=336 action=drop callresult=0
+[2026-11-01T20:19:45Z] CBQ    unlisted iCallback=304 action=drop callresult=0
+[2026-11-01T20:19:45Z] CBDISP iCallback=1281 targets=1 held=0
+[2026-11-01T20:19:45Z] CBDISP iCallback=1222 targets=1 held=0
+[2026-11-01T20:19:45Z] CBDISP iCallback=1281 targets=1 held=0
+[2026-11-01T20:19:45Z] CBDISP iCallback=1101 targets=1 held=0
+[2026-11-01T20:19:47Z] CBQ    queued iCallback=1281 cub=272
+[2026-11-01T20:19:47Z] CBQ    queued iCallback=1222 cub=260
+[2026-11-01T20:19:47Z] CBDISP iCallback=1281 targets=1 held=0
+[2026-11-01T20:19:47Z] CBDISP iCallback=1222 targets=1 held=0
+[2026-11-01T20:19:52Z] CBQ    unlisted iCallback=1040015 action=drop callresult=0
+[2026-11-01T20:19:52Z] CBQ    queued iCallback=1281 cub=272
+[2026-11-01T20:19:52Z] CBDISP iCallback=1281 targets=1 held=0
+[2026-11-01T20:19:54Z] CBQ    unlisted iCallback=331 action=drop callresult=0
+[2026-11-01T20:23:58Z] CBQ    unlisted iCallback=1100062 action=drop callresult=0

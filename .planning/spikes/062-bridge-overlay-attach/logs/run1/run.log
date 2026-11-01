@@ -1,0 +1,16 @@
+2026-11-01T20:11:23Z == spike 062 run1 overlayui=1 shim=1 steampid=40643
+2026-11-01T20:11:23Z helper pid=45491 port=52776
+2026-11-01T20:11:23Z CX_ENV=DYLD_INSERT_LIBRARIES='/Users/graysonmitchell/Library/Application Support/notproton/overlay-shim.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib' SteamOverlayGameId=3205720 SteamGameId=3205720 SteamAppId=3205720 NOTPROTON_OVERLAY_SHIM='/Users/graysonmitchell/Library/Application Support/notproton/overlay-shim.dylib'
+2026-11-01T20:11:23Z wine wrapper pid=45520
+2026-11-01T20:11:23Z game window pid=no window matched schedule i free
+ps: Invalid process id: no
+ps: Invalid process id: window
+ps: Invalid process id: matched
+ps: Invalid process id: schedule
+ps: Invalid process id: i
+ps: Invalid process id: free
+2026-11-01T20:11:23Z started gameoverlayui pid=45553 for game pid=no window matched schedule i free
+2026-11-01T20:11:23Z waiting for the game to exit; press Shift+Tab in game, then quit it
+uipid=46377 20:13:07Z
+2026-11-01T20:14:57Z wine wrapper exited
+2026-11-01T20:14:57Z restored cfgs, stopped helper

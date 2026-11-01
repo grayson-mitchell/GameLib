@@ -1,0 +1,1519 @@
+2026-11-01T20:02:50Z game=41261 gameoverlayui=[]
+no window matched grim dawn
+2026-11-01T20:02:54Z game=41261 gameoverlayui=[]
+no window matched grim dawn
+2026-11-01T20:02:57Z game=41261 gameoverlayui=[]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/003.png status=0
+2026-11-01T20:03:00Z game=41261 gameoverlayui=[]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/004.png status=0
+2026-11-01T20:03:03Z game=41261 gameoverlayui=[]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/005.png status=0
+2026-11-01T20:03:06Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/006.png status=0
+2026-11-01T20:03:10Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/007.png status=0
+2026-11-01T20:03:13Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/008.png status=0
+2026-11-01T20:03:16Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/009.png status=0
+2026-11-01T20:03:19Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/010.png status=0
+2026-11-01T20:03:22Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/011.png status=0
+2026-11-01T20:03:26Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/012.png status=0
+2026-11-01T20:03:29Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/013.png status=0
+2026-11-01T20:03:32Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/014.png status=0
+2026-11-01T20:03:35Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/015.png status=0
+2026-11-01T20:03:39Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/016.png status=0
+2026-11-01T20:03:42Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/017.png status=0
+2026-11-01T20:03:45Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/018.png status=0
+2026-11-01T20:03:48Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/019.png status=0
+2026-11-01T20:03:52Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/020.png status=0
+2026-11-01T20:03:55Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/021.png status=0
+2026-11-01T20:03:58Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/022.png status=0
+2026-11-01T20:04:01Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/023.png status=0
+2026-11-01T20:04:05Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/024.png status=0
+2026-11-01T20:04:08Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/025.png status=0
+2026-11-01T20:04:11Z game=41261 gameoverlayui=[41644 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 41590 -steampid 40643 -manuallyclearframes 0 -gameid 219990 ]
+window id=11534 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11529 owner=grim dawn.exe pid=41590 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11532 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11530 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=11531 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11533 owner=grim dawn.exe pid=41590 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11534 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/026.png status=0
+2026-11-01T20:04:14Z game=41261 gameoverlayui=[]
+window id=11528 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11527 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11525 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=11526 owner=Grim Dawn pid=41547 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 11528 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/run1/shots/027.png status=0
+2026-11-01T20:04:17Z game gone, stopping

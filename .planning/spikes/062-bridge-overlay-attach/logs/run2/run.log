@@ -1,0 +1,12 @@
+2026-11-01T20:15:47Z == spike 062 run2 overlayui=1 shim=1 steampid=40643
+2026-11-01T20:15:47Z helper pid=48299 port=52828
+2026-11-01T20:15:47Z CX_ENV=DYLD_INSERT_LIBRARIES='/Users/graysonmitchell/Library/Application Support/notproton/overlay-shim.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib' SteamOverlayGameId=3205720 SteamGameId=3205720 SteamAppId=3205720 NOTPROTON_OVERLAY_SHIM='/Users/graysonmitchell/Library/Application Support/notproton/overlay-shim.dylib'
+2026-11-01T20:15:47Z wine wrapper pid=48324
+2026-11-01T20:15:57Z game window pid=48484
+  PID  PPID COMM
+48484     1 C:\Program Files (x86)\Steam\steamapps\common\Schedule I Demo\Schedule I Free Sample.exe
+2026-11-01T20:16:01Z started gameoverlayui pid=48550 for game pid=48484
+2026-11-01T20:16:01Z waiting for the game to exit; press Shift+Tab in game, then quit it
+2026-11-01T20:18:10Z wine wrapper exited
+2026-11-01T20:18:10Z restored cfgs, stopped helper
+operator: Shift+Tab did nothing (control, renderer not loaded)
