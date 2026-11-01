@@ -175,7 +175,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const isLinux = platform === 'linux'
   const isMac = platform === 'darwin'
   const isSideloaded = runner === 'sideload'
-  const isBrowserGame = gameInfo?.install.platform === 'Browser'
 
   // Phase 17 (17-11), GAP 3 gap-closure: single source of truth shared with
   // the guided bottle-setup toast (SteamBottleSetup.tsx) — see
@@ -533,7 +532,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
                       <ArrowBackIosNew />
                     </NavLink>
                     <div className="topRowWapperInner">
-                      {!isBrowserGame && <SettingsButton gameInfo={gameInfo} />}
                       <DotsMenu
                         gameInfo={gameInfo}
                         handleUpdate={handleUpdate}
@@ -582,6 +580,10 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           gameInfo={gameInfo}
                           handlePlay={handlePlay}
                           handleInstall={handleInstall}
+                        />
+                        <SettingsButton
+                          gameInfo={gameInfo}
+                          isUninstalling={isUninstalling}
                         />
                       </div>
                       {wikiLink}

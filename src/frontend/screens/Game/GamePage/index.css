@@ -329,6 +329,11 @@
         margin-top: 15px;
         border-radius: 8px;
 
+        & > .settings-icon {
+          margin-inline-start: var(--space-xs);
+          flex-shrink: 0;
+        }
+
         .buttonWithIcon > svg {
           display: flex;
           justify-content: center;
