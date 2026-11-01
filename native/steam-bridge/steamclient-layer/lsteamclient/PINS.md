@@ -36,7 +36,7 @@ and never committed.
 | `unix_steam_input_manual.cpp` | `3f9e3390a9c4b060a367a312d61f84fc3690141ef34811484b3c21481d7583a7` |
 
 - `unixlib.cpp` and `unix_steam_input_manual.cpp` are committed byte-for-byte.
-- GameLib `steamclient_main.c` sha256 (as committed): `6fab6375ae1afff6e3f4644440ca9c5fe108bd58a6e0e6279380dca93ce4f543` (was `389163118e...` before the GetAppBuildId fixup below).
+- GameLib `steamclient_main.c` sha256 (as committed): `beb58e3e950ebce0619cbcd64125271d2bcd6152301d47fa7a82e7009fffec92` (was `6fab6375ae...` before the WR-02 fixup; `389163118e...` before the GetAppBuildId fixup below).
 - Strip rule: deleting every block from a line whose trimmed content is
   `/* GAMELIB-DRM-TRACE BEGIN (Phase 56 D-15/D-16) */` through the line whose trimmed content is
   `/* GAMELIB-DRM-TRACE END */`, marker lines included, reproduces the upstream bytes exactly. There
@@ -63,9 +63,15 @@ and never committed.
   and are never committed (56-SECURITY T-56-15-03).
 - raft-drm-build-id-mismatch (2026-10-31) extends blocks 2 and 4 in place (the count stays seven).
   Block 4's `steamclient_call` hook calls `gamelib_apps_call`, which for `ISteamApps_..._GetAppBuildId`
-  (007/008) replaces Mac Steam's answer with the `buildid` of `C:\Program Files (x86)\Steam\steamapps\appmanifest_<SteamGameId>.acf`
-  when that file exists and parses; otherwise Mac Steam's answer stands. It runs whether or not tracing is
-  enabled. Trace shape: `event=apps op=build-id|build-id-given ret=<int>` (two integers, no ID; the
+  (007/008) replaces Mac Steam's answer with the top-level `AppState.buildid` of
+  `appmanifest_<SteamGameId>.acf` (WR-02, quick-261101-j03). Candidate order, first hit wins: the library
+  holding the running exe (the `...\steamapps\common\` prefix of its module path), the default library
+  `C:\Program Files (x86)\Steam`, then up to 8 paths from that library's `libraryfolders.vdf`. The file is
+  parsed as KeyValues (only depth-1 `buildid`, 1..INT32_MAX digits) and read to EOF into a 256 KiB bounded
+  heap buffer; an oversize, unreadable or unparsable file leaves Mac Steam's answer standing, and no path is
+  ever traced. The parser sits in an inner `GAMELIB-ACF-PARSE` fence (inside block 2, so the strip rule still
+  removes it) and `meta/__tests__/acfParseHost.test.ts` compiles exactly that text on the host. It runs
+  whether or not tracing is enabled. Trace shape: `event=apps op=build-id|build-id-given ret=<int>` (two integers, no ID; the
   census parser ignores it). Audit: the Raft host trace shows only `GetAppBuildId` among ISteamApps
   calls, so `GetCurrentBetaName`, `BIsAppInstalled`, `GetAppInstallDir`, `BIsSubscribedApp`,
   `GetInstalledDepots` and `GetLaunchCommandLine` are deliberately not rewritten (no evidence a game needs it).
