@@ -278,12 +278,18 @@ export async function prepareBottleForEngine(args: {
         LogPrefix.Steam
       )
     } else {
-      const settings =
-        restoreEngine() === 'staging'
+      // 59-UAT G7: the stock CrossOver settings carry the global winePrefix,
+      // not this bottle, so installRemove checked an unrelated prefix, called
+      // it invalid and returned true with DXVK still in place. Pin the prefix
+      // to the bottle, and treat a marker that survives as a failed restore.
+      const settings = {
+        ...(restoreEngine() === 'staging'
           ? deps.fallbackSettings(bottleName, pin)
-          : deps.crossoverSettings(appId)
+          : deps.crossoverSettings(appId)),
+        winePrefix: bottleDir
+      }
       const ok = await deps.installRemove(settings, 'dxvk', 'restore', pin.dxvk)
-      if (!ok) {
+      if (!ok || existsSync(dxvkMarkerPath)) {
         return {
           ok: false,
           reason: 'dxvk-failed',

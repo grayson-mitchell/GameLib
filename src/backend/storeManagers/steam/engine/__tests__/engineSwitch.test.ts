@@ -142,6 +142,10 @@ describe('prepareBottleForEngine', () => {
       wineserverBin: PIN_WS
     })
     writeFileSync(join(dir, 'current_dxvk-macOS'), 'v1')
+    ;(deps.installRemove as jest.Mock).mockImplementationOnce(async () => {
+      rmSync(join(dir, 'current_dxvk-macOS'))
+      return true
+    })
     const res = await run(crossover)
     expect(res).toEqual({ ok: true, changed: true })
     expect(deps.killWith).toHaveBeenCalledWith(
@@ -152,12 +156,24 @@ describe('prepareBottleForEngine', () => {
     )
     expect(deps.crossoverSettings).toHaveBeenCalledWith('620')
     expect(deps.installRemove).toHaveBeenCalledWith(
-      { id: 'cx' },
+      { id: 'cx', winePrefix: dir },
       'dxvk',
       'restore',
       { dir: '/tools/steam-engines/dxvk', version: 'v1' }
     )
     expect(marker().kind).toBe('crossover')
+  })
+
+  test('pinned -> crossover: a restore that leaves the DXVK marker is a failure, marker unchanged (59-UAT G7)', async () => {
+    seedMarker({
+      kind: 'pinned',
+      id: 'wine-staging-11.20',
+      wineserverBin: PIN_WS
+    })
+    writeFileSync(join(dir, 'current_dxvk-macOS'), 'v1')
+    const res = await run(crossover)
+    expect(res).toMatchObject({ ok: false, reason: 'dxvk-failed' })
+    expect(marker().kind).toBe('pinned')
   })
 
   test('same engine as the marker: no kill, no DXVK change', async () => {
