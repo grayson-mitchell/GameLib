@@ -1,0 +1,2101 @@
+2026-11-01T23:07:09Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd ]
+no window matched manorlords
+2026-11-01T23:07:12Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd ]
+no window matched manorlords
+2026-11-01T23:07:15Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd ]
+no window matched manorlords
+2026-11-01T23:07:18Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/004.png status=0
+2026-11-01T23:07:21Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/005.png status=0
+2026-11-01T23:07:25Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/006.png status=0
+2026-11-01T23:07:28Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/007.png status=0
+2026-11-01T23:07:31Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/008.png status=0
+2026-11-01T23:07:35Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/009.png status=0
+2026-11-01T23:07:38Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/010.png status=0
+2026-11-01T23:07:42Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/011.png status=0
+2026-11-01T23:07:45Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/012.png status=0
+2026-11-01T23:07:49Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/013.png status=0
+2026-11-01T23:07:52Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/014.png status=0
+2026-11-01T23:07:55Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/015.png status=0
+2026-11-01T23:07:59Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/016.png status=0
+2026-11-01T23:08:02Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/017.png status=0
+2026-11-01T23:08:05Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/018.png status=0
+2026-11-01T23:08:09Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 30289 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/019.png status=0
+2026-11-01T23:08:12Z game=29866 gameoverlayui=[29848 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd 29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 30289 /bin/zsh -c source /Users/graysonmitchell/.claude/shell-snapshots/snapshot-zsh-1793227809819-avl8mi.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { uiltin unalias -- 'unsetenv'; uiltin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval '/bin/sleep 60; L=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/064-d3dmetal-d3d12-overlay/logs/run1; grep -v CX_ENV $L/run.log | grep -v -E '"'"'oah'"'"' | cut -c1-170; grep -E '"'"'HELLO|GINIT'"'"' $L/helper.log | head -2; grep -c -i '"'"'dxvk'"'"' $L/wine.log; p=$(sed -n '"'"'s/.*game window pid=\([0-9]*\).*/\1/p'"'"' $L/run.log); [ -n "$p" ] && vmmap $p 2>/dev/null | grep -i -E '"'"'d3d12|D3DMetal|dxgi'"'"' | awk '"'"'{print $NF}'"'"' | sort -u | sed '"'"'s#.*/##'"'"' | head; pgrep -lf '"'"'MacOS/gameoverlayui'"'"' | cut -c1-200' < /dev/null && pwd -P >| /tmp/claude-b50c-cwd ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/020.png status=0
+2026-11-01T23:08:15Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/021.png status=0
+2026-11-01T23:08:19Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/022.png status=0
+2026-11-01T23:08:22Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/023.png status=0
+2026-11-01T23:08:26Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/024.png status=0
+2026-11-01T23:08:29Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/025.png status=0
+2026-11-01T23:08:32Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/026.png status=0
+2026-11-01T23:08:36Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/027.png status=0
+2026-11-01T23:08:39Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/028.png status=0
+2026-11-01T23:08:42Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/029.png status=0
+2026-11-01T23:08:46Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/030.png status=0
+2026-11-01T23:08:49Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/031.png status=0
+2026-11-01T23:08:53Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/032.png status=0
+2026-11-01T23:08:56Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/033.png status=0
+2026-11-01T23:08:59Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/034.png status=0
+2026-11-01T23:09:03Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/035.png status=0
+2026-11-01T23:09:06Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/036.png status=0
+2026-11-01T23:09:09Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/037.png status=0
+2026-11-01T23:09:13Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/038.png status=0
+2026-11-01T23:09:16Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/039.png status=0
+2026-11-01T23:09:20Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/040.png status=0
+2026-11-01T23:09:23Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/041.png status=0
+2026-11-01T23:09:26Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/042.png status=0
+2026-11-01T23:09:30Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/043.png status=0
+2026-11-01T23:09:33Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/044.png status=0
+2026-11-01T23:09:36Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/045.png status=0
+2026-11-01T23:09:40Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/046.png status=0
+2026-11-01T23:09:43Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/047.png status=0
+2026-11-01T23:09:47Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/048.png status=0
+2026-11-01T23:09:50Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/049.png status=0
+2026-11-01T23:09:53Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1468;
+    Width = 3440;
+    X = 0;
+    Y = 30;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/050.png status=0
+2026-11-01T23:09:57Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12296 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/051.png status=0
+2026-11-01T23:10:00Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12296 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/052.png status=0
+2026-11-01T23:10:03Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12296 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/053.png status=0
+2026-11-01T23:10:06Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12296 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/054.png status=0
+2026-11-01T23:10:10Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/055.png status=0
+2026-11-01T23:10:13Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/056.png status=0
+2026-11-01T23:10:16Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12297 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/057.png status=0
+2026-11-01T23:10:20Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12296 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/058.png status=0
+2026-11-01T23:10:23Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12296 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/059.png status=0
+2026-11-01T23:10:26Z game=29866 gameoverlayui=[29992 /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayui -pid 29912 -steampid 40643 -manuallyclearframes 0 -gameid 1363080 ]
+window id=12302 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12301 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12300 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+window id=12297 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=27 bounds={
+    Height = 1440;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=1
+window id=12296 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 500;
+    Width = 500;
+    X = 0;
+    Y = 940;
+} onscreen=0
+window id=12303 owner=ManorLords-Win64-Shipping.exe pid=29912 layer=0 bounds={
+    Height = 30;
+    Width = 3440;
+    X = 0;
+    Y = 0;
+} onscreen=0
+captured window 12296 -> /Users/graysonmitchell/Projects/GameLib/.planning/spikes/061-notproton-overlay-render/logs/../../062-bridge-overlay-attach/logs/../../064-d3dmetal-d3d12-overlay/logs/run1/shots/060.png status=0
+2026-11-01T23:10:29Z game gone, stopping

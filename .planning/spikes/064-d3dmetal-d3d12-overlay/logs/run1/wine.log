@@ -1,0 +1,6 @@
+File 'C:/Program Files (x86)/Steam/steamapps/common/Manor Lords/ManorLords/Plugins/StreamlineCore/Binaries/ThirdParty/Win64/sl.common.dll' is signed by NVIDIA and the signature was verified.
+File 'C:/Program Files (x86)/Steam/steamapps/common/Manor Lords/ManorLords/Plugins/StreamlineCore/Binaries/ThirdParty/Win64/sl.deepdvc.dll' is signed by NVIDIA and the signature was verified.
+File 'C:/Program Files (x86)/Steam/steamapps/common/Manor Lords/ManorLords/Plugins/StreamlineCore/Binaries/ThirdParty/Win64/sl.dlss_g.dll' is signed by NVIDIA and the signature was verified.
+File 'C:/Program Files (x86)/Steam/steamapps/common/Manor Lords/ManorLords/Plugins/StreamlineCore/Binaries/ThirdParty/Win64/sl.pcl.dll' is signed by NVIDIA and the signature was verified.
+File 'C:/Program Files (x86)/Steam/steamapps/common/Manor Lords/ManorLords/Plugins/StreamlineCore/Binaries/ThirdParty/Win64/sl.reflex.dll' is signed by NVIDIA and the signature was verified.
+Warning: FEnumProperty: In asset 'None', there is an enum property of type 'ETaskType' with an invalid value of 'BringItemToBuilding' - loaded

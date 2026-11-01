@@ -1,0 +1,44 @@
+overlay_shim image_added: overlay text 0x108cbd000-0x108ce4000
+overlay_shim_load: pid=31354 exe=wineloader layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=31354 exe=wineloader layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=31384 exe=wineboot.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=31386 exe=services.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=31391 exe=winedevice.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=31393 exe=plugplay.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=31395 exe=svchost.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=31397 exe=winedevice.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=31404 exe=ManorLords-Win64-Shipping.exe layer_hooks=3 overlay=present
+overlay_shim image_added: overlay text 0x208653000-0x20867a000
+overlay_shim_load: pid=31408 exe=explorer.exe layer_hooks=3 overlay=present
+overlay_shim ensure_device_hooks: AGXG17DDevice hooks=4
+overlay_shim ensure_queue_hooks: AGXG17XFamilyCommandQueue hooks=2
+overlay_shim ensure_command_buffer_hooks: AGXG17XFamilyCommandBuffer hooks=1 overlay_commit=missing
+overlay_shim image_added: overlay text 0x208652000-0x208679000
+overlay_shim_load: pid=31415 exe=rpcss.exe layer_hooks=3 overlay=present
+overlay_shim ensure_device_hooks: AGXG17DDevice hooks=4
+overlay_shim ensure_queue_hooks: AGXG17XFamilyCommandQueue hooks=2
+overlay_shim ensure_command_buffer_hooks: AGXG17XFamilyCommandBuffer hooks=1 overlay_commit=missing
+overlay_shim ensure_mtl4_queue_hooks: AGXG17XFamilyCommandQueue_mtlnext hooks=1
+overlay_shim ensure_encoder_hooks: AGXG17XFamilyRenderContext hooks=2
+overlay_shim hook_set_colorspace: layer=WineMetalLayer colorspace=kCGColorSpaceSRGB
+overlay_shim hook_set_pixel_format: layer=WineMetalLayer format=90 (RGB10A2Unorm) overlay_pipeline=missing
+overlay_shim record_overlay_pipeline: overlay pipeline 0x7fb1961e2400 format RGBA16Float
+overlay_shim record_overlay_pipeline: overlay pipeline 0x7fb1961f6800 format BGR10A2Unorm
+overlay_shim record_overlay_pipeline: overlay pipeline 0x7fb1961f8a00 format BGRA8Unorm
+overlay_shim record_overlay_pipeline: overlay pipeline 0x7fb1a193a000 format BGRA8Unorm_sRGB
+File 'C:/Program Files (x86)/Steam/steamapps/common/Manor Lords/ManorLords/Plugins/StreamlineCore/Binaries/ThirdParty/Win64/sl.common.dll' is signed by NVIDIA and the signature was verified.
+File 'C:/Program Files (x86)/Steam/steamapps/common/Manor Lords/ManorLords/Plugins/StreamlineCore/Binaries/ThirdParty/Win64/sl.deepdvc.dll' is signed by NVIDIA and the signature was verified.
+File 'C:/Program Files (x86)/Steam/steamapps/common/Manor Lords/ManorLords/Plugins/StreamlineCore/Binaries/ThirdParty/Win64/sl.dlss_g.dll' is signed by NVIDIA and the signature was verified.
+File 'C:/Program Files (x86)/Steam/steamapps/common/Manor Lords/ManorLords/Plugins/StreamlineCore/Binaries/ThirdParty/Win64/sl.pcl.dll' is signed by NVIDIA and the signature was verified.
+File 'C:/Program Files (x86)/Steam/steamapps/common/Manor Lords/ManorLords/Plugins/StreamlineCore/Binaries/ThirdParty/Win64/sl.reflex.dll' is signed by NVIDIA and the signature was verified.
+Warning: FEnumProperty: In asset 'None', there is an enum property of type 'ETaskType' with an invalid value of 'BringItemToBuilding' - loaded
+overlay_shim variant_for: built RGB10A2Unorm pipeline for base BGRA8Unorm
+overlay_shim hook_set_pipeline_state: pipeline 0x7fb1961f8a00 BGRA8Unorm bound to RGB10A2Unorm attachment, substituted

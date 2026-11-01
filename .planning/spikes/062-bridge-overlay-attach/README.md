@@ -118,7 +118,7 @@ takes clicks), with no Steam-side patching.
    already accepts, applied to one more binary.
 3. **The default bridge is unaffected.** The helper, the TCP shim and the cfg handshake worked
    unchanged on the clone (`HELLO` + `GINIT ok=1` in runs 2–5).
-4. **NotProton's shim is not needed on the DXVK path.** Steam's own `steamloader.dylib` +
+4. **NotProton's shim is not needed on the DXVK path** (BGRA8 layer; 064 found a 10-bit layer does need it). Steam's own `steamloader.dylib` +
    `gameoverlayrenderer.dylib` drew a working overlay alone (run 5). The build injects only
    Valve's files from the user's own Steam install and takes no dependency on NotProton's binary or
    code, so its licence does not matter here.

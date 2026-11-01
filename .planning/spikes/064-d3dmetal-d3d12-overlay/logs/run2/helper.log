@@ -1,0 +1,7 @@
+[2026-11-01T23:12:19Z] LISTEN 127.0.0.1:52420 appid=1363080 mode=full
+[S_API] SteamAPI_Init(): Loaded '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamclient.dylib' OK.
+Setting breakpad minidump AppID = 1363080
+SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561197995867096 [API loaded no]
+[2026-11-01T23:12:19Z] INIT   manual dispatch ready
+[2026-11-01T23:12:19Z] INIT   SteamAPI ready (single InitFlat call, real appid=1363080)
+[2026-11-01T23:12:19Z] READY  init=ok appid=1363080

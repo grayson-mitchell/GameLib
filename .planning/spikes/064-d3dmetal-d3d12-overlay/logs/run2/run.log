@@ -1,0 +1,53 @@
+2026-11-01T23:12:19Z == spike 062 ../../064-d3dmetal-d3d12-overlay/logs/run2 overlayui=0 shim=1 backend=d3dmetal args=[-dx12 -windowed] steampid=40643
+2026-11-01T23:12:19Z helper pid=31331 port=52420
+2026-11-01T23:12:19Z CX_ENV=DYLD_INSERT_LIBRARIES='/Users/graysonmitchell/Library/Application Support/notproton/overlay-shim.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib:/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib' SteamOverlayGameId=1363080 SteamGameId=1363080 SteamAppId=1363080 NOTPROTON_OVERLAY_SHIM='/Users/graysonmitchell/Library/Application Support/notproton/overlay-shim.dylib'
+2026-11-01T23:12:19Z wine wrapper pid=31354
+2026-11-01T23:12:24Z game window pid=31404
+  PID  PPID COMM
+31404     1 C:\Program Files (x86)\Steam\steamapps\common\Manor Lords\ManorLords\Binaries\Win64\ManorLords-Win64-Shipping.exe
+/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/wine/x86_64-windows/d3d12.dll
+/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/wine/x86_64-windows/dxgi.dll
+/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/wine/x86_64-windows/nvapi64.dll
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/49c5e90ef431555ead73d7708900f2cbee5b00607aa9dafb5ae2509a18891c58/steamloader.dylib.aot
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/89126e2050cfe25c9995ec6d67f5d3ccf62b92bf99b6ef82175b87defe760a5a/D3DMetal.aot
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/98514ab721332332f2e87068a6e7fa85d660778777adfef14b2edb540d2867db/gameoverlayrenderer.dylib.aot
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/cc90d735c7404f515c41a1142dde811e5a943885a49f9c69ebf0b0bb8ff92a1d/libMoltenVK.dylib.aot
+/private/var/db/oah/1e756a42c2ec1e053b790dad88a656fcaa990fb94258dc8cec8bf28e7d872b83/d06409e8cc843efa4a32b2a7ad4e336b649e31fd985b586add01d2585fc7768a/overlay-shim.dylib.aot
+/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/external/D3DMetal.framework/Versions/A/D3DMetal
+/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/external/D3DMetal.framework/Versions/A/Resources/libdxccontainer.dylib
+/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/external/D3DMetal.framework/Versions/A/Resources/libmetalirconverter.dylib
+/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/apple_gptk/external/libd3dshared.dylib
+/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/55750ae4-af91-40ce-a494-abb2a9cf8a96/scratchpad/cx062/CrossOver/lib64/libMoltenVK.dylib
+Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib
+Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamloader.dylib
+Support/notproton/overlay-shim.dylib
+2026-11-01T23:12:27Z waiting for the game to exit; press Shift+Tab in game, then quit it
+2026-11-01T23:12:49Z wine wrapper exited
+   6 overlay_shim image_added: overlay text 0x208653000-0x20867a000
+   4 overlay_shim image_added: overlay text 0x208652000-0x208679000
+   2 overlay_shim_load: pid=31354 exe=wineloader layer_hooks=3 overlay=present
+   2 overlay_shim ensure_queue_hooks: AGXG17XFamilyCommandQueue hooks=2
+   2 overlay_shim ensure_device_hooks: AGXG17DDevice hooks=4
+   2 overlay_shim ensure_command_buffer_hooks: AGXG17XFamilyCommandBuffer hooks=1 overlay_commit=missing
+   1 overlay_shim_load: pid=31415 exe=rpcss.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=31408 exe=explorer.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=31404 exe=ManorLords-Win64-Shipping.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=31397 exe=winedevice.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=31395 exe=svchost.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=31393 exe=plugplay.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=31391 exe=winedevice.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=31386 exe=services.exe layer_hooks=3 overlay=present
+   1 overlay_shim_load: pid=31384 exe=wineboot.exe layer_hooks=3 overlay=present
+   1 overlay_shim variant_for: built RGB10A2Unorm pipeline for base BGRA8Unorm
+   1 overlay_shim record_overlay_pipeline: overlay pipeline 0x7fb1a193a000 format BGRA8Unorm_sRGB
+   1 overlay_shim record_overlay_pipeline: overlay pipeline 0x7fb1961f8a00 format BGRA8Unorm
+   1 overlay_shim record_overlay_pipeline: overlay pipeline 0x7fb1961f6800 format BGR10A2Unorm
+   1 overlay_shim record_overlay_pipeline: overlay pipeline 0x7fb1961e2400 format RGBA16Float
+   1 overlay_shim image_added: overlay text 0x108cbd000-0x108ce4000
+   1 overlay_shim hook_set_pixel_format: layer=WineMetalLayer format=90 (RGB10A2Unorm) overlay_pipeline=missing
+   1 overlay_shim hook_set_pipeline_state: pipeline 0x7fb1961f8a00 BGRA8Unorm bound to RGB10A2Unorm attachment, substituted
+   1 overlay_shim hook_set_colorspace: layer=WineMetalLayer colorspace=kCGColorSpaceSRGB
+   1 overlay_shim ensure_mtl4_queue_hooks: AGXG17XFamilyCommandQueue_mtlnext hooks=1
+   1 overlay_shim ensure_encoder_hooks: AGXG17XFamilyRenderContext hooks=2
+2026-11-01T23:12:49Z restored cfgs, stopped helper
+operator: it worked that time (shim=1)
