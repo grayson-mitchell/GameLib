@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 59
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-01 - Completed quick task 261101-tjv: clean tile mode toggle
+Last activity: 2026-11-01 - Completed quick task 261101-tsq: hide titles toggle
 
 Progress: [██████████] 99%
 
@@ -387,6 +387,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast | Invite picker header X removed (showCloseButton=false); the picker window closes via the traffic lights or the footer Close button. | 2026-11-01 | 821b996ec | 2 suites pass (16 tests); live check pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
 | 261101-t66 | Main-menu '+' invite scored as a supported Direction A host path: D-17 in 58-CONTEXT.md supersedes 58-33 scope decision 5 and item 2(e) (incl. the operator amendment) for the next bridge gate; 58-33 contract untouched; no code change (census scores `host=` from AcceptConnection). Todo stays pending (`ready: live-gate`) | 2026-11-01 | 37cfa575a | docs-only; planning-gates 11/12 (pre-existing STATE `Plan: Not started` anchor failure); live gate owed | [261101-t66-score-the-game-s-main-menu-invite-as-a-s](./quick/261101-t66-score-the-game-s-main-menu-invite-as-a-s/) |
 | 261101-tjv | Clean tile mode: `cleanTiles` pref (default off) + Accessibility toggle under "Always show titles"; grid tiles hide the bottom button bar (store badge included) and collapse to bare 3:4 art, click tile to open game page and launch there; list view Action column unchanged; right-click menu and controller shortcuts intact | 2026-11-01 | 41299c88b | tsc clean, 125 jest pass; live tauri dev check owed | [261101-tjv-clean-tile-mode-setting-hide-tile-button](./quick/261101-tjv-clean-tile-mode-setting-hide-tile-button/) |
+| 261101-tsq | Hide titles: `hideTitles` pref (default off) + Accessibility toggle under "Always show titles" (which is disabled while it's on); grid tile titles hidden entirely, hover included; list view name column unchanged | 2026-11-01 | 3948170d6 | tsc clean, jest pass; live tauri dev check owed | [261101-tsq-hide-titles-toggle-never-show-tile-title](./quick/261101-tsq-hide-titles-toggle-never-show-tile-title/) |
 
 ## Deferred Items
 
