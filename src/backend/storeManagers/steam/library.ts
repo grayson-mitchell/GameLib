@@ -41,6 +41,7 @@ import {
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
 import { formatMacArch32KnownFixEntry } from './macArchKnownFix'
+import { reportDetectedFix } from 'backend/knownFixReport'
 import SteamGame, {
   isNativeInstallInFlight,
   clearForcedWindowsViaBottle
@@ -2006,6 +2007,14 @@ export async function verifyMacArchGroundTruth(
       `Steam: curated known-fixes entry ${appId}-steam.json macArch "32" is contradicted by the Mach-O ground truth ('64') and should be removed`,
       LogPrefix.Steam
     )
+    // Phase 57 detector 3: fire-and-forget (void, never awaited). The client
+    // gates on the setting and D-12. D-18: one-shot best effort, no retry seam.
+    reportDetectedFix({
+      appId,
+      key: 'macArch',
+      op: 'remove',
+      detector: 'macho'
+    })
   }
 
   if (verdict === '32') {
@@ -2013,6 +2022,9 @@ export async function verifyMacArchGroundTruth(
       formatMacArch32KnownFixEntry(appId, library.get(appId)?.title),
       LogPrefix.Steam
     )
+    // Phase 57 detector 1: fire-and-forget (void, never awaited). The client
+    // gates on the setting and D-12. D-18: one-shot best effort, no retry seam.
+    reportDetectedFix({ appId, key: 'macArch', op: 'add', detector: 'macho' })
     // MAC32-03/CONTEXT D-6: decoupled — never awaited here, so this check
     // never blocks the pollInstallOnce 'installed' badge-flip UX above.
     void promptI386Recovery(appId)

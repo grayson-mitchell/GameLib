@@ -53,6 +53,7 @@ import * as vdf from '@node-steam/vdf'
 import { spawnSync, execFileSync } from 'child_process'
 import { dialog, shell } from 'backend/platform'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
+import { reportDetectedFix } from 'backend/knownFixReport'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
@@ -111,6 +112,8 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
   removeShortcuts: jest.fn(),
   shortcutFiles: jest.fn()
 }))
+
+jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -8437,6 +8440,82 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
         mac_arch_verified: true
       })
     )
+  })
+
+  describe('Phase 57 report hook', () => {
+    const arrange = (lipoOut: string, meta: Record<string, unknown>) => {
+      ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+        if (dir === INSTALL_PATH) return ['OldGame.app']
+        if (dir === MACOS_DIR) return ['OldGame']
+        return []
+      })
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+        if (cmd === 'lipo') return lipoOut
+        throw new Error(`unexpected command ${cmd}`)
+      })
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue(meta)
+    }
+
+    beforeEach(() => {
+      ;(reportDetectedFix as jest.Mock).mockReset()
+    })
+
+    it("reports a '32' verdict once as macArch add", async () => {
+      arrange('i386\n', { art_cover: '', art_square: '', extra: { reqs: [] } })
+      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      expect(reportDetectedFix).toHaveBeenCalledTimes(1)
+      expect(reportDetectedFix).toHaveBeenCalledWith({
+        appId: APP_ID,
+        key: 'macArch',
+        op: 'add',
+        detector: 'macho'
+      })
+    })
+
+    it("reports a curated '32' contradicted by '64' as macArch remove", async () => {
+      arrange('x86_64\n', { mac_arch: '32', mac_arch_source: 'known-fix' })
+      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      expect(reportDetectedFix).toHaveBeenCalledTimes(1)
+      expect(reportDetectedFix).toHaveBeenCalledWith({
+        appId: APP_ID,
+        key: 'macArch',
+        op: 'remove',
+        detector: 'macho'
+      })
+    })
+
+    it("reports nothing for a plain '64' verdict", async () => {
+      arrange('x86_64\n', {
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] }
+      })
+      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      expect(reportDetectedFix).not.toHaveBeenCalled()
+    })
+
+    it('reports nothing on the early-return paths', async () => {
+      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'bottle')
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        mac_arch: '64',
+        mac_arch_verified: true
+      })
+      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      envMock.isMac = false
+      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      expect(reportDetectedFix).not.toHaveBeenCalled()
+    })
+
+    it('still resolves when the hook never settles', async () => {
+      ;(reportDetectedFix as jest.Mock).mockImplementation(
+        () => new Promise(() => undefined)
+      )
+      arrange('i386\n', { art_cover: '', art_square: '', extra: { reqs: [] } })
+      await expect(
+        verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      ).resolves.toBeUndefined()
+    })
   })
 
   describe('quick 261027-bqe: curated known-fix seed', () => {
