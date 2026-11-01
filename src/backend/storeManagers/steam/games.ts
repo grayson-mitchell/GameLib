@@ -199,7 +199,6 @@ import { isScanVerdictNowCovered } from './bridge/shimCoverage'
 import {
   builtBridgeShim64Path,
   appFolder,
-  gamesConfigPath,
   userHome
 } from 'backend/constants/paths'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
@@ -1208,13 +1207,11 @@ export default class SteamGame implements Game {
       // 59-UAT G11: the engine override is per game and written to this
       // title's GameConfig (where the launch reads it), so the shared bottle
       // settings alone made the Settings screen read it back as Automatic.
-      // Only an existing config file is read: GameConfig.get creates one.
       const settings = getSteamBottleSettings()
-      if (!existsSync(join(gamesConfigPath, `${this.appId}.json`))) {
-        return settings
-      }
-      const override = GameConfig.get(this.appId).config?.steamEngineOverride
-      return override === undefined
+      const { readStoredEngineOverride } =
+        await import('./engine/engineDecision')
+      const override = readStoredEngineOverride(this.appId)
+      return typeof override !== 'string'
         ? settings
         : { ...settings, steamEngineOverride: override }
     }

@@ -13,6 +13,12 @@ jest.mock('../../platform', () => ({
     on: jest.fn()
   }
 }))
+// 58-31 (0a627de67) made the registration import bridge/inviteBridge, whose
+// helperProcess import pulls in the real constants/paths chain.
+jest.mock('../../storeManagers/steam/bridge/inviteBridge', () => ({
+  listBridgeFriends: jest.fn(),
+  sendBridgeInvite: jest.fn()
+}))
 jest.mock('../../storeManagers', () => ({}))
 jest.mock('../../storeManagers/steam/user', () => ({ SteamUser: {} }))
 jest.mock('../../storeManagers/steam/electronStores', () => ({}))

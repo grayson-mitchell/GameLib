@@ -10,9 +10,14 @@
  * Nothing runs at import; heavy collaborators are reached through injectable
  * deps whose defaults are built lazily inside each function.
  */
-import { accessSync, constants as fsConstants, existsSync } from 'fs'
+import {
+  accessSync,
+  constants as fsConstants,
+  existsSync,
+  readFileSync
+} from 'fs'
 import { dirname, isAbsolute, join, relative } from 'path'
-import { toolsPath } from 'backend/constants/paths'
+import { gamesConfigPath, toolsPath } from 'backend/constants/paths'
 import { logWarning, LogPrefix } from 'backend/logger'
 import type { SteamEngineOption } from 'common/types/steam'
 import { probeDemoStatus } from './demoStatus'
@@ -141,15 +146,7 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
         15_000
       )
     },
-    readOverride(appId) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { GameConfig } = require('backend/game_config') as {
-        GameConfig: {
-          get(id: string): { config?: { steamEngineOverride?: unknown } }
-        }
-      }
-      return GameConfig.get(appId).config?.steamEngineOverride
-    },
+    readOverride: readStoredEngineOverride,
     listReadyBridgeBottleNames() {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const bottle = require('../bottle') as typeof import('../bottle')
@@ -315,6 +312,28 @@ function pinnedSelection(
     label: pin.label,
     version: pin.wine.version,
     dxvk: { dir: p.dxvkDir, version: pin.dxvk.version }
+  }
+}
+
+/**
+ * 59-UAT G11: the title's stored override, read straight from its GameConfig
+ * file. `GameConfig.get(id).config` is filled asynchronously after
+ * construction, so the first read after a restart saw undefined and the
+ * launch silently ran Automatic; GameConfig.get also creates a missing file.
+ * Unvalidated: callers pass the value through parseEngineOverride.
+ */
+export function readStoredEngineOverride(appId: string): unknown {
+  if (!/^[0-9]{1,10}$/.test(appId)) return undefined
+  const path = join(gamesConfigPath, `${appId}.json`)
+  if (!existsSync(path)) return undefined
+  try {
+    const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<
+      string,
+      { steamEngineOverride?: unknown } | undefined
+    >
+    return raw[appId]?.steamEngineOverride
+  } catch {
+    return undefined
   }
 }
 

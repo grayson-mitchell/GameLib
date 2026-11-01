@@ -10,7 +10,7 @@
  */
 import { logError, LogPrefix } from 'backend/logger'
 import type { SteamEngineState } from 'common/types/steam'
-import { preflightCrossover } from './engineDecision'
+import { preflightCrossover, readStoredEngineOverride } from './engineDecision'
 import type {
   CrossoverPreflight,
   EngineDecisionDeps,
@@ -65,15 +65,6 @@ const lazyBottle = () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('../bottle') as typeof import('../bottle')
 
-type GameConfigShape = {
-  GameConfig: {
-    get(id: string): { config?: { steamEngineOverride?: unknown } }
-  }
-}
-const lazyGameConfig = () =>
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('backend/game_config') as GameConfigShape
-
 function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
   return {
     isMac:
@@ -98,7 +89,7 @@ function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
 function readOverride(appId: string, deps: EngineStateDeps): EngineOverrideId {
   const raw = deps.readOverride
     ? deps.readOverride(appId)
-    : lazyGameConfig().GameConfig.get(appId).config?.steamEngineOverride
+    : readStoredEngineOverride(appId)
   return parseEngineOverride(raw)
 }
 

@@ -528,7 +528,8 @@ jest.mock('../bridge/sharedRedistInstall', () => ({
 jest.mock('../engine/engineDecision', () => ({
   decideCreationEngine: jest.fn(),
   decideLaunchEngine: jest.fn(),
-  preflightCrossover: jest.fn()
+  preflightCrossover: jest.fn(),
+  readStoredEngineOverride: jest.fn()
 }))
 // Phase 59 (59-10): per-launch bottle preparation and state publishing.
 jest.mock('../engine/engineSwitch', () => ({
@@ -7549,14 +7550,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
-    ;(existsSync as jest.Mock).mockImplementation((p: string) =>
-      String(p).endsWith(`GamesConfig/${APP_ID}.json`)
-    )
-    const gameConfigGetMock = jest.requireMock('backend/game_config').GameConfig
-      .get as jest.Mock
-    gameConfigGetMock.mockReturnValueOnce({
-      config: { steamEngineOverride: 'pinned:wine-staging-11.20' }
-    })
+    const readStored = jest.requireMock('../engine/engineDecision')
+      .readStoredEngineOverride as jest.Mock
+    readStored.mockReturnValueOnce('pinned:wine-staging-11.20')
 
     const settings = await new SteamGame(APP_ID).getSettings()
 
