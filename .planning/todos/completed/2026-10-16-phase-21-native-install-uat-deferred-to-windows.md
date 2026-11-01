@@ -89,3 +89,11 @@ Record results:
 
 - Record 4a/4b/4c in 21-UAT.md's `**Result:**` lines, through `/gsd-verify-work 21`.
 - Write no SteamID, account name or other account identifier into the todo or the UAT file.
+
+## Resolution (2026-11-02)
+
+Run on the operator's Windows box via `/gsd-verify-work 21` with the recipe above. 4b PASS, 4c PASS
+(second attempt; the first was lost to D-UAT-18), 4a ISSUE: the consent dialog shows, but
+`SteamSetup.exe` fails to spawn with EACCES while GameLib reports it started (D-UAT-17). New
+findings D-UAT-15..18 are recorded in 21-UAT.md "Windows client-setup pass" and filed as their own
+pending todos. This todo, which only existed to get 4a/4b/4c run, is closed.
