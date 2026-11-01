@@ -372,6 +372,26 @@ body.keyboardNav .gameCard:hover:not(:focus-within) {
   display: none;
 }
 
+/* Clean tile mode (quick 261101-tjv): the operator asked for the bottom bar
+   gone, with the game page (reached by clicking the tile's cover Link) as the
+   place to launch from. Zeroing --game-card-bar-height collapses both the
+   card's content height and the pre-reveal placeholder to the bare 3:4 art, so
+   the art keeps its ratio and no empty band is left behind. The bar itself is
+   hidden, store badge included. Its buttons stay in the DOM so the controller
+   play/install shortcut in gamepad.ts (.playIcon / .downIcon .click(), which
+   fires on display:none elements) keeps working.
+   Scope: every grid-card mount (main grid, Favourites/Recently-Played, the
+   FocusRowStrip and its just-played hero) renders through GamesList, which
+   carries the .cleanTiles class. List rows (.gameListItem) are deliberately
+   untouched: their .icons is the table's Action column. */
+.cleanTiles .gameCard {
+  --game-card-bar-height: 0px;
+}
+
+.cleanTiles .gameCard > .icons {
+  display: none;
+}
+
 .gameCard > .icons > .svg-button {
   justify-self: center;
 }

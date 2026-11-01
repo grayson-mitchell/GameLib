@@ -31,7 +31,7 @@ const GamesList = ({
   isFavourite = false,
   ariaLabel
 }: Props): JSX.Element => {
-  const { gameUpdates, allTilesInColor, titlesAlwaysVisible } =
+  const { gameUpdates, allTilesInColor, titlesAlwaysVisible, cleanTiles } =
     useContext(ContextProvider)
   const { t } = useTranslation()
   const listRef = useRef<HTMLDivElement | null>(null)
@@ -67,7 +67,8 @@ const GamesList = ({
         gameListLayout: layout === 'list',
         firstLane: isFirstLane,
         allTilesInColor,
-        titlesAlwaysVisible
+        titlesAlwaysVisible,
+        cleanTiles
       })}
       ref={listRef}
       {...(ariaLabel ? { role: 'group', 'aria-label': ariaLabel } : {})}
