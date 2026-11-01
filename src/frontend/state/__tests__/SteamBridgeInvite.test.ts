@@ -1,14 +1,10 @@
 /**
- * Store tests for the Phase 58 Plan 32 friend picker. No jsdom: the store and
- * the push handler are exercised directly with a stubbed window.api.
+ * Store tests for the Phase 58 Plan 32 friend picker. No jsdom: the store is
+ * exercised directly with a stubbed window.api (quick 261101-llf: opened through
+ * `open(...)`, as BridgeInvitePickerRoot does; the main-window push is gone).
  */
 import type { BridgeFriend } from 'common/types/steam'
-import type { IpcRendererEvent } from 'backend/platform'
-import {
-  useSteamBridgeInvite,
-  sortFriends,
-  handleSteamBridgeInviteRequestSignal
-} from '../SteamBridgeInvite'
+import { useSteamBridgeInvite, sortFriends } from '../SteamBridgeInvite'
 
 const api = {
   getGameInfo: jest.fn(),
@@ -50,9 +46,7 @@ describe('useSteamBridgeInvite', () => {
       ok: true,
       friends: [f(1, 'Off', false, false), f(2, 'On', true, false)]
     })
-    handleSteamBridgeInviteRequestSignal({} as IpcRendererEvent, {
-      appId: '3205720'
-    })
+    useSteamBridgeInvite.getState().open({ appId: '3205720' })
     expect(useSteamBridgeInvite.getState().isOpen).toBe(true)
     expect(useSteamBridgeInvite.getState().load).toBe('loading')
     await flush()

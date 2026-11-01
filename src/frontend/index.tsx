@@ -41,12 +41,18 @@ import { defaultThemes } from './components/UI/ThemeSelector'
 import { migrateThemeKey } from './components/UI/ThemeSelector/themeLabels'
 import Loading from './screens/Loading'
 import { hydrateStoreSnapshot } from '../preload/tauriTransport'
+import { parseBridgeInvitePickerParams } from 'common/bridgeInvitePicker'
 import { applyFramelessDecorations } from '../preload/api/tauriWindowChrome'
 import {
   i18nextLanguageOptions,
   toI18nextCode,
   toShippedLanguage
 } from 'common/languages'
+
+// Quick 261101-llf: a `?window=bridge-invite&..` load is the dedicated invite-picker window. It
+// mounts only the friend picker: no GlobalState, no App, no frameless decorations, drag regions,
+// shortcuts or gamepads, so it looks the same whether frameless is OFF or ON.
+const pickerParams = parseBridgeInvitePickerParams(window.location.search)
 
 initOnlineMonitor()
 
@@ -170,7 +176,7 @@ try {
 // see tauriWindowChrome.ts's header), so a redundant re-apply for the common
 // decorated case costs one `setDecorations(true)` and nothing else.
 probeMark('after-hydrate')
-applyFramelessDecorations()
+if (!pickerParams) applyFramelessDecorations()
 
 const DEFAULT_THEME = 'midnightMirage'
 
@@ -195,8 +201,10 @@ const Backend = new HttpApi(null, {
     `locales/${toShippedLanguage(languages[0])}/${namespaces[0]}.json`
 })
 
-initGamepad()
-initShortcuts()
+if (!pickerParams) {
+  initGamepad()
+  initShortcuts()
+}
 
 const storage: Storage = window.localStorage
 storage.removeItem('nonAvailableGames')
@@ -249,19 +257,32 @@ const App = lazy(async () => {
   return mod
 })
 
+const BridgeInvitePickerRoot = lazy(
+  () => import('./bridgeInvitePicker/BridgeInvitePickerRoot')
+)
+
 probeMark('before-root-render')
 
-root.render(
-  // <React.StrictMode>
-  <GlobalState>
+if (pickerParams) {
+  root.render(
     <I18nextProvider i18n={i18next}>
-      <Suspense fallback={<Loading />}>
-        <App />
+      <Suspense fallback={null}>
+        <BridgeInvitePickerRoot params={pickerParams} />
       </Suspense>
     </I18nextProvider>
-  </GlobalState>
-  // </React.StrictMode>
-)
+  )
+} else
+  root.render(
+    // <React.StrictMode>
+    <GlobalState>
+      <I18nextProvider i18n={i18next}>
+        <Suspense fallback={<Loading />}>
+          <App />
+        </Suspense>
+      </I18nextProvider>
+    </GlobalState>
+    // </React.StrictMode>
+  )
 
 probeMark('after-root-render')
 i18next.on('initialized', () => probeMark('i18next-initialized'))

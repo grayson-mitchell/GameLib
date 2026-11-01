@@ -1,4 +1,3 @@
-import type { IpcRendererEvent } from 'backend/platform'
 import { create } from 'zustand'
 import type { BridgeFriend, BridgeInviteResult } from 'common/types/steam'
 
@@ -36,11 +35,12 @@ export const sortFriends = (friends: BridgeFriend[]): BridgeFriend[] =>
     return a.name.localeCompare(b.name)
   })
 
-// Phase 58 Plan 32 (M-01): the friend picker store. Opened exclusively by the
-// backend `steamBridgeInviteRequest` push (the game's own invite control);
-// the one subscriber is GlobalState.tsx. Friend names are state for rendering
+// Phase 58 Plan 32 (M-01): the friend picker store. Quick 261101-llf: opened by
+// `BridgeInvitePickerRoot` in the dedicated `bridge-invite` window, from the URL
+// params the shell builds when the game's own invite control fires; the main
+// window no longer opens it. Friend names are state for rendering
 // only: nothing in this file logs them.
-// 58-36: the push's ackId is kept so the dialog can echo it back once it is on
+// 58-36: the ackId is kept so the dialog can echo it back once it is on
 // screen (dialogDisplayed); the backend then logs display=confirmed or unconfirmed.
 export const useSteamBridgeInvite = create<SteamBridgeInviteState>()(
   (set, get) => ({
@@ -83,11 +83,3 @@ export const useSteamBridgeInvite = create<SteamBridgeInviteState>()(
     }
   })
 )
-
-// Standalone so tests can simulate the push without mounting GlobalState.
-export const handleSteamBridgeInviteRequestSignal = (
-  _e: IpcRendererEvent,
-  payload: { appId: string; ackId?: string }
-): void => {
-  useSteamBridgeInvite.getState().open(payload)
-}

@@ -26,8 +26,17 @@ const WM_ROOT = '/tools/wine'
 
 const ok = (status: DemoStatus) =>
   ({ kind: 'ok', status, elapsedMs: 1 }) as DemoStatusProbe
-const failed = (reason: 'timeout' | 'spawn-error' | 'nonzero-exit') =>
-  ({ kind: 'failed', reason, detail: 'x', elapsedMs: 1 }) as DemoStatusProbe
+const failed = (
+  reason: 'timeout' | 'spawn-error' | 'nonzero-exit' | 'invalid-bottle'
+) => ({ kind: 'failed', reason, detail: 'x', elapsedMs: 1 }) as DemoStatusProbe
+
+/** Probe that resolves the given results in order, repeating the last one. */
+const seq = (...results: DemoStatusProbe[]) => {
+  let i = 0
+  return jest.fn(() =>
+    Promise.resolve(results[Math.min(i++, results.length - 1)])
+  )
+}
 
 function mkDeps(
   over: Partial<EngineDecisionDeps> = {}
@@ -69,37 +78,81 @@ describe('preflightCrossover (stub deps)', () => {
     expect(r).toMatchObject({ kind: 'broken' })
     expect((r as { detail: string }).detail).toContain('not executable')
   })
-  it.each(['timeout', 'spawn-error', 'nonzero-exit'] as const)(
-    'broken on probe failure %s, wineserver stopped only on timeout',
-    async (reason) => {
+  it.each([
+    ['spawn-error', failed('spawn-error'), 'broken'],
+    ['nonzero-exit', failed('nonzero-exit'), 'broken'],
+    ['invalid-bottle', failed('invalid-bottle'), 'broken'],
+    ['unrecognised', ok({ kind: 'unrecognised' }), 'broken'],
+    ['expired', ok({ kind: 'expired', daysAgo: 2 }), 'expired']
+  ])(
+    'definitive %s demotes on the first probe, no retry',
+    async (_n, res, kind) => {
+      const probe = seq(res)
       const kill = jest.fn(() => Promise.resolve(undefined))
       const r = await preflightCrossover(
         'B',
-        mkDeps({
-          probe: () => Promise.resolve(failed(reason)),
-          killCrossoverWineserver: kill
-        })
+        mkDeps({ probe, killCrossoverWineserver: kill })
       )
-      expect(r.kind).toBe('broken')
-      expect(kill).toHaveBeenCalledTimes(reason === 'timeout' ? 1 : 0)
-      if (reason === 'timeout') expect(kill).toHaveBeenCalledWith('B', CX_BIN)
+      expect(r.kind).toBe(kind)
+      expect(probe).toHaveBeenCalledTimes(1)
+      expect(kill).toHaveBeenCalledTimes(0)
     }
   )
-  it('broken on unrecognised output', async () => {
+  it('timeout then licensed is healthy', async () => {
+    const probe = seq(failed('timeout'), ok({ kind: 'licensed' }))
+    const kill = jest.fn(() => Promise.resolve(undefined))
     const r = await preflightCrossover(
       'B',
-      mkDeps({ probe: () => Promise.resolve(ok({ kind: 'unrecognised' })) })
+      mkDeps({ probe, killCrossoverWineserver: kill })
     )
-    expect(r.kind).toBe('broken')
+    expect(r).toMatchObject({ kind: 'healthy', trialDaysRemaining: null })
+    expect(probe).toHaveBeenCalledTimes(2)
+    expect(kill).toHaveBeenCalledTimes(1)
+    expect(kill).toHaveBeenCalledWith('B', CX_BIN)
   })
-  it('expired', async () => {
+  it('timeout then trial is healthy', async () => {
     const r = await preflightCrossover(
       'B',
       mkDeps({
-        probe: () => Promise.resolve(ok({ kind: 'expired', daysAgo: 3 }))
+        probe: seq(failed('timeout'), ok({ kind: 'trial', daysRemaining: 5 }))
       })
     )
-    expect(r).toMatchObject({ kind: 'expired', daysAgo: 3 })
+    expect(r).toMatchObject({ kind: 'healthy', trialDaysRemaining: 5 })
+  })
+  it('timeout then expired still demotes', async () => {
+    const r = await preflightCrossover(
+      'B',
+      mkDeps({
+        probe: seq(failed('timeout'), ok({ kind: 'expired', daysAgo: 2 }))
+      })
+    )
+    expect(r).toMatchObject({ kind: 'expired', daysAgo: 2 })
+  })
+  it('timeout then nonzero-exit is broken', async () => {
+    const probe = seq(failed('timeout'), failed('nonzero-exit'))
+    const kill = jest.fn(() => Promise.resolve(undefined))
+    const r = await preflightCrossover(
+      'B',
+      mkDeps({ probe, killCrossoverWineserver: kill })
+    )
+    expect(r.kind).toBe('broken')
+    expect((r as { detail: string }).detail).toContain('nonzero-exit')
+    expect(probe).toHaveBeenCalledTimes(2)
+    expect(kill).toHaveBeenCalledTimes(1)
+  })
+  it('timeout then timeout is broken, wineserver stopped after each', async () => {
+    const probe = seq(failed('timeout'), failed('timeout'))
+    const kill = jest.fn(() => Promise.resolve(undefined))
+    const r = await preflightCrossover(
+      'B',
+      mkDeps({ probe, killCrossoverWineserver: kill })
+    )
+    expect(r.kind).toBe('broken')
+    const detail = (r as { detail: string }).detail
+    expect(detail).toContain('timeout')
+    expect(detail).toContain('2')
+    expect(probe).toHaveBeenCalledTimes(2)
+    expect(kill).toHaveBeenCalledTimes(2)
   })
   it('licensed and trial are healthy', async () => {
     expect(await preflightCrossover('B', mkDeps())).toMatchObject({
@@ -130,6 +183,7 @@ describe('preflightCrossover (real probe, stub wine)', () => {
   afterEach(() => profile.dispose())
 
   const real = (mode: string): Partial<EngineDecisionDeps> => {
+    const stubState = join(profile.root, 'hang-once.state')
     const base = mkDeps()
     delete base.probe
     delete base.isExecutable
@@ -138,26 +192,31 @@ describe('preflightCrossover (real probe, stub wine)', () => {
       ...base,
       resolveCrossoverBinDir: () => Promise.resolve(binDir),
       readBuild: () => Promise.resolve(null),
-      probeEnv: profile.childEnv({ ...process.env, STUB_MODE: mode }),
+      probeEnv: profile.childEnv({
+        ...process.env,
+        STUB_MODE: mode,
+        STUB_STATE: stubState
+      }),
       probeTimeoutMs: 500
     }
   }
 
   it.each([
-    ['licensed', { kind: 'healthy', trialDaysRemaining: null }],
-    ['trial', { kind: 'healthy', trialDaysRemaining: 12 }],
-    ['expired', { kind: 'expired', daysAgo: 3 }],
-    ['garbage', { kind: 'broken' }],
-    ['hang', { kind: 'broken' }],
-    ['fail', { kind: 'broken' }]
-  ])('maps stub mode %s', async (mode, expected) => {
+    ['licensed', { kind: 'healthy', trialDaysRemaining: null }, 0],
+    ['trial', { kind: 'healthy', trialDaysRemaining: 12 }, 0],
+    ['expired', { kind: 'expired', daysAgo: 3 }, 0],
+    ['garbage', { kind: 'broken' }, 0],
+    ['hang', { kind: 'broken' }, 2],
+    ['hang-once', { kind: 'healthy', trialDaysRemaining: null }, 1],
+    ['fail', { kind: 'broken' }, 0]
+  ])('maps stub mode %s', async (mode, expected, kills) => {
     const kill = jest.fn(() => Promise.resolve(undefined))
     const r = await preflightCrossover('Steam', {
       ...real(mode),
       killCrossoverWineserver: kill
     })
     expect(r).toMatchObject(expected)
-    expect(kill).toHaveBeenCalledTimes(mode === 'hang' ? 1 : 0)
+    expect(kill).toHaveBeenCalledTimes(kills)
   })
 })
 
@@ -194,6 +253,40 @@ describe('decideLaunchEngine', () => {
         pinId: ENGINE_PINS.current.id
       }
     })
+  })
+  it('one timeout then licensed stays on CrossOver (no pinned selection)', async () => {
+    const r = await decideLaunchEngine(
+      args,
+      mkDeps({ probe: seq(failed('timeout'), ok({ kind: 'licensed' })) })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'crossover', reason: 'cx-healthy' },
+      needsDownload: false
+    })
+  })
+  it('two timeouts -> pinned cx-broken', async () => {
+    const r = await decideLaunchEngine(
+      args,
+      mkDeps({ probe: seq(failed('timeout'), failed('timeout')) })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: {
+        kind: 'pinned',
+        reason: 'cx-broken',
+        pinId: ENGINE_PINS.current.id
+      }
+    })
+  })
+  it('expired demotes on a single probe (trial-expiry guard)', async () => {
+    const probe = seq(ok({ kind: 'expired', daysAgo: 1 }))
+    const r = await decideLaunchEngine(args, mkDeps({ probe }))
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'pinned', reason: 'cx-expired' }
+    })
+    expect(probe).toHaveBeenCalledTimes(1)
   })
   it('needsDownload mirrors pin installation', async () => {
     const r = await decideLaunchEngine(
@@ -364,6 +457,20 @@ describe('decideCreationEngine', () => {
     const r = await decideCreationEngine(
       { appId: '1' },
       mkDeps({ probe: () => Promise.resolve(ok({ kind: 'unrecognised' })) })
+    )
+    expect(r).toMatchObject({ kind: 'pinned', reason: 'cx-broken' })
+  })
+  it('one timeout then licensed -> crossover probed', async () => {
+    const r = await decideCreationEngine(
+      { appId: '1' },
+      mkDeps({ probe: seq(failed('timeout'), ok({ kind: 'licensed' })) })
+    )
+    expect(r).toMatchObject({ kind: 'crossover', probed: true })
+  })
+  it('two timeouts -> pinned cx-broken', async () => {
+    const r = await decideCreationEngine(
+      { appId: '1' },
+      mkDeps({ probe: seq(failed('timeout'), failed('timeout')) })
     )
     expect(r).toMatchObject({ kind: 'pinned', reason: 'cx-broken' })
   })

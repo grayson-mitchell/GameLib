@@ -69,7 +69,6 @@ import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
 import { handleSteamBridgeRouteNoticeSignal } from './SteamBridgeRouteNotice'
 import { handleSteamGoOfflineRequiredSignal } from './SteamGoOfflineNotice'
-import { handleSteamBridgeInviteRequestSignal } from './SteamBridgeInvite'
 import { handleSteamEngineStateChangedSignal } from './SteamEngineState'
 import {
   handleSteamBottleLaunchWaitingSignal,
@@ -1658,11 +1657,6 @@ class GlobalState extends PureComponent<Props> {
     // Phase 54: opens the guided Go Offline step when the backend's go-offline
     // wrap did not see Mac Steam log off; no logon happened.
     window.api.handleSteamGoOfflineRequired(handleSteamGoOfflineRequiredSignal)
-
-    // Phase 58 Plan 32: the game's own invite control opens the friend picker.
-    window.api.handleSteamBridgeInviteRequest(
-      handleSteamBridgeInviteRequestSignal
-    )
 
     // Phase 59 Plan 11: backend-computed per-title engine state for the game page.
     window.api.handleSteamEngineStateChanged(

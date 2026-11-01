@@ -302,10 +302,166 @@ static int control_call(int authenticated, uint16_t slot, const uint8_t *arg, ui
   return n;
 }
 
+/* WR-07 p2pfb-*: legacy-P2P fallback, per-1202 remote + allowlist. */
+#define PFB_BASE 76561198100000000ull
+static uint64_t g_pfb_acc[128];
+static int g_pfb_accn = 0;
+static uint64_t g_pfb_lobby_l = 0, g_pfb_lobby_m = 0;
+static uint64_t g_pfb_member_l = 0, g_pfb_member_m = 0;
+static int32_t g_pfb_lobby_count = 0;
+static int pfb_accept(void *self, uint64_t remote) {
+  (void)self;
+  if (g_pfb_accn < 128) g_pfb_acc[g_pfb_accn++] = remote;
+  return 1;
+}
+static int32_t pfb_num(void *self, uint64_t lobby) {
+  (void)self;
+  return lobby == g_pfb_lobby_l ? g_pfb_lobby_count : lobby == g_pfb_lobby_m ? 1 : 0;
+}
+static uint64_t pfb_member(void *self, uint64_t lobby, int32_t i) {
+  (void)self;
+  (void)i;
+  return lobby == g_pfb_lobby_l ? g_pfb_member_l : lobby == g_pfb_lobby_m ? g_pfb_member_m : 0;
+}
+static void pfb_run_frame(int32_t pipe) { (void)pipe; }
+static bool pfb_get_next(int32_t pipe, gl_CallbackMsg_t *m) {
+  (void)pipe;
+  (void)m;
+  return false;
+}
+static void pfb_setup(void) {
+  g_inited = 1;
+  g_manual_dispatch = 1;
+  g_md_run_frame = pfb_run_frame;
+  g_md_get_next = pfb_get_next;
+  g_bd_self_steamnetworking006 = (void *)3;
+  g_bd_self_steammatchmaking009 = (void *)2;
+  g_bd_flat_SteamNetworking006_AcceptP2PSessionWithUser = pfb_accept;
+  g_bd_flat_SteamMatchMaking009_GetNumLobbyMembers = pfb_num;
+  g_bd_flat_SteamMatchMaking009_GetLobbyMemberByIndex = pfb_member;
+}
+static void pfb_serve(uint64_t remote) {
+  uint8_t body[GL_CBQ_DRAIN_RESP_MAX_BYTES], status = 9;
+  gl_cbq_offer(&g_cbq, GL_CBQ_ID_P2P_SESSION_REQUEST, (const uint8_t *)&remote, 8);
+  control_call(1, CONTROL_SLOT_DRAIN_CALLBACKS, NULL, 0, &status, body, sizeof body);
+}
+static void pfb_report(uint32_t dn) {
+  uint8_t body[16], status = 9, arg[12];
+  int32_t id = GL_CBQ_ID_P2P_SESSION_REQUEST;
+  uint32_t dh = 0;
+  memcpy(arg, &id, 4);
+  memcpy(arg + 4, &dn, 4);
+  memcpy(arg + 8, &dh, 4);
+  control_call(1, CONTROL_SLOT_REPORT_CB_DISPATCH, arg, 12, &status, body, sizeof body);
+}
+static void pfb_sent(uint64_t remote) {
+  uint8_t args[32];
+  memset(args, 0, sizeof args);
+  memcpy(args, &remote, 8);
+  gl_p2p_note_call(bd_call_index(BD_ORDINAL_SteamNetworking006, BD_SLOT_SteamNetworking006_SendP2PPacket), args,
+                   sizeof args);
+}
+static void pfb_lobby_enter(uint64_t lobby, int32_t resp) {
+  uint8_t buf[GL_CBQ_LOBBYENTER_MAC_SIZE];
+  memset(buf, 0, sizeof buf);
+  memcpy(buf, &lobby, 8);
+  memcpy(buf + GL_CBQ_LOBBYENTER_MAC_OFF_RESPONSE, &resp, 4);
+  gl_p2p_note_lobby_from_mac(GL_CBQ_ID_LOBBY_ENTER, buf);
+}
+static void pfb_print(const char *tag) {
+  printf("%s accepts=%d idx=", tag, g_pfb_accn);
+  for (int i = 0; i < g_pfb_accn; i++) printf("%lld,", (long long)(g_pfb_acc[i] - PFB_BASE));
+  printf("\n");
+}
+static int run_pfb_case(const char *c) {
+  pfb_setup();
+  if (strcmp(c, "p2pfb-order") == 0) {
+    pfb_sent(PFB_BASE + 1);
+    pfb_sent(PFB_BASE + 2);
+    pfb_serve(PFB_BASE + 1);
+    pfb_serve(PFB_BASE + 2);
+    pfb_report(0);
+    pfb_report(0);
+    pfb_print("order");
+  } else if (strcmp(c, "p2pfb-stranger") == 0) {
+    pfb_serve(PFB_BASE + 77);
+    pfb_report(0);
+    pfb_print("stranger");
+  } else if (strcmp(c, "p2pfb-lobby") == 0) {
+    g_pfb_lobby_l = 109775240000000001ull;
+    g_pfb_lobby_m = 109775240000000002ull;
+    g_pfb_member_l = PFB_BASE + 5;
+    g_pfb_member_m = PFB_BASE + 6; /* Z is only in lobby M (response 2, never recorded) */
+    g_pfb_lobby_count = 1;
+    pfb_lobby_enter(g_pfb_lobby_l, 1);
+    pfb_lobby_enter(g_pfb_lobby_m, 2);
+    pfb_serve(PFB_BASE + 5);
+    pfb_report(0);
+    pfb_print("member");
+    pfb_serve(PFB_BASE + 6);
+    pfb_report(0);
+    pfb_print("response2");
+    g_pfb_lobby_count = 0; /* left the lobby */
+    pfb_serve(PFB_BASE + 5);
+    pfb_report(0);
+    pfb_print("left");
+  } else if (strcmp(c, "p2pfb-listener") == 0) {
+    pfb_sent(PFB_BASE + 1);
+    pfb_sent(PFB_BASE + 2);
+    pfb_serve(PFB_BASE + 1);
+    pfb_serve(PFB_BASE + 2);
+    pfb_report(1);
+    pfb_report(0);
+    pfb_print("listener");
+  } else if (strcmp(c, "p2pfb-empty") == 0) {
+    pfb_report(0);
+    pfb_print("empty");
+  } else if (strcmp(c, "p2pfb-reaccept") == 0) {
+    pfb_sent(PFB_BASE + 1);
+    pfb_serve(PFB_BASE + 1);
+    pfb_report(0);
+    pfb_serve(PFB_BASE + 1);
+    pfb_report(0);
+    pfb_print("reaccept");
+  } else if (strcmp(c, "p2pfb-sent-evict") == 0) {
+    for (int i = 0; i <= 64; i++) pfb_sent(PFB_BASE + 1000 + i);
+    pfb_serve(PFB_BASE + 1000);
+    pfb_report(0);
+    pfb_print("evicted");
+    pfb_serve(PFB_BASE + 1064);
+    pfb_report(0);
+    pfb_print("newest");
+  } else if (strcmp(c, "p2pfb-overflow") == 0) {
+    for (int i = 0; i < 40; i++) pfb_sent(PFB_BASE + 2000 + i);
+    for (int i = 0; i < 40; i++) pfb_serve(PFB_BASE + 2000 + i);
+    for (int i = 0; i < 8; i++) pfb_report(0);
+    pfb_print("skipped");
+    pfb_report(0);
+    pfb_print("ninth");
+  } else if (strcmp(c, "p2pfb-strangers-flood") == 0) {
+    for (int i = 0; i < 40; i++) {
+      pfb_serve(PFB_BASE + 3000 + i);
+      pfb_report(0);
+    }
+    pfb_print("flood");
+  } else if (strcmp(c, "p2pfb-many") == 0) {
+    for (int k = 1; k <= 8; k++) pfb_sent(PFB_BASE + 4000 + k);
+    for (int k = 1; k <= 8; k++) {
+      pfb_serve(PFB_BASE + 4000 + k);
+      pfb_report(0);
+    }
+    pfb_print("many");
+  } else {
+    return 2;
+  }
+  return 0;
+}
+
 int main(int argc, char **argv) {
   const char *c = argc > 1 ? argv[1] : "";
   if (strncmp(c, "mms-", 4) == 0 && strcmp(c, "mms-lobby-args") != 0) return run_mms_case(c);
   g_dylib_handle = RTLD_DEFAULT;
+  if (strncmp(c, "p2pfb-", 6) == 0) return run_pfb_case(c);
   if (strncmp(c, "invite-", 7) == 0 || strcmp(c, "list-friends") == 0 || strcmp(c, "control-unauth") == 0 ||
       strcmp(c, "mms-lobby-args") == 0) {
     uint8_t body[GL_INVITE_FRIENDS_RESP_MAX];
@@ -332,7 +488,7 @@ int main(int argc, char **argv) {
       uint32_t rl = 0;
       memcpy(arg, &lobby, 8);
       for (int i = 0; i < 20; i++) gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
-      /* cap: pretend 2 s passed between every call */
+      /* no count cap (58 WR-01): pretend 2 s passed between every call */
       for (int i = 0; i < 40; i++) {
         g_invite_last_log_ms -= 3000;
         gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
@@ -378,7 +534,8 @@ int main(int argc, char **argv) {
           uint16_t nl;
           memcpy(&o, body + off, 4);
           memcpy(&nl, body + off + 6, 2);
-          printf("f ord=%u online=%u playing=%u name=%.*s\n", o, body[off + 4], body[off + 5], (int)nl,
+          /* 58 WR-04: the ordinal is a (generation << 8) | index token. */
+          printf("f idx=%u gen=%u online=%u playing=%u name=%.*s\n", o & 0xffu, o >> 8, body[off + 4], body[off + 5], (int)nl,
                  (const char *)body + off + 8);
           off += 8u + nl;
         }
@@ -392,7 +549,7 @@ int main(int argc, char **argv) {
       memcpy(arg, &lobby, 8);
       gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
       gl_invite_list_friends((void *)1, body, sizeof body, &fn);
-      r = gl_invite_send((void *)2, 2);
+      r = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 2u);
       printf("r=%d calls=%d lobbyok=%d targetok=%d\n", r, g_inv_calls, g_inv_lobby == lobby, g_inv_target == k_fid[2]);
       return 0;
     }
@@ -405,9 +562,20 @@ int main(int argc, char **argv) {
       gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
       a3 = gl_invite_send((void *)2, 0); /* no snapshot yet */
       gl_invite_list_friends((void *)1, body, sizeof body, &fn);
-      a4 = gl_invite_send((void *)2, 3);
+      a4 = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 3u);
+      {
+        /* 58 WR-04: a token from a superseded snapshot, a bare index and a
+         * current token. Only the last one reaches InviteUserToLobby. */
+        uint32_t stale = (g_friend_snapshot_gen << 8) | 0u;
+        int32_t s1, s2, s3;
+        gl_invite_list_friends((void *)1, body, sizeof body, &fn);
+        s1 = gl_invite_send((void *)2, stale);
+        s2 = gl_invite_send((void *)2, 0);
+        s3 = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 0u);
+        printf("stale=%d bare=%d current=%d target0=%d\n", s1, s2, s3, g_inv_target == k_fid[0]);
+      }
       g_invite_born_ms = gl_invite_now_ms() - 601000ull;
-      a2 = gl_invite_send((void *)2, 0);
+      a2 = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 0u);
       printf("nopending=%d expired=%d nosnap=%d badord=%d calls=%d\n", a1, a2, a3, a4, g_inv_calls);
       {
         uint8_t st = 9;

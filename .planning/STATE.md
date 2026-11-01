@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
-status: executing
-stopped_at: Phase 59 context gathered
-last_updated: "2026-10-31T22:29:42.093Z"
-last_activity: 2026-10-31
+status: ready_to_plan
+stopped_at: Phase 58 complete (37/37) — ready to discuss Phase 59
+last_updated: 2026-11-01T01:49:18.475Z
+last_activity: 2026-11-01
 progress:
   total_phases: 9
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 192
-  completed_plans: 189
-  percent: 67
+  completed_plans: 191
+  percent: 78
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 58 — steam-bridge-multiplayer
+**Current focus:** Phase 59 — steam engine fallback when crossover is unavailable
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -71,12 +71,12 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 58 (steam-bridge-multiplayer) — EXECUTING
-Plan: 4 of 37
-Status: Ready to execute
-Last activity: 2026-10-31
+Phase: 59
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-11-01 - Completed quick task 261101-mmt: Phase 58 WR-03/WR-04 live-verified, 3 follow-up todos filed
 
-Progress: [██████████] 98%
+Progress: [██████████] 99%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -376,6 +376,14 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261101-d0h | Archived the 113 oldest Quick Tasks Completed rows (112 in bfeccdc21, 1 more when this row was added) from STATE.md to quick/COMPLETED-INDEX.md, verbatim and in order; STATE keeps the newest 20. | 2026-11-01 | bfeccdc21 | 757 rows conserved; moved rows byte-identical | [261101-d0h-archive-old-quick-task-rows-to-completed](./quick/261101-d0h-archive-old-quick-task-rows-to-completed/) |
 | 261101-d55 | Settings info icons made consistent: hover-only InfoIcon now renders the InfoBox iconOnly click popover (API unchanged, 0 call sites touched); PopoverComponent gains Esc-to-close + aria-expanded. | 2026-11-01 | bff0189f4 | Jest pass (11 tests); Esc helper landed inside 0608ce7ad via concurrent 59-12 commit; live click check pending | [261101-d55-make-settings-info-icons-consistent-hove](./quick/261101-d55-make-settings-info-icons-consistent-hove/) |
 | 261101-h8l | Pre-push gate green again for the 282 unpushed commits: 4 lint errors fixed, test-scope warnings 714 -> 610 (ceiling 648, no disables, ceilings unchanged), 8 dead exports resolved at source, gamepage.json committed in i18next key order. | 2026-11-01 | 3b09e3e26 | pre-push line-2 chain exit 0; 6 touched suites pass (1178 tests) | [261101-h8l-make-the-pre-push-gate-pass-so-main-can-](./quick/261101-h8l-make-the-pre-push-gate-pass-so-main-can-/) |
+| 261101-i00 | WR-05 fixed: SteamMatchMakingServers GetServerDetails returns a stable heap buffer per (request, iServer), never rewritten once returned, freed on ReleaseRequest / dup-handle reissue / abort / terminal retire (cap 1024 per request); todo closed. | 2026-11-01 | 9793f4039 | Harness pass (420 tests); build-steam-bridge both arches OK; no live title exercises the server browser | [261101-i00-fix-wr-05-per-request-iserver-stable-get](./quick/261101-i00-fix-wr-05-per-request-iserver-stable-get/) |
+| 261101-iah | WR-07 fixed: legacy P2P fallback accepts a 1202 only for the remote that 1202 reported (per-1202 FIFO filled at slot-6 drain; pump-time `g_p2p_last_remote` deleted) and only if the game sent it a P2P packet or it is a member of a lobby the game entered; unresolved remotes refused; full tables evict oldest (never accept-all); accept-once table removed. Todo closed; shim 4-report budget filed as follow-up; M-03 stays verified-with-caveats. | 2026-11-01 | 2238d27c6 | Harness pass (165 tests, 9 new p2pfb-*); build-steam-bridge both arches OK; no legacy-TCP-mode title under live test | [261101-iah-legacy-p2p-fallback-accept-only-the-repo](./quick/261101-iah-legacy-p2p-fallback-accept-only-the-repo/) |
+| 261101-ip5 | Shim `gl_cb_report_dispatch` exempts 1202 (P2PSessionRequest_t) from the per-id report budget of 4, so the slot-10 report stays one-per-1202 and the helper's legacy-P2P served FIFO stays paired past the fourth 1202; other ids keep budget 4; helper CBDISP log budget still bounds the log. Pinned on generator and committed shim; todo closed. | 2026-11-01 | 4c0ce026b | Harness pass (505 tests across 4 suites, new p2pfb-many: 8 pairs accept, 4 CBDISP lines); build-steam-bridge both arches OK; gen-vtables drift clean; no legacy-TCP-mode title under live test | [261101-ip5-exempt-1202-from-shim-per-id-report-budg](./quick/261101-ip5-exempt-1202-from-shim-per-id-report-budg/) |
+| 261101-j03 | WR-02 fixed: DRM-mode lsteamclient GetAppBuildId resolves the manifest from the running exe's library, then the default library, then libraryfolders.vdf (max 8), and takes only top-level AppState.buildid via a KeyValues tokenizer, read to EOF (256 KiB bound). Shipped as -p58c (archive 330076c4..., 5381345 B; only lsteamclient.dll changed), catalogue repinned; todo closed. | 2026-11-01 | 79a77eb1b | Host parser test + buildLsteamclient pass (45), DRM/notice suites pass (389); upload round-trip match, pinned: match; live Raft gate on p58c pending | [261101-j03-drm-getappbuildid-appmanifest-lookup-res](./quick/261101-j03-drm-getappbuildid-appmanifest-lookup-res/) |
+| 261101-jbm | A single --demo-status timeout is now inconclusive: preflightCrossover kills the wineserver and re-probes once; only two consecutive timeouts give cx-broken (pinned engine + bottle rewrite). Definitive answers (expired, nonzero-exit, spawn-error, invalid-bottle, unrecognised) still demote on the first probe. Todo closed. | 2026-11-01 | d3f83e677 | Jest pass (87 tests, 3 engine suites); codecheck: 2 pre-existing TS2737 in helperNetHarness.test.ts; live launch pending | [261101-jbm-single-demo-status-probe-timeout-must-no](./quick/261101-jbm-single-demo-status-probe-timeout-must-no/) |
+| 261101-llf | Bridge invite picker now opens in its own focused `bridge-invite` Tauri window (scoped capability, 4 permissions) instead of raising the main window; focus returns to the game on close; bridge-notice dialogs keep `main_window_raise`. | 2026-11-01 | 7cebc8c99 | cargo + touched Jest suites pass; live gate (7 items, frameless OFF/ON) pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
+| 261101-mmt | Phase 58 live checks recorded: WR-03 (two Schedule I sessions, 2m39s + 2m05s, no mid-session drop or shim reconnect) and WR-04 (3 invites from fresh snapshots, 0 bad-ordinal) marked live-verified in 58-REVIEW-FIX.md; filed todos: main-menu invite as a supported host path (supersedes 58-33 decision 5), lobby-0 invite dialog refuses every invite, quitting GameLib kills a hosted bridge session | 2026-11-01 | 413df5b28 | Live-verified; planning-gates 11/12 (state-sdk-field-anchor fails on pre-existing `Plan: Not started`) | [261101-mmt-record-phase-58-live-check-results-and-f](./quick/261101-mmt-record-phase-58-live-check-results-and-f/) |
+| fast | Invite picker header X removed (showCloseButton=false); the picker window closes via the traffic lights or the footer Close button. | 2026-11-01 | 821b996ec | 2 suites pass (16 tests); live check pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
 
 ## Deferred Items
 
@@ -460,7 +468,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-31T22:29:36.925Z
+Last session: 2026-11-01T01:45:23.886Z
 Stopped at: Phase 59 context gathered
 Resume file: None
 

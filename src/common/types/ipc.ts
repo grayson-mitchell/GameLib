@@ -824,9 +824,6 @@ interface FrontendMessages {
   steamGoOfflineRequired: (payload: SteamGoOfflinePayload) => void
   // Phase 59 (D-04/D-06): the per-title engine display state changed
   steamEngineStateChanged: (payload: SteamEngineState) => void
-  // Phase 58 Plan 31 (M-01): helperProcess.ts pushes this when the game opens
-  // its invite dialog; the friend picker subscribes.
-  steamBridgeInviteRequest: (payload: { appId: string; ackId: string }) => void
   steamBridgeRouteNotice: (payload: {
     appName: string
     reason: SteamBridgeRouteReason

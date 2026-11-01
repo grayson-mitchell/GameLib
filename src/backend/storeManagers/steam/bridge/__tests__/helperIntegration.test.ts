@@ -2015,12 +2015,36 @@ describeDarwinOnly(
       }
     }, 20000)
 
-    test('58-35: connection cap -- the 17th connection is closed at once, the first stays served, one `connection table full` line', async () => {
+    test('58 WR-02: a full table evicts its oldest unauthenticated slot for a new connection, the authenticated one stays served', async () => {
       const h = await startAuthHelper('p58-35-cap-', authedEnv())
       const socks: Socket[] = []
       try {
         for (let i = 0; i < 16; i++) socks.push(await h.connect())
         await authenticate(socks[0], 1)
+        const evicted = waitClose(socks[1])
+        const extra = await h.connect()
+        socks.push(extra)
+        expect(await evicted).toBeLessThan(1000)
+        await authenticate(extra, 3)
+        expect((await sendFrameOnSocket(socks[0], drainFrame(2))).status).toBe(
+          STATUS_OK
+        )
+        expect(h.getStderr()).not.toMatch(/connection table full/)
+      } finally {
+        socks.forEach((s) => s.destroy())
+        h.child.kill()
+      }
+    }, 20000)
+
+    test('58-35: connection cap -- with every slot authenticated the 17th connection is closed at once, the first stays served, one `connection table full` line', async () => {
+      const h = await startAuthHelper('p58-35-capauth-', authedEnv())
+      const socks: Socket[] = []
+      try {
+        for (let i = 0; i < 16; i++) {
+          const s = await h.connect()
+          socks.push(s)
+          await authenticate(s, 100 + i)
+        }
         const extra = await h.connect()
         socks.push(extra)
         const ms = await waitClose(extra)
@@ -2031,6 +2055,29 @@ describeDarwinOnly(
         expect(h.getStderr().match(/connection table full/g)).toHaveLength(1)
       } finally {
         socks.forEach((s) => s.destroy())
+        h.child.kill()
+      }
+    }, 20000)
+
+    test('58 WR-02: a connection trickling bytes without HELLO is closed 4-7 s after accept, not kept alive by each byte', async () => {
+      const h = await startAuthHelper('p58-wr02-trickle-', authedEnv())
+      const sock = await h.connect()
+      const frame = Buffer.alloc(4)
+      frame.writeUInt32LE(100, 0)
+      let i = 0
+      const tick = setInterval(() => {
+        if (sock.destroyed) return
+        if (i < frame.length) sock.write(frame.subarray(i, i + 1))
+        else sock.write(Buffer.from([0]))
+        i++
+      }, 1000)
+      try {
+        const ms = await waitClose(sock)
+        expect(ms).toBeGreaterThanOrEqual(4000)
+        expect(ms).toBeLessThanOrEqual(7000)
+      } finally {
+        clearInterval(tick)
+        sock.destroy()
         h.child.kill()
       }
     }, 20000)
@@ -2219,17 +2266,26 @@ describeDarwinOnly(
       expect(body).toContain('GL_NET_KIND_OVERSIZE')
     })
 
-    test('58-13 source pin: the 1202 fallback logs only a fixed line, with no %s, and stores at most 16 remotes', () => {
+    test('WR-07 source pin: the 1202 fallback logs fixed lines only, is paired per report, and every table fails closed', () => {
       const raw = readFileSync(HELPER_SOURCE_PATH, 'utf8')
       const src = raw
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/^\s*\/\/.*$/gm, '')
       expect(src).toContain('logts("CBQ", "p2p-accept src=helper")')
-      expect(src).toContain('#define GL_P2P_REMOTE_MAX 16')
-      expect(src).toContain('g_p2p_accepted_n < GL_P2P_REMOTE_MAX')
+      expect(src).toContain('#define GL_P2P_SERVED_MAX 32')
+      expect(src).toContain('#define GL_P2P_SENT_MAX 64')
+      expect(src).toContain('#define GL_P2P_LOBBY_MAX 4')
+      expect(src).not.toContain('g_p2p_last_remote')
+      expect(src).not.toContain('g_p2p_accepted')
       expect(src).not.toMatch(/logts(?:_f)?\("(NET|CBQ)",[^;]*%s/)
       const fb = src.slice(src.indexOf('static void gl_p2p_fallback_accept'))
       expect(fb.slice(0, fb.indexOf('\n}\n'))).not.toMatch(/logts_f/)
+      const drain = src.slice(src.indexOf('CONTROL_SLOT_DRAIN_CALLBACKS) {'))
+      const served = drain.indexOf('gl_p2p_note_served(')
+      expect(served).toBeGreaterThan(-1)
+      expect(served).toBeLessThan(drain.indexOf('gl_cbq_secure_zero(out'))
+      expect(src).toContain('gl_p2p_on_report(')
+      expect(src).toContain('gl_p2p_note_call(ci, argBlob, argLen)')
     })
 
     const strippedHelper = (): string =>

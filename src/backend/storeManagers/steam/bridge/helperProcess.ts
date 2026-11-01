@@ -106,7 +106,10 @@ const INIT_FAILED_LINE =
 // ActivateGameOverlayInviteDialog -- MUST match bridge_helper.c's
 // `logts_f("INVITE", "dialog appid=%s", ...)` (INVITE fills the 6-char
 // category column, so ONE space follows it). Carries no lobby or user ids.
-const INVITE_DIALOG_LINE = /INVITE dialog appid=(\d+)/
+// 58 WR-05: anchored to logts's whole-line shape `[ts] CAT    msg` so another
+// line merely containing this text (a game-controlled string) cannot raise
+// the window. `\r?` tolerates a CRLF split.
+const INVITE_DIALOG_LINE = /^\[[^\]]*\] INVITE +dialog appid=(\d+)\r?$/
 
 // Backend debounce on top of the helper's own 1/2 s rate limit.
 const INVITE_REQUEST_DEBOUNCE_MS = 2000
@@ -445,10 +448,14 @@ function ensureHelperSpawned(
       return
     }
     entry.lastInviteRequestMs = now
-    // 58-36: fakeWindow.show is a no-op under Tauri, so 58-32's picker rendered
-    // into a window that stayed behind the game. Raise through the shell.
-    app.raiseMainWindow()
-    logInfo(`bridge invite [${appId}]: raise requested`, LogPrefix.Steam)
+    // Quick 261101-llf: the picker gets its own `bridge-invite` window, so the main window no
+    // longer comes forward over the game (58-36 raised it). The picker window echoes the
+    // display ack itself; nothing is pushed to the main window, whose render would
+    // false-confirm it.
+    logInfo(
+      `bridge invite [${appId}]: picker window requested`,
+      LogPrefix.Steam
+    )
     const ackId = newDialogAckId()
     trackDialogDisplay(ackId, (result) =>
       logInfo(
@@ -458,7 +465,14 @@ function ensureHelperSpawned(
         LogPrefix.Steam
       )
     )
-    sendFrontendMessage('steamBridgeInviteRequest', { appId, ackId })
+    void app.openBridgeInvitePicker({ appId, ackId }).then((ok) => {
+      if (!ok) {
+        logWarning(
+          `bridge invite [${appId}]: picker window failed`,
+          LogPrefix.Steam
+        )
+      }
+    })
   }
 
   // 261027-aue: same appid rule and own-stream rule as LISTEN/READY (T-aue-01).

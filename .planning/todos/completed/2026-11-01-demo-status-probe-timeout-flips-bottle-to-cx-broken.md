@@ -19,3 +19,13 @@ A transient timeout should not demote the engine. The side effects are a changed
 ## Suggested direction
 
 Require repeated or corroborated failures before marking cx-broken, or make the demotion reversible. Do not mutate the bottle on a single timeout. Verify against the logic that sets `reason=cx-broken` in the bridge engine selection.
+
+## Result
+
+Fixed in quick-261101-jbm (code commit d3f83e677).
+
+A `--demo-status` timeout is now inconclusive. `preflightCrossover` stops the bottle's CrossOver wineserver and probes once more. Two timeouts in a row mean cx-broken, so phase 59 D-09 still holds for a sustained hang. Expired, nonzero-exit, spawn-error, invalid-bottle and unrecognised output still demote on the first probe with no retry, so spike 060's trial-expiry fallback is unchanged. Nothing is stored between launches (D-07). A single timeout followed by a good answer stays on CrossOver, so no pinned selection is produced and `prepareBottleForEngine` never switches the engine or rewrites `user.reg`.
+
+The worst case before a corroborated-hang fallback is now about 2 x 15 s plus the wineserver kill.
+
+Not done: no live GameLib bridge launch was run. If the probe on the operator's machine times out on both attempts, the hang itself still needs root-causing. The debug session showed repeated timeouts at 11:22 and 12:04, and that is a separate investigation. A dev restart is needed before any live test, because tauri dev does not rebuild the sidecar.

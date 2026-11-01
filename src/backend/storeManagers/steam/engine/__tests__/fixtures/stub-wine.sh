@@ -7,5 +7,6 @@ case "$STUB_MODE" in
   garbage) echo "Something else" ;;
   empty) ;;
   hang) exec sleep 30 ;;
+  hang-once) if [ -e "$STUB_STATE" ]; then echo "Standard version"; else : > "$STUB_STATE"; exec sleep 30; fi ;;
   fail) exit 3 ;;
 esac

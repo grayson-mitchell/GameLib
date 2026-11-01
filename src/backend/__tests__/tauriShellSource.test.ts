@@ -395,10 +395,16 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // hide itself is unproven by any automated test.
       'app_hide',
       // Bridge-notice display hardening (debug bridge-notice-display-unconfirm): raises the main
-      // window before a bridge-notice dialog (and the invite picker, 58-36). Same
+      // window before a bridge-notice dialog (the invite picker moved off it, 261101-llf). Same
       // unminimize/show/set_focus calls as the tray About arm, plus a macOS
       // Critical-attention fallback; no args, no pure logic to unit-test, so its proof is live only.
       'main_window_raise',
+      // Quick 261101-llf: opens or reuses the dedicated `bridge-invite` window that hosts the
+      // Steam bridge invite picker, instead of raising the main window over the game.
+      // PROOF STATUS: the pure path/nav helpers (`bridge_invite_picker_path`,
+      // `bridge_invite_nav_allowed`) are unit-tested in main.rs; the window itself, focus and
+      // the AppKit focus restore are proven live only (operator gate).
+      'bridge_invite_picker_open',
       // Phase 35 Plan 08 (D-08/D-05, REQ-35-06) legitimately added exactly these two wake-lock
       // arms, replacing electronStub's `powerSaveBlocker` logged no-op; this gate only pins that
       // no OTHER, undeclared arm has crept in since.
@@ -1373,7 +1379,19 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 
   test('always_on_top never appears in non-comment source (F-4) -- proves the persistent-pin option was never wired, NOT that the one-shot raise plan 29 item 1 must observe actually happens', () => {
     const code = loadMainRsCode()
-    expect(code).not.toContain('always_on_top')
+    // Quick 261101-llf: the bridge invite picker (a local, app-bundle window) is the ONE
+    // deliberate exception -- it must float over a frontmost game. Exempt exactly that chain
+    // and assert it is the only occurrence; every login/remote window stays pin-free.
+    const pickerStart = code.indexOf('BRIDGE_INVITE_WINDOW_LABEL,\n')
+    expect(pickerStart).toBeGreaterThan(-1)
+    const pickerEnd = code.indexOf('.build()', pickerStart)
+    const pickerChain = code.slice(pickerStart, pickerEnd)
+    expect(pickerChain.split('always_on_top').length - 1).toBe(1)
+    expect(
+      (code.slice(0, pickerStart) + code.slice(pickerEnd)).includes(
+        'always_on_top'
+      )
+    ).toBe(false)
   })
 
   // AMENDED Phase 34.4.1 gap cycle 3, plan 33 (D-29-05). This test previously asserted
@@ -1399,11 +1417,21 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
       ...code.matchAll(/tauri::WebviewWindowBuilder::new\(/g)
     ]
     expect(chainStarts.length).toBeGreaterThanOrEqual(3)
+    // WR-07 protects REMOTE login windows from a forged app title. The bridge invite picker
+    // (quick 261101-llf) loads GameLib's own bundle (`WebviewUrl::App`), so a fixed title is not
+    // the prohibited shape. Exactly one such chain may exist, and it must be the picker's.
+    let appBundleChains = 0
     for (const match of chainStarts) {
       const start = match.index ?? 0
       const end = code.indexOf('.build()', start)
       expect(end).toBeGreaterThan(start)
       const chain = code.slice(start, end + '.build()'.length)
+
+      if (chain.includes('tauri::WebviewUrl::App(')) {
+        appBundleChains += 1
+        expect(chain).toContain('BRIDGE_INVITE_WINDOW_LABEL')
+        continue
+      }
 
       // The prohibited shape: a literal, in any of Rust's string forms.
       expect(chain).not.toMatch(/\.title\(\s*"/)
@@ -1416,6 +1444,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
         expect(t[1]).toContain('login_window_title(')
       }
     }
+    expect(appBundleChains).toBe(1)
   })
 
   // D-29-05's POSITIVE half, and the reason it is a separate test: the amended negative test

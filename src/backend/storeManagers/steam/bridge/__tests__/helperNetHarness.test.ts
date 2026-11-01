@@ -56,6 +56,78 @@ describeDarwinOnly(
       profile?.dispose()
     })
 
+    // WR-07 legacy-P2P fallback (host harness only; no legacy-TCP-mode title is live-tested).
+    const pfbBase = BigInt('76561198100000000')
+
+    test('p2pfb-order: each report accepts the remote of the 1202 it reports', () => {
+      const { out } = runBoth('p2pfb-order')
+      expect(out).toContain('order accepts=2 idx=1,2,')
+    })
+
+    test('p2pfb-stranger: a never-sent-to, lobby-less remote is refused and never logged', () => {
+      const { out, err } = runBoth('p2pfb-stranger')
+      expect(out).toContain('stranger accepts=0')
+      expect(err).toContain('p2p-accept src=helper action=refused')
+      const x = pfbBase + BigInt(77)
+      expect(err).not.toContain(x.toString())
+      expect(err).not.toContain(x.toString(16))
+    })
+
+    test('p2pfb-lobby: lobby co-members are accepted; response!=1 and left lobbies are refused', () => {
+      const { out } = runBoth('p2pfb-lobby')
+      expect(out).toContain('member accepts=1 idx=5,')
+      expect(out).toContain('response2 accepts=1 idx=5,')
+      expect(out).toContain('left accepts=1 idx=5,')
+    })
+
+    test('p2pfb-listener: the report that reached a listener consumes its own 1202', () => {
+      const { out } = runBoth('p2pfb-listener')
+      expect(out).toContain('listener accepts=1 idx=2,')
+    })
+
+    test('p2pfb-empty: a report with nothing served accepts nothing', () => {
+      const { out } = runBoth('p2pfb-empty')
+      expect(out).toContain('empty accepts=0')
+    })
+
+    test('p2pfb-reaccept: no accept-once table, a reconnecting peer is accepted again', () => {
+      const { out } = runBoth('p2pfb-reaccept')
+      expect(out).toContain('reaccept accepts=2 idx=1,1,')
+    })
+
+    test('p2pfb-sent-evict: the sent-to ring evicts oldest and fails closed', () => {
+      const { out } = runBoth('p2pfb-sent-evict')
+      expect(out).toContain('evicted accepts=0')
+      expect(out).toContain('newest accepts=1 idx=1064,')
+    })
+
+    test('p2pfb-overflow: served-FIFO overflow is skipped in step so pairing stays exact', () => {
+      const { out } = runBoth('p2pfb-overflow')
+      expect(out).toContain('skipped accepts=0')
+      expect(out).toContain('ninth accepts=1')
+    })
+
+    test('p2pfb-strangers-flood: 40 strangers never reopen accept-all', () => {
+      const { out } = runBoth('p2pfb-strangers-flood')
+      expect(out).toContain('flood accepts=0')
+    })
+
+    test("p2pfb-many: every 1202 report pairs past the shim's old cap of four; CBDISP log stays capped", () => {
+      const { out, err } = runBoth('p2pfb-many')
+      expect(out).toContain(
+        'many accepts=8 idx=4001,4002,4003,4004,4005,4006,4007,4008,'
+      )
+      const lines = err.split('\n')
+      expect(
+        lines.filter((l) =>
+          l.includes('CBDISP iCallback=1202 targets=0 held=0')
+        )
+      ).toHaveLength(4)
+      expect(
+        lines.filter((l) => l.includes('CBDISP cap reached iCallback=1202'))
+      ).toHaveLength(1)
+    })
+
     test('sockets-conn: Sockets recv is labelled iface=Sockets', () => {
       const { out, err } = runBoth('sockets-conn')
       expect(err).toContain('role=game kind=recv iface=Sockets')
@@ -153,10 +225,12 @@ describeDarwinOnly(
       expect(err).not.toMatch(/[0-9]{17}/)
     })
 
-    test('invite-dialog-ratelimit: a burst logs once, the process total is capped at 16', () => {
+    // 58 WR-01: the line is the backend's picker trigger, so it has no
+    // per-process count cap -- only the 2 s gap. 1 for the burst + 40 spaced.
+    test('invite-dialog-ratelimit: a burst logs once, every gap-separated call logs (no count cap)', () => {
       const { out, err } = runBoth('invite-dialog-ratelimit')
       expect(out).toContain('dialog calls=60')
-      expect(lines(err, /INVITE +dialog appid=/)).toHaveLength(16)
+      expect(lines(err, /INVITE +dialog appid=/)).toHaveLength(41)
     })
 
     test('mms-lobby-args: integer lobby shape only, 4 lines per op', () => {
@@ -212,9 +286,9 @@ describeDarwinOnly(
       expect(out).toContain('rc=0')
       expect(out).toContain('leak=0')
       expect(out).toContain('count=3')
-      expect(out).toContain('f ord=0 online=1 playing=0 name=Alice')
-      expect(out).toContain('f ord=1 online=0 playing=0 name=Bob')
-      expect(out).toContain('f ord=2 online=1 playing=1 name=Cara')
+      expect(out).toContain('f idx=0 gen=1 online=1 playing=0 name=Alice')
+      expect(out).toContain('f idx=1 gen=1 online=0 playing=0 name=Bob')
+      expect(out).toContain('f idx=2 gen=1 online=1 playing=1 name=Cara')
       expect(lines(err, /INVITE +friends n=3$/)).toHaveLength(1)
       expect(err).not.toMatch(/[0-9]{17}/)
     })
@@ -225,15 +299,17 @@ describeDarwinOnly(
       expect(lines(err, /INVITE +sent ok=1$/)).toHaveLength(1)
     })
 
-    test('invite-refusals: no-pending, expired, bad-ordinal, bad length', () => {
+    test('invite-refusals: no-pending, expired, bad-ordinal, stale snapshot token, bad length', () => {
       const { out, err } = runBoth('invite-refusals')
+      // 58 WR-04: a token from an earlier list and a bare index are refused.
+      expect(out).toContain('stale=-3 bare=-3 current=1 target0=1')
       expect(out).toContain(
-        'nopending=-1 expired=-2 nosnap=-3 badord=-3 calls=0'
+        'nopending=-1 expired=-2 nosnap=-3 badord=-3 calls=1'
       )
       expect(out).toContain('badlen status=1')
       expect(lines(err, /reason=no-pending$/)).toHaveLength(1)
       expect(lines(err, /reason=expired$/)).toHaveLength(1)
-      expect(lines(err, /reason=bad-ordinal$/)).toHaveLength(2)
+      expect(lines(err, /reason=bad-ordinal$/)).toHaveLength(4)
     })
 
     test('control-unauth: slots 13 and 14 refuse an unauthenticated connection', () => {

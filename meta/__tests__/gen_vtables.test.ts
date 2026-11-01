@@ -3673,7 +3673,9 @@ describe('quick k51: RequestCurrentStats notify and dispatch report (shim)', () 
     expect(hookAt).toBeLessThan(c.indexOf('static void gl_cb_run_callbacks('))
     const hook = c.slice(hookAt, c.indexOf('\n}\n', hookAt))
     expect(hook).not.toContain('> 16')
-    expect(hook).toContain('InterlockedIncrement(&g_gl_cb_report_n[i]) > 4')
+    expect(hook).toContain(
+      'id != 1202 && InterlockedIncrement(&g_gl_cb_report_n[i]) > 4'
+    )
     expect(hook).toContain('gl_cb_report_ids[i] == id')
     const idsLine = /gl_cb_report_ids\[\] = \{([^}]*)\}/.exec(c)![1]
     const ids = idsLine.split(',').map((x) => Number(x.trim()))
@@ -3699,6 +3701,44 @@ describe('quick k51: RequestCurrentStats notify and dispatch report (shim)', () 
     ).toBeGreaterThan(md.lastIndexOf('GL_CB_UNLOCK();'))
     expect(hook).toContain('BRIDGE_CONTROL_SLOT_REPORT_CB_DISPATCH')
   })
+
+  it.each<[string, () => string]>([
+    ['generateShimC output', () => generateShimC(loadAllManifests())],
+    [
+      'committed steam_api_shim.c',
+      () =>
+        readFileSync(
+          join(
+            __dirname,
+            '..',
+            '..',
+            'native',
+            'steam-bridge',
+            'generated',
+            'steam_api_shim.c'
+          ),
+          'utf-8'
+        )
+    ]
+  ])(
+    '(%s) the report hook exempts 1202 from the per-id budget (quick-261101-ip5)',
+    (_l, getSource) => {
+      const src = getSource()
+      const hookAt = src.indexOf('static void gl_cb_report_dispatch(')
+      expect(hookAt).toBeGreaterThan(-1)
+      const hook = src.slice(hookAt, src.indexOf('\n}\n', hookAt))
+      expect(hook).toContain(
+        'id != 1202 && InterlockedIncrement(&g_gl_cb_report_n[i]) > 4'
+      )
+      expect(hook).toContain('gl_cb_report_ids[i] == id')
+      expect(hook).toContain('if (i == ')
+      expect(hook).not.toContain('> 16')
+      const idsLine = /gl_cb_report_ids\[\] = \{([^}]*)\}/.exec(src)![1]
+      const ids = idsLine.split(',').map((x) => Number(x.trim()))
+      expect(ids).toContain(1202)
+      expect(ids).not.toContain(703)
+    }
+  )
 })
 
 describe('callback delivery wiring (P55-6)', () => {
