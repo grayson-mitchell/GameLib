@@ -63,6 +63,7 @@ import {
 } from 'common/signInDismissal'
 import { collectSignInInputs } from '../helpers/signInInputs'
 import { resyncSignInIdentity } from '../helpers/signInIdentityResync'
+import { createConnectivitySync } from '../helpers/connectivitySync'
 import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
@@ -1958,15 +1959,20 @@ class GlobalState extends PureComponent<Props> {
       }
     )
 
-    // listen to custom connectivity-changed event to update state
-    window.api.onConnectivityChanged((_, connectivity) => {
-      this.setState({ connectivity })
+    // Keep `connectivity` equal to the sidecar's. The pushes and the one pull below reach the
+    // webview by different routes, so which arrived last says nothing about which is newer:
+    // applying them blindly lets a stale pull reply land after the `online` push, and nothing
+    // would ever correct the "Retrying" banner it leaves behind. connectivitySync orders them
+    // by the sidecar's epoch/seq stamp, and re-pulls after a quiet spell while not online.
+    const connectivitySync = createConnectivitySync({
+      pull: () => window.api.getConnectivityStatus(),
+      onChange: (connectivity) => this.setState({ connectivity }),
+      log: (message) => window.api.logInfo(message)
     })
-
-    // get the current status
-    window.api
-      .getConnectivityStatus()
-      .then((connectivity) => this.setState({ connectivity }))
+    window.api.onConnectivityChanged((_, snapshot) =>
+      connectivitySync.receive(snapshot)
+    )
+    void connectivitySync.pull()
 
     // 49-07 (D-08, Pitfall 11): pull once on mount, because the outcomes push
     // can precede the listener above. Read-only getter -- nothing here starts

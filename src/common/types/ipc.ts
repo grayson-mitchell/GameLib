@@ -6,6 +6,7 @@ import type {
   AntiCheatInfo,
   AppSettings,
   ButtonOptions,
+  ConnectivitySnapshot,
   ConnectivityStatus,
   DialogType,
   DiskSpaceData,
@@ -646,10 +647,7 @@ interface AsyncIPCFunctions {
     finished: DMQueueElement[]
     state: DownloadManagerState
   }
-  'get-connectivity-status': () => {
-    status: ConnectivityStatus
-    retryIn: number
-  }
+  'get-connectivity-status': () => ConnectivitySnapshot
   // Phase 49 (49-04), D-08: read-only pull of this launch's sign-in probe
   // outcomes, for a renderer that mounted after the `signInProbeOutcomes` push.
   // Pure getter -- it can never start a probe (P3, T-49-11).
@@ -776,10 +774,7 @@ interface FrontendMessages {
   fullscreen: (status: boolean) => void
   refreshLibrary: (runner?: Runner) => void
   openScreen: (screen: string) => void
-  'connectivity-changed': (status: {
-    status: ConnectivityStatus
-    retryIn: number
-  }) => void
+  'connectivity-changed': (snapshot: ConnectivitySnapshot) => void
   launchGame: (appName: string, runner: Runner, args: string[]) => void
   installGame: (appName: string, runner: Runner) => void
   recentGamesChanged: (newRecentGames: RecentGame[]) => void

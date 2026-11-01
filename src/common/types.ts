@@ -763,6 +763,19 @@ export type InstallPlatform =
 
 export type ConnectivityStatus = 'offline' | 'check-online' | 'online'
 
+/**
+ * What the sidecar tells the renderer about connectivity, both pushed ('connectivity-changed')
+ * and pulled ('get-connectivity-status'). A push and a pull reply reach the webview by
+ * different routes, so arrival order says nothing about which is newer: `seq` (one per publish,
+ * within one `epoch` = one sidecar process) does.
+ */
+export interface ConnectivitySnapshot {
+  status: ConnectivityStatus
+  retryIn: number
+  epoch: string
+  seq: number
+}
+
 export interface Tools {
   exe?: string
   tool: string
