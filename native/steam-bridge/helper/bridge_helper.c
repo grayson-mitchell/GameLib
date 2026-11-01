@@ -2233,7 +2233,6 @@ int gl_mms_get_server_details(void *self, const uint8_t *args, uint32_t argLen, 
 #define GL_INVITE_FRIENDS_MAX 100u
 #define GL_INVITE_NAME_MAX 128u
 #define GL_INVITE_EXPIRY_MS 600000ull
-#define GL_INVITE_DIALOG_LOG_MAX 16u
 #define GL_INVITE_DIALOG_LOG_GAP_MS 2000ull
 #define GL_INVITE_FRIENDS_RESP_MAX (4u + GL_INVITE_FRIENDS_MAX * (8u + GL_INVITE_NAME_MAX))
 
@@ -2266,9 +2265,11 @@ int gl_friends_invite_dialog(void *self, const uint8_t *args, uint32_t argLen, u
   g_invite_lobby = lobby;
   g_invite_born_ms = now;
   g_bd_flat_SteamFriends017_ActivateGameOverlayInviteDialog(self, lobby);
-  if (g_invite_dialog_logged < GL_INVITE_DIALOG_LOG_MAX &&
-      (g_invite_dialog_logged == 0 || now - g_invite_last_log_ms >= GL_INVITE_DIALOG_LOG_GAP_MS)) {
-    g_invite_dialog_logged++;
+  /* This line is the backend's picker trigger (helperProcess.ts), not just a
+   * log line, so it is never capped by count: every call past the 2 s gap
+   * emits it. The gap (plus the backend's own debounce) bounds the volume. */
+  if (!g_invite_dialog_logged || now - g_invite_last_log_ms >= GL_INVITE_DIALOG_LOG_GAP_MS) {
+    g_invite_dialog_logged = 1;
     g_invite_last_log_ms = now;
     logts_f("INVITE", "dialog appid=%s", g_appid);
   }
