@@ -43,3 +43,11 @@ no GameLib logon. It is unverified, and automating the console is awkward.
 ## Cross-reference: known-fix macArch "32" (quick 261027-bqe)
 
 The "title with a macOS build goes to steam://install" rule must treat a title for which `knownFixSaysMac32(appId, meta)` is true, or whose stored `mac_arch` is '32', as Windows-only. Otherwise this routing sends it to the unusable Mac build. See `src/backend/storeManagers/steam/macArchKnownFix.ts`.
+
+## Resolution (2026-11-02)
+
+Closed as resolved by Phase 54 (54-VERIFICATION `status: passed`). Both blockers are cleared: Phase 54 shipped, and the spike `2026-10-26-spike-gamelib-toggles-mac-steam-offline-around-logon.md` is completed (verdict: the go-offline wrap is automatable, spikes 046a-c).
+
+- **Part 2 (protect authenticated logons): done.** `macSteamOffline.ts` wraps every cold authenticated connect in `user.ts` (`withMacSteamOffline`) with `steam://open/gooffline` / `goonline`. `autoRelogin: false` means no unwrapped reconnect. If Mac Steam's LogOff isn't seen within 5 s, a `GuidedOfflineRequiredError` asks the user to go offline instead of logging on silently. The Friends sign-out todo was closed as fixed by Phase 54 (`e5fbd8ef7`).
+- **Part 3 (warn in the install dialog): not needed.** It was only the fallback for when parts 1 and 2 both fail.
+- **Part 1 (route Mac-build titles to `steam://install`): deliberately not built.** Its only purpose was to avoid the Friends flip, which part 2 now prevents. The remaining cost of the native depot path is a ≈3-4 s Mac Steam/Friends-chat drop during the wrap. `steam://install` also opens Steam's install dialog and needs a human click (quick 261029-iwy, `macSteamAdoption.ts`). `enableSteamNativeInstall` OFF still sends Mac-native titles to `steam://install` for anyone who prefers that. The macArch "32" cross-reference already holds: `mac_arch === '32'` makes a title bottle-eligible (`isBottleEligibleFromPlatforms`). Re-open as a part-1-only todo if the wrap's brief offline window proves annoying in use.
