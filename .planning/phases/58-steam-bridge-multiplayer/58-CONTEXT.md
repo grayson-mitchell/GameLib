@@ -122,6 +122,31 @@ session the peer hosts.
   quick 261026-ous, `90ebe6db7`), so D-12 is a **no-op**. Plans record it; no task removes an
   entry. The `p2p-required` category stays.
 
+### Operator decision after Phase 58 close (2026-11-01)
+- **D-17 (main-menu invite is a supported host path):** Decided by the operator on 2026-11-01
+  during the Phase 58 live check (58-34 launch 2). It applies to the next bridge live gate and
+  any later one. It **supersedes**, for any future gate, 58-33-LIVE-GATE scope decision 5 and
+  item 2 sub-check (e) "main-menu '+' refuses cleanly", including that sub-check's 2026-11-01
+  OPERATOR AMENDMENT (which let the picker open at the main menu but still required the send to
+  be refused). The closed 58-33 contract is not edited and its recorded results stand.
+  The Direction A main-menu pass path, in order: the invite is sent from the game's main-menu
+  '+' before Continue, with `INVITE sent ok=1` in the log. The PC accepts and waits at its own
+  menu. Mac Continue creates the listen socket (`CreateListenSocketP2P`). The PC then auto-loads,
+  followed by a game-originated `AcceptConnection` and
+  `NET role=game kind=join iface=Sockets cb=1221`.
+  Evidence from launch 2: invite sent at 16:06:47 before Continue; Continue at 16:07:37
+  (`CALL SteamNetworkingSockets013.CreateListenSocketP2P`); PC connected at 16:07:40
+  (`AcceptConnection`, `NET role=game kind=join iface=Sockets cb=1221 path=relayed`).
+  The in-game '+' (ESC menu after Continue) is still accepted, but it is no longer the only
+  scored host gesture. Its visibility is the game's own flaky logic, and the operator disproved
+  the "Windows must load first" hypothesis. The main-menu '+' always shows.
+  D-08's evidence bar is unchanged, including 58-33 item 2(a)'s ordering rule: the
+  `AcceptConnection` and cb=1221 join lines must come after the `INVITE sent ok=1` line, and the
+  D-08 send/recv and operator-confirmation items still apply. This works unchanged for the
+  main-menu path because `meta/bridgeCensus.ts` derives `host=` from the game's
+  `AcceptConnection` call, not from the invite's timing. The lobby-0 fix (quick 261101-mv3,
+  `6ab500d6a`) is what makes the main-menu send succeed.
+
 ### Claude's Discretion
 - The trace format for join callbacks, peer send/receive and the direct-vs-relayed marker, in both
   modes. It must be greppable by `meta/bridgeCensus.ts` (`classifyBridgeEvidence`) and carry
