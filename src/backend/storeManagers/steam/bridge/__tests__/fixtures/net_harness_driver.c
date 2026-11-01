@@ -488,7 +488,7 @@ int main(int argc, char **argv) {
       uint32_t rl = 0;
       memcpy(arg, &lobby, 8);
       for (int i = 0; i < 20; i++) gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
-      /* cap: pretend 2 s passed between every call */
+      /* no count cap (58 WR-01): pretend 2 s passed between every call */
       for (int i = 0; i < 40; i++) {
         g_invite_last_log_ms -= 3000;
         gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);

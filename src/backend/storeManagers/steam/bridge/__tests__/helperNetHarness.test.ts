@@ -225,10 +225,12 @@ describeDarwinOnly(
       expect(err).not.toMatch(/[0-9]{17}/)
     })
 
-    test('invite-dialog-ratelimit: a burst logs once, the process total is capped at 16', () => {
+    // 58 WR-01: the line is the backend's picker trigger, so it has no
+    // per-process count cap -- only the 2 s gap. 1 for the burst + 40 spaced.
+    test('invite-dialog-ratelimit: a burst logs once, every gap-separated call logs (no count cap)', () => {
       const { out, err } = runBoth('invite-dialog-ratelimit')
       expect(out).toContain('dialog calls=60')
-      expect(lines(err, /INVITE +dialog appid=/)).toHaveLength(16)
+      expect(lines(err, /INVITE +dialog appid=/)).toHaveLength(41)
     })
 
     test('mms-lobby-args: integer lobby shape only, 4 lines per op', () => {
