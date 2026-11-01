@@ -1,5 +1,5 @@
 ---
-status: awaiting-verification
+status: resolved
 trigger: "Schedule I (bridge bottle) exits ~6 s after launch when saved prefs request 3440x1440 fullscreen"
 created: 2026-11-01
 updated: 2026-11-01
@@ -68,6 +68,13 @@ next_action: once the probe-timeout todo is fixed, launch Schedule I from GameLi
   implication: the mode-switch failure is D3DMetal-specific and DXVK removes it (test A passes).
   The error alone does not end the process within 60 s outside the bridge; the 21 s / 6 s stops of
   the 11:07 / 11:09 bridge launches are not explained by it
+- checked: GameLib launch 14:04 (operator Play click, dev restarted on the d3f83e677 sidecar), saved prefs
+  3440x1440 FullScreenWindow restored
+  found: demo-status probe ok (licensed, 5.2 s) -> engine=crossover build 26.3.0.39832 reason=cx-healthy,
+  bottle switched pinned -> crossover; "known-fix env applied: CX_GRAPHICS_BACKEND=dxvk (tier-1)";
+  Player.log renderer "Apple M5 Ultra" (DXVK), zero "Switching to resolution" / "could not switch" lines;
+  window raised 14:04:57, still running at 14:06:59 with no "gone after"; operator confirmed fullscreen
+  implication: the fix holds on the GameLib CrossOver bridge path (verification complete)
 - checked: gamelib.log 11:07 and 11:09
   found: 11:07 crossover run "gone after 21s of play"; 11:09 "gone after 6s of play"; both after
   raiseWineGameWindow raised the window
@@ -88,7 +95,8 @@ fix: public/fixes/3205720-steam.json sets CX_GRAPHICS_BACKEND=dxvk (tier-1 known
   CrossOver bridge launch of Schedule I uses DXVK instead of D3DMetal.
 verification: fix file loaded and logged ("known-fix env applied: CX_GRAPHICS_BACKEND=dxvk
   (tier-1)") on the 12:04 GameLib launch; direct CrossOver runs show DXVK clean vs D3DMetal error;
-  known-fixes jest suites 315/315; prettier clean. NOT yet verified: a GameLib bridge launch on the
-  CrossOver engine with the fix, blocked because the demo-status probe keeps timing out
-  (.planning/todos/pending/2026-11-01-demo-status-probe-timeout-flips-bottle-to-cx-broken.md).
+  known-fixes jest suites 315/315; prettier clean. Live-verified 2026-11-01 14:04: a GameLib bridge
+  launch on the CrossOver engine with the fix applied ran fullscreen at 3440x1440 for over 2 min with no
+  mode-switch error (operator confirmed). The 21 s / 6 s D3DMetal-era stops were not root-caused; they
+  do not recur on the DXVK path. The 58-34 fullscreen invite-raise re-check stays with 58-34.
 files_changed: public/fixes/3205720-steam.json

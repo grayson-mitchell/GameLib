@@ -40,3 +40,16 @@ therefore ran windowed.
 - Fix in place: `public/fixes/3205720-steam.json` sets `CX_GRAPHICS_BACKEND=dxvk`.
 - Still open: verify a GameLib CrossOver-engine fullscreen launch once the probe todo is fixed,
   and the 58-34 fullscreen raise check.
+
+## Result
+
+Fixed by the tier-1 known fix `public/fixes/3205720-steam.json` (`CX_GRAPHICS_BACKEND=dxvk`, commit
+32d203a8b). Live-verified on 2026-11-01 at 14:04 after the demo-status probe fix (d3f83e677). The
+saved 3440x1440 FullScreenWindow prefs were restored. The probe returned licensed, the bottle went
+back to the CrossOver engine, and the known-fix env was applied. Unity ran on DXVK ("Apple M5
+Ultra") with no mode-switch error. The game ran fullscreen on the ultrawide for over 2 minutes
+with no exit, confirmed by the operator.
+
+Not done: the 21 s and 6 s stops of the 11:07 and 11:09 D3DMetal launches were never root-caused.
+They do not recur on the DXVK path. The 58-34 invite-raise re-check over a fullscreen game belongs
+to 58-34. Debug session: `.planning/debug/resolved/fullscreen-3440-dx11-crossover.md`.
