@@ -450,4 +450,87 @@ describe('SteamClientSetup waiting dialog (D-UAT-18)', () => {
     )
     expect(buttonLabels(errored)).toEqual([TRY_AGAIN, CANCEL_INSTALL])
   })
+  // ---- LD-3: the waiting copy follows the live recheck status -------------
+
+  it('L1 install session: needs-install keeps the installer copy; a later needs-launch switches to launch-once, title and single button unchanged', async () => {
+    mockRecheck.mockResolvedValue({ status: 'needs-install', ready: false })
+    await openInstallWaiting()
+    await flush()
+    const installing = reinvoke()
+    expect(bodyText(installing)).toBe(INSTALLING)
+
+    mockRecheck.mockResolvedValue({ status: 'needs-launch', ready: false })
+    jest.advanceTimersByTime(3000)
+    await flush()
+    const launch = reinvoke()
+
+    expect(bodyText(launch)).toBe(LAUNCH_ONCE)
+    expect(headerText(launch)).toBe(WAITING_TITLE)
+    expect(buttonLabels(launch)).toEqual([CANCEL_INSTALL])
+  })
+
+  it('L2 the poll result wins over the opening reason: launch-once session + needs-install shows the installer copy', async () => {
+    mockRecheck.mockResolvedValue({ status: 'needs-install', ready: false })
+    await openLaunchOnceWaiting()
+    await flush()
+
+    expect(bodyText(reinvoke())).toBe(INSTALLING)
+  })
+
+  it('L3 a REJECTED recheck keeps the last known copy and the next tick polls again (C-19(b))', async () => {
+    mockRecheck.mockResolvedValue({ status: 'needs-launch', ready: false })
+    await openInstallWaiting()
+    await flush()
+    expect(bodyText(reinvoke())).toBe(LAUNCH_ONCE)
+    const callsBefore = mockRecheck.mock.calls.length
+
+    mockRecheck.mockRejectedValue(new Error('transport timeout'))
+    jest.advanceTimersByTime(3000)
+    await flush()
+
+    expect(mockRecheck.mock.calls.length).toBe(callsBefore + 1)
+    expect(bodyText(reinvoke())).toBe(LAUNCH_ONCE)
+  })
+
+  it('L4 a new session never inherits a status from the last one', async () => {
+    mockRecheck.mockResolvedValue({ status: 'needs-launch', ready: false })
+    const waiting = await openInstallWaiting()
+    await flush()
+    expect(bodyText(reinvoke())).toBe(LAUNCH_ONCE)
+
+    click(waiting, CANCEL_INSTALL)
+    expect(reinvoke()).toBeNull()
+    await flush()
+
+    // Reopen the same app as a fresh install session (the reset effect runs
+    // on the first render, the consent phase is read on the second).
+    mockStore.isOpen = true
+    mockStore.reason = 'install'
+    reinvoke()
+    const consent = reinvoke()
+    await flush()
+    expect(buttonLabels(consent)).toContain(INSTALL_STEAM)
+
+    click(consent, INSTALL_STEAM)
+    await flush()
+    const again = reinvoke()
+
+    expect(headerText(again)).toBe(WAITING_TITLE)
+    expect(bodyText(again)).toBe(INSTALLING)
+  })
+
+  it('L5 the store reason flipping install -> launch-once mid-wait still renders the waiting Dialog with launch-once copy', async () => {
+    mockRecheck.mockResolvedValue({ status: 'needs-launch', ready: false })
+    await openInstallWaiting()
+    await flush()
+
+    mockStore.reason = 'launch-once'
+    reinvoke()
+    const tree = reinvoke()
+
+    expectSharedDialogRoot(tree)
+    expect(headerText(tree)).toBe(WAITING_TITLE)
+    expect(bodyText(tree)).toBe(LAUNCH_ONCE)
+    expect(buttonLabels(tree)).toEqual([CANCEL_INSTALL])
+  })
 })
