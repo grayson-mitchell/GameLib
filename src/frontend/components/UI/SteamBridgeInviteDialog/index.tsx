@@ -63,7 +63,13 @@ const SteamBridgeInviteDialog = () => {
   }
 
   return (
-    <Dialog onClose={close} showCloseButton className="steamBridgeInviteDialog">
+    // No header X: the picker has its own window (quick 261101-llf), so the traffic lights and
+    // the footer Close button already close it.
+    <Dialog
+      onClose={close}
+      showCloseButton={false}
+      className="steamBridgeInviteDialog"
+    >
       <DialogHeader onClose={close}>
         {t('steam.bridge.invite.title', {
           defaultValue: 'Invite a friend to {{title}}',
