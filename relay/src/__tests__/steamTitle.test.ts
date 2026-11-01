@@ -91,7 +91,9 @@ describe('title', () => {
   })
 
   it('sanitises control, format chars, backticks and angle brackets', () => {
-    const out = sanitizeSteamTitle('A\u0000B `x` <b>Game (2004): R&D</b>   C‮')
+    const out = sanitizeSteamTitle(
+      'A\u0000B `x` <b>Game (2004): R&D</b>   C' + String.fromCodePoint(0x202e)
+    )
     expect(out).toBe('AB x bGame (2004): R&D/b C')
     expect(out).not.toMatch(/[`<>]/)
     expect(out).not.toMatch(/[\p{Cc}\p{Cf}]/u)
