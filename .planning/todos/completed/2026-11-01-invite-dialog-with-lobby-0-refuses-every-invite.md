@@ -8,7 +8,7 @@ files:
   - src/backend/storeManagers/steam/bridge/__tests__/fixtures/net_harness_driver.c
 severity: major
 platform: macos
-ready: code
+ready: live-gate
 ---
 
 ## Trigger
@@ -37,3 +37,9 @@ Harness case for dialog-with-0 then 513, then a live check: first main-menu '+' 
 ## Related
 
 `2026-11-01-main-menu-invite-is-a-supported-host-path.md`.
+
+## Resolution
+
+2026-11-01 (quick 261101-mv3): A dialog that arrives with lobby 0 now arms `g_invite_await_lobby`. The first successful LobbyCreated_t (513) the pump sees adopts the lobby id, from either the call result or the broadcast, and adoption is not gated on ring space. Adoption is one-shot, never overwrites an explicit lobby, and does not reset `born_ms`, so a late or stray 513 can never extend a dialog's 10-minute window. A click before 513 returns -1 (wire and UI unchanged) and logs `refused reason=lobby-pending`. Harness cases: `invite-zero-adopt` and `invite-zero-guards`.
+
+Live check still owed: first main-menu '+' press in Schedule I, pick a friend, expect `INVITE lobby adopted` then `INVITE sent ok=1`, and zero `refused reason=no-pending` / `lobby-pending`. Until then this stays open in spirit.
