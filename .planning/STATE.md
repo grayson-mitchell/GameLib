@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 57 (opt-in-known-fix-sharing-via-relay) — EXECUTING
 Plan: 12 of 12
 Status: Ready to execute
-Last activity: 2026-11-01
+Last activity: 2026-11-02 - Completed quick task 261102-fvg: settings button next to Play on the game page
 
 Progress: [██████████] 99%
 
@@ -396,6 +396,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261101-tsq | Hide titles: `hideTitles` pref (default off) + Accessibility toggle under "Always show titles" (which is disabled while it's on); grid tile titles hidden entirely, hover included; list view name column unchanged | 2026-11-01 | 3948170d6 | tsc clean, jest pass; live tauri dev check owed | [261101-tsq-hide-titles-toggle-never-show-tile-title](./quick/261101-tsq-hide-titles-toggle-never-show-tile-title/) |
 | fast | Clean tiles exception: Recently Played just-played hero keeps its button bar (`.cleanTiles .gameCard:not(.justPlayed)`) | 2026-11-01 | bf39f3d03 | 79 GameCard jest pass | — |
 | fast | Clean tiles: just-played hero art shrinks by the bar height (and its placeholder matches) so hero + bar equals neighbours' bare-art height | 2026-11-01 | 8ca8a6700 | 259 GameCard/FocusRowStrip jest pass | — |
+| 261102-fvg | Game page settings gear moved beside Play (inside .buttons, after MainButton); shown for every runner incl. Steam under the library card's rule (installed, not uninstalling, not Browser); title/aria-label from submenu.settings. | 2026-11-02 | 7032a414d | GamePage jest pass (441 tests, 9 new); live tauri dev check pending | [261102-fvg-in-the-game-page-add-a-settings-button-n](./quick/261102-fvg-in-the-game-page-add-a-settings-button-n/) |
 
 ## Deferred Items
 
