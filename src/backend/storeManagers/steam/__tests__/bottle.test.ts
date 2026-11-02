@@ -69,6 +69,9 @@ import {
   drmRunnerWineInstallation,
   getDrmBridgeBottleSettings,
   setDrmBridgeRunner,
+  setOverlayBridgeRunner,
+  getBridgeRunnerKind,
+  endPerGameBridgeBottleSessionWith,
   clearDrmBridgeRunner,
   getDrmBridgeRunner,
   killBottleWineServerWith,
@@ -2124,6 +2127,86 @@ describe('bottle.ts', () => {
         call = mockedSpawnAsync.mock.calls.at(-1)!
         expect(call[0]).toBe(CX_ROOT + '/bin/wineserver')
         expect(call[2]?.timeout).toBe(5000)
+      })
+
+      describe('Phase 60 overlay runner (60-07)', () => {
+        const OV_ROOT =
+          '/Users/a b/Library/Application Support/GameLib/steam-bridge/overlay/runners/crossover-26.3.0.39832/CrossOver'
+        const OV: DrmBridgeRunner = {
+          ...R,
+          runnerDir: dirnameOf(OV_ROOT),
+          cxRoot: OV_ROOT,
+          wrapperBin: OV_ROOT + '/bin/wine',
+          wineloaderBin: OV_ROOT + '/bin/wineloader',
+          wineserverBin: OV_ROOT + '/bin/wineserver',
+          windowsDllDir: OV_ROOT + '/lib/wine/x86_64-windows',
+          unixDllDir: OV_ROOT + '/lib/wine/x86_64-unix'
+        }
+
+        test('registers and routes the overlay clone', () => {
+          expect(setOverlayBridgeRunner('620', OV)).toBe(true)
+          expect(getBridgeBottleSettings('620').wineVersion).toEqual({
+            bin: OV_ROOT + '/bin/wine',
+            wineserver: OV_ROOT + '/bin/wineserver',
+            type: 'crossover',
+            name: 'CrossOver 26.3.0.39832 (GameLib overlay runner)'
+          })
+          expect(getBridgeRunnerKind('620')).toBe('overlay')
+          expect(getDrmBridgeRunner('620')?.kind).toBe('overlay')
+          clearDrmBridgeRunner('620')
+          expect(getBridgeRunnerKind('620')).toBeUndefined()
+        })
+
+        test('kind must match the runner root', () => {
+          expect(setOverlayBridgeRunner('620', R)).toBe(false)
+          expect(setDrmBridgeRunner('620', OV)).toBe(false)
+          expect(setOverlayBridgeRunner('abc', OV)).toBe(false)
+        })
+
+        test('stop uses the overlay clone wineserver', async () => {
+          const dir = getBottleDir('GameLibSteamBridge-620')
+          mockedExistsSync.mockImplementation((path: string) => path === dir)
+          setOverlayBridgeRunner('620', OV)
+          await stopPerGameBridgeBottle('620')
+          const call = mockedSpawnAsync.mock.calls.at(-1)!
+          expect(call[0]).toBe(OV_ROOT + '/bin/wineserver')
+        })
+
+        test('endPerGameBridgeBottleSessionWith uses the given bin dir', async () => {
+          const dir = getBottleDir('GameLibSteamBridge-620')
+          mockedExistsSync.mockImplementation((path: string) => path === dir)
+          await endPerGameBridgeBottleSessionWith(
+            '620',
+            'GameLibSteamBridge-620',
+            OV_ROOT + '/bin',
+            15000
+          )
+          const call = mockedSpawnAsync.mock.calls.at(-1)!
+          expect(call[0]).toBe(OV_ROOT + '/bin/wineserver')
+          expect(call[2]?.timeout).toBe(15000)
+        })
+
+        test('endPerGameBridgeBottleSessionWith refuses bad names', async () => {
+          mockedExistsSync.mockReturnValue(true)
+          mockedSpawnAsync.mockClear()
+          expect(
+            await endPerGameBridgeBottleSessionWith(
+              '620',
+              'GameLibSteamBridge-621',
+              undefined,
+              1000
+            )
+          ).toBe(false)
+          expect(
+            await endPerGameBridgeBottleSessionWith(
+              '620',
+              'GameLibSteamBridge',
+              undefined,
+              1000
+            )
+          ).toBe(false)
+          expect(mockedSpawnAsync).not.toHaveBeenCalled()
+        })
       })
     })
 
