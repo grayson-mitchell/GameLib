@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 60 context gathered
-last_updated: "2026-11-02T06:26:02.137Z"
+last_updated: "2026-11-02T18:00:07.994Z"
 last_activity: 2026-11-02
 progress:
   total_phases: 10
   completed_phases: 8
-  total_plans: 231
-  completed_plans: 223
+  total_plans: 240
+  completed_plans: 227
   percent: 80
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 60 — steam-overlay-in-bridged-games-on-macos
+**Current focus:** Phase 59 — steam-engine-fallback-when-crossover-is-unavailable
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -71,12 +71,12 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 60 (steam-overlay-in-bridged-games-on-macos) — EXECUTING
-Plan: 6 of 10
+Phase: 59 (steam-engine-fallback-when-crossover-is-unavailable) — EXECUTING
+Plan: 2 of 39
 Status: Ready to execute
-Last activity: 2026-11-02 - Completed quick task 261102-szs: store-embed Back settle window for luna rewrites
+Last activity: 2026-11-02
 
-Progress: [██████████] 97%
+Progress: [██████████] 95%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -490,7 +490,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-02T06:26:02.132Z
+Last session: 2026-11-02T18:00:07.989Z
 Stopped at: Phase 60 context gathered
 Resume file: None
 
