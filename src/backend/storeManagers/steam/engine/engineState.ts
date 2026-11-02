@@ -87,6 +87,10 @@ const lazyBottle = () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('../bottle') as typeof import('../bottle')
 
+const lazyBridgeVerdict = () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('../bridge/bridgeVerdict') as typeof import('../bridge/bridgeVerdict')
+
 function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
   return {
     isMac:
@@ -106,10 +110,7 @@ function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
     isDrmModeTitle:
       deps?.isDrmModeTitle ??
       ((id) =>
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        (
-          require('../bridge/bridgeVerdict') as typeof import('../bridge/bridgeVerdict')
-        ).readBridgeModeVerdict(id) === 'steamclient-layer'),
+        lazyBridgeVerdict().readBridgeModeVerdict(id) === 'steamclient-layer'),
     now: deps?.now ?? Date.now,
     isBridgeBottleReady:
       deps?.isBridgeBottleReady ?? ((n) => lazyBottle().isBridgeBottleReady(n)),
