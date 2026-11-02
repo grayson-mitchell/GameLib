@@ -108,7 +108,7 @@ function isEpicPurchaseIntentUrl(url: string): boolean {
   return first === 'purchase'
 }
 
-const AMAZON_HOSTS = new Set(['gaming.amazon.com'])
+const AMAZON_HOSTS = new Set(['gaming.amazon.com', 'luna.amazon.com'])
 
 // CANDIDATE pattern, pending live measurement (todo 2026-10-30); evidence:
 // start URL https://gaming.amazon.com. ANY path arms: Prime Gaming claims are
@@ -116,8 +116,10 @@ const AMAZON_HOSTS = new Set(['gaming.amazon.com'])
 // no URL distinguishes intent. The refresh is an ordinary nile entitlement
 // sync on stored tokens, gated by sign-in and in-flight; in practice this is
 // refresh-on-leave for any Amazon session. Narrowing is a one-row change if
-// live measurement shows a claim URL. Any redirect host (e.g. luna.amazon.com)
-// is added after measurement, not guessed.
+// live measurement shows a claim URL. luna.amazon.com is measured, not
+// guessed: the live 2026-11-02 shell log (quick 261102-szs) showed the Amazon
+// store's pages running on host=luna.amazon.com, so it is listed. Any further
+// redirect host is still added only after measurement.
 function isAmazonPurchaseIntentUrl(url: string): boolean {
   return httpsSegments(url, AMAZON_HOSTS) !== null
 }

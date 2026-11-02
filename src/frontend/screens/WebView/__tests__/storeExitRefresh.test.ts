@@ -159,13 +159,19 @@ describe('isPurchaseIntentUrlFor (quick 261030-ts4)', () => {
       yes: [
         'https://gaming.amazon.com',
         'https://gaming.amazon.com/home',
-        'https://gaming.amazon.com/some-game/dp/amzn1.pg.item.x'
+        'https://gaming.amazon.com/some-game/dp/amzn1.pg.item.x',
+        'https://luna.amazon.com/claims/home',
+        'https://luna.amazon.com'
       ],
       no: [
         'http://gaming.amazon.com/',
         'https://www.amazon.com/',
         'https://gaming.amazon.com.attacker.net/',
-        'https://attacker.net/?u=gaming.amazon.com'
+        'https://attacker.net/?u=gaming.amazon.com',
+        'http://luna.amazon.com/',
+        'https://luna.amazon.com.attacker.net/',
+        'https://attacker.net/?u=luna.amazon.com',
+        'https://evilluna.amazon.com/'
       ]
     }
   }
