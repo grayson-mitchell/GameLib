@@ -18,7 +18,7 @@ import {
 } from 'fs'
 import { dirname, isAbsolute, join, relative } from 'path'
 import { gamesConfigPath, toolsPath } from 'backend/constants/paths'
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SteamEngineOption } from 'common/types/steam'
 import { probeDemoStatus } from './demoStatus'
 import type { DemoStatusProbe } from './demoStatus'
@@ -64,6 +64,8 @@ export type CrossoverPreflight =
       binDir: string | null
       build: string | null
       detail: string
+      /** A page read timed out without a retry; says nothing certain about CrossOver. */
+      inconclusive?: boolean
     }
   | { kind: 'missing'; detail: string }
 
@@ -110,7 +112,8 @@ export interface EngineDecisionDeps {
   readBuild(binDir: string): Promise<string | null>
   killCrossoverWineserver(bottleName: string, binDir: string): Promise<void>
   readOverride(appId: string): unknown
-  listReadyBridgeBottleNames(): string[]
+  /** Process-monitor phase for a title; non-null means a game is running or starting. */
+  monitorPhase(appId: string): 'starting' | 'running' | null
   wineManagerReleases(): WineManagerRelease[]
   isPinInstalled(pin: EnginePin): boolean
   pins: Readonly<{ current: EnginePin; previous: EnginePin | null }>
@@ -147,10 +150,11 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
       )
     },
     readOverride: readStoredEngineOverride,
-    listReadyBridgeBottleNames() {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const bottle = require('../bottle') as typeof import('../bottle')
-      return bottle.listReadyBridgeBottleNames()
+    monitorPhase(appId) {
+      const { getBottleProcessMonitorPhase } =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../bottleProcessMonitor') as typeof import('../bottleProcessMonitor')
+      return getBottleProcessMonitorPhase(appId)
     },
     wineManagerReleases() {
       const { wineDownloaderInfoStore } =
@@ -172,9 +176,17 @@ function withDefaults(deps?: Partial<EngineDecisionDeps>): EngineDecisionDeps {
   return { ...defaultEngineDecisionDeps(), ...deps }
 }
 
+/** The CrossOver bin dir the engine layer resolves (persisted wine bins as hint). */
+export async function resolveCrossoverBinDirForEngine(): Promise<
+  string | undefined
+> {
+  return defaultEngineDecisionDeps().resolveCrossoverBinDir()
+}
+
 export async function preflightCrossover(
   bottleName: string,
-  deps?: Partial<EngineDecisionDeps>
+  deps?: Partial<EngineDecisionDeps>,
+  opts?: { killOnTimeout?: boolean; appId?: string }
 ): Promise<CrossoverPreflight> {
   const d = withDefaults(deps)
   const binDir = await d.resolveCrossoverBinDir()
@@ -215,12 +227,29 @@ export async function preflightCrossover(
     runProbe()
   ])
   let probe = firstProbe
+  // 59-REVIEW WR-07: never stop a wineserver for a display read, or while a
+  // game of this title is running or starting.
+  const noKillReason =
+    opts?.killOnTimeout === false
+      ? 'page read'
+      : opts?.appId !== undefined && d.monitorPhase(opts.appId) !== null
+        ? 'game running'
+        : null
   // A single timeout is inconclusive: stop the wineserver and probe again.
   for (
     let attempt = 1;
     probe.kind === 'failed' && probe.reason === 'timeout';
     attempt++
   ) {
+    if (noKillReason !== null) {
+      return {
+        kind: 'broken',
+        binDir,
+        build,
+        inconclusive: true,
+        detail: `--demo-status timeout (not retried: ${noKillReason}): ${probe.detail}`
+      }
+    }
     await stopWineserver()
     if (attempt >= PROBE_TIMEOUT_ATTEMPTS) {
       return {
@@ -422,7 +451,10 @@ export async function decideLaunchEngine(
     )
   }
 
-  const preflight = await preflightCrossover(args.bottleName, d)
+  const preflight = await preflightCrossover(args.bottleName, d, {
+    killOnTimeout: true,
+    appId: args.appId
+  })
 
   if (override === 'crossover') {
     if (preflight.kind === 'missing' || preflight.kind === 'broken') {
@@ -479,11 +511,17 @@ export async function decideCreationEngine(
 ): Promise<CreationDecision> {
   const d = withDefaults(deps)
   const pin = d.pins.current
-  const binDir = await d.resolveCrossoverBinDir()
-  if (binDir === undefined) return { kind: 'pinned', reason: 'cx-missing', pin }
-  const ready = d.listReadyBridgeBottleNames()[0]
-  if (ready === undefined) {
-    // No bottle to run --demo-status against; rely on the create cap.
+  // 59-REVIEW WR-03: presence check only. --demo-status against another
+  // title's bottle read that bottle's trial clock, not this one's.
+  const decide = async (): Promise<CreationDecision> => {
+    const binDir = await d.resolveCrossoverBinDir()
+    if (binDir === undefined)
+      return { kind: 'pinned', reason: 'cx-missing', pin }
+    const wineBin = join(binDir, 'wine')
+    if (!d.fileExists(wineBin))
+      return { kind: 'pinned', reason: 'cx-missing', pin }
+    if (!d.isExecutable(wineBin))
+      return { kind: 'pinned', reason: 'cx-broken', pin }
     return {
       kind: 'crossover',
       createTimeoutMs: CX_CREATE_CAP_MS,
@@ -491,19 +529,12 @@ export async function decideCreationEngine(
       build: await d.readBuild(binDir).catch(() => null)
     }
   }
-  const pf = await preflightCrossover(ready, d)
-  if (pf.kind === 'missing')
-    return { kind: 'pinned', reason: 'cx-missing', pin }
-  if (pf.kind === 'expired')
-    return { kind: 'pinned', reason: 'cx-expired', pin }
-  if (pf.kind === 'broken') return { kind: 'pinned', reason: 'cx-broken', pin }
-  void args
-  return {
-    kind: 'crossover',
-    createTimeoutMs: CX_CREATE_CAP_MS,
-    probed: true,
-    build: pf.build
-  }
+  const decision = await decide()
+  logInfo(
+    `SteamEngine: appId ${args.appId} bottle creation engine ${decision.kind} (presence check only; a CrossOver create failure falls back, 59-REVIEW WR-02/WR-03)`,
+    LogPrefix.Steam
+  )
+  return decision
 }
 
 export async function listEngineOverrideOptions(

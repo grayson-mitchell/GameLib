@@ -49,7 +49,7 @@ function mkDeps(
     readBuild: () => Promise.resolve('26.3.0.39832'),
     killCrossoverWineserver: () => Promise.resolve(undefined),
     readOverride: () => undefined,
-    listReadyBridgeBottleNames: () => ['GameLibSteamBridge-1'],
+    monitorPhase: () => null,
     wineManagerReleases: () => [],
     isPinInstalled: () => true,
     pins: ENGINE_PINS,
@@ -444,56 +444,87 @@ describe('decideCreationEngine', () => {
     )
     expect(r).toMatchObject({ kind: 'pinned', reason: 'cx-missing' })
   })
-  it('expired ready bottle -> pinned cx-expired', async () => {
+  it('bin dir without bin/wine -> pinned cx-missing', async () => {
     const r = await decideCreationEngine(
       { appId: '1' },
-      mkDeps({
-        probe: () => Promise.resolve(ok({ kind: 'expired', daysAgo: 1 }))
-      })
+      mkDeps({ fileExists: () => false })
     )
-    expect(r).toMatchObject({ kind: 'pinned', reason: 'cx-expired' })
+    expect(r).toMatchObject({ kind: 'pinned', reason: 'cx-missing' })
   })
-  it('broken -> pinned cx-broken', async () => {
+  it('non-executable wine -> pinned cx-broken', async () => {
     const r = await decideCreationEngine(
       { appId: '1' },
-      mkDeps({ probe: () => Promise.resolve(ok({ kind: 'unrecognised' })) })
+      mkDeps({ isExecutable: () => false })
     )
     expect(r).toMatchObject({ kind: 'pinned', reason: 'cx-broken' })
   })
-  it('one timeout then licensed -> crossover probed', async () => {
-    const r = await decideCreationEngine(
-      { appId: '1' },
-      mkDeps({ probe: seq(failed('timeout'), ok({ kind: 'licensed' })) })
-    )
-    expect(r).toMatchObject({ kind: 'crossover', probed: true })
-  })
-  it('two timeouts -> pinned cx-broken', async () => {
-    const r = await decideCreationEngine(
-      { appId: '1' },
-      mkDeps({ probe: seq(failed('timeout'), failed('timeout')) })
-    )
-    expect(r).toMatchObject({ kind: 'pinned', reason: 'cx-broken' })
-  })
-  it('healthy -> crossover with the create cap', async () => {
-    const r = await decideCreationEngine({ appId: '1' }, mkDeps())
-    expect(r).toMatchObject({
-      kind: 'crossover',
-      createTimeoutMs: CX_CREATE_CAP_MS,
-      probed: true
-    })
-  })
-  it('no ready bottle -> crossover, capped, never probed', async () => {
+  it('executable wine -> crossover, unprobed, with the create cap; no foreign probe', async () => {
     const probe = jest.fn(() => Promise.resolve(ok({ kind: 'licensed' })))
-    const r = await decideCreationEngine(
-      { appId: '1' },
-      mkDeps({ listReadyBridgeBottleNames: () => [], probe })
-    )
+    const r = await decideCreationEngine({ appId: '1' }, mkDeps({ probe }))
     expect(r).toMatchObject({
       kind: 'crossover',
       createTimeoutMs: CX_CREATE_CAP_MS,
       probed: false
     })
     expect(probe).not.toHaveBeenCalled()
+  })
+})
+
+describe('preflightCrossover passive reads (WR-07)', () => {
+  it('killOnTimeout:false never kills, probes once, returns inconclusive', async () => {
+    const probe = seq(failed('timeout'))
+    const kill = jest.fn(() => Promise.resolve(undefined))
+    const r = await preflightCrossover(
+      'B',
+      mkDeps({ probe, killCrossoverWineserver: kill }),
+      { killOnTimeout: false }
+    )
+    expect(r).toMatchObject({ kind: 'broken', inconclusive: true })
+    expect(kill).not.toHaveBeenCalled()
+    expect(probe).toHaveBeenCalledTimes(1)
+  })
+  it('an active monitor skips the kill and the retry', async () => {
+    const probe = seq(failed('timeout'))
+    const kill = jest.fn(() => Promise.resolve(undefined))
+    const r = await preflightCrossover(
+      'B',
+      mkDeps({
+        probe,
+        killCrossoverWineserver: kill,
+        monitorPhase: () => 'running'
+      }),
+      { appId: '1' }
+    )
+    expect(r).toMatchObject({ kind: 'broken', inconclusive: true })
+    expect(kill).not.toHaveBeenCalled()
+    expect(probe).toHaveBeenCalledTimes(1)
+  })
+  it('no monitor keeps kill-and-retry (regression guard)', async () => {
+    const probe = seq(failed('timeout'), failed('timeout'))
+    const kill = jest.fn(() => Promise.resolve(undefined))
+    const r = await preflightCrossover(
+      'B',
+      mkDeps({ probe, killCrossoverWineserver: kill }),
+      { appId: '1' }
+    )
+    expect(r).toMatchObject({ kind: 'broken' })
+    expect((r as { inconclusive?: boolean }).inconclusive).toBeUndefined()
+    expect(kill).toHaveBeenCalled()
+    expect(probe).toHaveBeenCalledTimes(2)
+  })
+  it('decideLaunchEngine passes its appId so the monitor check applies', async () => {
+    const monitorPhase = jest.fn(() => 'running' as const)
+    const kill = jest.fn(() => Promise.resolve(undefined))
+    await decideLaunchEngine(
+      { appId: '77', bottleName: 'B' },
+      mkDeps({
+        probe: seq(failed('timeout')),
+        killCrossoverWineserver: kill,
+        monitorPhase
+      })
+    )
+    expect(monitorPhase).toHaveBeenCalledWith('77')
+    expect(kill).not.toHaveBeenCalled()
   })
 })
 
