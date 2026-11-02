@@ -321,7 +321,7 @@ export function readKnownFixes(
   return null
 }
 
-export type KnownFixLayer = 'local' | 'bundled' | 'remote'
+type KnownFixLayer = 'local' | 'bundled' | 'remote'
 
 /**
  * Like readKnownFixes, but also reports which layer won. Used by the D-12

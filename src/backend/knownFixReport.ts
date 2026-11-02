@@ -36,14 +36,14 @@ export const RELAY_URL_PENDING_SENTINEL = 'OPERATOR-DEPLOY-PENDING'
 export const GAMELIB_FIX_RELAY_URL =
   'https://gamelib-fix-relay.gamelib.workers.dev/v1/reports'
 
-export const RELAY_TIMEOUT_MS = 8000
+const RELAY_TIMEOUT_MS = 8000
 
 /** D-04: env override for `wrangler dev` or staging. */
 export function relayUrl(): string {
   return process.env.GAMELIB_FIX_RELAY_URL || GAMELIB_FIX_RELAY_URL
 }
 
-export type RelayPost = (
+type RelayPost = (
   url: string,
   body: unknown,
   signal: AbortSignal
@@ -72,7 +72,7 @@ export interface ReportDeps {
   relayUrl: () => string
 }
 
-export type ReportOutcome =
+type ReportOutcome =
   | 'not-mac'
   | 'disabled'
   | 'skipped-local'

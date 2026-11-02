@@ -15,7 +15,7 @@ import { z } from 'zod'
 export const KNOWN_FIX_REPORT_PAIRS = { macArch: '32', drm: 'ceg' } as const
 export type KnownFixReportKey = keyof typeof KNOWN_FIX_REPORT_PAIRS
 
-export const KNOWN_FIX_REPORT_OPS = ['add', 'remove'] as const
+const KNOWN_FIX_REPORT_OPS = ['add', 'remove'] as const
 export type KnownFixReportOp = (typeof KNOWN_FIX_REPORT_OPS)[number]
 
 export const KNOWN_FIX_REPORT_VERSION = 1
@@ -23,7 +23,7 @@ export const KNOWN_FIX_REPORT_VERSION = 1
 /** Relay request body cap in bytes (D-15). */
 export const KNOWN_FIX_REPORT_MAX_BYTES = 2048
 
-export const knownFixReportSchema = z
+const knownFixReportSchema = z
   .object({
     v: z.literal(KNOWN_FIX_REPORT_VERSION),
     store: z.literal('steam'),
@@ -41,6 +41,7 @@ export const knownFixReportSchema = z
     message: 'only macArch can be removed'
   })
 
+// ts-prune-ignore-next -- imported by relay/src/publish.ts, which ts-prune does not scan
 export type KnownFixReport = z.infer<typeof knownFixReportSchema>
 
 export function parseKnownFixReport(
@@ -73,9 +74,10 @@ export const RELAY_RESPONSE_STATUSES = [
   'rate-limited',
   'unavailable'
 ] as const
-export type RelayResponseStatus = (typeof RELAY_RESPONSE_STATUSES)[number]
+type RelayResponseStatus = (typeof RELAY_RESPONSE_STATUSES)[number]
 
 /** The relay writes this body; the client logs only `status` (D-10). */
+// ts-prune-ignore-next -- imported by relay/src/handler.ts, which ts-prune does not scan
 export type RelayResponseBody = {
   status: RelayResponseStatus
   detail?: string
