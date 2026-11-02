@@ -76,6 +76,8 @@ const TIER2_FILE_SUFFIX = '.profile.json'
  * realpath-contained to the install folder at launch (`knownFixLaunch.ts`), so
  * it carries the same trust as `runInPrefix`. Unlike `macArch`/`drm` they are
  * fixes, not routing keys, and count for the GameLib row.
+ * `steamGameOverlay` (Phase 60 D-03) accepts only "off": it can only remove an
+ * injection, runs no code, and reaches every user without a release.
  */
 export const TIER1_KNOWN_FIX_KEYS = [
   'title',
@@ -88,7 +90,8 @@ export const TIER1_KNOWN_FIX_KEYS = [
   'macArch',
   'drm',
   'launchArgs',
-  'exeOverride'
+  'exeOverride',
+  'steamGameOverlay'
 ] as const
 
 /**
@@ -231,6 +234,12 @@ export function filterTier1KnownFixes(
       if (key === 'drm' && value !== 'ceg') {
         logWarning(
           `Known fixes for '${appName}' (${layerLabel} layer): 'drm' accepts only "ceg", ignoring ${JSON.stringify(value)}.`
+        )
+        continue
+      }
+      if (key === 'steamGameOverlay' && value !== 'off') {
+        logWarning(
+          `Known fixes for '${appName}' (${layerLabel} layer): 'steamGameOverlay' accepts only "off", ignoring ${JSON.stringify(value)}.`
         )
         continue
       }

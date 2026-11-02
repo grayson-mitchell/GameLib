@@ -332,6 +332,11 @@ export interface GameSettings {
   wineCrossoverBottle: string
   // Phase 59 (D-14): per-game Steam bridge engine override id; parsed by engine/engineIds.ts, never a path.
   steamEngineOverride?: string
+  /**
+   * Phase 60 D-02: per-game Steam overlay toggle. Undefined means automatic.
+   * The user's on/off beats a known fix in both directions (D-03).
+   */
+  steamOverlayOverride?: 'automatic' | 'on' | 'off'
   winePrefix: string
   wineVersion: WineInstallation
   wrapperOptions: WrapperVariable[]
@@ -1177,6 +1182,12 @@ export interface KnowFixesInfo {
    * entry or a detected CEG verdict (quick 261027-gtd).
    */
   drm?: 'ceg'
+  /**
+   * Tier 1, only "off" is accepted: disables overlay injection for a title
+   * known to break (Phase 60 D-03). Unrelated to tier-2 `overlays` /
+   * `KnownFixOverlayEntry` (payload archives).
+   */
+  steamGameOverlay?: 'off'
   /** Tier 1 (quick 261029-mbl). Appended to the game's launch arguments;
    * mirrors protonfixes `append_argument`. */
   launchArgs?: string[]
