@@ -42,8 +42,8 @@
   // DIFFERENT font-size on .NavShell__navbar than on .MuiTab-root, so a
   // shared token would compute wrong. appShellLayout.test.ts's Test E is the
   // drift guard instead.
-  // 42px still clears --overlay-controls-height's 39px fallback
-  // (env(titlebar-area-height, 39px)), so the Windows/Linux WindowControls
+  // 42px still clears --overlay-controls-height's 32px fallback
+  // (env(titlebar-area-height, 32px)), so the Windows/Linux WindowControls
   // cluster sharing this grid row is not clipped (F6).
   --navbar-height: 42px;
 

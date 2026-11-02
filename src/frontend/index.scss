@@ -41,7 +41,8 @@ body {
   /* Frameless window defaults */
   --titlebar-color: var(--body-background);
   --titlebar-symbol-color: var(--accent);
-  --overlay-controls-height: env(titlebar-area-height, 39px);
+  --overlay-controls-height: env(titlebar-area-height, 32px);
+  --window-controls-button-width: 46px;
   --overlay-controls-width: calc(
     100vw - env(titlebar-area-width, calc(100vw - 120px))
   );
@@ -50,6 +51,26 @@ body {
   // that create problems, don't change
   overflow: auto !important;
   padding: 0 !important;
+}
+
+// Windows/Linux frameless: the in-app caption cluster is three buttons of
+// --window-controls-button-width, so the trailing reserve is derived from that
+// token and the two cannot drift. Scoped off macOS on purpose:
+// - WindowControls never render on darwin, so the two macOS-unscoped
+//   --overlay-controls-width consumers (StoreEmbedControls, GamePage) keep the
+//   120px body fallback there.
+// - On macOS `.frameless` implies `.macOverlayTitlebar` (both come from the
+//   same settings.framelessWindow), so this selector never matches there.
+// - The property itself is redeclared on `.App`: a body-level var() is
+//   substituted on body and inherited as a computed value, so overriding a
+//   helper token lower down would change nothing.
+.App:not(.macOverlayTitlebar).frameless {
+  --overlay-controls-width: calc(
+    100vw - env(
+        titlebar-area-width,
+        calc(100vw - 3 * var(--window-controls-button-width))
+      )
+  );
 }
 
 /* Overlay Scrollbar*/
