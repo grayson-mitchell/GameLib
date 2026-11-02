@@ -1,5 +1,6 @@
 import {
   ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS,
+  isDrmModeFromVerdict,
   TRIAL_NOTICE_DAYS,
   __resetEngineStateForTests,
   dismissSteamEngineNotice,
@@ -127,6 +128,7 @@ describe('getSteamEngineState', () => {
       showNoCrossoverNote: false,
       untestedCrossoverBuild: null,
       overrideEligible: true,
+      overrideWarning: null,
       launchNotice: null
     })
     expect(probe).not.toHaveBeenCalled()
@@ -236,7 +238,7 @@ describe('getSteamEngineState', () => {
     }
     delete real.preflight
     const first = await getSteamEngineState('1', real)
-    expect(first).toMatchObject({ engine: 'builtin', reason: 'cx-broken' })
+    expect(first).toMatchObject({ engine: null, reason: null })
     await getSteamEngineState('1', real)
     expect(kill).not.toHaveBeenCalled()
     expect(probe).toHaveBeenCalledTimes(2)
@@ -312,6 +314,99 @@ describe('getSteamEngineState', () => {
     await Promise.all([a, b])
     await getSteamEngineState('1', deps)
     expect(probe).toHaveBeenCalledTimes(1)
+  })
+})
+
+const inconclusive: CrossoverPreflight = {
+  kind: 'broken',
+  binDir: '/cx/bin',
+  build: TESTED,
+  detail: 'slow',
+  inconclusive: true
+} as CrossoverPreflight
+const expiredPf: CrossoverPreflight = {
+  kind: 'expired',
+  binDir: '/cx/bin',
+  build: TESTED,
+  daysAgo: 1
+}
+const brokenPf: CrossoverPreflight = {
+  kind: 'broken',
+  binDir: '/cx/bin',
+  build: TESTED,
+  detail: 'x'
+} as CrossoverPreflight
+
+describe('truthful engine state (WR-02, WR-06, WR-07)', () => {
+  it('inconclusive page preflight shows no badge', async () => {
+    const { deps } = mk(inconclusive)
+    expect(await getSteamEngineState('1', deps)).toMatchObject({
+      engine: null,
+      reason: null,
+      crossoverInstalled: true
+    })
+  })
+  it('inconclusive launch preflight is not cached', async () => {
+    const { deps, probe } = mk(healthy(null))
+    recordLaunchDecision(
+      '1',
+      {
+        kind: 'use',
+        selection: {
+          kind: 'crossover',
+          reason: 'cx-healthy',
+          crossoverBuild: TESTED,
+          binDir: '/cx/bin'
+        },
+        preflight: inconclusive,
+        pin: null,
+        needsDownload: false,
+        override: 'automatic',
+        logLines: []
+      },
+      'GameLibSteamBridge-1',
+      deps
+    )
+    await getSteamEngineState('1', deps)
+    expect(probe).toHaveBeenCalledTimes(1)
+  })
+  it('forced CrossOver on an expired bottle carries overrideWarning cx-expired', async () => {
+    const { deps } = mk(expiredPf, { readOverride: () => 'crossover' })
+    expect(await getSteamEngineState('1', deps)).toMatchObject({
+      engine: 'crossover',
+      reason: 'override',
+      overrideWarning: 'cx-expired'
+    })
+  })
+  it('forced CrossOver: broken warns, healthy and inconclusive do not', async () => {
+    const ov = { readOverride: () => 'crossover' } as const
+    expect(
+      (await getSteamEngineState('1', mk(brokenPf, ov).deps))?.overrideWarning
+    ).toBe('cx-broken')
+    __resetEngineStateForTests()
+    expect(
+      (await getSteamEngineState('1', mk(healthy(null), ov).deps))
+        ?.overrideWarning
+    ).toBeNull()
+    __resetEngineStateForTests()
+    expect(
+      (await getSteamEngineState('1', mk(inconclusive, ov).deps))
+        ?.overrideWarning
+    ).toBeNull()
+  })
+  it('automatic override never carries a warning', async () => {
+    const { deps } = mk(expiredPf)
+    expect((await getSteamEngineState('1', deps))?.overrideWarning).toBeNull()
+  })
+  it('verdict without mode: steamstub scan is not override-eligible', () => {
+    expect(isDrmModeFromVerdict({ mode: 'steamclient-layer' })).toBe(true)
+    expect(isDrmModeFromVerdict({ mode: 'tcp', drm: 'ceg' })).toBe(false)
+    expect(isDrmModeFromVerdict({ scan: { drmWrapper: 'steamstub' } })).toBe(
+      true
+    )
+    expect(isDrmModeFromVerdict({ drm: 'ceg' })).toBe(true)
+    expect(isDrmModeFromVerdict({ scan: {} })).toBe(false)
+    expect(isDrmModeFromVerdict(undefined)).toBe(false)
   })
 })
 

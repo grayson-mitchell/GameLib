@@ -109,8 +109,7 @@ function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
       deps?.ownBottleNameFor ?? ((id) => lazyBottle().bridgeBottleNameFor(id)),
     isDrmModeTitle:
       deps?.isDrmModeTitle ??
-      ((id) =>
-        lazyBridgeVerdict().readBridgeModeVerdict(id) === 'steamclient-layer'),
+      ((id) => isDrmModeFromVerdict(lazyBridgeVerdict().readBridgeVerdict(id))),
     now: deps?.now ?? Date.now,
     isBridgeBottleReady:
       deps?.isBridgeBottleReady ?? ((n) => lazyBottle().isBridgeBottleReady(n)),
@@ -119,6 +118,24 @@ function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
       ((n) => preflightCrossover(n, deps, { killOnTimeout: false })),
     ...deps
   } as EngineStateDeps
+}
+
+/**
+ * WR-07: whether a persisted verdict means the engine override has no effect.
+ * A persisted `mode` wins. A title installed before the mode was persisted is
+ * resolved from its DRM signal: a steamstub scan, or a CEG verdict. CEG is not
+ * the steamclient-layer mode (resolveBridgeMode gives tcp for it), but its
+ * launch is refused, so the override has no effect there either. Read-only:
+ * a page view must not write the verdict store.
+ */
+export function isDrmModeFromVerdict(
+  verdict:
+    | { mode?: string; drm?: string; scan?: { drmWrapper?: string } }
+    | undefined
+): boolean {
+  if (!verdict) return false
+  if (verdict.mode !== undefined) return verdict.mode === 'steamclient-layer'
+  return verdict.drm === 'ceg' || verdict.scan?.drmWrapper === 'steamstub'
 }
 
 function readOverride(appId: string, deps: EngineStateDeps): EngineOverrideId {
@@ -159,6 +176,7 @@ function compute(
 ): SteamEngineState {
   let engine: SteamEngineState['engine'] = null
   let reason: SteamEngineState['reason'] = null
+  let overrideWarning: SteamEngineState['overrideWarning'] = null
   if (isUnsupportedOverride(override)) {
     engine = 'unsupported'
     reason = 'override'
@@ -166,6 +184,10 @@ function compute(
     // G9: CrossOver is the supported engine however it was chosen.
     engine = 'crossover'
     reason = 'override'
+    // WR-06: a forced CrossOver that will nag (expired) or may fail (broken).
+    if (preflight?.kind === 'expired') overrideWarning = 'cx-expired'
+    else if (preflight?.kind === 'broken' && preflight.inconclusive !== true)
+      overrideWarning = 'cx-broken'
   } else if (preflight) {
     if (preflight.kind === 'healthy') {
       engine = 'crossover'
@@ -198,6 +220,7 @@ function compute(
     untestedCrossoverBuild:
       build !== null && shouldShowUntestedNotice(build, store) ? build : null,
     overrideEligible,
+    overrideWarning,
     launchNotice
   }
 }
@@ -252,8 +275,11 @@ export async function getSteamEngineState(
         )
         inflight.set(bottle, p)
       }
-      preflight = await p
-      crossoverInstalled = preflight.kind !== 'missing'
+      const probed = await p
+      crossoverInstalled = probed.kind !== 'missing'
+      // WR-02: an inconclusive probe is no evidence either way: no badge.
+      preflight =
+        probed.kind === 'broken' && probed.inconclusive === true ? null : probed
     }
   }
   lastCrossoverInstalled.set(appId, crossoverInstalled)
@@ -282,7 +308,13 @@ export function recordLaunchDecision(
   })
   try {
     const d = stateDeps(deps)
-    if (decision.preflight) {
+    if (
+      decision.preflight &&
+      !(
+        decision.preflight.kind === 'broken' &&
+        decision.preflight.inconclusive === true
+      )
+    ) {
       preflightCache.set(bottleName, {
         result: decision.preflight,
         at: d.now()

@@ -248,6 +248,12 @@ export interface SteamEngineState {
    */
   overrideEligible?: boolean
   /**
+   * Set only for a forced CrossOver override whose preflight is expired or
+   * conclusively broken (CrossOver will nag or the launch may fail). Closed
+   * enum: the renderer maps it to catalogue strings.
+   */
+  overrideWarning?: 'cx-expired' | 'cx-broken' | null
+  /**
    * Non-null only in the state pushed by a launch that automatically dropped
    * to the built-in engine. `seq` strictly increases per sidecar session so
    * the renderer can show the notice once per launch.
