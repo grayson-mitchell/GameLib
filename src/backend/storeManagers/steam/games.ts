@@ -193,7 +193,8 @@ import {
   setBridgeUserRoute,
   markBridgeLimitedNoticeShown,
   setBridgeIdentityFallback,
-  writeBridgeDrmVerdict
+  writeBridgeDrmVerdict,
+  writeBridgeModeVerdict
 } from './bridge/bridgeVerdict'
 import { isScanVerdictNowCovered } from './bridge/shimCoverage'
 import {
@@ -3944,7 +3945,11 @@ export default class SteamGame implements Game {
     if (decision.needsDownload && decision.pin) {
       const engine = await this.ensureBuiltInEngineForInstall(decision.pin)
       if ('status' in engine) {
-        notify({ title, body: engine.error ?? '' })
+        this.showEngineDialog(
+          title,
+          engine.error ?? '',
+          'engine-download-failed'
+        )
         return { ok: false }
       }
     }
@@ -3955,21 +3960,52 @@ export default class SteamGame implements Game {
         `SteamGame: appId ${this.appId} engine selection was rejected (${engineLabelForLog(sel)}); not launching`,
         LogPrefix.Steam
       )
+      this.showEngineDialog(
+        title,
+        i18next.t(
+          'gamelib:steam.engine.selectionRejected',
+          "GameLib couldn't set up {{engine}} for this game, so it did not start. Check the launch log (Settings > Logs).",
+          { engine: sel.kind === 'crossover' ? 'CrossOver' : sel.label }
+        ),
+        'engine-selection-rejected'
+      )
       return { ok: false }
     }
     const prep = await prepareBottleForEngine({
       appId: this.appId,
       bottleName,
-      next: sel
+      next: sel,
+      // 59-UAT G10: an override to CrossOver on an expired bottle must not run
+      // the DXVK restore through CrossOver.
+      crossoverHealthy: decision.preflight?.kind === 'healthy'
     })
     if (!prep.ok) {
       if (prep.reason === 'dxvk-failed') {
         // The built-in engine is best-effort: missing DXVK degrades Direct3D
         // but is not a launch blocker.
         logWarning(
-          `SteamGame: appId ${this.appId} DXVK setup failed (${prep.detail}); continuing`,
+          sel.kind === 'crossover'
+            ? `SteamGame: appId ${this.appId} DXVK removal failed (${prep.detail}); the engine marker still names the previous engine, so the restore is retried on the next launch`
+            : `SteamGame: appId ${this.appId} DXVK setup failed (${prep.detail}); continuing`,
           LogPrefix.Steam
         )
+      } else if (prep.reason === 'shared-bottle') {
+        // 59-REVIEW WR-06: refuse, kill nothing, and say why.
+        clearEngineSelection(this.appId)
+        logWarning(
+          `SteamGame: appId ${this.appId} cannot switch engine (${prep.reason}: ${prep.detail}); not launching`,
+          LogPrefix.Steam
+        )
+        this.showEngineDialog(
+          title,
+          i18next.t(
+            'gamelib:steam.engine.sharedBottle',
+            "{{title}} is installed in GameLib's shared bridge bottle, where changing engines could stop other games. It can only run there on CrossOver. Uninstall and reinstall it to give it its own bottle.",
+            { title }
+          ),
+          'engine-shared-bottle'
+        )
+        return { ok: false }
       } else {
         clearEngineSelection(this.appId)
         logWarning(
@@ -4280,6 +4316,9 @@ export default class SteamGame implements Game {
     const wantsDrm =
       resolveBridgeMode(launchDrmWrapper, launchCegMarkers) ===
       'steamclient-layer'
+    // 59-REVIEW WR-04 / 59-15: persist what this launch routed on so the engine
+    // state keeps the override off DRM-mode titles.
+    writeBridgeModeVerdict(this.appId, wantsDrm ? 'steamclient-layer' : 'tcp')
     const drmInstallRoot = wantsDrm
       ? this.resolveBridgeGameInstallRoot(
           exePath,

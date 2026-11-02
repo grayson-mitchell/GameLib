@@ -11745,6 +11745,22 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         expect(runWineCommand).not.toHaveBeenCalled()
       })
 
+      it('persists the steamclient-layer bridge mode right after resolving it (WR-04 writer)', async () => {
+        const id = freshId()
+        const spy = jest.spyOn(bridgeVerdictModule, 'writeBridgeModeVerdict')
+        __drmLaunchSetupMock.mockResolvedValue({
+          status: 'error',
+          step: 'steam-not-running',
+          cause: 'c'
+        })
+        try {
+          await new SteamGame(id).launch({} as never)
+          expect(spy).toHaveBeenCalledWith(id, 'steamclient-layer')
+        } finally {
+          spy.mockRestore()
+        }
+      })
+
       it('hands drmLaunchSetup the exe, bottle, install root and wrapper', async () => {
         const id = freshId()
         __drmLaunchSetupMock.mockResolvedValue({
@@ -12904,6 +12920,118 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       expect(await new SteamGame(ID).launch({} as any)).toBe(false)
       expect(runWineCommand).not.toHaveBeenCalled()
       expect(getEngineSelection(ID)).toBeUndefined()
+    })
+
+    const engineDialog = () =>
+      jest.requireMock('backend/dialog/dialog')
+        .showDialogBoxModalAuto as jest.Mock
+
+    it('download failure shows an in-app dialog with the downloadFailed body (WR-08)', async () => {
+      ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
+        pinnedDecision('cx-missing', { needsDownload: true })
+      )
+      ;(ensurePinnedEngine as jest.Mock).mockResolvedValue({
+        ok: false,
+        reason: 'offline',
+        detail: 'x'
+      })
+      engineDialog().mockClear()
+      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(engineDialog()).toHaveBeenCalledTimes(1)
+      expect(engineDialog().mock.calls[0][0].message).toContain(
+        'downloadFailed'
+      )
+      expect(
+        infoMessages().some((m) => m.includes('tag=engine-download-failed'))
+      ).toBe(true)
+    })
+
+    it('a rejected setEngineSelection shows the selectionRejected dialog (WR-08)', async () => {
+      const registry = jest.requireActual('../engine/engineRegistry')
+      const spy = jest
+        .spyOn(registry, 'setEngineSelection')
+        .mockReturnValue(false)
+      engineDialog().mockClear()
+      try {
+        expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      } finally {
+        spy.mockRestore()
+      }
+      expect(engineDialog()).toHaveBeenCalledTimes(1)
+      expect(engineDialog().mock.calls[0][0].message).toContain(
+        'selectionRejected'
+      )
+      expect(
+        infoMessages().some((m) => m.includes('tag=engine-selection-rejected'))
+      ).toBe(true)
+      expect(runWineCommand).not.toHaveBeenCalled()
+    })
+
+    it('shared-bottle refusal: sharedBottle dialog, selection cleared, nothing spawned (WR-06)', async () => {
+      ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
+        ok: false,
+        reason: 'shared-bottle',
+        detail: 'shared'
+      })
+      engineDialog().mockClear()
+      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(engineDialog()).toHaveBeenCalledTimes(1)
+      expect(engineDialog().mock.calls[0][0].message).toContain('sharedBottle')
+      expect(
+        infoMessages().some((m) => m.includes('tag=engine-shared-bottle'))
+      ).toBe(true)
+      expect(getEngineSelection(ID)).toBeUndefined()
+      expect(runWineCommand).not.toHaveBeenCalled()
+    })
+
+    it('a CrossOver override on an expired bottle passes crossoverHealthy:false (G10)', async () => {
+      ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
+        cxDecision({
+          override: 'crossover',
+          preflight: {
+            kind: 'expired',
+            binDir: '/cx/bin',
+            build: '26.3',
+            daysAgo: 5
+          }
+        })
+      )
+      await new SteamGame(ID).launch({} as any)
+      expect(prepareBottleForEngine).toHaveBeenCalledWith(
+        expect.objectContaining({ crossoverHealthy: false })
+      )
+    })
+
+    it('a healthy CrossOver decision passes crossoverHealthy:true (G10)', async () => {
+      await new SteamGame(ID).launch({} as any)
+      expect(prepareBottleForEngine).toHaveBeenCalledWith(
+        expect.objectContaining({ crossoverHealthy: true })
+      )
+    })
+
+    it('a TCP bridge launch persists the bridge mode as tcp (WR-04 writer)', async () => {
+      const spy = jest.spyOn(bridgeVerdictModule, 'writeBridgeModeVerdict')
+      try {
+        await new SteamGame(ID).launch({} as any)
+        expect(spy).toHaveBeenCalledWith(ID, 'tcp')
+      } finally {
+        spy.mockRestore()
+      }
+    })
+
+    it('dxvk-failed while switching to CrossOver warns about the retry and continues', async () => {
+      ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
+        ok: false,
+        reason: 'dxvk-failed',
+        detail: 'boom'
+      })
+      expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+      const warns = (
+        jest.requireMock('backend/logger').logWarning as jest.Mock
+      ).mock.calls.map((c) => String(c[0]))
+      expect(
+        warns.some((m) => m.includes('restore is retried on the next launch'))
+      ).toBe(true)
     })
 
     it.each(['expired', 'missing', 'broken'])(
