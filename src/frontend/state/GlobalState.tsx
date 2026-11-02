@@ -1482,6 +1482,12 @@ class GlobalState extends PureComponent<Props> {
     runner
   }: GameStatus) => {
     const { libraryStatus, gameUpdates } = this.state
+    {
+      const prev = libraryStatus.find((game) => game.appName === appName)
+      window.api.logInfo(
+        `[g1-trace] handleGameStatus entry app=${appName} status=${status} context=${context} prev=${prev?.status}/${prev?.context}`
+      )
+    }
 
     // Phase 51 Plan 08 (D-51-16, folded todo): the "waiting for Steam"
     // state ends either way the launch resolves -- the game's own process

@@ -30,7 +30,9 @@ metrics:
 
 Engine status now carries one size-weighted overall percent plus verify, unpack and set-up phases, hands back to `installing` once the bottle exists, and every surface renders it through one formatter.
 
-## G1 root cause: FOUND
+## G1 root cause: FOUND (first live trace); fix NOT operator-confirmed
+
+The first re-test (title uncertain, appId 98800, i386-recovery reinstall) showed only "Installing" for ~70 s with no engine phase label, so the fix above is unconfirmed on that path. Temporary `[g1-trace]` logging re-added (ipc send, preload slot, GlobalState entry, hasStatus) to find why. See below once resolved.
 
 **Hop:** the backend producer, `SteamGame.ensureBuiltInEngineForInstall` in `src/backend/storeManagers/steam/games.ts` (the status contract it emitted), not the transport or the renderer.
 

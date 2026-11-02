@@ -1,6 +1,7 @@
 // eslint-disable-next-line no-restricted-imports
 import { ipcMain, type IpcMainEvent } from 'backend/platform'
 import { getMainWindow } from 'backend/main_window'
+import { logInfo, LogPrefix } from 'backend/logger'
 
 import type {
   AsyncIPCFunctions,
@@ -68,6 +69,13 @@ function sendFrontendMessage<ChannelName extends keyof FrontendMessages>(
     return false
   }
 
+  if (channel === 'gameStatusUpdate') {
+    const p = args[0] as { appName?: string; status?: string; context?: string }
+    logInfo(
+      `[g1-trace] ipc send app=${p?.appName} status=${p?.status} context=${p?.context}`,
+      LogPrefix.Backend
+    )
+  }
   mainWindow.webContents.send(channel, ...args)
   return true
 }
