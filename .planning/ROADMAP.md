@@ -911,7 +911,33 @@ Plans:
 **Goal:** Shift+Tab opens Mac Steam's own overlay, drawn correctly and taking clicks, in games GameLib launches through the macOS Steam bridge. GameLib injects the user's own `steamloader.dylib` + `gameoverlayrenderer.dylib` (with `SteamOverlayGameId`) through `CX_ENV` on a cloned CrossOver runner whose `bin/wineloader` and `lib/wine/x86_64-unix/wine` are both re-signed with `allow-dyld-environment-variables`. Mac Steam then attaches `gameoverlayui` itself. A vendored, self-built copy of NotProton's GPLv3 `overlay_shim.m` fixes 10-bit (`RGB10A2Unorm`) and Metal 4 layers. Blueprint: `spike-findings-gamelib` → `references/steam-overlay-in-bottles.md` (spikes 061–064).
 **Requirements**: TBD
 **Depends on:** Phase 56
-**Plans:** 0 plans
+**Plans:** 10 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 60 to break down)
+**Wave 1**
+
+- [ ] 60-01-PLAN.md — Vendor NotProton overlay_shim.m (pinned, GPLv3) and build it as a universal dylib (D-13, D-14)
+- [ ] 60-02-PLAN.md — Overlay policy, setting type, tier-1 known-fix key, notice and path modules (D-01..D-03, D-08, D-10)
+- [ ] 60-03-PLAN.md — DRM clone re-signs bin/wineloader best-effort; shared clone/re-sign primitives (D-05)
+- [ ] 60-04-PLAN.md — console_log attach watcher and overlay wine-log sink (D-11, D-15 evidence)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 60-05-PLAN.md — Overlay-only CrossOver clone, no allowlist, fail-open (D-04, D-06)
+- [ ] 60-06-PLAN.md — Per-game Steam overlay toggle, overlayEligible, catalogue strings (D-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 60-07-PLAN.md — CX_ENV tokens, fail-open prepare, overlay runner in the bottle registry (D-04, D-12)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 60-08-PLAN.md — Launch wiring: TCP overlay clone route, DRM tokens, toasts, fallback skip (D-01, D-05, D-07..D-09)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 60-09-PLAN.md — Post-launch wiring: attach watch, shim trace, abnormal-exit notice (D-10, D-11)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 60-10-PLAN.md — Four-title live UAT gate, invite observation, D-07 gap todo (D-15, D-16)
