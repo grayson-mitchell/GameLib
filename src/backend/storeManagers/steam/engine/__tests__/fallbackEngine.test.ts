@@ -216,6 +216,35 @@ test('aborted signal leaves nothing', async () => {
   expect(isPinnedEngineInstalled(pin)).toBe(false)
 })
 
+test('abort during verify resolves aborted and installs nothing', async () => {
+  const pin = await makePin()
+  const ac = new AbortController()
+  const r = await ensurePinnedEngine(pin, {
+    signal: ac.signal,
+    onProgress: (p) => {
+      if (p.phase === 'verifying') ac.abort()
+    }
+  })
+  expect(r).toMatchObject({ ok: false, reason: 'aborted' })
+  expect(existsSync(pinnedEnginePaths(pin).wineDir)).toBe(false)
+  expect(leftovers()).toEqual([])
+})
+
+test('abort during extract resolves aborted and installs nothing', async () => {
+  const pin = await makePin()
+  const ac = new AbortController()
+  const r = await ensurePinnedEngine(pin, {
+    signal: ac.signal,
+    onProgress: (p) => {
+      if (p.phase === 'extracting') ac.abort()
+    }
+  })
+  expect(r).toMatchObject({ ok: false, reason: 'aborted' })
+  expect(existsSync(pinnedEnginePaths(pin).wineDir)).toBe(false)
+  expect(isPinnedEngineInstalled(pin)).toBe(false)
+  expect(leftovers()).toEqual([])
+})
+
 test('offline makes no download call', async () => {
   const pin = await makePin()
   mockIsOnline.mockReturnValue(false)

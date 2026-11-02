@@ -226,6 +226,8 @@ async function installArtifact(
     logInfo(`Steam engine: verifying ${kind}`, LogPrefix.Steam)
     emit({ phase: 'verifying' })
     const digest = await sha256OfFile(archive)
+    if (opts.signal?.aborted)
+      throw new StageError('aborted', 'aborted during verify')
     if (digest !== artifact.sha256) {
       rmSync(archive, { force: true })
       throw new StageError('hash-mismatch', `${kind}: sha256 mismatch`)
@@ -238,6 +240,8 @@ async function installArtifact(
       destination: out,
       strip: 1
     })
+    if (opts.signal?.aborted)
+      throw new StageError('aborted', 'aborted during extract')
     if (res.status !== 'done') {
       throw new StageError('extract-failed', `${kind}: tar failed`)
     }
@@ -253,6 +257,8 @@ async function installArtifact(
       join(out, MARKER),
       JSON.stringify({ sha256: artifact.sha256, version: artifact.version })
     )
+    if (opts.signal?.aborted)
+      throw new StageError('aborted', 'aborted before install')
     if (existsSync(finalDir)) rmSync(finalDir, { recursive: true, force: true })
     renameSync(out, finalDir)
   } finally {
