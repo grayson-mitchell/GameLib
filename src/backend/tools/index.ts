@@ -314,8 +314,15 @@ export const DXVK = {
     }
 
     if (action === 'restore') {
-      logInfo(`Removing ${tool} version information`, LogPrefix.ToolInstaller)
-      if (existsSync(currentVersionCheck)) {
+      // 59-REVIEW WR-01 / 59-UAT G7+G10: the source-pinned path (the Steam engine switch)
+      // reports failure strictly and keeps the version file until every step has succeeded,
+      // so a half-done restore is visible and retried. Heroic's toggle path is unchanged.
+      const strict = source !== undefined
+      const failed: string[] = []
+      if (!strict) {
+        logInfo(`Removing ${tool} version information`, LogPrefix.ToolInstaller)
+      }
+      if (!strict && existsSync(currentVersionCheck)) {
         rm(currentVersionCheck, { force: true }, (err) => {
           if (err) {
             logError(
@@ -346,12 +353,19 @@ export const DXVK = {
           dll,
           '/f'
         ]
-        await runWineCommand({
+        const regResult = await runWineCommand({
           gameSettings,
           commandParts: unregisterDll,
           wait: true,
           protonVerb: 'run'
         })
+        if (strict && regResult?.code !== 0) {
+          // "Unable to find" means the value is already gone (a retried restore).
+          const output = `${regResult?.stdout ?? ''}${regResult?.stderr ?? ''}`
+          if (!/unable to find/i.test(output)) {
+            failed.push(`reg delete ${dll} code=${regResult?.code}`)
+          }
+        }
       }
 
       logInfo('Removing DXVK DLLs', LogPrefix.ToolInstaller)
@@ -372,21 +386,37 @@ export const DXVK = {
       }
       dllsToRemove.forEach((dllFile) => {
         try {
-          rmSync(dllFile)
+          rmSync(dllFile, { force: strict })
         } catch (err) {
           logError([`Error removing ${dllFile}`, err], LogPrefix.ToolInstaller)
+          failed.push(`rm ${dllFile}`)
         }
       })
 
       // Restore stock Wine libraries
       logInfo('Restoring Wine stock DLLs', LogPrefix.ToolInstaller)
 
-      await runWineCommand({
+      const bootResult = await runWineCommand({
         gameSettings,
         commandParts: ['wineboot', '-u'],
         wait: true,
         protonVerb: 'run'
       })
+      if (!strict) return true
+
+      if (bootResult?.code !== 0) {
+        failed.push(`wineboot -u code=${bootResult?.code}`)
+      }
+      if (failed.length > 0) {
+        logError(
+          `DXVK restore failed for ${winePrefix}: ${failed.join('; ')}`,
+          LogPrefix.ToolInstaller
+        )
+        return false
+      }
+      // Last, and synchronous: the version file is the "DXVK is installed" signal.
+      logInfo(`Removing ${tool} version information`, LogPrefix.ToolInstaller)
+      rmSync(currentVersionCheck, { force: true })
       return true
     }
 

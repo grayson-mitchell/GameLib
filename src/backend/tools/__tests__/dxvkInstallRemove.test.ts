@@ -213,3 +213,110 @@ describe('DXVK.installRemove with a pinned source', () => {
     expect(existsSync(join(toolsPath, 'dxvk', 'latest_dxvk'))).toBe(false)
   })
 })
+
+describe('DXVK.installRemove strict restore with a pinned source', () => {
+  let srcDir: string
+  const ok = { stdout: '', stderr: '', code: 0 }
+
+  beforeEach(() => {
+    srcDir = mkdtempSync(join(root, 'src-'))
+    for (const arch of ['x32', 'x64']) {
+      mkdirSync(join(srcDir, arch), { recursive: true })
+      for (const dll of DLLS) writeFileSync(join(srcDir, arch, dll), arch)
+    }
+    rmSync(join(prefix, '.update-timestamp'))
+    writeFileSync(join(prefix, 'system.reg'), '')
+    writeFileSync(join(prefix, 'current_dxvk'), 'v1')
+  })
+
+  const restore = (withSource = true) =>
+    DXVK.installRemove(
+      settings(),
+      'dxvk',
+      'restore',
+      withSource ? { dir: srcDir, version: 'v1' } : undefined
+    )
+  const versionFile = () => existsSync(join(prefix, 'current_dxvk'))
+
+  it('returns true and removes the version file last when every step succeeds', async () => {
+    const order: string[] = []
+    mockRunWineCommand.mockImplementation(
+      async ({ commandParts }: { commandParts: string[] }) => {
+        order.push(commandParts[0] === 'reg' ? 'reg' : commandParts[0])
+        order.push(`ver:${versionFile()}`)
+        return ok
+      }
+    )
+    expect(await restore()).toBe(true)
+    // the version file was still present during every wine step (incl. wineboot)
+    expect(order.filter((e) => e.startsWith('ver:'))).not.toContain('ver:false')
+    expect(order[order.length - 2]).toBe('wineboot')
+    expect(versionFile()).toBe(false)
+  })
+
+  it('returns false and keeps the version file when a reg delete fails', async () => {
+    mockRunWineCommand.mockImplementation(
+      async ({ commandParts }: { commandParts: string[] }) =>
+        commandParts[0] === 'reg'
+          ? { stdout: '', stderr: 'reg: access denied', code: 1 }
+          : ok
+    )
+    expect(await restore()).toBe(false)
+    expect(versionFile()).toBe(true)
+  })
+
+  it('treats "unable to find" on a reg delete as already removed', async () => {
+    mockRunWineCommand.mockImplementation(
+      async ({ commandParts }: { commandParts: string[] }) =>
+        commandParts[0] === 'reg'
+          ? {
+              stdout: '',
+              stderr: 'reg: Unable to find the specified registry key or value',
+              code: 1
+            }
+          : ok
+    )
+    expect(await restore()).toBe(true)
+    expect(versionFile()).toBe(false)
+  })
+
+  it('returns false and keeps the version file when wineboot -u fails', async () => {
+    mockRunWineCommand.mockImplementation(
+      async ({ commandParts }: { commandParts: string[] }) =>
+        commandParts[0] === 'wineboot' ? { ...ok, code: 3 } : ok
+    )
+    expect(await restore()).toBe(false)
+    expect(versionFile()).toBe(true)
+  })
+
+  it('returns false and keeps the version file when a DLL cannot be removed', async () => {
+    mockRunWineCommand.mockResolvedValue(ok)
+    // a non-empty directory where the DLL should be makes rmSync throw (not ENOENT)
+    const blocked = join(prefix, 'drive_c/windows/system32/d3d9.dll')
+    rmSync(blocked, { force: true })
+    mkdirSync(blocked, { recursive: true })
+    writeFileSync(join(blocked, 'keep'), '')
+    expect(await restore()).toBe(false)
+    expect(versionFile()).toBe(true)
+  })
+
+  it('treats an already-absent DLL as success', async () => {
+    mockRunWineCommand.mockResolvedValue(ok)
+    for (const dir of ['system32', 'syswow64'])
+      for (const dll of DLLS)
+        rmSync(join(prefix, 'drive_c/windows', dir, dll), { force: true })
+    expect(await restore()).toBe(true)
+  })
+
+  it('without a source keeps the lenient Heroic toggle behaviour', async () => {
+    mockRunWineCommand.mockResolvedValue({
+      stdout: '',
+      stderr: 'boom',
+      code: 1
+    })
+    rmSync(join(prefix, 'system.reg'))
+    writeFileSync(join(prefix, '.update-timestamp'), '')
+    writeFileSync(join(toolsPath, 'dxvk', 'latest_dxvk'), VERSION)
+    expect(await restore(false)).toBe(true)
+  })
+})
