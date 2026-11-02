@@ -19,8 +19,9 @@ const RECHECK_POLL_INTERVAL_MS = 3000
 
 // Phase 21 (21-10), D-10/D-11: native Steam-CLIENT guided-install +
 // prompt-to-launch surface, opened exclusively by the global
-// SteamClientSetup store (itself only ever opened by the backend
-// `steamClientSetupRequired` push — D-11-safe, see SteamClientSetup.ts).
+// SteamClientSetup store (itself opened only by the backend
+// `steamClientSetupRequired` push or by Console Mode's hand-off to desktop
+// mode — D-11-safe, see SteamClientSetup.ts).
 // Distinct from SteamBottleSetup.tsx (the macOS CrossOver BOTTLE flow):
 // this component targets the NATIVE Steam client on Win/macOS/Linux.
 //

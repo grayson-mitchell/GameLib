@@ -16,12 +16,18 @@ interface SteamClientSetupState {
 
 // Phase 21 (21-10), D-10/D-11: single global store driving the native
 // Steam-CLIENT guided-install/prompt-to-launch surface — distinct from
-// SteamBottleSetup.ts (the macOS CrossOver BOTTLE flow). Opened EXCLUSIVELY
-// in response to the backend `steamClientSetupRequired` push (see
+// SteamBottleSetup.ts (the macOS CrossOver BOTTLE flow). Opened by the
+// backend `steamClientSetupRequired` push (see
 // `handleSteamClientSetupRequiredSignal` below, wired up once in
-// GlobalState.tsx) — never by a frontend eligibility check. D-10/D-11's
-// backend-owned decision (Steam absent vs. installed-but-never-launched)
-// arrives via the `reason` field; the frontend only reflects it.
+// GlobalState.tsx) OR by Console Mode's hand-off
+// (`handOffSteamClientSetupToDesktop`, consoleSteamTarget.ts), which reopens
+// it with the appName and reason the backend's own recheck just reported.
+// The decision stays backend-owned and is never made by a frontend
+// eligibility check. D-10/D-11's backend-owned decision (Steam absent vs.
+// installed-but-never-launched) arrives via the `reason` field; the frontend
+// only reflects it. Under `/console` nothing renders this store, so the
+// overlay closes a push-opened session it did not hand off
+// (`releaseUnclaimedSteamClientSetup`).
 export const useSteamClientSetup = create<SteamClientSetupState>()((set) => ({
   isOpen: false,
   appName: undefined,
