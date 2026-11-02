@@ -58,10 +58,13 @@ export async function checkIpLimit(
 ): Promise<{ ok: true } | { ok: false; retryAfterSec: number }> {
   const hourStart = Math.floor(nowMs / HOUR_MS) * HOUR_MS
   const who = ip ? await hashIp(salt, ip, nowMs) : 'unknown'
+  // CR-03: an hourly bucket is useless once its hour ends, so it expires
+  // then; the per-request and cron purges delete it within the next 30 min,
+  // well inside the "about two hours" the privacy copy promises.
   const n = await bumpBucket(
     db,
     `ip:${who}:${utcHourKey(nowMs)}`,
-    hourStart + 2 * HOUR_MS
+    hourStart + HOUR_MS
   )
   if (n <= limit) return { ok: true }
   return {
@@ -84,6 +87,7 @@ export async function reserveDailyCreation(
   return n <= cap
 }
 
+/** CR-03: one indexed DELETE; runs on every request and from the cron. */
 export async function purgeExpiredBuckets(
   db: D1Like,
   nowMs: number

@@ -8,6 +8,8 @@
   "observability": { "enabled": false },
   "workers_dev": true,
   "preview_urls": false,
+  // CR-03: purge expired hashed-IP rate-limit buckets every 30 minutes.
+  "triggers": { "crons": ["*/30 * * * *"] },
   "vars": {
     "REPO_OWNER": "grayson-mitchell",
     "REPO_NAME": "known-fixes",
@@ -32,6 +34,7 @@
       "observability": { "enabled": false },
       "workers_dev": true,
       "preview_urls": false,
+      "triggers": { "crons": ["*/30 * * * *"] },
       "vars": {
         "REPO_OWNER": "grayson-mitchell",
         "REPO_NAME": "known-fixes-staging",

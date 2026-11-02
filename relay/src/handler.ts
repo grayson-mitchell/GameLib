@@ -73,6 +73,15 @@ async function handle(
   const { db, env } = deps
   const now = deps.now()
 
+  // CR-03: delete expired rate-limit buckets (hashed IPs) on every request,
+  // before any validation, so the retention promise holds even at low
+  // traffic. The cron in index.ts covers the idle hours.
+  try {
+    await purgeExpiredBuckets(db, now)
+  } catch {
+    // best effort; the cron retries
+  }
+
   if (request.method !== 'POST') return respond(405, { status: 'rejected' })
   if (new URL(request.url).pathname !== '/v1/reports') {
     return respond(404, { status: 'rejected' })
@@ -128,14 +137,6 @@ async function handle(
       `relay: ${ref.appId} ${ref.key} ${ref.op} -> ${httpStatus} ${body.status}`
     )
     return respond(httpStatus, body, h)
-  }
-
-  if (deps.random() < 0.01) {
-    try {
-      await purgeExpiredBuckets(db, now)
-    } catch {
-      // best effort
-    }
   }
 
   const row = await upsertReport(

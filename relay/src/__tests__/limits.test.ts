@@ -49,7 +49,7 @@ describe('limits', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].bucket).not.toContain(IP)
     expect(rows[0].bucket).toMatch(/^ip:[0-9a-f]{32}:2026030410$/)
-    expect(rows[0].expires).toBe(Math.floor(T0 / HOUR) * HOUR + 2 * HOUR)
+    expect(rows[0].expires).toBe(Math.floor(T0 / HOUR) * HOUR + HOUR)
   })
 
   it('uses a shared key for a missing IP', async () => {

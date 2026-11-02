@@ -4,6 +4,7 @@ import type { FetchCall } from './helpers/fakeFetch'
 import type { RelayEnv } from '../env'
 import { resetTokenCacheForTests } from '../githubApp'
 import { handleReport } from '../handler'
+import worker from '../index'
 import { utcDayKey } from '../limits'
 import {
   entriesForPr,
@@ -504,6 +505,44 @@ describe('failures', () => {
       }
     })
     expect(res.status).toBe(503)
+  })
+})
+
+describe('retention (CR-03)', () => {
+  const seed = (db: ReturnType<typeof createTestD1>) =>
+    db.raw.exec(
+      `INSERT INTO buckets VALUES ('ip:old:x', 1, ${NOW - 1}), ('ip:live:x', 1, ${NOW + 60_000})`
+    )
+  const names = (db: ReturnType<typeof createTestD1>) =>
+    (
+      db.raw.prepare('SELECT bucket FROM buckets').all() as Array<{
+        bucket: string
+      }>
+    ).map((b) => b.bucket)
+
+  it('purges expired buckets on every request, even a rejected one', async () => {
+    const h = await harness()
+    seed(h.db)
+    expect((await h.send({ method: 'GET' })).status).toBe(405)
+    expect(names(h.db)).toEqual(['ip:live:x'])
+  })
+
+  it('the cron handler purges expired buckets', async () => {
+    const h = await harness()
+    seed(h.db)
+    await worker.scheduled({ scheduledTime: NOW }, h.deps.env)
+    expect(names(h.db)).toEqual(['ip:live:x'])
+  })
+
+  it('an IP bucket expires when its hour ends', async () => {
+    const h = await harness()
+    await h.send({ contentType: 'text/plain' })
+    const row = h.db.raw
+      .prepare("SELECT expires FROM buckets WHERE bucket LIKE 'ip:%'")
+      .get() as { expires: number }
+    expect(row.expires).toBe(
+      Math.floor(NOW / 3_600_000) * 3_600_000 + 3_600_000
+    )
   })
 })
 
