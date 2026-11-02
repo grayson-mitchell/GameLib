@@ -36,6 +36,7 @@ import { join } from 'node:path'
 import Backend from 'i18next-fs-backend'
 import i18next from 'i18next'
 import * as electronStub from '../platform'
+import { sweepStaleEngineTemps } from '../storeManagers/steam/engine/fallbackEngine'
 import { restoreMacSteamOnlineIfOwed } from '../storeManagers/steam/macSteamOffline'
 import { startInstalledJsonWatcher } from './installedJsonWatcher'
 import { removeLegacyZoomData } from './legacyZoomDataCleanup'
@@ -234,6 +235,8 @@ let protocolUrlHandlerRegistered = false
 let playtimeLockClearInitialized = false
 // Guards the legacy Zoom data removal below (quick-261029-toq); same once-per-process reason.
 let legacyZoomCleanupInitialized = false
+// Guards the stale engine temp sweep below (G20); same once-per-process reason.
+let engineTempSweepInitialized = false
 // Guards reconcileStoreUsersWhenOnline() below (Block E, todo 2026-09-06, quick-260908-fre).
 // Same reason as the other guards: bootstrap.test.ts / *Flows.test.ts call init() many times
 // per file, and without this guard each call would register another
@@ -1287,6 +1290,17 @@ export function init(
   if (!legacyZoomCleanupInitialized) {
     legacyZoomCleanupInitialized = true
     void removeLegacyZoomData(electronStub.app.getPath('userData'))
+  }
+  // Stale engine temp sweep (G20): removes steam-engines/.tmp-* left by an interrupted unpack.
+  // Placed after `initLogger()` (it logs) and before READY (no install can hold a temp dir yet).
+  // Exit contract: synchronous, creates no handle, nothing in flight once it returns.
+  if (!engineTempSweepInitialized) {
+    engineTempSweepInitialized = true
+    try {
+      sweepStaleEngineTemps()
+    } catch {
+      /* never fails boot */
+    }
   }
   // Block E — boot-time Epic/GOG user reconciliation (todo 2026-09-06, quick-260908-fre).
   // Placement (D2): must be after `initLogger()` above (the helper logs, and `heroicLogWriter`
