@@ -676,6 +676,32 @@
             "signInRequiredNotice": "GameLib isn't signed in to Steam, so it can't download this game. Sign in to Steam again, then install.",
             "withOptionsLabel": "Install with options…"
         },
+        "overlay": {
+            "exit": {
+                "body": "The game exited within 30 seconds with the Steam overlay on. If this keeps happening, turn the overlay off in this game's settings: Advanced > Steam overlay.",
+                "title": "Game closed soon after starting"
+            },
+            "override": {
+                "automatic": "Automatic (on, unless a known fix turns it off)",
+                "help": "Shift+Tab opens Mac Steam's overlay in this game. Turn it off if the game crashes or draws wrongly with it.",
+                "label": "Steam overlay",
+                "off": "Off",
+                "on": "On",
+                "summary": "Steam overlay (advanced)"
+            },
+            "step": {
+                "clone": "The overlay copy of CrossOver could not be prepared.",
+                "crossoverDetect": "CrossOver could not be found.",
+                "env": "An overlay path contains a character GameLib cannot pass to the game.",
+                "resign": "The overlay copy of CrossOver could not be signed.",
+                "shim": "GameLib's overlay helper is missing from this build.",
+                "steamDylibs": "Mac Steam's overlay files were not found."
+            },
+            "toast": {
+                "body": "{{step}} The game is launching without the Steam overlay.",
+                "title": "Steam overlay unavailable"
+            }
+        },
         "resumeAvailable": {
             "notify": "An interrupted install for {{game}} is ready to resume — click Install to continue"
         },

@@ -248,6 +248,12 @@ export interface SteamEngineState {
    */
   overrideEligible?: boolean
   /**
+   * Phase 60 D-02: true for any title with a bridge install on macOS, DRM-mode
+   * titles included (unlike overrideEligible). Always set by the backend;
+   * optional so older fixtures compile.
+   */
+  overlayEligible?: boolean
+  /**
    * Set only for a forced CrossOver override whose preflight is expired or
    * conclusively broken (CrossOver will nag or the launch may fail). Closed
    * enum: the renderer maps it to catalogue strings.

@@ -174,6 +174,7 @@ function compute(
   engineLabel: string | null,
   store: EngineNoticeStore,
   overrideEligible: boolean,
+  overlayEligible: boolean,
   launchNotice: SteamEngineState['launchNotice']
 ): SteamEngineState {
   let engine: SteamEngineState['engine'] = null
@@ -222,6 +223,7 @@ function compute(
     untestedCrossoverBuild:
       build !== null && shouldShowUntestedNotice(build, store) ? build : null,
     overrideEligible,
+    overlayEligible,
     overrideWarning,
     launchNotice
   }
@@ -293,6 +295,8 @@ export async function getSteamEngineState(
     labelFor(appId),
     d.store,
     overrideEligible,
+    // Phase 60 D-02: a bridge bottle exists on macOS here, so the overlay toggle applies.
+    true,
     null
   )
 }
@@ -344,6 +348,8 @@ export function recordLaunchDecision(
       labelFor(appId),
       d.store,
       overrideEligible,
+      // Phase 60 D-02: only bridge launches reach here, so the overlay toggle applies.
+      true,
       launchNotice
     )
     publisher(state)

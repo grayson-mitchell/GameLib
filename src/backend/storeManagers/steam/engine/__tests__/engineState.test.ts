@@ -128,6 +128,7 @@ describe('getSteamEngineState', () => {
       showNoCrossoverNote: false,
       untestedCrossoverBuild: null,
       overrideEligible: true,
+      overlayEligible: true,
       overrideWarning: null,
       launchNotice: null
     })
@@ -216,6 +217,19 @@ describe('getSteamEngineState', () => {
   it('a DRM-mode title (injected) is not override-eligible', async () => {
     const { deps } = mk(healthy(null), { isDrmModeTitle: () => true })
     expect((await getSteamEngineState('1', deps))?.overrideEligible).toBe(false)
+  })
+  it('overlayEligible is true for a bridge title, DRM-mode included', async () => {
+    const plain = mk(healthy(null))
+    expect((await getSteamEngineState('1', plain.deps))?.overlayEligible).toBe(
+      true
+    )
+    const drm = mk(healthy(null), { isDrmModeTitle: () => true })
+    expect((await getSteamEngineState('1', drm.deps))?.overlayEligible).toBe(
+      true
+    )
+    expect((await getSteamEngineState('1', drm.deps))?.overrideEligible).toBe(
+      false
+    )
   })
   it('the default page preflight never kills a wineserver; an inconclusive result is not cached', async () => {
     const kill = jest.fn(async () => undefined)
@@ -465,7 +479,8 @@ describe('recordLaunchDecision and publisher', () => {
     expect(pub.mock.calls[0][0]).toMatchObject({
       trialDaysRemaining: 3,
       showTrialNotice: true,
-      engineLabel: 'CrossOver'
+      engineLabel: 'CrossOver',
+      overlayEligible: true
     })
     expect(await getSteamEngineState('1', deps)).toMatchObject({
       trialDaysRemaining: 3
