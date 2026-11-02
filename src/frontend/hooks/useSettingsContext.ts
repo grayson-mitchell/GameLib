@@ -57,18 +57,7 @@ export function createSettingSetter({
   return (key, value) => {
     const currentConfig = getConfig()
     const currentValue = currentConfig[key]
-    let earlyReturn = false
-    if (currentValue !== undefined || currentValue !== null) {
-      const noChange = JSON.stringify(value) === JSON.stringify(currentValue)
-      if (noChange) earlyReturn = true
-    }
-    if (key === 'steamEngineOverride') {
-      // [G17-probe] engine ids and booleans only
-      void globalThis.window?.api?.logInfo?.(
-        `[G17-probe] setSetting app=${appName} key=${key} new=${String(value)} current=${String(currentValue)} earlyReturn=${earlyReturn}`
-      )
-    }
-    if (earlyReturn) return
+    if (JSON.stringify(value) === JSON.stringify(currentValue)) return
     setConfig({ ...currentConfig, [key]: value })
     send({ appName, key, value })
   }

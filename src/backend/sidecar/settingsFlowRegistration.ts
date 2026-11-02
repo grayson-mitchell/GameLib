@@ -78,6 +78,7 @@ import { ipcMain } from '../platform'
 import '../storeManagers'
 import { GlobalConfig } from '../config'
 import { GameConfig } from '../game_config'
+import { applyGameSetting } from './gameSettingWrite'
 import { libraryManagerMap } from '../storeManagers'
 // NOTE: the export is `library`, not `steamLibrary` — there is no export
 // named `steamLibrary` from this module. Aliased on import exactly as
@@ -184,7 +185,7 @@ export function registerSettingsFlows(): void {
         )
         return
       }
-      GameConfig.get(appName).setSetting(key, value)
+      applyGameSetting(appName, key, value)
     }
   })
 
