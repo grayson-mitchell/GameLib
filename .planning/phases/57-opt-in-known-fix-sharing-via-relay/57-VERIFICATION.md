@@ -1,12 +1,13 @@
 ---
 phase: 57-opt-in-known-fix-sharing-via-relay
 verified: 2026-11-02T00:00:00Z
-status: human_needed
+status: passed
 score: 6/6 must-haves verified
 human_verification:
   - test: "Decide whether to add a D1 Time Travel caveat to the 'about two hours' help text / PRIVACY.md"
     expected: "Operator decision: D1 Time Travel keeps up to 30 days of restorable history containing hashed IP buckets"
     why_human: "Privacy-copy judgement, not verifiable programmatically"
+    result: "resolved 2026-11-02: operator chose to add the caveat (a7e61905a)"
 ---
 
 # Phase 57 Verification
@@ -35,6 +36,6 @@ human_verification:
 Other-phase jest failures (cargoFeatures, skeletonFlows, steamFlows, etc.) were stated to fail on clean HEAD; none are in phase-57 test globs, which pass. Phase-57 dead-code findings fixed in ae6f4ee00. Skipped review items (WR-04/05/06/09/10, IN-01..04) are operator-scoped out, not gaps.
 
 ## Human verification
-1. Privacy caveat (open): D1 Time Travel keeps up to 30 days of restorable history containing hashed IP buckets, which the "about two hours" help text does not mention. Operator has not decided whether to add a caveat.
+1. Privacy caveat (resolved 2026-11-02): D1 Time Travel keeps up to 30 days of restorable history containing hashed IP buckets. The operator chose to state it; the toggle help text and PRIVACY.md now say so (a7e61905a).
 
 No gaps found.
