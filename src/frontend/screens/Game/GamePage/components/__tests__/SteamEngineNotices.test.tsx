@@ -110,6 +110,28 @@ describe('SteamEngineNotices', () => {
     ).toBeNull()
   })
 
+  it('overrideWarning cx-expired renders the expired text in one status notice', () => {
+    const els = render(make({ overrideWarning: 'cx-expired' }))
+    const notices = els.filter((e) =>
+      e.props.className?.includes('steamEngineNotice--overrideWarning')
+    )
+    expect(notices).toHaveLength(1)
+    expect(notices[0].props).toHaveProperty('role', 'status')
+    expect(text(notices[0])).toContain('its CrossOver trial has expired')
+  })
+
+  it('overrideWarning cx-broken renders the broken text', () => {
+    const els = render(make({ overrideWarning: 'cx-broken' }))
+    expect(els.map((e) => text(e)).join('|')).toContain(
+      "CrossOver isn't working for it. The launch may fail."
+    )
+  })
+
+  it('overrideWarning absent or null renders no warning notice', () => {
+    expect(render(make({ overrideWarning: null }))).toEqual([])
+    expect(render(make({}))).toEqual([])
+  })
+
   it('is inline and non-modal', () => {
     const els = render(make({ showNoCrossoverNote: true }))
     expect(
