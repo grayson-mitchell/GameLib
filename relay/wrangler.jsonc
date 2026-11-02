@@ -7,12 +7,13 @@
   // No request logging: IPs and headers must not be retained.
   "observability": { "enabled": false },
   "workers_dev": true,
+  "preview_urls": false,
   "vars": {
     "REPO_OWNER": "grayson-mitchell",
     "REPO_NAME": "known-fixes",
     "BASE_BRANCH": "main",
-    "GITHUB_APP_ID": "OPERATOR_FILLS",
-    "GITHUB_INSTALLATION_ID": "OPERATOR_FILLS",
+    "GITHUB_APP_ID": "5572986",
+    "GITHUB_INSTALLATION_ID": "177665978",
     "IP_HOURLY_LIMIT": "10",
     "DAILY_CREATE_CAP": "25"
   },
@@ -20,7 +21,7 @@
     {
       "binding": "DB",
       "database_name": "gamelib-fix-relay",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "231222f4-6b99-4bfd-a0c5-a1048a8c084c",
       "migrations_dir": "migrations"
     }
   ],
@@ -30,12 +31,13 @@
       "name": "gamelib-fix-relay-staging",
       "observability": { "enabled": false },
       "workers_dev": true,
+      "preview_urls": false,
       "vars": {
         "REPO_OWNER": "grayson-mitchell",
         "REPO_NAME": "known-fixes-staging",
         "BASE_BRANCH": "main",
-        "GITHUB_APP_ID": "OPERATOR_FILLS",
-        "GITHUB_INSTALLATION_ID": "OPERATOR_FILLS",
+        "GITHUB_APP_ID": "5572986",
+        "GITHUB_INSTALLATION_ID": "177665978",
         "IP_HOURLY_LIMIT": "10",
         "DAILY_CREATE_CAP": "25"
       },
@@ -43,7 +45,7 @@
         {
           "binding": "DB",
           "database_name": "gamelib-fix-relay-staging",
-          "database_id": "00000000-0000-0000-0000-000000000000",
+          "database_id": "7bb3b29f-e09c-4ecf-a84e-4de3b294f50c",
           "migrations_dir": "migrations"
         }
       ]

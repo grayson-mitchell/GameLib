@@ -102,9 +102,9 @@ online. No account data is sent.
 **Known-fix relay (opt-in, macOS only).** Off by default. Turning on Share detected game fixes in
 General settings is the only consent; nothing is sent while it is off.
 
-| Destination                                                                                 | When                                                                                                                                                                                       | What is sent                                                                                                  |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| The maintainer's relay, a Cloudflare Worker on `workers.dev` (exact URL added after deploy) | Only on macOS, only when the setting is on, and only when a detector reaches a definitive verdict: a 32-bit Mac build, Steam CEG DRM, or a curated 32-bit entry that turns out to be wrong | The Steam app id, the store, the detected fix key and value, whether to add or remove it, the GameLib version |
+| Destination                                                                            | When                                                                                                                                                                                       | What is sent                                                                                                  |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| The maintainer's relay, a Cloudflare Worker at `gamelib-fix-relay.gamelib.workers.dev` | Only on macOS, only when the setting is on, and only when a detector reaches a definitive verdict: a 32-bit Mac build, Steam CEG DRM, or a curated 32-bit entry that turns out to be wrong | The Steam app id, the store, the detected fix key and value, whether to add or remove it, the GameLib version |
 
 It never sends a user id, the game title, a file path or a log. The relay looks the title up from
 Steam itself.
@@ -177,4 +177,4 @@ visit there can set cookies, and GameLib does not control what they do.
 
 Open an issue at https://github.com/grayson-mitchell/GameLib/issues.
 
-This document was checked against the GameLib source at commit `f08a83040` on 2026-11-02.
+This document was checked against the GameLib source at commit `3619b0775` on 2026-11-02.

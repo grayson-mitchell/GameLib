@@ -33,7 +33,8 @@ import {
 // Plan 57-12 replaces the host with the deployed URL after the operator
 // checkpoint, and adds a test that the sentinel is gone.
 export const RELAY_URL_PENDING_SENTINEL = 'OPERATOR-DEPLOY-PENDING'
-export const GAMELIB_FIX_RELAY_URL = `https://gamelib-fix-relay.${RELAY_URL_PENDING_SENTINEL}.workers.dev/v1/reports`
+export const GAMELIB_FIX_RELAY_URL =
+  'https://gamelib-fix-relay.gamelib.workers.dev/v1/reports'
 
 export const RELAY_TIMEOUT_MS = 8000
 
