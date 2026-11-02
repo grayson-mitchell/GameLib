@@ -47,16 +47,48 @@ export type AddPlan =
   | { kind: 'already-known' }
   | { kind: 'skipped'; reason: string }
 
+type NoteInput = { gamelibVersion: string; firstSeen: number }
+
+const NOTE_REASON: Record<KnownFixReportKey, string> = {
+  macArch:
+    'The macOS build is 32-bit only (i386); Apple silicon cannot run it, so GameLib installs the Windows build.',
+  drm: "The Windows build's executable is a Steam CEG executable. CEG needs a genuine Windows Steam client, so GameLib routes this title to bottled Steam before any download."
+}
+
+const NOTE_DETECTOR: Record<KnownFixReportKey, string> = {
+  macArch: 'post-install Mach-O check',
+  drm: 'PE CEG scan'
+}
+
+/**
+ * The `notes.<key>` text, matching the hand-written seeds. Built only from
+ * fixed strings, the schema-validated version and a date, never client text.
+ */
+export function reportNote(key: KnownFixReportKey, input: NoteInput): string {
+  const date = new Date(input.firstSeen).toISOString().slice(0, 10)
+  return `${NOTE_REASON[key]} Reported by GameLib ${input.gamelibVersion}'s ${NOTE_DETECTOR[key]} through the known-fix relay, first received ${date}.`
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
+
 export function planAdd(
   existingText: string | null,
   key: KnownFixReportKey,
   value: string,
-  canonicalTitle: string
+  canonicalTitle: string,
+  note: NoteInput
 ): AddPlan {
+  const noteText = reportNote(key, note)
   if (existingText === null) {
     return {
       kind: 'create',
-      text: serializeFixFile({ title: canonicalTitle, [key]: value })
+      text: serializeFixFile({
+        title: canonicalTitle,
+        [key]: value,
+        notes: { [key]: noteText }
+      })
     }
   }
   const existing = parseObject(existingText)
@@ -70,6 +102,14 @@ export function planAdd(
       ? { ...existing }
       : { title: canonicalTitle, ...existing }
   next[key] = value
+  // A hand-written note for this key wins; a non-object `notes` is left alone.
+  if (!('notes' in next)) {
+    next.notes = { [key]: noteText }
+  } else if (isPlainObject(next.notes) && !(key in next.notes)) {
+    const notes = next.notes
+    delete next.notes
+    next.notes = { ...notes, [key]: noteText }
+  }
   return { kind: 'update', text: serializeFixFile(next) }
 }
 
@@ -88,6 +128,12 @@ export function planRemove(existingText: string | null): RemovePlan {
   if (existing.macArch !== '32') return { kind: 'not-in-repo' }
   const rest: FixFile = { ...existing }
   delete rest.macArch
+  if (isPlainObject(rest.notes) && 'macArch' in rest.notes) {
+    const notes = { ...rest.notes }
+    delete notes.macArch
+    if (Object.keys(notes).length === 0) delete rest.notes
+    else rest.notes = notes
+  }
   const onlyMeta = Object.keys(rest).every(
     (k) => k === 'title' || k === 'notes'
   )

@@ -2,6 +2,7 @@ import { publishReport, type PublishInput } from '../publish'
 import type { RepoClient } from '../githubFiles'
 import { GitHubUnavailableError } from '../githubApp'
 import { issueTitle, type BodyEntry } from '../prBody'
+import { reportNote } from '../fileEdit'
 
 type Pull = { number: number; mergedAt: string | null; body: string }
 type Script = {
@@ -132,7 +133,13 @@ describe('pr', () => {
     expect(put.branch).toBe('report/steam-123')
     expect(JSON.parse(put.text as string)).toEqual({
       title: 'Half-Life 2',
-      macArch: '32'
+      macArch: '32',
+      notes: {
+        macArch: reportNote('macArch', {
+          gamelibVersion: '0.8.0',
+          firstSeen: 0
+        })
+      }
     })
     expect(f.args.createPull[0][0]).toMatchObject({
       base: 'main',
@@ -188,7 +195,10 @@ describe('pr', () => {
     expect(JSON.parse(put.text as string)).toEqual({
       title: 'X',
       macArch: '32',
-      drm: 'ceg'
+      drm: 'ceg',
+      notes: {
+        drm: reportNote('drm', { gamelibVersion: '0.8.0', firstSeen: 0 })
+      }
     })
     expect(f.args.updatePullBody[0][0]).toBe(5)
   })

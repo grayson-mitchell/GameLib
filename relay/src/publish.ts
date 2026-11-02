@@ -58,8 +58,15 @@ export async function publishReport(
   const title = prTitle(appId, { key, op })
   const message = `known-fix: ${title}`
 
+  const own = input.entries.find((e) => e.key === key && e.op === op)
+  const note = {
+    gamelibVersion: report.gamelibVersion,
+    firstSeen: own?.firstSeen ?? Date.now()
+  }
   const plan = (text: string | null): Plan =>
-    op === 'add' ? planAdd(text, key, value, input.title) : planRemove(text)
+    op === 'add'
+      ? planAdd(text, key, value, input.title, note)
+      : planRemove(text)
 
   const body = () =>
     renderPrBody({ appId, title: input.title, entries: input.entries })
@@ -77,7 +84,6 @@ export async function publishReport(
     const existing = await gh.findIssueByTitle(label, issueTitle(appId))
     if (existing !== null) return { status: 'counted', issueNumber: existing }
     if (!(await input.reserveCreation())) return { status: 'rate-limited' }
-    const own = input.entries.find((e) => e.key === key && e.op === op)
     const issueNumber = await gh.createIssue({
       title: issueTitle(appId),
       body: renderIssueBody({
