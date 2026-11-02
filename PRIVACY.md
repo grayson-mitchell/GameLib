@@ -132,7 +132,8 @@ publishes files as GitHub release assets in `https://github.com/grayson-mitchell
 
 The relay runs on Cloudflare. It sees the IP address of each request. It stores only a SHA-256 hash
 of that address (for an IPv6 address, of its /64 network prefix), salted per day, in a rate-limit
-bucket that expires after about two hours, and it never writes the address or its hash to GitHub. For each app id, fix key and add/remove operation it
+bucket that expires after about two hours, and it never writes the address or its hash to GitHub. Cloudflare D1 keeps point-in-time restore copies of the database (Time Travel) for up to 30 days, so a
+hash deleted from the live table can remain in those copies for that long; they are not published. For each app id, fix key and add/remove operation it
 stores a report count, first and last seen times, the last GameLib version and the number of the
 pull request or issue. It uses a GitHub App credential to open pull requests and issues on
 `grayson-mitchell/known-fixes`, which are public. Cloudflare's own handling of requests is governed
