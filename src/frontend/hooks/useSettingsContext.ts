@@ -33,6 +33,47 @@ export function shouldWithholdContext(
   return Object.keys(config).length === 0 && !hasAttemptedLoad
 }
 
+type SetterDeps = {
+  appName: string
+  getConfig: () => Partial<AppSettings>
+  setConfig: (config: Partial<AppSettings>) => void
+  send: (payload: {
+    appName: string
+    key: keyof AppSettings
+    value: unknown
+  }) => unknown
+}
+
+/**
+ * The setSetting decision as a pure function so it can be tested without
+ * mounting React. Behaviour is unchanged from the inline original.
+ */
+export function createSettingSetter({
+  appName,
+  getConfig,
+  setConfig,
+  send
+}: SetterDeps): SettingsContextType['setSetting'] {
+  return (key, value) => {
+    const currentConfig = getConfig()
+    const currentValue = currentConfig[key]
+    let earlyReturn = false
+    if (currentValue !== undefined || currentValue !== null) {
+      const noChange = JSON.stringify(value) === JSON.stringify(currentValue)
+      if (noChange) earlyReturn = true
+    }
+    if (key === 'steamEngineOverride') {
+      // [G17-probe] engine ids and booleans only
+      void globalThis.window?.api?.logInfo?.(
+        `[G17-probe] setSetting app=${appName} key=${key} new=${String(value)} current=${String(currentValue)} earlyReturn=${earlyReturn}`
+      )
+    }
+    if (earlyReturn) return
+    setConfig({ ...currentConfig, [key]: value })
+    send({ appName, key, value })
+  }
+}
+
 const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
   const [currentConfig, setCurrentConfig] = useState<Partial<AppSettings>>({})
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
@@ -77,15 +118,12 @@ const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
 
   const contextValues: SettingsContextType = {
     getSetting: (key, fallback) => currentConfig[key] ?? fallback,
-    setSetting: (key, value) => {
-      const currentValue = currentConfig[key]
-      if (currentValue !== undefined || currentValue !== null) {
-        const noChange = JSON.stringify(value) === JSON.stringify(currentValue)
-        if (noChange) return
-      }
-      setCurrentConfig({ ...currentConfig, [key]: value })
-      window.api.setSetting({ appName, key, value })
-    },
+    setSetting: createSettingSetter({
+      appName,
+      getConfig: () => currentConfig,
+      setConfig: setCurrentConfig,
+      send: (payload) => window.api.setSetting(payload)
+    }),
     config: currentConfig,
     isDefault,
     appName,

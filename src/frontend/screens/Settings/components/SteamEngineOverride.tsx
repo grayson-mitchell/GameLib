@@ -155,7 +155,13 @@ export function SteamEngineOverrideView({
             )}
           />
         }
-        onChange={(e: SelectChangeEvent) => onChange(e.target.value)}
+        onChange={(e: SelectChangeEvent) => {
+          // [G17-probe]
+          void globalThis.window?.api?.logInfo?.(
+            `[G17-probe] select onChange raw=${String(e.target.value)} value=${value}`
+          )
+          onChange(e.target.value)
+        }}
         afterSelect={
           unsupported ? (
             <span className="smallInputInfo danger">
@@ -216,6 +222,11 @@ const SteamEngineOverride = () => {
   }, [eligible])
 
   if (!eligible) return null
+
+  // [G17-probe]
+  void window.api?.logInfo?.(
+    `[G17-probe] render override=${String(override)} loaded=${String(loaded)}`
+  )
 
   return (
     <SteamEngineOverrideView
