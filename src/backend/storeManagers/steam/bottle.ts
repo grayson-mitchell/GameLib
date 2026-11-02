@@ -96,6 +96,11 @@ export const CROSSOVER_CREATE_TIMEOUT = 'crossover-create-timeout' as const
  * installBridgeGame).
  */
 export const CROSSOVER_CREATE_FAILED = 'crossover-create-failed' as const
+/**
+ * 59-REVIEW CR-01: bottle creation was cancelled (install abort / quit). Not a failure: the caller
+ * must not fall back to another engine.
+ */
+export const PROVISION_ABORTED = 'provision-aborted' as const
 const CROSSOVER_REQUIRED_MESSAGE =
   'CrossOver is required. Install CrossOver from https://www.codeweavers.com/crossover, then try again.'
 
@@ -649,6 +654,12 @@ export type ProvisionBottleResult = {
     | typeof CROSSOVER_MISSING
     | typeof CROSSOVER_CREATE_TIMEOUT
     | typeof CROSSOVER_CREATE_FAILED
+    | typeof PROVISION_ABORTED
+  /**
+   * True only when this call created the bottle dir (absent at entry). False on the ready
+   * short-circuit or when the dir pre-existed.
+   */
+  createdHere?: boolean
 }
 
 /**
@@ -2153,6 +2164,19 @@ function removeCreatedBottleDir(bottleName: string): void {
 }
 
 /**
+ * Discard a bottle the caller created in this install (see ProvisionBottleResult.createdHere),
+ * already stopped by the post-create kill. Same single-segment-under-Bottles-root guard as
+ * removeCreatedBottleDir (T-59-25). Never call for a bottle that pre-existed.
+ */
+export function discardNewBridgeBottle(bottleName: string): void {
+  logInfo(
+    `provisionBridgeBottle: discarding newly created bottle "${bottleName}"`,
+    LogPrefix.Steam
+  )
+  removeCreatedBottleDir(bottleName)
+}
+
+/**
  * Phase 59 (D-01/D-02/D-03): create the bridge bottle with the fallback engine, in CrossOver's own
  * Bottles directory, so the Windows profile is C:\users\crossover from the start. The
  * cxbottle.conf is written LAST so isBridgeBottleReady stays false until the bottle is complete.
@@ -2163,7 +2187,8 @@ function removeCreatedBottleDir(bottleName: string): void {
  */
 async function createFallbackBridgeBottle(
   bottleName: string,
-  engine: NonCrossoverEngine
+  engine: NonCrossoverEngine,
+  signal?: AbortSignal
 ): Promise<ProvisionBottleResult> {
   const dir = getBottleDir(bottleName)
   const createdHere = !existsSync(dir)
@@ -2186,12 +2211,32 @@ async function createFallbackBridgeBottle(
     if (createdHere) removeCreatedBottleDir(bottleName)
     return { status: 'error', error }
   }
+  const aborted = async (): Promise<ProvisionBottleResult> => {
+    logInfo(
+      `provisionBridgeBottle: bottle creation cancelled for "${bottleName}"`,
+      LogPrefix.Steam
+    )
+    await killBottleWineServerWith(
+      bottleName,
+      engine.wineserverBin,
+      { USER: 'crossover' },
+      15_000
+    )
+    if (createdHere) removeCreatedBottleDir(bottleName)
+    return {
+      status: 'error',
+      errorCode: PROVISION_ABORTED,
+      error: 'bottle creation cancelled'
+    }
+  }
   try {
     mkdirSync(dirname(dir), { recursive: true })
     const boot = await spawnAsync(engine.wineBin, ['wineboot', '-i'], {
       env,
-      timeout: 180_000
+      timeout: 180_000,
+      signal
     })
+    if (signal?.aborted) return await aborted()
     if (boot?.code !== 0) {
       // log-secret-gate-exempt: stderr of wineboot, not an auth command
       return await fail(
@@ -2201,8 +2246,10 @@ async function createFallbackBridgeBottle(
     // system.reg is flushed only once the wineserver exits.
     const wait = await spawnAsync(engine.wineserverBin, ['-w'], {
       env,
-      timeout: 60_000
+      timeout: 60_000,
+      signal
     })
+    if (signal?.aborted) return await aborted()
     if (wait?.code === null) {
       return await fail(`wineserver -w timed out for bottle "${bottleName}"`)
     }
@@ -2214,6 +2261,7 @@ async function createFallbackBridgeBottle(
         'backup',
         engine.dxvk
       )
+      if (signal?.aborted) return await aborted()
       if (!ok || !existsSync(join(dir, 'current_dxvk-macOS'))) {
         return await fail(`DXVK install failed for bottle "${bottleName}"`)
       }
@@ -2223,6 +2271,7 @@ async function createFallbackBridgeBottle(
       return await fail(`cxbottle.conf not written for bottle "${bottleName}"`)
     }
   } catch (error) {
+    if (signal?.aborted) return await aborted()
     return await fail(`fallback bottle creation threw: ${String(error)}`)
   }
   await killBottleWineServerWith(
@@ -2235,7 +2284,7 @@ async function createFallbackBridgeBottle(
     `provisionBridgeBottle: bridge bottle "${bottleName}" created by ${engine.label}`,
     LogPrefix.Steam
   )
-  return { status: 'done' }
+  return { status: 'done', createdHere }
 }
 
 export async function provisionBridgeBottle(opts: {
@@ -2245,6 +2294,8 @@ export async function provisionBridgeBottle(opts: {
   fallbackEngine?: NonCrossoverEngine
   /** D-12: hard cap for `cxbottle --create`, in ms. */
   createTimeoutMs?: number
+  /** 59-REVIEW CR-01: aborts bottle creation and removes what this call created. */
+  signal?: AbortSignal
 }): Promise<ProvisionBottleResult> {
   const rawName = opts.bottleName
   const bottleName = sanitizeBottleName(rawName)
@@ -2275,12 +2326,24 @@ export async function provisionBridgeBottle(opts: {
 
   // (3) Idempotent short-circuit — bridge bottle already created.
   if (isBridgeBottleReady(bottleName)) {
-    return { status: 'done' }
+    return { status: 'done', createdHere: false }
+  }
+
+  if (opts.signal?.aborted) {
+    return {
+      status: 'error',
+      errorCode: PROVISION_ABORTED,
+      error: 'bottle creation cancelled'
+    }
   }
 
   // Phase 59: an explicit fallback engine creates the bottle itself.
   if (opts.fallbackEngine) {
-    return createFallbackBridgeBottle(bottleName, opts.fallbackEngine)
+    return createFallbackBridgeBottle(
+      bottleName,
+      opts.fallbackEngine,
+      opts.signal
+    )
   }
 
   // (3b) quick 261024-cjq: CrossOver precondition, after the ready
@@ -2304,6 +2367,19 @@ export async function provisionBridgeBottle(opts: {
   // (4) CREATE via the SAME locked cxbottle mechanism provisionBottle()
   // uses (argv form only, arguments as discrete words) — win10_64 template.
   const createdHere = !existsSync(getBottleDir(bottleName))
+  const abortedCrossOver = async (): Promise<ProvisionBottleResult> => {
+    logInfo(
+      `provisionBridgeBottle: bottle creation cancelled for "${bottleName}"`,
+      LogPrefix.Steam
+    )
+    await killBottleWineServer(bottleName, binDir, 15_000)
+    if (createdHere) removeCreatedBottleDir(bottleName)
+    return {
+      status: 'error',
+      errorCode: PROVISION_ABORTED,
+      error: 'bottle creation cancelled'
+    }
+  }
   try {
     const createArgv = [
       '--create',
@@ -2315,9 +2391,13 @@ export async function provisionBridgeBottle(opts: {
     const { code, stderr } =
       opts.createTimeoutMs !== undefined
         ? await spawnAsync(cxbottleIn(binDir), createArgv, {
-            timeout: opts.createTimeoutMs
+            timeout: opts.createTimeoutMs,
+            signal: opts.signal
           })
-        : await spawnAsync(cxbottleIn(binDir), createArgv)
+        : await spawnAsync(cxbottleIn(binDir), createArgv, {
+            signal: opts.signal
+          })
+    if (opts.signal?.aborted) return await abortedCrossOver()
     if (code === null && opts.createTimeoutMs !== undefined) {
       logError(
         `provisionBridgeBottle: cxbottle create for "${bottleName}" hit its ${opts.createTimeoutMs} ms cap (D-12)`,
@@ -2342,6 +2422,7 @@ export async function provisionBridgeBottle(opts: {
         ],
         LogPrefix.Steam
       )
+      await killBottleWineServer(bottleName, binDir, 15_000)
       if (createdHere) removeCreatedBottleDir(bottleName)
       return {
         status: 'error',
@@ -2354,6 +2435,8 @@ export async function provisionBridgeBottle(opts: {
       ['provisionBridgeBottle: cxbottle create threw', error],
       LogPrefix.Steam
     )
+    if (opts.signal?.aborted) return await abortedCrossOver()
+    await killBottleWineServer(bottleName, binDir, 15_000)
     if (createdHere) removeCreatedBottleDir(bottleName)
     return {
       status: 'error',
@@ -2372,5 +2455,5 @@ export async function provisionBridgeBottle(opts: {
     LogPrefix.Steam
   )
 
-  return { status: 'done' }
+  return { status: 'done', createdHere }
 }
