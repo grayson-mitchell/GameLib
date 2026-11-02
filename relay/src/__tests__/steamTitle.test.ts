@@ -50,13 +50,22 @@ describe('title', () => {
     })
   })
 
-  it('missing appId key is unknown-app', async () => {
+  it.each([
+    ['null', null],
+    ['an array', []],
+    ['a string', 'x'],
+    ['missing the appId key', {}],
+    ['a null entry', { '7': null }],
+    ['an entry without success', { '7': {} }],
+    ['success:"false" as a string', { '7': { success: 'false' } }],
+    ['success:true without data', { '7': { success: true } }]
+  ])('a body that is %s is unavailable (WR-07)', async (_n, json) => {
     const { fetch } = createFakeFetch({
-      [`GET ${url('7')}`]: { status: 200, json: {} }
+      [`GET ${url('7')}`]: { status: 200, text: JSON.stringify(json) }
     })
     expect(await lookupSteamTitle('7', fetch)).toEqual({
       ok: false,
-      kind: 'unknown-app'
+      kind: 'unavailable'
     })
   })
 

@@ -52,7 +52,7 @@ async function harness(envOver: Partial<RelayEnv> = {}, script: Script = {}) {
           '220': { success: true, data: { type: 'game', name: 'Half-Life 2' } }
         }
       }
-      return json(s.status, s.json ?? {})
+      return json(s.status, s.json === undefined ? {} : s.json)
     }
     if (url.endsWith('/access_tokens')) {
       return json(201, { token: 'tok', expires_at: '2099-01-01T00:00:00Z' })
@@ -277,6 +277,13 @@ describe('title', () => {
     )
     expect((await h.send({})).status).toBe(422)
     expect(h.calls.filter((c) => c.url.includes('github'))).toHaveLength(0)
+  })
+
+  it('503s, never 422s, on a null Steam body (WR-07)', async () => {
+    const h = await harness({}, { steam: { status: 200, json: null } })
+    const res = await h.send({})
+    expect(res.status).toBe(503)
+    expect((await res.json()).status).toBe('unavailable')
   })
 
   it('503s when Steam is down', async () => {
