@@ -1,0 +1,15 @@
+overlay_shim.m is vendored unmodified from NotProton.
+
+Upstream repo: NotProtonNot/NotProton
+Path:          overlay-shim/overlay_shim.m
+Commit:        0c798e7148efe279627573f864210064788b427c
+Git blob:      194b5fba7c0f145a9d7e227fc5ace2e2333e2299
+sha256:        d6924aa4b330059dfa1212340a34f8081ea949cc8c82cfc2875ca6f0964687e5
+Licence:       GPL-3.0 (the repository default; the exemptions in upstream's own
+               NOTICE do not cover overlay-shim/). The licence text is in LICENSE
+               beside this file.
+
+Built from this source by GameLib's meta/buildSteamBridgeShims.ts. No NotProton
+prebuilt binary is shipped (D-14, same rule as D-56-01).
+
+GameLib is GPL-3.0-only, so the combination is compatible.

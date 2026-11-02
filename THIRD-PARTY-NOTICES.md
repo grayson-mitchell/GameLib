@@ -161,3 +161,13 @@ release page.
 | lsteamclient.so                              | Steamworks-SDK-License | dd48289787223d9e0f75a97da3cc15aa616faa382741e39a5a433fa5cfa5167d | 2388896  |
 | steam.exe                                    | BSD-3-Clause           | 4a67c58a41792e8a784bea7338adaf3d7d3713dc6d20ccaf61895edfdb32e6ba | 193536   |
 | steamclient-layer-cx26.3.0.39832-p58c.tar.gz | archive                | 330076c412724b37712da42ea86dadf1990a02476dba83844273c80760ed8a78 | 5381345  |
+
+## Overlay shim: NotProton `overlay_shim.m` (macOS)
+
+`native/steam-bridge/overlay-shim/overlay_shim.m` is vendored unmodified from
+`NotProtonNot/NotProton` at commit `0c798e7148efe279627573f864210064788b427c`
+(git blob `194b5fba7c0f145a9d7e227fc5ace2e2333e2299`, sha256
+`d6924aa4b330059dfa1212340a34f8081ea949cc8c82cfc2875ca6f0964687e5`) under
+GPL-3.0. GameLib builds it from source into `overlay_shim.dylib`; no NotProton
+prebuilt binary is shipped. The licence text and provenance are in
+`native/steam-bridge/overlay-shim/LICENSE` and `NOTICE`.
