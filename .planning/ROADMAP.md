@@ -842,7 +842,7 @@ Plans:
 **Goal:** A Windows Steam title on the macOS native bridge still launches when CrossOver is missing, its trial has expired for that bottle, or it is broken. CrossOver stays the first-choice engine. The fallback is one Wine-Staging + DXVK build pinned per GameLib release, which GameLib installs and manages itself. GameLib keeps the previous pinned build so a bad bump can be rolled back. The fallback runs the game's existing bridge bottle with `USER=crossover`, so saves and settings stay in one Windows profile. Before every CrossOver launch, GameLib checks the bottle's trial state with `CX_BOTTLE=<bottle> wine --demo-status`. An expired bottle goes to the fallback instead of hanging on CrossOver's nag dialog. CrossOver launches always run with a timeout. Users see "N days remaining" before expiry. A per-game engine override exists only as an advanced, explicitly unsupported option (the Proton model): known-fixes and census verdicts do not apply to it, and the launch log records the exact engine and version. GameLib records the CrossOver versions it has tested, and warns on an untested one without blocking it. Out of scope: DRM mode and bottled Steam (CrossOver-only), GPTK and `-DXMT` for Steam, a full census on the fallback (it is best-effort). Evidence: spikes 056–060 and the Idea B engine decision in `.planning/spikes/MANIFEST.md`.
 **Requirements**: TBD
 **Depends on:** Phase 51 (per-game bridge bottles)
-**Plans:** 23/23 plans complete
+**Plans:** 23/30 plans complete
 
 Plans:
 **Wave 1**
@@ -905,6 +905,24 @@ Plans:
 **Gap wave 5**
 
 - [x] 59-23-PLAN.md — Live re-UAT of the closed gaps and gate battery
+
+**Gap closure round 2** *(from 59-VERIFICATION.md re-verification gaps A-G, 59-REVIEW.md CR-01..03 / WR-01..07, 59-UAT.md G13-G19)*
+
+**Gap round 2, wave 1**
+
+- [ ] 59-24-PLAN.md — Round-2 catalogue strings (restore-failed dialog, forced-CrossOver warnings)
+- [ ] 59-25-PLAN.md — Override save to Automatic/CrossOver: probe-first diagnosis, fix, regression test (gap B, G17)
+- [ ] 59-26-PLAN.md — Failed return to CrossOver blocks the launch; failed-restore marker; recopying backup; ordered restore with progress (gap A, CR-03; WR-05/G19, IN-06)
+- [ ] 59-27-PLAN.md — Abort during engine verify/unpack; abortable bottle creation; wineserver stop before delete (gap E, WR-03; gap C bottle half; WR-04)
+
+**Gap round 2, wave 2**
+
+- [ ] 59-28-PLAN.md — Truthful engine state: inconclusive preflight, forced-CrossOver warning, DRM eligibility (gap F, WR-02, WR-06/G18; WR-07)
+- [ ] 59-29-PLAN.md — Install cancel during provisioning, no reroute after a cancel, abort mapping (gaps C, D; CR-01, CR-02, WR-01, IN-03)
+
+**Gap round 2, wave 3**
+
+- [ ] 59-30-PLAN.md — Live re-UAT 2 of gaps A-G and gate battery
 
 ### Phase 60: Steam overlay in bridged games on macOS
 
