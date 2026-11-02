@@ -4,10 +4,11 @@ import { app } from 'backend/platform'
 
 export const steamSupportPath = join(app.getPath('userData'), 'steam_store')
 
+// Windows is absent on purpose: SteamUser.isSteamClientInstalled() resolves it
+// from the Default Steam path setting (quick 261101-whs).
 export const STEAM_INSTALL_PATHS: Record<string, string[]> = {
   linux: ['/usr/bin/steam', join(homedir(), '.steam', 'steam')],
-  darwin: ['/Applications/Steam.app'],
-  win32: ['C:\\Program Files (x86)\\Steam\\Steam.exe']
+  darwin: ['/Applications/Steam.app']
 }
 
 export const STEAM_DOWNLOAD_URL = 'https://store.steampowered.com/about/'

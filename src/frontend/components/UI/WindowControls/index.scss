@@ -14,16 +14,20 @@
   align-self: start;
   z-index: 100;
   -webkit-app-region: no-drag;
+  display: flex;
 
+  // Operator report 2026-11-02, quick 261102-p8r: transparent so the tab bar's
+  // own colour shows behind the buttons in every theme, and 46x32 to match the
+  // Windows 11 caption buttons.
   button {
     display: inline-flex;
     justify-content: center;
     align-items: center;
     border-radius: 0;
-    background-color: var(--titlebar-color);
+    background-color: transparent;
     color: var(--titlebar-symbol-color);
     height: var(--overlay-controls-height);
-    width: var(--overlay-controls-height);
+    width: var(--window-controls-button-width);
 
     &:hover {
       background-color: var(--secondary-hover);

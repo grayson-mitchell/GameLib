@@ -12892,9 +12892,18 @@ fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std::process::
                     // `sidecar-log-output-shares-the-rpc-stdout-pipe`). The check logs the
                     // rejected scheme itself, never the URL.
                     if open_external_scheme_check(url).is_ok() {
-                        if let Err(e) = app.opener().open_url(url, None::<&str>) {
-                            shell_eprintln!("[shell] openExternal failed: {e}");
-                        }
+                        // D-UAT-19: open on a worker thread, never inline. On Windows
+                        // `open_url` blocks while the OS shows a dialog (e.g. "no app
+                        // handles steam://"), and this loop is the only reader of the
+                        // sidecar's stdout — inline, every invoke response parked behind
+                        // that dialog and was abandoned at the 60 s timeout.
+                        let url = url.to_string();
+                        let opener_app = app.clone();
+                        thread::spawn(move || {
+                            if let Err(e) = opener_app.opener().open_url(&url, None::<&str>) {
+                                shell_eprintln!("[shell] openExternal failed: {e}");
+                            }
+                        });
                     }
                 } else {
                     shell_eprintln!("[shell] openExternal frame missing a string URL in args[0]");

@@ -66,9 +66,10 @@
         "installPrevious": "Previous",
         "sortAscending": "A → Z",
         "sortDescending": "Z → A",
+        "steamClientSetupHandOff": "Set up Steam in desktop mode",
         "steamInstallBlockedTitle": "Can't start this install",
         "steamInstallLibraryFull": "There isn't enough free space in your Steam library folder. Free up space and try again.",
-        "steamInstallLibraryMissing": "Your Steam library folder isn't available right now. Reconnect the drive and try again."
+        "steamInstallLibraryMissing": "Your Steam library folder couldn't be found. Check that Steam is installed and has been opened at least once, and that the library's drive is connected."
     },
     "discounts": {
         "pegiPrefix": "PEGI ≤ {{value}}"
@@ -666,7 +667,7 @@
             "libraryFullNotice": "Not enough space in your Steam library — choose another below or free up space.",
             "libraryFullOnlyNotice": "Not enough space in your Steam library. Free up space, then try again.",
             "libraryMissingNotice": "Your Steam library couldn't be reached — choose another below.",
-            "libraryMissingOnlyNotice": "Your Steam library couldn't be reached. Reconnect the drive, then try again.",
+            "libraryMissingOnlyNotice": "Your Steam library folder couldn't be found. Check that it still exists and that its drive is connected, then try again.",
             "libraryPickerLabel": "Choose Steam library",
             "libraryPrimarySuffix": "default",
             "noCrossoverEngine": "No CrossOver installation was found. CrossOver is required to install this game. Install it from codeweavers.com, then reopen this dialog.",

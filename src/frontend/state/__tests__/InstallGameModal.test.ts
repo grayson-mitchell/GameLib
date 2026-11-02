@@ -93,6 +93,7 @@ let installMock: jest.Mock
 let listSteamLibraryTargetsMock: jest.Mock
 let checkDiskSpaceMock: jest.Mock
 let logErrorMock: jest.Mock
+let steamClientSetupRecheckMock: jest.Mock
 
 /** The established idiom for stubbing `window` in this node-env project
  * (`hasStatus.reconcile.test.ts:99-110`). Called fresh in `beforeEach` so
@@ -103,12 +104,16 @@ function stubWindowApi() {
   listSteamLibraryTargetsMock = jest.fn().mockResolvedValue([])
   checkDiskSpaceMock = jest.fn().mockResolvedValue(makeDisk())
   logErrorMock = jest.fn()
+  steamClientSetupRecheckMock = jest
+    .fn()
+    .mockResolvedValue({ status: 'ready', ready: true })
   ;(global as unknown as { window: unknown }).window = {
     api: {
       install: installMock,
       listSteamLibraryTargets: listSteamLibraryTargetsMock,
       checkDiskSpace: checkDiskSpaceMock,
-      logError: logErrorMock
+      logError: logErrorMock,
+      steamClientSetupRecheck: steamClientSetupRecheckMock
     }
   }
 }
@@ -341,6 +346,123 @@ describe('Group S: sign-in gate', () => {
     listSteamLibraryTargetsMock.mockResolvedValue(makeTargets(1))
     await startSteamQuickInstall('570', makeGameInfo())
 
+    expect(installMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Group U — D-UAT-15: client-setup precedence over the library-missing degrade
+// (quick 261102-21x).
+// ---------------------------------------------------------------------------
+describe('Group U: D-UAT-15 client-setup precedence', () => {
+  const armMissingLibrary = () => {
+    listSteamLibraryTargetsMock.mockResolvedValue(makeTargets(1))
+    checkDiskSpaceMock.mockResolvedValue(makeDisk({ validPath: false }))
+  }
+
+  it('U1: D-UAT-15 library-missing + needs-install -> no dialog, no install (the backend push owns the prompt)', async () => {
+    armMissingLibrary()
+    steamClientSetupRecheckMock.mockResolvedValue({
+      status: 'needs-install',
+      ready: false
+    })
+    await startSteamQuickInstall('570', makeGameInfo())
+
+    expect(steamClientSetupRecheckMock).toHaveBeenCalledTimes(1)
+    expect(steamClientSetupRecheckMock).toHaveBeenCalledWith('570')
+    expect(installMock).not.toHaveBeenCalled()
+    const state = useInstallGameModal.getState()
+    expect(state.isOpen).toBe(false)
+    expect(state.steamDegrade).toBeUndefined()
+  })
+
+  it('U2: D-UAT-15 library-missing + needs-launch -> no dialog, no install', async () => {
+    armMissingLibrary()
+    steamClientSetupRecheckMock.mockResolvedValue({
+      status: 'needs-launch',
+      ready: false
+    })
+    await startSteamQuickInstall('570', makeGameInfo())
+
+    expect(steamClientSetupRecheckMock).toHaveBeenCalledTimes(1)
+    expect(steamClientSetupRecheckMock).toHaveBeenCalledWith('570')
+    expect(installMock).not.toHaveBeenCalled()
+    const state = useInstallGameModal.getState()
+    expect(state.isOpen).toBe(false)
+    expect(state.steamDegrade).toBeUndefined()
+  })
+
+  it('U3: D-UAT-15 library-missing + client ready -> the D-24 library-missing degrade, unchanged', async () => {
+    armMissingLibrary()
+    steamClientSetupRecheckMock.mockResolvedValue({
+      status: 'ready',
+      ready: true
+    })
+    await startSteamQuickInstall('570', makeGameInfo())
+
+    expect(steamClientSetupRecheckMock).toHaveBeenCalledTimes(1)
+    expect(installMock).not.toHaveBeenCalled()
+    const state = useInstallGameModal.getState()
+    expect(state.isOpen).toBe(true)
+    expect(state.steamDegrade?.reason).toBe('library-missing')
+    expect(state.steamDegrade?.libraryPath).toBe(makeTargets(1)[0].path)
+  })
+
+  it('U4: D-UAT-15 library-missing + rejected recheck -> never rejects, falls through to the degrade', async () => {
+    armMissingLibrary()
+    steamClientSetupRecheckMock.mockRejectedValue(new Error('IPC down'))
+
+    await expect(
+      startSteamQuickInstall('570', makeGameInfo())
+    ).resolves.toBeUndefined()
+
+    const state = useInstallGameModal.getState()
+    expect(state.isOpen).toBe(true)
+    expect(state.steamDegrade?.reason).toBe('library-missing')
+    expect(installMock).not.toHaveBeenCalled()
+  })
+
+  it('U5: D-UAT-15 library-missing + an error verdict is not a setup precondition -> degrade dialog opens', async () => {
+    armMissingLibrary()
+    steamClientSetupRecheckMock.mockResolvedValue({
+      status: 'needs-install',
+      ready: false,
+      error: 'Invalid appId: "x"'
+    })
+    await startSteamQuickInstall('570', makeGameInfo())
+
+    const state = useInstallGameModal.getState()
+    expect(state.isOpen).toBe(true)
+    expect(state.steamDegrade?.reason).toBe('library-missing')
+  })
+
+  it('U6: D-UAT-15 library-full never calls the recheck', async () => {
+    listSteamLibraryTargetsMock.mockResolvedValue(makeTargets(1))
+    checkDiskSpaceMock.mockResolvedValue(
+      makeDisk({ free: LOW_SPACE_FLOOR_BYTES - 1 })
+    )
+    await startSteamQuickInstall('570', makeGameInfo())
+
+    expect(steamClientSetupRecheckMock).not.toHaveBeenCalled()
+    const state = useInstallGameModal.getState()
+    expect(state.isOpen).toBe(true)
+    expect(state.steamDegrade?.reason).toBe('library-full')
+  })
+
+  it('U7: D-UAT-15 a valid library never calls the recheck and installs', async () => {
+    listSteamLibraryTargetsMock.mockResolvedValue(makeTargets(1))
+    checkDiskSpaceMock.mockResolvedValue(makeDisk())
+    await startSteamQuickInstall('570', makeGameInfo())
+
+    expect(steamClientSetupRecheckMock).not.toHaveBeenCalled()
+    expect(installMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('U8: D-UAT-15 0 libraries never calls the recheck and delegates the install', async () => {
+    listSteamLibraryTargetsMock.mockResolvedValue([])
+    await startSteamQuickInstall('570', makeGameInfo())
+
+    expect(steamClientSetupRecheckMock).not.toHaveBeenCalled()
     expect(installMock).toHaveBeenCalledTimes(1)
   })
 })

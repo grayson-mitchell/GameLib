@@ -3,7 +3,7 @@ created: 2026-10-29
 title: "Store embed: Windows resize-while-away measurement and the Linux live run of 261012-f25 / 261012-gn8"
 area: tauri-shell
 severity: minor
-platform: windows
+platform: linux
 ready: blocked
 found_by: "quick 261029-bv7 closing the Windows todo .planning/todos/completed/2026-10-11-stores-tab-embed-not-implemented-on-windows.md"
 files:
@@ -128,3 +128,12 @@ Item 1 (macOS) and the macOS half of item 3 are done.
   ("This is tracked as its own future work -- for now, use the button below to open it in your
   system browser instead.") still renders under the origin reason and was deliberately left alone.
   It may read oddly for a link that is simply not meant to be embedded.
+
+## Item 3 on Windows: PASS (2026-11-02, operator)
+
+- The operator ran the resize-while-away step on Windows: open Stores, go to Library, resize the
+  window, return. The operator reported a pass, with no captures.
+- This is the first live observation of the Windows half of `2fd875107`'s existing-embed rect.
+- Item 3 is now done on every platform except Linux, which is folded into item 2.
+- Frontmatter retargeted to `platform: linux`, `ready: blocked`: the only open item is the Linux
+  live run (R1-R7), which needs the Linux machine.

@@ -2,9 +2,11 @@ import type { Runner } from 'common/types'
 import {
   resolveQuickInstallTarget,
   evaluateQuickInstallTarget,
+  steamClientSetupCause,
   type SteamInstallLibraryTarget,
   type SteamQuickInstallDegrade
 } from 'frontend/state/InstallGameModal'
+import { useSteamClientSetup } from 'frontend/state/SteamClientSetup'
 
 /**
  * The Console Mode half of D-24, extended by D-29. This module deliberately
@@ -17,16 +19,44 @@ import {
  * (`resolveQuickInstallTarget`, `evaluateQuickInstallTarget`) directly — one
  * definition of the check, two degrade shapes (the desktop options dialog vs.
  * this module's terminal in-place failure card).
+ *
+ * The library-missing branch DOES run the shared D-UAT-15 client-setup recheck
+ * (`steamClientSetupCause`, the same predicate the desktop quick install
+ * uses). `SteamClientSetup` is mounted only in `App.tsx`'s non-console
+ * branch, so on a client cause the card offers a hand-off to desktop mode,
+ * where that dialog lives (operator decision 2026-11-02, todo
+ * `2026-11-02-console-mode-steam-client-setup-unreachable`). The recheck's own
+ * backend push opens the setup store under `/console` with nothing rendered,
+ * which is why the overlay releases a store it did not hand off
+ * (`releaseUnclaimedSteamClientSetup`).
  */
 
-export type ConsoleFocusKey = 'platform' | 'wine' | 'cancel' | 'install'
+export type ConsoleFocusKey =
+  | 'platform'
+  | 'wine'
+  | 'cancel'
+  | 'install'
+  | 'setupSteam'
+
+/**
+ * The setup reason the backend recheck reported when the Steam client is the
+ * cause of a library-missing verdict. Derived from `steamClientSetupCause`,
+ * never re-declared.
+ */
+export type ConsoleClientSetupHandOff = NonNullable<
+  Awaited<ReturnType<typeof steamClientSetupCause>>
+>
 
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
 // flagged the previously-exported form as a used-in-module finding -- there
 // is no external consumer, so the export served no purpose).
 type ConsoleSteamVerdict =
   | { ok: true }
-  | { ok: false; degrade: SteamQuickInstallDegrade }
+  | {
+      ok: false
+      degrade: SteamQuickInstallDegrade
+      clientSetup?: ConsoleClientSetupHandOff
+    }
 
 /**
  * Sequence: fetch `listSteamLibraryTargets()` (fail-open to `[]` on
@@ -71,7 +101,49 @@ export async function probeSteamQuickInstallTarget(
     disk = undefined
   }
 
-  return evaluateQuickInstallTarget(target, disk)
+  const verdict = evaluateQuickInstallTarget(target, disk)
+  if (!verdict.ok && verdict.degrade.reason === 'library-missing' && appName) {
+    const clientSetup = await steamClientSetupCause(appName)
+    if (clientSetup) {
+      return { ...verdict, clientSetup }
+    }
+  }
+  return verdict
+}
+
+/**
+ * Hand Steam client setup off to desktop mode. Opens the module-global
+ * `useSteamClientSetup` store FIRST and leaves Console Mode SECOND. The
+ * desktop `SteamClientSetup` mounts with App.tsx's non-console branch after
+ * the route change and renders from an already-open store on its first render
+ * (W0/W1 in `SteamClientSetup.waitingDialog.test.tsx`), so opening first leaves
+ * no window in which the desktop branch renders with the store closed. The
+ * explicit open also makes the hand-off independent of when the backend push
+ * lands.
+ */
+export function handOffSteamClientSetupToDesktop(
+  appName: string,
+  clientSetup: ConsoleClientSetupHandOff,
+  exitConsole: () => void
+): void {
+  useSteamClientSetup.getState().open(appName, clientSetup)
+  exitConsole()
+}
+
+/**
+ * Close a client-setup session the overlay did not hand off.
+ * `ensureSteamClientReady` pushes `steamClientSetupRequired` while answering
+ * the probe's recheck, and nothing under `/console` renders
+ * `SteamClientSetup`, so the push leaves the store open with no dialog. If the
+ * user dismisses the card instead of handing off, that store must not survive
+ * into desktop mode as a stray dialog. Closes only a session for the SAME
+ * appName, never one some other flow opened for a different game.
+ */
+export function releaseUnclaimedSteamClientSetup(appName: string): void {
+  const state = useSteamClientSetup.getState()
+  if (state.isOpen && state.appName === appName) {
+    state.close()
+  }
 }
 
 /**
@@ -85,7 +157,9 @@ export async function probeSteamQuickInstallTarget(
  * directly. Steam's Console Mode branch renders no `FocusKey` row and no
  * install control on ANY path (the transient state or the D-29 failure
  * card), so for `runner === 'steam'` the only sane answer to "what does A
- * do?" is "get me out" — unconditionally, regardless of `focused`.
+ * do?" is "get me out". A dismisses unless focus sits on the client-cause
+ * card's hand-off chip (`setupSteam`), which is itself a way out (to desktop
+ * mode).
  */
 export function resolveConsoleActionIntent({
   runner,
@@ -93,9 +167,9 @@ export function resolveConsoleActionIntent({
 }: {
   runner: Runner
   focused: ConsoleFocusKey
-}): 'install' | 'dismiss' | 'none' {
+}): 'install' | 'dismiss' | 'handoff' | 'none' {
   if (runner === 'steam') {
-    return 'dismiss'
+    return focused === 'setupSteam' ? 'handoff' : 'dismiss'
   }
   if (focused === 'install') {
     return 'install'
@@ -134,7 +208,7 @@ const STEAM_BLOCKED_MESSAGES: Record<
 > = {
   'library-missing': [
     'consoleMode.steamInstallLibraryMissing',
-    "Your Steam library folder isn't available right now. Reconnect the drive and try again."
+    "Your Steam library folder couldn't be found. Check that Steam is installed and has been opened at least once, and that the library's drive is connected."
   ],
   'library-full': [
     'consoleMode.steamInstallLibraryFull',

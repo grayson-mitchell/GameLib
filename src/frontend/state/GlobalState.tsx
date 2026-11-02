@@ -1911,6 +1911,11 @@ class GlobalState extends PureComponent<Props> {
         this.setState({ isFullscreen })
       }
     )
+    // quick 261102-dma: follow the Use frameless window toggle after the seed above, so the
+    // WindowControls gate does not keep showing GameLib's buttons next to the native frame.
+    window.api.handleFramelessChanged((isFrameless: boolean) =>
+      this.setState({ isFrameless })
+    )
 
     const gogUser = gogConfigStore.has('userData')
     const amazonUser = nileConfigStore.has('userData')

@@ -1946,8 +1946,9 @@ export default class SteamGame implements Game {
 
     // D-13 opt-in: route a (non-bottle-eligible) native install through the
     // depot.ts orchestrator instead of the steam://install handoff. Reading
-    // the setting is the ONLY new branch condition — OFF preserves today's
-    // steam://install path byte-for-byte below (D-13 safety valve). The D-15
+    // the setting is the ONLY new branch condition — OFF keeps the
+    // steam://install path below (D-13 safety valve), gated since D-UAT-19 on
+    // a Steam client being there to handle it. The D-15
     // bottle branch above is Plan 11's scope, not this one.
     if (isSteamNativeInstallEnabled()) {
       return this.installNative(args)
@@ -1956,6 +1957,33 @@ export default class SteamGame implements Game {
     const url = buildSteamProtocolUrl('install', this.appId)
     if (!url) {
       return { status: 'error', error: `Invalid appId: ${this.appId}` }
+    }
+
+    // D-UAT-19 (quick 261102-dkw): the hand-off needs a Steam client to
+    // handle steam://. With none installed, Windows showed a bare "no app
+    // handles this link" error and the ACF poller below kept the game
+    // "installing" for ~30 min. Gate on the same check the native path uses:
+    // a missing / never-launched client opens the D-10/D-11 guided setup
+    // (ensureSteamClientReady already sent steamClientSetupRequired), and the
+    // install is deferred — no openExternal, no poller, no finished entry.
+    const clientReady = await ensureSteamClientReady(this.appId)
+    if (!clientReady.ready) {
+      if (
+        clientReady.error === undefined &&
+        (clientReady.status === 'needs-install' ||
+          clientReady.status === 'needs-launch')
+      ) {
+        logInfo(
+          `SteamGame: appId ${this.appId} Steam client not ready (${clientReady.status}) — guided setup requested, deferring steam://install hand-off`,
+          LogPrefix.Steam
+        )
+        return { status: 'done', deferredToSetup: true }
+      }
+      return {
+        status: 'error',
+        error:
+          clientReady.error ?? `Steam client not ready for appId ${this.appId}`
+      }
     }
 
     logInfo(

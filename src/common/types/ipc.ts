@@ -408,7 +408,11 @@ interface AsyncIPCFunctions {
   // Steam once) — the frontend polls/re-checks this to know when to retry
   // the install. appId is guarded server-side (T-21-05) inside
   // ensureSteamClientReady itself, the single seam both this handler and
-  // SteamGame.install() go through.
+  // SteamGame.install() go through. Also called once by
+  // startSteamQuickInstall on a library-missing verdict (D-UAT-15), so the
+  // backend push opens client setup before any library notice. Console
+  // Mode's probeSteamQuickInstallTarget calls it once on the same verdict
+  // (quick 261102-pgy); its card hands setup off to desktop mode.
   steamClientSetupRecheck: (appId: string) => Promise<{
     status: 'ready' | 'needs-install' | 'needs-launch'
     ready: boolean

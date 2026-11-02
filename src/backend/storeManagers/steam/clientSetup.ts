@@ -11,8 +11,11 @@
 //
 // D-10: when the Steam CLIENT itself is absent, this module downloads the
 // OFFICIAL native Steam installer over HTTPS ONLY (T-21-20) and runs it
-// NON-SILENTLY — Windows: spawn the .exe directly (no /S / /VERYSILENT
-// flag), the user sees the real Valve installer window; macOS: `open` the
+// NON-SILENTLY — Windows: launch the .exe through PowerShell
+// `Start-Process -Verb RunAs` (the installer requires elevation, so a direct
+// CreateProcess spawn fails with EACCES instead of raising UAC — D-UAT-17),
+// with no /S / /VERYSILENT flag, so the user answers UAC and then sees the
+// real Valve installer window; macOS: `open` the
 // official .dmg, which mounts it and shows Finder for the user's own
 // drag-to-Applications install; Linux: distro packaging is not reliably
 // automatable — link out to the official download page instead of
@@ -39,6 +42,22 @@ import {
 } from './constants'
 
 const NUMERIC_APP_ID = /^\d+$/
+
+// Shown to the user after the frontend's "Steam setup could not start: " prefix;
+// the exit code and stderr detail go to the log instead.
+const WINDOWS_LAUNCH_FAILED =
+  'The Steam installer did not open (administrator permission was declined or the launch failed)'
+const MAC_LAUNCH_FAILED = 'The Steam installer disk image did not open'
+
+/**
+ * Wraps a string as a PowerShell single-quoted literal. Nothing inside is
+ * interpolated, and doubling every apostrophe means the value can neither
+ * close the literal early nor split into several arguments (a Windows
+ * username may contain a space or an apostrophe).
+ */
+function toPowerShellLiteral(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`
+}
 
 // Not exported (this and EnsureSteamClientReadyResult, StartGuidedInstallStatus and
 // StartGuidedInstallResult below): verified to have no importer anywhere -- not in any
@@ -160,9 +179,13 @@ interface StartGuidedInstallResult {
  * no /S, /VERYSILENT, or other unattended flag is ever passed — so the user
  * sees and clicks through the real Valve installer themselves.
  *
- *  - Windows: fetch SteamSetup.exe, spawn it DIRECTLY on the host OS (this
- *    is the NATIVE client — never routed through Wine/CrossOver, unlike
- *    bottle.ts's provisionBottle()).
+ *  - Windows: fetch SteamSetup.exe and launch it on the host OS through
+ *    PowerShell `Start-Process -Verb RunAs` (this is the NATIVE client —
+ *    never routed through Wine/CrossOver, unlike bottle.ts's
+ *    provisionBottle()). The installer needs elevation, so a direct spawn
+ *    fails with EACCES (D-UAT-17); RunAs raises UAC instead. No wait switch
+ *    and no installer arguments are passed, so the Valve installer window
+ *    stays visible.
  *  - macOS: fetch the official .dmg and `open` it — mounts the disk image
  *    and shows Finder, the standard macOS drag-to-Applications flow; the
  *    closest non-silent equivalent to Windows' installer wizard for a
@@ -170,10 +193,11 @@ interface StartGuidedInstallResult {
  *  - Linux: distro packaging is not reliably automatable (D-10) — open the
  *    official Steam download page instead of attempting any install.
  *
- * Fire-and-forget on Win/macOS (mirrors provisionBottle's wait:false — the
- * user completes the click-through/drag-install at their own pace); this
- * function itself returns as soon as the download completes and the
- * installer process/Finder window has been launched.
+ * On Win/macOS this awaits the LAUNCHER's outcome, never the installer's
+ * lifetime: the user completes the click-through/drag-install at their own
+ * pace. A launch that failed or was declined (UAC "No", a failed `open`)
+ * returns status 'error' so the UI does not claim an install is running when
+ * nothing opened (D-UAT-17).
  */
 export async function startGuidedClientInstall(): Promise<StartGuidedInstallResult> {
   if (isLinux) {
@@ -223,22 +247,52 @@ export async function startGuidedClientInstall(): Promise<StartGuidedInstallResu
   }
 
   // NON-SILENT (T-21-20) — macOS: `open` the .dmg (mount + Finder, user
-  // completes the drag-install); Windows: spawn the exe directly with no
-  // silent/quiet flag, the real Valve installer window is what the user
-  // sees. Fire-and-forget — never awaited — so this function returns
-  // promptly instead of blocking on the user's own click-through pace.
-  const launch = isMac
-    ? spawnAsync('open', [destPath])
-    : spawnAsync(destPath, [])
-  launch.catch((error) => {
-    logWarning(
+  // completes the drag-install); Windows: PowerShell `Start-Process -Verb
+  // RunAs` so UAC is raised (a direct spawn of the exe fails with EACCES,
+  // D-UAT-17). No -Wait (it would block on the installer's whole lifetime),
+  // no -ArgumentList and no silent/quiet flag: the real Valve installer
+  // window is what the user sees. The await is bounded by the user's UAC
+  // answer, not by the installer.
+  const launcherName = isMac ? 'open' : 'powershell'
+  const launchFailedMessage = isMac ? MAC_LAUNCH_FAILED : WINDOWS_LAUNCH_FAILED
+  try {
+    const { code, stderr } = isMac
+      ? await spawnAsync('open', [destPath])
+      : await spawnAsync(
+          'powershell',
+          [
+            '-NoProfile',
+            '-NonInteractive',
+            'Start-Process',
+            '-FilePath',
+            toPowerShellLiteral(destPath),
+            '-Verb',
+            'RunAs',
+            '-ErrorAction',
+            'Stop'
+          ],
+          { windowsHide: true }
+        )
+    if (code !== 0) {
+      logError(
+        [
+          `startGuidedClientInstall: ${launcherName} exited with code ${String(code)} (${destPath})`,
+          stderr.trim()
+        ],
+        LogPrefix.Steam
+      )
+      return { status: 'error', error: launchFailedMessage }
+    }
+  } catch (error) {
+    logError(
       [
-        'startGuidedClientInstall: native Steam installer process reported an error (fire-and-forget)',
+        `startGuidedClientInstall: failed to launch the native Steam installer through ${launcherName}`,
         error
       ],
       LogPrefix.Steam
     )
-  })
+    return { status: 'error', error: launchFailedMessage }
+  }
 
   logInfo(
     `startGuidedClientInstall: launched the native Steam installer non-silently (${destPath})`,

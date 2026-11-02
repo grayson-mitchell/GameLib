@@ -1,4 +1,5 @@
 import { existsSync } from 'graceful-fs'
+import { join } from 'path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { configStore } from './electronStores'
 import { STEAM_INSTALL_PATHS } from './constants'
@@ -217,7 +218,32 @@ export class SteamUser {
 
   // ── AUTH-05: Steam client detection ────────────────────────────────────────
 
+  /**
+   * Whether a Steam client is installed.
+   *
+   * On Windows this probes `<defaultSteamPath>/steam.exe`, the same root the
+   * D-11 launch gate's hasLibraryFoldersVdf() (clientSetup.ts) reads, so the
+   * D-10 and D-11 gates cannot disagree about where Steam lives (quick
+   * 261101-whs). On darwin and linux it probes STEAM_INSTALL_PATHS. A blank
+   * Default Steam path setting returns false without probing anything.
+   */
   static isSteamClientInstalled(): boolean {
+    if (platform === 'win32') {
+      // Loaded on first use, not at module load: backend/config pulls in the
+      // whole backend graph (utils, GOG, Electron paths), and user.ts is on
+      // every startup path and in every suite that touches it (same reason as
+      // macSteamOffline.ts's connectionLogPath).
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const { GlobalConfig } =
+        require('backend/config') as typeof import('backend/config')
+      /* eslint-enable @typescript-eslint/no-require-imports */
+      const root = GlobalConfig.get()
+        .getSettings()
+        .defaultSteamPath.replaceAll("'", '')
+      // join('', 'steam.exe') would probe a steam.exe relative to the cwd.
+      if (root.trim() === '') return false
+      return existsSync(join(root, 'steam.exe'))
+    }
     const paths = STEAM_INSTALL_PATHS[platform] ?? []
     return paths.some((p) => existsSync(p))
   }

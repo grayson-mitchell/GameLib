@@ -220,6 +220,43 @@ export function evaluateQuickInstallTarget(
 }
 
 /**
+ * D-UAT-15: is the Steam client itself the reason the library looks missing?
+ * Asks the backend's `ensureSteamClientReady` through the existing recheck
+ * channel. `ready === false` with no `error` and a needs-install / needs-launch
+ * status means the backend has JUST sent the `steamClientSetupRequired` push
+ * (the same predicate `runNativeDepotDownload` defers on), so the D-10/D-11
+ * prompt is already opening. Resolves to the setup reason the backend pushed:
+ * `'install'` (needs-install, D-10) or `'launch-once'` (needs-launch, D-11).
+ * Those literals mirror the reason values `ensureSteamClientReady` pushes
+ * (`clientSetup.ts`); the store's `open()` type-checks them at the Console
+ * Mode hand-off call site.
+ *
+ * Fails open: a rejection, an `error` verdict (e.g. a non-numeric appId, which
+ * sends no push) or any other result resolves `undefined` and the caller
+ * degrades as before. Never throws.
+ *
+ * Exported (quick 261102-pgy) because the desktop quick install and Console
+ * Mode's probe must share ONE definition of "the client is the cause".
+ */
+export async function steamClientSetupCause(
+  appName: string
+): Promise<'install' | 'launch-once' | undefined> {
+  try {
+    const result = await window.api.steamClientSetupRecheck(appName)
+    if (result.ready !== false || result.error !== undefined) return undefined
+    if (result.status === 'needs-install') return 'install'
+    if (result.status === 'needs-launch') return 'launch-once'
+    return undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function steamClientSetupPending(appName: string): Promise<boolean> {
+  return (await steamClientSetupCause(appName)) !== undefined
+}
+
+/**
  * D-23/D-24: the one-click default. Resolves Steam's primary library, runs
  * D-24's cheap LOCAL validity check, and either installs with no friction at
  * all (Phase 21 D-09, unchanged) or degrades into the options dialog
@@ -229,7 +266,21 @@ export function evaluateQuickInstallTarget(
  * On the native path a latched expired Steam sign-in opens the options dialog
  * (no degrade) instead of installing (quick 261029-s5l).
  *
- * Both awaits below are individually guarded — a rejected
+ * D-UAT-15: on a library-missing verdict the function first asks the backend
+ * whether the Steam client itself is the reason. `getSteamLibraries()` always
+ * yields the configured default path, even with no `libraryfolders.vdf`, so a
+ * missing `steamappsDir` there usually means "no client yet" (D-10) or "never
+ * launched" (D-11), not "drive gone". The recheck is the same
+ * `ensureSteamClientReady` the click would reach through
+ * `runNativeDepotDownload`, and it sends the same push, so the frontend still
+ * never opens SteamClientSetup itself. It runs only on that branch, so the
+ * happy path gains no round-trip. A rejected recheck, or one carrying an
+ * `error`, falls through to the D-24 degrade. Accepted ordering consequence:
+ * on a macOS bottle-routed title with no native Steam, the client-setup prompt
+ * can now appear before the CrossOver / bridge / bottle checks `install()`
+ * would have made first; every prompt is still a real precondition.
+ *
+ * All three awaits below are individually guarded — a rejected
  * `listSteamLibraryTargets` yields an empty list (server-gated on
  * `isSteamNativeInstallEnabled()` for mac-native titles only, so an empty list
  * ALSO means "GameLib controls no local target" — the delegated
@@ -237,9 +288,10 @@ export function evaluateQuickInstallTarget(
  * 261030-o77), so it reaches the sign-in pre-check below — and
  * D-24 structurally cannot fire there, UI-SPEC §"D-24 Degrade-into-Options
  * Contract", "When this applies"); a rejected `checkDiskSpace` yields
- * `undefined`, which `evaluateQuickInstallTarget` treats as fail-open. So
- * this function needs no top-level try/catch: there is no rejection path
- * left (pinned by spec B8).
+ * `undefined`, which `evaluateQuickInstallTarget` treats as fail-open; a
+ * rejected recheck is treated as "not pending". So this function needs no
+ * top-level try/catch: there is no rejection path left (pinned by specs B8
+ * and U4).
  */
 export const startSteamQuickInstall = async (
   appName: string,
@@ -295,6 +347,14 @@ export const startSteamQuickInstall = async (
     installSteamGame(appName, gameInfo).catch(
       logSteamInstallDispatchFailure(appName)
     )
+    return
+  }
+
+  if (
+    verdict.degrade.reason === 'library-missing' &&
+    (await steamClientSetupPending(appName))
+  ) {
+    // The backend push has already opened SteamClientSetup (D-10/D-11).
     return
   }
 

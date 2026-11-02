@@ -7,6 +7,7 @@
  *  - steam-session → LoginSession constructor + instance methods
  *  - steam-user    → SteamUser constructor + instance methods (aliased as SteamUserLib)
  *  - graceful-fs   → existsSync
+ *  - backend/config → GlobalConfig.get (Windows Default Steam path)
  *  - backend/logger
  *  - ../electronStores → configStore
  */
@@ -53,6 +54,12 @@ jest.mock('backend/logger', () => ({
 const mockExistsSync = jest.fn(() => false)
 jest.mock('graceful-fs', () => ({
   existsSync: mockExistsSync
+}))
+
+// ── backend/config mock (Windows Default Steam path, lazily required) ────────
+const mockGlobalConfigGet = jest.fn()
+jest.mock('backend/config', () => ({
+  GlobalConfig: { get: mockGlobalConfigGet }
 }))
 
 // ── electronStores mock ───────────────────────────────────────────────────────
@@ -176,6 +183,7 @@ jest.mock('../anonymousClient', () => ({
 import { SteamUser } from '../user'
 import { safeStorage } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
+import { join } from 'path'
 import { logInfo, logWarning, logError } from 'backend/logger'
 import {
   setTokenStore,
@@ -292,47 +300,107 @@ describe('SteamUser', () => {
   // ── AUTH-05: Steam client detection ────────────────────────────────────────
 
   describe('isSteamClientInstalled()', () => {
+    let savedPlatform: NodeJS.Platform
+
+    const setPlatform = (value: string) =>
+      Object.defineProperty(process, 'platform', {
+        value,
+        configurable: true
+      })
+    const armWindowsRoot = (defaultSteamPath: string) =>
+      mockGlobalConfigGet.mockReturnValue({
+        getSettings: () => ({ defaultSteamPath })
+      })
+    const existsOnly = (...present: string[]) =>
+      (existsSync as jest.Mock).mockImplementation((p: string) =>
+        present.includes(p)
+      )
+    const probedPaths = () =>
+      (existsSync as jest.Mock).mock.calls.map(([p]) => p)
+
+    beforeEach(() => {
+      savedPlatform = process.platform
+    })
+
+    afterEach(() => {
+      setPlatform(savedPlatform)
+    })
+
     test('returns false when no platform paths exist', () => {
+      setPlatform('linux')
       mockExistsSync.mockReturnValue(false)
       expect(SteamUser.isSteamClientInstalled()).toBe(false)
     })
 
     test('returns true when a matching path exists', () => {
+      setPlatform('linux')
       // Make existsSync return true for any path
       mockExistsSync.mockReturnValue(true)
       expect(SteamUser.isSteamClientInstalled()).toBe(true)
     })
 
     test('returns false on unknown platform (no paths)', () => {
-      const original = process.platform
-      Object.defineProperty(process, 'platform', {
-        value: 'freebsd',
-        configurable: true
-      })
+      setPlatform('freebsd')
       mockExistsSync.mockReturnValue(false)
       expect(SteamUser.isSteamClientInstalled()).toBe(false)
-      Object.defineProperty(process, 'platform', {
-        value: original,
-        configurable: true
-      })
     })
 
-    test('calls existsSync with platform-specific paths', () => {
+    test('darwin calls existsSync with the Steam.app path and never reads GlobalConfig', () => {
+      setPlatform('darwin')
       mockExistsSync.mockReturnValue(false)
-      const savedPlatform = process.platform
-      Object.defineProperty(process, 'platform', {
-        value: 'darwin',
-        configurable: true
-      })
 
       SteamUser.isSteamClientInstalled()
-      const calledPaths = (existsSync as jest.Mock).mock.calls.map(([p]) => p)
-      expect(calledPaths).toContain('/Applications/Steam.app')
+      expect(probedPaths()).toContain('/Applications/Steam.app')
+      expect(mockGlobalConfigGet).not.toHaveBeenCalled()
+    })
 
-      Object.defineProperty(process, 'platform', {
-        value: savedPlatform,
-        configurable: true
-      })
+    test('linux calls existsSync with /usr/bin/steam and never reads GlobalConfig', () => {
+      setPlatform('linux')
+      mockExistsSync.mockReturnValue(false)
+
+      SteamUser.isSteamClientInstalled()
+      expect(probedPaths()).toContain('/usr/bin/steam')
+      expect(mockGlobalConfigGet).not.toHaveBeenCalled()
+    })
+
+    test('win32 is true when steam.exe exists under the Default Steam path (and only that is probed)', () => {
+      setPlatform('win32')
+      armWindowsRoot('D:\\Steam')
+      existsOnly(join('D:\\Steam', 'steam.exe'))
+
+      expect(SteamUser.isSteamClientInstalled()).toBe(true)
+      expect(existsSync as jest.Mock).toHaveBeenCalledTimes(1)
+      expect(probedPaths()).toEqual([join('D:\\Steam', 'steam.exe')])
+    })
+
+    test('win32 ignores a Steam at Program Files when the Default Steam path is empty of one', () => {
+      const programFilesSteam = 'C:\\Program Files (x86)\\Steam\\Steam.exe'
+      setPlatform('win32')
+      armWindowsRoot('C:\\SteamUAT')
+      existsOnly(programFilesSteam)
+
+      expect(SteamUser.isSteamClientInstalled()).toBe(false)
+      expect(probedPaths()).toEqual([join('C:\\SteamUAT', 'steam.exe')])
+      expect(probedPaths()).not.toContain(programFilesSteam)
+    })
+
+    test('win32 strips the single quotes the Default Steam path setting can carry', () => {
+      setPlatform('win32')
+      armWindowsRoot("'D:\\Games\\Steam'")
+      existsOnly(join('D:\\Games\\Steam', 'steam.exe'))
+
+      expect(SteamUser.isSteamClientInstalled()).toBe(true)
+      expect(probedPaths()).toEqual([join('D:\\Games\\Steam', 'steam.exe')])
+      expect(probedPaths().join('')).not.toContain("'")
+    })
+
+    test('win32 with a blank Default Steam path is false and probes nothing', () => {
+      setPlatform('win32')
+      armWindowsRoot('')
+      mockExistsSync.mockReturnValue(true)
+
+      expect(SteamUser.isSteamClientInstalled()).toBe(false)
+      expect(existsSync as jest.Mock).not.toHaveBeenCalled()
     })
   })
 

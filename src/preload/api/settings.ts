@@ -1,5 +1,5 @@
 import { makeListenerCaller, makeHandlerInvoker, frontendListenerSlot } from '../ipc'
-import { applyFramelessDecorations } from './tauriWindowChrome'
+import { applyFramelessDecorations, notifyFramelessChanged } from './tauriWindowChrome'
 
 export const requestAppSettings = makeHandlerInvoker('requestAppSettings')
 export const requestGameSettings = makeHandlerInvoker('requestGameSettings')
@@ -15,6 +15,8 @@ const setSettingIpc = makeListenerCaller('setSetting')
 // WR-05 (Phase 34.1 code review): the destructure below is null-safe by construction
 // (`args[0] ?? {}`), so it is safe to run unconditionally after the IPC send has gone
 // out, regardless of whether `appName`/`key`/`value` are present.
+// Quick 261102-dma: the written boolean is then pushed to `handleFramelessChanged` subscribers so
+// GlobalState's `isFrameless` (and with it the WindowControls gate) follows the toggle live.
 // Phase 35 plan 17: the Tauri-context early return that used to precede this
 // destructure is gone -- there is only one shell now, so the guard was always a no-op.
 export const setSetting = (...args: Parameters<typeof setSettingIpc>) => {
@@ -22,6 +24,7 @@ export const setSetting = (...args: Parameters<typeof setSettingIpc>) => {
   const { appName, key, value } = args[0] ?? {}
   if (appName === 'default' && key === 'framelessWindow') {
     applyFramelessDecorations(Boolean(value))
+    notifyFramelessChanged(Boolean(value))
   }
 }
 export const getLegendaryVersion = makeHandlerInvoker('getLegendaryVersion')
