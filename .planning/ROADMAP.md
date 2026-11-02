@@ -912,15 +912,18 @@ Plans:
 
 - [ ] 59-24-PLAN.md — Round-2 catalogue strings (restore-failed dialog, forced-CrossOver warnings)
 - [ ] 59-25-PLAN.md — Override save to Automatic/CrossOver: probe-first diagnosis, fix, regression test (gap B, G17)
-- [ ] 59-26-PLAN.md — Failed return to CrossOver blocks the launch; failed-restore marker; recopying backup; ordered restore with progress (gap A, CR-03; WR-05/G19, IN-06)
-- [ ] 59-27-PLAN.md — Abort during engine verify/unpack; abortable bottle creation; wineserver stop before delete (gap E, WR-03; gap C bottle half; WR-04)
+- [ ] 59-27-PLAN.md — Abort during engine verify/unpack; abortable bottle creation (createdHere on the result); wineserver stop before delete (gap E, WR-03; gap C bottle half; WR-04)
 
 **Gap round 2, wave 2**
 
+- [ ] 59-26-PLAN.md — Failed return to CrossOver blocks the launch; failed-restore marker; recopying backup; ordered restore with progress (gap A, CR-03; WR-05/G19, IN-06)
 - [ ] 59-28-PLAN.md — Truthful engine state: inconclusive preflight, forced-CrossOver warning, DRM eligibility (gap F, WR-02, WR-06/G18; WR-07)
-- [ ] 59-29-PLAN.md — Install cancel during provisioning, no reroute after a cancel, abort mapping (gaps C, D; CR-01, CR-02, WR-01, IN-03)
 
 **Gap round 2, wave 3**
+
+- [ ] 59-29-PLAN.md — Install cancel during provisioning, no reroute after a cancel, abort mapping (gaps C, D; CR-01, CR-02, WR-01, IN-03)
+
+**Gap round 2, wave 4**
 
 - [ ] 59-30-PLAN.md — Live re-UAT 2 of gaps A-G and gate battery
 
