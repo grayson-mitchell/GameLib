@@ -2374,6 +2374,15 @@ export default class SteamGame implements Game {
       })
       return { result: { status: 'abort' } }
     }
+    // G21 (59-36): the bottle-creation stage the Downloads tab and game page
+    // render (59-37 maps the context to its label).
+    const sendCreatingBottle = () =>
+      sendGameStatusUpdate({
+        appName: this.appId,
+        runner: 'steam',
+        status: 'engine-download',
+        context: 'creating-bottle'
+      })
     logInfo(
       `SteamGame: bridge bottle "${bridgeBottleName}" not yet provisioned for appId ${this.appId} — provisioning inline (BLOCKER 1, no consent dialog needed)`,
       LogPrefix.Steam
@@ -2397,12 +2406,14 @@ export default class SteamGame implements Game {
       if ('status' in engine) return { result: engine }
       engineUsed = engine
       if (signal?.aborted) return abortResult()
+      sendCreatingBottle()
       provisionResult = await provisionBridgeBottle({
         bottleName: bridgeBottleName,
         fallbackEngine: engine,
         signal
       })
     } else {
+      sendCreatingBottle()
       provisionResult = await provisionBridgeBottle({
         bottleName: bridgeBottleName,
         createTimeoutMs: creation.createTimeoutMs,
@@ -2433,6 +2444,7 @@ export default class SteamGame implements Game {
         if ('status' in engine) return { result: engine }
         engineUsed = engine
         if (signal?.aborted) return abortResult()
+        sendCreatingBottle()
         provisionResult = await provisionBridgeBottle({
           bottleName: bridgeBottleName,
           fallbackEngine: engine,
@@ -2447,6 +2459,11 @@ export default class SteamGame implements Game {
         LogPrefix.Steam
       )
       markBridgeFailedThisSession(this.appId)
+      sendGameStatusUpdate({
+        appName: this.appId,
+        runner: 'steam',
+        status: 'done'
+      })
       sendFrontendMessage('steamBridgeSetupRequired', {
         appName: this.appId,
         reason: 'bridge-bottle-provision-failed',
@@ -2454,16 +2471,14 @@ export default class SteamGame implements Game {
       })
       return { result: { status: 'done', deferredToSetup: true } }
     }
-    if (engineUsed !== 'crossover') {
-      // G1 (59-22): nothing else replaces the last engine-download status, so
-      // the label read "Downloading built-in engine (0%)" through the whole
-      // game download. Hand the state back to installing.
-      sendGameStatusUpdate({
-        appName: this.appId,
-        runner: 'steam',
-        status: 'installing'
-      })
-    }
+    // G1 (59-22) / G21 (59-36): the creating-bottle stage precedes both
+    // engines and nothing else replaces it, so hand the state back to
+    // installing whatever engine was used.
+    sendGameStatusUpdate({
+      appName: this.appId,
+      runner: 'steam',
+      status: 'installing'
+    })
     return {
       engine: engineUsed,
       createdHere: provisionResult.createdHere === true
@@ -2554,7 +2569,8 @@ export default class SteamGame implements Game {
     const downloadResult = await this.installDepotDownload(args, {
       targetSteamappsDirOverride: targetSteamappsDir,
       os: 'windows',
-      pollerSource: 'bridge'
+      pollerSource: 'bridge',
+      signal
     })
 
     // A refusal wrapped by the go-offline step, or (quick 261027-tot) a
@@ -3057,6 +3073,7 @@ export default class SteamGame implements Game {
       targetSteamappsDirOverride?: string
       os: string
       pollerSource?: 'bottle' | 'bridge'
+      signal?: AbortSignal
     }
   ): Promise<InstallResult> {
     const existing = nativeInstallsInFlight.get(this.appId)
@@ -3071,7 +3088,10 @@ export default class SteamGame implements Game {
       // proceeding to a fresh run below. Never rejects here: the prior run's
       // own rejection (if any) is not this caller's concern.
       await existing.promise.catch(() => undefined)
+      // 59-REVIEW WR-03: a cancel that landed during the wait must stop here.
+      if (opts.signal?.aborted) return { status: 'abort' }
     }
+    if (opts.signal?.aborted) return { status: 'abort' }
 
     const runPromise = this.runNativeDepotDownload(args, opts)
     nativeInstallsInFlight.set(this.appId, {
@@ -3094,8 +3114,12 @@ export default class SteamGame implements Game {
       targetSteamappsDirOverride?: string
       os: string
       pollerSource?: 'bottle' | 'bridge'
+      signal?: AbortSignal
     }
   ): Promise<InstallResult> {
+    // 59-REVIEW WR-03: never register a fresh controller for a cancelled
+    // install; nothing is registered, so no finally runs.
+    if (opts.signal?.aborted) return { status: 'abort' }
     const controller = createAbortController(this.appId)
     // [Timing] debug/steam-install-slow-start: top-level breakdown of the
     // ~30s pre-download latency across this seam's three major awaits.
@@ -3218,7 +3242,11 @@ export default class SteamGame implements Game {
       // unhandled throw/rejection) — never leaves this appId permanently
       // blocked from a later re-install.
       nativeInstallsInFlight.delete(this.appId)
-      deleteAbortController(this.appId)
+      // 59-REVIEW WR-02: a newer install may have registered its own
+      // provisioning controller during this run's teardown; remove only ours.
+      if (getAbortSignal(this.appId) === controller.signal) {
+        deleteAbortController(this.appId)
+      }
     }
   }
 

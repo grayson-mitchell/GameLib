@@ -4381,6 +4381,10 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
   it('createAbortController is registered under this.appId before downloadSteamDepots runs, and released after it resolves', async () => {
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+    // WR-02: the run removes only its own registered controller
+    const registered = new AbortController()
+    ;(createAbortController as jest.Mock).mockReturnValue(registered)
+    ;(getAbortSignal as jest.Mock).mockReturnValue(registered.signal)
 
     const game = new SteamGame(APP_ID)
     await game.install({} as any)
@@ -6813,7 +6817,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         'downloading:0',
         'downloading:10',
         'downloading:98',
-        'setting-up'
+        'setting-up',
+        'creating-bottle'
       ])
       const call = (provisionBridgeBottle as jest.Mock).mock.calls[0][0]
       expect(call.bottleName).toBe(`GameLibSteamBridge-${APP_ID}`)
@@ -6858,7 +6863,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       // no bare percent (legacy '0') once phases exist, and no consecutive dupes
       expect(seen.filter((c) => /^\d+$/.test(c))).toEqual([])
       expect(seen.filter((c, i) => c === seen[i - 1])).toEqual([])
-      expect(seen[seen.length - 1]).toBe('setting-up')
+      expect(seen[seen.length - 1]).toBe('creating-bottle')
+      expect(seen[seen.length - 2]).toBe('setting-up')
     })
 
     it('G1: once the bottle is ready the status leaves engine-download for installing before the game depots download', async () => {
@@ -6894,10 +6900,10 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       expect(installingAfterEngine).toBeLessThan(depots)
     })
 
-    it('already-installed pin: no engine-download status is sent', async () => {
+    it('already-installed pin: no engine download status is sent, only the creating-bottle stage (G21)', async () => {
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
       await new SteamGame(APP_ID).install({} as any)
-      expect(statuses()).toEqual([])
+      expect(statuses()).toEqual(['creating-bottle'])
       expect(provisionBridgeBottle).toHaveBeenCalledWith(
         expect.objectContaining({ fallbackEngine: expect.anything() })
       )
@@ -7180,6 +7186,173 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         expect(createAbortController).toHaveBeenCalledWith(APP_ID)
         expect(result.status).toBe('done')
         expect(downloadSteamDepots).toHaveBeenCalled()
+      })
+
+      const order = () =>
+        sendGameStatusUpdate.mock.calls.map(
+          ([u]: [{ status: string; context?: string }]) =>
+            u.context ? `${u.status}:${u.context}` : u.status
+        )
+
+      it('G21: CrossOver creation sends creating-bottle before provisioning and installing after', async () => {
+        const seq: string[] = []
+        sendGameStatusUpdate.mockImplementation((u) =>
+          seq.push(`${u.status}:${u.context ?? ''}`)
+        )
+        ;(provisionBridgeBottle as jest.Mock).mockImplementation(() => {
+          seq.push('provision')
+          return Promise.resolve({ status: 'done' })
+        })
+        await new SteamGame(APP_ID).install({} as any)
+        const create = seq.indexOf('engine-download:creating-bottle')
+        expect(create).toBeGreaterThan(-1)
+        expect(create).toBeLessThan(seq.indexOf('provision'))
+        expect(seq.indexOf('installing:')).toBeGreaterThan(
+          seq.indexOf('provision')
+        )
+      })
+
+      it('G21: built-in path with the engine already installed sends creating-bottle then installing', async () => {
+        ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
+        await new SteamGame(APP_ID).install({} as any)
+        const seq = order()
+        expect(seq.indexOf('engine-download:creating-bottle')).toBeGreaterThan(
+          -1
+        )
+        expect(seq.indexOf('installing')).toBeGreaterThan(
+          seq.indexOf('engine-download:creating-bottle')
+        )
+      })
+
+      it('G21: built-in path with a download sends engine contexts, then creating-bottle, then installing', async () => {
+        ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
+        ;(ensurePinnedEngine as jest.Mock).mockImplementation((_pin, opts) => {
+          opts.onProgress({
+            phase: 'downloading',
+            artifact: 'wine',
+            percentage: 50
+          })
+          return Promise.resolve(ENGINE_OK)
+        })
+        await new SteamGame(APP_ID).install({} as any)
+        const seq = order()
+        const dl = seq.findIndex((o: string) =>
+          o.startsWith('engine-download:downloading:')
+        )
+        const setup = seq.indexOf('engine-download:setting-up')
+        const create = seq.indexOf('engine-download:creating-bottle')
+        const installing = seq.indexOf('installing')
+        expect(dl).toBeGreaterThan(-1)
+        expect(setup).toBeGreaterThan(dl)
+        expect(create).toBeGreaterThan(setup)
+        expect(installing).toBeGreaterThan(create)
+      })
+
+      it('G21: a CrossOver create failure falling back to the built-in engine sends creating-bottle again', async () => {
+        ;(provisionBridgeBottle as jest.Mock)
+          .mockResolvedValueOnce({
+            status: 'error',
+            errorCode: 'crossover-create-failed',
+            error: 'x'
+          })
+          .mockResolvedValueOnce({ status: 'done' })
+        await new SteamGame(APP_ID).install({} as any)
+        expect(
+          order().filter((o: string) => o === 'engine-download:creating-bottle')
+        ).toHaveLength(2)
+      })
+
+      it('G21: a provisioning failure sends done before deferring to setup', async () => {
+        ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+          status: 'error',
+          errorCode: 'other',
+          error: 'boom'
+        })
+        const result = await new SteamGame(APP_ID).install({} as any)
+        expect(result).toEqual({ status: 'done', deferredToSetup: true })
+        const seq = order()
+        const create = seq.indexOf('engine-download:creating-bottle')
+        expect(seq.indexOf('done', create)).toBeGreaterThan(create)
+        expect(seq).not.toContain('installing')
+      })
+
+      it('G21: an abort during provisioning sends done and never installing', async () => {
+        wireControllers()
+        ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+          status: 'error',
+          errorCode: 'provision-aborted',
+          error: 'aborted'
+        })
+        const result = await new SteamGame(APP_ID).install({} as any)
+        expect(result).toEqual({ status: 'abort' })
+        const seq = order()
+        expect(seq).toContain('done')
+        expect(seq).not.toContain('installing')
+      })
+
+      it('WR-02: a depot run leaves a newer install controller registered, and removes its own', async () => {
+        const registry = wireControllers()
+        let newer: AbortController | undefined
+        ;(downloadSteamDepots as jest.Mock).mockImplementationOnce(() => {
+          // a reinstall registers its provisioning controller during teardown
+          newer = new AbortController()
+          registry.set(APP_ID, newer)
+          return Promise.resolve({ status: 'done' })
+        })
+        await new SteamGame(APP_ID).install({} as any)
+        expect(registry.get(APP_ID)).toBe(newer)
+        expect(newer!.signal.aborted).toBe(false)
+      })
+
+      it('WR-02: a run whose own controller is still registered removes it (no leak)', async () => {
+        const registry = wireControllers()
+        await new SteamGame(APP_ID).install({} as any)
+        expect(downloadSteamDepots).toHaveBeenCalled()
+        expect(registry.has(APP_ID)).toBe(false)
+      })
+
+      it('WR-03: a cancel while waiting on a tearing-down prior run stops the install', async () => {
+        const registry = wireControllers()
+        let resolveFirst!: (v: { status: 'cancelled' }) => void
+        ;(downloadSteamDepots as jest.Mock).mockReturnValueOnce(
+          new Promise((resolve) => {
+            resolveFirst = resolve
+          })
+        )
+        const game = new SteamGame(APP_ID)
+        const first = game.install({} as any)
+        await flushAsync()
+        expect(downloadSteamDepots).toHaveBeenCalledTimes(1)
+        await game.stop()
+
+        const second = new SteamGame(APP_ID).install({} as any)
+        await flushAsync()
+        // the cancel lands while the second install waits on the prior run
+        registry.get(APP_ID)!.abort()
+        resolveFirst({ status: 'cancelled' })
+        await first
+        const result = await second
+        expect(result).toEqual({ status: 'abort' })
+        expect(downloadSteamDepots).toHaveBeenCalledTimes(1)
+      })
+
+      it('WR-03: a signal aborted before the depot run registers nothing and starts no download', async () => {
+        const registry = wireControllers()
+        let abortedAtCall = false
+        ;(provisionBridgeBottle as jest.Mock).mockImplementation(() => {
+          return Promise.resolve({ status: 'done' })
+        })
+        // cancel lands between the provisioning stage and the depot hand-off
+        sendGameStatusUpdate.mockImplementation((u: { status: string }) => {
+          if (u.status === 'installing' && !abortedAtCall) {
+            abortedAtCall = true
+            registry.get(APP_ID)!.abort()
+          }
+        })
+        const result = await new SteamGame(APP_ID).install({} as any)
+        expect(result).toEqual({ status: 'abort' })
+        expect(downloadSteamDepots).not.toHaveBeenCalled()
+        expect(registry.has(APP_ID)).toBe(false)
       })
 
       it('an existing live appId controller is reused and left alone by the install', async () => {
