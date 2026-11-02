@@ -59,3 +59,12 @@ the 19 failures are the identical pre-existing Windows path-separator set at HEA
 Live gate (Windows): Settings → turn OFF "Download Steam games directly in GameLib"; Default Steam
 path = an empty folder; Install a Steam game → the D-10 consent dialog appears, with no Windows
 "application not found" error, no `sidecar invoke timed out`, and the game not left "installing".
+
+## Resolution (live gate passed 2026-11-02, real Windows)
+
+Native install OFF, Default Steam path an empty folder, Install on appId 332380: the D-10
+install-Steam dialog appeared (operator: pass). `gamelib.log` 18:01:55 shows
+`ensureSteamClientReady: Steam client not installed` followed by `SteamGame: appId 332380 Steam client
+not ready (needs-install) — guided setup requested, deferring steam://install hand-off`. No
+`delegating install` line followed, so no `steam://` link was opened, and no invoke timed out.
+Recorded on the D-UAT-19 finding in 21-UAT.md.
