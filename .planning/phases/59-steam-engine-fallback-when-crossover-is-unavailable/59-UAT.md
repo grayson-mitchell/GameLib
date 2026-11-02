@@ -1,5 +1,5 @@
 ---
-status: complete
+status: testing
 phase: 59-steam-engine-fallback-when-crossover-is-unavailable
 source: [59-13-PLAN.md]
 ---
@@ -136,6 +136,36 @@ result: pass — Fallout 38400 backdated (InstallTime 6145cfdb -> 611e42db), nol
 expected: (gap G, WR-07) Pick an installed DRM-mode bridge title (persisted scan with steamstub); with operator go-ahead remove only its `bridge.mode` key from the Steam metadata store (backup first), restart: its Settings have no Engine (advanced) section. Restore the key afterwards.
 result: pass — 219990 (Grim Dawn) and 648800 (Raft) already carry a steamstub scan with no bridge.mode key (pre-59-15 state), so no metadata edit or backup was needed; neither offers 'Engine (advanced)'; Planet Crafter still does.
 
+## Re-UAT 3 (gap closure 59-31..59-38)
+
+### 29. DirectX Jun2010 on the built-in engine settles
+expected: (H1, 59-32) Under no-crossover.sb, with the operator's go-ahead clear only Low Magic Age's (576770) DirectX failure/back-off entry from `gamelib-shared-redists.json` (backup first) so the step runs again, then Play: the log shows `Steam 576770: registering the engine's bundled Wine Mono in the bottle before DirectX setup`, then the DirectX Jun2010 entry completes with no `installer exited with code 247`; the ledger then shows the DirectX entry as done (not in engineUnsupported) and `settled` present, and the next Play logs "shared redists already settled, nothing to do" with no DXSETUP spawn.
+result: pending
+
+### 30. Redist display-driver window uses the engine's wineserver
+expected: (H2, 59-31) In the same run as item 29, the log has no `killBottleWineServer: no CrossOver install found` line, no "could not switch the bottle to the null display driver" and no "could not restore the Wine display driver" line; it has `endPerGameBridgeBottleSession: wineserver -k for bottle "GameLibSteamBridge-576770"` lines; afterwards `[Software\\Wine\\Drivers]` in the bottle's user.reg has no Graphics value, and the game window draws.
+result: pending
+
+### 31. No library-folder error on pinned-wine calls
+expected: (H3, 59-31) Across the item 29-30 session, `grep -c "Couldn't find all library folders"` over that session's gamelib.log lines is 0.
+result: pending
+
+### 32. Interrupted unpack leaves nothing after the next start
+expected: (G20, 59-33) Under no-crossover.sb with the pinned engine moved aside (operator go-ahead), start a not-installed bridge title's install and Cmd-Q while the label reads 'Unpacking built-in engine': `pgrep -f build/main/sidecar.js` is empty within 10 s; `ls -a` of steam-engines shows a `.tmp-wine-*` dir; start GameLib again: within 5 s of the boot log the `removed 1 stale engine temp dir(s) at boot` line appears and no `.tmp-*` remains; quit again with the app idle and `pgrep` is empty within 10 s.
+result: pending
+
+### 33. Downloads tab names engine and bottle setup
+expected: (G21, 59-36/59-37) Under no-crossover.sb, Batman (200260) not installed. Round a, engine moved aside: start the install and open Downloads: the hero shows 'Downloading built-in engine (N%)' with N advancing, then 'Verifying built-in engine', 'Unpacking built-in engine', 'Setting up built-in engine', then "Creating the game's bottle", then the depot download with transfer stats; the game page shows the same labels. Round b, engine present: "Creating the game's bottle" shows in Downloads during bottle creation instead of a bare 0%.
+result: pending
+
+### 34. Offline launch block is prompt
+expected: (G22, 59-38 CONFIRMED) Planet Crafter prepared on the built-in engine (marker pinned), quit, pinned engine moved aside and the Mac offline (operator go-ahead for both), no profile, Play: the dialog "GameLib couldn't download its built-in engine (offline). Check your connection and try again." appears within 2 s of the click, the log has `launch blocked before pre-flight` and no `demo-status probe` line for that launch, the game does not start, the marker still says pinned. Back online, Play: restore runs and the game launches on CrossOver as in item 25.
+result: pending
+
+### 35. Cancel right after a cancelled reinstall stops the install
+expected: (WR-02, WR-03, 59-36) Under no-crossover.sb, Batman (200260): start the install, cancel during the depot stream, and immediately (within a second or two, while the Downloads entry is still clearing) start the install again and cancel it during 'Creating the game's bottle' or engine setup: no `chunk-stream` or depot lines after the second cancel, no "Could not find a matching abort controller" line, Install is offered, no GameLibSteamBridge-200260 dir remains. If the timing cannot be hit after three attempts, record skipped with the reason and cite the WR-02/WR-03 unit tests from 59-36.
+result: pending
+
 ## Restore
 
 Done 2026-11-02: GameLibSteamBridge-38400's system.reg restored from the pre-test copy (cmp identical), `InstallTime.orig` removed, `--demo-status` with the licence visible reads "Standard version"; licence file unchanged (304 bytes, Oct 22 19:57) before and after. The bottle's engine marker is pinned from item 9; its next Automatic launch switches it back to CrossOver.
@@ -146,6 +176,8 @@ Re-UAT restore (59-23), done 2026-11-02 and verified: `steam-engines` present (r
 Undo the throwaway bottle's backdate by re-running spike-060 `backdate.py`, or delete that bottle with GameLib's uninstall, as the operator chooses. Confirm the licence file mtime is unchanged.
 
 Re-UAT 2 restore (59-30), done and verified 2026-11-02 22:08: wine-staging-11.20 moved back (aside dir removed; dxvk present), leftover .tmp-wine removed by hand, network on, 38400 InstallTime restored 611e42db -> 6145cfdb, overrides 1284190 and 38400 automatic, no metadata-store backup needed, Batman 200260 not installed and no bottle, licence still 304 bytes Oct 22 19:57, Bottles list identical to the session-start snapshot. Original steps: move the pinned engine back (or let GameLib re-download it), network back on, undo the 38400 backdate with backdate.py, reset hand-set overrides (1284190, 38400) to automatic, restore the metadata-store backup from item 28, uninstall or keep any Batman (200260) install as the operator chooses, and confirm the licence mtime (Oct 22 19:57, 304 bytes) is unchanged.
+
+Re-UAT 3 restore (59-39), 2026-11-03, pending: restore 576770's `gamelib-shared-redists.json` backup if the pre-test state is wanted (or keep the settled ledger); move the pinned engine back (or let GameLib re-download it); network back on; uninstall or keep any Batman (200260) install as the operator chooses; confirm the licence file is unchanged (304 bytes, Oct 22 19:57) and the Bottles list matches the session-start snapshot.
 
 ## Gaps
 
