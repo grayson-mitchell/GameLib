@@ -1595,6 +1595,12 @@ export async function isMacSonomaOrHigher() {
 }
 
 function sendGameStatusUpdate(payload: GameStatus) {
+  if (payload.status === 'engine-download') {
+    logInfo(
+      `[g1-trace] backend sendGameStatusUpdate app=${payload.appName} status=${payload.status} context=${payload.context}`,
+      LogPrefix.Backend
+    )
+  }
   sendFrontendMessage('gameStatusUpdate', payload)
   backendEvents.emit('gameStatusUpdate', payload)
 }

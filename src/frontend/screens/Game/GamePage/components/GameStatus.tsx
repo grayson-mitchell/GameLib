@@ -110,6 +110,9 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
 
     // Phase 59 (D-05): the built-in Steam engine is downloading.
     if (is.downloadingEngine) {
+      window.api.logInfo(
+        `[g1-trace] GameStatus render context=${statusContext}`
+      )
       return (
         <span
           style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}

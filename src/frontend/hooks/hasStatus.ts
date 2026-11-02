@@ -129,6 +129,11 @@ export function hasStatus(gameInfo: GameInfo, gameSize?: string) {
 
       if (kind === 'active') {
         const { status } = statusEntry as GameStatus
+        if (status === 'engine-download') {
+          window.api.logInfo(
+            `[g1-trace] hasStatus label app=${appName} context=${statusContext}`
+          )
+        }
         const label = getStatusLabel({
           status,
           t,
