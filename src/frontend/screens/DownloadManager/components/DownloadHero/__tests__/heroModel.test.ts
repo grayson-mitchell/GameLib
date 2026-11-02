@@ -133,6 +133,29 @@ describe('heroPhase (quick 261029-exu)', () => {
     ).toEqual({ kind: 'drm-setup', context: 'Steam client files' })
   })
 
+  it('G21: names every engine-download stage', () => {
+    expect(
+      heroPhase({ status: 'engine-download', context: 'creating-bottle' })
+    ).toEqual({ kind: 'engine', context: 'creating-bottle' })
+    expect(
+      heroPhase({ status: 'engine-download', context: 'downloading:42' })
+    ).toEqual({ kind: 'engine', context: 'downloading:42' })
+  })
+
+  it('G21: engine-download with no context has an empty context', () => {
+    expect(heroPhase({ status: 'engine-download' })).toEqual({
+      kind: 'engine',
+      context: ''
+    })
+  })
+
+  it('G21: leaves finishing and plain installing unchanged', () => {
+    expect(
+      heroPhase({ status: 'installing', context: 'steam-bridge-finishing' })
+    ).toEqual({ kind: 'finishing' })
+    expect(heroPhase({ status: 'installing' })).toBeNull()
+  })
+
   it('names the bridge finishing state', () => {
     expect(
       heroPhase({ status: 'installing', context: 'steam-bridge-finishing' })

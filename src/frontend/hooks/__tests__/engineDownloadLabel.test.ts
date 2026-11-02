@@ -55,4 +55,10 @@ describe('engineDownloadLabel', () => {
     expect(engineDownloadLabel('downloading:<b>x</b>', t)).toBe(zero)
     expect(engineDownloadLabel('wat', t)).toBe(zero)
   })
+
+  it("G21: labels creating-bottle as Creating the game's bottle", () => {
+    expect(engineDownloadLabel('creating-bottle', t)).toBe(
+      "Creating the game's bottle"
+    )
+  })
 })

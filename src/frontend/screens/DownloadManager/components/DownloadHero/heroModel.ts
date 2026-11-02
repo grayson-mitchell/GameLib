@@ -89,12 +89,15 @@ export function heroPercent(
 export type HeroPhase =
   | { kind: 'redist'; context: string }
   | { kind: 'drm-setup'; context: string }
+  | { kind: 'engine'; context: string }
   | { kind: 'finishing' }
 
 /**
  * Quick 261029-exu: a bridge install keeps its queue slot after the depot
  * download while it installs redists and prefetches DRM support. Maps the
  * game's status to that phase, or `null` while it is genuinely downloading.
+ * G21: built-in engine and bottle setup (status `engine-download`) precede
+ * the depot download and are named the same way.
  */
 export function heroPhase(entry?: {
   status?: string
@@ -106,6 +109,9 @@ export function heroPhase(entry?: {
   }
   if (entry.status === 'drm-setup') {
     return { kind: 'drm-setup', context: entry.context ?? '' }
+  }
+  if (entry.status === 'engine-download') {
+    return { kind: 'engine', context: entry.context ?? '' }
   }
   if (
     entry.status === 'installing' &&
