@@ -19105,6 +19105,165 @@ mod tests {
         );
     }
 
+    // ---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----
+    //
+    // gaming.amazon.com changes views via history.pushState, which fires no page load, so
+    // `push()` from Finished never sees them. These prove the pure reconcile decision.
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_observe_spa_push_is_recorded() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://gaming.amazon.com/home".to_string());
+        state.take_nav_events();
+        let claim = "https://gaming.amazon.com/claim/x";
+        let generation = state.nav_generation();
+
+        assert!(state.observe_live_url(claim, generation));
+        assert_eq!(state.current_url().as_deref(), Some(claim));
+        assert!(state.can_go_back());
+        let events = state.take_nav_events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0]["canGoBack"], true);
+        assert_eq!(events[0]["url"], claim);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_observe_equal_url_is_a_noop() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://gaming.amazon.com/home".to_string());
+        state.take_nav_events();
+        let generation = state.nav_generation();
+
+        assert!(!state.observe_live_url("https://gaming.amazon.com/home", generation));
+        assert_eq!(state.history.len(), 1);
+        assert!(state.take_nav_events().is_empty());
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_observe_while_suppressed_is_a_noop() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/a".to_string());
+        state.push("https://a.example/b".to_string());
+        state.go_back();
+        state.take_nav_events();
+        let generation = state.nav_generation();
+
+        assert!(!state.observe_live_url("https://a.example/b", generation));
+        assert_eq!(state.history.len(), 2);
+        assert_eq!(state.cursor, 0);
+        assert!(state.can_go_forward());
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_observe_while_page_loading_is_a_noop() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/a".to_string());
+        state.begin_page_load();
+        let generation = state.nav_generation();
+        assert!(!state.observe_live_url("https://a.example/b", generation));
+        assert_eq!(state.history.len(), 1);
+
+        state.push("https://a.example/b".to_string());
+        let generation = state.nav_generation();
+        assert!(state.observe_live_url("https://a.example/c", generation));
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_observe_cross_origin_is_a_noop() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://gaming.amazon.com/home".to_string());
+        let generation = state.nav_generation();
+
+        assert!(!state.observe_live_url("https://www.amazon.com/ap/signin", generation));
+        assert_eq!(state.history.len(), 1);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_observe_on_empty_history_is_a_noop() {
+        let mut state = StoreEmbedState::default();
+        let generation = state.nav_generation();
+        assert!(!state.observe_live_url("https://a.example/", generation));
+        assert!(state.history.is_empty());
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_observe_with_stale_generation_is_a_noop() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/a".to_string());
+        let stale = state.nav_generation();
+        state.push("https://a.example/b".to_string());
+
+        assert!(!state.observe_live_url("https://a.example/c", stale));
+        assert_eq!(state.history.len(), 2);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_observe_query_only_change_replaces_in_place() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://gaming.amazon.com/home".to_string());
+        state.take_nav_events();
+        let generation = state.nav_generation();
+        let next = "https://gaming.amazon.com/home?ref=x";
+
+        assert!(state.observe_live_url(next, generation));
+        assert_eq!(state.history.len(), 1);
+        assert_eq!(state.current_url().as_deref(), Some(next));
+        assert!(!state.can_go_back());
+        assert_eq!(state.take_nav_events().len(), 1);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_observe_page_initiated_back_moves_the_cursor() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/home".to_string());
+        state.push("https://a.example/claim".to_string());
+        state.take_nav_events();
+        let generation = state.nav_generation();
+
+        assert!(state.observe_live_url("https://a.example/home", generation));
+        assert_eq!(state.cursor, 0);
+        assert!(state.can_go_forward());
+        assert_eq!(state.history.len(), 2);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_back_after_observed_push_returns_previous() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/home".to_string());
+        let generation = state.nav_generation();
+        assert!(state.observe_live_url("https://a.example/claim", generation));
+
+        assert_eq!(
+            state.go_back().as_deref(),
+            Some("https://a.example/home")
+        );
+        state.push("https://a.example/home".to_string());
+        assert_eq!(state.history.len(), 2);
+        assert_eq!(state.cursor, 0);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_finished_after_observed_commit_does_not_double_push() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/a".to_string());
+        let generation = state.nav_generation();
+        assert!(state.observe_live_url("https://a.example/a2", generation));
+
+        state.push("https://a.example/a2".to_string());
+        assert_eq!(state.history.len(), 2);
+    }
+
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_take_nav_events_drains_rather_than_peeks() {
