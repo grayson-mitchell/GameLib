@@ -27,7 +27,9 @@ import type {
   SteamInstallLibraryTarget,
   SteamQuickInstallDegrade
 } from 'frontend/state/InstallGameModal'
+import { useSteamClientSetup } from 'frontend/state/SteamClientSetup'
 import {
+  handOffSteamClientSetupToDesktop,
   probeSteamQuickInstallTarget,
   resolveConsoleActionIntent,
   steamBlockedMessageKey
@@ -46,6 +48,8 @@ jest.mock('frontend/helpers/electronStores', () => ({
 const OVERLAY_PATH = join(__dirname, '..', 'index.tsx')
 
 const TARGET_MODULE_PATH = join(__dirname, '..', 'consoleSteamTarget.ts')
+
+const CONSOLE_MODE_PATH = join(__dirname, '..', '..', 'index.tsx')
 
 function readStrippedOverlay(): string {
   return stripSourceComments(readFileSync(OVERLAY_PATH, 'utf8'))
@@ -162,16 +166,81 @@ function assertSteamBranchMarshalsThroughInstallSteamGame(source: string) {
   }
 }
 
+// Quick 261102-pgy: the hand-off wiring gates. Same THROWING-helper idiom.
+
+function assertClientSetupHandOffWired(source: string) {
+  if (
+    !/handOffSteamClientSetupToDesktop\(\s*game\.app_name,\s*clientSetupHandOff,\s*onExitConsole\s*\)/.test(
+      source
+    )
+  ) {
+    throw new Error(
+      'assertClientSetupHandOffWired: the overlay does not call handOffSteamClientSetupToDesktop(game.app_name, clientSetupHandOff, onExitConsole)'
+    )
+  }
+  if (!/\{\s*clientSetupHandOff\s*&&\s*\(/.test(source)) {
+    throw new Error(
+      'assertClientSetupHandOffWired: the hand-off chip is not conditional on clientSetupHandOff'
+    )
+  }
+  if (!source.includes("'gamelib:consoleMode.steamClientSetupHandOff'")) {
+    throw new Error(
+      'assertClientSetupHandOffWired: the chip label key is missing'
+    )
+  }
+  const writes = source.match(/setClientSetupHandOff\(/g)?.length ?? 0
+  if (writes !== 1) {
+    throw new Error(
+      `assertClientSetupHandOffWired: setClientSetupHandOff( appears ${writes} times -- only the verdict may write it`
+    )
+  }
+  if (
+    !/setClientSetupHandOff\(\s*verdict\.clientSetup\s*\?\?\s*null\s*\)/.test(
+      source
+    )
+  ) {
+    throw new Error(
+      'assertClientSetupHandOffWired: the single write is not setClientSetupHandOff(verdict.clientSetup ?? null)'
+    )
+  }
+  if (source.includes('useSteamClientSetup')) {
+    throw new Error(
+      'assertClientSetupHandOffWired: the overlay reaches useSteamClientSetup directly -- go through the tested helpers'
+    )
+  }
+}
+
+function assertConsoleExitWired(source: string) {
+  if (
+    !source.includes(
+      "const quit = useCallback(() => navigate('/'), [navigate])"
+    )
+  ) {
+    throw new Error(
+      'assertConsoleExitWired: ConsoleMode no longer defines quit as navigate(/)'
+    )
+  }
+  if (!source.includes('onExitConsole={quit}')) {
+    throw new Error(
+      'assertConsoleExitWired: InstallOverlay does not receive onExitConsole={quit}'
+    )
+  }
+}
+
 function stubWindowApi(overrides: {
   listSteamLibraryTargets?: jest.Mock
   checkDiskSpace?: jest.Mock
+  steamClientSetupRecheck?: jest.Mock
 }) {
   ;(global as unknown as { window: unknown }).window = {
     api: {
       listSteamLibraryTargets:
         overrides.listSteamLibraryTargets ?? jest.fn().mockResolvedValue([]),
       checkDiskSpace:
-        overrides.checkDiskSpace ?? jest.fn().mockResolvedValue(undefined)
+        overrides.checkDiskSpace ?? jest.fn().mockResolvedValue(undefined),
+      steamClientSetupRecheck:
+        overrides.steamClientSetupRecheck ??
+        jest.fn().mockResolvedValue({ status: 'ready', ready: true })
     }
   }
 }
@@ -362,7 +431,129 @@ describe('probeSteamQuickInstallTarget (D-29 inheriting D-24)', () => {
   })
 })
 
+describe('probeSteamQuickInstallTarget client cause (quick 261102-pgy)', () => {
+  const missingDisk = () =>
+    jest.fn().mockResolvedValue(makeDisk({ validPath: false }))
+
+  it("A10 (261102-pgy): library-missing + recheck needs-install -> clientSetup 'install', recheck called once with the appName", async () => {
+    const targets = makeTargets(1)
+    const steamClientSetupRecheck = jest
+      .fn()
+      .mockResolvedValue({ status: 'needs-install', ready: false })
+    stubWindowApi({
+      listSteamLibraryTargets: jest.fn().mockResolvedValue(targets),
+      checkDiskSpace: missingDisk(),
+      steamClientSetupRecheck
+    })
+    const verdict = await probeSteamQuickInstallTarget('570')
+    expect(verdict).toEqual({
+      ok: false,
+      degrade: { reason: 'library-missing', libraryPath: targets[0].path },
+      clientSetup: 'install'
+    })
+    expect(steamClientSetupRecheck).toHaveBeenCalledTimes(1)
+    expect(steamClientSetupRecheck).toHaveBeenCalledWith('570')
+  })
+
+  it("A11 (261102-pgy): recheck needs-launch -> clientSetup 'launch-once'", async () => {
+    const targets = makeTargets(1)
+    stubWindowApi({
+      listSteamLibraryTargets: jest.fn().mockResolvedValue(targets),
+      checkDiskSpace: missingDisk(),
+      steamClientSetupRecheck: jest
+        .fn()
+        .mockResolvedValue({ status: 'needs-launch', ready: false })
+    })
+    const verdict = await probeSteamQuickInstallTarget('570')
+    expect(verdict).toEqual({
+      ok: false,
+      degrade: { reason: 'library-missing', libraryPath: targets[0].path },
+      clientSetup: 'launch-once'
+    })
+  })
+
+  it.each([
+    [
+      'a ready recheck',
+      jest.fn().mockResolvedValue({ status: 'ready', ready: true })
+    ],
+    [
+      'a recheck carrying an error',
+      jest.fn().mockResolvedValue({
+        status: 'needs-install',
+        ready: false,
+        error: 'Invalid appId'
+      })
+    ],
+    ['a rejected recheck', jest.fn().mockRejectedValue(new Error('ipc failed'))]
+  ])(
+    'A12 (261102-pgy): %s keeps the existing library-missing card, no clientSetup',
+    async (_label, steamClientSetupRecheck) => {
+      stubWindowApi({
+        listSteamLibraryTargets: jest.fn().mockResolvedValue(makeTargets(1)),
+        checkDiskSpace: missingDisk(),
+        steamClientSetupRecheck
+      })
+      const verdict = await probeSteamQuickInstallTarget('570')
+      expect(verdict.ok).toBe(false)
+      if (!verdict.ok) {
+        expect(verdict.degrade.reason).toBe('library-missing')
+      }
+      expect(verdict).not.toHaveProperty('clientSetup')
+    }
+  )
+
+  it('A13 (261102-pgy): library-full, ok, 0 libraries and an appName-less probe never call the recheck', async () => {
+    const recheck = () =>
+      jest.fn().mockResolvedValue({ status: 'needs-install', ready: false })
+
+    const full = recheck()
+    stubWindowApi({
+      listSteamLibraryTargets: jest.fn().mockResolvedValue(makeTargets(1)),
+      checkDiskSpace: jest
+        .fn()
+        .mockResolvedValue(makeDisk({ free: LOW_SPACE_FLOOR_BYTES - 1 })),
+      steamClientSetupRecheck: full
+    })
+    const fullVerdict = await probeSteamQuickInstallTarget('570')
+    expect(fullVerdict).not.toHaveProperty('clientSetup')
+    expect(full).not.toHaveBeenCalled()
+
+    const okCheck = recheck()
+    stubWindowApi({
+      listSteamLibraryTargets: jest.fn().mockResolvedValue(makeTargets(1)),
+      checkDiskSpace: jest.fn().mockResolvedValue(makeDisk({})),
+      steamClientSetupRecheck: okCheck
+    })
+    const okVerdict = await probeSteamQuickInstallTarget('570')
+    expect(okVerdict).toEqual({ ok: true })
+    expect(okCheck).not.toHaveBeenCalled()
+
+    const zero = recheck()
+    stubWindowApi({
+      listSteamLibraryTargets: jest.fn().mockResolvedValue([]),
+      steamClientSetupRecheck: zero
+    })
+    const zeroVerdict = await probeSteamQuickInstallTarget('570')
+    expect(zeroVerdict).toEqual({ ok: true })
+    expect(zero).not.toHaveBeenCalled()
+
+    const noName = recheck()
+    stubWindowApi({
+      listSteamLibraryTargets: jest.fn().mockResolvedValue(makeTargets(1)),
+      checkDiskSpace: missingDisk(),
+      steamClientSetupRecheck: noName
+    })
+    const noNameVerdict = await probeSteamQuickInstallTarget()
+    expect(noNameVerdict.ok).toBe(false)
+    expect(noNameVerdict).not.toHaveProperty('clientSetup')
+    expect(noName).not.toHaveBeenCalled()
+  })
+})
+
 type ConsoleFocusKeyLike = 'platform' | 'wine' | 'cancel' | 'install'
+// The four original keys. 'setupSteam' (quick 261102-pgy) is the one exception
+// for runner 'steam' and is pinned separately in B5.
 const ALL_FOCUS_KEYS: ConsoleFocusKeyLike[] = [
   'platform',
   'wine',
@@ -379,7 +570,7 @@ describe('resolveConsoleActionIntent (the A-button bypass gate)', () => {
   })
 
   it.each(ALL_FOCUS_KEYS)(
-    "B2: runner 'steam' with focused '%s' -> 'dismiss' for every FocusKey (no focus row survives the Steam branch)",
+    "B2: runner 'steam' with focused '%s' -> 'dismiss' for every original FocusKey (the hand-off key 'setupSteam' is the one exception, see B5)",
     (focused) => {
       expect(resolveConsoleActionIntent({ runner: 'steam', focused })).toBe(
         'dismiss'
@@ -404,6 +595,17 @@ describe('resolveConsoleActionIntent (the A-button bypass gate)', () => {
       )
     }
   )
+
+  it("B5 (261102-pgy): the hand-off key is 'handoff' for steam and 'none' for every other runner", () => {
+    expect(
+      resolveConsoleActionIntent({ runner: 'steam', focused: 'setupSteam' })
+    ).toBe('handoff')
+    for (const runner of NON_STEAM_RUNNERS) {
+      expect(
+        resolveConsoleActionIntent({ runner, focused: 'setupSteam' })
+      ).toBe('none')
+    }
+  })
 
   // B4: the function takes no "blocked" input. The answer is 'dismiss' for
   // Steam in BOTH the transient "Opening Steam…" state and the D-29 failure
@@ -709,5 +911,78 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
     expect(() =>
       assertSteamBranchMarshalsThroughInstallSteamGame(knownBad)
     ).toThrow(/installPath/)
+  })
+})
+
+describe('handOffSteamClientSetupToDesktop (quick 261102-pgy)', () => {
+  beforeEach(() => {
+    useSteamClientSetup.setState({
+      isOpen: false,
+      appName: undefined,
+      reason: undefined
+    })
+  })
+
+  it.each(['install', 'launch-once'] as const)(
+    "H1/H2: hand-off with '%s' opens the store with the appName BEFORE exiting, and exits once",
+    (clientSetup) => {
+      const snapshots: ReturnType<typeof useSteamClientSetup.getState>[] = []
+      const exitConsole = jest.fn(() => {
+        snapshots.push(useSteamClientSetup.getState())
+      })
+      handOffSteamClientSetupToDesktop('570', clientSetup, exitConsole)
+      const state = useSteamClientSetup.getState()
+      expect(state.isOpen).toBe(true)
+      expect(state.appName).toBe('570')
+      expect(state.reason).toBe(clientSetup)
+      expect(exitConsole).toHaveBeenCalledTimes(1)
+      expect(snapshots[0].isOpen).toBe(true)
+      expect(snapshots[0].appName).toBe('570')
+      expect(snapshots[0].reason).toBe(clientSetup)
+    }
+  )
+})
+
+describe('Console Mode hand-off wiring gates (quick 261102-pgy, comment-stripped)', () => {
+  it('D9: the overlay offers the hand-off only from the verdict, through the tested helper', () => {
+    expect(() =>
+      assertClientSetupHandOffWired(readStrippedOverlay())
+    ).not.toThrow()
+  })
+
+  it('D9-RED-a: a chip rendered unconditionally is rejected', () => {
+    const real = readStrippedOverlay()
+    const knownBad = real.replace(/\{\s*clientSetupHandOff\s*&&\s*\(/, '{(')
+    expect(knownBad).not.toBe(real)
+    expect(() => assertClientSetupHandOffWired(knownBad)).toThrow(
+      /not conditional/
+    )
+  })
+
+  it('D9-RED-b: opening the store directly from the overlay is rejected', () => {
+    const real = readStrippedOverlay()
+    const knownBad = real.replace(
+      /handOffSteamClientSetupToDesktop\(\s*game\.app_name,\s*clientSetupHandOff,\s*onExitConsole\s*\)/,
+      'useSteamClientSetup.getState().open(game.app_name, clientSetupHandOff)'
+    )
+    expect(knownBad).not.toBe(real)
+    expect(() => assertClientSetupHandOffWired(knownBad)).toThrow(
+      /does not call handOffSteamClientSetupToDesktop/
+    )
+  })
+
+  it('D10: ConsoleMode hands its existing quit to the overlay as onExitConsole', () => {
+    const source = stripSourceComments(readFileSync(CONSOLE_MODE_PATH, 'utf8'))
+    expect(() => assertConsoleExitWired(source)).not.toThrow()
+  })
+
+  it('D10-RED: an overlay given a no-op exit is rejected', () => {
+    const real = stripSourceComments(readFileSync(CONSOLE_MODE_PATH, 'utf8'))
+    const knownBad = real.replace(
+      'onExitConsole={quit}',
+      'onExitConsole={() => undefined}'
+    )
+    expect(knownBad).not.toBe(real)
+    expect(() => assertConsoleExitWired(knownBad)).toThrow(/onExitConsole/)
   })
 })
