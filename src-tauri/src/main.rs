@@ -6305,6 +6305,15 @@ struct StoreEmbedState {
     /// not showing, so a return to it resumes its own Back history. Dropping it instead left
     /// Back greyed out on a store reopened at its remembered game page (live 2026-10-30).
     parked: HashMap<String, (Vec<String>, usize)>,
+    /// True between an `on_page_load` Started and the next Finished `push()` (quick
+    /// 261102-sk8). While set, `observe_live_url` records nothing: full loads are recorded by
+    /// Finished, and a mid-load URL read can be a server-redirect intermediate.
+    page_loading: bool,
+    /// Bumped by every event that could invalidate a live-URL read taken before the state lock
+    /// (page load start/finish, chrome back/forward/reload, store swap, close). The drain
+    /// snapshots it, reads the URL lock-free, and `observe_live_url` discards the read if the
+    /// generation moved in between.
+    nav_generation: u64,
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
@@ -6324,6 +6333,9 @@ impl StoreEmbedState {
     /// restored cursor already points at. The event is still queued so the renderer learns the
     /// restored `canGoBack`.
     fn push(&mut self, url: String) {
+        // A Finished push ends the load in flight even when suppressed.
+        self.page_loading = false;
+        self.nav_generation = self.nav_generation.wrapping_add(1);
         if self.suppress_next_push {
             self.suppress_next_push = false;
             return;
@@ -6340,6 +6352,81 @@ impl StoreEmbedState {
         // event is that its `canGoBack`/`canGoForward` are the post-navigation cursor's, the
         // same derivation every other arm reports.
         self.enqueue_nav_event();
+    }
+
+    /// PURE: marks a main-frame page load as in flight (`on_page_load` Started). Cleared by the
+    /// next `push()`.
+    fn begin_page_load(&mut self) {
+        self.page_loading = true;
+        self.nav_generation = self.nav_generation.wrapping_add(1);
+    }
+
+    /// PURE: the current navigation generation; see the `nav_generation` field.
+    fn nav_generation(&self) -> u64 {
+        self.nav_generation
+    }
+
+    /// PURE: decides whether `live_url` -- the embed's current URL as read from the native
+    /// `Webview::url()` (never page-side JS; D-22/D-25 unchanged) -- is a same-document
+    /// navigation worth recording, and records it. Returns whether state changed.
+    ///
+    /// Why: gaming.amazon.com changes views via `history.pushState`, which fires no page load,
+    /// so the Finished-only `push()` never saw them and Back stayed disabled (live 2026-11-02,
+    /// quick 261102-sk8).
+    ///
+    /// No-op (false, nothing queued) when: `observed_generation` is stale; a chrome-initiated
+    /// back/forward/reload is in flight (`suppress_next_push`; a mid-back read would see the
+    /// pre-navigation URL and truncate forward history); a page load is in flight; history is
+    /// empty; the URL equals the current entry; either URL fails to parse; or the origins
+    /// differ (a same-document navigation cannot change origin). Otherwise: a URL equal to the
+    /// previous/next entry moves the cursor (page-initiated back/forward); a URL differing only
+    /// in query/fragment replaces the current entry in place; anything else is pushed.
+    ///
+    /// Known limits: (a) a pushState changing only query/fragment is treated as a replace, so
+    /// filter-style pushes create no Back steps -- chosen because tracking-param `replaceState`
+    /// on load would otherwise insert a duplicate-looking entry and make Back ping-pong; (b) a
+    /// path-changing `replaceState` is indistinguishable from pushState and adds an entry; (c)
+    /// a page-initiated back to a URL equal to the previous entry moves the cursor, so a
+    /// pushState to that same URL is also read as back -- harmless (Forward stays available);
+    /// (d) detection lags by up to one nav poll (250 ms).
+    fn observe_live_url(&mut self, live_url: &str, observed_generation: u64) -> bool {
+        if observed_generation != self.nav_generation
+            || self.suppress_next_push
+            || self.page_loading
+        {
+            return false;
+        }
+        let Some(current) = self.current_url() else {
+            return false;
+        };
+        if current == live_url {
+            return false;
+        }
+        let (Ok(live), Ok(cur)) = (tauri::Url::parse(live_url), tauri::Url::parse(&current)) else {
+            return false;
+        };
+        if live.origin() != cur.origin() {
+            return false;
+        }
+        if self.cursor > 0
+            && self.history.get(self.cursor - 1).map(String::as_str) == Some(live_url)
+        {
+            self.cursor -= 1;
+            self.enqueue_nav_event();
+            return true;
+        }
+        if self.history.get(self.cursor + 1).map(String::as_str) == Some(live_url) {
+            self.cursor += 1;
+            self.enqueue_nav_event();
+            return true;
+        }
+        if live.path() == cur.path() {
+            self.history[self.cursor] = live_url.to_string();
+            self.enqueue_nav_event();
+            return true;
+        }
+        self.push(live_url.to_string());
+        true
     }
 
     /// PURE: snapshots the current navigation state onto the drain queue (GAP-D, REQ-40-06),
@@ -6371,6 +6458,8 @@ impl StoreEmbedState {
         self.history.clear();
         self.cursor = 0;
         self.suppress_next_push = false;
+        self.page_loading = false;
+        self.nav_generation = self.nav_generation.wrapping_add(1);
         // D-21: a teardown must not leave events describing a history that no longer exists --
         // the next embed would drain them and render another session's host in its chrome.
         self.pending_nav_events.clear();
@@ -6397,6 +6486,8 @@ impl StoreEmbedState {
         self.history = history;
         self.cursor = cursor;
         self.suppress_next_push = false;
+        self.page_loading = false;
+        self.nav_generation = self.nav_generation.wrapping_add(1);
         // Queued events describe the outgoing store; the incoming page's push queues its own.
         self.pending_nav_events.clear();
         self.store_key = Some(store_key.to_string());
@@ -6446,6 +6537,7 @@ impl StoreEmbedState {
         }
         self.cursor -= 1;
         self.suppress_next_push = true;
+        self.nav_generation = self.nav_generation.wrapping_add(1);
         self.history.get(self.cursor).cloned()
     }
 
@@ -6457,6 +6549,7 @@ impl StoreEmbedState {
         }
         self.cursor += 1;
         self.suppress_next_push = true;
+        self.nav_generation = self.nav_generation.wrapping_add(1);
         self.history.get(self.cursor).cloned()
     }
 
@@ -6465,6 +6558,7 @@ impl StoreEmbedState {
     /// for it.
     fn arm_reload_suppression(&mut self) {
         self.suppress_next_push = true;
+        self.nav_generation = self.nav_generation.wrapping_add(1);
     }
 
     /// PURE: the URL the cursor currently points at, if any.
@@ -6808,6 +6902,15 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
             // has begun replacing a Valve page is not still judged by the Valve host.
             if let Ok(mut host) = STORE_EMBED_TOP_LEVEL_HOST.lock() {
                 *host = payload.url().host_str().map(str::to_string);
+            }
+            if payload.event() == tauri::webview::PageLoadEvent::Started {
+                if let Ok(mut state) = store_embed_state().lock() {
+                    state.begin_page_load();
+                } else {
+                    shell_eprintln!(
+                        "[shell] WARN: store_embed history registry poisoned -- continuing"
+                    );
+                }
             }
             if payload.event() == tauri::webview::PageLoadEvent::Finished {
                 if let Ok(mut state) = store_embed_state().lock() {
@@ -7493,8 +7596,9 @@ fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
 }
 
 /// Drains the navigation states queued by `on_page_load`'s Finished handler (GAP-D, D-22,
-/// REQ-40-06). Takes no `AppHandle`: the queue lives in the process-static `STORE_EMBED_STATE`,
-/// NOT on the webview handle -- which is the point. The 013-015 rule is that a poller must be
+/// REQ-40-06). Takes an `AppHandle` only to read the embed's live URL (native `Webview::url()`,
+/// no page-side JS) and reconcile same-document navigations (quick 261102-sk8). The queue lives
+/// in the process-static `STORE_EMBED_STATE`, NOT on the webview handle -- which is the point. The 013-015 rule is that a poller must be
 /// anchored to a SURVIVOR, and the embed's handle dies with the embed; this state does not, so
 /// a drain issued while the embed is closed resolves an empty array rather than erroring.
 ///
@@ -7504,7 +7608,7 @@ fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
 /// indistinguishable from a healthy idle channel -- exactly the F-34.4.2-19 defect class this
 /// seam's per-field coercion exists to prevent one layer up.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-fn store_embed_take_nav_events() -> Result<Value, String> {
+fn store_embed_take_nav_events(app: &AppHandle) -> Result<Value, String> {
     // Phase 50 Plan 02 (D-01/D-02): the Epic surface queues its OWN nav events
     // (`macos_epic_embed::EpicEmbedSurface::pending_nav_events`) -- route there when it is the
     // selected surface, symmetric with `store_embed_hide`/`show`/`close` above.
@@ -7514,9 +7618,27 @@ fn store_embed_take_nav_events() -> Result<Value, String> {
             return macos_epic_embed::take_nav_events();
         }
     }
+    // Never call into the webview while holding the state lock: the main-thread `on_page_load`
+    // handler takes that lock and `Webview::url()` round-trips to the main thread, so holding
+    // it across the read can deadlock.
+    let generation = store_embed_state()
+        .lock()
+        .map_err(|_| "store_embed_take_nav_events:history-registry-poisoned".to_string())?
+        .nav_generation();
+    let live_url = app
+        .get_webview(STORE_EMBED_LABEL)
+        .and_then(|webview| webview.url().ok());
     let mut state = store_embed_state()
         .lock()
         .map_err(|_| "store_embed_take_nav_events:history-registry-poisoned".to_string())?;
+    if let Some(live) = live_url {
+        if state.observe_live_url(live.as_str(), generation) {
+            shell_eprintln!(
+                "[shell] store_embed: same-document navigation recorded host={}",
+                live.host_str().unwrap_or("")
+            );
+        }
+    }
     Ok(Value::Array(state.take_nav_events()))
 }
 
@@ -10454,7 +10576,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         "store_embed_take_nav_events" => {
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
-                store_embed_take_nav_events()
+                store_embed_take_nav_events(app)
             }
             #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
             {
@@ -19243,10 +19365,7 @@ mod tests {
         let generation = state.nav_generation();
         assert!(state.observe_live_url("https://a.example/claim", generation));
 
-        assert_eq!(
-            state.go_back().as_deref(),
-            Some("https://a.example/home")
-        );
+        assert_eq!(state.go_back().as_deref(), Some("https://a.example/home"));
         state.push("https://a.example/home".to_string());
         assert_eq!(state.history.len(), 2);
         assert_eq!(state.cursor, 0);
