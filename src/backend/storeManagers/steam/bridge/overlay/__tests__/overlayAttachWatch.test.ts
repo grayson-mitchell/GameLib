@@ -62,7 +62,7 @@ describe('findOverlayAttach', () => {
     )
     expect(m).not.toBeNull()
     expect(m!.line.length).toBeLessThanOrEqual(512)
-    expect(m!.line).not.toMatch(/\u0001/)
+    expect(m!.line.includes('\u0001')).toBe(false)
   })
 })
 

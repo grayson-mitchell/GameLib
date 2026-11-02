@@ -132,16 +132,13 @@ export async function watchOverlayAttach(
   const sleep = (ms: number) =>
     new Promise<void>((resolve) => {
       if (controller.signal.aborted) return resolve()
-      let handle: { unref?: () => void } | undefined
       const done = () => {
-        if (handle) {
-          timers.delete(handle)
-          clearT(handle)
-        }
+        timers.delete(handle)
+        clearT(handle)
         controller.signal.removeEventListener('abort', done)
         resolve()
       }
-      handle = setT(done, ms)
+      const handle = setT(done, ms)
       timers.add(handle)
       handle.unref?.()
       controller.signal.addEventListener('abort', done, { once: true })
