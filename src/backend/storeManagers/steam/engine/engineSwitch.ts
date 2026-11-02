@@ -9,7 +9,7 @@
  * Nothing runs at import and there are no timers (sidecar exit contract).
  */
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
-import { dirname, isAbsolute, join, relative, resolve } from 'path'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { GameSettings } from 'common/types'
@@ -242,6 +242,13 @@ async function killPrevious(
     return
   }
   const bin = prev.wineserverBin
+  if (bin && !existsSync(bin)) {
+    logInfo(
+      `engine switch: no wineserver at ${basename(bin)} for "${bottleName}", nothing to stop`,
+      LogPrefix.Steam
+    )
+    return
+  }
   const allowed =
     isInside(pinnedEngineRoot(), bin) ||
     isInside(join(toolsPath, 'wine'), bin) ||
@@ -260,10 +267,13 @@ async function killPrevious(
 /**
  * Where the DXVK DLL list for a restore comes from: the marker's recorded dir, else the pin the
  * bottle was prepared with, else the current pin (downloaded when it is not on disk).
+ * `needWine`: the restore runs through the built-in engine (CrossOver unhealthy), so a source
+ * with DXVK but no Wine binary (half-installed pin, IN-06) takes its Wine from the pin download.
  */
 async function resolveRestoreSource(
   prev: EngineMarker,
-  deps: EngineSwitchDeps
+  deps: EngineSwitchDeps,
+  needWine: boolean
 ): Promise<NonCrossoverEngine | null> {
   const pin =
     (prev.kind === 'pinned' ? pinById(prev.id) : null) ?? ENGINE_PINS.current
@@ -273,13 +283,18 @@ async function resolveRestoreSource(
     prev.dxvk !== 'failed' &&
     existsSync(join(prev.dxvk.dir, 'x64'))
   ) {
-    return {
-      wineBin: installed?.wineBin ?? '',
-      wineserverBin: installed?.wineserverBin ?? '',
-      label: pin.label,
-      version: pin.wine.version,
-      dxvk: prev.dxvk
+    if (installed || !needWine) {
+      return {
+        wineBin: installed?.wineBin ?? '',
+        wineserverBin: installed?.wineserverBin ?? '',
+        label: pin.label,
+        version: pin.wine.version,
+        dxvk: prev.dxvk
+      }
     }
+    const fetched = await deps.ensurePinEngine(pin)
+    if (!fetched) return null
+    return { ...fetched, dxvk: prev.dxvk }
   }
   if (installed) {
     return {
@@ -293,6 +308,10 @@ async function resolveRestoreSource(
   return deps.ensurePinEngine(pin)
 }
 
+/**
+ * `deps.ensurePinEngine` is overridable: games.ts passes one that reports download progress
+ * through the same engine-download statuses as a launch download.
+ */
 export async function prepareBottleForEngine(args: {
   appId: string
   bottleName: string
@@ -378,6 +397,23 @@ export async function prepareBottleForEngine(args: {
     }
   }
 
+  // 59-REVIEW WR-05: resolve (and download) the restore source before anything is stopped, so
+  // a missing source leaves the bottle and its marker exactly as they were.
+  const restoreNeeded =
+    next.kind === 'crossover' &&
+    (existsSync(dxvkMarkerPath) || prev.dxvk !== undefined)
+  let restoreSource: NonCrossoverEngine | null = null
+  if (restoreNeeded) {
+    restoreSource = await resolveRestoreSource(prev, deps, !crossoverHealthy)
+    if (!restoreSource?.dxvk) {
+      return {
+        ok: false,
+        reason: 'dxvk-failed',
+        detail: `no DXVK source to restore "${bottleName}"`
+      }
+    }
+  }
+
   args.onSwitching?.()
   logInfo(
     `engine switch for "${bottleName}": ${identityOf(prev)} -> ${identityOf(nextMarker)}`,
@@ -387,16 +423,9 @@ export async function prepareBottleForEngine(args: {
 
   if (next.kind !== 'crossover') return installNextDxvk(next)
 
-  if (existsSync(dxvkMarkerPath) || prev.dxvk !== undefined) {
-    // 59-REVIEW CR-03: a missing source is a failure that is retried, never a silent success.
-    const source = await resolveRestoreSource(prev, deps)
-    if (!source?.dxvk) {
-      return {
-        ok: false,
-        reason: 'dxvk-failed',
-        detail: `no DXVK source to restore "${bottleName}"`
-      }
-    }
+  if (restoreNeeded && restoreSource?.dxvk) {
+    const source = restoreSource
+    const sourceDxvk = restoreSource.dxvk
     // 59-UAT G7: the stock CrossOver settings carry the global winePrefix, not this bottle.
     // 59-UAT G10: every CrossOver wine step on an expired bottle blocks on CodeWeavers'
     // Expired Bottle dialog; the built-in engine never shows it, so an unhealthy CrossOver
@@ -418,12 +447,7 @@ export async function prepareBottleForEngine(args: {
         winePrefix: bottleDir
       }
     }
-    const ok = await deps.installRemove(
-      settings,
-      'dxvk',
-      'restore',
-      source.dxvk
-    )
+    const ok = await deps.installRemove(settings, 'dxvk', 'restore', sourceDxvk)
     if (!crossoverHealthy) {
       await deps.killWith(
         bottleName,
@@ -433,6 +457,11 @@ export async function prepareBottleForEngine(args: {
       )
     }
     if (!ok || existsSync(dxvkMarkerPath)) {
+      // CR-03: the restore may have deleted DLLs/overrides before failing; record that so the
+      // next launch on either engine repairs the bottle instead of reporting changed:false.
+      if (prev.kind !== 'crossover') {
+        writeMarker(bottleDir, { ...prev, dxvk: 'failed' })
+      }
       return {
         ok: false,
         reason: 'dxvk-failed',

@@ -148,10 +148,14 @@ describe('prepareBottleForEngine', () => {
   })
 
   test('pinned -> crossover with DXVK present: kills the pin wineserver and restores via CrossOver', async () => {
+    mockState.engines = join(mockState.root, 'engines')
+    const ws = join(mockState.engines, 'wine', 'bin', 'wineserver')
+    mkdirSync(join(mockState.engines, 'wine', 'bin'), { recursive: true })
+    writeFileSync(ws, '')
     seedMarker({
       kind: 'pinned',
       id: 'wine-staging-11.20',
-      wineserverBin: PIN_WS
+      wineserverBin: ws
     })
     writeFileSync(join(dir, 'current_dxvk-macOS'), 'v1')
     ;(deps.installRemove as jest.Mock).mockImplementationOnce(async () => {
@@ -162,7 +166,7 @@ describe('prepareBottleForEngine', () => {
     expect(res).toEqual({ ok: true, changed: true })
     expect(deps.killWith).toHaveBeenCalledWith(
       NAME,
-      PIN_WS,
+      ws,
       { USER: 'crossover' },
       15_000
     )
@@ -445,10 +449,41 @@ describe('prepareBottleForEngine health and shared bottles (G10, WR-06)', () => 
       dxvk: { dir: srcDir, version: 'v9' }
     })
     writeFileSync(join(dir, 'current_dxvk-macOS'), 'v9')
+    deps.ensurePinEngine.mockResolvedValue(null)
     const res = await runWith({ crossoverHealthy: false })
     expect(res).toMatchObject({ ok: false, reason: 'dxvk-failed' })
     expect(deps.installRemove).not.toHaveBeenCalled()
+    expect(deps.killWith).not.toHaveBeenCalled()
     expect(marker().kind).toBe('pinned')
+  })
+
+  test('half pin fetches the pin wine for an unhealthy restore', async () => {
+    mockState.engines = join(mockState.root, 'engines')
+    const srcDir = join(mockState.engines, 'dxvk')
+    mkdirSync(join(srcDir, 'x64'), { recursive: true })
+    seedMarker({
+      kind: 'pinned',
+      id: 'wine-staging-11.20',
+      wineserverBin: '',
+      dxvk: { dir: srcDir, version: 'v9' }
+    })
+    writeFileSync(join(dir, 'current_dxvk-macOS'), 'v9')
+    removing()
+    expect(await runWith({ crossoverHealthy: false })).toEqual({
+      ok: true,
+      changed: true
+    })
+    expect(deps.ensurePinEngine).toHaveBeenCalledTimes(1)
+    expect(deps.fallbackSettings).toHaveBeenCalledWith(NAME, {
+      ...pinEngine,
+      dxvk: { dir: srcDir, version: 'v9' }
+    })
+    expect(deps.installRemove).toHaveBeenCalledWith(
+      expect.anything(),
+      'dxvk',
+      'restore',
+      { dir: srcDir, version: 'v9' }
+    )
   })
 
   test('a legacy shared bottle with a differing marker is refused with no side effects', async () => {
@@ -490,5 +525,109 @@ describe('prepareBottleForEngine health and shared bottles (G10, WR-06)', () => 
     const again = jest.fn()
     await runWith({ onSwitching: again }, pinned)
     expect(again).not.toHaveBeenCalled()
+  })
+})
+
+describe('prepareBottleForEngine ordered restore (CR-03, WR-05)', () => {
+  const seedPinned = (extra: object = {}, ws = PIN_WS) =>
+    seedMarker({
+      kind: 'pinned',
+      id: 'wine-staging-11.20',
+      wineserverBin: ws,
+      ...extra
+    })
+  const dxvkFile = () => join(dir, 'current_dxvk-macOS')
+
+  test('offline licensed user: no source, no kill, marker untouched', async () => {
+    seedPinned()
+    writeFileSync(dxvkFile(), 'v1')
+    const before = readFileSync(join(dir, ENGINE_MARKER_FILE), 'utf8')
+    deps.ensurePinEngine.mockResolvedValue(null)
+    const onSwitching = jest.fn()
+    const res = await prepareBottleForEngine({
+      appId: '620',
+      bottleName: NAME,
+      next: crossover,
+      deps,
+      onSwitching
+    })
+    expect(res).toMatchObject({ ok: false, reason: 'dxvk-failed' })
+    expect(deps.killWith).not.toHaveBeenCalled()
+    expect(onSwitching).not.toHaveBeenCalled()
+    expect(readFileSync(join(dir, ENGINE_MARKER_FILE), 'utf8')).toBe(before)
+    expect(existsSync(dxvkFile())).toBe(true)
+  })
+
+  test('source resolved before killPrevious', async () => {
+    mockState.engines = join(mockState.root, 'engines')
+    const ws = join(mockState.engines, 'bin', 'wineserver')
+    mkdirSync(join(mockState.engines, 'bin'), { recursive: true })
+    writeFileSync(ws, '')
+    seedPinned({}, ws)
+    writeFileSync(dxvkFile(), 'v1')
+    ;(deps.installRemove as jest.Mock).mockImplementation(async () => {
+      rmSync(dxvkFile(), { force: true })
+      return true
+    })
+    await run(crossover)
+    const resolveOrder = deps.ensurePinEngine.mock.invocationCallOrder[0]
+    expect(resolveOrder).toBeLessThan(deps.killWith.mock.invocationCallOrder[0])
+  })
+
+  test('a marker wineserver that does not exist is not spawned', async () => {
+    seedPinned({}, '/tools/steam-engines/wine-staging-11.20/bin/missing')
+    writeFileSync(dxvkFile(), 'v1')
+    ;(deps.installRemove as jest.Mock).mockImplementation(async () => {
+      rmSync(dxvkFile(), { force: true })
+      return true
+    })
+    await run(crossover)
+    expect(deps.killWith).not.toHaveBeenCalled()
+  })
+
+  test('wineboot -u failure rewrites the marker with dxvk failed', async () => {
+    seedPinned({ dxvk: { dir: '/tools/steam-engines/dxvk', version: 'v1' } })
+    writeFileSync(dxvkFile(), 'v1')
+    deps.installRemove.mockResolvedValue(false)
+    expect(await run(crossover)).toMatchObject({
+      ok: false,
+      reason: 'dxvk-failed'
+    })
+    expect(marker()).toEqual({
+      kind: 'pinned',
+      id: 'wine-staging-11.20',
+      wineserverBin: PIN_WS,
+      dxvk: 'failed'
+    })
+  })
+
+  test('after a failed restore, a pinned next retries the backup and records dxvk', async () => {
+    seedPinned({ dxvk: 'failed' })
+    expect(await run(pinned)).toEqual({ ok: true, changed: true })
+    expect(deps.installRemove).toHaveBeenCalledWith(
+      expect.anything(),
+      'dxvk',
+      'backup',
+      pinned.kind === 'pinned' ? pinned.dxvk : undefined
+    )
+    expect(marker().dxvk).toEqual({
+      dir: '/tools/steam-engines/dxvk',
+      version: 'v1'
+    })
+  })
+
+  test('after a failed restore, a CrossOver next re-runs the restore with the pin source', async () => {
+    seedPinned({ dxvk: 'failed' })
+    ;(deps.installRemove as jest.Mock).mockImplementation(async () => {
+      rmSync(dxvkFile(), { force: true })
+      return true
+    })
+    expect(await run(crossover)).toEqual({ ok: true, changed: true })
+    expect(deps.installRemove).toHaveBeenCalledWith(
+      expect.anything(),
+      'dxvk',
+      'restore',
+      { dir: '/tools/steam-engines/dxvk', version: 'v1' }
+    )
   })
 })
