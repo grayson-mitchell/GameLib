@@ -1,11 +1,13 @@
 ---
 phase: 59-steam-engine-fallback-when-crossover-is-unavailable
 plan: 32
-status: checkpoint-after-task-1
+status: complete
 requirements: [H1]
 ---
 
-# Phase 59 Plan 32: H1 DirectX exit 247 diagnosis (Task 1 only, Task 2 not started)
+# Phase 59 Plan 32: H1 DirectX exit 247 (Wine Mono) Summary
+
+DXSETUP now completes on the built-in engine: new bottles register Wine Mono at creation, and existing bottles get the bundled Mono support msi registered before their first DirectX run.
 
 ## H1 diagnosis
 
@@ -65,6 +67,29 @@ The cause is in bottle creation, outside this plan's `files_modified`.
 
 Recommended: 1 plus the existing-bottle repair from 2.
 
-## Status
+## Fix implemented (user chose option 1 + option 2)
 
-Task 1 done (this section). Task 2 not implemented; no source files changed.
+Commit 1e300375d.
+
+- `bottle.ts` `createFallbackBridgeBottle`: `WINEDLLOVERRIDES` is now `mshtml=` (mscoree enabled), so `wineboot -i` registers the engine's bundled Mono offline. `bottle.test.ts` assertion updated.
+- `sharedRedists.ts`: pure `buildMonoSupportMsiParts(msiUnixPath)` (absolute path only, no quote or control chars, mapped to `Z:`) and `systemRegHasWineMono`.
+- `sharedRedistInstall.ts`: `ensureEngineMono` runs once per run, before the first directx entry's process, on non-CrossOver bottles only. If `system.reg` has no wine-mono it finds `<engine>/share/wine/mono/wine-mono-*/support/winemono-support.msi` and runs `msiexec /i` through `runBounded`. No bundled msi, a failing or timed-out msi, or any error logs a warning and DXSETUP still runs; it never fails the redist run. CrossOver bottles and non-DirectX entries get no repair.
+- Expected live log on re-UAT (576770): `Steam 576770: registering the engine's bundled Wine Mono in the bottle before DirectX setup`, then the DirectX Jun2010 entry completes with no `installer exited with code 247`. The bottle's old failure count (1) resets via the normal success path.
+
+## Verification
+
+- Disposable-prefix repro with the new creation path (`WINEDLLOVERRIDES=mshtml=`): wine-mono registered (4 matches), DXSETUP exits 0. Repair path on an old-style prefix (override mscoree): msiexec `winemono-support.msi` exits 0, mono registered, DXSETUP exits 0.
+- Jest: sharedRedistInstall, sharedRedists, bottle suites 345 passed (6 new `H1:` tests in the install suite, 3 in sharedRedists, including "H1: CrossOver bottle unchanged"). eslint clean, `pnpm codecheck` clean, prettier clean. Teardown "import after Jest environment torn down" noise predates this plan.
+- The real bottle 576770 was not modified; left for live UAT.
+
+## Deviations from Plan
+
+- [Scope, user-approved] `bottle.ts` and `bottle.test.ts` modified; they are not in the plan's `files_modified`.
+- The diagnosis fit none of Branches A/B/C, so the implemented fix is the Mono registration above, not a branch from Task 2. The Branch-specific ledger changes (engineUnsupported, isDirectxInstalledInBottle) were not needed.
+- The repair installs `winemono-support.msi` (the engine ships Mono as an extracted directory, no top-level msi).
+
+## Known Stubs
+
+None.
+
+## Self-Check: PASSED
