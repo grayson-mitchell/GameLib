@@ -842,7 +842,7 @@ Plans:
 **Goal:** A Windows Steam title on the macOS native bridge still launches when CrossOver is missing, its trial has expired for that bottle, or it is broken. CrossOver stays the first-choice engine. The fallback is one Wine-Staging + DXVK build pinned per GameLib release, which GameLib installs and manages itself. GameLib keeps the previous pinned build so a bad bump can be rolled back. The fallback runs the game's existing bridge bottle with `USER=crossover`, so saves and settings stay in one Windows profile. Before every CrossOver launch, GameLib checks the bottle's trial state with `CX_BOTTLE=<bottle> wine --demo-status`. An expired bottle goes to the fallback instead of hanging on CrossOver's nag dialog. CrossOver launches always run with a timeout. Users see "N days remaining" before expiry. A per-game engine override exists only as an advanced, explicitly unsupported option (the Proton model): known-fixes and census verdicts do not apply to it, and the launch log records the exact engine and version. GameLib records the CrossOver versions it has tested, and warns on an untested one without blocking it. Out of scope: DRM mode and bottled Steam (CrossOver-only), GPTK and `-DXMT` for Steam, a full census on the fallback (it is best-effort). Evidence: spikes 056–060 and the Idea B engine decision in `.planning/spikes/MANIFEST.md`.
 **Requirements**: TBD
 **Depends on:** Phase 51 (per-game bridge bottles)
-**Plans:** 30/30 plans complete
+**Plans:** 30/39 plans complete
 
 Plans:
 **Wave 1**
@@ -926,6 +926,26 @@ Plans:
 **Gap round 2, wave 4**
 
 - [x] 59-30-PLAN.md — Live re-UAT 2 of gaps A-G and gate battery
+
+**Gap closure round 3** *(from 59-HUMAN-UAT.md H1-H3, 59-UAT.md G20-G22, 59-REVIEW.md WR-01..WR-05; WR-06, G23 and H4 out of scope)*
+
+**Gap round 3, wave 1**
+
+- [ ] 59-31-PLAN.md — Engine-aware wineserver stop for the redist display-driver window; no library-folder error on macOS (H2, H3)
+- [ ] 59-33-PLAN.md — Bounded boot sweep of stale steam-engines/.tmp-* dirs (G20)
+- [ ] 59-34-PLAN.md — CEG first in override eligibility; truthful cx-broken notice; bottle-setup label key (WR-01, WR-05, G21 catalogue)
+- [ ] 59-35-PLAN.md — Failed per-game write rolls back memory and makes the settings screen re-read (WR-04)
+- [ ] 59-36-PLAN.md — Cancel handoff races; bottle-setup stage status (WR-02, WR-03, G21 backend)
+
+**Gap round 3, wave 2** *(blocked on gap round 3 wave 1)*
+
+- [ ] 59-32-PLAN.md — DXSETUP exit 247 on the pinned Wine-Staging: diagnosis, then the evidence-selected fix (H1)
+- [ ] 59-37-PLAN.md — Downloads tab shows engine and bottle setup stages (G21 renderer)
+- [ ] 59-38-PLAN.md — Offline launch block before the demo-status probe, diagnosis first (G22)
+
+**Gap round 3, wave 3**
+
+- [ ] 59-39-PLAN.md — Live re-UAT 3 (H1-H3, G20-G22, WR-02/03) and gate battery
 
 ### Phase 60: Steam overlay in bridged games on macOS
 
