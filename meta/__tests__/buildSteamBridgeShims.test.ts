@@ -11,10 +11,12 @@ import { join } from 'path'
 
 import {
   buildHelperCompileArgv,
+  buildOverlayShimCompileArgv,
   buildShim64CompileArgv,
   buildShimCompileArgv,
   helperOutputPath,
   machoArchFlag,
+  overlayShimOutputPath,
   pruneShim64BuildByproducts,
   pruneShimBuildByproducts,
   resolveBridgeArch,
@@ -612,7 +614,7 @@ describe('buildSteamBridgeShims', () => {
       )
     })
 
-    it('main runs exactly compileHelper, stageSteamAppId, compileShim, compileShim64 in order', () => {
+    it('main runs exactly compileHelper, stageSteamAppId, compileShim, compileShim64, compileOverlayShim in order', () => {
       const from = sourceText.slice(
         sourceText.indexOf('export async function main')
       )
@@ -622,8 +624,68 @@ describe('buildSteamBridgeShims', () => {
         'compileHelper',
         'stageSteamAppId',
         'compileShim',
-        'compileShim64'
+        'compileShim64',
+        'compileOverlayShim'
       ])
+    })
+  })
+
+  describe('overlay shim build (60-01, D-14)', () => {
+    it.each(['arm64', 'x86_64'] as const)('argv for %s', (slice) => {
+      const { command, args } = buildOverlayShimCompileArgv(
+        slice,
+        '/tmp/x/overlay_shim.dylib'
+      )
+      expect(command).toBe('clang')
+      expect(args).toEqual(expect.arrayContaining(['-arch', slice]))
+      expect(args).toContain('-mmacosx-version-min=11.0')
+      expect(args).toContain('-Werror=unguarded-availability-new')
+      expect(args).toContain('-dynamiclib')
+      expect(args).toEqual(
+        expect.arrayContaining(['-install_name', '@rpath/overlay_shim.dylib'])
+      )
+      for (const fw of [
+        'Metal',
+        'QuartzCore',
+        'CoreGraphics',
+        'CoreFoundation',
+        'Foundation'
+      ]) {
+        const i = args.indexOf(fw)
+        expect(i).toBeGreaterThan(0)
+        expect(args[i - 1]).toBe('-framework')
+      }
+      expect(args[args.indexOf('-o') + 1]).toBe('/tmp/x/overlay_shim.dylib')
+      expect(args[args.length - 1]).toContain('overlay_shim.m')
+    })
+
+    it('output path sits beside the helper', () => {
+      expect(overlayShimOutputPath('arm64')).toBe(
+        join('public', 'bin', 'arm64', 'darwin', 'overlay_shim.dylib')
+      )
+      expect(overlayShimOutputPath('arm64')).toContain(
+        helperOutputPath('arm64').replace('steam-bridge-helper', '')
+      )
+    })
+
+    it('compileOverlayShim lipos, signs and isolates HOME', () => {
+      const start = sourceText.indexOf('async function compileOverlayShim')
+      expect(start).toBeGreaterThan(-1)
+      const body = sourceText.slice(start)
+      expect(body).toContain('lipo')
+      expect(body).toContain('-create')
+      expect(body).toContain('codesign')
+      expect(body).toContain('createFakeHomeProfile')
+      expect(body).not.toMatch(/HOME:/)
+    })
+
+    it('main() calls compileOverlayShim', () => {
+      const from = sourceText.slice(
+        sourceText.indexOf('export async function main')
+      )
+      expect(from.slice(0, from.indexOf('\n}'))).toContain(
+        'await compileOverlayShim()'
+      )
     })
   })
 })

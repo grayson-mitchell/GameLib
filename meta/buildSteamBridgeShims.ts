@@ -62,9 +62,11 @@
 
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, rmSync } from 'node:fs'
-import { chmod, copyFile } from 'node:fs/promises'
+import { chmod, copyFile, mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import { createFakeHomeProfile } from '../src/backend/testUtils/fakeHomeProfile'
 import { downloadZig } from './downloadZig'
 
 const HELPER_SOURCE_PATH = join(
@@ -457,10 +459,14 @@ export function buildShim64CompileArgv(
 // non-zero exit means (compile-gate failure vs. a plain build error).
 function spawnArgv(
   command: string,
-  args: string[]
+  args: string[],
+  opts?: { env?: NodeJS.ProcessEnv }
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn(command, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      ...(opts?.env ? { env: opts.env } : {})
+    })
     let stdout = ''
     let stderr = ''
     child.stdout?.on('data', (d) => {
@@ -597,6 +603,120 @@ export async function main(): Promise<void> {
   await stageSteamAppId()
   await compileShim()
   await compileShim64()
+  await compileOverlayShim()
+}
+
+/**
+ * Phase 60 (D-14): the vendored NotProton overlay shim, built from source.
+ * Floor rationale: no `minimumSystemVersion` / `LSMinimumSystemVersion` is set in
+ * src-tauri/*.json, so GameLib declares no floor. The shim compiled clean at 11.0
+ * through 15.0. 11.0 is the first Apple-silicon macOS. meta/buildLsteamclient.ts's
+ * 15.0 belongs to the DRM-only lsteamclient build and is not a project floor.
+ */
+const OVERLAY_SHIM_SOURCE_PATH = join(
+  'native',
+  'steam-bridge',
+  'overlay-shim',
+  'overlay_shim.m'
+)
+const OVERLAY_SHIM_MIN_MACOS = '11.0'
+// Both slices are always built, whatever resolveBridgeArch() returns: the
+// injected Wine process is x86_64 under Rosetta and the sidecar is arm64.
+const OVERLAY_SHIM_SLICES = ['arm64', 'x86_64'] as const
+
+// ts-prune-ignore-next
+export function buildOverlayShimCompileArgv(
+  slice: 'arm64' | 'x86_64',
+  outPath: string
+): { command: string; args: string[] } {
+  return {
+    command: 'clang',
+    args: [
+      '-arch',
+      slice,
+      `-mmacosx-version-min=${OVERLAY_SHIM_MIN_MACOS}`,
+      '-Werror=unguarded-availability-new',
+      '-dynamiclib',
+      '-O2',
+      '-Wall',
+      '-Wextra',
+      '-install_name',
+      '@rpath/overlay_shim.dylib',
+      '-framework',
+      'Metal',
+      '-framework',
+      'QuartzCore',
+      '-framework',
+      'CoreGraphics',
+      '-framework',
+      'CoreFoundation',
+      '-framework',
+      'Foundation',
+      '-o',
+      outPath,
+      OVERLAY_SHIM_SOURCE_PATH
+    ]
+  }
+}
+
+// ts-prune-ignore-next
+export function overlayShimOutputPath(
+  arch: string = resolveBridgeArch()
+): string {
+  return join(bundledBinDir(arch), 'overlay_shim.dylib')
+}
+
+async function compileOverlayShim(): Promise<void> {
+  if (process.platform !== 'darwin') {
+    console.log('Skipping overlay shim build: not macOS')
+    return
+  }
+  const profile = createFakeHomeProfile({ prefix: 'gamelib-overlay-shim-' })
+  const tmp = await mkdtemp(join(tmpdir(), 'overlay-shim-'))
+  try {
+    const env = profile.childEnv(process.env)
+    const slices: string[] = []
+    for (const slice of OVERLAY_SHIM_SLICES) {
+      const out = join(tmp, `overlay_shim.${slice}.dylib`)
+      const { command, args } = buildOverlayShimCompileArgv(slice, out)
+      console.log(`Overlay shim: ${command} ${args.join(' ')}`)
+      const r = await spawnArgv(command, args, { env })
+      if (r.code !== 0) {
+        throw new Error(
+          `overlay shim ${slice} compile failed (${r.code}):\n${r.stderr}`
+        )
+      }
+      slices.push(out)
+    }
+    const output = overlayShimOutputPath()
+    mkdirSync(bundledBinDir(), { recursive: true })
+    const lipo = await spawnArgv(
+      'lipo',
+      ['-create', ...slices, '-output', output],
+      { env }
+    )
+    if (lipo.code !== 0) {
+      throw new Error(`lipo -create failed (${lipo.code}):\n${lipo.stderr}`)
+    }
+    // arm64 slices need a signature; ad hoc is enough. The release pipeline's
+    // meta/signMachOResources.ts re-signs every Mach-O under this tree.
+    const sign = await spawnArgv('codesign', ['-fs', '-', output], { env })
+    if (sign.code !== 0) {
+      throw new Error(`codesign failed (${sign.code}):\n${sign.stderr}`)
+    }
+    const info = await spawnArgv('lipo', ['-info', output], { env })
+    if (
+      info.code !== 0 ||
+      !info.stdout.includes('arm64') ||
+      !info.stdout.includes('x86_64')
+    ) {
+      throw new Error(`overlay shim is not universal: ${info.stdout}`)
+    }
+    console.log(`Overlay shim built -> ${output}`)
+  } finally {
+    await rm(tmp, { recursive: true, force: true })
+    profile.dispose()
+  }
 }
 
 // See meta/gen_vtables.ts for why this can't use the usual

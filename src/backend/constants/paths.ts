@@ -140,6 +140,12 @@ export const steamBridgeHelperPath = fixAsarPath(
   join(publicDir, 'bin', process.arch, 'darwin', 'steam-bridge-helper')
 )
 
+// Phase 60 (D-14): built by `pnpm build-steam-bridge`; a dev tree without it
+// fails open at launch (D-08).
+export const builtOverlayShimPath = fixAsarPath(
+  join(publicDir, 'bin', process.arch, 'darwin', 'overlay_shim.dylib')
+)
+
 // Phase 51 Plan 01 (D-51-01): per-appId staging root for the bridge helper's
 // own cwd. Each running helper gets its OWN subdirectory
 // `<steamBridgeHelperStateDir>/<appId>/` so two concurrently-running

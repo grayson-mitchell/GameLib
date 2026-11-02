@@ -20,6 +20,7 @@
 # present on disk. The rules below stay as belt-and-braces only, so a future
 # toolchain change that re-emits them mid-build cannot be silently committed.
 **/steam-bridge-helper
+**/overlay_shim.dylib
 **/steam_api.dll
 **/steam_api.pdb
 **/steam_api_shim.lib
