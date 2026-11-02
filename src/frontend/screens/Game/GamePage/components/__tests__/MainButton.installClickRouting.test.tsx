@@ -272,7 +272,7 @@ describe('MainButton — install click routing (260907-dbh)', () => {
     expect(violations).toEqual([])
   })
 
-  it('R3: partition pin — exactly {notInstallable, notSupportedGame, queued, installing, settingUpBottle} change the label for a gog game', async () => {
+  it('R3: partition pin — exactly {notInstallable, notSupportedGame, queued, installing, settingUpBottle, downloadingEngine (59-22)} change the label for a gog game', async () => {
     const flags = Object.keys(DEFAULT_IS) as (keyof GameContextType['is'])[]
     const results: ProbeResult[] = []
     for (const flag of flags) {
@@ -286,6 +286,7 @@ describe('MainButton — install click routing (260907-dbh)', () => {
 
     expect(labelChangingFlags).toEqual(
       [
+        'downloadingEngine',
         'installing',
         'notInstallable',
         'notSupportedGame',

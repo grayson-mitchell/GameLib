@@ -64,6 +64,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     is.notSupportedGame ||
     is.notInstallable ||
     is.importing ||
+    is.downloadingEngine ||
     // Steam installs cannot be cancelled from GamerLib — disable the button while polling (D-07).
     (gameInfo.runner === 'steam' && is.installing) ||
     // Phase 17 (17-11), GAP 3 gap-closure: a guided bottle-setup surface is
@@ -204,6 +205,18 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
         <span className="buttonWithIcon">
           <Warning />
           {t('status.steamWaitingRestart', 'Restart Steam to finish')}
+        </span>
+      )
+    }
+
+    // 59-22 (G1): the built-in engine is being fetched for a title that is not
+    // installed yet. Without this the label fell through to "Install" with an
+    // enabled button for the whole engine setup.
+    if (is.downloadingEngine) {
+      return (
+        <span className="buttonWithIcon">
+          <FontAwesomeIcon icon={faSyncAlt} className="fa-spin" />
+          {engineDownloadLabel(statusContext, t)}
         </span>
       )
     }
