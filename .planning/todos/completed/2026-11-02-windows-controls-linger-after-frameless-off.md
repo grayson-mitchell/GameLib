@@ -96,3 +96,14 @@ contains the fix commits, on the Windows box:
    only in the frameless (overlay) state.
 
 Record the result here, then move this todo to `.planning/todos/completed/`.
+
+## Resolution (live gate passed 2026-11-02, real Windows)
+
+The operator ran the live gate on the Windows box with a GameLib build containing the 261102-dma
+fix commits. Step 1 (toggle "Use frameless window" OFF: exactly one set of window buttons, the
+native ones, no restart) passed. Step 2 (toggle it back ON: GameLib's set returns on the tab bar,
+the native frame goes away, no restart) passed. Step 3 (optional, Mac) was not run; the macOS side
+effect (the `frameless` / `macOverlayTitlebar` classes and the 78px traffic-light reserve
+following the toggle live) is covered by the jest flip rows only, and Linux was not live-checked.
+The same session's feedback on the buttons' look (black block, oversized, underscore minimize) is
+handled in quick 261102-p8r.
