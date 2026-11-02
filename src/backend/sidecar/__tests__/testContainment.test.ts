@@ -949,6 +949,11 @@ const IN_SCOPE_SUITES = [
  * the Steam store modules, the electron stores, `engineState`/`engineDecision` and `../../ipc` all
  * replaced by `jest.mock` factories, so no path module, `homedir()`, filesystem or child process is
  * reached. Its landing commit did not classify it; the T-34.2-83 tripwire caught it.
+ *
+ * `gameSettingWrite.test.ts` (Phase 59 Plan 25, G17) is structurally contained: it replaces
+ * `../../game_config` and `../../logger` with `jest.mock` factories and calls the pure
+ * `applyGameSetting`, so no path module, `homedir()`, filesystem or child process is reached.
+ * Its landing commit did not classify it; the T-34.2-83 tripwire caught it (59 gap round 2).
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -970,6 +975,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'flowRegistrationCensus.test.ts',
   'focusRowFirstLaunchHydration.test.ts',
   'gameDetailsImportGate.test.ts',
+  'gameSettingWrite.test.ts',
   'gamelibNamespaceLoad.test.ts',
   'gogPresenceBootWire.test.ts',
   'humbleFlows.test.ts',

@@ -162,8 +162,16 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // `git diff --stat -- src/backend/sidecar/settingsFlowRegistration.ts`:
   // 1 insertion, 1 deletion. Prior digest:
   // 43afa3fb9f2352ee25a13811958c017c4474445bc0ea468ce67ed29674087351
+  // Re-pinned 2026-11-02 by Phase 59 Plan 25 (G17), per this gate's documented
+  // procedure. The per-game write in `setSetting` changed from
+  // `GameConfig.get(appName).setSetting(key, value)` to
+  // `applyGameSetting(appName, key, value)` (one retry, then logError), plus the one
+  // import of `./gameSettingWrite`. No registration, channel or guard moved; the D-09
+  // `steamLibrary.has(appName)` gate is untouched and still proven by the semantic
+  // pins below. 2 insertions, 1 deletion. Prior digest:
+  // b408ff7c38a5238b5c1c88eba9f63382294428246a290c0ef7602f48f0414862
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    'b408ff7c38a5238b5c1c88eba9f63382294428246a290c0ef7602f48f0414862'
+    '4c818e88579365b61da196d5f95975dcc785d5cf0e1cc3126f2ce8abfb209657'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
