@@ -2,388 +2,319 @@
 phase: 59-steam-engine-fallback-when-crossover-is-unavailable
 reviewed: 2026-11-02T00:00:00Z
 depth: standard
-scope: gap-closure round, plans 59-14 to 59-23 (git diff 546af6c1d..HEAD per file)
-files_reviewed: 25
+scope: gap-closure round 2, plans 59-24 to 59-30 plus 8e7f931f8 and f63afb1f3 (git diff 4cf305b51..HEAD per file; phase-60 commits ignored)
+files_reviewed: 26
 files_reviewed_list:
+  - src/backend/game_config.ts
+  - src/backend/sidecar/gameSettingWrite.ts
+  - src/backend/sidecar/settingsFlowRegistration.ts
   - src/backend/storeManagers/steam/bottle.ts
-  - src/backend/storeManagers/steam/bridge/bridgeVerdict.ts
-  - src/backend/storeManagers/steam/electronStores.ts
-  - src/backend/storeManagers/steam/engine/engineDecision.ts
   - src/backend/storeManagers/steam/engine/engineState.ts
   - src/backend/storeManagers/steam/engine/engineSwitch.ts
   - src/backend/storeManagers/steam/engine/fallbackEngine.ts
-  - src/backend/storeManagers/steam/engine/launchDeadline.ts
   - src/backend/storeManagers/steam/games.ts
   - src/backend/tools/index.ts
-  - src/backend/utils/aborthandler/aborthandler.ts
   - src/common/types/steam.ts
-  - src/frontend/App.tsx
-  - src/frontend/components/UI/SteamEngineLaunchNotice/index.scss
-  - src/frontend/components/UI/SteamEngineLaunchNotice/index.tsx
-  - src/frontend/hooks/constants.ts
-  - src/frontend/hooks/engineDownloadLabel.ts
-  - src/frontend/screens/ConsoleMode/components/LaunchOverlay/index.tsx
-  - src/frontend/screens/Game/GamePage/components/EngineBadge.tsx
-  - src/frontend/screens/Game/GamePage/components/GameStatus.tsx
-  - src/frontend/screens/Game/GamePage/components/MainButton.tsx
-  - src/frontend/screens/Game/GamePage/index.css
-  - src/frontend/screens/Game/GamePage/index.tsx
+  - src/frontend/hooks/useSettingsContext.ts
+  - src/frontend/screens/Game/GamePage/components/SteamEngineNotices.tsx
   - src/frontend/screens/Settings/components/SteamEngineOverride.tsx
-  - src/frontend/state/SteamEngineState.ts
+  - src/backend/__tests__/gameConfigFirstWrite.test.ts
+  - src/backend/sidecar/__tests__/gameSettingWrite.test.ts
+  - src/backend/sidecar/__tests__/gameDetailsImportGate.test.ts
+  - src/backend/sidecar/__tests__/testContainment.test.ts
+  - src/backend/storeManagers/steam/__tests__/bottle.test.ts
+  - src/backend/storeManagers/steam/__tests__/games.test.ts
+  - src/backend/storeManagers/steam/engine/__tests__/engineState.test.ts
+  - src/backend/storeManagers/steam/engine/__tests__/engineSwitch.test.ts
+  - src/backend/storeManagers/steam/engine/__tests__/fallbackEngine.test.ts
+  - src/backend/tools/__tests__/dxvkInstallRemove.test.ts
+  - src/frontend/hooks/__tests__/useSettingsContext.setSetting.test.ts
+  - src/frontend/screens/Game/GamePage/components/__tests__/SteamEngineNotices.test.tsx
+  - src/frontend/screens/Settings/components/__tests__/SteamEngineOverride.save.test.tsx
 findings:
-  critical: 3
-  warning: 7
-  info: 6
+  critical: 0
+  warning: 6
+  info: 10
   total: 16
 status: issues_found
 ---
 
-# Phase 59: Code Review Report (gap-closure round 59-14 to 59-23)
+# Phase 59: Code Review Report (gap-closure round 2)
 
 **Reviewed:** 2026-11-02
 **Depth:** standard
-**Files Reviewed:** 25
+**Files Reviewed:** 26
 **Status:** issues_found
-
-## Summary
-
-This round reviews `git diff 546af6c1d HEAD` for the 25 listed files. Surrounding code was read
-where a change depends on it: the download queue cancel path, `aborthandler`, `runWineCommand`,
-`useSettingsContext` and the `setSetting` sidecar handler.
-
-Most of the previous round's findings are fixed. The DXVK restore is now strict. The engine marker
-records DXVK, and records a failed install. The deadline stands down when no monitor starts. The
-creation decision no longer reads another bottle's trial clock. Shared bottles refuse an engine
-switch. The page preflight no longer kills a wineserver.
-
-Three problems remain at blocker level:
-
-1. **Install cancel (G13).** A cancel during provisioning is lost. The provisioning abort
-   controller is deleted before the depot download registers a new one, and nothing checks
-   `signal.aborted` in between. This is the G13 root cause.
-2. **Reinstall after cancel (G16).** A cancelled bridge download trips the session circuit
-   breaker. That is the G16 root cause.
-3. **Failed restore.** When the restore to CrossOver fails, the bottle is left half-cleaned, the
-   marker still says DXVK is installed, and the game launches on CrossOver anyway. This reproduces
-   the G7 end state by a new route.
-
-The sidecar exit contract is honoured only in part. Engine downloads are now registered for the
-stdin-EOF abort, but an abort that arrives during verify or unpack is ignored, so the install goes
-on to `wineboot` (WR-03). The new code adds no new timer, watcher or socket handles. The one
-frontend timer (the launch notice auto-hide) is cleared on unmount.
-
-No child-process spawn sites were added under `src/` or `meta/` that need `createFakeHomeProfile()`.
-
-## Prior-round findings: resolution status
-
-| ID | Prior finding (short) | Status this round |
-| --- | --- | --- |
-| CR-01 | Deadline arms with no monitor, kills running game | **Resolved.** `bindDeadlineToMonitor` (`launchDeadline.ts:129-141`) is wired at `games.ts` monitor start, and `STAGING_MONITOR_MATCH` is removed. |
-| CR-02 | Install-time redists always run on stock CrossOver | **Resolved.** `resolveInstallEngineSettings` (`games.ts:2421`) carries the creation engine or runs decide+prepare. IN-04 below notes a status-label side effect. |
-| CR-03 | Restore to CrossOver marks success with no DXVK source | **Resolved as stated** (missing source is now `dxvk-failed`, marker untouched, source from marker or pin, pin downloaded). **But see new CR-03:** the launch still proceeds on CrossOver after that failure, and a partly done restore leaves a marker that is wrong. |
-| WR-01 | DXVK restore reports success whatever happens | **Resolved.** Strict path in `tools/index.ts:316-421`. It checks `reg delete` and `wineboot -u` codes and removes the version file last and synchronously. |
-| WR-02 | Non-timeout CrossOver create failure does not fall back | **Resolved.** `CROSSOVER_CREATE_FAILED` plus partial-dir removal. WR-04 covers the missing wineserver stop. |
-| WR-03 | Creation decision probes a different bottle | **Resolved.** Presence and executable check only (`engineDecision.ts:516-537`). |
-| WR-04 | Engine state and override on every Steam title | **Resolved, with a gap.** Gated on `findBridgeInstallBottle` and `overrideEligible`. WR-07 covers DRM titles installed before this change. |
-| WR-05 | Stored-but-unoffered override shows as Automatic | **Resolved.** `storedExtraOption` adds a disabled "(not installed)" entry. |
-| WR-06 | Engine switch on shared bottle kills other titles | **Resolved.** `shared-bottle` refusal at `engineSwitch.ts:371-377`, with an in-app dialog. |
-| WR-07 | Page preflight can `wineserver -k` a live game | **Resolved.** `killOnTimeout: false` on page reads, and a monitor-phase guard on launch. WR-02 covers the misleading badge this introduces. |
-| WR-08 | Launch failures reported only via `notify()` | **Resolved.** `showEngineDialog` is used for download failure and selection rejection. |
-| WR-09 | Failed DXVK install leaves marker on old engine | **Resolved.** `markerFor(n, 'failed')` plus same-identity retry (`engineSwitch.ts:331-363`). |
-| WR-10 | Concurrent downloads share one callback and signal; `.tmp-*` leak | **Resolved.** Listener fan-out, all-callers-aborted rule, `.tmp-*` prune when idle. IN-01 and IN-02 cover the remaining edges. |
-| WR-11 | Engine download keeps sidecar alive after quit, then spawns wine | **Partially resolved.** The download is registered with `callAllAbortControllers` and provisioning stops on an aborted download. An abort during verify or unpack is ignored and provisioning goes on to `wineboot` (WR-03). |
-
-Info items from the prior round:
-
-- IN-01 is resolved: the constant was removed.
-- IN-02 is partly resolved: `resolveCrossoverBinDirForEngine` exists, but `engineSwitch.ts` still
-  keeps its own copy (new IN-05).
-- IN-03 is resolved through `lastCrossoverInstalled`.
-- IN-04 is resolved with a 60 s TTL on unhealthy results.
-- IN-05 is resolved with the `onSwitching` "setting-up" status.
-- IN-06 is resolved: `args.appId` is now logged.
-
-## Known UAT gaps G13-G19: code analysis
-
-- **G13 is root-caused.** See CR-01.
-- **G14 is downstream of G13.** It is not analysed separately.
-- **G16 is root-caused.** See CR-02. It is a cancelled depot download, not the provisioning
-  cancel.
-- **G17 is not root-caused in these files.** The save path reads clean from end to end:
-  1. `SteamEngineOverride.tsx:223-228` passes `onChange={setOverride}`.
-  2. `useSetting` calls `useSettingsContext.setSetting` (`useSettingsContext.ts:80-88`). Its
-     only filter is a JSON-equality no-op check.
-  3. The sidecar `ipcMain.on('setSetting')` handler (`settingsFlowRegistration.ts:160-186`) calls
-     `GameConfig.setSetting`, which always logs `Setting <key>`.
-
-  No step filters by value. A "pinned saves, automatic/crossover don't" split therefore has to come
-  from before `onChange` fires, in the MUI `Select` and `MenuItem` set the view renders. The next
-  step is a renderer-side probe: log in `onChange` and in `setSetting`. The cause is not in the
-  backend.
-- **G18 is root-caused.** See WR-06.
-- **G19 is root-caused.** See WR-05.
 
 ## Narrative Findings (AI reviewer)
 
-## Critical Issues
+## Summary
 
-### CR-01: A cancel during engine or bottle setup is dropped, and the depot download starts anyway (root cause of G13)
+This round closes the prior round's three criticals. CR-01 (a cancel during provisioning is
+dropped), CR-02 (a cancel trips the bridge circuit breaker) and CR-03 (a failed restore still
+launches on CrossOver) are each fixed in the code paths they named. WR-01 through WR-06 and IN-06
+are also fixed. The synchronous `GameConfig.load()` (8e7f931f8) is correct:
 
-**File:** `src/backend/storeManagers/steam/games.ts:2288-2309`, `2327-2416`, `3014`; `src/backend/storeManagers/steam/engine/fallbackEngine.ts:235-257`
-**Issue:** The queue cancel (`downloadqueue.ts` `stopCurrentDownload`) calls
-`callAbortController(appId)`. During provisioning, that aborts the controller registered at
-`games.ts:2292`. Nothing then acts on the abort:
+- `load()` has no awaiting caller.
+- Every caller that reads `.config` already falls back with `config || await getSettings()`.
+- Class-field order means `version`/`isExplicit` are set before `load()` runs.
+- The explicit-mode flush writes the merged `readSettings()` result, so it drops no stored key.
 
-1. **Bottle creation ignores the signal.** `provisionBridgeBottle` / `createFallbackBridgeBottle`
-   (`games.ts:2354`, `2359`, `2384`) take no signal. `cxbottle --create` or `wineboot -i` runs to
-   completion.
-2. **An installed engine never reads the signal.** When the engine is already installed (the usual
-   case after the first install of a session, and the Batman case at 17:22),
-   `doEnsure` returns `ok` at once and never looks at the signal.
-3. **An abort during verify or unpack is ignored.** It is only checked before and after
-   `downloadFile`, so `ensurePinnedEngine` returns `ok: true` (`fallbackEngine.ts:235-257`).
-4. **The abort is thrown away.** After `provisionBridgeBottleForInstall` returns `{ engine }`, the
-   `finally` at `games.ts:2305-2307` deletes the aborted controller. `installBridgeGameLeased` is
-   then called with no `signal.aborted` check. `runNativeDepotDownload` registers a fresh,
-   un-aborted controller under the same id (`games.ts:3014`).
+No blockers were found. The remaining defects are listed below.
 
-So the depot stream runs with no queue entry behind it. That matches the 17:22-17:24 trace: the
-queue removed the title, `SteamGame.stop` was a no-op (no `nativeInstallsInFlight` entry yet), and
-chunk-stream continued.
-**Fix:** Check the signal at every hand-off, and do not let the download create a controller that
-hides a cancel:
-```ts
-// games.ts, after provisioning
-if (signal?.aborted) {
-  sendGameStatusUpdate({ appName: this.appId, runner: 'steam', status: 'done' })
-  return { status: 'abort' }
-}
-// provisionBridgeBottleForInstall: after ensureBuiltInEngineForInstall and after each
-// provisionBridgeBottle, `if (signal?.aborted) return { result: { status: 'abort' } }`
-// fallbackEngine.installArtifact: `if (opts.signal?.aborted) throw new StageError('aborted', ...)`
-// after sha256OfFile and again after extractFiles, before renameSync.
-```
-Also thread the signal into `provisionBridgeBottle` so `spawnAsync` / `wineboot` can be killed.
-Remove the partly created bottle on abort. That also addresses G15 for this path.
+- **WR-07's fix is incomplete.** A persisted `mode` takes precedence over the CEG signal. The
+  install prefetch writes `mode: 'tcp'` for every CEG title, so new CEG installs are still offered
+  the override.
+- **The controller handoff still drops cancels.** IN-03's replacement controller is deleted by the
+  tearing-down run it replaced. The depot run also overwrites the provisioning controller after it
+  awaits a prior run.
+- **A failed per-game write is only logged.** The renderer and the in-memory `GameConfig` keep the
+  new value while the file keeps the old one, and the launch reads the file.
+- **The forced-CrossOver "broken" notice is wrong.** It says the launch "may fail", but
+  `decideLaunchEngine` always refuses that launch.
 
-### CR-02: A cancelled bridge depot download trips the session circuit breaker, so the reinstall goes to bottled Steam (root cause of G16)
-
-**File:** `src/backend/storeManagers/steam/games.ts:2485-2488` (with `3290-3297`, `3480`, `3717`)
-**Issue:** A user cancel during the depot stream returns `{ status: 'abort' }` from
-`runNativeDepotDownload` (`games.ts:3290-3297`, after `markSteamInstallIncomplete`).
-`installBridgeGameLeased` treats every non-`done` status as a bridge failure:
-```ts
-if (downloadResult.status !== 'done') {
-  markBridgeFailedThisSession(this.appId)
-  return downloadResult
-}
-```
-`bridgeFailedThisSession` then feeds `failedThisSession` into `resolveBridgeRoute` (`games.ts:3480`).
-The next `install()` in the session is routed off the bridge. On a machine without CrossOver it
-stops with "CrossOver is required". That is exactly the G16 trace at 17:30:57, which followed the
-G14 Resume-then-cancel at 17:28:55. The UAT's suspicion of `bridgeFailedThisSession` is correct.
-The trigger is the depot-stream cancel, not the provisioning cancel.
-**Fix:** A user abort is not a bridge failure:
-```ts
-if (downloadResult.status === 'abort') return downloadResult
-if (downloadResult.status !== 'done') {
-  markBridgeFailedThisSession(this.appId)
-  return downloadResult
-}
-```
-
-### CR-03: A failed restore to CrossOver still launches on CrossOver, and a partly done restore leaves a marker that claims DXVK is installed
-
-**File:** `src/backend/storeManagers/steam/games.ts:4152-4160`; `src/backend/storeManagers/steam/engine/engineSwitch.ts:390-441`; `src/backend/tools/index.ts:338-421`
-**Issue:** There are two linked defects.
-
-1. **The launch goes ahead on CrossOver after a failed restore.** On `dxvk-failed` for a CrossOver
-   selection, `selectLaunchEngine` logs "the restore is retried on the next launch" and continues.
-   The game then runs on CrossOver over DXVK-macOS DLLs and overrides, which is the G7 failure.
-   This is easy to reach. A licensed user never has the pin (D-05), so `resolveRestoreSource`
-   downloads it (`engineSwitch.ts:293`). Offline, or after any download failure, it returns null
-   (`dxvk-failed`, "no DXVK source"), and every launch runs CrossOver with DXVK fully installed
-   until the download succeeds.
-2. **A partly done restore leaves the marker wrong.** The strict restore is destructive before it
-   knows the outcome. It deletes the overrides (`reg delete` loop), then the DLLs (`rmSync` with
-   `force`), and only then judges failure, usually from `wineboot -u` (`tools/index.ts:405-415`).
-   When `wineboot -u` fails, DLLs and overrides are already gone, but `current_dxvk-macOS` stays
-   and the marker stays `pinned` with `dxvk: {dir, version}`. If the next launch picks the pinned
-   engine again (for example, CrossOver expired meanwhile), `identityOf(prev) === identityOf(next)`
-   and `prev.dxvk !== 'failed'`. `prepareBottleForEngine` returns `changed: false`, and the game
-   runs on Wine-Staging with no DXVK DLLs. Writing `'failed'` would not fix it either: the
-   `backup` path short-circuits on `currentVersion === globalVersion` ("already installed") and
-   does not copy the DLLs back.
-
-**Fix:**
-- Treat `dxvk-failed` on a CrossOver selection as a launch blocker. Call `clearEngineSelection`,
-  then `showEngineDialog` ("GameLib couldn't finish switching this game back to CrossOver"), and
-  return `{ ok: false }`.
-- On a strict restore failure, rewrite the previous marker with `dxvk: 'failed'`.
-- In `installRemove('backup', source)`, skip the `currentVersion === globalVersion` short-circuit
-  when the caller passes `source` (or a `force` flag), so the retry recopies the DLLs and
-  re-registers the overrides.
+Four open Info items from the prior review are carried forward: old IN-01, IN-02, IN-04 and IN-05.
 
 ## Warnings
 
-### WR-01: A user cancel during the engine download is reported as an install error
+### WR-01: CEG titles are still offered the engine override, because a persisted `mode: 'tcp'` beats the CEG signal
 
-**File:** `src/backend/storeManagers/steam/games.ts:2208-2228`, `2347-2351`, `2378-2383`
-**Issue:** When the provisioning signal aborts the download, `ensurePinnedEngine` resolves
-`{ ok: false, reason: 'aborted' }`. `ensureBuiltInEngineForInstall` maps every failure to
-`{ status: 'error', error: "GameLib couldn't download its built-in engine (aborted). Check your
-connection…" }`. That result goes back through `installBridgeGame` to the queue, whose `'error'`
-branch (`downloadmanager/utils.ts`) raises the failure dialog and logs "No in-flight download to
-abort". A deliberate cancel therefore shows up as a connection failure.
-**Fix:** Return `{ status: 'abort' }` when `result.reason === 'aborted'`, before building the error
-result.
+**File:** `src/backend/storeManagers/steam/engine/engineState.ts:131-139`; writer at `src/backend/storeManagers/steam/games.ts:4395-4400` and `4608`
+**Issue:** The WR-07 rationale says CEG launches are refused, so the override has no effect.
+`isDrmModeFromVerdict` checks the CEG signal only when `mode` is undefined:
 
-### WR-02: A single page-read timeout shows "Built-in engine · CrossOver isn't working" for a healthy CrossOver
+```ts
+if (verdict.mode !== undefined) return verdict.mode === 'steamclient-layer'
+return verdict.drm === 'ceg' || verdict.scan?.drmWrapper === 'steamstub'
+```
 
-**File:** `src/backend/storeManagers/steam/engine/engineDecision.ts:244-252`; `src/backend/storeManagers/steam/engine/engineState.ts:169-180`, `242`, `285-290`
-**Issue:** With `killOnTimeout: false`, the first `--demo-status` timeout returns
-`{ kind: 'broken', inconclusive: true }`. `getSteamEngineState` correctly declines to cache it, but
-still passes it to `compute`, which maps any non-healthy preflight to `engine: 'builtin',
-reason: 'cx-broken'`. The new visible-reason badge (59-19) then states as fact something the probe
-itself calls inconclusive. Separately, `recordLaunchDecision` caches `decision.preflight` with no
-`inconclusive` filter, so a launch-time inconclusive result (game running) is kept for up to 60 s.
-**Fix:** In `getSteamEngineState`, set `preflight = null` when `r.inconclusive` (no badge rather
-than a wrong one). Apply the same `inconclusive` guard to the cache write in
-`recordLaunchDecision`.
+`prefetchBridgeDrmDownloads` (install) and the launch path both persist
+`resolveBridgeMode(drmWrapper, cegMarkers)`. That returns `'tcp'` whenever CEG markers are present
+(`steamclientLayerMode.ts:32-39`). As a result:
 
-### WR-03: An abort during verify or unpack is ignored, so a quit mid-install still runs `wineboot` (WR-11 remainder)
+- Every CEG title installed after 59-15 has `mode: 'tcp'` and `drm: 'ceg'`, and is treated as
+  eligible.
+- Only legacy verdicts get the exclusion.
 
-**File:** `src/backend/storeManagers/steam/engine/fallbackEngine.ts:222-257`; `src/backend/storeManagers/steam/games.ts:2343-2358`
-**Issue:** Registering the download under `steam-engine-download:<pin>` lets the stdin-EOF release
-abort it. `installArtifact`, however, only checks `signal.aborted` before and after `downloadFile`.
-An abort during the SHA-256 pass or the `tar` extract (tens of seconds for the about 228 MB Wine
-archive) finishes, renames into place and returns `ok`. `provisionBridgeBottleForInstall` has no
-`signal.aborted` check of its own, so it goes on to `createFallbackBridgeBottle` and spawns
-`wineboot` after the shell has gone. That breaks half 2 of the exit contract: in-flight work
-started after quit. The same applies to the cancel path (CR-01, point 3).
-**Fix:** Check `opts.signal?.aborted` after `sha256OfFile` and after `extractFiles` (throw
-`StageError('aborted')`). In `provisionBridgeBottleForInstall`, check `signal?.aborted` before
-each `provisionBridgeBottle` call.
+The same title therefore flips eligibility depending on when it was installed.
 
-### WR-04: The new create-failed path deletes the bottle directory without stopping the wineserver `cxbottle` started
+**Fix:** Check CEG first, independent of mode:
+```ts
+if (!verdict) return false
+if (verdict.drm === 'ceg') return true
+if (verdict.mode !== undefined) return verdict.mode === 'steamclient-layer'
+return verdict.scan?.drmWrapper === 'steamstub'
+```
+Add a test with `{ mode: 'tcp', drm: 'ceg' }`.
 
-**File:** `src/backend/storeManagers/steam/bottle.ts:2331-2361`
-**Issue:** The timeout branch runs `killBottleWineServer(bottleName, binDir, 15_000)` before
-`removeCreatedBottleDir`. The two new `CROSSOVER_CREATE_FAILED` branches (non-zero exit with no
-conf, and throw) delete the directory straight away. A `cxbottle --create` that got as far as
-`wineboot` leaves a CrossOver wineserver bound to a prefix that no longer exists. The install then
-falls back immediately and creates the same bottle name with the built-in engine. The orphan
-outlives the install and the app.
-**Fix:** Run `await killBottleWineServer(bottleName, binDir, 15_000)` before
-`removeCreatedBottleDir` in both new branches, as the timeout branch does.
+### WR-02: The IN-03 replacement controller is deleted by the tearing-down run it replaced, so a cancel during provisioning is dropped again
 
-### WR-05: The restore stops the previous wineserver with a binary that may not exist yet, then downloads the engine with no progress (root cause of G19)
+**File:** `src/backend/storeManagers/steam/games.ts:2316-2322` (reuse decision); `3216-3221` (prior run's `finally`)
+**Issue:** IN-03's scenario is a previous depot run that was cancelled and is still tearing down,
+with its aborted controller in the map. The new install now calls `createAbortController(appId)`,
+which overwrites that map entry with its own controller.
 
-**File:** `src/backend/storeManagers/steam/engine/engineSwitch.ts:386`, `390-393`, `293`, `96-108`
+The prior run's `runNativeDepotDownload` `finally` then calls `deleteAbortController(this.appId)`
+unconditionally, which removes the **new** controller. A cancel issued during the new install's
+engine download or bottle creation calls `callAbortController(appId)`. That logs "Could not find a
+matching abort controller" and does nothing. Provisioning and the depot download continue: the
+CR-01 symptom, in the reinstall-right-after-cancel case.
+
+This round's ownership guard in `install()`'s own `finally` (`getAbortSignal(id) === signal`) is
+correct, but the depot run's `finally` has no equivalent.
+
+**Fix:** Make the depot run's cleanup ownership-checked too:
+```ts
+} finally {
+  nativeInstallsInFlight.delete(this.appId)
+  if (getAbortSignal(this.appId) === controller.signal) {
+    deleteAbortController(this.appId)
+  }
+}
+```
+Alternatively, wait for `nativeInstallsInFlight.get(appId)?.promise` to settle before registering
+the provisioning controller.
+
+### WR-03: A cancel that lands while the depot run waits for a prior run to settle is overwritten
+
+**File:** `src/backend/storeManagers/steam/games.ts:3062-3081`, `3099`
+**Issue:** The CR-01 comment in `installBridgeGameLeased` relies on `installDepotDownload` reaching
+`createAbortController` synchronously. That holds only when no `nativeInstallsInFlight` entry
+exists. When an aborted entry exists, `installDepotDownload` first awaits
+`existing.promise.catch(...)`. During that await the provisioning controller is still the
+registered one, and a cancel aborts it.
+
+`runNativeDepotDownload` then calls `createAbortController(this.appId)` unconditionally. A fresh,
+un-aborted controller replaces the aborted one, and the download starts despite the cancel.
+
+**Fix:** Pass the install signal into `installDepotDownload` and re-check it after the await:
+```ts
+await existing.promise.catch(() => undefined)
+if (opts.signal?.aborted) return { status: 'abort' }
+```
+Alternatively, have `runNativeDepotDownload` refuse to start when the currently registered signal
+is already aborted.
+
+### WR-04: A per-game write that fails both attempts leaves the renderer, the in-memory config and the file disagreeing, with only a log line
+
+**File:** `src/backend/sidecar/gameSettingWrite.ts:16-27`; `src/frontend/hooks/useSettingsContext.ts:56-64`; `src/backend/game_config.ts:331-345`
 **Issue:**
-- **Ordering.** `killPrevious(bottleName, prev, deps)` runs at line 386, using
-  `prev.wineserverBin`. Only after that does `resolveRestoreSource` (line 392) find the pinned
-  engine missing and call `deps.ensurePinEngine(pin)` to download it. When the pin was pruned or
-  never downloaded, the kill spawns a missing `wineserver`. That is the 17:57:50
-  `killBottleWineServerWith … failed` line in item 20.
-- **Silent download.** `defaultEnsurePinEngine` passes no `onProgress` and no caller signal. The
-  roughly 228 MB download runs under a single "Setting up built-in engine" label, cannot be
-  cancelled by the user, and only the shutdown abort can bound it.
-- **Stale process.** If a stale Staging wineserver from the missing pin were still running, it
-  would not be stopped.
+- **The renderer.** `createSettingSetter` updates React state before the fire-and-forget `send`.
+- **The in-memory config.** `GameConfigV0.setSetting` assigns `this.config[key] = value` before
+  `flush()`. When `writeFileSync` throws (ENOSPC, EACCES, a read-only volume), the in-memory
+  `GameConfig` already holds the new value.
+- **The file.** It still holds the old one.
 
-**Fix:**
-- Resolve the restore source before `killPrevious`.
-- Skip the kill when `!existsSync(prev.wineserverBin)`, and log that nothing was running.
-- Pass a progress callback through `EngineSwitchDeps.ensurePinEngine`, so `selectLaunchEngine` can
-  reuse the `downloading:<n>` status, or download the pin in `selectLaunchEngine` before
-  `prepareBottleForEngine`, as the `needsDownload` path already does.
+After two failures:
 
-### WR-06: A forced CrossOver override reports "CrossOver" whatever the preflight found (root cause of G18)
+- The Settings screen shows the new value.
+- `config || getSettings()` callers see the new value.
+- `readStoredEngineOverride` / `readStoredOverlayOverride` read the file, which the launch path
+  uses, and see the old value.
 
-**File:** `src/backend/storeManagers/steam/engine/engineState.ts:165-168`
-**Issue:** `compute` maps `override === 'crossover'` to `engine: 'crossover'` before it looks at
-`preflight`. `getSteamEngineState` still runs the preflight for that override and gets
-`expired`, but the state it returns has no field that carries it. The page therefore shows a plain
-CrossOver badge on a bottle that will open CodeWeavers' expired nag at launch. That is G18.
-**Fix:** Keep `engine: 'crossover', reason: 'override'`. When `preflight.kind` is `expired` or
-`broken`, also emit a flag (for example `overrideWarning: 'cx-expired' | 'cx-broken'`) that the
-GamePage notices render, so the forced choice comes with a warning.
+The user believes the engine override changed, but the launch runs the old engine. The only trace
+is a `logError`. This is the G17 symptom ("the change vanished") with a log line added.
 
-### WR-07: DRM-mode titles installed before this change are offered the override until their next launch
+**Fix:** On final failure, drop the cached instance so memory matches disk, and tell the renderer.
+For example, `GameConfig.instances.delete(appName)` through a small static `evict(appName)`, plus a
+`sendFrontendMessage('settingWriteFailed', { appName, key })` that makes `useSettingsContext`
+re-fetch. At minimum, make `setSetting` roll back `this.config[key]` when `flush()` throws.
 
-**File:** `src/backend/storeManagers/steam/engine/engineState.ts:111-114`, `221-222`; `src/backend/storeManagers/steam/games.ts:4285-4292`, `4501`
-**Issue:** `overrideEligible` excludes DRM-mode titles only through `readBridgeModeVerdict(id) ===
-'steamclient-layer'`. That verdict is written only by an install prefetch or a launch made after
-59-15. Every existing DRM-mode bridge install has `mode === undefined`, so it is treated as
-eligible and shows the override, which has no effect on the DRM route (the original WR-04
-complaint). The same is true for a fresh install where the prefetch returned early before
-`writeBridgeModeVerdict`.
-**Fix:** Treat `undefined` as unknown and not eligible when the persisted verdict carries `drm` or
-a steamstub signal. You could also have `getSteamEngineState` resolve the mode lazily, through the
-same `resolveBridgeMode` inputs the launch uses, when the verdict is absent, and persist it.
+### WR-05: The forced-CrossOver "broken" notice says the launch "may fail", but a broken preflight always refuses the launch
+
+**File:** `src/frontend/screens/Game/GamePage/components/SteamEngineNotices.tsx:101-105`; `src/backend/storeManagers/steam/engine/engineState.ts:187-190`; cf. `src/backend/storeManagers/steam/engine/engineDecision.ts:459-466`
+**Issue:** With `override === 'crossover'`, `decideLaunchEngine` returns `kind: 'unavailable'` for
+any `broken` (or `missing`) preflight. `launchSteamGame` then shows `overrideUnavailable` and does
+not start. The new notice tells the user that CrossOver "isn't working for it. The launch may
+fail", and the badge for the same state still reads `engine: 'crossover'`.
+
+59-28's goal was truthful state, but this notice understates the outcome: the launch will not
+start at all.
+
+**Fix:** Reword `cxBroken` to say the game will not start on CrossOver until it is fixed or the
+user chooses Automatic. Optionally, set `engine` to `null` (or a distinct value) for forced
+CrossOver plus a conclusive broken preflight, so the badge does not claim CrossOver.
+
+### WR-06: `load()` resets the per-game file when the global `config.json` is missing (pre-existing, data loss), and the first-write test is order-dependent on it
+
+**File:** `src/backend/game_config.ts:165-168`; `src/backend/__tests__/gameConfigFirstWrite.test.ts:66-80`
+**Issue:**
+- **The production bug.** `if (!existsSync(configPath)) this.resetToDefaults()` tests the
+  **global** config path (`appFolder/config.json`), not `this.path`. If the global file does not
+  exist yet, the first `GameConfig.get(appId)` flushes `{ [appId]: {}, version, explicit }` over
+  the per-game file. That wipes a stored `steamEngineOverride`, `targetExe` and the rest. This
+  round made `load()` the code path every first write goes through, and the explicit-mode flush is
+  what wipes the keys. The bug was inherited, but it sits in the function this round changed.
+- **The test.** The second test seeds `38400.json` but does not write `config.json`. It passes
+  only because the first test wrote that file. Run alone (`-t 'late load'`), it takes the reset
+  path, wipes the seed, and still passes, so it no longer proves the scenario.
+
+**Fix:** Change the guard to `if (!existsSync(this.path)) this.resetToDefaults()`. Confirm that a
+new game still gets `disableUMU: false` from `readSettings`, which it does, because the file is
+absent at read time. In the test, write `config.json` in a `beforeEach` (or in the second test
+itself), and add a case asserting that a missing global config does not clear a per-game file.
 
 ## Info
 
-### IN-01: A caller that joins an engine download after every earlier caller aborted gets `aborted`; abort listeners are never removed
+### IN-01: `setSetting`'s `this.config === undefined` fallback cannot be reached, and its comment describes a state that does not occur
 
-**File:** `src/backend/storeManagers/steam/engine/fallbackEngine.ts:316-382`
+**File:** `src/backend/game_config.ts:332-336`
+**Issue:** `GameConfigV0_1`'s field initializers run after `super()` returns, so `load()` always
+sees `version === 'v0'` (equal to `currentGameConfigVersion`) and always loads. When the version is
+invalid, `reload` never constructs an instance. No instance reaches `setSetting` with `config`
+unset. The comment ("outdated version awaiting upgrade") will mislead the next reader.
+**Fix:** Delete the branch, or keep it with a comment that it is purely defensive. Also remove the
+now-stale `@ts-expect-error TODO: Somehow figure out how to synchronously load the config` at
+line 27, by using a definite-assignment `config!: GameSettings`.
+
+### IN-02: A corrupt per-game JSON file now makes `GameConfig.get` throw synchronously, so its corrupt-file fallback does nothing
+
+**File:** `src/backend/game_config.ts:55-63`, `177-179`
+**Issue:** `get()` catches the parse error, logs "Config file is corrupted" and falls back to
+`'v0'`. The V0 constructor's synchronous `readSettings()` then calls `JSON.parse` on the same file
+and throws out of the constructor. No instance is cached, and every `GameConfig.get(appId)` throws.
+Callers today are async, so the effect is still a rejection, the same as before. The fallback still
+logs the corruption but no longer yields a working instance, and the corruption is now logged twice.
+**Fix:** In `readSettings`, catch the parse error and treat the file as empty, or recover by
+resetting. Either way, `get()` should return a usable instance for a corrupt file.
+
+### IN-03: Two comments still say `GameConfig.get(id).config` "is filled asynchronously after construction"
+
+**File:** `src/backend/storeManagers/steam/bridge/overlay/overlayPolicy.ts:36-38`; `src/backend/storeManagers/steam/engine/engineDecision.ts:348-352`
+**Issue:** That is no longer true after 8e7f931f8. The file-direct readers remain justified,
+because `GameConfig.get` creates a missing file and pins defaults, but the stated reason is now
+false.
+**Fix:** Update both comments to give the reason that still applies.
+
+### IN-04: `restorePinEngine` steals `resolveInstallEngineSettings`'s JSDoc and reports an aborted download as a restore failure
+
+**File:** `src/backend/storeManagers/steam/games.ts:2473-2485`
 **Issue:**
-- **Joining a dead download.** The aborted entry stays in `inFlight` until its promise settles. A
-  reinstall right after a cancel joins it and receives `aborted`.
-- **Listener leak.** `signal.addEventListener('abort', onAbort)` is never removed when the shared
-  promise settles. A later abort on the same install signal bumps `aborted` on a dead entry. This
-  is harmless today but leaks a closure.
+- **The JSDoc.** The new arrow property sits between `resolveInstallEngineSettings`'s doc comment
+  and the method, so that comment now attaches to `restorePinEngine`.
+- **The abort.** `'status' in result ? null : result` collapses `abort` into `null`. If the
+  download is aborted (for example after joining a dead in-flight entry, see IN-06), the launch
+  shows "couldn't finish switching back to CrossOver… check your connection" instead of stopping
+  quietly the way the direct launch download at line 4192 does.
+**Fix:** Move the property above the doc comment. Let `ensurePinEngine` signal abort distinctly,
+for example by returning `'aborted'`, and have `prepareBottleForEngine` return a new `aborted`
+reason that the launch treats as a silent `{ ok: false }`.
 
-**Fix:** When `entry.controller.signal.aborted`, start a new entry instead of joining. Remove the
-listener in a `finally` on the returned promise.
+### IN-05: `applyGameSetting`'s retry runs in the same tick, so it cannot recover from the transient it was written for
 
-### IN-02: `activeArtifactInstalls++` runs before the `try`, so a `mkdtempSync` throw leaks the counter
+**File:** `src/backend/sidecar/gameSettingWrite.ts:16-27`
+**Issue:** The documented transient is "a GamesConfig file read while it is being rewritten". The
+sidecar writes per-game configs with synchronous `writeFileSync`, so no in-process reader can
+observe a half-written file. An external writer would still be mid-write on an immediate
+synchronous retry. The retry test proves only that a mocked first throw is retried.
+**Fix:** Either drop the retry and keep the log (plus WR-04's renderer notification), or write
+`flush()` atomically (temp file plus `renameSync`, as `writeMarker` in `engineSwitch.ts` does). The
+atomic write removes the truncated-read class entirely.
+
+### IN-06: (carried, prior IN-01) Joining an aborted engine download returns `aborted`; abort listeners are never removed
+
+**File:** `src/backend/storeManagers/steam/engine/fallbackEngine.ts:322-385` (listener at `368`)
+**Issue:** Unchanged by this round. With the CR-03 launch block, this now also surfaces through
+IN-04: a launch-time restore that joins a dead entry shows the restore-failed dialog.
+**Fix:** As before: start a fresh entry when `entry.controller.signal.aborted`, and remove the
+listener when the shared promise settles.
+
+### IN-07: (carried, prior IN-02) `activeArtifactInstalls++` runs before `mkdtempSync` and outside the `try`
 
 **File:** `src/backend/storeManagers/steam/engine/fallbackEngine.ts:186-187`
-**Issue:** If `mkdtempSync` throws (disk full, permissions), the counter is never decremented. From
-then on, `pruneUnpinnedEngines` never removes `.tmp-*` directories for the rest of the session.
-**Fix:** Increment after `mkdtempSync` succeeds, or move both inside the `try`.
+**Issue:** Unchanged. A `mkdtempSync` throw leaks the counter, and `pruneUnpinnedEngines` then
+skips `.tmp-*` cleanup for the rest of the session.
+**Fix:** Increment after `mkdtempSync` succeeds.
 
-### IN-03: The provisioning controller can reuse a stale, already-aborted controller
+### IN-08: (carried, prior IN-04) Install-time engine prep for an existing bottle ignores cancel
 
-**File:** `src/backend/storeManagers/steam/games.ts:2289-2307`
-**Issue:** When `hasAbortController(appId)` is true (for example, a previous run still tearing
-down after pause), its possibly aborted signal is reused. Provisioning then fails at once with
-`aborted`.
-**Fix:** Reuse only when `!getAbortSignal(id)?.aborted`. Otherwise register a fresh controller.
+**File:** `src/backend/storeManagers/steam/games.ts:2509-2519`
+**Issue:** `ensureBuiltInEngineForInstall(decision.pin)` is still called without the install
+signal. The new `restorePinEngine` dep has no signal either, so a restore download during install
+is not cancellable.
+**Fix:** Thread the install signal through `resolveInstallEngineSettings` and `restorePinEngine`.
 
-### IN-04: Install-time engine prep for an existing bottle shows the engine label through "finishing" and ignores cancel
-
-**File:** `src/backend/storeManagers/steam/games.ts:2421-2466`, `2691-2714`
-**Issue:**
-- **Stale label.** `resolveInstallEngineSettings` runs after `sendFinishing()`. Its
-  `ensureBuiltInEngineForInstall(decision.pin)` sends `engine-download` and `setting-up` statuses,
-  which replace "finishing" until the next `sendFinishing()`.
-- **No signal.** The download has no signal, so a cancel in that window is ignored.
-
-**Fix:** Pass the install signal, and call `sendFinishing()` again after the engine is ready.
-
-### IN-05: `engineSwitch.ts` still resolves the CrossOver bin dir itself
+### IN-09: (carried, prior IN-05) `engineSwitch.ts` still resolves the CrossOver bin dir inline
 
 **File:** `src/backend/storeManagers/steam/engine/engineSwitch.ts:113-114`
-**Issue:** The old IN-02 asked for one helper. `resolveCrossoverBinDirForEngine` now exists in
-`engineDecision.ts`, but `defaultDeps.resolveCrossoverBinDir` still calls
-`resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() })` inline.
-**Fix:** Use `resolveCrossoverBinDirForEngine`.
+**Issue:** `defaultDeps.resolveCrossoverBinDir` still calls `resolveCrossoverBinDirAsync(...)`
+directly instead of `resolveCrossoverBinDirForEngine`.
+**Fix:** Use the shared helper.
 
-### IN-06: An unhealthy restore fails for good when only the DXVK half of a pin is on disk
+### IN-10: A failed healthy restore leaves CrossOver's wineserver unstopped while the marker names the built-in engine
 
-**File:** `src/backend/storeManagers/steam/engine/engineSwitch.ts:269-283`, `409-415`
+**File:** `src/backend/storeManagers/steam/engine/engineSwitch.ts:450-469`
 **Issue:**
-- **How the half pin arises.** `doEnsure` installs DXVK first. If the Wine artifact then fails,
-  the DXVK directory stays but `isPinnedEngineInstalled` is false.
-- **What the restore then does.** `resolveRestoreSource` returns the marker's DXVK dir with
-  `wineBin: ''`. The unhealthy branch then returns "no built-in engine to restore" on every launch.
-  It never tries `ensurePinEngine`.
+- **Before the CR-03 block.** The healthy branch ran the restore through CrossOver's wine and never
+  stopped CrossOver's wineserver, because the launch continued on CrossOver anyway.
+- **What happens now.** A failed restore writes `{ ...prev, dxvk: 'failed' }` and the launch is
+  blocked.
+- **The next attempt.** If the next attempt selects the built-in engine (same identity as `prev`),
+  `installNextDxvk` retries "with no wineserver kill". It runs the built-in Wine against a bottle
+  that a CrossOver wineserver may still serve, if it has not idled out.
 
-**Fix:** When the source has no `wineBin` and CrossOver is unhealthy, fall through to
-`deps.ensurePinEngine(pin)` and take the Wine paths from it.
+**Fix:** On the failure path with `crossoverHealthy`, stop CrossOver's wineserver (via `killWith`
+with `join(binDir, 'wineserver')`) before returning `dxvk-failed`.
 
 ---
 
