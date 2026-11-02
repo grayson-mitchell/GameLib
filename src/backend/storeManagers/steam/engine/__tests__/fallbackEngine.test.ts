@@ -74,6 +74,7 @@ import {
   pinnedEnginePaths,
   pinnedEngineRoot,
   pruneUnpinnedEngines,
+  sweepStaleEngineTemps,
   sha256OfFile,
   type FallbackDownloadProgress
 } from '../fallbackEngine'
@@ -418,4 +419,84 @@ test('prune removes stale .tmp-* dirs when idle, keeps them during an install', 
   expect(leftovers().length).toBeGreaterThanOrEqual(2)
   callAllAbortControllers()
   await p
+})
+
+describe('sweepStaleEngineTemps', () => {
+  const logger =
+    jest.requireMock<typeof import('backend/logger')>('backend/logger')
+
+  it('G20: removes only .tmp-* dirs under the root', () => {
+    const root = pinnedEngineRoot()
+    mkdirSync(join(root, '.tmp-wine-abc/nested'), { recursive: true })
+    writeFileSync(join(root, '.tmp-wine-abc/nested/f'), 'x')
+    mkdirSync(join(root, '.tmp-dxvk-def'))
+    mkdirSync(join(root, 'wine-staging-11.20'))
+    mkdirSync(join(root, 'dxvk-macOS-1.10.3'))
+    mkdirSync(join(root, 'other'))
+    writeFileSync(join(root, '.tmp-note'), 'n')
+    sweepStaleEngineTemps()
+    expect(existsSync(join(root, '.tmp-wine-abc'))).toBe(false)
+    expect(existsSync(join(root, '.tmp-dxvk-def'))).toBe(false)
+    expect(existsSync(join(root, '.tmp-note'))).toBe(true)
+    expect(existsSync(join(root, 'other'))).toBe(true)
+    expect(existsSync(join(root, 'wine-staging-11.20'))).toBe(true)
+    expect(existsSync(join(root, 'dxvk-macOS-1.10.3'))).toBe(true)
+  })
+
+  it('G20: does not follow a .tmp-* symlink', () => {
+    const root = pinnedEngineRoot()
+    const outside = join(work, 'outside')
+    mkdirSync(outside, { recursive: true })
+    writeFileSync(join(outside, 'keep'), 'k')
+    mkdirSync(root, { recursive: true })
+    symlinkSync(outside, join(root, '.tmp-link'))
+    sweepStaleEngineTemps()
+    expect(existsSync(join(outside, 'keep'))).toBe(true)
+  })
+
+  it('G20: missing root is a silent no-op', () => {
+    ;(logger.logWarning as jest.Mock).mockClear()
+    const root = pinnedEngineRoot()
+    rmSync(root, { recursive: true, force: true })
+    sweepStaleEngineTemps()
+    expect(existsSync(root)).toBe(false)
+    expect(logger.logWarning).not.toHaveBeenCalled()
+  })
+
+  it('G20: removes nothing while an artifact install is in flight', async () => {
+    const root = pinnedEngineRoot()
+    const pin = await makePin()
+    hangingDownload()
+    const p = ensurePinnedEngine(pin)
+    await tick()
+    mkdirSync(join(root, '.tmp-other-9'))
+    sweepStaleEngineTemps()
+    expect(existsSync(join(root, '.tmp-other-9'))).toBe(true)
+    callAllAbortControllers()
+    await p
+  })
+
+  it('G20: an rmSync failure warns once and does not throw', () => {
+    const root = pinnedEngineRoot()
+    mkdirSync(join(root, '.tmp-wine-bad'), { recursive: true })
+    ;(logger.logWarning as jest.Mock).mockClear()
+    const spy = jest
+      .spyOn(jest.requireActual<typeof import('fs')>('fs'), 'rmSync')
+      .mockImplementationOnce(() => {
+        throw new Error('boom')
+      })
+    expect(() => sweepStaleEngineTemps()).not.toThrow()
+    spy.mockRestore()
+    expect(logger.logWarning).toHaveBeenCalledTimes(1)
+  })
+
+  it('G20: logs one info line naming the removed count', () => {
+    const root = pinnedEngineRoot()
+    mkdirSync(join(root, '.tmp-a'), { recursive: true })
+    mkdirSync(join(root, '.tmp-b'))
+    ;(logger.logInfo as jest.Mock).mockClear()
+    sweepStaleEngineTemps()
+    expect(logger.logInfo).toHaveBeenCalledTimes(1)
+    expect((logger.logInfo as jest.Mock).mock.calls[0][0]).toContain('2 stale')
+  })
 })

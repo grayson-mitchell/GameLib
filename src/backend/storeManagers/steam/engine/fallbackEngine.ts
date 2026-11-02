@@ -412,3 +412,46 @@ export function pruneUnpinnedEngines(): void {
     logWarning(`Steam engine: prune failed: ${err}`, LogPrefix.Steam)
   }
 }
+
+/**
+ * Boot-time sweep of `.tmp-*` unpack directories under the engine root (G20).
+ *
+ * An interrupted engine unpack (quit during "Unpacking built-in engine")
+ * leaves `steam-engines/.tmp-*` behind, and pruneUnpinnedEngines only runs
+ * after a successful install. Synchronous on purpose: the sidecar exit
+ * contract forbids unbounded in-flight work at boot, so this creates no timer,
+ * watcher, socket or child handle and leaves nothing running once it returns.
+ * It cannot race an install: it runs before READY, and it also returns early
+ * while an artifact install or engine download is in flight. Never throws.
+ */
+export function sweepStaleEngineTemps(): void {
+  try {
+    if (activeArtifactInstalls > 0 || inFlight.size > 0) return
+    const root = pinnedEngineRoot()
+    if (!existsSync(root)) return
+    let removed = 0
+    for (const name of readdirSync(root)) {
+      if (!name.startsWith('.tmp-')) continue
+      const full = join(root, name)
+      try {
+        if (!isContained(root, full) || full === root) continue
+        if (!lstatSync(full).isDirectory()) continue
+        rmSync(full, { recursive: true, force: true })
+        removed++
+      } catch (err) {
+        logWarning(
+          `Steam engine: could not remove stale temp ${name}: ${err}`,
+          LogPrefix.Steam
+        )
+      }
+    }
+    if (removed > 0) {
+      logInfo(
+        `Steam engine: removed ${removed} stale engine temp dir(s) at boot`,
+        LogPrefix.Steam
+      )
+    }
+  } catch (err) {
+    logWarning(`Steam engine: temp sweep failed: ${err}`, LogPrefix.Steam)
+  }
+}
