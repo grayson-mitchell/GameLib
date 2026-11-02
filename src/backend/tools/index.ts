@@ -422,7 +422,9 @@ export const DXVK = {
 
     logInfo([`installing ${tool} on...`, prefix], LogPrefix.ToolInstaller)
 
-    if (currentVersion === globalVersion) {
+    // CR-03: a source-pinned install (Steam engine switch) always recopies, so a retry after a
+    // partial restore really puts the DLLs back; only the source-less Heroic toggle short-circuits.
+    if (!source && currentVersion === globalVersion) {
       logInfo(`${tool} already installed!`, LogPrefix.ToolInstaller)
       return true
     }

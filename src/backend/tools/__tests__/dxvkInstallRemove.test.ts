@@ -214,6 +214,55 @@ describe('DXVK.installRemove with a pinned source', () => {
   })
 })
 
+describe('DXVK.installRemove backup short-circuit (CR-03)', () => {
+  let srcDir: string
+  beforeEach(() => {
+    srcDir = mkdtempSync(join(root, 'src-'))
+    for (const arch of ['x32', 'x64']) {
+      mkdirSync(join(srcDir, arch), { recursive: true })
+      for (const dll of DLLS) writeFileSync(join(srcDir, arch, dll), arch)
+    }
+    rmSync(join(prefix, '.update-timestamp'))
+    writeFileSync(join(prefix, 'system.reg'), '')
+    writeFileSync(join(prefix, 'current_dxvk'), 'same-1')
+    for (const dir of ['system32', 'syswow64'])
+      for (const dll of DLLS)
+        rmSync(join(prefix, 'drive_c/windows', dir, dll), { force: true })
+  })
+
+  it('source-pinned backup recopies when the version file already matches', async () => {
+    const ok = await DXVK.installRemove(settings(), 'dxvk', 'backup', {
+      dir: srcDir,
+      version: 'same-1'
+    })
+    expect(ok).toBe(true)
+    for (const dll of DLLS) {
+      expect(existsSync(join(prefix, 'drive_c/windows/system32', dll))).toBe(
+        true
+      )
+    }
+    expect(events.some((e) => e.startsWith('end add:'))).toBe(true)
+  })
+
+  it('source-less backup keeps the already-installed short-circuit', async () => {
+    mkdirSync(join(toolsPath, 'dxvk'), { recursive: true })
+    writeFileSync(join(toolsPath, 'dxvk', 'latest_dxvk'), 'same-1')
+    const ok = await DXVK.installRemove(settings(), 'dxvk', 'backup')
+    expect(ok).toBe(true)
+    expect(events.some((e) => e.startsWith('end add:'))).toBe(false)
+  })
+
+  it('source-pinned backup on a fresh prefix copies and records the version', async () => {
+    rmSync(join(prefix, 'current_dxvk'))
+    const ok = await DXVK.installRemove(settings(), 'dxvk', 'backup', {
+      dir: srcDir,
+      version: 'new-2'
+    })
+    expect(ok).toBe(true)
+    expect(readFileSync(join(prefix, 'current_dxvk'), 'utf-8')).toBe('new-2')
+  })
+})
+
 describe('DXVK.installRemove strict restore with a pinned source', () => {
   let srcDir: string
   const ok = { stdout: '', stderr: '', code: 0 }
