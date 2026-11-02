@@ -1,5 +1,5 @@
 ---
-status: complete
+status: testing
 phase: 59-steam-engine-fallback-when-crossover-is-unavailable
 source: [59-13-PLAN.md]
 ---
@@ -66,10 +66,52 @@ result: skipped — no other Wine-Staging-macOS build is installed: Wine Manager
 expected: (sidecar exit contract) After quitting the app following items 2-11, `pgrep -f sidecar` is empty within 10 s.
 result: pass — after Cmd-Q the sidecar (`build/main/sidecar.js`) was gone 0.0 s after `gamelib-shell` exited and `pgrep -f sidecar` was empty (the one transient match was the pnpm `tauri:dev:run` wrapper command line).
 
+## Re-UAT (gap closure 59-14..59-22)
+
+Run order groups by environment: A (no-crossover.sb, item 13 and 19 and 15 prerequisites), B (engine absent), C (nolicence.sb), D (no profile). The numbers below are stable; the order is in the 59-23 checkpoint.
+
+### 13. Install checks Steam sign-in before any engine work
+expected: (G2) Under no-crossover.sb with the Steam session signed out, installing a not-installed bridge title is refused with the sign-in prompt, no new `GameLibSteamBridge-<appid>` directory appears and no engine download starts.
+result: pending
+
+### 14. No-CrossOver install shows real engine progress and runs redists on the built-in engine
+expected: (G1, CR-02, D-05) With the pinned engine moved aside (operator go-ahead) and signed in, the label climbs through "Downloading built-in engine (N%)" with N increasing; HARD PASS REQUIREMENT: N advances past 0% to at least one intermediate value before the download ends, a label stuck at 0% or jumping from 0% to the next phase is an issue. Then "Verifying built-in engine" and "Unpacking built-in engine"; the install-time redist lines in the log run the pinned wine (path under the engine root) and no redist entry fails on a missing CrossOver binary. Prior evidence 2026-11-02 (59-22): Dungeons of Dredmor (98800), i386-recovery path, no CrossOver, engine absent, phases showed in order (downloading, verifying, unpacking, setting up, installing) and the install button was disabled then read "Installing..." (158bc680e); redist lines not yet checked.
+result: pending
+
+### 15. Fallback launch is announced in the app
+expected: (G6, D-06, IN-05) Under no-crossover.sb, launching an installed bridge title shows the in-app notice "CrossOver not found — using built-in engine" in the dev build, and the badge shows "Built-in engine (best-effort)" with "CrossOver not found" visible without hovering; after the download in item 14, the label shows "Setting up built-in engine" before "Launching".
+result: pending
+
+### 16. Expired bottle switch shows the Expired dialog at most once
+expected: (G10) On the operator-approved throwaway bottle backdated past expiry, with its marker on pinned, under nolicence.sb, override CrossOver and launch: the log shows the DXVK restore running on the built-in engine, no CodeWeavers Expired Bottle dialog appears before the launch itself, and afterwards `current_dxvk-macOS` is gone and `.gamelib-engine.json` says crossover. Set the override back to Automatic.
+result: pending
+
+### 17. CrossOver override is supported
+expected: (G9) Choosing CrossOver in Engine (advanced) shows no red Unsupported warning and the game page shows no Unsupported badge; choosing the pinned build shows both.
+result: pending
+
+### 18. Override shows the stored value and Automatic sticks
+expected: (G12, WR-05) After a restart with a non-automatic stored override, opening Settings immediately shows the stored engine (disabled while options load), never Automatic; choosing Automatic once logs one `Setting steamEngineOverride to "automatic"` and survives a restart. With operator approval, hand-set `steamEngineOverride` in that title's GamesConfig JSON to `wine-manager:0.0-missing`: the select shows "Wine Manager: 0.0-missing (not installed)" selected, and one click on Automatic saves.
+result: pending
+
+### 19. Engine UI only for bridge titles
+expected: (WR-04) Under no-crossover.sb, a native macOS Steam title's page shows no no-CrossOver note and no engine badge, and its settings have no Engine (advanced) section; a not-installed Windows title's page shows none either.
+result: pending
+
+### 20. Return to CrossOver without the pin on disk
+expected: (CR-03) Prepare a title on the built-in engine (item 15), quit, move the pinned engine aside (operator go-ahead), start without a profile and launch it: the log shows the restore source being downloaded (or, offline, a `dxvk-failed` restore with the marker left on pinned and a retry on the next launch); `.gamelib-engine.json` says crossover only when `current_dxvk-macOS` is gone.
+result: pending
+
+### 21. Quit during the engine download, and a running game outlives the deadline
+expected: (WR-11, CR-01 regression) With the pinned engine moved aside, start a no-CrossOver install, Cmd-Q during "Downloading built-in engine", and `pgrep -f build/main/sidecar.js` is empty within 10 s, no new bottle directory exists, and after the next launch no `.tmp-*` directory remains under the engine root; then launch a built-in-engine title and keep it running past 180 s with no "Game didn't start" dialog.
+result: pending
+
 ## Restore
 
 Done 2026-11-02: GameLibSteamBridge-38400's system.reg restored from the pre-test copy (cmp identical), `InstallTime.orig` removed, `--demo-status` with the licence visible reads "Standard version"; licence file unchanged (304 bytes, Oct 22 19:57) before and after. The bottle's engine marker is pinned from item 9; its next Automatic launch switches it back to CrossOver.
 
+
+Re-UAT restore (59-23): move the pinned engine back (or let GameLib re-download it), undo the throwaway bottle's backdate with backdate.py or uninstall it as the operator chooses, remove any hand-set override (`wine-manager:0.0-missing`), and confirm the licence mtime is unchanged.
 
 Undo the throwaway bottle's backdate by re-running spike-060 `backdate.py`, or delete that bottle with GameLib's uninstall, as the operator chooses. Confirm the licence file mtime is unchanged.
 
