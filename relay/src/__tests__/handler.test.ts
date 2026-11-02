@@ -350,6 +350,96 @@ describe('repeat (handler)', () => {
   })
 })
 
+describe('concurrency (CR-02)', () => {
+  // Holds the first branch creation until released, so a second request can
+  // arrive while the first is mid-publish.
+  function gate(h: Awaited<ReturnType<typeof harness>>) {
+    let release!: () => void
+    let reached!: () => void
+    const opened = new Promise<void>((r) => (release = r))
+    const hit = new Promise<void>((r) => (reached = r))
+    let held = false
+    const fetch = async (url: string, init?: RequestInit) => {
+      if (!held && init?.method === 'POST' && url.endsWith('/git/refs')) {
+        held = true
+        reached()
+        await opened
+      }
+      return h.deps.fetch(url, init)
+    }
+    return { deps: { ...h.deps, fetch }, release, hit }
+  }
+  const drm = () => JSON.stringify({ ...valid(), key: 'drm', value: 'ceg' })
+  const n = (h: Awaited<ReturnType<typeof harness>>, m: string, u: string) =>
+    h.calls.filter((c) => c.method === m && c.url.endsWith(u)).length
+
+  it('a second key for the same app waits out the first publish', async () => {
+    const h = await harness({ IP_HOURLY_LIMIT: '1000' })
+    const g = gate(h)
+    const first = handleReport(h.request({}), g.deps)
+    await g.hit
+    const second = await handleReport(h.request({ body: drm() }), g.deps)
+    expect(second.status).toBe(503)
+    expect((await second.json()).status).toBe('unavailable')
+    g.release()
+    expect((await first).status).toBe(201)
+
+    expect(n(h, 'POST', '/pulls')).toBe(1)
+    expect(h.calls.some((c) => c.method === 'PATCH')).toBe(false)
+    const cap = h.db.raw
+      .prepare("SELECT n FROM buckets WHERE bucket LIKE 'cap:%'")
+      .get() as { n: number }
+    expect(cap.n).toBe(1)
+    const row = h.db.raw
+      .prepare("SELECT outcome FROM reports WHERE key = 'drm'")
+      .get() as { outcome: string | null }
+    expect(row.outcome).toBeNull()
+    expect(h.db.raw.prepare('SELECT * FROM publish_locks').all()).toEqual([])
+  })
+
+  it('the same ref arriving mid-publish is retried, then counted', async () => {
+    const h = await harness({ IP_HOURLY_LIMIT: '1000' })
+    const g = gate(h)
+    const first = handleReport(h.request({}), g.deps)
+    await g.hit
+    expect((await handleReport(h.request({}), g.deps)).status).toBe(503)
+    g.release()
+    expect((await first).status).toBe(201)
+    const retry = await h.send({})
+    expect(retry.status).toBe(200)
+    expect(await retry.json()).toEqual({ status: 'counted', pr: 7 })
+    expect(n(h, 'POST', '/pulls')).toBe(1)
+  })
+
+  it('a live lease held elsewhere blocks GitHub entirely', async () => {
+    const h = await harness()
+    h.db.raw
+      .prepare(
+        'INSERT INTO publish_locks (app_id, token, expires) VALUES (?, ?, ?)'
+      )
+      .run('220', 'other', NOW + 60_000)
+    expect((await h.send({})).status).toBe(503)
+    expect(h.calls.filter((c) => c.url.includes('github'))).toHaveLength(0)
+  })
+
+  it('a stale lease is taken over', async () => {
+    const h = await harness()
+    h.db.raw
+      .prepare(
+        'INSERT INTO publish_locks (app_id, token, expires) VALUES (?, ?, ?)'
+      )
+      .run('220', 'other', NOW - 1)
+    expect((await h.send({})).status).toBe(201)
+    expect(h.db.raw.prepare('SELECT * FROM publish_locks').all()).toEqual([])
+  })
+
+  it('releases the lease when GitHub fails, so the report is retried', async () => {
+    const h = await harness({}, { putStatus: 409 })
+    expect((await h.send({})).status).toBe(503)
+    expect(h.db.raw.prepare('SELECT * FROM publish_locks').all()).toEqual([])
+  })
+})
+
 describe('closed', () => {
   it('stores suppressed when an operator closed the PR', async () => {
     const h = await harness(

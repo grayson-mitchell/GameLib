@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { DatabaseSync } from 'node:sqlite'
 import type { D1Like, D1StatementLike } from '../../env'
@@ -25,9 +25,12 @@ function makeStatement(
 
 export function createTestD1(): D1Like & { raw: DatabaseSync } {
   const raw = new DatabaseSync(':memory:')
-  raw.exec(
-    readFileSync(join(__dirname, '../../../migrations/0001_init.sql'), 'utf8')
-  )
+  const dir = join(__dirname, '../../../migrations')
+  for (const f of readdirSync(dir)
+    .filter((n) => n.endsWith('.sql'))
+    .sort()) {
+    raw.exec(readFileSync(join(dir, f), 'utf8'))
+  }
   return {
     raw,
     prepare: (sql: string) => makeStatement(raw, sql, [])

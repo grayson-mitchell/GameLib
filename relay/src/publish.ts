@@ -1,6 +1,7 @@
 // GitHub decision flow for a validated known-fix report (D-05..D-08, D-11,
 // D-20). GitHub is the source of truth; every call is awaited in sequence
-// (the contents API answers 409 to parallel writes).
+// (the contents API answers 409 to parallel writes). The caller must hold the
+// per-appId publish lease (CR-02), so no other request touches the branch.
 import {
   KNOWN_FIX_REPORT_PAIRS,
   type KnownFixReport
@@ -137,6 +138,8 @@ export async function publishReport(
   if (!(await input.reserveCreation())) return { status: 'rate-limited' }
 
   const baseSha = await gh.getBranchSha(baseBranch)
+  // No open PR and the lease is ours: a surviving branch is a leftover of a
+  // merged or closed PR, so resetting it to base cannot drop live work.
   if ((await gh.createBranch(branch, baseSha)) === 'exists') {
     await gh.forceBranch(branch, baseSha)
   }

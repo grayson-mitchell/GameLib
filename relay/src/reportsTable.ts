@@ -41,6 +41,51 @@ export async function upsertReport(
   return row
 }
 
+export async function readReport(
+  db: D1Like,
+  r: ReportRef
+): Promise<ReportRow | null> {
+  return db
+    .prepare(
+      `SELECT count, first_seen, last_seen, title, outcome, pr_number, issue_number FROM reports WHERE app_id = ? AND key = ? AND op = ?`
+    )
+    .bind(r.appId, r.key, r.op)
+    .first<ReportRow>()
+}
+
+/** CR-02: lease length; a crashed or cancelled publish frees the app after it. */
+export const PUBLISH_LOCK_MS = 120_000
+
+/**
+ * CR-02: take the per-appId publish lease atomically. Returns the lease token,
+ * or null when another request holds a live lease for this appId.
+ */
+export async function acquirePublishLock(
+  db: D1Like,
+  appId: string,
+  nowMs: number
+): Promise<string | null> {
+  const token = crypto.randomUUID()
+  const row = await db
+    .prepare(
+      `INSERT INTO publish_locks (app_id, token, expires) VALUES (?, ?, ?) ON CONFLICT(app_id) DO UPDATE SET token = excluded.token, expires = excluded.expires WHERE publish_locks.expires <= ? RETURNING token`
+    )
+    .bind(appId, token, nowMs + PUBLISH_LOCK_MS, nowMs)
+    .first<{ token: string }>()
+  return row?.token === token ? token : null
+}
+
+export async function releasePublishLock(
+  db: D1Like,
+  appId: string,
+  token: string
+): Promise<void> {
+  await db
+    .prepare(`DELETE FROM publish_locks WHERE app_id = ? AND token = ?`)
+    .bind(appId, token)
+    .run()
+}
+
 export async function setOutcome(
   db: D1Like,
   r: ReportRef,

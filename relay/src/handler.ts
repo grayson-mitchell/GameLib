@@ -24,12 +24,16 @@ import {
 import { renderPrBody } from './prBody'
 import { publishReport } from './publish'
 import {
+  acquirePublishLock,
   entriesForPr,
+  readReport,
+  releasePublishLock,
   setOutcome,
   setTitle,
   shouldRefreshBody,
   upsertReport,
-  type ReportRef
+  type ReportRef,
+  type ReportRow
 } from './reportsTable'
 import { lookupSteamTitle } from './steamTitle'
 
@@ -149,38 +153,49 @@ async function handle(
     })
   }
 
+  // D-13 / D-20: a row with an outcome is counted only; never opens a PR
+  // or issue.
+  const counted = (r: ReportRow) =>
+    done(200, {
+      status: 'counted',
+      ...(r.pr_number !== null ? { pr: r.pr_number } : {}),
+      ...(r.issue_number !== null ? { issue: r.issue_number } : {})
+    })
+
   try {
     if (row.outcome !== null) {
-      // D-13 / D-20: counted only; never opens a PR or issue.
       if (
         row.outcome === 'pr' &&
         row.pr_number !== null &&
         shouldRefreshBody(row.count)
       ) {
-        try {
-          const gh = await github()
-          // CR-01: never rewrite a closed or merged PR; its D-20 marker
-          // must keep exactly what it proposed when the operator closed it.
-          if ((await gh.getPullState(row.pr_number)) === 'open') {
-            await gh.updatePullBody(
-              row.pr_number,
-              renderPrBody({
-                appId: ref.appId,
-                title: row.title ?? '',
-                entries: await entriesForPr(db, ref.appId, row.pr_number, ref)
-              })
-            )
+        // CR-02: refresh only while holding the app's lease, so it cannot
+        // overwrite a concurrent fold's body. A held lease skips the refresh.
+        const lease = await acquirePublishLock(db, ref.appId, now)
+        if (lease !== null) {
+          try {
+            const gh = await github()
+            // CR-01: never rewrite a closed or merged PR; its D-20 marker
+            // must keep exactly what it proposed when the operator closed it.
+            if ((await gh.getPullState(row.pr_number)) === 'open') {
+              await gh.updatePullBody(
+                row.pr_number,
+                renderPrBody({
+                  appId: ref.appId,
+                  title: row.title ?? '',
+                  entries: await entriesForPr(db, ref.appId, row.pr_number, ref)
+                })
+              )
+            }
+          } catch (err) {
+            const name = err instanceof Error ? err.constructor.name : 'unknown'
+            console.log(`relay: ${ref.appId} body refresh failed (${name})`)
+          } finally {
+            await releaseLease(lease)
           }
-        } catch (err) {
-          const name = err instanceof Error ? err.constructor.name : 'unknown'
-          console.log(`relay: ${ref.appId} body refresh failed (${name})`)
         }
       }
-      return done(200, {
-        status: 'counted',
-        ...(row.pr_number !== null ? { pr: row.pr_number } : {}),
-        ...(row.issue_number !== null ? { issue: row.issue_number } : {})
-      })
+      return counted(row)
     }
 
     let title = row.title
@@ -195,6 +210,46 @@ async function handle(
       title = found.title
       await setTitle(db, ref, title)
     }
+
+    // CR-02: one publish per appId at a time (the branch is per appId). A
+    // request that loses the lease answers a retryable 503 and leaves its
+    // outcome NULL, so the client retries and the next attempt folds or is
+    // counted against whatever the winner produced.
+    const lease = await acquirePublishLock(db, ref.appId, now)
+    if (lease === null) {
+      return done(503, { status: 'unavailable', detail: 'busy' })
+    }
+    try {
+      return await publishLocked(title)
+    } finally {
+      await releaseLease(lease)
+    }
+  } catch (err) {
+    if (
+      err instanceof PrivateKeyFormatError ||
+      err instanceof GitHubUnavailableError
+    ) {
+      console.log(
+        `relay: ${ref.appId} ${ref.key} ${ref.op} -> 503 unavailable (${err.constructor.name}: ${err.message})`
+      )
+      return respond(503, { status: 'unavailable' })
+    }
+    throw err
+  }
+
+  async function releaseLease(lease: string): Promise<void> {
+    try {
+      await releasePublishLock(db, ref.appId, lease)
+    } catch {
+      // best effort: the lease expires on its own after PUBLISH_LOCK_MS
+    }
+  }
+
+  async function publishLocked(title: string): Promise<Response> {
+    // Re-read under the lease: a request that held it before us may have
+    // published this very ref since our upsert.
+    const fresh = await readReport(db, ref)
+    if (fresh !== null && fresh.outcome !== null) return counted(fresh)
 
     const gh = await github()
     const outcome = await publishReport({
@@ -252,16 +307,5 @@ async function handle(
         )
       }
     }
-  } catch (err) {
-    if (
-      err instanceof PrivateKeyFormatError ||
-      err instanceof GitHubUnavailableError
-    ) {
-      console.log(
-        `relay: ${ref.appId} ${ref.key} ${ref.op} -> 503 unavailable (${err.constructor.name}: ${err.message})`
-      )
-      return respond(503, { status: 'unavailable' })
-    }
-    throw err
   }
 }
