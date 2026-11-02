@@ -53,6 +53,7 @@ import {
   isBridgeBottleReady,
   getBridgeBottleSettings,
   provisionBridgeBottle,
+  CROSSOVER_CREATE_FAILED,
   CROSSOVER_CREATE_TIMEOUT,
   CROSSOVER_MISSING,
   bridgeBottleNameFor,
@@ -3157,6 +3158,37 @@ describe('Phase 59 engine registry', () => {
       expect(result.errorCode).toBe(CROSSOVER_CREATE_TIMEOUT)
       expect(mockedSpawnAsync.mock.calls[0][2]).toEqual({ timeout: 1000 })
       expect(order.some((o) => o.startsWith('wineserver -k'))).toBe(true)
+      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(name), {
+        recursive: true,
+        force: true
+      })
+    })
+
+    test('cxbottle --create exiting without a conf returns CROSSOVER_CREATE_FAILED and removes the new dir', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 1, stdout: '', stderr: 'x' })
+      const result = await provisionBridgeBottle({ bottleName: name })
+      expect(result.status).toBe('error')
+      expect(result.errorCode).toBe(CROSSOVER_CREATE_FAILED)
+      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(name), {
+        recursive: true,
+        force: true
+      })
+    })
+
+    test('CROSSOVER_CREATE_FAILED keeps a bottle dir that existed before the call', async () => {
+      mockedExistsSync.mockImplementation(
+        (p: string) => String(p) === getBottleDir(name)
+      )
+      mockedSpawnAsync.mockResolvedValue({ code: 1, stdout: '', stderr: 'x' })
+      const result = await provisionBridgeBottle({ bottleName: name })
+      expect(result.errorCode).toBe(CROSSOVER_CREATE_FAILED)
+      expect(mockedRmSync).not.toHaveBeenCalled()
+    })
+
+    test('cxbottle --create throwing returns CROSSOVER_CREATE_FAILED and removes the new dir', async () => {
+      mockedSpawnAsync.mockRejectedValue(new Error('spawn failed'))
+      const result = await provisionBridgeBottle({ bottleName: name })
+      expect(result.errorCode).toBe(CROSSOVER_CREATE_FAILED)
       expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(name), {
         recursive: true,
         force: true

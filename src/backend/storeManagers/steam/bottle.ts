@@ -89,6 +89,13 @@ export function persistedWineBins(): string[] {
 export const CROSSOVER_MISSING = 'crossover-missing' as const
 /** D-12: `cxbottle --create` exceeded its cap (for example an expired trial dialog). */
 export const CROSSOVER_CREATE_TIMEOUT = 'crossover-create-timeout' as const
+/**
+ * 59-REVIEW WR-02: `cxbottle --create` exited (or threw) without producing cxbottle.conf. A
+ * non-timeout create failure is how a broken CrossOver most often shows itself, and D-09 routes a
+ * broken CrossOver to the built-in engine (the fallback condition itself lives in
+ * installBridgeGame).
+ */
+export const CROSSOVER_CREATE_FAILED = 'crossover-create-failed' as const
 const CROSSOVER_REQUIRED_MESSAGE =
   'CrossOver is required. Install CrossOver from https://www.codeweavers.com/crossover, then try again.'
 
@@ -638,7 +645,10 @@ async function raiseBottledGameWindow(context: string): Promise<void> {
 export type ProvisionBottleResult = {
   status: 'done' | 'error'
   error?: string
-  errorCode?: typeof CROSSOVER_MISSING | typeof CROSSOVER_CREATE_TIMEOUT
+  errorCode?:
+    | typeof CROSSOVER_MISSING
+    | typeof CROSSOVER_CREATE_TIMEOUT
+    | typeof CROSSOVER_CREATE_FAILED
 }
 
 /**
@@ -2332,8 +2342,10 @@ export async function provisionBridgeBottle(opts: {
         ],
         LogPrefix.Steam
       )
+      if (createdHere) removeCreatedBottleDir(bottleName)
       return {
         status: 'error',
+        errorCode: CROSSOVER_CREATE_FAILED,
         error: `Failed to create CrossOver bridge bottle "${bottleName}"`
       }
     }
@@ -2342,8 +2354,10 @@ export async function provisionBridgeBottle(opts: {
       ['provisionBridgeBottle: cxbottle create threw', error],
       LogPrefix.Steam
     )
+    if (createdHere) removeCreatedBottleDir(bottleName)
     return {
       status: 'error',
+      errorCode: CROSSOVER_CREATE_FAILED,
       error: `Failed to create CrossOver bridge bottle "${bottleName}": ${String(error)}`
     }
   }
