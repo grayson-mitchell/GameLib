@@ -93,7 +93,8 @@ export type RunTool = (
 const OUTPUT_CAP = 1024 * 1024
 
 // cp gets 900 s because the `cp -R` fallback copies about 1 GB.
-const RUNNER_TIMEOUTS = {
+// ts-prune-ignore-next
+export const RUNNER_TIMEOUTS = {
   cp: 900_000,
   xattr: 180_000,
   codesign: 60_000,
@@ -183,21 +184,27 @@ export const defaultRunTool: RunTool = async (tool, args, opts) => {
   }
 }
 
-const BUILD_RE = /^[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/
+// ts-prune-ignore-next
+export const CROSSOVER_BUILD_RE = /^[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/
 const MAX_NTDLL_BYTES = 16 * 1024 * 1024
 const MAX_SO_BYTES = 4 * 1024 * 1024
 // Measured: the real lsteamclient.dll (PE, debug-rich) is about 34 MB.
 const MAX_DLL_BYTES = 64 * 1024 * 1024
-const MAX_LOADER_BYTES = 16 * 1024 * 1024
+// ts-prune-ignore-next
+export const MAX_LOADER_BYTES = 16 * 1024 * 1024
 
 const WIN_DLL_REL = join('lib', 'wine', 'x86_64-windows')
 const UNIX_DLL_REL = join('lib', 'wine', 'x86_64-unix')
 const NTDLL_REL = join(WIN_DLL_REL, 'ntdll.dll')
-const LOADER_REL = join(UNIX_DLL_REL, 'wine')
+// ts-prune-ignore-next
+export const LOADER_REL = join(UNIX_DLL_REL, 'wine')
+// ts-prune-ignore-next
+export const WINELOADER_REL = join('bin', 'wineloader')
 const DLL_REL = join(WIN_DLL_REL, 'lsteamclient.dll')
 const SO_REL = join(UNIX_DLL_REL, 'lsteamclient.so')
 
-async function sha256File(path: string): Promise<string> {
+// ts-prune-ignore-next
+export async function sha256File(path: string): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const hash = createHash('sha256')
     const stream = createReadStream(path)
@@ -210,7 +217,11 @@ async function sha256File(path: string): Promise<string> {
 const sha256Bytes = (b: Buffer) => createHash('sha256').update(b).digest('hex')
 
 /** lstat a path that must be a regular non-symlink file of at most maxBytes. */
-async function statRegular(path: string, maxBytes: number): Promise<Stats> {
+// ts-prune-ignore-next
+export async function statRegular(
+  path: string,
+  maxBytes: number
+): Promise<Stats> {
   const st = await fsp.lstat(path)
   if (st.isSymbolicLink() || !st.isFile()) {
     throw new Error(`${basename(path)} is not a regular file`)
@@ -219,7 +230,8 @@ async function statRegular(path: string, maxBytes: number): Promise<Stats> {
   return st
 }
 
-function isContained(root: string, candidate: string): boolean {
+// ts-prune-ignore-next
+export function isContained(root: string, candidate: string): boolean {
   const rel = relative(root, candidate)
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
 }
@@ -252,15 +264,52 @@ export type DetectCrossoverDeps = {
   platform?: NodeJS.Platform
 }
 
-const CX_ROOT_SUFFIX = `${sep}Contents${sep}SharedSupport${sep}CrossOver`
+// ts-prune-ignore-next
+export const CX_ROOT_SUFFIX = `${sep}Contents${sep}SharedSupport${sep}CrossOver`
 
-async function defaultResolveBinDir(): Promise<string | undefined> {
+// ts-prune-ignore-next
+export async function defaultResolveBinDir(): Promise<string | undefined> {
   try {
     const mod = await import('backend/storeManagers/steam/crossoverLocation')
     return await mod.resolveCrossoverBinDirAsync()
   } catch {
     return undefined
   }
+}
+
+/**
+ * Reads CFBundleVersion of a CrossOver.app. 'unreadable' = plutil failed;
+ * 'invalid' = it did not match the build pattern (value is the raw text).
+ */
+// ts-prune-ignore-next
+export async function readCrossoverBundleVersion(
+  run: RunTool,
+  appPath: string,
+  timeoutMs: number
+): Promise<
+  | { status: 'ok'; value: string }
+  | { status: 'invalid'; value: string }
+  | { status: 'unreadable'; value: '' }
+> {
+  const plist = await run(
+    '/usr/bin/plutil',
+    [
+      '-extract',
+      'CFBundleVersion',
+      'raw',
+      '-o',
+      '-',
+      join(appPath, 'Contents', 'Info.plist')
+    ],
+    { timeoutMs }
+  )
+  if (plist.code !== 0 || plist.timedOut || plist.aborted) {
+    return { status: 'unreadable', value: '' }
+  }
+  const value = plist.stdout.trim()
+  return CROSSOVER_BUILD_RE.test(value)
+    ? { status: 'ok', value }
+    : { status: 'invalid', value }
 }
 
 /**
@@ -302,23 +351,16 @@ export async function detectAllowedCrossover(
     }
 
     const run = deps.runTool ?? defaultRunTool
-    const plist = await run(
-      '/usr/bin/plutil',
-      [
-        '-extract',
-        'CFBundleVersion',
-        'raw',
-        '-o',
-        '-',
-        join(appPath, 'Contents', 'Info.plist')
-      ],
-      { timeoutMs: RUNNER_TIMEOUTS.plutil }
+    const version = await readCrossoverBundleVersion(
+      run,
+      appPath,
+      RUNNER_TIMEOUTS.plutil
     )
-    if (plist.code !== 0 || plist.timedOut || plist.aborted) {
+    if (version.status === 'unreadable') {
       return fail('cannot read CrossOver version')
     }
-    const build = plist.stdout.trim()
-    if (!BUILD_RE.test(build)) {
+    const build = version.value
+    if (version.status === 'invalid') {
       return fail(`installed ${build.slice(0, 40)} supported ${list}`)
     }
 
@@ -451,7 +493,11 @@ const STALE_CLONE_RE = /^crossover-[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/
 const STALE_PARTIAL_RE = /^\.crossover-([0-9.]+)\.partial-[A-Za-z0-9]+$/
 
 /** The only removal path for entries directly under the runners root. */
-async function safeRemove(root: string, target: string): Promise<boolean> {
+// ts-prune-ignore-next
+export async function safeRemove(
+  root: string,
+  target: string
+): Promise<boolean> {
   try {
     if (!isContained(root, target) || dirname(target) !== root) return false
     if (!REMOVABLE_RE.test(basename(target))) return false
@@ -465,7 +511,11 @@ async function safeRemove(root: string, target: string): Promise<boolean> {
 }
 
 /** Remove something inside a partial dir (containment checked, never throws). */
-async function removeInside(root: string, target: string): Promise<void> {
+// ts-prune-ignore-next
+export async function removeInside(
+  root: string,
+  target: string
+): Promise<void> {
   try {
     if (isContained(root, target)) {
       await fsp.rm(target, { recursive: true, force: true })
@@ -475,7 +525,8 @@ async function removeInside(root: string, target: string): Promise<void> {
   }
 }
 
-function parseEntitlementKeys(stdout: string): string[] | null {
+// ts-prune-ignore-next
+export function parseEntitlementKeys(stdout: string): string[] | null {
   const start = stdout.search(/<\?xml|<plist/)
   if (start < 0) return null
   const text = stdout.slice(start)
@@ -495,7 +546,8 @@ function parseEntitlementKeys(stdout: string): string[] | null {
   return keys
 }
 
-async function dumpLoaderEntitlements(
+// ts-prune-ignore-next
+export async function dumpLoaderEntitlements(
   run: RunTool,
   loader: string,
   timeoutMs: number
@@ -510,7 +562,11 @@ async function dumpLoaderEntitlements(
 }
 
 function entitlementsPlist(): string {
-  const keys = [...STOCK_LOADER_ENTITLEMENTS, DYLD_ENTITLEMENT].sort()
+  return entitlementsPlistFor([...STOCK_LOADER_ENTITLEMENTS, DYLD_ENTITLEMENT])
+}
+
+function entitlementsPlistFor(keysIn: string[]): string {
+  const keys = [...keysIn].sort()
   return (
     '<?xml version="1.0" encoding="UTF-8"?>\n' +
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n' +
@@ -685,7 +741,8 @@ export async function verifyRunnerClone(
 /**
  * Lists processes. null means ps failed or timed out, which counts as in use.
  */
-async function psListing(
+// ts-prune-ignore-next
+export async function psListing(
   run: RunTool,
   timeoutMs: number
 ): Promise<string | null> {
@@ -698,7 +755,8 @@ async function psListing(
 // process in the bottle lives, which is why this full-width command scan
 // catches a running game even though Wine retitles game processes to Windows
 // paths. A failed ps counts as in use (fail safe).
-async function isPathInUse(
+// ts-prune-ignore-next
+export async function isPathInUse(
   dir: string,
   run: RunTool,
   timeoutMs: number
@@ -871,6 +929,168 @@ async function pruneStale(
   return { pruned, pruneSkipped }
 }
 
+/**
+ * Clones a CrossOver tree: cp -c -R (APFS clonefile), then cp -R -p as the
+ * fallback. Registers an abort controller under opts.abortId. Never throws.
+ */
+// ts-prune-ignore-next
+export async function cloneCrossoverTree(
+  run: RunTool,
+  src: string,
+  dest: string,
+  opts: { abortId: string; timeoutMs: number; partial: string }
+): Promise<
+  { ok: true; cloneMethod: 'cp -c' | 'cp -R' } | { ok: false; cause: string }
+> {
+  const controller = createAbortController(opts.abortId)
+  let cloneMethod: 'cp -c' | 'cp -R' = 'cp -c'
+  try {
+    const first = await run('/bin/cp', [...CLONE_ARGV_PRIMARY, src, dest], {
+      timeoutMs: opts.timeoutMs,
+      signal: controller.signal
+    })
+    let last = first
+    if (first.code !== 0 && !first.timedOut && !first.aborted) {
+      await removeInside(opts.partial, dest)
+      cloneMethod = 'cp -R'
+      last = await run('/bin/cp', [...CLONE_ARGV_FALLBACK, src, dest], {
+        timeoutMs: opts.timeoutMs,
+        signal: controller.signal
+      })
+      if (last.code !== 0 && !last.timedOut && !last.aborted) {
+        return {
+          ok: false,
+          cause: `clone failed (cp -c ${first.code}, cp -R ${last.code}): ${(last.stderr || first.stderr).slice(0, 120)}`
+        }
+      }
+    }
+    if (last.timedOut) return { ok: false, cause: 'clone timed out' }
+    if (last.aborted) return { ok: false, cause: 'clone aborted' }
+    if (last.code !== 0) {
+      return { ok: false, cause: `clone failed (cp ${last.code})` }
+    }
+    return { ok: true, cloneMethod }
+  } catch (e) {
+    return { ok: false, cause: errText(e) }
+  } finally {
+    deleteAbortController(opts.abortId)
+  }
+}
+
+/**
+ * Re-signs a Mach-O loader ad hoc with hardened runtime plus the dyld
+ * environment entitlement. 'strict' accepts only the 5 stock keys (or the 6
+ * with dyld) and signs exactly the 6; 'derived' keeps whatever boolean
+ * entitlements the loader has and adds the dyld one. The stock binary is kept
+ * next to it as <loader>.gamelib-orig.
+ */
+// ts-prune-ignore-next
+export async function resignLoader(
+  run: RunTool,
+  loader: string,
+  partial: string,
+  timeoutMs: number,
+  mode: 'strict' | 'derived'
+): Promise<{ ok: true; keys: string[] } | { ok: false; cause: string }> {
+  try {
+    await fsp.copyFile(
+      loader,
+      loader + '.gamelib-orig',
+      fsConstants.COPYFILE_EXCL
+    )
+    const stock = await dumpLoaderEntitlements(run, loader, timeoutMs)
+    if (!stock) return { ok: false, cause: 'loader entitlements unreadable' }
+    let keys: string[]
+    if (mode === 'strict') {
+      const sorted = [...stock].sort().join('\n')
+      const stockSet = [...STOCK_LOADER_ENTITLEMENTS].sort()
+      const sixSet = [...stockSet, DYLD_ENTITLEMENT].sort()
+      if (sorted !== stockSet.join('\n') && sorted !== sixSet.join('\n')) {
+        return { ok: false, cause: 'unexpected loader entitlements' }
+      }
+      keys = sixSet
+    } else {
+      keys = Array.from(new Set([...stock, DYLD_ENTITLEMENT])).sort()
+    }
+    resignCounter += 1
+    const plist = join(
+      partial,
+      `entitlements-${basename(loader)}-${resignCounter}.plist`
+    )
+    await fsp.writeFile(
+      plist,
+      mode === 'strict' ? entitlementsPlist() : entitlementsPlistFor(keys),
+      { flag: 'wx', mode: 0o600 }
+    )
+    const sign = await run(
+      '/usr/bin/codesign',
+      [
+        '--force',
+        '--sign',
+        '-',
+        '--options',
+        'runtime',
+        '--entitlements',
+        plist,
+        loader
+      ],
+      { timeoutMs }
+    )
+    if (sign.code !== 0) {
+      await removeInside(partial, plist)
+      return {
+        ok: false,
+        cause: `loader re-sign failed (${sign.code}): ${sign.stderr.slice(0, 80)}`
+      }
+    }
+    const after = await dumpLoaderEntitlements(run, loader, timeoutMs)
+    await removeInside(partial, plist)
+    if (!after || !keys.every((k) => after.includes(k))) {
+      return {
+        ok: false,
+        cause: 'loader lacks the dyld entitlement after re-sign'
+      }
+    }
+    return { ok: true, keys }
+  } catch (e) {
+    return { ok: false, cause: errText(e) }
+  }
+}
+
+let resignCounter = 0
+
+/**
+ * Targeted xattr scrub of a clone. Never `xattr -c`: it would strip the
+ * com.apple.cs.* signature xattrs from stock-signed files.
+ */
+// ts-prune-ignore-next
+export async function scrubCloneXattrs(
+  run: RunTool,
+  dest: string,
+  timeoutMs: number
+): Promise<
+  { ok: true; provenanceRemaining: boolean } | { ok: false; cause: string }
+> {
+  for (const attr of ['com.apple.quarantine', 'com.apple.provenance']) {
+    const r = await run('/usr/bin/xattr', ['-r', '-d', attr, dest], {
+      timeoutMs
+    })
+    if (r.timedOut || r.aborted) {
+      return { ok: false, cause: `xattr ${attr} scrub timed out` }
+    }
+  }
+  let provenanceRemaining = false
+  for (const rel of [LOADER_REL, NTDLL_REL, SO_REL, DLL_REL, WINELOADER_REL]) {
+    const r = await run('/usr/bin/xattr', [join(dest, rel)], { timeoutMs })
+    const lines = r.stdout.split('\n').map((l) => l.trim())
+    if (lines.includes('com.apple.quarantine')) {
+      return { ok: false, cause: `quarantine xattr remains on ${rel}` }
+    }
+    if (lines.includes('com.apple.provenance')) provenanceRemaining = true
+  }
+  return { ok: true, provenanceRemaining }
+}
+
 async function buildRunner(
   opts: {
     appFolder: string
@@ -901,39 +1121,14 @@ async function buildRunner(
   try {
     // --- clone ---
     deps.onCloneStart?.()
-    const abortId = `drm-runner-clone:${build}`
-    const controller = createAbortController(abortId)
     const t0 = Date.now()
-    let cloneMethod: 'cp -c' | 'cp -R' = 'cp -c'
-    try {
-      const first = await run(
-        '/bin/cp',
-        [...CLONE_ARGV_PRIMARY, crossover.cxRoot, dest],
-        { timeoutMs: timeouts.cp, signal: controller.signal }
-      )
-      let last = first
-      if (first.code !== 0 && !first.timedOut && !first.aborted) {
-        await removeInside(partial, dest)
-        cloneMethod = 'cp -R'
-        last = await run(
-          '/bin/cp',
-          [...CLONE_ARGV_FALLBACK, crossover.cxRoot, dest],
-          { timeoutMs: timeouts.cp, signal: controller.signal }
-        )
-        if (last.code !== 0 && !last.timedOut && !last.aborted) {
-          stepFail(
-            'runner-clone',
-            `clone failed (cp -c ${first.code}, cp -R ${last.code}): ${(last.stderr || first.stderr).slice(0, 120)}`
-          )
-        }
-      }
-      if (last.timedOut) stepFail('runner-clone', 'clone timed out')
-      if (last.aborted) stepFail('runner-clone', 'clone aborted')
-      if (last.code !== 0)
-        stepFail('runner-clone', `clone failed (cp ${last.code})`)
-    } finally {
-      deleteAbortController(abortId)
-    }
+    const cloned = await cloneCrossoverTree(run, crossover.cxRoot, dest, {
+      abortId: `drm-runner-clone:${build}`,
+      timeoutMs: timeouts.cp,
+      partial
+    })
+    if (!cloned.ok) return stepFail('runner-clone', cloned.cause)
+    const cloneMethod = cloned.cloneMethod
     logInfo(
       `runnerClone: crossover-${build} cloned with ${cloneMethod} in ${Date.now() - t0} ms`,
       LogPrefix.Steam
@@ -1054,76 +1249,20 @@ async function buildRunner(
 
     // --- loader re-sign (runner-patch) ---
     const loader = join(dest, LOADER_REL)
-    await fsp.copyFile(
+    const signed = await resignLoader(
+      run,
       loader,
-      loader + '.gamelib-orig',
-      fsConstants.COPYFILE_EXCL
+      partial,
+      timeouts.codesign,
+      'strict'
     )
-    const stock = await dumpLoaderEntitlements(run, loader, timeouts.codesign)
-    if (!stock) stepFail('runner-patch', 'loader entitlements unreadable')
-    const sorted = [...(stock as string[])].sort().join('\n')
-    const stockSet = [...STOCK_LOADER_ENTITLEMENTS].sort()
-    const sixSet = [...stockSet, DYLD_ENTITLEMENT].sort()
-    if (sorted !== stockSet.join('\n') && sorted !== sixSet.join('\n')) {
-      stepFail('runner-patch', 'unexpected loader entitlements')
-    }
-    const plist = join(partial, 'loader-entitlements.plist')
-    await fsp.writeFile(plist, entitlementsPlist(), { flag: 'wx', mode: 0o600 })
-    const sign = await run(
-      '/usr/bin/codesign',
-      [
-        '--force',
-        '--sign',
-        '-',
-        '--options',
-        'runtime',
-        '--entitlements',
-        plist,
-        loader
-      ],
-      { timeoutMs: timeouts.codesign }
-    )
-    if (sign.code !== 0) {
-      stepFail(
-        'runner-patch',
-        `loader re-sign failed (${sign.code}): ${sign.stderr.slice(0, 80)}`
-      )
-    }
-    const after = await dumpLoaderEntitlements(run, loader, timeouts.codesign)
-    if (!after || !sixSet.every((k) => after.includes(k))) {
-      stepFail(
-        'runner-patch',
-        'loader lacks the dyld entitlement after re-sign'
-      )
-    }
-    await removeInside(partial, plist)
+    if (!signed.ok) stepFail('runner-patch', signed.cause)
 
     // --- scrub (runner-clone) ---
-    // Never `xattr -c`: it would strip com.apple.cs.* signature xattrs.
-    for (const attr of ['com.apple.quarantine', 'com.apple.provenance']) {
-      const r = await run('/usr/bin/xattr', ['-r', '-d', attr, dest], {
-        timeoutMs: timeouts.xattr
-      })
-      if (r.timedOut || r.aborted)
-        stepFail('runner-clone', `xattr ${attr} scrub timed out`)
-    }
-    let provenanceRemaining = false
-    for (const rel of [
-      LOADER_REL,
-      NTDLL_REL,
-      SO_REL,
-      DLL_REL,
-      join('bin', 'wineloader')
-    ]) {
-      const r = await run('/usr/bin/xattr', [join(dest, rel)], {
-        timeoutMs: timeouts.xattr
-      })
-      const lines = r.stdout.split('\n').map((l) => l.trim())
-      if (lines.includes('com.apple.quarantine')) {
-        stepFail('runner-clone', `quarantine xattr remains on ${rel}`)
-      }
-      if (lines.includes('com.apple.provenance')) provenanceRemaining = true
-    }
+    const scrubbed = await scrubCloneXattrs(run, dest, timeouts.xattr)
+    if (!scrubbed.ok) stepFail('runner-clone', scrubbed.cause)
+    const provenanceRemaining = (scrubbed as { provenanceRemaining: boolean })
+      .provenanceRemaining
     if (provenanceRemaining) {
       logWarning(
         `runnerClone: com.apple.provenance remains on crossover-${build} (tolerated)`,
