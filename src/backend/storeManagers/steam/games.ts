@@ -120,6 +120,8 @@ import {
   CROSSOVER_MISSING,
   CROSSOVER_CREATE_TIMEOUT,
   CROSSOVER_CREATE_FAILED,
+  PROVISION_ABORTED,
+  discardNewBridgeBottle,
   buildFallbackGameSettings,
   getDrmBridgeRunner,
   killBridgeBottleWineServer,
@@ -2206,6 +2208,19 @@ export default class SteamGame implements Game {
       }
     })
     if (result.ok && sentAny) sendEngineContext('setting-up')
+    if (!result.ok && result.reason === 'aborted') {
+      // 59-REVIEW WR-01: a cancel or quit is not a download failure.
+      logInfo(
+        `SteamGame: built-in engine download aborted for appId ${this.appId}`,
+        LogPrefix.Steam
+      )
+      sendGameStatusUpdate({
+        appName: this.appId,
+        runner: 'steam',
+        status: 'done'
+      })
+      return { status: 'abort' }
+    }
     if (!result.ok) {
       logWarning(
         `SteamGame: built-in engine unavailable for appId ${this.appId}: ${result.reason} ${result.detail}`,
@@ -2279,38 +2294,58 @@ export default class SteamGame implements Game {
       })
     }
     try {
-      // 59-REVIEW WR-11 (install cancel): the download queue aborts an install
-      // by id, so provisioning observes that controller's signal. An existing
-      // controller is reused and left alone; otherwise one scoped to
-      // provisioning is registered and removed before the download below
-      // registers its own.
+      // 59-REVIEW WR-11 / CR-01 (install cancel): the download queue aborts an
+      // install by id, so provisioning observes that controller's signal. A
+      // live controller is reused; a missing or already-aborted one (IN-03) is
+      // replaced. A controller this install created stays registered until the
+      // depot run registers its own, so no cancel can land in a gap; the
+      // finally removes it only if it is still ours.
       let installEngine: NonCrossoverEngine | 'crossover' | null = null
-      if (!isBridgeBottleReady(bridgeBottleName)) {
-        const reused = hasAbortController(this.appId)
-        const signal = reused
-          ? getAbortSignal(this.appId)
-          : createAbortController(this.appId).signal
-        let provisioned: Awaited<
-          ReturnType<SteamGame['provisionBridgeBottleForInstall']>
-        >
-        try {
-          provisioned = await this.provisionBridgeBottleForInstall(
+      let signal: AbortSignal | undefined
+      let ownsController = false
+      const stop = (): InstallResult => {
+        sendGameStatusUpdate({
+          appName: this.appId,
+          runner: 'steam',
+          status: 'done'
+        })
+        return { status: 'abort' }
+      }
+      try {
+        if (!isBridgeBottleReady(bridgeBottleName)) {
+          const reused =
+            hasAbortController(this.appId) &&
+            getAbortSignal(this.appId)?.aborted === false
+          signal = reused
+            ? getAbortSignal(this.appId)
+            : createAbortController(this.appId).signal
+          ownsController = !reused
+          const provisioned = await this.provisionBridgeBottleForInstall(
             bridgeBottleName,
             signal
           )
-        } finally {
-          if (!reused) deleteAbortController(this.appId)
+          if ('result' in provisioned) return provisioned.result
+          installEngine = provisioned.engine
+          if (signal?.aborted) {
+            if (provisioned.createdHere) {
+              discardNewBridgeBottle(bridgeBottleName)
+            }
+            return stop()
+          }
         }
-        if ('result' in provisioned) return provisioned.result
-        installEngine = provisioned.engine
+        const result = await this.installBridgeGameLeased(
+          args,
+          bridgeBottleName,
+          installEngine,
+          signal
+        )
+        if (result.status === 'error') clearFinishing()
+        return result
+      } finally {
+        if (ownsController && signal && getAbortSignal(this.appId) === signal) {
+          deleteAbortController(this.appId)
+        }
       }
-      const result = await this.installBridgeGameLeased(
-        args,
-        bridgeBottleName,
-        installEngine
-      )
-      if (result.status === 'error') clearFinishing()
-      return result
     } catch (error) {
       clearFinishing()
       throw error
@@ -2328,8 +2363,17 @@ export default class SteamGame implements Game {
     bridgeBottleName: string,
     signal?: AbortSignal
   ): Promise<
-    { engine: NonCrossoverEngine | 'crossover' } | { result: InstallResult }
+    | { engine: NonCrossoverEngine | 'crossover'; createdHere: boolean }
+    | { result: InstallResult }
   > {
+    const abortResult = (): { result: InstallResult } => {
+      sendGameStatusUpdate({
+        appName: this.appId,
+        runner: 'steam',
+        status: 'done'
+      })
+      return { result: { status: 'abort' } }
+    }
     logInfo(
       `SteamGame: bridge bottle "${bridgeBottleName}" not yet provisioned for appId ${this.appId} — provisioning inline (BLOCKER 1, no consent dialog needed)`,
       LogPrefix.Steam
@@ -2340,6 +2384,7 @@ export default class SteamGame implements Game {
       `SteamGame: bridge bottle creation engine for appId ${this.appId}: ${creation.kind}${creation.kind === 'pinned' ? ` (${creation.reason})` : ''}`,
       LogPrefix.Steam
     )
+    if (signal?.aborted) return abortResult()
     let provisionResult: Awaited<ReturnType<typeof provisionBridgeBottle>>
     let engineUsed: NonCrossoverEngine | 'crossover' = 'crossover'
     if (creation.kind === 'pinned') {
@@ -2351,15 +2396,21 @@ export default class SteamGame implements Game {
       // must stop here; wineboot after quit breaks the sidecar exit contract.
       if ('status' in engine) return { result: engine }
       engineUsed = engine
+      if (signal?.aborted) return abortResult()
       provisionResult = await provisionBridgeBottle({
         bottleName: bridgeBottleName,
-        fallbackEngine: engine
+        fallbackEngine: engine,
+        signal
       })
     } else {
       provisionResult = await provisionBridgeBottle({
         bottleName: bridgeBottleName,
-        createTimeoutMs: creation.createTimeoutMs
+        createTimeoutMs: creation.createTimeoutMs,
+        signal
       })
+      if (provisionResult.errorCode === PROVISION_ABORTED) {
+        return abortResult()
+      }
       if (
         provisionResult.errorCode === CROSSOVER_CREATE_TIMEOUT ||
         provisionResult.errorCode === CROSSOVER_MISSING ||
@@ -2381,12 +2432,15 @@ export default class SteamGame implements Game {
         // 59-REVIEW WR-11: see above.
         if ('status' in engine) return { result: engine }
         engineUsed = engine
+        if (signal?.aborted) return abortResult()
         provisionResult = await provisionBridgeBottle({
           bottleName: bridgeBottleName,
-          fallbackEngine: engine
+          fallbackEngine: engine,
+          signal
         })
       }
     }
+    if (provisionResult.errorCode === PROVISION_ABORTED) return abortResult()
     if (provisionResult.status !== 'done') {
       logWarning(
         `SteamGame: bridge bottle provisioning failed for appId ${this.appId}: ${provisionResult.error}`,
@@ -2410,7 +2464,10 @@ export default class SteamGame implements Game {
         status: 'installing'
       })
     }
-    return { engine: engineUsed }
+    return {
+      engine: engineUsed,
+      createdHere: provisionResult.createdHere === true
+    }
   }
 
   /**
@@ -2478,8 +2535,19 @@ export default class SteamGame implements Game {
   private async installBridgeGameLeased(
     args: InstallArgs,
     bridgeBottleName: string,
-    installEngine: NonCrossoverEngine | 'crossover' | null
+    installEngine: NonCrossoverEngine | 'crossover' | null,
+    signal?: AbortSignal
   ): Promise<InstallResult> {
+    // 59-REVIEW CR-01: synchronous with the depot run's controller
+    // registration, so a cancel cannot fall in between.
+    if (signal?.aborted) {
+      sendGameStatusUpdate({
+        appName: this.appId,
+        runner: 'steam',
+        status: 'done'
+      })
+      return { status: 'abort' }
+    }
     // a new install must show finishing again (quick 261031-ihs)
     clearBridgeInstallFinalized(this.appId)
     const targetSteamappsDir = getBottleSteamappsDir(bridgeBottleName)
@@ -2494,6 +2562,10 @@ export default class SteamGame implements Game {
     // with deferredToSetup: a dialog owns the next step, nothing was
     // downloaded, and it is not a bridge failure.
     if (downloadResult.deferredToSetup) return downloadResult
+
+    // 59-REVIEW CR-02: a user cancel is not a bridge failure; marking it would
+    // route the reinstall to bottled Steam.
+    if (downloadResult.status === 'abort') return downloadResult
 
     if (downloadResult.status !== 'done') {
       markBridgeFailedThisSession(this.appId)
@@ -4117,6 +4189,9 @@ export default class SteamGame implements Game {
 
     if (decision.needsDownload && decision.pin) {
       const engine = await this.ensureBuiltInEngineForInstall(decision.pin)
+      if ('status' in engine && engine.status === 'abort') {
+        return { ok: false }
+      }
       if ('status' in engine) {
         this.showEngineDialog(
           title,

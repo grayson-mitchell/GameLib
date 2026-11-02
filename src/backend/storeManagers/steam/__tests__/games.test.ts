@@ -65,6 +65,7 @@ import {
   isBridgeBottleReady,
   getBridgeBottleSettings,
   provisionBridgeBottle,
+  discardNewBridgeBottle,
   removePerGameBridgeBottle,
   stopPerGameBridgeBottle,
   getDrmBridgeRunner,
@@ -334,6 +335,8 @@ jest.mock('../bottle', () => {
     CROSSOVER_MISSING: 'crossover-missing',
     CROSSOVER_CREATE_TIMEOUT: 'crossover-create-timeout',
     CROSSOVER_CREATE_FAILED: 'crossover-create-failed',
+    PROVISION_ABORTED: 'provision-aborted',
+    discardNewBridgeBottle: jest.fn(),
     buildFallbackGameSettings: jest.fn(),
     isBottleReady: jest.fn(),
     tellBottledSteamToLaunch: jest.fn(),
@@ -5924,7 +5927,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(isBridgeBottleReady).not.toHaveBeenCalledWith('GameLibSteamBridge')
     expect(provisionBridgeBottle).toHaveBeenCalledWith({
       bottleName: `GameLibSteamBridge-${APP_ID}`,
-      createTimeoutMs: 120_000
+      createTimeoutMs: 120_000,
+      signal: expect.anything()
     })
     expect(placeShimForGame).toHaveBeenCalledWith(
       APP_ID,
@@ -6637,7 +6641,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     expect(provisionBridgeBottle).toHaveBeenCalledWith({
       bottleName: `GameLibSteamBridge-${APP_ID}`,
-      createTimeoutMs: 120_000
+      createTimeoutMs: 120_000,
+      signal: expect.anything()
     })
     expect(downloadSteamDepots).toHaveBeenCalled()
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
@@ -6660,7 +6665,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     expect(provisionBridgeBottle).toHaveBeenCalledWith({
       bottleName: `GameLibSteamBridge-${APP_ID}`,
-      createTimeoutMs: 120_000
+      createTimeoutMs: 120_000,
+      signal: expect.anything()
     })
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -6902,7 +6908,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       expect(ensurePinnedEngine).not.toHaveBeenCalled()
       expect(provisionBridgeBottle).toHaveBeenCalledWith({
         bottleName: `GameLibSteamBridge-${APP_ID}`,
-        createTimeoutMs: 120_000
+        createTimeoutMs: 120_000,
+        signal: expect.anything()
       })
     })
 
@@ -6986,7 +6993,28 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         expect(result.status).toBe('done')
       })
 
-      it('WR-11: an aborted engine download stops before provisionBridgeBottle and releases the lease once', async () => {
+      // A real AbortController wired through the aborthandler mocks, with a
+      // registry that mimics createAbortController replacing the entry.
+      const wireControllers = () => {
+        const registry = new Map<string, AbortController>()
+        ;(createAbortController as jest.Mock).mockImplementation((id) => {
+          const c = new AbortController()
+          registry.set(id, c)
+          return c
+        })
+        ;(hasAbortController as jest.Mock).mockImplementation((id) =>
+          registry.has(id)
+        )
+        ;(getAbortSignal as jest.Mock).mockImplementation(
+          (id) => registry.get(id)?.signal
+        )
+        ;(deleteAbortController as jest.Mock).mockImplementation((id) => {
+          registry.delete(id)
+        })
+        return registry
+      }
+
+      it('WR-01: an aborted engine download is status abort', async () => {
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
         ;(ensurePinnedEngine as jest.Mock).mockResolvedValue({
           ok: false,
@@ -6994,20 +7022,21 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           detail: 'shutting down'
         })
         const result = await new SteamGame(APP_ID).install({} as any)
-        expect(result.status).toBe('error')
+        expect(result).toEqual({ status: 'abort' })
         expect(provisionBridgeBottle).not.toHaveBeenCalled()
         expect(downloadSteamDepots).not.toHaveBeenCalled()
         expect(leaseRelease).toHaveBeenCalledTimes(1)
+        expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({ appName: APP_ID, status: 'done' })
+        )
       })
 
-      it('WR-11 install cancel: callAbortController(appId) aborts the signal the engine download received, and the scoped controller is deleted', async () => {
-        const controller = new AbortController()
-        ;(createAbortController as jest.Mock).mockReturnValue(controller)
+      it('WR-01: install cancel mid engine download aborts the signal it received and removes the controller', async () => {
+        const registry = wireControllers()
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
         ;(ensurePinnedEngine as jest.Mock).mockImplementation(
           (_pin, opts: { signal: AbortSignal }) => {
-            // the queue's callAbortController(appId) lands mid-download
-            controller.abort()
+            registry.get(APP_ID)!.abort()
             return Promise.resolve(
               opts.signal.aborted
                 ? { ok: false, reason: 'aborted', detail: 'cancelled' }
@@ -7016,16 +7045,144 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           }
         )
         const result = await new SteamGame(APP_ID).install({} as any)
-        expect((ensurePinnedEngine as jest.Mock).mock.calls[0][1].signal).toBe(
-          controller.signal
-        )
-        expect(result.status).toBe('error')
+        expect(result.status).toBe('abort')
         expect(provisionBridgeBottle).not.toHaveBeenCalled()
-        expect(deleteAbortController).toHaveBeenCalledWith(APP_ID)
+        expect(registry.has(APP_ID)).toBe(false)
         expect(leaseRelease).toHaveBeenCalledTimes(1)
       })
 
-      it('an existing appId controller is reused and not deleted by the install', async () => {
+      it('CR-01: abort during provisioning never reaches installBridgeGameLeased (engine already installed)', async () => {
+        const registry = wireControllers()
+        // the engine resolves at once; the cancel lands during the decision
+        ;(decideCreationEngine as jest.Mock).mockImplementation(() => {
+          registry.get(APP_ID)!.abort()
+          return Promise.resolve(pinnedDecision())
+        })
+        const result = await new SteamGame(APP_ID).install({} as any)
+        expect(result).toEqual({ status: 'abort' })
+        expect(provisionBridgeBottle).not.toHaveBeenCalled()
+        expect(downloadSteamDepots).not.toHaveBeenCalled()
+        expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({ appName: APP_ID, status: 'done' })
+        )
+        expect(leaseRelease).toHaveBeenCalledTimes(1)
+        expect(registry.has(APP_ID)).toBe(false)
+      })
+
+      it('CR-01: PROVISION_ABORTED is an abort, not a bridge failure', async () => {
+        wireControllers()
+        ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+          status: 'error',
+          errorCode: 'provision-aborted',
+          error: 'aborted'
+        })
+        const result = await new SteamGame(APP_ID).install({} as any)
+        expect(result).toEqual({ status: 'abort' })
+        // no built-in-engine fallback, no setup dialog, no downloads
+        expect(provisionBridgeBottle).toHaveBeenCalledTimes(1)
+        expect(ensurePinnedEngine).not.toHaveBeenCalled()
+        expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+          'steamBridgeSetupRequired',
+          expect.anything()
+        )
+        expect(downloadSteamDepots).not.toHaveBeenCalled()
+        // the route is not poisoned: the next install provisions again
+        ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+          status: 'done'
+        })
+        await new SteamGame(APP_ID).install({} as any)
+        expect(provisionBridgeBottle).toHaveBeenCalledTimes(2)
+        expect(downloadSteamDepots).toHaveBeenCalled()
+      })
+
+      it('CR-01: the signal reaches provisionBridgeBottle on every call (CrossOver, create-failed fallback, pinned)', async () => {
+        wireControllers()
+        ;(provisionBridgeBottle as jest.Mock)
+          .mockResolvedValueOnce({
+            status: 'error',
+            errorCode: 'crossover-create-failed',
+            error: 'x'
+          })
+          .mockResolvedValueOnce({ status: 'done' })
+        await new SteamGame(APP_ID).install({} as any)
+        ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
+        ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+          status: 'done'
+        })
+        await new SteamGame(APP_ID).install({} as any)
+        const calls = (provisionBridgeBottle as jest.Mock).mock.calls
+        expect(calls).toHaveLength(3)
+        for (const [opts] of calls) {
+          expect(opts.signal).toBeInstanceOf(AbortSignal)
+        }
+      })
+
+      it('CR-01: abort after a fresh bottle discards it', async () => {
+        const registry = wireControllers()
+        ;(provisionBridgeBottle as jest.Mock).mockImplementation(() => {
+          registry.get(APP_ID)!.abort()
+          return Promise.resolve({ status: 'done', createdHere: true })
+        })
+        const result = await new SteamGame(APP_ID).install({} as any)
+        expect(result).toEqual({ status: 'abort' })
+        expect(discardNewBridgeBottle).toHaveBeenCalledWith(
+          `GameLibSteamBridge-${APP_ID}`
+        )
+        expect(downloadSteamDepots).not.toHaveBeenCalled()
+      })
+
+      it('CR-01: abort after provisioning keeps a pre-existing bottle dir', async () => {
+        const registry = wireControllers()
+        ;(provisionBridgeBottle as jest.Mock).mockImplementation(() => {
+          registry.get(APP_ID)!.abort()
+          return Promise.resolve({ status: 'done', createdHere: false })
+        })
+        const result = await new SteamGame(APP_ID).install({} as any)
+        expect(result).toEqual({ status: 'abort' })
+        expect(discardNewBridgeBottle).not.toHaveBeenCalled()
+        expect(downloadSteamDepots).not.toHaveBeenCalled()
+      })
+
+      it('CR-01: a throw before the depot hand-off removes the provisioning controller', async () => {
+        const registry = wireControllers()
+        ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
+        ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+          status: 'done'
+        })
+        // throws between provisioning and installDepotDownload
+        sendGameStatusUpdate.mockImplementation((u: { status: string }) => {
+          if (u.status === 'installing') throw new Error('boom')
+        })
+        await expect(new SteamGame(APP_ID).install({} as any)).rejects.toThrow(
+          'boom'
+        )
+        expect(registry.has(APP_ID)).toBe(false)
+        expect(leaseRelease).toHaveBeenCalledTimes(1)
+      })
+
+      it('CR-01: the provisioning controller stays registered when the depot run starts', async () => {
+        const registry = wireControllers()
+        let seen: boolean | undefined
+        ;(downloadSteamDepots as jest.Mock).mockImplementation(() => {
+          seen = registry.has(APP_ID)
+          return Promise.resolve({ status: 'done' })
+        })
+        await new SteamGame(APP_ID).install({} as any)
+        expect(seen).toBe(true)
+      })
+
+      it('IN-03: a stale aborted controller is replaced', async () => {
+        const registry = wireControllers()
+        const stale = new AbortController()
+        stale.abort()
+        registry.set(APP_ID, stale)
+        const result = await new SteamGame(APP_ID).install({} as any)
+        expect(createAbortController).toHaveBeenCalledWith(APP_ID)
+        expect(result.status).toBe('done')
+        expect(downloadSteamDepots).toHaveBeenCalled()
+      })
+
+      it('an existing live appId controller is reused and left alone by the install', async () => {
         const controller = new AbortController()
         ;(hasAbortController as jest.Mock).mockReturnValue(true)
         ;(getAbortSignal as jest.Mock).mockReturnValue(controller.signal)
@@ -7034,12 +7191,13 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         expect((ensurePinnedEngine as jest.Mock).mock.calls[0][1].signal).toBe(
           controller.signal
         )
-        // only the download's own controller is deleted, after provisioning
-        for (const order of (deleteAbortController as jest.Mock).mock
-          .invocationCallOrder) {
-          expect(order).toBeGreaterThan(
-            (provisionBridgeBottle as jest.Mock).mock.invocationCallOrder[0]
-          )
+        // only the depot run registers or removes controllers, after provisioning
+        const provisioned = (provisionBridgeBottle as jest.Mock).mock
+          .invocationCallOrder[0]
+        for (const m of [createAbortController, deleteAbortController]) {
+          for (const order of (m as jest.Mock).mock.invocationCallOrder) {
+            expect(order).toBeGreaterThan(provisioned)
+          }
         }
       })
 
@@ -7177,6 +7335,55 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         'steamBridgeSetupRequired',
         expect.objectContaining({ reason: 'bridge-bottle-provision-failed' })
       )
+    })
+
+    describe('59-29 CR-02: a cancelled bridge download does not poison the session', () => {
+      const CR02_APP_ID = APP_ID
+      beforeEach(() => {
+        library.set(CR02_APP_ID, makeEntry({ title: 'Cancel Test' }))
+        ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+      })
+
+      it('CR-02: an aborted depot download does not mark the bridge failed', async () => {
+        ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+          status: 'cancelled'
+        })
+        const result = await new SteamGame(CR02_APP_ID).install({} as any)
+        expect(result).toEqual({ status: 'abort' })
+        expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+          'steamBridgeSetupRequired',
+          expect.anything()
+        )
+      })
+
+      // installBridgeGame is the only route that asks whether the bridge
+      // bottle is ready; the bottled branch never does (see Plan 13 above).
+      it('CR-02: reinstall after an aborted depot download routes to the bridge', async () => {
+        ;(downloadSteamDepots as jest.Mock).mockResolvedValueOnce({
+          status: 'cancelled'
+        })
+        await new SteamGame(CR02_APP_ID).install({} as any)
+        ;(isBridgeBottleReady as jest.Mock).mockClear()
+        ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+          status: 'done'
+        })
+        await new SteamGame(CR02_APP_ID).install({} as any)
+        expect(isBridgeBottleReady).toHaveBeenCalled()
+      })
+
+      it('CR-02: a depot error still marks the bridge failed', async () => {
+        ;(downloadSteamDepots as jest.Mock).mockResolvedValueOnce({
+          status: 'error',
+          error: 'boom'
+        })
+        await new SteamGame(CR02_APP_ID).install({} as any)
+        ;(isBridgeBottleReady as jest.Mock).mockClear()
+        ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+          status: 'done'
+        })
+        await new SteamGame(CR02_APP_ID).install({} as any)
+        expect(isBridgeBottleReady).not.toHaveBeenCalled()
+      })
     })
   })
 
