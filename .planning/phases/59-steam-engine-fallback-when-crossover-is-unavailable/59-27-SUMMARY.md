@@ -24,7 +24,7 @@ Engine install now aborts after sha256/extract and before rename; provisionBridg
 
 ## Commits
 - 88619b4b3: engine install abort checks (WR-03)
-- Task 2 commit: bottle abort, WR-04, createdHere, discardNewBridgeBottle (see git log, "fix(59-27): abortable bridge-bottle creation")
+- Task 2 commit: bottle abort, WR-04, createdHere, discardNewBridgeBottle (8f86599c0)
 
 ## Deviations from Plan
 - Existing tests updated for the new third spawnAsync argument (`expect.anything()`) and `createdHere` on bridge done results. No other deviations.
