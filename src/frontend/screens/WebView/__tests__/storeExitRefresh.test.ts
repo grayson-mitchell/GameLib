@@ -3,6 +3,7 @@ import {
   runSteamStoreExitRefresh,
   resetSteamStoreExitRefreshState,
   isPurchaseIntentUrlFor,
+  armForUrl,
   runStoreExitRefresh,
   resetStoreExitRefreshState,
   type StoreExitStoreKey
@@ -266,5 +267,76 @@ describe('runStoreExitRefresh (quick 261030-ts4)', () => {
     ).toBe('refreshed')
     for (let i = 0; i < 4; i++) await Promise.resolve()
     expect(runStoreExitRefresh('gog', mk())).toBe('refreshed')
+  })
+})
+
+describe('armForUrl (quick 261102-s32)', () => {
+  const log = jest.fn()
+  beforeEach(() => log.mockClear())
+
+  it('arms amazon on the bare start URL and logs once', () => {
+    expect(
+      armForUrl('amazon', 'https://gaming.amazon.com', false, 'entry', log)
+    ).toBe(true)
+    expect(log).toHaveBeenCalledTimes(1)
+    expect(log).toHaveBeenCalledWith(
+      '[amazonStoreExitRefresh] armed host=gaming.amazon.com via=entry'
+    )
+  })
+
+  it('logs hostname only, never path or query', () => {
+    expect(
+      armForUrl(
+        'steam',
+        'https://store.steampowered.com/app/391540/?snr=1_x',
+        false,
+        'nav',
+        log
+      )
+    ).toBe(true)
+    expect(log).toHaveBeenCalledWith(
+      '[steamStoreExitRefresh] armed host=store.steampowered.com via=nav'
+    )
+    expect(log.mock.calls[0][0]).not.toContain('/app/')
+    expect(log.mock.calls[0][0]).not.toContain('snr')
+  })
+
+  it('already armed returns true without logging', () => {
+    expect(
+      armForUrl(
+        'steam',
+        'https://store.steampowered.com/cart',
+        true,
+        'nav',
+        log
+      )
+    ).toBe(true)
+    expect(log).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['steam', 'https://store.steampowered.com/'],
+    ['gog', 'https://www.gog.com/'],
+    ['epic', 'https://store.epicgames.com/en-US/']
+  ])('%s home does not arm', (store, url) => {
+    expect(armForUrl(store, url, false, 'entry', log)).toBe(false)
+    expect(log).not.toHaveBeenCalled()
+  })
+
+  it('non-store keys return armed unchanged', () => {
+    expect(
+      armForUrl('humble', 'https://gaming.amazon.com', false, 'nav', log)
+    ).toBe(false)
+    expect(
+      armForUrl('wiki', 'https://gaming.amazon.com', true, 'nav', log)
+    ).toBe(true)
+    expect(log).not.toHaveBeenCalled()
+  })
+
+  it('cross-store URL does not arm', () => {
+    expect(
+      armForUrl('gog', 'https://gaming.amazon.com', false, 'nav', log)
+    ).toBe(false)
+    expect(log).not.toHaveBeenCalled()
   })
 })

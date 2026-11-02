@@ -168,6 +168,30 @@ export function isPurchaseIntentUrlFor(storeKey: string, url: string): boolean {
   return STORE_EXIT_ROWS[storeKey].isPurchaseIntentUrl(url)
 }
 
+/**
+ * Pure arming step shared by nav events and store entry (quick 261102-s32).
+ * Entry-arming exists because the shared embed is hidden rather than closed,
+ * so re-entry and SPA claim clicks yield no page-load nav event. Logs the
+ * hostname only, once per unarmed-to-armed transition.
+ */
+export function armForUrl(
+  storeKey: string,
+  url: string,
+  armed: boolean,
+  via: 'entry' | 'nav',
+  log: (line: string) => void
+): boolean {
+  if (armed) return true
+  if (!isStoreExitStoreKey(storeKey)) return armed
+  if (isPurchaseIntentUrlFor(storeKey, url)) {
+    log(
+      `[${storeKey}StoreExitRefresh] armed host=${new URL(url).hostname} via=${via}`
+    )
+    return true
+  }
+  return false
+}
+
 const inFlight = new Set<StoreExitStoreKey>()
 
 export function resetStoreExitRefreshState(): void {
