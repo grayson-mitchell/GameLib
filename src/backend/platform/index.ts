@@ -793,16 +793,6 @@ const fakeWebContents = {
   // Phase 35 Plan 15: signature-only widening, no-op body. steamhelper.ts calls this.
   executeJavaScript: async (_code: string): Promise<string> => '',
   send: (channel: string, ...args: unknown[]): void => {
-    if (channel === 'gameStatusUpdate') {
-      const p = args[0] as
-        | { appName?: string; status?: string; context?: string }
-        | undefined
-      if (p?.status === 'engine-download') {
-        console.warn(
-          `[g1-trace] sidecar push app=${p.appName} status=${p.status} context=${p.context}`
-        )
-      }
-    }
     transport?.pushFrontendMessage(channel, ...args)
   },
   // Phase 34.5 Plan 08 (T-34.5-27): `processShortcut`'s `ctrl+shift+i` case
