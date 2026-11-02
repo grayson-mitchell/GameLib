@@ -30,7 +30,14 @@ metrics:
 
 Engine status now carries one size-weighted overall percent plus verify, unpack and set-up phases, hands back to `installing` once the bottle exists, and every surface renders it through one formatter.
 
-## G1 root cause: FOUND
+## G1 root cause: FOUND (not yet operator-confirmed)
+
+Operator confirmation of the final fix is pending a rebuild/restart re-test. Two live traces were needed:
+
+- **Run 1 (Asgaard, normal queue install):** all hops delivered; backend producer contract was wrong (resets, 0% for verify/extract, no hand-back). Fixed in eea11d3ab.
+- **Run 2 (Dredmor 98800, i386 recovery; re-test after fix, all-statuses trace):** every `gameStatusUpdate` frame reached `handleGameStatus` and `hasStatus` with the right status and context (installing -> downloading:0 -> verifying -> extracting -> downloading:1..100 -> verifying -> extracting -> setting-up -> installing -> done). Not an overwrite and not a dropped frame. The remaining defect was the **not-installed install button**: `MainButton.getButtonLabel` had no `downloadingEngine` branch, so on a title that is not yet installed the button read "Install" and was enabled for the whole engine setup (the operator's observation). `GameStatus` already rendered the phase. Fixed in 43829dc3e with `MainButton.engineDownloading.test.tsx` (RED seen: 4 cases read "Install"), and `downloadingEngine` added to `disabledInstallButtons`.
+
+Original heading text follows.
 
 **Hop:** the backend producer, `SteamGame.ensureBuiltInEngineForInstall` in `src/backend/storeManagers/steam/games.ts` (the status contract it emitted), not the transport or the renderer.
 
@@ -61,6 +68,12 @@ The live trace was run by the operator and orchestrator (Asgaard, no-crossover p
 - `pnpm lint` substituted with `npx eslint <touched files>` (0 errors). `pnpm codecheck` substituted with `npx tsc --noEmit` (clean).
 - Engine directory: the orchestrator's aside copy `steam-engines.g1-aside` and the fresh re-download `steam-engines` are both 864 MB with the same two pinned directories. Left both in place; nothing deleted. `steam-engines.bak` untouched.
 
+## Out of scope / open
+
+- Button spinner colour (black instead of the button font colour), reported on run 2: the new button branch reuses the existing `faSyncAlt fa-spin` icon the steam "Installing…" branch uses; whether that icon inherits the button colour was not investigated. Not part of this plan's gap; file as a todo.
+- The label gap the operator described as "Installing" before the download was the ~3 s sign-in window (status `installing`, no engine frame yet) plus the button defect above; the wine archive downloaded in ~12 s on this run, so the download phase is short on a fast link.
+- `MainButton.installClickRouting` R3 partition pin updated deliberately to include `downloadingEngine`.
+
 ## Known pre-existing failures (not from this plan)
 
 `steamFlows.test.ts` Test C, `skeletonFlows.test.ts` Test 2 and the `getDefaultLegendarySavePathRefresh.test.ts` suite fail under `--findRelatedTests`; they concern the steam:// launch dispatch and `constants/paths.ts`, not this plan. `dxvkInstallRemove.test.ts` failed once in the batch and passes alone (flaky under parallel load).
@@ -72,6 +85,8 @@ The live trace was run by the operator and orchestrator (Asgaard, no-crossover p
 - eea11d3ab fix: phase-encoded status, overall percent, hand back to installing (GREEN)
 - 4f878077c chore: remove trace logging
 - a57c1cfb5 feat: one engineDownloadLabel, setting-up on engine switch
+- bff266524 chore: second temporary trace (all gameStatusUpdate frames); removed by the following revert commit
+- 43829dc3e fix: install button shows the engine phase and is disabled (not-installed title)
 
 ## Self-Check: PASSED
 
