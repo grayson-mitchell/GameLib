@@ -19385,6 +19385,167 @@ mod tests {
 
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
+    fn store_embed_settle_same_origin_rewrite_after_back_replaces_in_place() {
+        let t0 = std::time::Instant::now();
+        let mut state = StoreEmbedState::default();
+        state.push_at("https://luna.amazon.com/home".to_string(), t0);
+        state.push_at("https://luna.amazon.com/claims/x".to_string(), t0);
+        state.push_at("https://luna.amazon.com/claims/x/detail".to_string(), t0);
+        assert_eq!(
+            state.go_back().as_deref(),
+            Some("https://luna.amazon.com/claims/x")
+        );
+        assert_eq!(
+            state.push_at("https://luna.amazon.com/claims/x".to_string(), t0),
+            None
+        );
+        state.take_nav_events();
+        let generation = state.nav_generation();
+
+        let outcome = state.observe_live_url_at(
+            "https://luna.amazon.com/claims/x-canon",
+            generation,
+            t0 + std::time::Duration::from_millis(500),
+        );
+        assert_eq!(outcome, Some(StoreEmbedHistoryChange::Replaced));
+        assert_eq!(state.history.len(), 3);
+        assert_eq!(state.history[1], "https://luna.amazon.com/claims/x-canon");
+        assert_eq!(state.history[2], "https://luna.amazon.com/claims/x/detail");
+        assert!(state.can_go_back());
+        assert!(state.can_go_forward());
+        assert_eq!(state.take_nav_events().len(), 1);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_settle_rewrite_equal_to_next_entry_replaces_not_moves() {
+        let t0 = std::time::Instant::now();
+        let mut state = StoreEmbedState::default();
+        state.push_at("https://luna.amazon.com/l1".to_string(), t0);
+        state.push_at("https://luna.amazon.com/l1c".to_string(), t0);
+        assert!(state.go_back().is_some());
+        state.push_at("https://luna.amazon.com/l1".to_string(), t0);
+        let generation = state.nav_generation();
+
+        let outcome = state.observe_live_url_at(
+            "https://luna.amazon.com/l1c",
+            generation,
+            t0 + std::time::Duration::from_millis(500),
+        );
+        assert_eq!(outcome, Some(StoreEmbedHistoryChange::Replaced));
+        assert_eq!(state.cursor, 0);
+        assert!(!state.can_go_back());
+        assert_eq!(state.history.len(), 1);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_settle_cross_origin_finished_push_replaces() {
+        let t0 = std::time::Instant::now();
+        let mut state = StoreEmbedState::default();
+        state.push_at("https://gaming.amazon.com/".to_string(), t0);
+        state.push_at("https://luna.amazon.com/claim".to_string(), t0);
+        assert!(state.go_back().is_some());
+        state.push_at("https://gaming.amazon.com/".to_string(), t0);
+        state.begin_page_load();
+
+        let outcome = state.push_at(
+            "https://luna.amazon.com/claims/home".to_string(),
+            t0 + std::time::Duration::from_secs(1),
+        );
+        assert_eq!(outcome, Some(StoreEmbedHistoryChange::Replaced));
+        assert_eq!(state.history.len(), 2);
+        assert_eq!(state.history[0], "https://luna.amazon.com/claims/home");
+        assert_eq!(state.cursor, 0);
+        assert!(state.can_go_forward());
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_settle_expired_rewrite_appends_as_before() {
+        let t0 = std::time::Instant::now();
+        let mut state = StoreEmbedState::default();
+        state.push_at("https://luna.amazon.com/home".to_string(), t0);
+        state.push_at("https://luna.amazon.com/claims/x".to_string(), t0);
+        state.push_at("https://luna.amazon.com/claims/x/detail".to_string(), t0);
+        assert!(state.go_back().is_some());
+        state.push_at("https://luna.amazon.com/claims/x".to_string(), t0);
+        let generation = state.nav_generation();
+
+        let outcome = state.observe_live_url_at(
+            "https://luna.amazon.com/claims/x-canon",
+            generation,
+            t0 + STORE_EMBED_LANDING_SETTLE + std::time::Duration::from_millis(1),
+        );
+        assert_eq!(outcome, Some(StoreEmbedHistoryChange::Recorded));
+        assert_eq!(state.history.len(), 3);
+        assert_eq!(state.cursor, 2);
+        assert_eq!(state.history[2], "https://luna.amazon.com/claims/x-canon");
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_settle_not_opened_by_a_plain_finished_push() {
+        let t0 = std::time::Instant::now();
+        let mut state = StoreEmbedState::default();
+        state.push_at("https://a.example/a".to_string(), t0);
+        assert_eq!(
+            state.push_at("https://a.example/b".to_string(), t0),
+            Some(StoreEmbedHistoryChange::Recorded)
+        );
+        let generation = state.nav_generation();
+
+        let outcome = state.observe_live_url_at(
+            "https://a.example/c",
+            generation,
+            t0 + std::time::Duration::from_millis(100),
+        );
+        assert_eq!(outcome, Some(StoreEmbedHistoryChange::Recorded));
+        assert_eq!(state.history.len(), 3);
+        assert_eq!(state.history[2], "https://a.example/c");
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_settle_repeated_back_terminates_under_rewrite_on_every_load() {
+        fn rewrite(u: &str) -> String {
+            if u.ends_with("/canon") {
+                u.to_string()
+            } else {
+                format!("{u}/canon")
+            }
+        }
+        let t0 = std::time::Instant::now();
+        let mut state = StoreEmbedState::default();
+        for p in ["h", "p1", "p2", "p3"] {
+            state.push_at(format!("https://luna.amazon.com/{p}"), t0);
+        }
+        assert_eq!(state.cursor, 3);
+
+        let mut t = t0;
+        let mut successful_backs = 0;
+        for _ in 0..10 {
+            let Some(url) = state.go_back() else { break };
+            successful_backs += 1;
+            state.push_at(url.clone(), t);
+            let rewritten = rewrite(&url);
+            if rewritten != url {
+                let generation = state.nav_generation();
+                state.observe_live_url_at(
+                    &rewritten,
+                    generation,
+                    t + std::time::Duration::from_millis(400),
+                );
+            }
+            t += std::time::Duration::from_secs(2);
+        }
+        assert_eq!(successful_backs, 3);
+        assert!(!state.can_go_back());
+        assert_eq!(state.cursor, 0);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
     fn store_embed_take_nav_events_drains_rather_than_peeks() {
         let mut state = StoreEmbedState::default();
         state.push("https://a.example/".to_string());
