@@ -130,3 +130,117 @@ describe('caption glyphs (261102-p8r)', () => {
     })
   })
 })
+
+const WINDOW_CONTROLS_SCSS = join(WINDOW_CONTROLS_DIR, 'index.scss')
+const INDEX_SCSS = join(WINDOW_CONTROLS_DIR, '..', '..', '..', 'index.scss')
+
+/**
+ * Body of the FIRST rule whose selector+opening-brace matches `openPattern`,
+ * tracking brace depth so nested rules do not truncate it. Copied from
+ * `windowControlsPlacement.test.ts` rather than imported from a test file.
+ */
+function extractBlock(source: string, openPattern: RegExp): string | null {
+  const match = openPattern.exec(source)
+  if (!match) return null
+
+  let idx = match.index + match[0].length
+  let depth = 1
+  let out = ''
+  while (idx < source.length && depth > 0) {
+    const ch = source[idx]
+    if (ch === '{') depth++
+    else if (ch === '}') depth--
+    if (depth > 0) out += ch
+    idx++
+  }
+  return out
+}
+
+/** Keeps only the depth-0 characters of a block, so nested `&:hover {...}` drop out. */
+function restingDeclarations(block: string): string {
+  let depth = 0
+  let out = ''
+  for (const ch of block) {
+    if (ch === '{') {
+      depth++
+    } else if (ch === '}') {
+      depth--
+    } else if (depth === 0) {
+      out += ch
+    }
+  }
+  return out
+}
+
+function mustExtract(source: string, pattern: RegExp): string {
+  const block = extractBlock(source, pattern)
+  if (block === null) throw new Error(`no block matching ${pattern} found`)
+  return block
+}
+
+describe('caption button chrome (261102-p8r)', () => {
+  const controlsScss = readStripped(WINDOW_CONTROLS_SCSS)
+  const indexScss = readStripped(INDEX_SCSS)
+  const controlsBlock = mustExtract(controlsScss, /^\.windowControls\s*\{/m)
+  const buttonBlock = mustExtract(controlsBlock, /^\s*button\s*\{/m)
+  const bodyBlock = mustExtract(indexScss, /^body\s*\{/m)
+
+  it('C1 transparent at rest: the button background is transparent and --titlebar-color is not painted', () => {
+    expect(restingDeclarations(buttonBlock)).toMatch(
+      /background-color:\s*transparent\s*;/
+    )
+    expect(controlsScss).not.toContain('--titlebar-color')
+  })
+
+  it('C1 sanity: the resting-background regex does not match the pre-fix declaration', () => {
+    expect('background-color: var(--titlebar-color);').not.toMatch(
+      /background-color:\s*transparent\s*;/
+    )
+  })
+
+  it('C2 hover tints kept', () => {
+    const hover = mustExtract(buttonBlock, /&:hover\s*\{/)
+    expect(hover).toMatch(/background-color:\s*var\(--secondary-hover\)/)
+    const closeHover = mustExtract(buttonBlock, /&\.close:hover\s*\{/)
+    expect(closeHover).toMatch(
+      /background-color:\s*var\(--status-danger-hover\)/
+    )
+  })
+
+  it('C3 sizes: 46px wide token, 32px tall token fallback', () => {
+    const resting = restingDeclarations(buttonBlock)
+    expect(resting).toMatch(
+      /width:\s*var\(--window-controls-button-width\)\s*;/
+    )
+    expect(resting).toMatch(/height:\s*var\(--overlay-controls-height\)\s*;/)
+    expect(bodyBlock).toMatch(/--window-controls-button-width:\s*46px\s*;/)
+    expect(bodyBlock).toMatch(
+      /--overlay-controls-height:\s*env\(titlebar-area-height,\s*32px\)\s*;/
+    )
+  })
+
+  it('C4 cluster: .windowControls is a flex row, so no line-box strut sits under the buttons', () => {
+    expect(restingDeclarations(controlsBlock)).toMatch(/display:\s*flex\s*;/)
+  })
+
+  describe('C5 reserve', () => {
+    const OFF_MAC_SELECTOR =
+      /^\.App:not\(\.macOverlayTitlebar\)\.frameless\s*\{/m
+
+    it('is widened to 3 x the button width off macOS, with body left at 120px', () => {
+      const block = mustExtract(indexScss, OFF_MAC_SELECTOR)
+      const decl = block.match(/--overlay-controls-width:\s*([^;]+);/)
+      expect(decl).not.toBeNull()
+      expect(decl?.[1]).toMatch(
+        /3\s*\*\s*var\(--window-controls-button-width\)/
+      )
+      const bodyDecl = bodyBlock.match(/--overlay-controls-width:\s*([^;]+);/)
+      expect(bodyDecl).not.toBeNull()
+      expect(bodyDecl?.[1]).toContain('120px')
+    })
+
+    it('C5 sanity: the selector regex does not match a rule with no macOS exclusion', () => {
+      expect('.App.frameless {').not.toMatch(OFF_MAC_SELECTOR)
+    })
+  })
+})
