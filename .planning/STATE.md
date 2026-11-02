@@ -5,13 +5,13 @@ milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 60 context gathered
 last_updated: "2026-11-02T03:03:43.880Z"
-last_activity: 2026-11-02
+last_activity: 2026-11-02 -- Phase 60 planning complete
 progress:
   total_phases: 10
-  completed_phases: 8
+  completed_phases: 7
   total_plans: 224
   completed_plans: 213
-  percent: 80
+  percent: 70
 ---
 
 # Project State
@@ -72,11 +72,11 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 59 (steam-engine-fallback-when-crossover-is-unavailable) — EXECUTING
-Plan: 11 of 23
+Plan: 10 of 23
 Status: Ready to execute
-Last activity: 2026-11-02
+Last activity: 2026-11-02 -- Phase 60 planning complete
 
-Progress: [██████████] 95%
+Progress: [██████████] 99%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
