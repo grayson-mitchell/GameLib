@@ -124,6 +124,12 @@ abstract class GameConfig {
    */
   public abstract getSettings(): Promise<GameSettings>
 
+  /**
+   * Synchronous form of `getSettings`, used by `load` and `setSetting` so
+   * `this.config` is never read before it is set (G17).
+   */
+  protected abstract readSettings(): GameSettings
+
   /** Change a specific setting */
   public abstract setSetting(key: string, value: unknown): void
 
@@ -155,7 +161,7 @@ abstract class GameConfig {
   /**
    * Load the config file, upgrade if needed.
    */
-  protected async load() {
+  protected load() {
     // Config file doesn't exist, make one.
     if (!existsSync(configPath)) {
       this.resetToDefaults()
@@ -168,7 +174,9 @@ abstract class GameConfig {
     } else {
       // No upgrades necessary, load config.
       // `this.version` should be `currentGameConfigVersion` at this point.
-      this.config = await this.getSettings()
+      // Synchronous: an async load left `this.config` undefined for a tick, so a
+      // `setSetting` that was a title's first `GameConfig.get` threw (G17).
+      this.config = this.readSettings()
     }
   }
 }
@@ -201,6 +209,10 @@ class GameConfigV0 extends GameConfig {
   }
 
   public async getSettings(): Promise<GameSettings> {
+    return this.readSettings()
+  }
+
+  protected readSettings(): GameSettings {
     // Take defaults, then overwrite if explicitly set values exist.
     // The settings defined work as overrides.
 
@@ -317,6 +329,11 @@ class GameConfigV0 extends GameConfig {
   }
 
   public setSetting(key: keyof GameSettings, value: unknown) {
+    // A config whose load was skipped (outdated version awaiting upgrade) has no
+    // `this.config` yet. Read it rather than flush a one-key object over the file.
+    if (this.config === undefined) {
+      this.config = this.readSettings()
+    }
     // check if the key exists, if not, initialize it with a undefined value
     if (!(key in this.config)) {
       this.config[key] = undefined as never
