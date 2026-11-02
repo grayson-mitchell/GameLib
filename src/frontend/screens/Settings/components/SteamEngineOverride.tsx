@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MenuItem, SelectChangeEvent } from '@mui/material'
 import SelectField from 'frontend/components/UI/SelectField'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
+import SettingsContext from 'frontend/screens/Settings/SettingsContext'
+import { useSteamEngineState } from 'frontend/state/SteamEngineState'
 import type { SteamEngineOption } from 'common/types/steam'
 
 type T = (
@@ -173,13 +175,34 @@ export function SteamEngineOverrideView({
 
 const SteamEngineOverride = () => {
   const { t } = useTranslation('gamelib')
+  const { appName } = useContext(SettingsContext)
   const [override, setOverride] = useSetting('steamEngineOverride', 'automatic')
   const [options, setOptions] = useState<SteamEngineOption[]>([])
   const [loaded, setLoaded] = useState(false)
+  const state = useSteamEngineState((s) => s.byAppId[appName])
+  const hasState = state !== undefined
+  // WR-04: eligibility is computed by the backend from the title's own
+  // per-game bridge install and DRM mode; the renderer never derives it.
+  const eligible = state?.overrideEligible === true
 
   useEffect(() => {
+    if (hasState) return
     let cancelled = false
-    window.api
+    void window.api
+      .getSteamEngineState(appName)
+      .then((result) => {
+        if (!cancelled && result) useSteamEngineState.getState().set(result)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [appName, hasState])
+
+  useEffect(() => {
+    if (!eligible) return
+    let cancelled = false
+    void window.api
       .listSteamEngineOptions()
       .then((o) => {
         if (cancelled) return
@@ -190,7 +213,9 @@ const SteamEngineOverride = () => {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [eligible])
+
+  if (!eligible) return null
 
   return (
     <SteamEngineOverrideView

@@ -46,4 +46,11 @@ describe('SteamEngineState store', () => {
       useSteamEngineState.getState().byAppId['730'].untestedCrossoverBuild
     ).toBeNull()
   })
+
+  it('remove deletes one appId and leaves others', () => {
+    handleSteamEngineStateChangedSignal(evt, make({ appId: '63000' }))
+    handleSteamEngineStateChangedSignal(evt, make())
+    useSteamEngineState.getState().remove('63000')
+    expect(Object.keys(useSteamEngineState.getState().byAppId)).toEqual(['730'])
+  })
 })

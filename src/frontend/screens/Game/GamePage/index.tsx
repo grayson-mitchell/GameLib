@@ -230,7 +230,11 @@ export default React.memo(function GamePage(): JSX.Element | null {
     if (runner !== 'steam' || !isMac) return
     let cancelled = false
     void window.api.getSteamEngineState(appName).then((result) => {
-      if (!cancelled && result) useSteamEngineState.getState().set(result)
+      if (cancelled) return
+      // 59-REVIEW WR-04: a null state drops the cached entry so a stale badge
+      // or note cannot linger.
+      if (result) useSteamEngineState.getState().set(result)
+      else useSteamEngineState.getState().remove(appName)
     })
     return () => {
       cancelled = true

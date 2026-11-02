@@ -7,6 +7,7 @@ type EngineNotice = 'no-crossover' | 'untested'
 interface SteamEngineStore {
   byAppId: Record<string, SteamEngineState>
   set: (state: SteamEngineState) => void
+  remove: (appId: string) => void
   hideNotice: (appId: string, notice: EngineNotice) => void
 }
 
@@ -17,6 +18,12 @@ export const useSteamEngineState = create<SteamEngineStore>()((set) => ({
   byAppId: {},
   set: (state) =>
     set((s) => ({ byAppId: { ...s.byAppId, [state.appId]: state } })),
+  remove: (appId) =>
+    set((s) => {
+      if (!(appId in s.byAppId)) return s
+      const { [appId]: _dropped, ...rest } = s.byAppId
+      return { byAppId: rest }
+    }),
   // Optimistic hide so a dismissed note disappears at once; the backend
   // persists the dismissal (dismissSteamEngineNotice).
   hideNotice: (appId, notice) =>

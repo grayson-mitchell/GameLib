@@ -1,6 +1,33 @@
 import type { ReactElement } from 'react'
 import type { SteamEngineOption } from 'common/types/steam'
 
+// No DOM renderer in this project: drive the component function directly with
+// hooks stubbed (effects run synchronously, state is a fixed pair).
+let mockStore: Record<string, unknown> = {}
+const mockSet = jest.fn()
+jest.mock('react', () => ({
+  ...jest.requireActual('react'),
+  useContext: () => ({ appName: 'default' }),
+  useState: (init: unknown) => [init, jest.fn()],
+  useEffect: (fn: () => void) => {
+    fn()
+  }
+}))
+jest.mock('frontend/state/SteamEngineState', () => ({
+  useSteamEngineState: Object.assign(
+    (sel: (s: { byAppId: Record<string, unknown> }) => unknown) =>
+      sel({ byAppId: mockStore }),
+    { getState: () => ({ set: mockSet }) }
+  )
+}))
+jest.mock('frontend/screens/Settings/SettingsContext', () => ({
+  __esModule: true,
+  default: {}
+}))
+jest.mock('frontend/hooks/useSetting', () => ({
+  __esModule: true,
+  default: () => ['automatic', jest.fn()]
+}))
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: () => '' }) }))
 // CSS-importing UI components cannot load under this jest config; the test
 // inspects the element tree, so inert stand-ins are enough.
@@ -18,6 +45,7 @@ import {
   selectValue,
   optionLabel
 } from '../SteamEngineOverride'
+import SteamEngineOverride from '../SteamEngineOverride'
 import { gamelibT } from '../../../Game/GamePage/components/__tests__/gamelibT'
 const opts: SteamEngineOption[] = [
   {
@@ -157,5 +185,53 @@ describe('SteamEngineOverride', () => {
     const sel = select(render('automatic'))
     expect(sel.props.labelHelp).toBeTruthy()
     expect(sel.props.label).toBe('Engine')
+  })
+})
+
+describe('SteamEngineOverride eligibility gate (WR-04)', () => {
+  const api = {
+    getSteamEngineState: jest.fn(),
+    listSteamEngineOptions: jest.fn()
+  }
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(global as unknown as { window: unknown }).window = { api }
+    api.listSteamEngineOptions.mockResolvedValue(opts)
+    api.getSteamEngineState.mockResolvedValue(null)
+    mockStore = {}
+  })
+
+  it('renders the section when overrideEligible is true and loads options once on mount', () => {
+    mockStore = { default: { overrideEligible: true } }
+    const el = SteamEngineOverride() as El | null
+    expect(el).not.toBeNull()
+    expect(api.listSteamEngineOptions).toHaveBeenCalledTimes(1)
+    expect(api.getSteamEngineState).not.toHaveBeenCalled()
+  })
+
+  it.each([false, undefined])(
+    'renders nothing when overrideEligible is %p',
+    (v) => {
+      mockStore = { default: { overrideEligible: v } }
+      expect(SteamEngineOverride()).toBeNull()
+      expect(api.listSteamEngineOptions).not.toHaveBeenCalled()
+    }
+  )
+
+  it('fetches state once when absent; null result is not stored and renders nothing', async () => {
+    expect(SteamEngineOverride()).toBeNull()
+    expect(api.getSteamEngineState).toHaveBeenCalledTimes(1)
+    expect(api.getSteamEngineState).toHaveBeenCalledWith('default')
+    await Promise.resolve()
+    expect(mockSet).not.toHaveBeenCalled()
+  })
+
+  it('stores a non-null fetched state', async () => {
+    const result = { appId: 'default', overrideEligible: true }
+    api.getSteamEngineState.mockResolvedValue(result)
+    SteamEngineOverride()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(mockSet).toHaveBeenCalledWith(result)
   })
 })
