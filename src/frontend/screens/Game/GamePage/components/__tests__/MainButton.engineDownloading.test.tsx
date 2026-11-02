@@ -145,20 +145,24 @@ function render(): ReactElement {
 }
 
 describe('MainButton — built-in engine download on a not-installed title (59-22)', () => {
-  // the shared translate mock does not interpolate; the percent is covered by
-  // engineDownloadLabel.test.ts
+  // The phase is shown by GameStatus above the button (operator UAT
+  // 2026-11-02: the button repeating it was redundant), so every phase reads
+  // "Installing…" here.
   it.each([
     ['downloading:42', 'Downloading built-in engine'],
     ['verifying', 'Verifying built-in engine'],
     ['extracting', 'Unpacking built-in engine'],
     ['setting-up', 'Setting up built-in engine']
-  ])('context %s reads the phase and disables the button', (ctx, label) => {
-    mockIs = { ...baseIs, downloadingEngine: true }
-    mockStatusContext = ctx
-    const tree = render()
-    const text = collectText(tree)
-    expect(text).toContain(label)
-    expect(text).not.toContain('Install')
-    expect(hasDisabled(tree)).toBe(true)
-  })
+  ])(
+    'context %s reads Installing… and disables the button',
+    (ctx, phaseLabel) => {
+      mockIs = { ...baseIs, downloadingEngine: true }
+      mockStatusContext = ctx
+      const tree = render()
+      const text = collectText(tree)
+      expect(text).toContain('Installing…')
+      expect(text).not.toContain(phaseLabel)
+      expect(hasDisabled(tree)).toBe(true)
+    }
+  )
 })

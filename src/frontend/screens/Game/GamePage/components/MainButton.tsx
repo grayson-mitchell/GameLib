@@ -211,12 +211,14 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
 
     // 59-22 (G1): the built-in engine is being fetched for a title that is not
     // installed yet. Without this the label fell through to "Install" with an
-    // enabled button for the whole engine setup.
+    // enabled button for the whole engine setup. The phase itself is already
+    // shown by GameStatus above the button, so the button just says it is
+    // installing.
     if (is.downloadingEngine) {
       return (
         <span className="buttonWithIcon">
           <FontAwesomeIcon icon={faSyncAlt} className="fa-spin" />
-          {engineDownloadLabel(statusContext, t)}
+          {t('status.steamInstalling', 'Installing…')}
         </span>
       )
     }
