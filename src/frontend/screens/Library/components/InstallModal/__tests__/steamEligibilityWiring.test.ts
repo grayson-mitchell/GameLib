@@ -375,10 +375,11 @@ describe('Group C: the origin controls are deliberately UNTOUCHED (the inversion
     }
   })
 
-  it('C2: fa-spin counts in MainButton.tsx and GameCard/index.tsx are unchanged from their pre-plan values (2 and 1) -- this plan added no spinner to either', () => {
+  it('C2: fa-spin counts in MainButton.tsx and GameCard/index.tsx are unchanged from their 34.15 values (3 and 1) -- 34.15 added no spinner to either', () => {
+    // 3 not 2: 59-22 added the "Installing…" spinner to MainButton (engine setup).
     expect(
       countOccurrences(stripped(ORIGIN_CONTROLS.MainButton), 'fa-spin')
-    ).toBe(2)
+    ).toBe(3)
     expect(
       countOccurrences(stripped(ORIGIN_CONTROLS.GameCard), 'fa-spin')
     ).toBe(1)
