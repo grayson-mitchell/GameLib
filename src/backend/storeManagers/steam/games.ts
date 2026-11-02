@@ -139,9 +139,20 @@ import {
 } from './bridge/overlay/overlayLaunch'
 import {
   resolveOverlayEnabled,
-  readStoredOverlayOverride
+  readStoredOverlayOverride,
+  isAbnormalOverlayExit
 } from './bridge/overlay/overlayPolicy'
 import {
+  watchOverlayAttach,
+  macSteamConsoleLogPath
+} from './bridge/overlay/overlayAttachWatch'
+import {
+  openOverlayWineLog,
+  createShimLineForwarder
+} from './bridge/overlay/overlayWineLog'
+import { buildOverlayPaths } from './bridge/overlay/overlayPaths'
+import {
+  formatOverlayExitNoticeLine,
   formatOverlayNoticeLine,
   OVERLAY_STEP_TEXT,
   type OverlayStep
@@ -741,6 +752,13 @@ export const DRM_DLL_OVERRIDES = 'steamclient=n;steamclient64=n;lsteamclient=b'
 
 // ts-prune-ignore-next
 export const DRM_TRACE_KEEP_PER_APP = 8
+
+/**
+ * Phase 60 (D-10): how long after the process monitor reports the game gone we
+ * wait for the wine wrapper's exit code before deciding on lifetime alone.
+ */
+const OVERLAY_EXIT_GRACE_MS = 3000
+
 // ts-prune-ignore-next
 export const DRM_REGISTRY_TIMEOUT_MS = 30000
 // lsteamclient.so dlopens $STEAM_COMPAT_CLIENT_INSTALL_PATH/steamclient.dylib
@@ -5322,6 +5340,10 @@ export default class SteamGame implements Game {
     let deadline: LaunchDeadline | undefined
     const deadlineFired = () => deadline?.state === 'fired'
 
+    // Phase 60: true only where overlay tokens were actually applied to this
+    // launch. Gates the attach watch, wine-log sink and D-10 check.
+    let overlayInjected = false
+
     try {
       const { runWineCommand } = await import('backend/launcher')
       const { startBottleProcessMonitor, getBottleProcessMonitorPhase } =
@@ -5495,6 +5517,7 @@ export default class SteamGame implements Game {
           )
         }
         drmCommandPrefix = env.commandPrefix
+        if (drm.overlayTokens?.length) overlayInjected = true
 
         for (const cmd of env.registryCommands) {
           let timer: ReturnType<typeof setTimeout> | undefined
@@ -5561,9 +5584,69 @@ export default class SteamGame implements Game {
         )
         if (merged.status === 'ok') {
           launchSettings = { ...launchSettings, enviromentOptions: merged.env }
+          overlayInjected = true
         } else {
           this.notifyOverlaySetupFailed('env', merged.cause)
         }
+      }
+
+      const launchStartedAt = Date.now()
+
+      // D-11: diagnostic only (no UI, no toast). The watcher is bounded,
+      // unref'd and abortable (sidecar exit contract); it reads Mac Steam's
+      // console_log under the real HOME, the declared real-profile read arm.
+      // Never awaited by the launch.
+      let attachStarted = false
+      const startAttachWatch = () => {
+        if (attachStarted || !overlayInjected) return
+        attachStarted = true
+        void Promise.resolve(
+          watchOverlayAttach({
+            appId: this.appId,
+            consoleLogPath: macSteamConsoleLogPath(userHome),
+            launchStartedAt
+          })
+        ).catch(() => undefined)
+      }
+
+      // D-10: an overlay launch whose game vanishes within the window gets a
+      // text pointer to Advanced > Steam overlay (orchestrator resolution 4: an
+      // inline button would need a settings deep link the app does not have).
+      // Never retries, never changes settings.
+      let firstMatchAt: number | undefined
+      let stoppedAt: number | undefined
+      let wrapperSettled = false
+      let wrapperCode: number | undefined
+      let overlayExitDecided = false
+      let graceTimer: ReturnType<typeof setTimeout> | undefined
+      const maybeReportOverlayAbnormalExit = (graceFired: boolean) => {
+        if (!overlayInjected || overlayExitDecided) return
+        if (stoppedAt === undefined) return
+        if (!wrapperSettled && !graceFired) return
+        overlayExitDecided = true
+        if (graceTimer) clearTimeout(graceTimer)
+        graceTimer = undefined
+        if (
+          !isAbnormalOverlayExit({
+            firstMatchAt,
+            stoppedAt,
+            wrapperCode
+          })
+        ) {
+          return
+        }
+        logWarning(formatOverlayExitNoticeLine(this.appId), LogPrefix.Steam)
+        this.showEngineDialog(
+          i18next.t(
+            'gamelib:steam.overlay.exit.title',
+            'Game closed soon after starting'
+          ),
+          i18next.t(
+            'gamelib:steam.overlay.exit.body',
+            "The game exited within 30 seconds with the Steam overlay on. If this keeps happening, turn the overlay off in this game's settings: Advanced > Steam overlay."
+          ),
+          'overlay-exit-abnormal'
+        )
       }
 
       let handle: ReturnType<typeof startBottleProcessMonitor> = null
@@ -5575,13 +5658,30 @@ export default class SteamGame implements Game {
             installPath: installRoot,
             bottleDir: getBottleDir(bridgeBottleSettings.wineCrossoverBottle),
             kind: 'bridge',
-            onFirstMatch: () => deadline?.cancel('first-match'),
+            onFirstMatch: () => {
+              deadline?.cancel('first-match')
+              if (overlayInjected) {
+                firstMatchAt ??= Date.now()
+                startAttachWatch()
+              }
+            },
             onUnavailable: () => deadline?.cancel('monitor-unavailable'),
             onStopped: () => {
               clearLaunchRecord()
               stopBridgeHelper(this.appId)
               clearEngineSelection(this.appId)
               relogOnce()
+              if (overlayInjected && stoppedAt === undefined) {
+                stoppedAt = Date.now()
+                if (!wrapperSettled && !overlayExitDecided) {
+                  graceTimer = setTimeout(
+                    () => maybeReportOverlayAbnormalExit(true),
+                    OVERLAY_EXIT_GRACE_MS
+                  )
+                  graceTimer.unref?.()
+                }
+                maybeReportOverlayAbnormalExit(false)
+              }
             }
           }),
           (m) => logInfo(`SteamGame: appId ${this.appId} ${m}`, LogPrefix.Steam)
@@ -5626,6 +5726,33 @@ export default class SteamGame implements Game {
           LogPrefix.Steam
         )
       }
+      // D-15: TCP overlay launches get their own bounded wine log; DRM keeps its
+      // one. Shim lines (capped, sanitised) are copied into the launch log on
+      // both routes.
+      const overlayWineLog =
+        overlayInjected && !drm
+          ? openOverlayWineLog(
+              buildOverlayPaths(appFolder)?.traceRoot ?? '',
+              this.appId,
+              Date.now()
+            )
+          : null
+      if (overlayWineLog) {
+        logInfo(
+          `SteamGame: overlay launch appId ${this.appId}: wine log ${overlayWineLog.path}`,
+          LogPrefix.Steam
+        )
+      }
+      const shimForward = overlayInjected
+        ? createShimLineForwarder(
+            (line) =>
+              logInfo(
+                `SteamGame: appId ${this.appId} ${line}`,
+                LogPrefix.Steam
+              ),
+            50
+          )
+        : null
       const winePromise = runWineCommand({
         commandParts: drm
           ? [
@@ -5639,13 +5766,30 @@ export default class SteamGame implements Game {
         protonVerb: 'run',
         startFolder: launchCwd,
         skipPrefixCheckIKnowWhatImDoing: true,
-        ...(wineLog
-          ? { options: { onOutput: (chunk: string) => wineLog.write(chunk) } }
+        ...(wineLog || overlayWineLog || shimForward
+          ? {
+              options: {
+                onOutput: (chunk: string) => {
+                  wineLog?.write(chunk)
+                  overlayWineLog?.write(chunk)
+                  shimForward?.(chunk)
+                }
+              }
+            }
           : {})
       })
-      void winePromise.finally(() => wineLog?.close()).catch(() => undefined)
+      if (!handle) startAttachWatch()
+      void winePromise
+        .finally(() => {
+          wineLog?.close()
+          overlayWineLog?.close()
+        })
+        .catch(() => undefined)
       void winePromise.then(
-        () => {
+        (res) => {
+          wrapperSettled = true
+          wrapperCode = typeof res?.code === 'number' ? res.code : undefined
+          maybeReportOverlayAbnormalExit(false)
           // With a monitor, its onStopped clears the record when the game is
           // gone; the launcher process exiting says nothing about the game.
           if (!handle) {
@@ -5659,6 +5803,8 @@ export default class SteamGame implements Game {
           handle?.launcherExited()
         },
         (error: unknown) => {
+          wrapperSettled = true
+          maybeReportOverlayAbnormalExit(false)
           deadline?.cancel('launch-error')
           clearEngineSelection(this.appId)
           clearLaunchRecord()

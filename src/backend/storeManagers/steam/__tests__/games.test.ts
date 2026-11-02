@@ -481,7 +481,27 @@ jest.mock('../bridge/overlay/overlayPolicy', () => {
     __readStoredOverlayOverrideMock: storedMock,
     resolveOverlayEnabled: (...args: unknown[]) =>
       resolveMock(...args) ?? { enabled: false, source: 'user' },
-    readStoredOverlayOverride: (...args: unknown[]) => storedMock(...args)
+    readStoredOverlayOverride: (...args: unknown[]) => storedMock(...args),
+    isAbnormalOverlayExit: jest.requireActual('../bridge/overlay/overlayPolicy')
+      .isAbnormalOverlayExit
+  }
+})
+// Phase 60 (60-09): attach watch and overlay wine log. The shim forwarder and
+// console-log path helper stay real.
+jest.mock('../bridge/overlay/overlayAttachWatch', () => {
+  const watchMock = jest.fn()
+  return {
+    ...jest.requireActual('../bridge/overlay/overlayAttachWatch'),
+    __watchOverlayAttachMock: watchMock,
+    watchOverlayAttach: (...args: unknown[]) => watchMock(...args)
+  }
+})
+jest.mock('../bridge/overlay/overlayWineLog', () => {
+  const openMock = jest.fn()
+  return {
+    ...jest.requireActual('../bridge/overlay/overlayWineLog'),
+    __openOverlayWineLogMock: openMock,
+    openOverlayWineLog: (...args: unknown[]) => openMock(...args)
   }
 })
 jest.mock('../bridge/overlay/overlayLaunch', () => {
@@ -13705,6 +13725,342 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
         expect(await new SteamGame(id).launch({} as never)).toBe(true)
         expect(cxEnvOf()).toContain(`SteamAppId=${id}`)
+      })
+    })
+
+    describe('Phase 60 overlay (post-launch: attach watch, wine log, D-10)', () => {
+      const { __resolveOverlayEnabledMock } = jest.requireMock<{
+        __resolveOverlayEnabledMock: jest.Mock
+      }>('../bridge/overlay/overlayPolicy')
+      const { __prepareOverlayLaunchMock, __prepareOverlayTokensMock } =
+        jest.requireMock<{
+          __prepareOverlayLaunchMock: jest.Mock
+          __prepareOverlayTokensMock: jest.Mock
+        }>('../bridge/overlay/overlayLaunch')
+      const { __watchOverlayAttachMock } = jest.requireMock<{
+        __watchOverlayAttachMock: jest.Mock
+      }>('../bridge/overlay/overlayAttachWatch')
+      const { __openOverlayWineLogMock } = jest.requireMock<{
+        __openOverlayWineLogMock: jest.Mock
+      }>('../bridge/overlay/overlayWineLog')
+      const bottleMod = jest.requireMock<{
+        setOverlayBridgeRunner: jest.Mock
+        endPerGameBridgeBottleSessionWith: jest.Mock
+      }>('../bottle')
+      const { showDialogBoxModalAuto } = jest.requireMock<{
+        showDialogBoxModalAuto: jest.Mock
+      }>('backend/dialog/dialog')
+      const runnerBin = '/ov/runner/CrossOver/bin/wine'
+      const okResult = (id: string) => ({
+        status: 'ok' as const,
+        runner: {
+          crossoverBuild: '26.3.0',
+          runnerDir: '/ov/runner',
+          cxRoot: '/ov/runner/CrossOver',
+          wrapperBin: runnerBin
+        },
+        tokens: [`DYLD_INSERT_LIBRARIES='/s/shim.dylib'`, `SteamAppId=${id}`]
+      })
+      const registered = { current: false }
+      type Monitor = {
+        onFirstMatch: () => void
+        onStopped: () => void
+      }
+      let monitor: Monitor | undefined
+      const mon = (): Monitor => {
+        if (!monitor) throw new Error('process monitor was not started')
+        return monitor
+      }
+      let settleWine: (v: { code?: number }) => void
+      let rejectWine: (e: unknown) => void
+      let wineLogMock: { path: string; write: jest.Mock; close: jest.Mock }
+
+      beforeEach(() => {
+        jest.useFakeTimers()
+        monitor = undefined
+        registered.current = false
+        wineLogMock = {
+          path: '/ov/trace/overlay-wine.log',
+          write: jest.fn(),
+          close: jest.fn()
+        }
+        ;(detectDrmWrapper as jest.Mock).mockReturnValue('none')
+        __resolveOverlayEnabledMock.mockReturnValue({
+          enabled: true,
+          source: 'default'
+        })
+        __prepareOverlayLaunchMock.mockReset()
+        __openOverlayWineLogMock.mockReset().mockReturnValue(wineLogMock)
+        __watchOverlayAttachMock
+          .mockReset()
+          .mockReturnValue(new Promise(() => {}))
+        bottleMod.setOverlayBridgeRunner.mockImplementation(() => {
+          registered.current = true
+          return true
+        })
+        bottleMod.endPerGameBridgeBottleSessionWith.mockResolvedValue(true)
+        ;(getBridgeBottleSettings as jest.Mock).mockImplementation(
+          (id: string) => ({
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: registered.current
+              ? { bin: runnerBin, name: 'overlay', type: 'crossover' }
+              : { bin: '/stock/bin/wine', name: 'stock', type: 'crossover' },
+            enviromentOptions: []
+          })
+        )
+        ;(startBottleProcessMonitor as jest.Mock).mockImplementation(
+          (a: Monitor) => {
+            monitor = a
+            return { launcherExited: jest.fn() }
+          }
+        )
+        ;(runWineCommand as jest.Mock).mockImplementation(
+          () =>
+            new Promise((resolve, reject) => {
+              settleWine = resolve
+              rejectWine = reject
+            })
+        )
+      })
+      afterEach(() => {
+        // Stand the armed launch deadline down (it is a module-level registry
+        // that later describes count).
+        monitor?.onFirstMatch()
+        jest.useRealTimers()
+      })
+
+      const onOutput = () =>
+        (runWineCommand as jest.Mock).mock.calls[0][0].options?.onOutput as
+          | ((c: string) => void)
+          | undefined
+      const launchOn = async (id: string) => {
+        __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+        return new SteamGame(id).launch({} as never)
+      }
+      const flush = async () => {
+        for (let i = 0; i < 5; i++) await Promise.resolve()
+      }
+      const exitNotices = (id: string) =>
+        (logWarning as jest.Mock).mock.calls.filter((c) =>
+          String(c[0]).includes(`appId=${id} reason=overlay-exit-abnormal`)
+        )
+      const SHIM =
+        'overlay_shim hook_set_pixel_format: layer=WineMetalLayer format=80 (BGRA8Unorm)\n'
+
+      it('TCP overlay launch opens the trace-dir wine log and forwards shim lines', async () => {
+        const id = freshId()
+        expect(await launchOn(id)).toBe(true)
+        expect(__openOverlayWineLogMock).toHaveBeenCalledWith(
+          join(
+            jest.requireMock('backend/constants/paths').appFolder as string,
+            'steam-bridge',
+            'overlay',
+            'trace'
+          ),
+          id,
+          expect.any(Number)
+        )
+        onOutput()?.(SHIM)
+        expect(wineLogMock.write).toHaveBeenCalledWith(SHIM)
+        expect(
+          (logInfo as jest.Mock).mock.calls.some((c) =>
+            String(c[0]).includes(
+              `SteamGame: appId ${id} overlay_shim hook_set_pixel_format`
+            )
+          )
+        ).toBe(true)
+      })
+
+      it('the wine log is closed when the wine promise settles', async () => {
+        const id = freshId()
+        await launchOn(id)
+        settleWine({ code: 0 })
+        await flush()
+        expect(wineLogMock.close).toHaveBeenCalled()
+      })
+
+      it('a null overlay wine log still forwards shim lines and launches', async () => {
+        const id = freshId()
+        __openOverlayWineLogMock.mockReturnValue(null)
+        expect(await launchOn(id)).toBe(true)
+        onOutput()?.(SHIM)
+        expect(
+          (logInfo as jest.Mock).mock.calls.some((c) =>
+            String(c[0]).includes('overlay_shim hook_set_pixel_format')
+          )
+        ).toBe(true)
+      })
+
+      it('non-overlay TCP launch: no wine log, no onOutput, no watch', async () => {
+        const id = freshId()
+        __resolveOverlayEnabledMock.mockReturnValue({
+          enabled: false,
+          source: 'user'
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(__openOverlayWineLogMock).not.toHaveBeenCalled()
+        expect(onOutput()).toBeUndefined()
+        expect(monitor).toBeDefined()
+        mon().onFirstMatch()
+        expect(__watchOverlayAttachMock).not.toHaveBeenCalled()
+      })
+
+      it('DRM overlay launch keeps one wine log and forwards shim lines, no overlay log file', async () => {
+        const id = freshId()
+        const r = readyFor(id)
+        __drmLaunchSetupMock.mockImplementation(() =>
+          Promise.resolve({
+            ...r,
+            runner: { ...r.runner, wineloaderResigned: true }
+          })
+        )
+        ;(existsSync as jest.Mock).mockImplementation(() => true)
+        __prepareOverlayTokensMock.mockResolvedValue({
+          status: 'ok',
+          tokens: [`DYLD_INSERT_LIBRARIES='/s/shim.dylib'`]
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(__openOverlayWineLogMock).not.toHaveBeenCalled()
+        onOutput()?.(SHIM)
+        expect(
+          (logInfo as jest.Mock).mock.calls.some((c) =>
+            String(c[0]).includes(`SteamGame: appId ${id} overlay_shim`)
+          )
+        ).toBe(true)
+      })
+
+      it('with a monitor the watch starts at first match, once, with the start time', async () => {
+        const id = freshId()
+        const t0 = Date.now()
+        await launchOn(id)
+        expect(__watchOverlayAttachMock).not.toHaveBeenCalled()
+        mon().onFirstMatch()
+        mon().onFirstMatch()
+        expect(__watchOverlayAttachMock).toHaveBeenCalledTimes(1)
+        expect(__watchOverlayAttachMock.mock.calls[0][0]).toEqual({
+          appId: id,
+          consoleLogPath: join(
+            jest.requireMock('backend/constants/paths').userHome as string,
+            'Library',
+            'Application Support',
+            'Steam',
+            'logs',
+            'console_log.txt'
+          ),
+          launchStartedAt: expect.any(Number)
+        })
+        expect(
+          __watchOverlayAttachMock.mock.calls[0][0].launchStartedAt
+        ).toBeGreaterThanOrEqual(t0)
+      })
+
+      it('with no monitor the watch starts at spawn, once, and the launch does not await it', async () => {
+        const id = freshId()
+        ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(null)
+        // never-resolving watch promise: launch must still resolve
+        expect(await launchOn(id)).toBe(true)
+        if (monitor) return
+        expect(__watchOverlayAttachMock).toHaveBeenCalledTimes(1)
+      })
+
+      it('D-10: game gone at 12 s with code 1 shows one notice and the toggle pointer', async () => {
+        const id = freshId()
+        await launchOn(id)
+        mon().onFirstMatch()
+        jest.advanceTimersByTime(12_000)
+        mon().onStopped()
+        settleWine({ code: 1 })
+        await flush()
+        expect(exitNotices(id)).toHaveLength(1)
+        expect(showDialogBoxModalAuto).toHaveBeenCalledTimes(1)
+        expect(showDialogBoxModalAuto.mock.calls[0][0].message).toBe(
+          'gamelib:steam.overlay.exit.body'
+        )
+        expect(runWineCommand).toHaveBeenCalledTimes(1)
+      })
+
+      it('D-10: no code field counts as unknown, so abnormal', async () => {
+        const id = freshId()
+        await launchOn(id)
+        mon().onFirstMatch()
+        jest.advanceTimersByTime(5_000)
+        mon().onStopped()
+        settleWine({})
+        await flush()
+        expect(exitNotices(id)).toHaveLength(1)
+      })
+
+      it('D-10: a rejected wine promise after a quick stop counts too', async () => {
+        const id = freshId()
+        await launchOn(id)
+        mon().onFirstMatch()
+        jest.advanceTimersByTime(5_000)
+        mon().onStopped()
+        rejectWine(new Error('x'))
+        await flush()
+        expect(exitNotices(id)).toHaveLength(1)
+      })
+
+      it('D-10: gone at 45 s is a normal session, no notice', async () => {
+        const id = freshId()
+        await launchOn(id)
+        mon().onFirstMatch()
+        jest.advanceTimersByTime(45_000)
+        mon().onStopped()
+        settleWine({ code: 1 })
+        await flush()
+        expect(exitNotices(id)).toHaveLength(0)
+      })
+
+      it('D-10: wrapper code 0 means no notice', async () => {
+        const id = freshId()
+        await launchOn(id)
+        mon().onFirstMatch()
+        jest.advanceTimersByTime(5_000)
+        mon().onStopped()
+        settleWine({ code: 0 })
+        await flush()
+        expect(exitNotices(id)).toHaveLength(0)
+      })
+
+      it('D-10: a non-overlay launch dying at 5 s gets no overlay notice', async () => {
+        const id = freshId()
+        __resolveOverlayEnabledMock.mockReturnValue({
+          enabled: false,
+          source: 'user'
+        })
+        await new SteamGame(id).launch({} as never)
+        mon().onFirstMatch()
+        jest.advanceTimersByTime(5_000)
+        mon().onStopped()
+        settleWine({ code: 1 })
+        await flush()
+        expect(exitNotices(id)).toHaveLength(0)
+      })
+
+      it('D-10: never seen (no first match) gives no overlay notice', async () => {
+        const id = freshId()
+        await launchOn(id)
+        mon().onStopped()
+        settleWine({ code: 1 })
+        await flush()
+        expect(exitNotices(id)).toHaveLength(0)
+      })
+
+      it('D-10: wine promise never settles, the 3 s unref grace decides once', async () => {
+        const id = freshId()
+        await launchOn(id)
+        mon().onFirstMatch()
+        jest.advanceTimersByTime(5_000)
+        mon().onStopped()
+        expect(exitNotices(id)).toHaveLength(0)
+        jest.advanceTimersByTime(3_000)
+        expect(exitNotices(id)).toHaveLength(1)
+        settleWine({ code: 1 })
+        mon().onStopped()
+        await flush()
+        expect(exitNotices(id)).toHaveLength(1)
+        expect(jest.getTimerCount()).toBeLessThanOrEqual(1)
       })
     })
   })
