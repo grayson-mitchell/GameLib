@@ -31,6 +31,7 @@ import { useSteamClientSetup } from 'frontend/state/SteamClientSetup'
 import {
   handOffSteamClientSetupToDesktop,
   probeSteamQuickInstallTarget,
+  releaseUnclaimedSteamClientSetup,
   resolveConsoleActionIntent,
   steamBlockedMessageKey
 } from '../consoleSteamTarget'
@@ -984,5 +985,110 @@ describe('Console Mode hand-off wiring gates (quick 261102-pgy, comment-stripped
     )
     expect(knownBad).not.toBe(real)
     expect(() => assertConsoleExitWired(knownBad)).toThrow(/onExitConsole/)
+  })
+})
+
+describe('releaseUnclaimedSteamClientSetup (quick 261102-pgy)', () => {
+  beforeEach(() => {
+    useSteamClientSetup.setState({
+      isOpen: false,
+      appName: undefined,
+      reason: undefined
+    })
+  })
+
+  it('H3: closes a store open for the same appName, leaves another game and a closed store alone', () => {
+    useSteamClientSetup.getState().open('570', 'install')
+    releaseUnclaimedSteamClientSetup('570')
+    expect(useSteamClientSetup.getState().isOpen).toBe(false)
+
+    useSteamClientSetup.getState().open('999', 'launch-once')
+    releaseUnclaimedSteamClientSetup('570')
+    const other = useSteamClientSetup.getState()
+    expect(other.isOpen).toBe(true)
+    expect(other.appName).toBe('999')
+    expect(other.reason).toBe('launch-once')
+
+    useSteamClientSetup.setState({ isOpen: false })
+    releaseUnclaimedSteamClientSetup('999')
+    expect(useSteamClientSetup.getState().isOpen).toBe(false)
+  })
+})
+
+function assertUnclaimedSetupReleased(source: string) {
+  const releases =
+    source.match(/releaseUnclaimedSteamClientSetup\(\s*game\.app_name\s*\)/g)
+      ?.length ?? 0
+  if (releases !== 2) {
+    throw new Error(
+      `assertUnclaimedSetupReleased: releaseUnclaimedSteamClientSetup(game.app_name) appears ${releases} times, expected 2 (in-flight cancelled branch + effect cleanup)`
+    )
+  }
+  if (!source.includes('!handedOffRef.current')) {
+    throw new Error(
+      'assertUnclaimedSetupReleased: the cleanup is not guarded by !handedOffRef.current'
+    )
+  }
+  const flagIdx = source.indexOf('handedOffRef.current = true')
+  const callIdx = source.indexOf('handOffSteamClientSetupToDesktop(')
+  if (flagIdx === -1 || callIdx === -1 || flagIdx > callIdx) {
+    throw new Error(
+      'assertUnclaimedSetupReleased: handedOffRef.current = true must come BEFORE the hand-off call'
+    )
+  }
+}
+
+describe('Console Mode unclaimed-store release gates (quick 261102-pgy, comment-stripped)', () => {
+  it('D11: the overlay releases a store it did not hand off, on both unmount paths', () => {
+    expect(() =>
+      assertUnclaimedSetupReleased(readStrippedOverlay())
+    ).not.toThrow()
+  })
+
+  it('D11-RED-a: dropping the handed-off flag assignment is rejected', () => {
+    const real = readStrippedOverlay()
+    const knownBad = real.replace('handedOffRef.current = true', '')
+    expect(knownBad).not.toBe(real)
+    expect(() => assertUnclaimedSetupReleased(knownBad)).toThrow(
+      /must come BEFORE/
+    )
+  })
+
+  it('D11-RED-b: a renamed release call is rejected', () => {
+    const real = readStrippedOverlay()
+    const knownBad = real.replace(
+      'releaseUnclaimedSteamClientSetup(',
+      'releaseSomethingElse('
+    )
+    expect(knownBad).not.toBe(real)
+    expect(() => assertUnclaimedSetupReleased(knownBad)).toThrow(/expected 2/)
+  })
+})
+
+describe('en catalog (quick 261102-pgy)', () => {
+  it('I1: consoleMode.steamClientSetupHandOff matches the overlay in-code default', () => {
+    const catalog = JSON.parse(
+      readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          'public',
+          'locales',
+          'en',
+          'gamelib.json'
+        ),
+        'utf8'
+      )
+    ) as { consoleMode: Record<string, string> }
+    const match = readFileSync(OVERLAY_PATH, 'utf8').match(
+      /'gamelib:consoleMode\.steamClientSetupHandOff',\s*'([^']+)'/
+    )
+    expect(match).not.toBeNull()
+    expect(catalog.consoleMode.steamClientSetupHandOff).toBe(match?.[1])
   })
 })
