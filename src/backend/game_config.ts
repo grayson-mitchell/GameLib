@@ -349,7 +349,7 @@ class GameConfigV0 extends GameConfig {
     } catch (error) {
       // WR-04: memory must match the file the launch path reads.
       if (had) {
-        this.config[key] = prev
+        this.config[key] = prev as never
       } else {
         delete this.config[key]
       }
