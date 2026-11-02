@@ -253,8 +253,10 @@ export default class NileLibraryManager implements LibraryManager {
         publishSignInProbeOutcomes()
       }
     } catch {
-      // The caller does not await refreshNile() (F6); an escaping rejection
-      // here would become an unhandled rejection, so this catch is
+      // refresh() awaits refreshNile() (261102-s32), so this catch is what
+      // keeps a throw from rejecting out of refresh() into the
+      // steamFlowRegistration handler (init()'s unawaited refresh() would
+      // otherwise turn it into an unhandled rejection at boot). It is
       // load-bearing, not defensive decoration. The captured text must never
       // be logged, not even on this path (T-49-15) -- only what
       // applySignInVerdict already logs (the store and the verdict label).
@@ -323,7 +325,11 @@ export default class NileLibraryManager implements LibraryManager {
     }
     logInfo('Refreshing library...', LogPrefix.Nile)
 
-    this.refreshNile()
+    // Quick 261102-s32 / F3: await the sync so the list published below is
+    // the post-sync library.json. This lengthens a nile refresh by the sync
+    // duration (about 4-7s measured), which is accepted; init() still does
+    // not await refresh(), so boot is unaffected.
+    await this.refreshNile()
     this.refreshInstalled()
     this.loadGamesInAccount()
 
