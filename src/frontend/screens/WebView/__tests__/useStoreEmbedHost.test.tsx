@@ -2452,3 +2452,117 @@ describe('useStoreEmbedHost store exit (epic/gog/amazon, quick 261030-ts4)', () 
     expect(onStoreExit).not.toHaveBeenCalled()
   })
 })
+
+describe('useStoreEmbedHost arm on entry (quick 261102-s32)', () => {
+  const ev = (url: string) => ({
+    url,
+    host: new URL(url).host,
+    canGoBack: true,
+    canGoForward: false
+  })
+  const AMAZON = {
+    storeKey: 'amazon',
+    startUrl: 'https://gaming.amazon.com'
+  }
+  const GOG = {
+    storeKey: 'gog',
+    startUrl: 'https://www.gog.com/'
+  }
+  const armedLogs = () =>
+    mockApi.logInfo.mock.calls
+      .map((c: unknown[]) => String(c[0]))
+      .filter((l: string) => l.includes('armed host='))
+
+  const drain = async (events: ReturnType<typeof ev>[]) => {
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce(events)
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+  }
+
+  beforeEach(() => {
+    suppressionContextValue = {
+      suppressed: false,
+      acquire: jest.fn(),
+      release: jest.fn()
+    }
+    MockResizeObserver.instances = []
+    windowListeners.clear()
+    fakeLocalStorage.clear()
+    resetStoreEmbedSignInBaselines()
+    mockApi.logInfo.mockClear()
+    mockApi.storeEmbedOpen.mockResolvedValue(okStatus)
+    mockApi.storeEmbedHide.mockResolvedValue(okStatus)
+    mockApi.storeEmbedShow.mockResolvedValue(okStatus)
+    mockApi.storeEmbedClose.mockResolvedValue(okStatus)
+    mockApi.storeEmbedBack.mockResolvedValue(okStatus)
+    mockApi.storeEmbedNavigate.mockResolvedValue(okStatus)
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValue([])
+  })
+
+  afterEach(() => {
+    jest.clearAllTimers()
+  })
+
+  it('amazon arms on entry with no nav event', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onStoreExit = jest.fn()
+    mount({ slotRef: ref, ...AMAZON, onStoreExit })
+    await drain([])
+    harness().__unmount()
+    expect(onStoreExit).toHaveBeenCalledTimes(1)
+    expect(onStoreExit).toHaveBeenCalledWith('amazon')
+    expect(armedLogs()).toEqual([
+      '[amazonStoreExitRefresh] armed host=gaming.amazon.com via=entry'
+    ])
+  })
+
+  it('steam home does not arm', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onStoreExit = jest.fn()
+    mount({
+      slotRef: ref,
+      storeKey: 'steam',
+      startUrl: 'https://store.steampowered.com/',
+      onStoreExit
+    })
+    await drain([])
+    harness().__unmount()
+    expect(onStoreExit).not.toHaveBeenCalled()
+    expect(armedLogs()).toEqual([])
+  })
+
+  it('re-entry re-arms with no nav events in between', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const onStoreExit = jest.fn()
+    const options: MountOptions = { slotRef: ref, ...AMAZON, onStoreExit }
+    mount(options)
+    reinvoke({ ...options, ...GOG })
+    expect(onStoreExit).toHaveBeenCalledTimes(1)
+    reinvoke(options)
+    reinvoke({ ...options, ...GOG })
+    expect(onStoreExit).toHaveBeenCalledTimes(2)
+    expect(onStoreExit).toHaveBeenNthCalledWith(2, 'amazon')
+  })
+
+  it('armed log is once per arming', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    mount({ slotRef: ref, ...AMAZON, onStoreExit: jest.fn() })
+    await drain([ev('https://gaming.amazon.com/home')])
+    expect(armedLogs()).toHaveLength(1)
+  })
+
+  it('a nav arm logs via=nav', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    mount({
+      slotRef: ref,
+      storeKey: 'steam',
+      startUrl: 'https://store.steampowered.com/',
+      onStoreExit: jest.fn()
+    })
+    await drain([ev('https://store.steampowered.com/app/391540/Undertale/')])
+    expect(armedLogs()).toEqual([
+      '[steamStoreExitRefresh] armed host=store.steampowered.com via=nav'
+    ])
+  })
+})

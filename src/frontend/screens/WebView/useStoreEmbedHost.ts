@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
 import {
-  isPurchaseIntentUrlFor,
+  armForUrl,
   isStoreExitStoreKey,
   type StoreExitStoreKey
 } from './storeExitRefresh'
@@ -243,14 +243,20 @@ export function useStoreEmbedHost({
   onStoreExitRef.current = onStoreExit
   const storeKeyRef = useRef(storeKey)
   storeKeyRef.current = storeKey
+  const startUrlRef = useRef(startUrl)
+  startUrlRef.current = startUrl
   // Quick 261030-ts4: the macOS raw Epic WKWebView feeds this same drain
   // (main.rs `store_embed_take_nav_events` returns `macos_epic_embed::take_nav_events()` when
   // selected), so no Epic-specific arming branch is needed.
   const purchaseIntentArmedRef = useRef(false)
   const noteVisitedUrl = (url: string) => {
-    if (isPurchaseIntentUrlFor(storeKeyRef.current, url)) {
-      purchaseIntentArmedRef.current = true
-    }
+    purchaseIntentArmedRef.current = armForUrl(
+      storeKeyRef.current,
+      url,
+      purchaseIntentArmedRef.current,
+      'nav',
+      (line) => window.api.logInfo(line)
+    )
   }
   const noteVisitedUrlRef = useRef(noteVisitedUrl)
   noteVisitedUrlRef.current = noteVisitedUrl
@@ -859,8 +865,20 @@ export function useStoreEmbedHost({
   // `[storeKey]` runs on a store switch (`store/:store` is one route, so no unmount) AND on
   // unmount (route leave), with the PREVIOUS storeKey in its closure -- one lifecycle point for
   // both "leaving" shapes. Deliberately NOT the suppression hide (a modal is not leaving).
+  //
+  // Quick 261102-s32: the reset is followed by an entry-arm from `startUrl`. The shared embed is
+  // hidden, not closed, so re-entry (and SPA claim clicks on gaming.amazon.com) yield no
+  // page-load nav event and nothing else would arm. `startUrl` (not `navState.url`) because on a
+  // store switch `navState.url` still holds the previous store's last URL.
   useEffect(() => {
     purchaseIntentArmedRef.current = false
+    purchaseIntentArmedRef.current = armForUrl(
+      storeKey,
+      startUrlRef.current,
+      false,
+      'entry',
+      (line) => window.api.logInfo(line)
+    )
     return () => {
       const armed = purchaseIntentArmedRef.current
       purchaseIntentArmedRef.current = false
