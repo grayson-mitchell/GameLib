@@ -2,6 +2,7 @@ import { createRepoClient } from '../githubFiles'
 import { GitHubUnavailableError } from '../githubApp'
 import { encodeGitHubContent } from '../fileEdit'
 import { createFakeFetch } from './helpers/fakeFetch'
+import { publishReport } from '../publish'
 
 const BASE = 'https://api.github.com/repos/grayson-mitchell/known-fixes'
 
@@ -30,6 +31,52 @@ describe('githubFiles', () => {
       sha: 'abc',
       text
     })
+  })
+
+  test.each([
+    ['non-UTF-8', btoa('\xff\xfe{}')],
+    ['bad base64', '!!!not base64!!!']
+  ])('getFile never throws on %s content (WR-08)', async (_n, content) => {
+    const { repo } = client({
+      [`GET ${BASE}/contents/steam/1-steam.json?ref=main`]: {
+        status: 200,
+        json: { sha: 'abc', content, encoding: 'base64' }
+      }
+    })
+    expect(await repo.getFile('steam/1-steam.json', 'main')).toEqual({
+      sha: 'abc',
+      text: ''
+    })
+  })
+
+  test('an undecodable file on main makes the publish skipped (WR-08)', async () => {
+    const { repo, fake } = client({
+      [`GET ${BASE}/contents/steam/1-steam.json?ref=main`]: {
+        status: 200,
+        json: { sha: 'abc', content: btoa('\xff\xfe'), encoding: 'base64' }
+      }
+    })
+    for (const op of ['add', 'remove'] as const) {
+      const res = await publishReport({
+        report: {
+          v: 1,
+          store: 'steam',
+          appId: '1',
+          key: 'macArch',
+          value: '32',
+          op,
+          gamelibVersion: '0.8.0'
+        },
+        title: 'T',
+        detector: 'macho',
+        gh: repo,
+        baseBranch: 'main',
+        entriesFor: () => Promise.resolve([]),
+        reserveCreation: () => Promise.resolve(true)
+      })
+      expect(res.status).toBe('skipped')
+    }
+    expect(fake.calls.every((c) => c.method === 'GET')).toBe(true)
   })
 
   test('getFile returns null on 404', async () => {

@@ -115,10 +115,16 @@ export function createRepoClient(opts: {
       )
       if (r.status === 404) return null
       const j = obj(r.json)
-      return {
-        sha: String(j.sha),
-        text: decodeGitHubContent(String(j.content ?? ''))
+      // WR-08: bad base64 or non-UTF-8 content must not throw out of the
+      // publish flow (a retryable 503 the client would resend forever). An
+      // empty text is unparsable, so planAdd/planRemove return `skipped`.
+      let text: string
+      try {
+        text = decodeGitHubContent(String(j.content ?? ''))
+      } catch {
+        text = ''
       }
+      return { sha: String(j.sha), text }
     },
 
     async findPulls(branch, state) {

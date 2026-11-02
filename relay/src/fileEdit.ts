@@ -1,5 +1,7 @@
 // Pure fix-file edit rules for the relay (D-05, D-07, D-08, D-11).
-// Never throws: parse/decode failures are returned as `skipped`.
+// The plan functions never throw: unparsable text is returned as `skipped`.
+// decodeGitHubContent is strict and throws; githubFiles.getFile maps a decode
+// failure to unparsable text, so it also ends as `skipped` (WR-08).
 import type { KnownFixReportKey } from '../../src/common/knownFixReport'
 
 type FixFile = Record<string, unknown>
