@@ -3,7 +3,7 @@
 // and no `env` literal appears.
 
 import { execFile, execFileSync } from 'child_process'
-import { existsSync, readdirSync } from 'graceful-fs'
+import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { dialog } from 'backend/platform'
 import {
   machOArchsOf,
@@ -20,7 +20,8 @@ jest.mock('child_process', () => ({
 }))
 jest.mock('graceful-fs', () => ({
   existsSync: jest.fn(),
-  readdirSync: jest.fn()
+  readdirSync: jest.fn(),
+  readFileSync: jest.fn()
 }))
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
@@ -39,7 +40,13 @@ const mExecSync = execFileSync as unknown as jest.Mock
 const mExec = execFile as unknown as jest.Mock
 const mExists = existsSync as unknown as jest.Mock
 const mReaddir = readdirSync as unknown as jest.Mock
+const mReadFile = readFileSync as unknown as jest.Mock
 const mBox = dialog.showMessageBox as unknown as jest.Mock
+
+const DREDMOR_DIR = ['DredmorSchema.xsd', 'achievements', 'dredmor']
+function plistNaming(exe: string) {
+  return `<plist version="1.0">\n<dict>\n\t<key>CFBundleExecutable</key>\n\t<string>${exe}</string>\n</dict>\n</plist>`
+}
 
 type ExecCb = (err: Error | null, stdout?: string) => void
 function asyncExec(handler: (cmd: string) => string | Error) {
@@ -153,6 +160,31 @@ describe('locateMachOBinary', () => {
     })
     expect(locateMachOBinary('/g')).toBeNull()
   })
+  test('prefers CFBundleExecutable over the first MacOS entry', () => {
+    mExists.mockReturnValue(true)
+    mReaddir.mockImplementation((p: string) =>
+      p === '/g' ? ['D.app'] : DREDMOR_DIR
+    )
+    mReadFile.mockReturnValue(plistNaming('dredmor'))
+    expect(locateMachOBinary('/g')).toBe('/g/D.app/Contents/MacOS/dredmor')
+    expect(mReadFile).toHaveBeenCalledWith(
+      '/g/D.app/Contents/Info.plist',
+      'utf8'
+    )
+  })
+  test('ignores a CFBundleExecutable that is a path, or missing on disk', () => {
+    mReaddir.mockReturnValue(DREDMOR_DIR)
+    mExists.mockReturnValue(true)
+    mReadFile.mockReturnValue(plistNaming('../../evil'))
+    expect(locateMachOBinary('/g/D.app')).toBe(
+      '/g/D.app/Contents/MacOS/DredmorSchema.xsd'
+    )
+    mExists.mockImplementation((p: string) => !p.endsWith('/gone'))
+    mReadFile.mockReturnValue(plistNaming('gone'))
+    expect(locateMachOBinary('/g/D.app')).toBe(
+      '/g/D.app/Contents/MacOS/DredmorSchema.xsd'
+    )
+  })
 })
 
 describe('locateMachOCandidates', () => {
@@ -171,6 +203,17 @@ describe('locateMachOCandidates', () => {
     )
     const r = locateMachOCandidates('/g', 'run')
     expect(r[0]).toBe('/g/run')
+    expect(r).toHaveLength(8)
+  })
+  test('keeps the declared executable inside the cap', () => {
+    mExists.mockReturnValue(true)
+    mReaddir.mockReturnValue([
+      ...Array.from({ length: 12 }, (_, i) => `a${i}`),
+      'zz-game'
+    ])
+    mReadFile.mockReturnValue(plistNaming('zz-game'))
+    const r = locateMachOCandidates('/g/X.app')
+    expect(r[0]).toBe('/g/X.app/Contents/MacOS/zz-game')
     expect(r).toHaveLength(8)
   })
   test('[] on any miss', () => {

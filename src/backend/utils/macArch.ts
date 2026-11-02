@@ -8,8 +8,8 @@
 // specifiers here match the ones those tests mock.
 
 import { execFile, execFileSync } from 'child_process'
-import { existsSync, readdirSync } from 'graceful-fs'
-import { join, resolve, relative, isAbsolute } from 'path'
+import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
+import { basename, join, resolve, relative, isAbsolute } from 'path'
 import i18next from 'i18next'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { dialog } from 'backend/platform'
@@ -103,9 +103,36 @@ export function verdictFromArchs(archs: string[]): '32' | '64' | null {
   return null
 }
 
+/**
+ * CFBundleExecutable from an XML Info.plist, or null (binary plist, missing
+ * key, unreadable). Only a bare file name is accepted, so the result cannot
+ * leave Contents/MacOS.
+ */
+function bundleExecutableName(appBundlePath: string): string | null {
+  try {
+    const xml = String(
+      readFileSync(join(appBundlePath, 'Contents', 'Info.plist'), 'utf8')
+    )
+    const m = /<key>CFBundleExecutable<\/key>\s*<string>([^<]+)<\/string>/.exec(
+      xml
+    )
+    const name = m?.[1].trim()
+    return name && name === basename(name) && name !== '..' ? name : null
+  } catch {
+    return null
+  }
+}
+
+// Prefers the bundle's declared executable: the first directory entry can be
+// a data file (Dungeons of Dredmor's MacOS dir lists DredmorSchema.xsd before
+// the i386 `dredmor` binary), which made the check inconclusive.
 function firstBundleBinary(appBundlePath: string): string | null {
   const macOsDir = join(appBundlePath, 'Contents', 'MacOS')
   if (!existsSync(macOsDir)) return null
+  const declared = bundleExecutableName(appBundlePath)
+  if (declared && existsSync(join(macOsDir, declared))) {
+    return join(macOsDir, declared)
+  }
   const bins = readdirSync(macOsDir)
   return bins.length ? join(macOsDir, bins[0]) : null
 }
@@ -192,6 +219,8 @@ export function locateMachOCandidates(
     if (first) {
       const macOsDir = join(first, '..')
       if (/[\\/]Contents[\\/]MacOS$/.test(macOsDir)) {
+        // The declared executable first, so the cap never drops it.
+        add(first)
         for (const name of readdirSync(macOsDir)) add(join(macOsDir, name))
       } else {
         add(first)
