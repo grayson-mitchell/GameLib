@@ -2089,6 +2089,22 @@ describe('bottle.ts', () => {
         expect(getDrmBridgeRunner('abc')).toBeUndefined()
       })
 
+      test('H2: a registered DRM runner wins over an engine hint', async () => {
+        const dir = getBottleDir('GameLibSteamBridge-219990')
+        mockedExistsSync.mockImplementation(
+          (path: string) => path === dir || path === '/abs/hint/wineserver'
+        )
+        setDrmBridgeRunner('219990', R)
+        await endPerGameBridgeBottleSession(
+          '219990',
+          'GameLibSteamBridge-219990',
+          5000,
+          { wineserverBin: '/abs/hint/wineserver' }
+        )
+        const call = mockedSpawnAsync.mock.calls.at(-1)!
+        expect(call[0]).toBe(CX_ROOT + '/bin/wineserver')
+      })
+
       test('stop and end-session run the clone wineserver', async () => {
         const dir = getBottleDir('GameLibSteamBridge-219990')
         mockedExistsSync.mockImplementation((path: string) => path === dir)
@@ -2742,6 +2758,73 @@ describe('bottle.ts', () => {
         expect(
           await endPerGameBridgeBottleSession('206040', perGameName, 1)
         ).toBe(false)
+      })
+
+      describe('H2: engine hint', () => {
+        const HINT = '/abs/engine/bin/wineserver'
+        const spawnedBins = () =>
+          mockedSpawnAsync.mock.calls.map(([bin]) => String(bin))
+
+        test('H2: hint wineserver is spawned with -k, USER=crossover and the bottle WINEPREFIX', async () => {
+          mockedExistsSync.mockImplementation(
+            (path: string) => path === perGameDir || path === HINT
+          )
+          const ok = await endPerGameBridgeBottleSession(
+            '206040',
+            perGameName,
+            20_000,
+            { wineserverBin: HINT }
+          )
+          expect(ok).toBe(true)
+          expect(mockedSpawnAsync).toHaveBeenCalledTimes(1)
+          const [bin, args, opts] = mockedSpawnAsync.mock.calls[0]
+          expect(bin).toBe(HINT)
+          expect(args).toEqual(['-k'])
+          expect(opts?.env?.USER).toBe('crossover')
+          expect(opts?.env?.WINEPREFIX).toBe(perGameDir)
+        })
+
+        test('H2: registered non-CrossOver engine wins over the hint', async () => {
+          const REG = '/pins/bin/wineserver'
+          mockedExistsSync.mockImplementation(
+            (path: string) =>
+              path === perGameDir || path === HINT || path.startsWith('/pins/')
+          )
+          expect(
+            setEngineSelection('206040', {
+              kind: 'pinned',
+              pinId: 'pin-1',
+              reason: 'cx-missing',
+              wineBin: '/pins/bin/wine',
+              wineserverBin: REG,
+              label: 'Pinned Wine',
+              version: '9.0',
+              dxvk: { dir: '/pins/dxvk', version: '2.4' }
+            })
+          ).toBe(true)
+          try {
+            await endPerGameBridgeBottleSession('206040', perGameName, 20_000, {
+              wineserverBin: HINT
+            })
+          } finally {
+            clearEngineSelection('206040')
+          }
+          expect(spawnedBins()).toContain(REG)
+          expect(spawnedBins()).not.toContain(HINT)
+        })
+
+        test.each(['relative/wineserver', '/abs/missing/wineserver'])(
+          'H2: unusable hint %s is ignored and the CrossOver arm runs',
+          async (bin) => {
+            await endPerGameBridgeBottleSession('206040', perGameName, 20_000, {
+              wineserverBin: bin
+            })
+            expect(spawnedBins()).not.toContain(bin)
+            expect(
+              spawnedBins().filter((b) => b.includes('wineserver'))
+            ).toHaveLength(1)
+          }
+        )
       })
 
       test('timeout kill (code null): false', async () => {

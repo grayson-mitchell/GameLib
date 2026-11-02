@@ -243,7 +243,8 @@ describe('installSteamBridgeSharedRedists', () => {
     expect(mockedEnd).toHaveBeenCalledWith(
       APP,
       SETTINGS.wineCrossoverBottle,
-      20_000
+      20_000,
+      undefined
     )
     const l = ledger()
     expect(Object.keys(l.done)).toEqual([`${key.toLowerCase()}|dxsetup`])
@@ -259,6 +260,40 @@ describe('installSteamBridgeSharedRedists', () => {
         cacheSteamappsDir: join(mockSupportDir, 'sharedRedist', 'steamapps')
       })
     )
+  })
+
+  it('H2: fallback-engine settings pass the engine wineserver to both session-end calls', async () => {
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    const fallback = {
+      ...SETTINGS,
+      wineVersion: {
+        type: 'wine',
+        bin: '/pins/bin/wine',
+        name: 'built-in',
+        wineserver: '/pins/bin/wineserver'
+      }
+    } as unknown as GameSettings
+    await installSteamBridgeSharedRedists(APP, fallback)
+    expect(mockedEnd).toHaveBeenCalledTimes(2)
+    for (const call of mockedEnd.mock.calls) {
+      expect(call[3]).toEqual({ wineserverBin: '/pins/bin/wineserver' })
+    }
+  })
+
+  it('H2: CrossOver settings pass no engine hint to either session-end call', async () => {
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    const cx = {
+      ...SETTINGS,
+      wineVersion: {
+        type: 'crossover',
+        bin: '/cx/bin/wine',
+        name: 'CrossOver',
+        wineserver: '/cx/bin/wineserver'
+      }
+    } as unknown as GameSettings
+    await installSteamBridgeSharedRedists(APP, cx)
+    expect(mockedEnd).toHaveBeenCalledTimes(2)
+    for (const call of mockedEnd.mock.calls) expect(call[3]).toBeUndefined()
   })
 
   it('skips the installer when the registry already holds the mark', async () => {

@@ -316,6 +316,16 @@ async function runBounded(
  * installer already running is not killed (T-rkj-09). An aborted run never settles. A call that
  * joins an in-flight run for the same appId shares that run, and with it the first caller's signal.
  */
+/** 59-31 H2: the built-in engine's own wineserver, so the session end does not fall to CrossOver. */
+function engineHintFor(
+  bottleSettings: GameSettings
+): { wineserverBin: string } | undefined {
+  const wv = bottleSettings.wineVersion
+  return wv?.type !== 'crossover' && wv?.wineserver
+    ? { wineserverBin: wv.wineserver }
+    : undefined
+}
+
 export function installSteamBridgeSharedRedists(
   appId: string,
   bottleSettings: GameSettings,
@@ -423,7 +433,8 @@ async function run(
       sessionEnded = await endPerGameBridgeBottleSession(
         appId,
         bottleSettings.wineCrossoverBottle,
-        SESSION_END_TIMEOUT_MS
+        SESSION_END_TIMEOUT_MS,
+        engineHintFor(bottleSettings)
       )
     } catch {
       // endPerGameBridgeBottleSession never throws; belt and braces
@@ -556,7 +567,8 @@ async function run(
         (await endPerGameBridgeBottleSession(
           appId,
           bottleSettings.wineCrossoverBottle,
-          SESSION_END_TIMEOUT_MS
+          SESSION_END_TIMEOUT_MS,
+          engineHintFor(bottleSettings)
         ))
       if (!ended) {
         logWarning(

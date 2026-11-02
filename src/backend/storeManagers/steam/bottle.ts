@@ -1997,13 +1997,15 @@ export async function removePerGameBridgeBottle(
  * best-effort) - no new spawn site. Never throws.
  */
 /**
- * The one engine dispatch for killing a per-game bottle: DRM clone, then a
- * registered fallback/override engine, then stock CrossOver (D-10).
+ * The one engine dispatch for killing a per-game bottle, in order: DRM runner,
+ * registered non-CrossOver engine, the caller's engine hint (59-31 H2), then
+ * stock CrossOver (D-10).
  */
 async function killForRegisteredEngine(
   appId: string,
   name: string,
-  timeoutMs?: number
+  timeoutMs?: number,
+  engineHint?: { wineserverBin: string }
 ): Promise<boolean> {
   if (drmBridgeRunners.has(appId)) {
     return killBottleWineServer(name, drmRunnerBinDir(appId), timeoutMs)
@@ -2015,6 +2017,23 @@ async function killForRegisteredEngine(
       engine.wineserverBin,
       { USER: 'crossover' },
       timeoutMs ?? 10000
+    )
+  }
+  if (engineHint) {
+    if (
+      isAbsolute(engineHint.wineserverBin) &&
+      existsSync(engineHint.wineserverBin)
+    ) {
+      return killBottleWineServerWith(
+        name,
+        engineHint.wineserverBin,
+        { USER: 'crossover' },
+        timeoutMs ?? 10000
+      )
+    }
+    logWarning(
+      'endPerGameBridgeBottleSession: ignoring unusable engine wineserver hint',
+      LogPrefix.Steam
     )
   }
   return killBottleWineServer(name, undefined, timeoutMs)
@@ -2086,7 +2105,8 @@ export async function stopPerGameBridgeBottle(
 export async function endPerGameBridgeBottleSession(
   appId: string,
   bottleName: string | undefined,
-  timeoutMs: number
+  timeoutMs: number,
+  engineHint?: { wineserverBin: string }
 ): Promise<boolean> {
   try {
     if (!bottleName || bottleName !== bridgeBottleNameFor(appId)) return false
@@ -2102,7 +2122,7 @@ export async function endPerGameBridgeBottleSession(
       LogPrefix.Steam
     )
     // D-11: a registered DRM runner's own wineserver, one runner per bottle.
-    return await killForRegisteredEngine(appId, name, timeoutMs)
+    return await killForRegisteredEngine(appId, name, timeoutMs, engineHint)
   } catch (error) {
     logWarning(
       [`endPerGameBridgeBottleSession: failed for appId "${appId}"`, error],
