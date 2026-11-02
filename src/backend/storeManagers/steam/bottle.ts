@@ -2216,7 +2216,9 @@ async function createFallbackBridgeBottle(
     ...process.env,
     WINEPREFIX: dir,
     USER: 'crossover',
-    WINEDLLOVERRIDES: 'mscoree,mshtml=',
+    // Only Gecko stays off. mscoree must stay enabled so wineboot registers the engine's bundled
+    // Wine Mono (offline); without it DXSETUP's Managed DirectX step fails with exit 247 (59-32 H1).
+    WINEDLLOVERRIDES: 'mshtml=',
     WINEDEBUG: '-all',
     MVK_CONFIG_LOG_LEVEL: '0'
   }

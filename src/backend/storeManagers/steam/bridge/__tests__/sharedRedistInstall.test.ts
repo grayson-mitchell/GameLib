@@ -11,7 +11,8 @@ import {
   readFileSync,
   existsSync,
   rmSync,
-  writeFileSync
+  writeFileSync,
+  mkdirSync
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -294,6 +295,147 @@ describe('installSteamBridgeSharedRedists', () => {
     await installSteamBridgeSharedRedists(APP, cx)
     expect(mockedEnd).toHaveBeenCalledTimes(2)
     for (const call of mockedEnd.mock.calls) expect(call[3]).toBeUndefined()
+  })
+
+  describe('H1: Wine Mono repair before DirectX', () => {
+    const engineSettings = (root: string) =>
+      ({
+        ...SETTINGS,
+        wineVersion: {
+          type: 'wine',
+          bin: join(root, 'bin', 'wine'),
+          name: 'built-in',
+          wineserver: join(root, 'bin', 'wineserver')
+        }
+      }) as unknown as GameSettings
+    const bundleMono = (root: string) => {
+      const dir = join(
+        root,
+        'share',
+        'wine',
+        'mono',
+        'wine-mono-11.3.0',
+        'support'
+      )
+      mkdirSync(dir, { recursive: true })
+      writeFileSync(join(dir, 'winemono-support.msi'), 'x')
+      return join(dir, 'winemono-support.msi')
+    }
+    const msiCalls = () => installerCalls().filter((p) => p[0] === 'msiexec')
+    const order = () =>
+      mockedRun.mock.calls
+        .map(([a]) => a.commandParts as string[])
+        .map((p) =>
+          p[0] === 'msiexec'
+            ? 'msi'
+            : p[0].endsWith('DXSETUP.exe')
+              ? 'dx'
+              : p[0]
+        )
+
+    it('H1: registers the bundled Mono msi before DXSETUP when the bottle has none', async () => {
+      const root = mkdtempSync(join(tmpdir(), 'h1-engine-'))
+      try {
+        const msi = bundleMono(root)
+        writeFileSync(
+          join(bottleDir, 'system.reg'),
+          'WINE REGISTRY Version 2\n'
+        )
+        mockedDownload.mockResolvedValue(ok([dx()]))
+        await installSteamBridgeSharedRedists(APP, engineSettings(root))
+        expect(msiCalls()).toEqual([
+          ['msiexec', '/i', `Z:${msi.replace(/\//g, '\\')}`]
+        ])
+        const o = order()
+        expect(o.indexOf('msi')).toBeGreaterThan(-1)
+        expect(o.indexOf('msi')).toBeLessThan(o.indexOf('dx'))
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    })
+
+    it('H1: skips the repair when Mono is already registered', async () => {
+      const root = mkdtempSync(join(tmpdir(), 'h1-engine-'))
+      try {
+        bundleMono(root)
+        writeFileSync(
+          join(bottleDir, 'system.reg'),
+          '"InstallRoot"="C:\\\\windows\\\\mono\\\\wine-mono-11.3.0"\n'
+        )
+        mockedDownload.mockResolvedValue(ok([dx()]))
+        await installSteamBridgeSharedRedists(APP, engineSettings(root))
+        expect(msiCalls()).toEqual([])
+        expect(order()).toContain('dx')
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    })
+
+    it('H1: no bundled msi logs a warning and still runs DXSETUP', async () => {
+      const root = mkdtempSync(join(tmpdir(), 'h1-engine-'))
+      try {
+        mockedDownload.mockResolvedValue(ok([dx()]))
+        await installSteamBridgeSharedRedists(APP, engineSettings(root))
+        expect(msiCalls()).toEqual([])
+        expect(order()).toContain('dx')
+        expect(
+          mockedWarn.mock.calls.some((c) =>
+            String(c[0]).includes('no bundled Wine Mono')
+          )
+        ).toBe(true)
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    })
+
+    it('H1: a failing msi does not stop DXSETUP', async () => {
+      const root = mkdtempSync(join(tmpdir(), 'h1-engine-'))
+      try {
+        bundleMono(root)
+        defaultWine((p) =>
+          p[0] === 'msiexec' ? { code: 1, stdout: '', stderr: '' } : undefined
+        )
+        mockedDownload.mockResolvedValue(ok([dx()]))
+        await installSteamBridgeSharedRedists(APP, engineSettings(root))
+        expect(order()).toContain('dx')
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    })
+
+    it('H1: CrossOver bottle unchanged (no Mono check, no msiexec)', async () => {
+      const root = mkdtempSync(join(tmpdir(), 'h1-engine-'))
+      try {
+        bundleMono(root)
+        mockedDownload.mockResolvedValue(ok([dx()]))
+        const cx = {
+          ...SETTINGS,
+          wineVersion: {
+            type: 'crossover',
+            bin: join(root, 'bin', 'wine'),
+            name: 'CrossOver',
+            wineserver: join(root, 'bin', 'wineserver')
+          }
+        } as unknown as GameSettings
+        await installSteamBridgeSharedRedists(APP, cx)
+        expect(msiCalls()).toEqual([])
+        expect(order()).toContain('dx')
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    })
+
+    it('H1: a non-DirectX entry never triggers the repair', async () => {
+      const root = mkdtempSync(join(tmpdir(), 'h1-engine-'))
+      try {
+        bundleMono(root)
+        mockedDownload.mockResolvedValue(ok([vc2010()]))
+        await installSteamBridgeSharedRedists(APP, engineSettings(root))
+        expect(msiCalls()).toEqual([])
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    })
   })
 
   it('skips the installer when the registry already holds the mark', async () => {

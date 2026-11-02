@@ -56,9 +56,16 @@
  * only runs inside a user-initiated launch, never at boot.
  */
 
-import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises'
+import {
+  readFile,
+  writeFile,
+  mkdir,
+  rename,
+  rm,
+  readdir
+} from 'node:fs/promises'
 import type { ChildProcess } from 'node:child_process'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
 import type { GameSettings } from 'common/types'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
@@ -72,12 +79,14 @@ import { steamSupportPath } from '../constants'
 import {
   buildHasRunKeyAddParts,
   buildHasRunKeyQueryParts,
+  buildMonoSupportMsiParts,
   buildRedistProcessCommandParts,
   buildWineGraphicsDeleteParts,
   buildWineGraphicsQueryParts,
   buildWineGraphicsSetParts,
   entryAppliesToBottle,
   isRedistSuccessExit,
+  systemRegHasWineMono,
   normaliseSharedRedistOptIn,
   parseRegQueryDword,
   parseRegQueryGraphics,
@@ -326,6 +335,73 @@ function engineHintFor(
     : undefined
 }
 
+/**
+ * 59-32 H1: a built-in-engine bottle made while mscoree was disabled has no registered Wine Mono,
+ * and DXSETUP's Managed DirectX step then fails (exit 247). Register the engine's bundled Mono
+ * support package once, before the first DirectX run. Best effort and never throws: with no
+ * bundled package the caller logs and runs DXSETUP anyway. CrossOver bottles are never touched.
+ */
+async function ensureEngineMono(
+  appId: string,
+  bottleSettings: GameSettings,
+  bottleDir: string,
+  runWineCommand: typeof import('backend/launcher').runWineCommand
+): Promise<void> {
+  const wv = bottleSettings.wineVersion
+  if (!wv || wv.type === 'crossover' || !wv.bin) return
+  try {
+    const reg = await readFile(join(bottleDir, 'system.reg'), 'latin1').catch(
+      () => ''
+    )
+    if (systemRegHasWineMono(reg)) return
+    const monoRoot = join(dirname(dirname(wv.bin)), 'share', 'wine', 'mono')
+    const dirs = (await readdir(monoRoot).catch(() => [] as string[]))
+      .filter((d) => /^wine-mono-/i.test(d))
+      .sort()
+    let msi: string | null = null
+    for (const d of dirs.reverse()) {
+      const candidate = join(monoRoot, d, 'support', 'winemono-support.msi')
+      if (
+        await readFile(candidate)
+          .then(() => true)
+          .catch(() => false)
+      ) {
+        msi = candidate
+        break
+      }
+    }
+    const parts = msi ? buildMonoSupportMsiParts(msi) : null
+    if (!parts) {
+      logWarning(
+        `Steam ${appId}: no bundled Wine Mono found for ${wv.name ?? 'the built-in engine'}; running DirectX setup without it (it may fail with exit 247)`,
+        LogPrefix.Steam
+      )
+      return
+    }
+    logInfo(
+      `Steam ${appId}: registering the engine's bundled Wine Mono in the bottle before DirectX setup`,
+      LogPrefix.Steam
+    )
+    const r = await runBounded(
+      runWineCommand,
+      parts,
+      bottleSettings,
+      REG_TIMEOUT_MS
+    )
+    if (r.timedOut || r.code !== 0) {
+      logWarning(
+        `Steam ${appId}: registering Wine Mono did not complete (${r.timedOut ? 'timed out' : `exit ${String(r.code)}`}); running DirectX setup anyway`,
+        LogPrefix.Steam
+      )
+    }
+  } catch (error) {
+    logWarning(
+      `Steam ${appId}: Wine Mono repair failed, running DirectX setup anyway: ${String(error)}`,
+      LogPrefix.Steam
+    )
+  }
+}
+
 export function installSteamBridgeSharedRedists(
   appId: string,
   bottleSettings: GameSettings,
@@ -520,6 +596,7 @@ async function run(
   }
 
   let windowTried = false
+  let monoChecked = false
   let windowPrior: { prior: string | null } | null = null
 
   /** Lazily switch this appId's per-game bottle to Graphics=null; never throws or fails the launch. */
@@ -687,6 +764,15 @@ async function run(
           }
 
           await openNullDisplay()
+          if (depot.kind === 'directx' && !monoChecked) {
+            monoChecked = true
+            await ensureEngineMono(
+              appId,
+              bottleSettings,
+              bottleDir,
+              runWineCommand
+            )
+          }
 
           let entryOk = true
           for (const parts of allParts as string[][]) {

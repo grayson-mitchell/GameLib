@@ -3152,7 +3152,7 @@ describe('Phase 59 engine registry', () => {
       expect(bootOpts.env).toMatchObject({
         WINEPREFIX: getBottleDir(name),
         USER: 'crossover',
-        WINEDLLOVERRIDES: 'mscoree,mshtml=',
+        WINEDLLOVERRIDES: 'mshtml=',
         WINEDEBUG: '-all'
       })
       expect(bootOpts.timeout).toBe(180_000)

@@ -544,3 +544,20 @@ export function sharedRedistLedgerKey(
     return `|${encodeKeyPart(depotId)}|${encodeKeyPart(name)}`
   return `${encodeKeyPart(hasRunKey)}|${encodeKeyPart(name)}`
 }
+
+/**
+ * 59-32 H1: the argv that registers an engine's bundled Wine Mono "support" package in a bottle
+ * whose creation skipped it (DXSETUP's Managed DirectX step needs a registered runtime). The path
+ * is a unix path the caller found inside the engine's own tree; it is mapped to the Z: drive.
+ * Returns null for a path that is not absolute or carries a quote or control character.
+ */
+export function buildMonoSupportMsiParts(msiUnixPath: string): string[] | null {
+  if (!msiUnixPath.startsWith('/')) return null
+  if (CONTROL_CHARS.test(msiUnixPath) || msiUnixPath.includes('"')) return null
+  return ['msiexec', '/i', `Z:${msiUnixPath.replace(/\//g, '\\')}`]
+}
+
+/** 59-32 H1: whether a wine system.reg dump shows a registered Wine Mono. */
+export function systemRegHasWineMono(systemReg: string): boolean {
+  return /wine-mono/i.test(systemReg)
+}

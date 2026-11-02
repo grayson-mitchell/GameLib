@@ -5,6 +5,8 @@ import {
   BOTTLE_WINDOWS_VERSION,
   buildHasRunKeyAddParts,
   buildHasRunKeyQueryParts,
+  buildMonoSupportMsiParts,
+  systemRegHasWineMono,
   buildWineGraphicsDeleteParts,
   buildWineGraphicsQueryParts,
   buildWineGraphicsSetParts,
@@ -721,5 +723,24 @@ describe('Wine Graphics driver reg helpers (261027-nd3)', () => {
     )
     expect(parseRegQueryGraphics(`${drivers}\r\n`)).toBeNull()
     expect(parseRegQueryGraphics('    Other    REG_SZ    mac\r\n')).toBeNull()
+  })
+})
+
+describe('H1: Wine Mono helpers', () => {
+  it('H1: maps an absolute unix msi path to a Z: drive msiexec argv', () => {
+    expect(buildMonoSupportMsiParts('/a b/mono/support.msi')).toEqual([
+      'msiexec',
+      '/i',
+      'Z:\\a b\\mono\\support.msi'
+    ])
+  })
+  it('H1: rejects relative, quoted and control-character paths', () => {
+    expect(buildMonoSupportMsiParts('rel/x.msi')).toBeNull()
+    expect(buildMonoSupportMsiParts('/a"b.msi')).toBeNull()
+    expect(buildMonoSupportMsiParts('/a\nb.msi')).toBeNull()
+  })
+  it('H1: detects a registered wine-mono in a system.reg dump', () => {
+    expect(systemRegHasWineMono('"x"="mono\\\\wine-mono-11.3.0"')).toBe(true)
+    expect(systemRegHasWineMono('WINE REGISTRY Version 2')).toBe(false)
   })
 })
