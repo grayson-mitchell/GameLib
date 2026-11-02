@@ -12,9 +12,40 @@ files:
 severity: minor
 platform: macos
 ready: blocked
-blocked_by: "an Amazon Prime subscription - claiming a Prime Gaming game needs one, and the operator does not have one yet"
-revisit_trigger: "the operator has a Prime account - run the Amazon check below"
+blocked_by: "no unclaimed Amazon Games-delivered Prime title left this month"
+revisit_trigger: "the next Prime Gaming batch adds an Amazon Games title - claim it, leave via the Library tab, confirm it shows without a manual Refresh"
 ---
+
+## Status (2026-11-02, after quick 261102-s32)
+
+**The exit refresh passes live.** On a store entry the log showed
+`[amazonStoreExitRefresh] armed host=gaming.amazon.com via=entry` (20:27:17). Leaving via the
+Library tab then logged `[refreshLibrary] runner=nile origin=amazon-store-exit` and
+`outcome=refreshed` (20:29:36). The nile `library sync` ran **before** `Game list updated, got 2
+games`, so F3 (pre-sync publish) is fixed. Before 261102-s32, F3 was confirmed live at 20:10:24:
+a manual Refresh published 1 game while the sync wrote 2.
+
+- Host measured: `gaming.amazon.com`. No redirect host was seen.
+- **One check remains:** a *new* claim should appear without a manual Refresh. Both
+  Amazon-delivered titles were claimed before the fix, so none are left to test with
+  (`ready: blocked`). The pieces are each proven (arming, exit refresh, post-sync publish).
+  Only the end-to-end run on a fresh claim is missing.
+
+## Status (2026-11-02, first Amazon attempt)
+
+The operator now has Prime, so this is no longer blocked. The check still did not run: no
+`[amazonStoreExitRefresh]` line was logged. The store was opened at 19:36:00, and the app
+restarted at 19:39:33 without leaving it. nile is signed in but synced 0 games, so nothing
+delivered through the Amazon Games app had been claimed. The run surfaced four separate todos:
+
+- `2026-11-02-amazon-store-account-link-popup-never-resolves`
+- `2026-11-02-amazon-store-no-back-navigation-after-claim`
+- `2026-11-02-amazon-store-some-game-tiles-unclickable`
+- `2026-11-02-amazon-store-exit-should-refresh-epic-and-gog`. An Epic-delivered claim reached
+  the library only through the next full refresh, not through this row.
+
+To close: claim a title delivered through the **Amazon Games app** (not Epic or GOG), then leave
+the store with the back control or a tab (not by quitting the app), and run the checks below.
 
 ## Status (2026-10-30, after quick 261030-ts4)
 
