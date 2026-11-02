@@ -37,6 +37,7 @@ const EngineBadge = ({ state }: Props) => {
       'CrossOver is unavailable for this game ({{reason}}), so GameLib runs it on its built-in Wine engine.',
       { reason }
     )
+    // 59-UAT G6, item 7: the reason was only in the hover tooltip; show it.
     return (
       <div
         className="engineBadge engineBadge--builtin"
@@ -44,6 +45,8 @@ const EngineBadge = ({ state }: Props) => {
         aria-label={`${label}. ${title}`}
       >
         {label}
+        <span aria-hidden="true"> · </span>
+        <span className="engineBadge__reason">{reason}</span>
       </div>
     )
   }

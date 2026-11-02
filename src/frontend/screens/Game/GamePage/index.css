@@ -213,6 +213,11 @@
           background-color: var(--status-danger);
           color: var(--body-background);
         }
+
+        .engineBadge__reason {
+          font-weight: 400;
+          margin-left: 0.35rem;
+        }
       }
 
       .steamEngineNotice {

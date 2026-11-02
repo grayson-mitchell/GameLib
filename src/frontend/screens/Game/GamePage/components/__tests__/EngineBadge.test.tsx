@@ -24,7 +24,7 @@ const make = (over: Partial<SteamEngineState>): SteamEngineState => ({
 type R = ReactElement<{
   className: string
   title: string
-  children: string
+  children: unknown
 }> | null
 
 describe('EngineBadge', () => {
@@ -36,9 +36,26 @@ describe('EngineBadge', () => {
 
   it('shows the built-in badge with the reason in its title', () => {
     const el = EngineBadge({ state: make({}) }) as R
-    expect(el?.props.children).toBe('Built-in engine (best-effort)')
     expect(el?.props.className).toContain('engineBadge--builtin')
     expect(el?.props.title).toContain('CrossOver trial expired')
+  })
+
+  it.each([
+    ['cx-expired', 'CrossOver trial expired'],
+    ['cx-missing', 'CrossOver not found'],
+    ['cx-broken', "CrossOver isn't working"]
+  ] as const)('shows %s as visible text on the badge', (reason, text) => {
+    const el = EngineBadge({ state: make({ reason }) }) as R
+    const kids = el?.props.children as ReactElement<{
+      className?: string
+      children: string
+    }>[]
+    expect(kids[0]).toBe('Built-in engine (best-effort)')
+    const span = kids.find(
+      (k) =>
+        typeof k === 'object' && k.props.className === 'engineBadge__reason'
+    )
+    expect(span?.props.children).toBe(text)
   })
 
   it('shows the unsupported badge naming the engine', () => {
