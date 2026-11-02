@@ -2418,6 +2418,14 @@ export default class SteamGame implements Game {
    * uses, from the engine that owns the bottle. null means no usable engine,
    * so the wine steps are skipped (they never fail an install).
    */
+  /** engineSwitch's pin source: downloads with the same engine-download statuses as a launch. */
+  private restorePinEngine = async (
+    pin: EnginePin
+  ): Promise<NonCrossoverEngine | null> => {
+    const result = await this.ensureBuiltInEngineForInstall(pin)
+    return 'status' in result ? null : result
+  }
+
   private async resolveInstallEngineSettings(
     bridgeBottleName: string,
     installEngine: NonCrossoverEngine | 'crossover' | null
@@ -2450,10 +2458,15 @@ export default class SteamGame implements Game {
       appId: this.appId,
       bottleName: bridgeBottleName,
       next: sel,
-      crossoverHealthy: decision.preflight?.kind === 'healthy'
+      crossoverHealthy: decision.preflight?.kind === 'healthy',
+      deps: { ensurePinEngine: this.restorePinEngine }
     })
     if (!prep.ok && prep.reason !== 'dxvk-failed') {
       return { skipped: `${prep.reason}: ${prep.detail}` }
+    }
+    if (!prep.ok && sel.kind === 'crossover') {
+      // CR-03: no redists on CrossOver over DXVK-macOS DLLs.
+      return { skipped: `dxvk restore failed: ${prep.detail}` }
     }
     if (isNonCrossover(sel)) {
       return { settings: buildFallbackGameSettings(bridgeBottleName, sel) }
@@ -4138,6 +4151,8 @@ export default class SteamGame implements Game {
       // 59-UAT G10: an override to CrossOver on an expired bottle must not run
       // the DXVK restore through CrossOver.
       crossoverHealthy: decision.preflight?.kind === 'healthy',
+      // WR-05: a restore's pin download reports the same progress as a launch download.
+      deps: { ensurePinEngine: this.restorePinEngine },
       // IN-05 (59-22): a real engine switch is "setting up", not a stale
       // "Downloading (100%)", until the monitor's launching status.
       onSwitching: () =>
@@ -4149,13 +4164,30 @@ export default class SteamGame implements Game {
         })
     })
     if (!prep.ok) {
+      if (prep.reason === 'dxvk-failed' && sel.kind === 'crossover') {
+        // CR-03 (D-03/D-07): never start on CrossOver over DXVK-macOS DLLs. No reroute to
+        // bottled Steam; the switch is retried on the next launch.
+        clearEngineSelection(this.appId)
+        logWarning(
+          `SteamGame: appId ${this.appId} could not switch back to CrossOver (${prep.detail}); not launching`,
+          LogPrefix.Steam
+        )
+        this.showEngineDialog(
+          title,
+          i18next.t(
+            'gamelib:steam.engine.restoreFailed',
+            "GameLib couldn't finish switching {{title}} back to CrossOver, so it did not start. Check your connection and try again; GameLib retries the switch on the next launch.",
+            { title }
+          ),
+          'engine-restore-failed'
+        )
+        return { ok: false }
+      }
       if (prep.reason === 'dxvk-failed') {
         // The built-in engine is best-effort: missing DXVK degrades Direct3D
         // but is not a launch blocker.
         logWarning(
-          sel.kind === 'crossover'
-            ? `SteamGame: appId ${this.appId} DXVK removal failed (${prep.detail}); the engine marker still names the previous engine, so the restore is retried on the next launch`
-            : `SteamGame: appId ${this.appId} DXVK setup failed (${prep.detail}); continuing`,
+          `SteamGame: appId ${this.appId} DXVK setup failed (${prep.detail}); continuing`,
           LogPrefix.Steam
         )
       } else if (prep.reason === 'shared-bottle') {

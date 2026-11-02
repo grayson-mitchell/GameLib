@@ -13334,19 +13334,68 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       }
     })
 
-    it('dxvk-failed while switching to CrossOver warns about the retry and continues', async () => {
+    it('dxvk-failed while switching to CrossOver blocks the launch with the restoreFailed dialog', async () => {
+      ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
+        ok: false,
+        reason: 'dxvk-failed',
+        detail: 'boom'
+      })
+      engineDialog().mockClear()
+      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(engineDialog()).toHaveBeenCalledTimes(1)
+      expect(engineDialog().mock.calls[0][0].message).toContain('restoreFailed')
+      expect(
+        infoMessages().some((m) => m.includes('tag=engine-restore-failed'))
+      ).toBe(true)
+      expect(getEngineSelection(ID)).toBeUndefined()
+      expect(runWineCommand).not.toHaveBeenCalled()
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.anything()
+      )
+    })
+
+    it('dxvk-failed on a non-CrossOver selection warns and continues', async () => {
+      ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
+        pinnedDecision('cx-missing', { needsDownload: false })
+      )
       ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
         ok: false,
         reason: 'dxvk-failed',
         detail: 'boom'
       })
       expect(await new SteamGame(ID).launch({} as any)).toBe(true)
-      const warns = (
-        jest.requireMock('backend/logger').logWarning as jest.Mock
-      ).mock.calls.map((c) => String(c[0]))
-      expect(
-        warns.some((m) => m.includes('restore is retried on the next launch'))
-      ).toBe(true)
+      expect(engineDialog().mock.calls.map((c) => c[0].message)).not.toContain(
+        'restoreFailed'
+      )
+    })
+
+    it('prepareBottleForEngine gets an ensurePinEngine that reports engine-download progress', async () => {
+      await new SteamGame(ID).launch({} as any)
+      const args = (prepareBottleForEngine as jest.Mock).mock.calls[0][0]
+      ;(ensurePinnedEngine as jest.Mock).mockImplementation(
+        (_pin: unknown, opts: any) => {
+          opts.onProgress({
+            phase: 'downloading',
+            artifact: 'wine',
+            percentage: 55
+          })
+          return Promise.resolve(ENGINE_OK)
+        }
+      )
+      const engine = await args.deps.ensurePinEngine({
+        id: 'staging-11',
+        label: 'Wine-Staging 11.20',
+        wine: { version: '11.20' },
+        dxvk: { version: '1.10.3' }
+      })
+      expect(engine).not.toBeNull()
+      expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'engine-download',
+          context: 'downloading:55'
+        })
+      )
     })
 
     it.each(['expired', 'missing', 'broken'])(
