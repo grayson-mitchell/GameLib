@@ -81,7 +81,15 @@ function hasAbortController(id: string): boolean {
   return abortControllers.has(id)
 }
 
+// 59-21 (WR-11): the signal of an already-registered controller, so a caller
+// that must not replace it (the download queue aborts by id) can still observe
+// the cancel.
+function getAbortSignal(id: string): AbortSignal | undefined {
+  return abortControllers.get(id)?.signal
+}
+
 export {
+  getAbortSignal,
   createAbortController,
   callAbortController,
   callAllAbortControllers,

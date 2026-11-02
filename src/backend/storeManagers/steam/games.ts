@@ -52,7 +52,9 @@ import {
 import {
   createAbortController,
   callAbortController,
-  deleteAbortController
+  deleteAbortController,
+  hasAbortController,
+  getAbortSignal
 } from 'backend/utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../../ipc'
 import {
@@ -117,6 +119,8 @@ import {
   isCrossoverInstalled,
   CROSSOVER_MISSING,
   CROSSOVER_CREATE_TIMEOUT,
+  CROSSOVER_CREATE_FAILED,
+  buildFallbackGameSettings,
   getDrmBridgeRunner,
   killBridgeBottleWineServer,
   type DrmLaunchForm
@@ -2156,11 +2160,13 @@ export default class SteamGame implements Game {
    * reroute the title to bottled Steam.
    */
   private async ensureBuiltInEngineForInstall(
-    pin: EnginePin
+    pin: EnginePin,
+    signal?: AbortSignal
   ): Promise<NonCrossoverEngine | InstallResult> {
     const { ensurePinnedEngine } = await import('./engine/fallbackEngine')
     let lastPercent = -1
     const result = await ensurePinnedEngine(pin, {
+      signal,
       onProgress: (p) => {
         const percent = Math.round(p.percentage ?? 0)
         if (percent === lastPercent) return
@@ -2219,69 +2225,11 @@ export default class SteamGame implements Game {
       }
     }
 
-    if (!isBridgeBottleReady(bridgeBottleName)) {
-      logInfo(
-        `SteamGame: bridge bottle "${bridgeBottleName}" not yet provisioned for appId ${this.appId} — provisioning inline (BLOCKER 1, no consent dialog needed)`,
-        LogPrefix.Steam
-      )
-      const { decideCreationEngine } = await import('./engine/engineDecision')
-      const creation = await decideCreationEngine({ appId: this.appId })
-      logInfo(
-        `SteamGame: bridge bottle creation engine for appId ${this.appId}: ${creation.kind}${creation.kind === 'pinned' ? ` (${creation.reason})` : ''}`,
-        LogPrefix.Steam
-      )
-      let provisionResult: Awaited<ReturnType<typeof provisionBridgeBottle>>
-      if (creation.kind === 'pinned') {
-        const engine = await this.ensureBuiltInEngineForInstall(creation.pin)
-        if ('status' in engine) return engine
-        provisionResult = await provisionBridgeBottle({
-          bottleName: bridgeBottleName,
-          fallbackEngine: engine
-        })
-      } else {
-        provisionResult = await provisionBridgeBottle({
-          bottleName: bridgeBottleName,
-          createTimeoutMs: creation.createTimeoutMs
-        })
-        if (
-          provisionResult.errorCode === CROSSOVER_CREATE_TIMEOUT ||
-          provisionResult.errorCode === CROSSOVER_MISSING
-        ) {
-          // D-12 (59-01 create_under_expiry): cxbottle --create can hang or
-          // fail under an expired/broken CrossOver, and CrossOver can vanish
-          // after the gate. Create the same bottle with the built-in engine.
-          logWarning(
-            `SteamGame: CrossOver bottle creation for appId ${this.appId} returned ${provisionResult.errorCode} — creating with the built-in engine`,
-            LogPrefix.Steam
-          )
-          const { ENGINE_PINS } = await import('./engine/enginePins')
-          const engine = await this.ensureBuiltInEngineForInstall(
-            ENGINE_PINS.current
-          )
-          if ('status' in engine) return engine
-          provisionResult = await provisionBridgeBottle({
-            bottleName: bridgeBottleName,
-            fallbackEngine: engine
-          })
-        }
-      }
-      if (provisionResult.status !== 'done') {
-        logWarning(
-          `SteamGame: bridge bottle provisioning failed for appId ${this.appId}: ${provisionResult.error}`,
-          LogPrefix.Steam
-        )
-        markBridgeFailedThisSession(this.appId)
-        sendFrontendMessage('steamBridgeSetupRequired', {
-          appName: this.appId,
-          reason: 'bridge-bottle-provision-failed',
-          fallbackAvailable: true
-        })
-        return { status: 'done', deferredToSetup: true }
-      }
-    }
-
-    // Phase 54: one lease from the download through shim placement and the
-    // install-time shared-redist step. Provisioning above holds none.
+    // 59-UAT G2: sign-in is checked FIRST, so a refused session returns before
+    // any engine download or bottle creation. Phase 54: the one lease now
+    // spans provisioning, the download, shim placement and the install-time
+    // shared-redist step (acquireAuthenticated may be held across long work;
+    // only the idle timer after the last release closes the session).
     const lease = await SteamUser.acquireAuthenticated({
       reason: 'user-install',
       guidedAction: 'install',
@@ -2304,7 +2252,36 @@ export default class SteamGame implements Game {
       })
     }
     try {
-      const result = await this.installBridgeGameLeased(args, bridgeBottleName)
+      // 59-REVIEW WR-11 (install cancel): the download queue aborts an install
+      // by id, so provisioning observes that controller's signal. An existing
+      // controller is reused and left alone; otherwise one scoped to
+      // provisioning is registered and removed before the download below
+      // registers its own.
+      let installEngine: NonCrossoverEngine | 'crossover' | null = null
+      if (!isBridgeBottleReady(bridgeBottleName)) {
+        const reused = hasAbortController(this.appId)
+        const signal = reused
+          ? getAbortSignal(this.appId)
+          : createAbortController(this.appId).signal
+        let provisioned: Awaited<
+          ReturnType<SteamGame['provisionBridgeBottleForInstall']>
+        >
+        try {
+          provisioned = await this.provisionBridgeBottleForInstall(
+            bridgeBottleName,
+            signal
+          )
+        } finally {
+          if (!reused) deleteAbortController(this.appId)
+        }
+        if ('result' in provisioned) return provisioned.result
+        installEngine = provisioned.engine
+      }
+      const result = await this.installBridgeGameLeased(
+        args,
+        bridgeBottleName,
+        installEngine
+      )
       if (result.status === 'error') clearFinishing()
       return result
     } catch (error) {
@@ -2315,10 +2292,143 @@ export default class SteamGame implements Game {
     }
   }
 
+  /**
+   * The inline bridge-bottle creation of installBridgeGame (BLOCKER 1), now
+   * run under the install lease. Returns the engine that owns the new bottle,
+   * or the InstallResult to stop with.
+   */
+  private async provisionBridgeBottleForInstall(
+    bridgeBottleName: string,
+    signal?: AbortSignal
+  ): Promise<
+    { engine: NonCrossoverEngine | 'crossover' } | { result: InstallResult }
+  > {
+    logInfo(
+      `SteamGame: bridge bottle "${bridgeBottleName}" not yet provisioned for appId ${this.appId} — provisioning inline (BLOCKER 1, no consent dialog needed)`,
+      LogPrefix.Steam
+    )
+    const { decideCreationEngine } = await import('./engine/engineDecision')
+    const creation = await decideCreationEngine({ appId: this.appId })
+    logInfo(
+      `SteamGame: bridge bottle creation engine for appId ${this.appId}: ${creation.kind}${creation.kind === 'pinned' ? ` (${creation.reason})` : ''}`,
+      LogPrefix.Steam
+    )
+    let provisionResult: Awaited<ReturnType<typeof provisionBridgeBottle>>
+    let engineUsed: NonCrossoverEngine | 'crossover' = 'crossover'
+    if (creation.kind === 'pinned') {
+      const engine = await this.ensureBuiltInEngineForInstall(
+        creation.pin,
+        signal
+      )
+      // 59-REVIEW WR-11: an aborted download (quit, or the install cancelled)
+      // must stop here; wineboot after quit breaks the sidecar exit contract.
+      if ('status' in engine) return { result: engine }
+      engineUsed = engine
+      provisionResult = await provisionBridgeBottle({
+        bottleName: bridgeBottleName,
+        fallbackEngine: engine
+      })
+    } else {
+      provisionResult = await provisionBridgeBottle({
+        bottleName: bridgeBottleName,
+        createTimeoutMs: creation.createTimeoutMs
+      })
+      if (
+        provisionResult.errorCode === CROSSOVER_CREATE_TIMEOUT ||
+        provisionResult.errorCode === CROSSOVER_MISSING ||
+        // 59-REVIEW WR-02 / D-09: a failed create is a broken CrossOver too.
+        provisionResult.errorCode === CROSSOVER_CREATE_FAILED
+      ) {
+        // D-12 (59-01 create_under_expiry): cxbottle --create can hang or
+        // fail under an expired/broken CrossOver, and CrossOver can vanish
+        // after the gate. Create the same bottle with the built-in engine.
+        logWarning(
+          `SteamGame: CrossOver bottle creation for appId ${this.appId} returned ${provisionResult.errorCode} — creating with the built-in engine`,
+          LogPrefix.Steam
+        )
+        const { ENGINE_PINS } = await import('./engine/enginePins')
+        const engine = await this.ensureBuiltInEngineForInstall(
+          ENGINE_PINS.current,
+          signal
+        )
+        // 59-REVIEW WR-11: see above.
+        if ('status' in engine) return { result: engine }
+        engineUsed = engine
+        provisionResult = await provisionBridgeBottle({
+          bottleName: bridgeBottleName,
+          fallbackEngine: engine
+        })
+      }
+    }
+    if (provisionResult.status !== 'done') {
+      logWarning(
+        `SteamGame: bridge bottle provisioning failed for appId ${this.appId}: ${provisionResult.error}`,
+        LogPrefix.Steam
+      )
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: 'bridge-bottle-provision-failed',
+        fallbackAvailable: true
+      })
+      return { result: { status: 'done', deferredToSetup: true } }
+    }
+    return { engine: engineUsed }
+  }
+
+  /**
+   * 59-REVIEW CR-02 (D-01/D-04): the settings every install-time wine step
+   * uses, from the engine that owns the bottle. null means no usable engine,
+   * so the wine steps are skipped (they never fail an install).
+   */
+  private async resolveInstallEngineSettings(
+    bridgeBottleName: string,
+    installEngine: NonCrossoverEngine | 'crossover' | null
+  ): Promise<{ settings: GameSettings } | { skipped: string }> {
+    if (installEngine === 'crossover') {
+      return { settings: getBridgeBottleSettings(this.appId) }
+    }
+    if (installEngine !== null) {
+      return {
+        settings: buildFallbackGameSettings(bridgeBottleName, installEngine)
+      }
+    }
+    // Bottle already existed: the same decision + preparation as a launch.
+    const { decideLaunchEngine } = await import('./engine/engineDecision')
+    const { prepareBottleForEngine } = await import('./engine/engineSwitch')
+    const { isNonCrossover } = await import('./engine/engineTypes')
+    const decision = await decideLaunchEngine({
+      appId: this.appId,
+      bottleName: bridgeBottleName
+    })
+    if (decision.kind === 'unavailable') {
+      return { skipped: `engine unavailable: ${decision.detail}` }
+    }
+    if (decision.needsDownload && decision.pin) {
+      const engine = await this.ensureBuiltInEngineForInstall(decision.pin)
+      if ('status' in engine) return { skipped: 'engine download failed' }
+    }
+    const sel = decision.selection
+    const prep = await prepareBottleForEngine({
+      appId: this.appId,
+      bottleName: bridgeBottleName,
+      next: sel,
+      crossoverHealthy: decision.preflight?.kind === 'healthy'
+    })
+    if (!prep.ok && prep.reason !== 'dxvk-failed') {
+      return { skipped: `${prep.reason}: ${prep.detail}` }
+    }
+    if (isNonCrossover(sel)) {
+      return { settings: buildFallbackGameSettings(bridgeBottleName, sel) }
+    }
+    return { settings: getBridgeBottleSettings(this.appId) }
+  }
+
   /** The lease-held part of installBridgeGame: download, shim, redists. */
   private async installBridgeGameLeased(
     args: InstallArgs,
-    bridgeBottleName: string
+    bridgeBottleName: string,
+    installEngine: NonCrossoverEngine | 'crossover' | null
   ): Promise<InstallResult> {
     // a new install must show finishing again (quick 261031-ihs)
     clearBridgeInstallFinalized(this.appId)
@@ -2541,17 +2651,30 @@ export default class SteamGame implements Game {
       })
     sendFinishing()
     try {
-      await installSteamBridgeSharedRedists(
-        this.appId,
-        getBridgeBottleSettings(this.appId),
-        undefined,
-        { allowLogon: true }
-      ).catch((error: unknown) => {
+      // 59-REVIEW CR-02, D-01/D-04: the redists run on the engine that owns
+      // the bottle, never stock CrossOver on a built-in-engine bottle.
+      const redistEngine = await this.resolveInstallEngineSettings(
+        bridgeBottleName,
+        installEngine
+      ).catch((error: unknown) => ({ skipped: String(error) }))
+      if ('skipped' in redistEngine) {
         logWarning(
-          `SteamGame: install-time shared redist step failed for appId ${this.appId}: ${String(error)}`,
+          `SteamGame: appId ${this.appId} install-time shared redists skipped: no usable engine (${redistEngine.skipped})`,
           LogPrefix.Steam
         )
-      })
+      } else {
+        await installSteamBridgeSharedRedists(
+          this.appId,
+          redistEngine.settings,
+          undefined,
+          { allowLogon: true }
+        ).catch((error: unknown) => {
+          logWarning(
+            `SteamGame: install-time shared redist step failed for appId ${this.appId}: ${String(error)}`,
+            LogPrefix.Steam
+          )
+        })
+      }
       // Quick 261029-e2t: fetch DRM mode's runner and Valve client now, so
       // the first Play only stages the bottle. Never fails the install.
       sendFinishing()
@@ -4111,12 +4234,23 @@ export default class SteamGame implements Game {
       getBottleDir(bridgeBottleName),
       exePath
     )
+    // CEG markers are read once, and only for a steamstub exe.
+    const cegMarkers =
+      drmWrapper === 'steamstub' ? this.readLaunchExeCegMarkers(drmExe) : []
+    // 59-REVIEW WR-04 / 59-15: persist the mode this install resolves so a
+    // fresh DRM-mode title is excluded from the override before first launch.
+    writeBridgeModeVerdict(
+      this.appId,
+      resolveBridgeMode(drmWrapper, cegMarkers) === 'steamclient-layer'
+        ? 'steamclient-layer'
+        : 'tcp'
+    )
     if (drmWrapper !== 'steamstub') return
     await prefetchDrmDownloads({
       appId: this.appId,
       appFolder,
       drmWrapper,
-      cegMarkers: this.readLaunchExeCegMarkers(drmExe)
+      cegMarkers
     })
   }
 
