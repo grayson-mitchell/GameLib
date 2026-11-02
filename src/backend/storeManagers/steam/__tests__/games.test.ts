@@ -6814,6 +6814,71 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       expect(result.status).toBe('done')
     })
 
+    it('G1: real two-archive progress never resets the percent and labels verify/unpack/set-up (trace 2026-11-02)', async () => {
+      ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
+      ;(ensurePinnedEngine as jest.Mock).mockImplementation((_pin, opts) => {
+        const run = (artifact: 'dxvk' | 'wine') => {
+          for (const percentage of [0, 5, 50, 100]) {
+            opts.onProgress({ phase: 'downloading', artifact, percentage })
+          }
+          opts.onProgress({ phase: 'verifying', artifact })
+          opts.onProgress({ phase: 'extracting', artifact })
+        }
+        run('dxvk')
+        run('wine')
+        return Promise.resolve(ENGINE_OK)
+      })
+
+      await new SteamGame(APP_ID).install({} as any)
+
+      const seen = statuses() as string[]
+      const percents = seen
+        .filter((c) => c.startsWith('downloading:'))
+        .map((c) => Number(c.slice('downloading:'.length)))
+      expect(percents.length).toBeGreaterThan(1)
+      expect(percents).toEqual([...percents].sort((a, b) => a - b))
+      expect(percents[percents.length - 1]).toBe(100)
+      expect(seen).toContain('verifying')
+      expect(seen).toContain('extracting')
+      // no bare percent (legacy '0') once phases exist, and no consecutive dupes
+      expect(seen.filter((c) => /^\d+$/.test(c))).toEqual([])
+      expect(seen.filter((c, i) => c === seen[i - 1])).toEqual([])
+      expect(seen[seen.length - 1]).toBe('setting-up')
+    })
+
+    it('G1: once the bottle is ready the status leaves engine-download for installing before the game depots download', async () => {
+      ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
+      ;(ensurePinnedEngine as jest.Mock).mockImplementation((_pin, opts) => {
+        opts.onProgress({
+          phase: 'downloading',
+          artifact: 'wine',
+          percentage: 50
+        })
+        return Promise.resolve(ENGINE_OK)
+      })
+      const order: string[] = []
+      sendGameStatusUpdate.mockImplementation((u) => {
+        order.push(`${u.status}:${u.context ?? ''}`)
+      })
+      ;(downloadSteamDepots as jest.Mock).mockImplementation(() => {
+        order.push('depots')
+        return Promise.resolve({ status: 'done' })
+      })
+
+      await new SteamGame(APP_ID).install({} as any)
+
+      const depots = order.indexOf('depots')
+      const lastEngine = order
+        .map((o) => o.startsWith('engine-download'))
+        .lastIndexOf(true)
+      const installingAfterEngine = order.findIndex(
+        (o, i) => i > lastEngine && o.startsWith('installing')
+      )
+      expect(depots).toBeGreaterThan(-1)
+      expect(installingAfterEngine).toBeGreaterThan(lastEngine)
+      expect(installingAfterEngine).toBeLessThan(depots)
+    })
+
     it('already-installed pin: no engine-download status is sent', async () => {
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
       await new SteamGame(APP_ID).install({} as any)
