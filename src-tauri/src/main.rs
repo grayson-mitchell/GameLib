@@ -6260,6 +6260,40 @@ const STORE_EMBED_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 const STORE_EMBED_NAV_EVENTS_CAP: usize = 50;
 
+/// How long after a chrome-initiated navigation LANDS (back/forward/reload/navigate -- a
+/// suppressed Finished) a new URL from the page is read as the page rewriting its own URL
+/// rather than a user navigation, replacing the current history entry in place (quick
+/// 261102-szs). luna.amazon.com's SPA rewrites its URL on boot after every full reload (live
+/// 2026-11-02: 18 `recorded` steps for 18 Back presses, Back never disabling). The nav drain
+/// polls every 250 ms; 3 s covers a slow boot while keeping short the window in which a
+/// genuine user click is mis-read.
+///
+/// Trade-off: a real click within the window after a Back/Forward/Reload landing replaces the
+/// current entry instead of adding a Back step. Limit: a boot rewrite slower than this still
+/// adds a step -- the `recorded` diagnostic right after a Back shows it; tune this then.
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+const STORE_EMBED_LANDING_SETTLE: Duration = Duration::from_secs(3);
+
+/// What a history change did, for the shell diagnostic (host-only logging, D-23).
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StoreEmbedHistoryChange {
+    Recorded,
+    Replaced,
+    Moved,
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+impl StoreEmbedHistoryChange {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Recorded => "recorded",
+            Self::Replaced => "replaced",
+            Self::Moved => "moved",
+        }
+    }
+}
+
 /// Ordered main-frame URL history for the store/wiki embed (D-22). Neither
 /// `tauri::webview::Webview` nor wry's `WebView` expose a back/forward/history API
 /// (`40-EMBED-API-VERIFICATION.md` Q1/Q2), so this Rust-side stack is the mechanism. Pure
@@ -6314,6 +6348,14 @@ struct StoreEmbedState {
     /// snapshots it, reads the URL lock-free, and `observe_live_url` discards the read if the
     /// generation moved in between.
     nav_generation: u64,
+    /// End of the post-landing settle window (quick 261102-szs): stamped when a SUPPRESSED
+    /// Finished (the landing of a chrome back/forward/reload/navigate) is seen by `push_at`.
+    /// While `now < settle_until`, a new URL replaces `history[cursor]` instead of appending
+    /// or moving. Never extended by a replace. The window does NOT follow a store's first load:
+    /// that Finished is a non-suppressed push, and covering it would need a separate open-path
+    /// arming flag. Worst case of an initial canonicalization rewrite is one extra Back step
+    /// whose landing is itself settled, so it terminates.
+    settle_until: Option<std::time::Instant>,
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
@@ -6333,16 +6375,38 @@ impl StoreEmbedState {
     /// restored cursor already points at. The event is still queued so the renderer learns the
     /// restored `canGoBack`.
     fn push(&mut self, url: String) {
+        self.push_inner(url, None);
+    }
+
+    /// PURE: `push` that also drives the post-landing settle window (quick 261102-szs). A
+    /// suppressed Finished opens the window; a non-suppressed one inside it replaces the
+    /// current entry. Returns the history change, `None` when nothing was recorded.
+    fn push_at(&mut self, url: String, now: std::time::Instant) -> Option<StoreEmbedHistoryChange> {
+        self.push_inner(url, Some(now))
+    }
+
+    fn push_inner(
+        &mut self,
+        url: String,
+        now: Option<std::time::Instant>,
+    ) -> Option<StoreEmbedHistoryChange> {
         // A Finished push ends the load in flight even when suppressed.
         self.page_loading = false;
         self.nav_generation = self.nav_generation.wrapping_add(1);
         if self.suppress_next_push {
             self.suppress_next_push = false;
-            return;
+            if let Some(now) = now {
+                self.settle_until = Some(now + STORE_EMBED_LANDING_SETTLE);
+            }
+            return None;
         }
         if self.current_url().as_deref() == Some(url.as_str()) {
             self.enqueue_nav_event();
-            return;
+            return None;
+        }
+        if self.in_settle_window(now) && !self.history.is_empty() {
+            self.replace_current(url);
+            return Some(StoreEmbedHistoryChange::Replaced);
         }
         let keep = self.cursor.saturating_add(1).min(self.history.len());
         self.history.truncate(keep);
@@ -6351,6 +6415,31 @@ impl StoreEmbedState {
         // GAP-D: enqueue AFTER the cursor has moved, never before -- the whole value of the
         // event is that its `canGoBack`/`canGoForward` are the post-navigation cursor's, the
         // same derivation every other arm reports.
+        self.enqueue_nav_event();
+        Some(StoreEmbedHistoryChange::Recorded)
+    }
+
+    /// PURE: whether `now` falls inside the post-landing settle window.
+    fn in_settle_window(&self, now: Option<std::time::Instant>) -> bool {
+        match (now, self.settle_until) {
+            (Some(now), Some(until)) => now < until,
+            _ => false,
+        }
+    }
+
+    /// PURE: replaces `history[cursor]` with `url`, collapsing an adjacent duplicate this
+    /// creates, then queues a nav event. On luna the rewrite target is usually the very entry
+    /// Back just left, so without the collapse Back would walk through identical-looking
+    /// duplicates.
+    fn replace_current(&mut self, url: String) {
+        self.history[self.cursor] = url;
+        let current = self.history[self.cursor].clone();
+        if self.history.get(self.cursor + 1) == Some(&current) {
+            self.history.remove(self.cursor + 1);
+        } else if self.cursor > 0 && self.history.get(self.cursor - 1) == Some(&current) {
+            self.history.remove(self.cursor);
+            self.cursor -= 1;
+        }
         self.enqueue_nav_event();
     }
 
@@ -6389,44 +6478,73 @@ impl StoreEmbedState {
     /// a page-initiated back to a URL equal to the previous entry moves the cursor, so a
     /// pushState to that same URL is also read as back -- harmless (Forward stays available);
     /// (d) detection lags by up to one nav poll (250 ms).
+    ///
+    /// Settle window (quick 261102-szs, `observe_live_url_at`): within
+    /// `STORE_EMBED_LANDING_SETTLE` of a chrome navigation's landing, any new same-origin URL
+    /// replaces the current entry in place instead of moving/appending. Live 2026-11-02: Back =
+    /// full reload of luna.amazon.com, which `pushState`s to another path on boot; that
+    /// rewrite equalled the next entry, so it moved the cursor forward again and Back looped
+    /// 18 times. This legacy entry point never consults the window.
     fn observe_live_url(&mut self, live_url: &str, observed_generation: u64) -> bool {
+        self.observe_inner(live_url, observed_generation, None)
+            .is_some()
+    }
+
+    /// PURE: `observe_live_url` with the settle window; see its doc comment.
+    fn observe_live_url_at(
+        &mut self,
+        live_url: &str,
+        observed_generation: u64,
+        now: std::time::Instant,
+    ) -> Option<StoreEmbedHistoryChange> {
+        self.observe_inner(live_url, observed_generation, Some(now))
+    }
+
+    fn observe_inner(
+        &mut self,
+        live_url: &str,
+        observed_generation: u64,
+        now: Option<std::time::Instant>,
+    ) -> Option<StoreEmbedHistoryChange> {
         if observed_generation != self.nav_generation
             || self.suppress_next_push
             || self.page_loading
         {
-            return false;
+            return None;
         }
-        let Some(current) = self.current_url() else {
-            return false;
-        };
+        let current = self.current_url()?;
         if current == live_url {
-            return false;
+            return None;
         }
         let (Ok(live), Ok(cur)) = (tauri::Url::parse(live_url), tauri::Url::parse(&current)) else {
-            return false;
+            return None;
         };
         if live.origin() != cur.origin() {
-            return false;
+            return None;
+        }
+        if self.in_settle_window(now) {
+            self.replace_current(live_url.to_string());
+            return Some(StoreEmbedHistoryChange::Replaced);
         }
         if self.cursor > 0
             && self.history.get(self.cursor - 1).map(String::as_str) == Some(live_url)
         {
             self.cursor -= 1;
             self.enqueue_nav_event();
-            return true;
+            return Some(StoreEmbedHistoryChange::Moved);
         }
         if self.history.get(self.cursor + 1).map(String::as_str) == Some(live_url) {
             self.cursor += 1;
             self.enqueue_nav_event();
-            return true;
+            return Some(StoreEmbedHistoryChange::Moved);
         }
         if live.path() == cur.path() {
             self.history[self.cursor] = live_url.to_string();
             self.enqueue_nav_event();
-            return true;
+            return Some(StoreEmbedHistoryChange::Replaced);
         }
-        self.push(live_url.to_string());
-        true
+        self.push_inner(live_url.to_string(), None);
+        Some(StoreEmbedHistoryChange::Recorded)
     }
 
     /// PURE: snapshots the current navigation state onto the drain queue (GAP-D, REQ-40-06),
@@ -6458,6 +6576,7 @@ impl StoreEmbedState {
         self.history.clear();
         self.cursor = 0;
         self.suppress_next_push = false;
+        self.settle_until = None;
         self.page_loading = false;
         self.nav_generation = self.nav_generation.wrapping_add(1);
         // D-21: a teardown must not leave events describing a history that no longer exists --
@@ -6486,6 +6605,7 @@ impl StoreEmbedState {
         self.history = history;
         self.cursor = cursor;
         self.suppress_next_push = false;
+        self.settle_until = None;
         self.page_loading = false;
         self.nav_generation = self.nav_generation.wrapping_add(1);
         // Queued events describe the outgoing store; the incoming page's push queues its own.
@@ -6537,6 +6657,7 @@ impl StoreEmbedState {
         }
         self.cursor -= 1;
         self.suppress_next_push = true;
+        self.settle_until = None;
         self.nav_generation = self.nav_generation.wrapping_add(1);
         self.history.get(self.cursor).cloned()
     }
@@ -6549,6 +6670,7 @@ impl StoreEmbedState {
         }
         self.cursor += 1;
         self.suppress_next_push = true;
+        self.settle_until = None;
         self.nav_generation = self.nav_generation.wrapping_add(1);
         self.history.get(self.cursor).cloned()
     }
@@ -6558,6 +6680,7 @@ impl StoreEmbedState {
     /// for it.
     fn arm_reload_suppression(&mut self) {
         self.suppress_next_push = true;
+        self.settle_until = None;
         self.nav_generation = self.nav_generation.wrapping_add(1);
     }
 
@@ -6914,7 +7037,14 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
             }
             if payload.event() == tauri::webview::PageLoadEvent::Finished {
                 if let Ok(mut state) = store_embed_state().lock() {
-                    state.push(payload.url().to_string());
+                    if state.push_at(payload.url().to_string(), std::time::Instant::now())
+                        == Some(StoreEmbedHistoryChange::Replaced)
+                    {
+                        shell_eprintln!(
+                            "[shell] store_embed: page load replaced host={}",
+                            payload.url().host_str().unwrap_or("")
+                        );
+                    }
                 } else {
                     shell_eprintln!(
                         "[shell] WARN: store_embed history registry poisoned -- continuing"
@@ -7632,9 +7762,12 @@ fn store_embed_take_nav_events(app: &AppHandle) -> Result<Value, String> {
         .lock()
         .map_err(|_| "store_embed_take_nav_events:history-registry-poisoned".to_string())?;
     if let Some(live) = live_url {
-        if state.observe_live_url(live.as_str(), generation) {
+        if let Some(change) =
+            state.observe_live_url_at(live.as_str(), generation, std::time::Instant::now())
+        {
             shell_eprintln!(
-                "[shell] store_embed: same-document navigation recorded host={}",
+                "[shell] store_embed: same-document navigation {} host={}",
+                change.as_str(),
                 live.host_str().unwrap_or("")
             );
         }
