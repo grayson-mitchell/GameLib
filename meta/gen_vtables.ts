@@ -7344,7 +7344,7 @@ export function computeDispatchRespScratchBytes(
         (p) => p.kind === 'out-struct' || p.capBytes !== undefined
       )
       if (!big) continue
-      let need = dispatchReturnWidth(method, manifest) ?? 0
+      let need = dispatchReturnWidth(method) ?? 0
       for (const p of method.params) {
         const k = p.kind ?? 'value'
         if (k === 'out-value') need += valueTypeWidth(p.valueType ?? 'int32')
@@ -7467,10 +7467,7 @@ function dispatchReturnCType(method: MethodSignature): string {
  * helper-side -- `'pointer'`/`'float'` have no current production use and
  * are refused at generation time (see `assertDispatchable` below) rather
  * than silently mis-encoded. */
-function dispatchReturnWidth(
-  method: MethodSignature,
-  manifest?: InterfaceManifest
-): number | null {
+function dispatchReturnWidth(method: MethodSignature): number | null {
   switch (method.returnKind) {
     case 'void':
       return 0
@@ -7526,10 +7523,7 @@ function assertDispatchable(
   // 58-06: a helperCustom function produces the whole response blob itself,
   // so the generic return-shape and out-param limits below do not apply.
   if (method.helperCustom !== undefined) return
-  if (
-    method.returnKind !== 'string' &&
-    dispatchReturnWidth(method, manifest) === null
-  ) {
+  if (method.returnKind !== 'string' && dispatchReturnWidth(method) === null) {
     throw new Error(
       `generateDispatchHeader: ${ctx} has returnKind "${method.returnKind}"${
         method.returnKind === 'class'
@@ -7772,7 +7766,7 @@ function emitDispatchCase(
         (q) => (q.kind ?? 'value') === 'out-buffer'
       ).length
       const fixed =
-        (dispatchReturnWidth(method, manifest) ?? 0) +
+        (dispatchReturnWidth(method) ?? 0) +
         outValueWidth +
         outStructWidth +
         4 * outBufferCount
@@ -7866,7 +7860,7 @@ function emitDispatchCase(
       ...emitStringReturnEncodeLines('result')
     )
   } else {
-    const width = dispatchReturnWidth(method, manifest)
+    const width = dispatchReturnWidth(method)
     const outValueParams = method.params.filter(
       (p) => (p.kind ?? 'value') === 'out-value'
     )
