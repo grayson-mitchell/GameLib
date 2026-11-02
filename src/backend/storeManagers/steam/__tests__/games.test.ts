@@ -358,6 +358,10 @@ jest.mock('../bottle', () => {
     isBridgeBottleReady,
     getBridgeBottleSettings: jest.fn(),
     getDrmBridgeRunner: jest.fn(),
+    // Phase 60: overlay runner registry surface (plan 07).
+    clearDrmBridgeRunner: jest.fn(),
+    setOverlayBridgeRunner: jest.fn(),
+    endPerGameBridgeBottleSessionWith: jest.fn(),
     killBridgeBottleWineServer: jest.fn(),
     provisionBridgeBottle: jest.fn(),
     // quick/261016-u1w (D-D): per-game bridge bottle removal on uninstall.
@@ -459,9 +463,36 @@ jest.mock('../bridge/drm/drmLaunchSetup', () => {
   const drmLaunchSetupMock = jest.fn()
   return {
     __drmLaunchSetupMock: drmLaunchSetupMock,
+    DRM_END_SESSION_TIMEOUT_MS: 15000,
     drmLaunchSetup: (...args: unknown[]) =>
       drmLaunchSetupMock(...args) ??
       Promise.resolve({ status: 'not-applicable', mode: 'tcp' })
+  }
+})
+
+// Phase 60 (60-08): overlay policy and launch preparation. Plain functions over
+// jest.fn() so they survive resetMocks. Default: overlay off, so every
+// pre-Phase-60 launch test runs on stock CrossOver untouched (D-04).
+jest.mock('../bridge/overlay/overlayPolicy', () => {
+  const resolveMock = jest.fn()
+  const storedMock = jest.fn()
+  return {
+    __resolveOverlayEnabledMock: resolveMock,
+    __readStoredOverlayOverrideMock: storedMock,
+    resolveOverlayEnabled: (...args: unknown[]) =>
+      resolveMock(...args) ?? { enabled: false, source: 'user' },
+    readStoredOverlayOverride: (...args: unknown[]) => storedMock(...args)
+  }
+})
+jest.mock('../bridge/overlay/overlayLaunch', () => {
+  const prepareLaunchMock = jest.fn()
+  const prepareTokensMock = jest.fn()
+  return {
+    ...jest.requireActual('../bridge/overlay/overlayLaunch'),
+    __prepareOverlayLaunchMock: prepareLaunchMock,
+    __prepareOverlayTokensMock: prepareTokensMock,
+    prepareOverlayLaunch: (...args: unknown[]) => prepareLaunchMock(...args),
+    prepareOverlayTokens: (...args: unknown[]) => prepareTokensMock(...args)
   }
 })
 
@@ -12648,7 +12679,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('not-applicable after a registered runner re-reads the bottle settings', async () => {
         const id = freshId()
         ;(detectDrmWrapper as jest.Mock).mockReturnValue('none')
-        ;(getDrmBridgeRunner as jest.Mock).mockReturnValue({})
+        ;(getDrmBridgeRunner as jest.Mock).mockReturnValue({ kind: 'drm' })
         let calls = 0
         ;(getBridgeBottleSettings as jest.Mock).mockImplementation(() => {
           calls++
@@ -13232,6 +13263,448 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           )
         ).toBe(true)
         expect(startBottleProcessMonitor).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('Phase 60 overlay (DRM route and env)', () => {
+      const { __resolveOverlayEnabledMock, __readStoredOverlayOverrideMock } =
+        jest.requireMock<{
+          __resolveOverlayEnabledMock: jest.Mock
+          __readStoredOverlayOverrideMock: jest.Mock
+        }>('../bridge/overlay/overlayPolicy')
+      const { __prepareOverlayTokensMock } = jest.requireMock<{
+        __prepareOverlayTokensMock: jest.Mock
+      }>('../bridge/overlay/overlayLaunch')
+      const tokensFor = (id: string) => [
+        `DYLD_INSERT_LIBRARIES='/s/shim.dylib'`,
+        `SteamOverlayGameId=${id}`
+      ]
+      const resignedReady = (id: string, resigned: boolean) => {
+        const r = readyFor(id)
+        return { ...r, runner: { ...r.runner, wineloaderResigned: resigned } }
+      }
+      const useResigned = (id: string, resigned: boolean) => {
+        __drmLaunchSetupMock.mockImplementation(() =>
+          Promise.resolve(resignedReady(id, resigned))
+        )
+        ;(existsSync as jest.Mock).mockImplementation(() => true)
+      }
+      const cxEnv = () =>
+        (
+          (runWineCommand as jest.Mock).mock.calls[0][0].gameSettings
+            .enviromentOptions as { key: string; value: string }[]
+        ).find((e) => e.key === 'CX_ENV')?.value
+      beforeEach(() => {
+        __resolveOverlayEnabledMock.mockReturnValue({
+          enabled: true,
+          source: 'default'
+        })
+        __prepareOverlayTokensMock.mockReset()
+      })
+
+      const baseEnv = (
+        extra: Partial<Parameters<typeof buildDrmLaunchEnvironment>[0]>
+      ) => ({
+        appId: '123',
+        traceFile: '/t/trace.log',
+        macSteamClientDir: '/mac/client',
+        steamDirHost: '/steam',
+        windowsDllDir: '/r/win',
+        unixDllDir: '/r/unix',
+        launchForm: 'bin/wine+CX_BOTTLE' as const,
+        dllPathChannel: 'env' as const,
+        dllOverridesChannel: 'env' as const,
+        base: [] as { key: string; value: string }[],
+        ...extra
+      })
+      const cxOf = (r: ReturnType<typeof buildDrmLaunchEnvironment>) =>
+        r.status === 'ok'
+          ? r.enviromentOptions.find((e) => e.key === 'CX_ENV')?.value
+          : undefined
+
+      it('buildDrmLaunchEnvironment: overlay tokens alone become CX_ENV', () => {
+        expect(
+          cxOf(buildDrmLaunchEnvironment(baseEnv({ overlayTokens: ['A=1'] })))
+        ).toBe('A=1')
+      })
+
+      it('buildDrmLaunchEnvironment: overlay tokens append to an existing CX_ENV', () => {
+        expect(
+          cxOf(
+            buildDrmLaunchEnvironment(
+              baseEnv({
+                base: [{ key: 'CX_ENV', value: 'X=2' }],
+                overlayTokens: ['A=1']
+              })
+            )
+          )
+        ).toBe('X=2 A=1')
+      })
+
+      it('buildDrmLaunchEnvironment: an inner quote in an overlay token is an error', () => {
+        const r = buildDrmLaunchEnvironment(
+          baseEnv({ overlayTokens: [`P='a'b'`] })
+        )
+        expect(r.status).toBe('error')
+      })
+
+      it('buildDrmLaunchEnvironment: no overlay tokens leaves CX_ENV unset', () => {
+        expect(cxOf(buildDrmLaunchEnvironment(baseEnv({})))).toBeUndefined()
+      })
+
+      it('resigned clone and ok tokens: CX_ENV carries the overlay tokens', async () => {
+        const id = freshId()
+        useResigned(id, true)
+        __prepareOverlayTokensMock.mockResolvedValue({
+          status: 'ok',
+          tokens: tokensFor(id)
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(cxEnv()).toContain(`DYLD_INSERT_LIBRARIES='`)
+        expect(cxEnv()).toContain(`SteamOverlayGameId=${id}`)
+        expect(notify).not.toHaveBeenCalled()
+        expect(infoLines()).toContain(
+          `SteamGame: appId ${id} overlay=on source=default`
+        )
+      })
+
+      it('unresigned clone: no tokens, one resign notice and log line, game still launches', async () => {
+        const id = freshId()
+        useResigned(id, false)
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(cxEnv() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
+        expect(__prepareOverlayTokensMock).not.toHaveBeenCalled()
+        expect(notify).toHaveBeenCalledTimes(1)
+        expect(
+          (logWarning as jest.Mock).mock.calls.some((c) =>
+            String(c[0]).includes(
+              `[bridge-notice] appId=${id} reason=overlay-resign`
+            )
+          )
+        ).toBe(true)
+      })
+
+      it('shim step failure: launches without tokens and notifies on every launch (no dedupe)', async () => {
+        const id = freshId()
+        useResigned(id, true)
+        __prepareOverlayTokensMock.mockResolvedValue({
+          status: 'error',
+          step: 'shim',
+          cause: 'missing shim'
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(cxEnv() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
+        expect(notify).toHaveBeenCalledTimes(2)
+        expect(
+          (logWarning as jest.Mock).mock.calls.filter((c) =>
+            String(c[0]).includes(`appId=${id} reason=overlay-shim`)
+          )
+        ).toHaveLength(2)
+      })
+
+      it('overlay off: no tokens, no notify, policy source is logged', async () => {
+        const id = freshId()
+        useResigned(id, true)
+        __readStoredOverlayOverrideMock.mockReturnValue('off')
+        __resolveOverlayEnabledMock.mockReturnValue({
+          enabled: false,
+          source: 'user'
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(__prepareOverlayTokensMock).not.toHaveBeenCalled()
+        expect(cxEnv() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
+        expect(notify).not.toHaveBeenCalled()
+        expect(infoLines()).toContain(
+          `SteamGame: appId ${id} overlay=off source=user`
+        )
+        expect(__resolveOverlayEnabledMock).toHaveBeenCalledWith(
+          expect.objectContaining({ userOverride: 'off' })
+        )
+      })
+
+      it('a throwing policy read means no overlay, not a blocked launch', async () => {
+        const id = freshId()
+        useResigned(id, true)
+        __resolveOverlayEnabledMock.mockImplementation(() => {
+          throw new Error('boom')
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(__prepareOverlayTokensMock).not.toHaveBeenCalled()
+        expect(cxEnv() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
+      })
+    })
+
+    describe('Phase 60 overlay (TCP route)', () => {
+      const { __resolveOverlayEnabledMock } = jest.requireMock<{
+        __resolveOverlayEnabledMock: jest.Mock
+      }>('../bridge/overlay/overlayPolicy')
+      const { __prepareOverlayLaunchMock } = jest.requireMock<{
+        __prepareOverlayLaunchMock: jest.Mock
+      }>('../bridge/overlay/overlayLaunch')
+      const bottleMod = jest.requireMock<{
+        setOverlayBridgeRunner: jest.Mock
+        endPerGameBridgeBottleSessionWith: jest.Mock
+      }>('../bottle')
+      const runnerBin = '/ov/runner/CrossOver/bin/wine'
+      const overlayRunner = {
+        crossoverBuild: '26.3.0',
+        runnerDir: '/ov/runner',
+        cxRoot: '/ov/runner/CrossOver',
+        wrapperBin: runnerBin
+      }
+      const okResult = (id: string) => ({
+        status: 'ok' as const,
+        runner: overlayRunner,
+        tokens: [`DYLD_INSERT_LIBRARIES='/s/shim.dylib'`, `SteamAppId=${id}`]
+      })
+      const registered = { current: false }
+      beforeEach(() => {
+        registered.current = false
+        ;(detectDrmWrapper as jest.Mock).mockReturnValue('none')
+        __resolveOverlayEnabledMock.mockReturnValue({
+          enabled: true,
+          source: 'default'
+        })
+        __prepareOverlayLaunchMock.mockReset()
+        bottleMod.setOverlayBridgeRunner.mockImplementation(() => {
+          registered.current = true
+          return true
+        })
+        bottleMod.endPerGameBridgeBottleSessionWith.mockResolvedValue(true)
+        ;(getBridgeBottleSettings as jest.Mock).mockImplementation(
+          (id: string) => ({
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: registered.current
+              ? { bin: runnerBin, name: 'overlay', type: 'crossover' }
+              : { bin: '/stock/bin/wine', name: 'stock', type: 'crossover' },
+            enviromentOptions: []
+          })
+        )
+      })
+      const usedSettings = () =>
+        (runWineCommand as jest.Mock).mock.calls[0][0].gameSettings
+      const cxEnvOf = () =>
+        (
+          usedSettings().enviromentOptions as { key: string; value: string }[]
+        ).find((e) => e.key === 'CX_ENV')?.value
+
+      it('overlay on: registers the clone, launches on it with the tokens', async () => {
+        const id = freshId()
+        __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(bottleMod.setOverlayBridgeRunner).toHaveBeenCalledWith(
+          id,
+          overlayRunner
+        )
+        expect(usedSettings().wineVersion.bin).toBe(runnerBin)
+        expect(cxEnvOf()).toMatch(/^DYLD_INSERT_LIBRARIES='/)
+        expect(cxEnvOf()).toContain(`SteamAppId=${id}`)
+      })
+
+      it('no previous runner and overlay on: ends the stock wineserver session first', async () => {
+        const id = freshId()
+        __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+        await new SteamGame(id).launch({} as never)
+        expect(
+          bottleMod.endPerGameBridgeBottleSessionWith
+        ).toHaveBeenCalledWith(id, bottleFor(id), undefined, 15000)
+        expect(
+          bottleMod.endPerGameBridgeBottleSessionWith.mock
+            .invocationCallOrder[0]
+        ).toBeLessThan(
+          bottleMod.setOverlayBridgeRunner.mock.invocationCallOrder[0]
+        )
+      })
+
+      it('overlay off: stock runner, no prepare, no tokens, no notify', async () => {
+        const id = freshId()
+        __resolveOverlayEnabledMock.mockReturnValue({
+          enabled: false,
+          source: 'user'
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(__prepareOverlayLaunchMock).not.toHaveBeenCalled()
+        expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
+        expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
+        expect(notify).not.toHaveBeenCalled()
+        expect(
+          bottleMod.endPerGameBridgeBottleSessionWith
+        ).not.toHaveBeenCalled()
+      })
+
+      it('overlay turned off after an overlay launch: ends the clone wineserver with the clone bin dir', async () => {
+        const id = freshId()
+        ;(getDrmBridgeRunner as jest.Mock).mockReturnValue({
+          kind: 'overlay',
+          runner: overlayRunner
+        })
+        __resolveOverlayEnabledMock.mockReturnValue({
+          enabled: false,
+          source: 'user'
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(
+          bottleMod.endPerGameBridgeBottleSessionWith
+        ).toHaveBeenCalledWith(
+          id,
+          bottleFor(id),
+          '/ov/runner/CrossOver/bin',
+          15000
+        )
+        expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
+      })
+
+      it('clone step failure: stock runner, no tokens, one toast, log line, launch succeeds (D-08)', async () => {
+        const id = freshId()
+        __prepareOverlayLaunchMock.mockResolvedValue({
+          status: 'error',
+          step: 'clone',
+          cause: 'clone failed'
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(bottleMod.setOverlayBridgeRunner).not.toHaveBeenCalled()
+        expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
+        expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
+        expect(notify).toHaveBeenCalledTimes(1)
+        expect(
+          (logWarning as jest.Mock).mock.calls.some((c) =>
+            String(c[0]).includes(`appId=${id} reason=overlay-clone`)
+          )
+        ).toBe(true)
+      })
+
+      it('a refused runner registration falls back to stock with a clone notice', async () => {
+        const id = freshId()
+        __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+        bottleMod.setOverlayBridgeRunner.mockReturnValue(false)
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
+        expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
+        expect(notify).toHaveBeenCalledTimes(1)
+      })
+
+      it('a throwing prepare launches on stock without blocking', async () => {
+        const id = freshId()
+        __prepareOverlayLaunchMock.mockRejectedValue(new Error('boom'))
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
+        expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
+      })
+
+      it('fallback engine: no prepare, skipped log line, no toast (D-07)', async () => {
+        const id = freshId()
+        const { setEngineSelection } = jest.requireActual(
+          '../engine/engineRegistry'
+        )
+        setEngineSelection(id, {
+          kind: 'pinned',
+          pinId: 'staging-11',
+          reason: 'user',
+          wineBin: '/engine/wine/bin/wine',
+          wineserverBin: '/engine/wine/bin/wineserver',
+          label: 'Wine-Staging 11.20',
+          version: '11.20',
+          dxvk: null
+        })
+        const game = new SteamGame(id) as unknown as {
+          prepareTcpOverlay: (
+            s: unknown,
+            p: unknown
+          ) => Promise<{ overlayLaunch?: unknown }>
+        }
+        const out = await game.prepareTcpOverlay(
+          {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: { bin: '/e/wine', name: 'e', type: 'wine' }
+          },
+          undefined
+        )
+        clearEngineSelection(id)
+        expect(out.overlayLaunch).toBeUndefined()
+        expect(__prepareOverlayLaunchMock).not.toHaveBeenCalled()
+        expect(infoLines()).toContain(
+          `SteamGame: appId ${id} overlay=skipped reason=fallback-engine (D-07)`
+        )
+        expect(notify).not.toHaveBeenCalled()
+      })
+
+      it('fallback engine after an overlay launch ends the clone wineserver', async () => {
+        const id = freshId()
+        const { setEngineSelection } = jest.requireActual(
+          '../engine/engineRegistry'
+        )
+        setEngineSelection(id, {
+          kind: 'pinned',
+          pinId: 'staging-11',
+          reason: 'user',
+          wineBin: '/engine/wine/bin/wine',
+          wineserverBin: '/engine/wine/bin/wineserver',
+          label: 'Wine-Staging 11.20',
+          version: '11.20',
+          dxvk: null
+        })
+        const game = new SteamGame(id) as unknown as {
+          prepareTcpOverlay: (s: unknown, p: unknown) => Promise<unknown>
+        }
+        await game.prepareTcpOverlay(
+          {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: { bin: '/e/wine', name: 'e', type: 'wine' }
+          },
+          { kind: 'overlay', runner: overlayRunner }
+        )
+        clearEngineSelection(id)
+        expect(
+          bottleMod.endPerGameBridgeBottleSessionWith
+        ).toHaveBeenCalledWith(
+          id,
+          bottleFor(id),
+          '/ov/runner/CrossOver/bin',
+          15000
+        )
+      })
+
+      it('same overlay runner as before: no session end', async () => {
+        const id = freshId()
+        ;(getDrmBridgeRunner as jest.Mock).mockReturnValue({
+          kind: 'overlay',
+          runner: overlayRunner
+        })
+        __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+        await new SteamGame(id).launch({} as never)
+        expect(
+          bottleMod.endPerGameBridgeBottleSessionWith
+        ).not.toHaveBeenCalled()
+      })
+
+      it('a known fix that swaps the runner is restored to the overlay clone', async () => {
+        const id = freshId()
+        __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+        ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
+          (_id: string, settings: object) =>
+            Promise.resolve({
+              ...settings,
+              wineVersion: { bin: '/other/wine', name: 'o', type: 'wine' }
+            })
+        )
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(usedSettings().wineVersion.bin).toBe(runnerBin)
+        expect(
+          (logWarning as jest.Mock).mock.calls.some((c) =>
+            String(c[0]).includes('restoring the overlay clone runner')
+          )
+        ).toBe(true)
+      })
+
+      it('the no-steam-api path carries the overlay tokens too', async () => {
+        const id = freshId()
+        ;(placeShimForGame as jest.Mock).mockResolvedValue({
+          status: 'no-steam-api'
+        })
+        __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(cxEnvOf()).toContain(`SteamAppId=${id}`)
       })
     })
   })

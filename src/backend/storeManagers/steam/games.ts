@@ -125,9 +125,29 @@ import {
   discardNewBridgeBottle,
   buildFallbackGameSettings,
   getDrmBridgeRunner,
+  clearDrmBridgeRunner,
+  setOverlayBridgeRunner,
+  endPerGameBridgeBottleSessionWith,
   killBridgeBottleWineServer,
   type DrmLaunchForm
 } from './bottle'
+// Phase 60: Steam overlay in bridged games (macOS).
+import {
+  appendCxEnvTokens,
+  prepareOverlayLaunch,
+  prepareOverlayTokens
+} from './bridge/overlay/overlayLaunch'
+import {
+  resolveOverlayEnabled,
+  readStoredOverlayOverride
+} from './bridge/overlay/overlayPolicy'
+import {
+  formatOverlayNoticeLine,
+  OVERLAY_STEP_TEXT,
+  type OverlayStep
+} from './bridge/overlay/overlayNotice'
+import { readKnownFixes } from 'backend/knownFixes'
+import type { OverlayRunnerReady } from './bridge/overlay/overlayRunnerClone'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import type { CrossoverPreflight } from './engine/engineDecision'
@@ -156,6 +176,7 @@ import { detectSteamDrmInPe } from './bridge/peSteamDrm'
 import {
   drmLaunchSetup,
   prefetchDrmDownloads,
+  DRM_END_SESSION_TIMEOUT_MS,
   type DrmLaunchReady
 } from './bridge/drm/drmLaunchSetup'
 import {
@@ -206,6 +227,7 @@ import {
 import { isScanVerdictNowCovered } from './bridge/shimCoverage'
 import {
   builtBridgeShim64Path,
+  builtOverlayShimPath,
   appFolder,
   userHome
 } from 'backend/constants/paths'
@@ -746,6 +768,8 @@ export type DrmLaunchEnvInput = {
   dllPathChannel: DrmDllPathChannel
   dllOverridesChannel: DrmDllOverridesChannel
   base: readonly EnviromentVariable[]
+  // Phase 60 (D-05): overlay CX_ENV tokens merged with the DRM ones.
+  overlayTokens?: readonly string[]
 }
 // ts-prune-ignore-next
 export type DrmLaunchEnv =
@@ -887,13 +911,11 @@ export function buildDrmLaunchEnvironment(
       cxTokens.push(`WINEDLLPATH='${drmPath}'`)
     }
 
-    if (cxTokens.length > 0) {
-      if (cxTokens.some((t) => t.slice(t.indexOf("'") + 1, -1).includes("'"))) {
-        return invalid('CX_ENV value')
-      }
-      const existing = getKey('CX_ENV')
-      const joined = cxTokens.join(' ')
-      setKey('CX_ENV', existing ? `${existing} ${joined}` : joined)
+    const allCxTokens = [...cxTokens, ...(input.overlayTokens ?? [])]
+    if (allCxTokens.length > 0) {
+      const merged = appendCxEnvTokens(env, allCxTokens)
+      if (merged.status === 'error') return invalid('CX_ENV value')
+      env = merged.env
     }
 
     return {
@@ -1123,6 +1145,8 @@ type DrmWineLaunch = {
   traceFile: string
   anchorLine: string
   macSteamClientDir: string
+  // Phase 60 (D-05): overlay CX_ENV tokens for a re-signed DRM clone.
+  overlayTokens?: string[]
   // Test seam for the registry-channel branch; defaults to buildDrmLaunchEnvironment.
   buildEnv?: (input: DrmLaunchEnvInput) => DrmLaunchEnv
 }
@@ -4602,13 +4626,178 @@ export default class SteamGame implements Game {
     )
     // Not ready.bottleSettings-from-before: the settings computed before
     // drmLaunchSetup predate the runner swap (56-11 contract).
+    // Phase 60 (D-05/D-08): the overlay rides the DRM clone only when its
+    // wineloader is re-signed; any failure launches the clone without tokens.
+    let overlayTokens: string[] | undefined
+    if (this.resolveLaunchOverlay().enabled) {
+      if (ready.runner.wineloaderResigned !== true) {
+        this.notifyOverlaySetupFailed(
+          'resign',
+          'DRM runner wineloader not re-signed'
+        )
+      } else {
+        const r = await prepareOverlayTokens({
+          appId: this.appId,
+          shimPath: builtOverlayShimPath,
+          steamBinDir: macSteamClientDir
+        })
+        if (r.status === 'ok') overlayTokens = r.tokens
+        else this.notifyOverlaySetupFailed(r.step, r.cause)
+      }
+    }
     return this.fireBridgeWineLaunch(exePath, ready.bottleSettings, {
       ready,
       gameWinPath,
       traceFile: trace.traceFile,
       anchorLine,
-      macSteamClientDir
+      macSteamClientDir,
+      ...(overlayTokens ? { overlayTokens } : {})
     })
+  }
+
+  /**
+   * Phase 60 (D-01/D-03): whether the overlay is on for this launch, and why.
+   * Never throws: a failure here means no overlay, never a blocked launch.
+   */
+  private resolveLaunchOverlay(): { enabled: boolean; source: string } {
+    try {
+      const r = resolveOverlayEnabled({
+        platform: process.platform,
+        userOverride: readStoredOverlayOverride(this.appId),
+        knownFixOff:
+          readKnownFixes(this.appId, 'steam')?.steamGameOverlay === 'off'
+      })
+      logInfo(
+        `SteamGame: appId ${this.appId} overlay=${r.enabled ? 'on' : 'off'} source=${r.source}`,
+        LogPrefix.Steam
+      )
+      return r
+    } catch (error) {
+      logWarning(
+        `SteamGame: appId ${this.appId} overlay policy failed, launching without the overlay: ${String(error)}`,
+        LogPrefix.Steam
+      )
+      return { enabled: false, source: 'default' }
+    }
+  }
+
+  /**
+   * Phase 60 (D-08/D-09): an overlay setup failure is a log line plus a toast
+   * on EVERY affected launch, never a dialog, never deduped. Deliberately the
+   * opposite of DRM's fail-closed rule (D-56-13): the overlay is an
+   * enhancement, so the game still launches.
+   */
+  private notifyOverlaySetupFailed(step: OverlayStep, cause: string): void {
+    logWarning(
+      formatOverlayNoticeLine(this.appId, step, cause),
+      LogPrefix.Steam
+    )
+    notify({
+      title: i18next.t(
+        'gamelib:steam.overlay.toast.title',
+        'Steam overlay unavailable'
+      ),
+      body: i18next.t(
+        'gamelib:steam.overlay.toast.body',
+        '{{step}} The game is launching without the Steam overlay.',
+        {
+          step: i18next.t(
+            'gamelib:' + OVERLAY_STEP_TEXT[step].key,
+            OVERLAY_STEP_TEXT[step].en
+          )
+        }
+      )
+    })
+  }
+
+  /**
+   * Phase 60 (D-01/D-04/D-07/D-08): the TCP-route overlay decision. Returns the
+   * settings to launch with and, when the overlay is injecting, its tokens and
+   * runner. Ends the bottle's wineserver with the PREVIOUS runner's own
+   * wineserver whenever the runner changes (stock/overlay/DRM never share one).
+   * Never throws and never blocks the launch.
+   */
+  private async prepareTcpOverlay(
+    settings: GameSettings,
+    previousRunner: ReturnType<typeof getDrmBridgeRunner>
+  ): Promise<{
+    settings: GameSettings
+    overlayLaunch?: { tokens: string[]; runnerBin: string }
+  }> {
+    let registered = false
+    try {
+      const { getEngineSelection } = await import('./engine/engineRegistry')
+      const { isNonCrossover } = await import('./engine/engineTypes')
+      const sel = getEngineSelection(this.appId)
+      const fallbackEngine = sel
+        ? isNonCrossover(sel)
+        : settings.wineVersion.type !== 'crossover'
+      let ok:
+        | {
+            runner: OverlayRunnerReady
+            tokens: string[]
+          }
+        | undefined
+      if (fallbackEngine) {
+        logInfo(
+          `SteamGame: appId ${this.appId} overlay=skipped reason=fallback-engine (D-07)`,
+          LogPrefix.Steam
+        )
+      } else if (this.resolveLaunchOverlay().enabled) {
+        const result = await prepareOverlayLaunch({
+          appId: this.appId,
+          appFolder,
+          shimPath: builtOverlayShimPath,
+          steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH)
+        })
+        if (result.status === 'error') {
+          this.notifyOverlaySetupFailed(result.step, result.cause)
+        } else {
+          ok = { runner: result.runner, tokens: result.tokens }
+        }
+      }
+      const nextRunnerDir = ok?.runner.runnerDir
+      if (nextRunnerDir !== previousRunner?.runner.runnerDir) {
+        await endPerGameBridgeBottleSessionWith(
+          this.appId,
+          settings.wineCrossoverBottle,
+          previousRunner
+            ? join(previousRunner.runner.cxRoot, 'bin')
+            : undefined,
+          DRM_END_SESSION_TIMEOUT_MS
+        )
+      }
+      if (ok) {
+        if (setOverlayBridgeRunner(this.appId, ok.runner)) {
+          registered = true
+          return {
+            settings: getBridgeBottleSettings(this.appId),
+            overlayLaunch: {
+              tokens: ok.tokens,
+              runnerBin: ok.runner.wrapperBin
+            }
+          }
+        }
+        this.notifyOverlaySetupFailed(
+          'clone',
+          'overlay runner registration refused'
+        )
+      }
+      // Stock CrossOver (or the fallback engine) again: a previous overlay
+      // entry was already cleared by drmLaunchSetup, so a stale clone
+      // wineVersion must not ride along.
+      if (previousRunner?.kind === 'overlay' && !fallbackEngine) {
+        return { settings: getBridgeBottleSettings(this.appId) }
+      }
+      return { settings }
+    } catch (error) {
+      logWarning(
+        `SteamGame: appId ${this.appId} overlay setup threw, launching without the overlay: ${String(error)}`,
+        LogPrefix.Steam
+      )
+      if (registered) clearDrmBridgeRunner(this.appId)
+      return { settings }
+    }
   }
 
   /**
@@ -4698,7 +4887,11 @@ export default class SteamGame implements Game {
       launchDrmWrapper === 'steamstub'
         ? this.readLaunchExeCegMarkers(drmExe)
         : []
-    const hadDrmRunner = getDrmBridgeRunner(this.appId) !== undefined
+    const previousRunner = getDrmBridgeRunner(this.appId)
+    // Only a DRM runner's absence changes the settings drmLaunchSetup clears;
+    // an overlay entry is handled by prepareTcpOverlay below.
+    const hadDrmRunner = previousRunner?.kind === 'drm'
+    let overlayLaunch: { tokens: string[]; runnerBin: string } | undefined
     const wantsDrm =
       resolveBridgeMode(launchDrmWrapper, launchCegMarkers) ===
       'steamclient-layer'
@@ -4756,6 +4949,15 @@ export default class SteamGame implements Game {
       if (hadDrmRunner) {
         bridgeBottleSettings = getBridgeBottleSettings(this.appId)
       }
+      // Phase 60: on by default (D-01); with the overlay off a TCP-mode game
+      // runs on stock CrossOver exactly as before (D-04). Runs on every TCP
+      // launch so a runner change always ends the old wineserver.
+      const tcp = await this.prepareTcpOverlay(
+        bridgeBottleSettings,
+        previousRunner
+      )
+      bridgeBottleSettings = tcp.settings
+      overlayLaunch = tcp.overlayLaunch
     } else if (drm.status === 'error') {
       // D-13: no markBridgeFailedThisSession, no steamBridgeSetupRequired, no
       // bottled Steam. drmLaunchSetup's fail() sends the terminal 'done' when
@@ -4940,7 +5142,12 @@ export default class SteamGame implements Game {
           : `SteamGame: launching appId ${this.appId} via the Steam bridge bottle directly (no-steam-api, no helper)`,
         LogPrefix.Steam
       )
-      return this.fireBridgeWineLaunch(exePath, bridgeBottleSettings)
+      return this.fireBridgeWineLaunch(
+        exePath,
+        bridgeBottleSettings,
+        undefined,
+        overlayLaunch
+      )
     }
 
     // 261027-aue: InitFlat fails fast while Steam is quit or signing in, so the
@@ -5052,7 +5259,12 @@ export default class SteamGame implements Game {
       `SteamGame: launching appId ${this.appId} via the Steam bridge (${exePath}, helper port=${helperReady.port}, cfg copies=${1 + (configResult.extraPaths?.length ?? 0)})`,
       LogPrefix.Steam
     )
-    return this.fireBridgeWineLaunch(exePath, bridgeBottleSettings)
+    return this.fireBridgeWineLaunch(
+      exePath,
+      bridgeBottleSettings,
+      undefined,
+      overlayLaunch
+    )
   }
 
   /**
@@ -5066,7 +5278,8 @@ export default class SteamGame implements Game {
   private async fireBridgeWineLaunch(
     exePath: string,
     bridgeBottleSettings: GameSettings,
-    drm?: DrmWineLaunch
+    drm?: DrmWineLaunch,
+    overlay?: { tokens: string[]; runnerBin: string }
   ): Promise<boolean> {
     const reportLaunchFailure = (error: unknown) => {
       logWarning(
@@ -5251,7 +5464,8 @@ export default class SteamGame implements Game {
           launchForm: ready.launchForm,
           dllPathChannel: DRM_DLLPATH_CHANNEL,
           dllOverridesChannel: DRM_DLLOVERRIDES_CHANNEL,
-          base: launchSettings.enviromentOptions ?? []
+          base: launchSettings.enviromentOptions ?? [],
+          ...(drm.overlayTokens ? { overlayTokens: drm.overlayTokens } : {})
         })
         if (env.status === 'error') {
           this.maybeNotifyDrmModeFailed(
@@ -5326,6 +5540,29 @@ export default class SteamGame implements Game {
             return false
           }
           if (deadlineFired()) return false
+        }
+      }
+
+      if (!drm && overlay) {
+        // One runner per bottle (T-60-08-04): a known fix must not swap it.
+        if (launchSettings.wineVersion.bin !== overlay.runnerBin) {
+          logWarning(
+            `SteamGame: a launch step changed the wine runner for appId ${this.appId}; restoring the overlay clone runner`,
+            LogPrefix.Steam
+          )
+          launchSettings = {
+            ...launchSettings,
+            wineVersion: getBridgeBottleSettings(this.appId).wineVersion
+          }
+        }
+        const merged = appendCxEnvTokens(
+          launchSettings.enviromentOptions ?? [],
+          overlay.tokens
+        )
+        if (merged.status === 'ok') {
+          launchSettings = { ...launchSettings, enviromentOptions: merged.env }
+        } else {
+          this.notifyOverlaySetupFailed('env', merged.cause)
         }
       }
 
