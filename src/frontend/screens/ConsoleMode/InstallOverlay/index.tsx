@@ -15,6 +15,7 @@ import { useGamepadButtonPress, useGamepadInfo } from '../hooks'
 import {
   handOffSteamClientSetupToDesktop,
   probeSteamQuickInstallTarget,
+  releaseUnclaimedSteamClientSetup,
   resolveConsoleActionIntent,
   steamBlockedMessage,
   type ConsoleClientSetupHandOff,
@@ -95,6 +96,9 @@ export default function InstallOverlay({
     useState<SteamQuickInstallDegrade | null>(null)
   const [clientSetupHandOff, setClientSetupHandOff] =
     useState<ConsoleClientSetupHandOff | null>(null)
+  // Set once the hand-off has opened the setup store for desktop mode, so the
+  // unmount cleanup does not release the very session it just handed over.
+  const handedOffRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -130,10 +134,20 @@ export default function InstallOverlay({
   useEffect(() => {
     if (game.runner !== 'steam') return
     let cancelled = false
+    let clientSetupSeen = false
     let timer: ReturnType<typeof setTimeout> | undefined
     void probeSteamQuickInstallTarget(game.app_name).then((verdict) => {
-      if (cancelled) return
+      if (cancelled) {
+        // Unmounted while the recheck was in flight: its push may already
+        // have opened the setup store, and the cleanup below ran too early
+        // to know. Release it here.
+        if (!verdict.ok && verdict.clientSetup) {
+          releaseUnclaimedSteamClientSetup(game.app_name)
+        }
+        return
+      }
       if (!verdict.ok) {
+        clientSetupSeen = Boolean(verdict.clientSetup)
         setSteamBlocked(verdict.degrade)
         setClientSetupHandOff(verdict.clientSetup ?? null)
         // Client cause: land the controller on the remedy (confirm-first,
@@ -166,6 +180,12 @@ export default function InstallOverlay({
     return () => {
       cancelled = true
       if (timer) clearTimeout(timer)
+      // Every exit path (B, Escape, Backspace, A or a click on Dismiss, the
+      // global console toggle) unmounts the overlay, so one release here
+      // covers them all. A hand-off sets the flag first and keeps the store.
+      if (clientSetupSeen && !handedOffRef.current) {
+        releaseUnclaimedSteamClientSetup(game.app_name)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -257,6 +277,9 @@ export default function InstallOverlay({
 
   const handOff = () => {
     if (!clientSetupHandOff) return
+    // Before the call: navigation unmounts this overlay, and the cleanup must
+    // already see the flag.
+    handedOffRef.current = true
     handOffSteamClientSetupToDesktop(
       game.app_name,
       clientSetupHandOff,

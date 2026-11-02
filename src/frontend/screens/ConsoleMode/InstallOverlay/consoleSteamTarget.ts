@@ -131,6 +131,22 @@ export function handOffSteamClientSetupToDesktop(
 }
 
 /**
+ * Close a client-setup session the overlay did not hand off.
+ * `ensureSteamClientReady` pushes `steamClientSetupRequired` while answering
+ * the probe's recheck, and nothing under `/console` renders
+ * `SteamClientSetup`, so the push leaves the store open with no dialog. If the
+ * user dismisses the card instead of handing off, that store must not survive
+ * into desktop mode as a stray dialog. Closes only a session for the SAME
+ * appName, never one some other flow opened for a different game.
+ */
+export function releaseUnclaimedSteamClientSetup(appName: string): void {
+  const state = useSteamClientSetup.getState()
+  if (state.isOpen && state.appName === appName) {
+    state.close()
+  }
+}
+
+/**
  * The defect this closes: `focused` defaults to `'install'` and both the
  * confirm-button gamepad handler (`getActionButtonIndex`) and the Enter/Space
  * keydown branch called
