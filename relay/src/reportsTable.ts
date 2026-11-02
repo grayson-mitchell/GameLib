@@ -89,15 +89,24 @@ type EntryRow = {
   last_version: string | null
 }
 
-export async function entriesForApp(
+/**
+ * CR-01: the body entries for one PR. Only rows that PR actually proposed
+ * (`outcome = 'pr'` with its number) plus the ref being published now, so a
+ * row that hit the cap, became an issue, was skipped or suppressed never
+ * reaches a PR body or its D-20 marker. `prNumber = null` yields the current
+ * ref alone (a PR that is about to be created).
+ */
+export async function entriesForPr(
   db: D1Like,
-  appId: string
+  appId: string,
+  prNumber: number | null,
+  current: ReportRef
 ): Promise<BodyEntry[]> {
   const { results } = await db
     .prepare(
-      `SELECT key, op, count, first_seen, last_seen, last_version FROM reports WHERE app_id = ? ORDER BY key, op`
+      `SELECT key, op, count, first_seen, last_seen, last_version FROM reports WHERE app_id = ? AND ((outcome = 'pr' AND pr_number = ?) OR (key = ? AND op = ?)) ORDER BY key, op`
     )
-    .bind(appId)
+    .bind(appId, prNumber, current.key, current.op)
     .all<EntryRow>()
   return results.map((e) => ({
     key: e.key as BodyEntry['key'],

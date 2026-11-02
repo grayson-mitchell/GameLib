@@ -24,7 +24,7 @@ import {
 import { renderPrBody } from './prBody'
 import { publishReport } from './publish'
 import {
-  entriesForApp,
+  entriesForPr,
   setOutcome,
   setTitle,
   shouldRefreshBody,
@@ -159,14 +159,18 @@ async function handle(
       ) {
         try {
           const gh = await github()
-          await gh.updatePullBody(
-            row.pr_number,
-            renderPrBody({
-              appId: ref.appId,
-              title: row.title ?? '',
-              entries: await entriesForApp(db, ref.appId)
-            })
-          )
+          // CR-01: never rewrite a closed or merged PR; its D-20 marker
+          // must keep exactly what it proposed when the operator closed it.
+          if ((await gh.getPullState(row.pr_number)) === 'open') {
+            await gh.updatePullBody(
+              row.pr_number,
+              renderPrBody({
+                appId: ref.appId,
+                title: row.title ?? '',
+                entries: await entriesForPr(db, ref.appId, row.pr_number, ref)
+              })
+            )
+          }
         } catch (err) {
           const name = err instanceof Error ? err.constructor.name : 'unknown'
           console.log(`relay: ${ref.appId} body refresh failed (${name})`)
@@ -199,7 +203,7 @@ async function handle(
       detector: ref.key === 'macArch' ? 'macho' : 'ceg',
       gh,
       baseBranch: env.BASE_BRANCH,
-      entries: await entriesForApp(db, ref.appId),
+      entriesFor: (prNumber) => entriesForPr(db, ref.appId, prNumber, ref),
       reserveCreation: () =>
         reserveDailyCreation(
           db,

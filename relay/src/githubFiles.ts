@@ -37,6 +37,8 @@ export interface RepoClient {
     base: string
     body: string
   }): Promise<number>
+  /** CR-01: `open`, or `closed` for a closed or merged PR. */
+  getPullState(n: number): Promise<'open' | 'closed'>
   updatePullBody(n: number, body: string): Promise<void>
   findIssueByTitle(label: string, title: string): Promise<number | null>
   createIssue(a: {
@@ -178,6 +180,11 @@ export function createRepoClient(opts: {
     async createPull(a) {
       const r = await request('POST', '/pulls', a)
       return Number(obj(r.json).number)
+    },
+
+    async getPullState(n) {
+      const r = await request('GET', `/pulls/${n}`)
+      return obj(r.json).state === 'open' ? 'open' : 'closed'
     },
 
     async updatePullBody(n, body) {

@@ -156,6 +156,20 @@ describe('githubFiles', () => {
     expect(fake.calls[1].body).toEqual({ body: 'new' })
   })
 
+  test('getPullState reports open, and closed for closed or merged', async () => {
+    const { repo } = client({
+      [`GET ${BASE}/pulls/1`]: { status: 200, json: { state: 'open' } },
+      [`GET ${BASE}/pulls/2`]: {
+        status: 200,
+        json: { state: 'closed', merged_at: '2026-01-01T00:00:00Z' }
+      },
+      [`GET ${BASE}/pulls/3`]: { status: 200, json: {} }
+    })
+    expect(await repo.getPullState(1)).toBe('open')
+    expect(await repo.getPullState(2)).toBe('closed')
+    expect(await repo.getPullState(3)).toBe('closed')
+  })
+
   test('findIssueByTitle ignores PRs and matches exact title', async () => {
     const { repo } = client({
       [`GET ${BASE}/issues?labels=bundled-removal&state=all&per_page=100`]: {

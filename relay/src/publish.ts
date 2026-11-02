@@ -22,7 +22,11 @@ export type PublishInput = {
   detector: 'macho' | 'ceg'
   gh: RepoClient
   baseBranch: string
-  entries: BodyEntry[]
+  /**
+   * CR-01: body entries for a PR: the rows that PR proposed plus this report.
+   * `null` means a PR that does not exist yet (this report alone).
+   */
+  entriesFor: (prNumber: number | null) => Promise<BodyEntry[]>
   reserveCreation: () => Promise<boolean>
 }
 
@@ -58,7 +62,8 @@ export async function publishReport(
   const title = prTitle(appId, { key, op })
   const message = `known-fix: ${title}`
 
-  const own = input.entries.find((e) => e.key === key && e.op === op)
+  const ownEntries = await input.entriesFor(null)
+  const own = ownEntries.find((e) => e.key === key && e.op === op)
   const note = {
     gamelibVersion: report.gamelibVersion,
     firstSeen: own?.firstSeen ?? Date.now()
@@ -68,8 +73,8 @@ export async function publishReport(
       ? planAdd(text, key, value, input.title, note)
       : planRemove(text)
 
-  const body = () =>
-    renderPrBody({ appId, title: input.title, entries: input.entries })
+  const body = (entries: BodyEntry[]) =>
+    renderPrBody({ appId, title: input.title, entries })
 
   const main = await gh.getFile(path, baseBranch)
   const mainPlan = plan(main?.text ?? null)
@@ -114,7 +119,7 @@ export async function publishReport(
     } else if (branchPlan.kind === 'delete' && branchFile) {
       await gh.deleteFile({ path, branch, sha: branchFile.sha, message })
     }
-    await gh.updatePullBody(prNumber, body())
+    await gh.updatePullBody(prNumber, body(await input.entriesFor(prNumber)))
     return { status: 'updated', prNumber }
   }
 
@@ -150,7 +155,7 @@ export async function publishReport(
     title,
     head: branch,
     base: baseBranch,
-    body: body()
+    body: body(ownEntries)
   })
   return { status: 'created', prNumber }
 }

@@ -49,6 +49,7 @@ function fakeGh(s: Script = {}) {
     putFile: rec('putFile', () => Promise.resolve('newsha')),
     deleteFile: rec('deleteFile', () => Promise.resolve()),
     createPull: rec('createPull', () => Promise.resolve(77)),
+    getPullState: rec('getPullState', () => Promise.resolve('open' as const)),
     updatePullBody: rec('updatePullBody', () => Promise.resolve()),
     findIssueByTitle: rec('findIssueByTitle', () =>
       Promise.resolve(s.issue ?? null)
@@ -75,11 +76,13 @@ function input(
     key?: 'macArch' | 'drm'
     op?: 'add' | 'remove'
     reserve?: boolean
+    prEntries?: BodyEntry[]
   } = {}
-): PublishInput & { reserved: { n: number } } {
+): PublishInput & { reserved: { n: number }; asked: Array<number | null> } {
   const key = over.key ?? 'macArch'
   const op = over.op ?? 'add'
   const reserved = { n: 0 }
+  const asked: Array<number | null> = []
   return {
     report: {
       v: 1,
@@ -94,12 +97,20 @@ function input(
     detector: key === 'drm' ? 'ceg' : 'macho',
     gh,
     baseBranch: 'main',
-    entries: [entry({ key, op })],
+    entriesFor: (prNumber) => {
+      asked.push(prNumber)
+      return Promise.resolve(
+        prNumber === null
+          ? [entry({ key, op })]
+          : (over.prEntries ?? [entry({ key, op })])
+      )
+    },
     reserveCreation: () => {
       reserved.n++
       return Promise.resolve(over.reserve ?? true)
     },
-    reserved
+    reserved,
+    asked
   }
 }
 
@@ -262,6 +273,39 @@ describe('pr', () => {
     const res = await publishReport(input(f.gh))
     expect(res.status).toBe('skipped')
     for (const w of WRITES) expect(f.calls).not.toContain(w)
+  })
+})
+
+describe('body entries (CR-01)', () => {
+  test('a new PR body and marker carry only this report', async () => {
+    const f = fakeGh()
+    const inp = input(f.gh, { key: 'drm' })
+    await publishReport(inp)
+    expect(inp.asked).toEqual([null])
+    const body = (f.args.createPull[0][0] as { body: string }).body
+    expect(body).toContain('<!-- gamelib-report: drm:add -->')
+    expect(body).not.toContain('macArch')
+  })
+
+  test('a fold renders the rows of that PR plus this report', async () => {
+    const f = fakeGh({
+      files: {
+        [`report/steam-123:${P}`]: {
+          sha: 'bs',
+          text: '{"title":"X","macArch":"32"}'
+        }
+      },
+      open: [{ number: 5, mergedAt: null, body: '' }]
+    })
+    const inp = input(f.gh, {
+      key: 'drm',
+      prEntries: [entry(), entry({ key: 'drm', detector: 'ceg' })]
+    })
+    await publishReport(inp)
+    expect(inp.asked).toEqual([null, 5])
+    const [n, body] = f.args.updatePullBody[0] as [number, string]
+    expect(n).toBe(5)
+    expect(body).toContain('<!-- gamelib-report: macArch:add,drm:add -->')
   })
 })
 

@@ -6,7 +6,7 @@ import { resetTokenCacheForTests } from '../githubApp'
 import { handleReport } from '../handler'
 import { utcDayKey } from '../limits'
 import {
-  entriesForApp,
+  entriesForPr,
   setOutcome,
   shouldRefreshBody,
   upsertReport
@@ -17,6 +17,7 @@ type Script = {
   steam?: { status: number; json?: unknown }
   closed?: Pull[]
   putStatus?: number
+  pullState?: 'open' | 'closed'
 }
 
 const valid = () => ({
@@ -59,6 +60,9 @@ async function harness(envOver: Partial<RelayEnv> = {}, script: Script = {}) {
     if (method === 'GET' && url.includes('state=open')) return json(200, [])
     if (method === 'GET' && url.includes('state=closed')) {
       return json(200, script.closed ?? [])
+    }
+    if (method === 'GET' && /\/pulls\/\d+$/.test(url)) {
+      return json(200, { state: script.pullState ?? 'open' })
     }
     if (method === 'GET' && url.includes('/git/ref/heads/')) {
       return json(200, { object: { sha: 'base' } })
@@ -126,7 +130,7 @@ describe('repeat', () => {
     expect(b.count).toBe(2)
     expect(b.first_seen).toBe(100)
     expect(b.last_seen).toBe(200)
-    const e = await entriesForApp(db, '1')
+    const e = await entriesForPr(db, '1', null, r)
     expect(e[0].lastVersion).toBe('0.9.0')
   })
 
@@ -138,23 +142,31 @@ describe('repeat', () => {
     expect(n).toMatchObject({ outcome: 'pr', pr_number: 7, title: 'T' })
   })
 
-  it('lists entries for an app with derived detector', async () => {
+  it('lists only the rows a PR proposed plus the current ref (CR-01)', async () => {
     const db = createTestD1()
+    const drm = { appId: '1', key: 'drm' as const, op: 'add' as const }
+    const rm = { appId: '1', key: 'macArch' as const, op: 'remove' as const }
     await upsertReport(db, { ...r, version: '1' }, 1)
-    await upsertReport(
-      db,
-      { appId: '1', key: 'drm', op: 'add', version: '1' },
-      2
-    )
+    await setOutcome(db, r, { outcome: 'pr', prNumber: 7 })
+    await upsertReport(db, { ...rm, version: '1' }, 1)
+    await setOutcome(db, rm, { outcome: 'issue', issueNumber: 3 })
+    await upsertReport(db, { ...drm, version: '1' }, 2)
     await upsertReport(
       db,
       { appId: '2', key: 'drm', op: 'add', version: '1' },
       2
     )
-    const e = await entriesForApp(db, '1')
-    expect(e).toHaveLength(2)
-    expect(e.find((x) => x.key === 'macArch')?.detector).toBe('macho')
-    expect(e.find((x) => x.key === 'drm')?.detector).toBe('ceg')
+    const fold = await entriesForPr(db, '1', 7, drm)
+    expect(fold.map((x) => `${x.key}:${x.op}`)).toEqual([
+      'drm:add',
+      'macArch:add'
+    ])
+    expect(fold.find((x) => x.key === 'macArch')?.detector).toBe('macho')
+    expect(fold.find((x) => x.key === 'drm')?.detector).toBe('ceg')
+    const fresh = await entriesForPr(db, '1', null, drm)
+    expect(fresh.map((x) => `${x.key}:${x.op}`)).toEqual(['drm:add'])
+    const other = await entriesForPr(db, '1', 8, drm)
+    expect(other.map((x) => `${x.key}:${x.op}`)).toEqual(['drm:add'])
   })
 
   it('throttles body refreshes', () => {
@@ -287,6 +299,36 @@ describe('repeat (handler)', () => {
     expect(count('PATCH', '/pulls/7')).toBe(2)
     await h.send({}) // 4 -> none
     expect(count('PATCH', '/pulls/7')).toBe(2)
+  })
+
+  it('never refreshes the body of a closed PR (CR-01)', async () => {
+    const h = await harness({}, { pullState: 'closed' })
+    expect((await h.send({})).status).toBe(201)
+    const second = await h.send({})
+    expect((await second.json()).status).toBe('counted')
+    expect(
+      h.calls.some((c) => c.method === 'GET' && c.url.endsWith('/pulls/7'))
+    ).toBe(true)
+    expect(h.calls.some((c) => c.method === 'PATCH')).toBe(false)
+  })
+
+  it('a new PR body ignores cap-blocked and issue rows (CR-01)', async () => {
+    const h = await harness()
+    const mac = { appId: '220', key: 'macArch' as const, op: 'add' as const }
+    const rm = { appId: '220', key: 'macArch' as const, op: 'remove' as const }
+    await upsertReport(h.db, { ...mac, version: '1' }, 1) // outcome NULL (429)
+    await upsertReport(h.db, { ...rm, version: '1' }, 1)
+    await setOutcome(h.db, rm, { outcome: 'issue', issueNumber: 3 })
+    const res = await h.send({
+      body: JSON.stringify({ ...valid(), key: 'drm', value: 'ceg' })
+    })
+    expect(res.status).toBe(201)
+    const pull = h.calls.find(
+      (c) => c.method === 'POST' && c.url.endsWith('/pulls')
+    )
+    const body = (pull?.body as { body: string }).body
+    expect(body).toContain('<!-- gamelib-report: drm:add -->')
+    expect(body).not.toContain('macArch')
   })
 
   it('only counts a suppressed row, with no GitHub calls', async () => {
