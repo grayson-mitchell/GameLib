@@ -61,12 +61,27 @@ const NOTE_DETECTOR: Record<KnownFixReportKey, string> = {
 }
 
 /**
+ * WR-01 (D-14): the client-sent version is free text within the schema's
+ * charset, so it reaches a committed file only when it has a release shape
+ * (`1.2.3`, or `1.2.3-beta.1` with a fixed pre-release word); anything else,
+ * such as `1.2.3-evil.example`, is never written.
+ */
+const RELEASE_VERSION_RE =
+  /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-(?:alpha|beta|rc|dev)(?:\.\d{1,4})?)?$/
+
+export function releaseVersion(v: string | null | undefined): string | null {
+  return typeof v === 'string' && RELEASE_VERSION_RE.test(v) ? v : null
+}
+
+/**
  * The `notes.<key>` text, matching the hand-written seeds. Built only from
- * fixed strings, the schema-validated version and a date, never client text.
+ * fixed strings, a release-shaped version (WR-01) and a date, never client text.
  */
 export function reportNote(key: KnownFixReportKey, input: NoteInput): string {
   const date = new Date(input.firstSeen).toISOString().slice(0, 10)
-  return `${NOTE_REASON[key]} Reported by GameLib ${input.gamelibVersion}'s ${NOTE_DETECTOR[key]} through the known-fix relay, first received ${date}.`
+  const version = releaseVersion(input.gamelibVersion)
+  const who = version ? `GameLib ${version}'s` : `an unknown GameLib version's`
+  return `${NOTE_REASON[key]} Reported by ${who} ${NOTE_DETECTOR[key]} through the known-fix relay, first received ${date}.`
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {

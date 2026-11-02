@@ -4,6 +4,7 @@ import {
   fixFilePath,
   planAdd,
   planRemove,
+  releaseVersion,
   reportNote,
   serializeFixFile
 } from '../fileEdit'
@@ -29,6 +30,28 @@ describe('fileEdit', () => {
         "The macOS build is 32-bit only (i386); Apple silicon cannot run it, so GameLib installs the Windows build. Reported by GameLib 0.8.0's post-install Mach-O check through the known-fix relay, first received 2026-11-02."
       )
       expect(reportNote('drm', N)).toContain("GameLib 0.8.0's PE CEG scan")
+    })
+
+    it('writes only a release-shaped version into the note (WR-01)', () => {
+      for (const v of ['0.8.0', '1.10.2', '0.9.0-beta.2', '1.0.0-rc']) {
+        expect(releaseVersion(v)).toBe(v)
+        expect(reportNote('macArch', { ...N, gamelibVersion: v })).toContain(
+          `GameLib ${v}'s`
+        )
+      }
+      for (const v of [
+        'www.attacker-site.com',
+        'buy-cheap-pills.example',
+        '1.2.3-evil.example',
+        '1.2',
+        '1.2.3+meta',
+        ''
+      ]) {
+        expect(releaseVersion(v)).toBeNull()
+        const note = reportNote('drm', { ...N, gamelibVersion: v })
+        expect(note).toContain("Reported by an unknown GameLib version's")
+        if (v) expect(note).not.toContain(v)
+      }
     })
 
     it('adds its note to an existing notes object, last, without overwriting', () => {

@@ -91,6 +91,29 @@ describe('prBody', () => {
     expect(stripSpans(body)).not.toMatch(/@|#\d/)
   })
 
+  test('the client version only appears inside a code span (WR-01)', () => {
+    const v = 'www.attacker-site.com'
+    const pr = renderPrBody({
+      appId: '1',
+      title: 'T',
+      entries: [entry({ lastVersion: v })]
+    })
+    const issue = renderIssueBody({
+      appId: '1',
+      title: 'T',
+      count: 1,
+      lastVersion: v
+    })
+    for (const body of [pr, issue]) {
+      expect(body).toContain(`\`${v}\``)
+      expect(stripSpans(body)).not.toContain(v)
+    }
+    expect(pr).toContain('Detected by GameLib `' + v + '` on macOS')
+    expect(
+      renderIssueBody({ appId: '1', title: 'T', count: 1, lastVersion: null })
+    ).toContain('GameLib `unknown` reported')
+  })
+
   test('parseReportMarker reads and merges entries', () => {
     const body = renderPrBody({
       appId: '1',

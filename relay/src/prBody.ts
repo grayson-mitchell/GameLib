@@ -1,6 +1,7 @@
 // PR / issue text for known-fix reports (D-13, D-20 marker).
-// Inputs are validated key/op/appId/version plus Steam's canonical title,
-// which only ever appears inside a code span (T-57-32).
+// Inputs are validated key/op/appId/version plus Steam's canonical title.
+// The title and the client-sent version only ever appear inside a code span
+// (T-57-32, WR-01), so GitHub never autolinks or mentions from them.
 import { KNOWN_FIX_REPORT_PAIRS } from '../../src/common/knownFixReport'
 
 export const REPORT_MARKER_PREFIX = 'gamelib-report:'
@@ -38,6 +39,11 @@ function safeTitle(title: string): string {
   return title.replace(/`/g, "'").replace(/\s+/g, ' ').trim()
 }
 
+/** WR-01: the client-sent version, always as a code span. */
+function codeVersion(v: string | null): string {
+  return `\`${safeTitle(v ?? 'unknown')}\``
+}
+
 function entryLines(appId: string, e: BodyEntry): string[] {
   const value = KNOWN_FIX_REPORT_PAIRS[e.key]
   const change =
@@ -45,7 +51,7 @@ function entryLines(appId: string, e: BodyEntry): string[] {
       ? `Change: remove \`${e.key}\` from steam/${appId}-steam.json`
       : `Change: add \`${e.key}: "${value}"\` to steam/${appId}-steam.json`
   return [
-    `Detected by GameLib ${e.lastVersion ?? 'unknown'} on macOS (${DETECTOR_LABEL[e.detector]})`,
+    `Detected by GameLib ${codeVersion(e.lastVersion)} on macOS (${DETECTOR_LABEL[e.detector]})`,
     change,
     `Reports received: ${e.count} (first ${isoDate(e.firstSeen)}, latest ${isoDate(e.lastSeen)})`
   ]
@@ -88,7 +94,7 @@ export function renderIssueBody(a: {
 }): string {
   return (
     [
-      `GameLib ${a.lastVersion ?? 'unknown'} reported that \`macArch: "32"\` is wrong for steam ${a.appId} (\`${safeTitle(a.title)}\`), but the known-fixes repo has no such entry.`,
+      `GameLib ${codeVersion(a.lastVersion)} reported that \`macArch: "32"\` is wrong for steam ${a.appId} (\`${safeTitle(a.title)}\`), but the known-fixes repo has no such entry.`,
       '',
       `The entry is bundled only: it lives in public/fixes/${a.appId}-steam.json inside GameLib and needs a GameLib release to fix.`,
       '',
