@@ -1105,16 +1105,6 @@ export function relogDrmTrace(
 // failed step is new information, so it shows again. Keyed `${appId}|${step}`.
 const drmModeNoticeShownThisSession = new Set<string>()
 
-/**
- * Phase 59 (D-11): whether the bottle process monitor sees a game started by a
- * non-CrossOver engine. 59-01-SUMMARY.md `staging_monitor_match: yes` (a
- * Wine-Staging `ps` line starts with the game's `C:\...` path, so
- * deriveWindowsPrefix matching works). Were this false, every fallback launch
- * would hit the deadline and be killed, so the deadline would not be armed
- * for built-in-engine launches.
- */
-const STAGING_MONITOR_MATCH = true
-
 function engineLabelForLog(sel: EngineSelection): string {
   return sel.kind === 'crossover' ? 'crossover' : `${sel.kind} ${sel.label}`
 }
@@ -4698,10 +4688,10 @@ export default class SteamGame implements Game {
       const { runWineCommand } = await import('backend/launcher')
       const { startBottleProcessMonitor, getBottleProcessMonitorPhase } =
         await import('./bottleProcessMonitor')
-      const { armLaunchDeadline } = await import('./engine/launchDeadline')
+      const { armLaunchDeadline, bindDeadlineToMonitor } =
+        await import('./engine/launchDeadline')
       const { getEngineSelection, clearEngineSelection } =
         await import('./engine/engineRegistry')
-      const { isNonCrossover } = await import('./engine/engineTypes')
       const { applySteamBridgeKnownFixes, steamBridgeLaunchCommandParts } =
         await import('./bridgeKnownFixes')
       const { applyBridgeBottleDllOverrides } =
@@ -4729,17 +4719,13 @@ export default class SteamGame implements Game {
       // Phase 59 (D-10/D-11): armed before the shared-redist step so the
       // default covers a first-run prefix update and the redists. Cancelled
       // when the monitor first sees the game process. Needs a monitor to be
-      // cancellable, and for a non-CrossOver engine, a monitor that matches
-      // its processes (STAGING_MONITOR_MATCH, 59-01).
+      // cancellable; the monitor matches built-in-engine processes by host path
+      // (1a5b750bb, G8), and bindDeadlineToMonitor stands the deadline down
+      // when no monitor starts (59-REVIEW CR-01).
       const sel = getEngineSelection(this.appId)
       if (!installRoot) {
         logInfo(
           `SteamGame: appId ${this.appId} has no process monitor, so no launch deadline is armed`,
-          LogPrefix.Steam
-        )
-      } else if (sel && isNonCrossover(sel) && !STAGING_MONITOR_MATCH) {
-        logInfo(
-          `SteamGame: appId ${this.appId} launch deadline not armed: the monitor does not match this engine's processes (59-01)`,
           LogPrefix.Steam
         )
       } else {
@@ -4920,20 +4906,24 @@ export default class SteamGame implements Game {
 
       let handle: ReturnType<typeof startBottleProcessMonitor> = null
       if (installRoot) {
-        handle = startBottleProcessMonitor({
-          appId: this.appId,
-          installPath: installRoot,
-          bottleDir: getBottleDir(bridgeBottleSettings.wineCrossoverBottle),
-          kind: 'bridge',
-          onFirstMatch: () => deadline?.cancel('first-match'),
-          onUnavailable: () => deadline?.cancel('monitor-unavailable'),
-          onStopped: () => {
-            clearLaunchRecord()
-            stopBridgeHelper(this.appId)
-            clearEngineSelection(this.appId)
-            relogOnce()
-          }
-        })
+        handle = bindDeadlineToMonitor(
+          deadline,
+          startBottleProcessMonitor({
+            appId: this.appId,
+            installPath: installRoot,
+            bottleDir: getBottleDir(bridgeBottleSettings.wineCrossoverBottle),
+            kind: 'bridge',
+            onFirstMatch: () => deadline?.cancel('first-match'),
+            onUnavailable: () => deadline?.cancel('monitor-unavailable'),
+            onStopped: () => {
+              clearLaunchRecord()
+              stopBridgeHelper(this.appId)
+              clearEngineSelection(this.appId)
+              relogOnce()
+            }
+          }),
+          (m) => logInfo(`SteamGame: appId ${this.appId} ${m}`, LogPrefix.Steam)
+        )
       } else {
         logWarning(
           `SteamGame: launchBridgeGame could not resolve an install root for appId ${this.appId} — no process monitor started, helper will outlive the game until app quit`,

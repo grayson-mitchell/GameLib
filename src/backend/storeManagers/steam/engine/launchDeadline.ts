@@ -119,3 +119,23 @@ export function cancelLaunchDeadline(
 export function __activeLaunchDeadlineCount(): number {
   return active.size
 }
+
+/**
+ * 59-REVIEW CR-01: nothing but a live process monitor can cancel the deadline
+ * at first match, and on the built-in engine the wine launcher lives as long
+ * as the game, so an unwatched deadline kills a running game. When no monitor
+ * started (`handle === null`) an armed deadline is stood down at once.
+ */
+export function bindDeadlineToMonitor<H>(
+  deadline: LaunchDeadline | undefined,
+  handle: H | null,
+  log: (msg: string) => void
+): H | null {
+  if (handle === null && deadline?.state === 'armed') {
+    deadline.cancel('monitor-unavailable')
+    log(
+      'no process monitor started; launch deadline stood down (monitor-unavailable)'
+    )
+  }
+  return handle
+}

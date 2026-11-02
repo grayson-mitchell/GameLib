@@ -2,6 +2,7 @@ import { logInfo, logWarning } from 'backend/logger'
 import {
   LAUNCH_DEADLINE_MS,
   armLaunchDeadline,
+  bindDeadlineToMonitor,
   cancelLaunchDeadline,
   __activeLaunchDeadlineCount
 } from '../launchDeadline'
@@ -130,5 +131,47 @@ describe('launchDeadline', () => {
     ).toThrow(TypeError)
     expect(__activeLaunchDeadlineCount()).toBe(0)
     expect(jest.getTimerCount()).toBe(0)
+  })
+
+  describe('bindDeadlineToMonitor (CR-01)', () => {
+    test('null handle stands the armed deadline down and never fires', () => {
+      const onDeadline = jest.fn()
+      const log = jest.fn()
+      const d = armLaunchDeadline({ appId: '620', onDeadline })
+      expect(bindDeadlineToMonitor(d, null, log)).toBeNull()
+      expect(d.state).toBe('cancelled')
+      expect(log).toHaveBeenCalledTimes(1)
+      expect(log.mock.calls[0][0]).toContain('monitor-unavailable')
+      jest.advanceTimersByTime(LAUNCH_DEADLINE_MS)
+      expect(onDeadline).not.toHaveBeenCalled()
+    })
+
+    test('a live handle leaves the deadline armed and is returned', () => {
+      const log = jest.fn()
+      const handle = { stop: jest.fn() }
+      const d = armLaunchDeadline({ appId: '620', onDeadline: jest.fn() })
+      expect(bindDeadlineToMonitor(d, handle, log)).toBe(handle)
+      expect(d.state).toBe('armed')
+      expect(log).not.toHaveBeenCalled()
+    })
+
+    test('an undefined deadline does not throw or log', () => {
+      const log = jest.fn()
+      expect(() => bindDeadlineToMonitor(undefined, null, log)).not.toThrow()
+      expect(log).not.toHaveBeenCalled()
+    })
+
+    test('an already-fired deadline stays fired', () => {
+      const log = jest.fn()
+      const d = armLaunchDeadline({
+        appId: '620',
+        timeoutMs: 10,
+        onDeadline: jest.fn()
+      })
+      jest.advanceTimersByTime(10)
+      bindDeadlineToMonitor(d, null, log)
+      expect(d.state).toBe('fired')
+      expect(log).not.toHaveBeenCalled()
+    })
   })
 })
