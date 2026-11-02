@@ -2,8 +2,6 @@ import { GameInfo, Runner, Status } from 'common/types'
 import { TFunction } from 'i18next'
 import { engineDownloadLabel } from './engineDownloadLabel'
 
-export { engineDownloadLabel }
-
 type StatusArgs = {
   status: Status
   t: TFunction<'gamepage', undefined>

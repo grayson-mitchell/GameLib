@@ -16,7 +16,7 @@ interface Shown {
   seq: number
 }
 
-export const AUTO_HIDE_MS = 8000
+const AUTO_HIDE_MS = 8000
 
 const isReason = (r: unknown): r is Reason =>
   r === 'cx-missing' || r === 'cx-expired' || r === 'cx-broken'

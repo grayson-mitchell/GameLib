@@ -9,10 +9,9 @@ jest.mock('frontend/helpers', () => ({}))
 ;(globalThis as any).window = {
   localStorage: { getItem: () => null, setItem: () => undefined }
 }
-type ConstantsModule = typeof import('../constants')
+type LabelModule = typeof import('../engineDownloadLabel')
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const constants: ConstantsModule = require('../constants')
-const { engineDownloadLabel } = constants
+const { engineDownloadLabel }: LabelModule = require('../engineDownloadLabel')
 
 const t = ((key: string, def: string, vars?: Record<string, string>) =>
   (def ?? key).replace(/{{(\w+)}}/g, (_, k: string) => vars?.[k] ?? '')) as any
