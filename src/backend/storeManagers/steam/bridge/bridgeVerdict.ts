@@ -85,6 +85,10 @@ const bridgeVerdictSchema = z.object({
   // Quick 261024-br4: without this key the non-strict object strips `drm`
   // on read and a detected CEG would be silently forgotten.
   drm: z.enum(['ceg']).optional(),
+  // 59-REVIEW WR-04: the persisted copy of the launch's resolveBridgeMode
+  // result, so a synchronous reader can tell a DRM-mode title. Declared so
+  // the strip-on-read keeps it.
+  mode: z.enum(['steamclient-layer', 'tcp']).optional(),
   // 51-REVIEW WR-01: same Pitfall-2 reasoning -- the version pool retained
   // by clearBridgeScanVerdict would otherwise be stripped on read.
   interfaceVersions: z.record(z.string(), z.string()).optional(),
@@ -286,6 +290,33 @@ export function writeBridgeDrmVerdict(
     ...existing,
     bridge: drm === undefined ? restBridge : { ...restBridge, drm }
   })
+}
+
+/**
+ * 59-REVIEW WR-04: persists the bridge mode the launch (59-20) or the install
+ * prefetch (59-21) resolved, so engine state can exclude DRM-mode titles
+ * without an async exe scan. No store write when the value is unchanged.
+ */
+export function writeBridgeModeVerdict(
+  appId: string,
+  mode: 'steamclient-layer' | 'tcp'
+): void {
+  if (rejectNonNumeric('writeBridgeModeVerdict', appId)) return
+
+  if (readBridgeVerdict(appId)?.mode === mode) return
+
+  const existing = getOrCreateEntryForWrite(appId)
+  steamMetadataStore.set(appId, {
+    ...existing,
+    bridge: { ...existing.bridge, mode }
+  })
+}
+
+/** The persisted bridge mode, or undefined when never recorded. */
+export function readBridgeModeVerdict(
+  appId: string
+): 'steamclient-layer' | 'tcp' | undefined {
+  return readBridgeVerdict(appId)?.mode
 }
 
 /**

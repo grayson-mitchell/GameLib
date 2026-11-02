@@ -42,7 +42,9 @@ import {
   markBridgeLimitedNoticeShown,
   setBridgeIdentityFallback,
   setBridgeLaunchTarget,
-  writeBridgeDrmVerdict
+  writeBridgeDrmVerdict,
+  writeBridgeModeVerdict,
+  readBridgeModeVerdict
 } from '../bridgeVerdict'
 
 const mockedStore = steamMetadataStore as unknown as {
@@ -506,6 +508,36 @@ describe('writeBridgeDrmVerdict (quick 261024-br4)', () => {
 
     expect(readBridgeVerdict(APP_ID)).toBeUndefined()
     expect(mockedLogWarning).toHaveBeenCalled()
+  })
+})
+
+describe('bridge mode verdict (59-15 WR-04)', () => {
+  it('round-trips and survives strip-on-read', () => {
+    writeBridgeModeVerdict(APP_ID, 'steamclient-layer')
+    expect(readBridgeModeVerdict(APP_ID)).toBe('steamclient-layer')
+    expect(readBridgeVerdict(APP_ID)?.mode).toBe('steamclient-layer')
+  })
+  it('leaves drm, steamApi and launchTarget unchanged', () => {
+    writeBridgeDrmVerdict(APP_ID, 'ceg')
+    setBridgeSteamApiPrescreen(APP_ID, 'x64')
+    const target = { executable: 'a.exe', installdir: 'A' }
+    setBridgeLaunchTarget(APP_ID, target)
+    const before = readBridgeVerdict(APP_ID)
+    writeBridgeModeVerdict(APP_ID, 'tcp')
+    expect(readBridgeVerdict(APP_ID)).toEqual({ ...before, mode: 'tcp' })
+  })
+  it('rejects a non-numeric appId', () => {
+    writeBridgeModeVerdict(NON_NUMERIC_APP_ID, 'tcp')
+    expect(mockedStore.get(NON_NUMERIC_APP_ID)).toBeUndefined()
+  })
+  it('an invalid stored value reads as undefined', () => {
+    mockedStore.set(APP_ID, {
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      bridge: { mode: 'bogus' }
+    })
+    expect(readBridgeModeVerdict(APP_ID)).toBeUndefined()
   })
 })
 

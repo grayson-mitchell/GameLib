@@ -10,7 +10,11 @@
  */
 import { logError, LogPrefix } from 'backend/logger'
 import type { SteamEngineState } from 'common/types/steam'
-import { preflightCrossover, readStoredEngineOverride } from './engineDecision'
+import {
+  preflightCrossover,
+  readStoredEngineOverride,
+  resolveCrossoverBinDirForEngine
+} from './engineDecision'
 import type {
   CrossoverPreflight,
   EngineDecisionDeps,
@@ -18,6 +22,7 @@ import type {
 } from './engineDecision'
 import { parseEngineOverride } from './engineIds'
 import type { EngineOverrideId } from './engineIds'
+import { isNonCrossover } from './engineTypes'
 import type { EngineSelection } from './engineTypes'
 import {
   dismissUntestedNotice,
@@ -35,7 +40,16 @@ const lastDecision = new Map<
   string,
   { selection: EngineSelection | null; preflight: CrossoverPreflight | null }
 >()
-const preflightCache = new Map<string, CrossoverPreflight>()
+/** IN-04: a cached non-healthy preflight is re-probed after this long. */
+export const ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS = 60_000
+
+const preflightCache = new Map<
+  string,
+  { result: CrossoverPreflight; at: number }
+>()
+/** IN-03: the last crossoverInstalled value getSteamEngineState computed. */
+const lastCrossoverInstalled = new Map<string, boolean>()
+let launchNoticeSeq = 0
 const inflight = new Map<string, Promise<CrossoverPreflight>>()
 let publisher: (state: SteamEngineState) => void = () => {}
 
@@ -49,6 +63,8 @@ export function setEngineStatePublisher(
 export function __resetEngineStateForTests(): void {
   lastDecision.clear()
   preflightCache.clear()
+  lastCrossoverInstalled.clear()
+  launchNoticeSeq = 0
   inflight.clear()
   publisher = () => {}
 }
@@ -56,7 +72,13 @@ export function __resetEngineStateForTests(): void {
 export interface EngineStateDeps extends Partial<EngineDecisionDeps> {
   isMac: boolean
   store: EngineNoticeStore
-  bridgeBottleNameFor(appId: string): string | null
+  /** The bottle holding this title's bridge install, or null when it has none. */
+  bridgeInstallBottleFor(appId: string): string | null
+  /** The title's own per-game bottle name (never null). */
+  ownBottleNameFor(appId: string): string
+  /** True for a title whose persisted bridge mode is the DRM steamclient layer. */
+  isDrmModeTitle(appId: string): boolean
+  now(): number
   isBridgeBottleReady(bottleName: string): boolean
   preflight(bottleName: string): Promise<CrossoverPreflight>
 }
@@ -76,12 +98,24 @@ function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       (require('../electronStores') as typeof import('../electronStores'))
         .steamEngineNoticeStore,
-    bridgeBottleNameFor:
-      deps?.bridgeBottleNameFor ??
-      ((id) => lazyBottle().bridgeBottleNameFor(id)),
+    bridgeInstallBottleFor:
+      deps?.bridgeInstallBottleFor ??
+      ((id) => lazyBottle().findBridgeInstallBottle(id)),
+    ownBottleNameFor:
+      deps?.ownBottleNameFor ?? ((id) => lazyBottle().bridgeBottleNameFor(id)),
+    isDrmModeTitle:
+      deps?.isDrmModeTitle ??
+      ((id) =>
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        (
+          require('../bridge/bridgeVerdict') as typeof import('../bridge/bridgeVerdict')
+        ).readBridgeModeVerdict(id) === 'steamclient-layer'),
+    now: deps?.now ?? Date.now,
     isBridgeBottleReady:
       deps?.isBridgeBottleReady ?? ((n) => lazyBottle().isBridgeBottleReady(n)),
-    preflight: deps?.preflight ?? ((n) => preflightCrossover(n, deps)),
+    preflight:
+      deps?.preflight ??
+      ((n) => preflightCrossover(n, deps, { killOnTimeout: false })),
     ...deps
   } as EngineStateDeps
 }
@@ -93,19 +127,43 @@ function readOverride(appId: string, deps: EngineStateDeps): EngineOverrideId {
   return parseEngineOverride(raw)
 }
 
+function cachedPreflight(
+  bottle: string,
+  now: number
+): CrossoverPreflight | null {
+  const e = preflightCache.get(bottle)
+  if (!e) return null
+  if (
+    e.result.kind !== 'healthy' &&
+    now - e.at > ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS
+  ) {
+    preflightCache.delete(bottle)
+    return null
+  }
+  return e.result
+}
+
+const isUnsupportedOverride = (o: EngineOverrideId) =>
+  o.startsWith('pinned:') || o.startsWith('wine-manager:')
+
 function compute(
   appId: string,
   override: EngineOverrideId,
   crossoverInstalled: boolean,
   preflight: CrossoverPreflight | null,
   engineLabel: string | null,
-  store: EngineNoticeStore
+  store: EngineNoticeStore,
+  overrideEligible: boolean,
+  launchNotice: SteamEngineState['launchNotice']
 ): SteamEngineState {
-  const unsupported = override !== 'automatic'
   let engine: SteamEngineState['engine'] = null
   let reason: SteamEngineState['reason'] = null
-  if (unsupported) {
+  if (isUnsupportedOverride(override)) {
     engine = 'unsupported'
+    reason = 'override'
+  } else if (override === 'crossover') {
+    // G9: CrossOver is the supported engine however it was chosen.
+    engine = 'crossover'
     reason = 'override'
   } else if (preflight) {
     if (preflight.kind === 'healthy') {
@@ -137,7 +195,9 @@ function compute(
     crossoverInstalled,
     showNoCrossoverNote: !crossoverInstalled && !noteDismissed,
     untestedCrossoverBuild:
-      build !== null && shouldShowUntestedNotice(build, store) ? build : null
+      build !== null && shouldShowUntestedNotice(build, store) ? build : null,
+    overrideEligible,
+    launchNotice
   }
 }
 
@@ -154,34 +214,33 @@ export async function getSteamEngineState(
   if (typeof appId !== 'string' || !/^\d+$/.test(appId)) return null
   const d = stateDeps(deps)
   if (!d.isMac) return null
-  const bottle = d.bridgeBottleNameFor(appId)
+  // WR-04: only a title with a bridge install has an engine choice.
+  const bottle = d.bridgeInstallBottleFor(appId)
   if (bottle === null) return null
+  const overrideEligible =
+    bottle === d.ownBottleNameFor(appId) && !d.isDrmModeTitle(appId)
   const override = readOverride(appId, d)
 
-  let preflight: CrossoverPreflight | null = preflightCache.get(bottle) ?? null
+  let preflight: CrossoverPreflight | null = cachedPreflight(bottle, d.now())
   let crossoverInstalled: boolean
+  const resolveBin = d.resolveCrossoverBinDir ?? resolveCrossoverBinDirForEngine
   if (preflight) {
     crossoverInstalled = preflight.kind !== 'missing'
   } else {
-    const binDir = d.resolveCrossoverBinDir
-      ? await d.resolveCrossoverBinDir()
-      : await (async () => {
-          const { resolveCrossoverBinDirAsync } =
-            await import('../crossoverLocation')
-          const { persistedWineBins } = await import('../bottle')
-          return resolveCrossoverBinDirAsync({
-            hintWineBins: persistedWineBins()
-          })
-        })()
+    const binDir = await resolveBin()
     crossoverInstalled = binDir !== undefined
-    if (!crossoverInstalled) {
+    if (isUnsupportedOverride(override)) {
+      // G12a: a pinned/wine-manager override never waits on the preflight.
+    } else if (!crossoverInstalled) {
       preflight = { kind: 'missing', detail: 'CrossOver is not installed' }
     } else if (d.isBridgeBottleReady(bottle)) {
       let p = inflight.get(bottle)
       if (!p) {
         p = d.preflight(bottle).then(
           (r) => {
-            preflightCache.set(bottle, r)
+            if (!(r.kind === 'broken' && r.inconclusive === true)) {
+              preflightCache.set(bottle, { result: r, at: d.now() })
+            }
             inflight.delete(bottle)
             return r
           },
@@ -196,13 +255,16 @@ export async function getSteamEngineState(
       crossoverInstalled = preflight.kind !== 'missing'
     }
   }
+  lastCrossoverInstalled.set(appId, crossoverInstalled)
   return compute(
     appId,
     override,
     crossoverInstalled,
     preflight,
     labelFor(appId),
-    d.store
+    d.store,
+    overrideEligible,
+    null
   )
 }
 
@@ -217,17 +279,37 @@ export function recordLaunchDecision(
     selection: decision.selection,
     preflight: decision.preflight
   })
-  if (decision.preflight) preflightCache.set(bottleName, decision.preflight)
   try {
     const d = stateDeps(deps)
-    const preflight = decision.preflight ?? preflightCache.get(bottleName)
+    if (decision.preflight) {
+      preflightCache.set(bottleName, {
+        result: decision.preflight,
+        at: d.now()
+      })
+    }
+    const preflight = decision.preflight ?? cachedPreflight(bottleName, d.now())
+    const installed = preflight
+      ? preflight.kind !== 'missing'
+      : (lastCrossoverInstalled.get(appId) ?? true)
+    lastCrossoverInstalled.set(appId, installed)
+    const sel = decision.selection
+    const launchNotice: SteamEngineState['launchNotice'] =
+      isNonCrossover(sel) &&
+      decision.override === 'automatic' &&
+      sel.reason !== 'override'
+        ? { reason: sel.reason, seq: ++launchNoticeSeq }
+        : null
+    const overrideEligible =
+      bottleName === d.ownBottleNameFor(appId) && !d.isDrmModeTitle(appId)
     const state = compute(
       appId,
       decision.override,
-      preflight ? preflight.kind !== 'missing' : true,
+      installed,
       preflight ?? null,
       labelFor(appId),
-      d.store
+      d.store,
+      overrideEligible,
+      launchNotice
     )
     publisher(state)
   } catch (e) {

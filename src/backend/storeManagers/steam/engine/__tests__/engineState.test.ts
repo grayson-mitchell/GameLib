@@ -1,4 +1,5 @@
 import {
+  ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS,
   TRIAL_NOTICE_DAYS,
   __resetEngineStateForTests,
   dismissSteamEngineNotice,
@@ -14,6 +15,14 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   logError: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
+}))
+
+const mockMeta = new Map<string, unknown>()
+jest.mock('../../electronStores', () => ({
+  steamMetadataStore: {
+    get: (id: string) => mockMeta.get(id),
+    set: (id: string, v: unknown) => void mockMeta.set(id, v)
+  }
 }))
 
 const TESTED = '26.3.0.39832'
@@ -49,7 +58,9 @@ function mk(
   const deps: Partial<EngineStateDeps> = {
     isMac: true,
     store,
-    bridgeBottleNameFor: (id) => `GameLibSteamBridge-${id}`,
+    bridgeInstallBottleFor: (id) => `GameLibSteamBridge-${id}`,
+    ownBottleNameFor: (id) => `GameLibSteamBridge-${id}`,
+    isDrmModeTitle: () => false,
     isBridgeBottleReady: () => true,
     resolveCrossoverBinDir: async () => '/cx/bin',
     readOverride: () => undefined,
@@ -114,7 +125,9 @@ describe('getSteamEngineState', () => {
       showTrialNotice: false,
       crossoverInstalled: true,
       showNoCrossoverNote: false,
-      untestedCrossoverBuild: null
+      untestedCrossoverBuild: null,
+      overrideEligible: true,
+      launchNotice: null
     })
     expect(probe).not.toHaveBeenCalled()
     ready = true
@@ -140,7 +153,7 @@ describe('getSteamEngineState', () => {
       false
     )
   })
-  it('a non-automatic override is unsupported', async () => {
+  it('a pinned override is unsupported', async () => {
     const { deps } = mk(healthy(null), {
       readOverride: () => 'pinned:wine-staging-11.20'
     })
@@ -148,6 +161,132 @@ describe('getSteamEngineState', () => {
       engine: 'unsupported',
       reason: 'override'
     })
+  })
+  it('a pinned override never awaits the preflight (G12a)', async () => {
+    const { deps, probe } = mk(
+      () => new Promise<CrossoverPreflight>(() => {}),
+      {
+        readOverride: () => 'pinned:wine-staging-11.20'
+      }
+    )
+    expect(await getSteamEngineState('1', deps)).toMatchObject({
+      engine: 'unsupported',
+      crossoverInstalled: true
+    })
+    expect(probe).not.toHaveBeenCalled()
+  })
+  it.each([
+    ['healthy', healthy(null)],
+    [
+      'expired',
+      { kind: 'expired', binDir: '/cx/bin', build: TESTED, daysAgo: 2 } as const
+    ]
+  ])('a CrossOver override is supported (%s)', async (_n, pf) => {
+    const { deps } = mk(pf, { readOverride: () => 'crossover' })
+    expect(await getSteamEngineState('1', deps)).toMatchObject({
+      engine: 'crossover',
+      reason: 'override'
+    })
+  })
+  it('null for a title with no bridge install, without probing', async () => {
+    const resolveCrossoverBinDir = jest.fn(async () => '/cx/bin')
+    const { deps, probe } = mk(healthy(null), {
+      bridgeInstallBottleFor: () => null,
+      resolveCrossoverBinDir
+    })
+    expect(await getSteamEngineState('1', deps)).toBeNull()
+    expect(probe).not.toHaveBeenCalled()
+    expect(resolveCrossoverBinDir).not.toHaveBeenCalled()
+  })
+  it('overrideEligible: own bottle true, legacy shared bottle false, probed in the install bottle', async () => {
+    const own = mk(healthy(null))
+    expect((await getSteamEngineState('1', own.deps))?.overrideEligible).toBe(
+      true
+    )
+    const legacy = mk(healthy(null), {
+      bridgeInstallBottleFor: () => 'GameLibSteamBridge'
+    })
+    expect(
+      (await getSteamEngineState('1', legacy.deps))?.overrideEligible
+    ).toBe(false)
+    expect(legacy.probe).toHaveBeenCalledWith('GameLibSteamBridge')
+  })
+  it('a DRM-mode title (injected) is not override-eligible', async () => {
+    const { deps } = mk(healthy(null), { isDrmModeTitle: () => true })
+    expect((await getSteamEngineState('1', deps))?.overrideEligible).toBe(false)
+  })
+  it('the default page preflight never kills a wineserver; an inconclusive result is not cached', async () => {
+    const kill = jest.fn(async () => undefined)
+    const probe = jest.fn(async () => ({
+      kind: 'failed' as const,
+      reason: 'timeout' as const,
+      detail: 'x',
+      elapsedMs: 1
+    }))
+    const { deps } = mk(healthy(null))
+    const real: Partial<EngineStateDeps> = {
+      ...deps,
+      preflight: undefined,
+      probe,
+      killCrossoverWineserver: kill,
+      isExecutable: () => true,
+      fileExists: () => true,
+      readBuild: async () => TESTED,
+      monitorPhase: () => null
+    }
+    delete real.preflight
+    const first = await getSteamEngineState('1', real)
+    expect(first).toMatchObject({ engine: 'builtin', reason: 'cx-broken' })
+    await getSteamEngineState('1', real)
+    expect(kill).not.toHaveBeenCalled()
+    expect(probe).toHaveBeenCalledTimes(2)
+  })
+  it('default isDrmModeTitle reads the persisted bridge mode', async () => {
+    const { deps } = mk(healthy(null))
+    const real: Partial<EngineStateDeps> = { ...deps }
+    delete real.isDrmModeTitle
+    mockMeta.set('1', {
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      bridge: { mode: 'steamclient-layer' }
+    })
+    expect((await getSteamEngineState('1', real))?.overrideEligible).toBe(false)
+    mockMeta.set('1', {
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      bridge: { mode: 'tcp' }
+    })
+    __resetEngineStateForTests()
+    expect((await getSteamEngineState('1', real))?.overrideEligible).toBe(true)
+    mockMeta.clear()
+    __resetEngineStateForTests()
+    expect((await getSteamEngineState('1', real))?.overrideEligible).toBe(true)
+  })
+  it('a non-healthy cached preflight expires after 60 s; healthy stays', async () => {
+    let t = 0
+    const expired: CrossoverPreflight = {
+      kind: 'expired',
+      binDir: '/cx/bin',
+      build: TESTED,
+      daysAgo: 1
+    }
+    const a = mk(expired, { now: () => t })
+    await getSteamEngineState('1', a.deps)
+    t = ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS
+    await getSteamEngineState('1', a.deps)
+    expect(a.probe).toHaveBeenCalledTimes(1)
+    t = ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS + 1
+    await getSteamEngineState('1', a.deps)
+    expect(a.probe).toHaveBeenCalledTimes(2)
+    __resetEngineStateForTests()
+    t = 0
+    const b = mk(healthy(null), { now: () => t })
+    await getSteamEngineState('1', b.deps)
+    t = 10 * ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS
+    await getSteamEngineState('1', b.deps)
+    expect(b.probe).toHaveBeenCalledTimes(1)
   })
   it('untested build notice clears after dismissal', async () => {
     const { deps, store } = mk(healthy(null, UNTESTED))
@@ -227,6 +366,90 @@ describe('recordLaunchDecision and publisher', () => {
       trialDaysRemaining: 3
     })
     expect(probe).toHaveBeenCalledTimes(1)
+  })
+  const fallback = (
+    reason: 'cx-missing' | 'cx-expired' | 'cx-broken',
+    override: LaunchDecision extends infer L
+      ? L extends { override: infer O }
+        ? O
+        : never
+      : never = 'automatic'
+  ): LaunchDecision => ({
+    kind: 'use',
+    selection: {
+      kind: 'pinned',
+      pinId: 'p',
+      reason,
+      wineBin: '/w',
+      wineserverBin: '/ws',
+      label: 'Built-in',
+      version: '1',
+      dxvk: null
+    },
+    preflight: null,
+    pin: null,
+    needsDownload: false,
+    override,
+    logLines: []
+  })
+  it('publishes an increasing launchNotice for an automatic fallback launch', () => {
+    const { deps } = mk(healthy(null))
+    const pub = jest.fn()
+    setEngineStatePublisher(pub)
+    recordLaunchDecision(
+      '1',
+      fallback('cx-expired'),
+      'GameLibSteamBridge-1',
+      deps
+    )
+    recordLaunchDecision(
+      '1',
+      fallback('cx-expired'),
+      'GameLibSteamBridge-1',
+      deps
+    )
+    expect(pub.mock.calls[0][0].launchNotice).toEqual({
+      reason: 'cx-expired',
+      seq: 1
+    })
+    expect(pub.mock.calls[1][0].launchNotice).toEqual({
+      reason: 'cx-expired',
+      seq: 2
+    })
+  })
+  it('publishes launchNotice null for an override or CrossOver launch; get returns null', async () => {
+    const { deps } = mk(healthy(null))
+    const pub = jest.fn()
+    setEngineStatePublisher(pub)
+    recordLaunchDecision(
+      '1',
+      fallback('cx-broken', 'pinned:wine-staging-11.20'),
+      'GameLibSteamBridge-1',
+      deps
+    )
+    recordLaunchDecision(
+      '1',
+      decision(healthy(null)),
+      'GameLibSteamBridge-1',
+      deps
+    )
+    expect(pub.mock.calls[0][0].launchNotice).toBeNull()
+    expect(pub.mock.calls[1][0].launchNotice).toBeNull()
+    expect((await getSteamEngineState('1', deps))?.launchNotice).toBeNull()
+  })
+  it('carries the last crossoverInstalled forward when no preflight exists (IN-03)', async () => {
+    const a = mk(healthy(null), {
+      resolveCrossoverBinDir: async () => undefined
+    })
+    await getSteamEngineState('1', a.deps)
+    const pub = jest.fn()
+    setEngineStatePublisher(pub)
+    recordLaunchDecision('1', fallback('cx-missing'), 'Other', a.deps)
+    expect(pub.mock.calls[0][0].crossoverInstalled).toBe(false)
+    __resetEngineStateForTests()
+    setEngineStatePublisher(pub)
+    recordLaunchDecision('2', fallback('cx-missing'), 'Other', a.deps)
+    expect(pub.mock.calls[1][0].crossoverInstalled).toBe(true)
   })
   it('a throwing publisher is caught', () => {
     const { deps } = mk(healthy(null))

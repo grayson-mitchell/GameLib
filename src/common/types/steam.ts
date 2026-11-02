@@ -241,6 +241,21 @@ export interface SteamEngineState {
   crossoverInstalled: boolean
   showNoCrossoverNote: boolean
   untestedCrossoverBuild: string | null
+  /**
+   * True only for a title in its own per-game bridge bottle that is not a
+   * DRM-mode title: the only case where an engine override has any effect.
+   * Always set by the backend; optional so older fixtures compile.
+   */
+  overrideEligible?: boolean
+  /**
+   * Non-null only in the state pushed by a launch that automatically dropped
+   * to the built-in engine. `seq` strictly increases per sidecar session so
+   * the renderer can show the notice once per launch.
+   */
+  launchNotice?: {
+    reason: 'cx-missing' | 'cx-expired' | 'cx-broken'
+    seq: number
+  } | null
 }
 
 /** Phase 59: one choice in the per-game engine override picker (D-14). */

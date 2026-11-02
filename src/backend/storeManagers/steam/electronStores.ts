@@ -325,6 +325,9 @@ export interface SteamBridgeVerdict {
    * the exe that must survive that. Absent means not detected or never
    * checked; `writeBridgeDrmVerdict(appId, undefined)` removes the key. */
   drm?: 'ceg'
+  /** 59-REVIEW WR-04: the bridge mode the last launch/install resolved
+   * (`resolveBridgeMode`). 'steamclient-layer' marks a DRM-mode title. */
+  mode?: 'steamclient-layer' | 'tcp'
   /** 51-REVIEW WR-01: the cleared scan's own `interfaceVersions` pool,
    * retained by `clearBridgeScanVerdict`. For a target that already carries
    * an older GameLib shim, the persisted pool is the only version source
