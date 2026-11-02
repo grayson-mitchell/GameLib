@@ -7,7 +7,10 @@ jest.mock('frontend/state/ContextProvider', () => ({
   default: {}
 }))
 
-import { createSettingSetter } from '../useSettingsContext'
+import {
+  createSettingSetter,
+  shouldRefetchOnWriteFailure
+} from '../useSettingsContext'
 
 describe('createSettingSetter (G17)', () => {
   const make = (initial: Record<string, unknown>) => {
@@ -55,5 +58,30 @@ describe('createSettingSetter (G17)', () => {
     set('steamEngineOverride', 'automatic')
     set('steamEngineOverride', 'pinned:a')
     expect(send).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('shouldRefetchOnWriteFailure (WR-04)', () => {
+  it('WR-04: true for a payload naming this appName with a string key', () => {
+    expect(
+      shouldRefetchOnWriteFailure('1284190', {
+        appName: '1284190',
+        key: 'steamEngineOverride'
+      })
+    ).toBe(true)
+  })
+
+  it('WR-04: false for another appName, a missing payload or bad types', () => {
+    expect(
+      shouldRefetchOnWriteFailure('1284190', { appName: '38400', key: 'k' })
+    ).toBe(false)
+    expect(shouldRefetchOnWriteFailure('1284190', undefined)).toBe(false)
+    expect(shouldRefetchOnWriteFailure('1284190', null)).toBe(false)
+    expect(
+      shouldRefetchOnWriteFailure('1284190', { appName: 1284190, key: 'k' })
+    ).toBe(false)
+    expect(shouldRefetchOnWriteFailure('1284190', { appName: '1284190' })).toBe(
+      false
+    )
   })
 })

@@ -1,8 +1,11 @@
-import { makeListenerCaller, makeHandlerInvoker } from '../ipc'
+import { makeListenerCaller, makeHandlerInvoker, frontendListenerSlot } from '../ipc'
 import { applyFramelessDecorations } from './tauriWindowChrome'
 
 export const requestAppSettings = makeHandlerInvoker('requestAppSettings')
 export const requestGameSettings = makeHandlerInvoker('requestGameSettings')
+
+// WR-04: the sidecar pushes this when a per-game write failed both attempts.
+export const handleGameSettingWriteFailed = frontendListenerSlot('gameSettingWriteFailed')
 
 const setSettingIpc = makeListenerCaller('setSetting')
 

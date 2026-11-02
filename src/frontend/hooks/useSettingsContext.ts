@@ -33,6 +33,24 @@ export function shouldWithholdContext(
   return Object.keys(config).length === 0 && !hasAttemptedLoad
 }
 
+/**
+ * WR-04: should a `gameSettingWriteFailed` push make this hook re-read its
+ * settings? Only for its own appName; anything malformed is ignored.
+ */
+export function shouldRefetchOnWriteFailure(
+  appName: string,
+  payload: unknown
+): boolean {
+  if (typeof payload !== 'object' || payload === null) return false
+  const { appName: pushed, key } = payload as {
+    appName?: unknown
+    key?: unknown
+  }
+  return (
+    typeof pushed === 'string' && pushed === appName && typeof key === 'string'
+  )
+}
+
 type SetterDeps = {
   appName: string
   getConfig: () => Partial<AppSettings>
@@ -66,6 +84,7 @@ export function createSettingSetter({
 const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
   const [currentConfig, setCurrentConfig] = useState<Partial<AppSettings>>({})
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
+  const [reloadToken, setReloadToken] = useState(0)
   const { i18n } = useTranslation()
   const { platform } = useContext(ContextProvider)
   const { settingsModalProps } = useGlobalState.keys('settingsModalProps')
@@ -103,7 +122,29 @@ const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
       }
     }
     void getSettings()
-  }, [appName, isDefault, i18n.language, settingsModalProps.isOpen])
+  }, [
+    appName,
+    isDefault,
+    i18n.language,
+    settingsModalProps.isOpen,
+    reloadToken
+  ])
+
+  // WR-04: a failed per-game write leaves the control showing a value that is
+  // not on disk; re-read so it snaps back to the stored one.
+  useEffect(() => {
+    if (isDefault) return
+    const unlisten = window.api.handleGameSettingWriteFailed(
+      (_e: unknown, payload: unknown) => {
+        if (shouldRefetchOnWriteFailure(appName, payload)) {
+          setReloadToken((n) => n + 1)
+        }
+      }
+    )
+    return () => {
+      if (typeof unlisten === 'function') unlisten()
+    }
+  }, [appName, isDefault])
 
   const contextValues: SettingsContextType = {
     getSetting: (key, fallback) => currentConfig[key] ?? fallback,
