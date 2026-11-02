@@ -85,7 +85,7 @@ async function harness(envOver: Partial<RelayEnv> = {}, script: Script = {}) {
     GITHUB_APP_ID: '1',
     GITHUB_INSTALLATION_ID: '42',
     GITHUB_APP_PRIVATE_KEY: keys.pkcs8Pem,
-    IP_HASH_SALT: 'salt',
+    IP_HASH_SALT: 'test-salt-0123456789',
     ...envOver
   }
   const deps = { db, fetch, now: () => NOW, random: () => 0.5, env }
@@ -213,6 +213,29 @@ describe('edge', () => {
       expect((await res.json()).status).toBe('rejected')
     }
     expect(h.calls).toHaveLength(0)
+  })
+})
+
+describe('salt (WR-03)', () => {
+  it.each([
+    ['missing', undefined],
+    ['empty', ''],
+    ['short', 'fifteen-chars!!']
+  ])('503s with no D1 write or call when the salt is %s', async (_n, salt) => {
+    const h = await harness({ IP_HASH_SALT: salt as unknown as string })
+    const log = jest.spyOn(console, 'log').mockImplementation(() => undefined)
+    const res = await h.send({})
+    log.mockRestore()
+    expect(res.status).toBe(503)
+    expect(await res.json()).toEqual({ status: 'unavailable' })
+    expect(h.db.raw.prepare('SELECT * FROM buckets').all()).toEqual([])
+    expect(h.db.raw.prepare('SELECT * FROM reports').all()).toEqual([])
+    expect(h.calls).toHaveLength(0)
+  })
+
+  it('accepts a 16-character salt', async () => {
+    const h = await harness({ IP_HASH_SALT: 'sixteen-chars-ok' })
+    expect((await h.send({})).status).toBe(201)
   })
 })
 

@@ -38,6 +38,7 @@ import {
 import { lookupSteamTitle } from './steamTitle'
 
 const DAY_MS = 86_400_000
+export const MIN_SALT_LENGTH = 16
 
 function respond(
   httpStatus: number,
@@ -85,6 +86,15 @@ async function handle(
   if (request.method !== 'POST') return respond(405, { status: 'rejected' })
   if (new URL(request.url).pathname !== '/v1/reports') {
     return respond(404, { status: 'rejected' })
+  }
+
+  // WR-03: fail closed without a real salt; never hash `undefined:<ip>`.
+  if (
+    typeof env.IP_HASH_SALT !== 'string' ||
+    env.IP_HASH_SALT.length < MIN_SALT_LENGTH
+  ) {
+    console.log('relay: IP_HASH_SALT missing or too short -> 503 unavailable')
+    return respond(503, { status: 'unavailable' })
   }
 
   // D-15: every attempt counts, including the ones rejected below.
