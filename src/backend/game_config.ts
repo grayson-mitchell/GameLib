@@ -334,14 +334,27 @@ class GameConfigV0 extends GameConfig {
     if (this.config === undefined) {
       this.config = this.readSettings()
     }
+    // WR-04: remember the prior state so a failed flush can be undone.
+    const had = key in this.config
+    const prev = this.config[key]
     // check if the key exists, if not, initialize it with a undefined value
-    if (!(key in this.config)) {
+    if (!had) {
       this.config[key] = undefined as never
     }
 
     this.config[key] = value as never
     logInfo(`${this.appName}: Setting ${key} to ${JSON.stringify(value)}`)
-    return this.flush()
+    try {
+      return this.flush()
+    } catch (error) {
+      // WR-04: memory must match the file the launch path reads.
+      if (had) {
+        this.config[key] = prev
+      } else {
+        delete this.config[key]
+      }
+      throw error
+    }
   }
 
   public resetToDefaults() {

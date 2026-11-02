@@ -819,6 +819,8 @@ interface FrontendMessages {
   steamGoOfflineRequired: (payload: SteamGoOfflinePayload) => void
   // Phase 59 (D-04/D-06): the per-title engine display state changed
   steamEngineStateChanged: (payload: SteamEngineState) => void
+  // WR-04: a per-game setting write failed twice; the renderer re-reads the stored value
+  gameSettingWriteFailed: (payload: { appName: string; key: string }) => void
   steamBridgeRouteNotice: (payload: {
     appName: string
     reason: SteamBridgeRouteReason

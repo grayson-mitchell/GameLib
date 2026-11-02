@@ -4,6 +4,10 @@ const mockLogError = jest.fn()
 jest.mock('../../game_config', () => ({
   GameConfig: { get: (a: string) => mockGet(a) }
 }))
+const mockSend = jest.fn()
+jest.mock('../../ipc', () => ({
+  sendFrontendMessage: (...a: unknown[]) => mockSend(...a)
+}))
 jest.mock('../../logger', () => ({ logError: (m: string) => mockLogError(m) }))
 
 import { applyGameSetting } from '../gameSettingWrite'
@@ -42,5 +46,27 @@ describe('applyGameSetting (G17)', () => {
     ).not.toThrow()
     expect(mockLogError).toHaveBeenCalledTimes(1)
     expect(mockLogError.mock.calls[0][0]).toContain('1284190')
+  })
+
+  it('WR-04: pushes gameSettingWriteFailed once after both attempts fail', () => {
+    mockGet.mockImplementation(() => {
+      throw new Error('boom')
+    })
+    applyGameSetting('1284190', 'steamEngineOverride', 'automatic')
+    expect(mockLogError).toHaveBeenCalledTimes(1)
+    expect(mockSend).toHaveBeenCalledTimes(1)
+    expect(mockSend).toHaveBeenCalledWith('gameSettingWriteFailed', {
+      appName: '1284190',
+      key: 'steamEngineOverride'
+    })
+  })
+
+  it('WR-04: no push when a write lands on the first or second attempt', () => {
+    applyGameSetting('1284190', 'steamEngineOverride', 'automatic')
+    mockGet.mockImplementationOnce(() => {
+      throw new Error('transient')
+    })
+    applyGameSetting('1284190', 'steamEngineOverride', 'automatic')
+    expect(mockSend).not.toHaveBeenCalled()
   })
 })

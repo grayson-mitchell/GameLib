@@ -8,6 +8,24 @@ import { join } from 'path'
 // "Cannot use 'in' operator to search for '<key>' in undefined" and the change
 // was lost; the same-tick retry in applyGameSetting hit the same undefined.
 
+// WR-04: a spy cannot redefine fs exports, so wrap writeFileSync in a plain
+// function (not a jest.fn: the config resets mocks) that fails on demand.
+const failNextWrite: { error: Error | null } = { error: null }
+jest.mock('fs', () => {
+  const actual = jest.requireActual<typeof import('fs')>('fs')
+  return {
+    ...actual,
+    writeFileSync: (...args: Parameters<typeof actual.writeFileSync>) => {
+      if (failNextWrite.error) {
+        const error = failNextWrite.error
+        failNextWrite.error = null
+        throw error
+      }
+      return actual.writeFileSync(...args)
+    }
+  }
+})
+
 const dir = mkdtempSync(join(tmpdir(), 'gamelib-gameconfig-'))
 
 jest.mock('../constants/paths', () => ({
@@ -78,5 +96,47 @@ describe('GameConfig first write (G17)', () => {
     config.setSetting('steamEngineOverride', 'automatic')
     await new Promise((resolve) => setImmediate(resolve))
     expect(config.config.steamEngineOverride).toBe('automatic')
+  })
+
+  describe('WR-04: a failed flush rolls memory back', () => {
+    afterEach(() => (failNextWrite.error = null))
+
+    const seed = (name: string, settings: Record<string, unknown>) =>
+      writeFileSync(
+        join(dir, `${name}.json`),
+        JSON.stringify({ [name]: settings, version: 'v0', explicit: true })
+      )
+
+    it('WR-04: restores the prior value when the write throws', () => {
+      writeFileSync(join(dir, 'config.json'), '{}')
+      seed('wr04a', { steamEngineOverride: 'pinned:a' })
+      const config = GameConfig.get('wr04a')
+      failNextWrite.error = new Error('ENOSPC')
+      expect(() =>
+        config.setSetting('steamEngineOverride', 'automatic')
+      ).toThrow('ENOSPC')
+      expect(config.config.steamEngineOverride).toBe('pinned:a')
+    })
+
+    it('WR-04: removes the key when it was absent before the call', () => {
+      writeFileSync(join(dir, 'config.json'), '{}')
+      seed('wr04b', { targetExe: 'a.exe' })
+      const config = GameConfig.get('wr04b')
+      failNextWrite.error = new Error('EACCES')
+      expect(() =>
+        config.setSetting('steamEngineOverride', 'automatic')
+      ).toThrow('EACCES')
+      expect('steamEngineOverride' in config.config).toBe(false)
+    })
+
+    it('WR-04: a successful setSetting still persists to the file', () => {
+      writeFileSync(join(dir, 'config.json'), '{}')
+      seed('wr04c', { steamEngineOverride: 'pinned:a' })
+      GameConfig.get('wr04c').setSetting('steamEngineOverride', 'automatic')
+      const written = JSON.parse(
+        readFileSync(join(dir, 'wr04c.json'), 'utf-8')
+      )['wr04c']
+      expect(written.steamEngineOverride).toBe('automatic')
+    })
   })
 })
