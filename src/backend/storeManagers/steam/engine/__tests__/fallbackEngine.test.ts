@@ -78,6 +78,10 @@ import {
   type FallbackDownloadProgress
 } from '../fallbackEngine'
 import { ENGINE_PINS, type EnginePin } from '../enginePins'
+import {
+  callAllAbortControllers,
+  hasAbortController
+} from 'backend/utils/aborthandler/aborthandler'
 
 let work = ''
 
@@ -227,7 +231,7 @@ test('concurrent calls share one download per artifact', async () => {
     ensurePinnedEngine(pin)
   ])
   expect(mockDownload).toHaveBeenCalledTimes(2)
-  expect(a).toBe(b)
+  expect(a).toEqual(b)
   expect(a.ok).toBe(true)
 })
 
@@ -251,4 +255,138 @@ test('prune keeps pinned dirs and removes others, only inside root', () => {
   expect(existsSync(join(root, 'wine-staging-9.0'))).toBe(false)
   expect(existsSync(join(root, 'dxvk-macOS-old'))).toBe(false)
   expect(existsSync(outside)).toBe(true)
+})
+
+/** Make downloadFile hang until its abortSignal fires (rejects like the real one). */
+function hangingDownload() {
+  const seen: AbortSignal[] = []
+  mockDownload.mockImplementation(
+    (a: { abortSignal?: AbortSignal }) =>
+      new Promise<void>((_res, rej) => {
+        if (a.abortSignal) seen.push(a.abortSignal)
+        a.abortSignal?.addEventListener('abort', () =>
+          rej(new Error('Download stopped'))
+        )
+      })
+  )
+  return seen
+}
+const tick = () => new Promise((r) => setImmediate(r))
+
+test('abort controller is registered during download and released after', async () => {
+  const pin = await makePin()
+  const id = `steam-engine-download:${pin.id}`
+  const p = ensurePinnedEngine(pin)
+  expect(hasAbortController(id)).toBe(true)
+  await p
+  expect(hasAbortController(id)).toBe(false)
+})
+
+test('callAllAbortControllers aborts an in-flight download and cleans temp dirs', async () => {
+  const pin = await makePin()
+  const seen = hangingDownload()
+  const p = ensurePinnedEngine(pin)
+  await tick()
+  expect(seen).toHaveLength(1)
+  callAllAbortControllers()
+  expect(seen[0].aborted).toBe(true)
+  await expect(p).resolves.toMatchObject({ ok: false, reason: 'aborted' })
+  expect(leftovers()).toEqual([])
+  expect(hasAbortController(`steam-engine-download:${pin.id}`)).toBe(false)
+})
+
+test('concurrent callers each receive every progress event over one download', async () => {
+  const pin = await makePin()
+  const a: string[] = []
+  const b: string[] = []
+  const [ra, rb] = await Promise.all([
+    ensurePinnedEngine(pin, { onProgress: (p) => a.push(p.phase) }),
+    ensurePinnedEngine(pin, { onProgress: (p) => b.push(p.phase) })
+  ])
+  expect(ra.ok && rb.ok).toBe(true)
+  expect(mockDownload).toHaveBeenCalledTimes(2)
+  expect(a.length).toBeGreaterThan(0)
+  expect(b).toEqual(a)
+})
+
+test('one caller aborting does not abort the others', async () => {
+  const pin = await makePin()
+  const seen = hangingDownload()
+  const acA = new AbortController()
+  const pa = ensurePinnedEngine(pin, { signal: acA.signal })
+  const pb = ensurePinnedEngine(pin)
+  await tick()
+  acA.abort()
+  await expect(pa).resolves.toMatchObject({ ok: false, reason: 'aborted' })
+  expect(seen[0].aborted).toBe(false)
+  // let B finish: release the hung download normally
+  await makePin()
+  mockDownload.mockImplementation(async (x: { url: string; dest: string }) => {
+    copyFileSync(
+      join(work, x.url.endsWith('/w') ? 'w.tar.gz' : 'd.tar.gz'),
+      join(x.dest, x.url.endsWith('/w') ? 'w.tar.gz' : 'd.tar.gz')
+    )
+  })
+  callAllAbortControllers() // clean up the hung first download
+  await pb
+})
+
+test('shared download aborts when every caller has aborted', async () => {
+  const pin = await makePin()
+  const seen = hangingDownload()
+  const a = new AbortController()
+  const b = new AbortController()
+  const pa = ensurePinnedEngine(pin, { signal: a.signal })
+  const pb = ensurePinnedEngine(pin, { signal: b.signal })
+  await tick()
+  a.abort()
+  expect(seen[0].aborted).toBe(false)
+  b.abort()
+  expect(seen[0].aborted).toBe(true)
+  await expect(pa).resolves.toMatchObject({ reason: 'aborted' })
+  await expect(pb).resolves.toMatchObject({ reason: 'aborted' })
+  expect(leftovers()).toEqual([])
+})
+
+test('a single caller aborting its signal aborts the download', async () => {
+  const pin = await makePin()
+  const seen = hangingDownload()
+  const ac = new AbortController()
+  const p = ensurePinnedEngine(pin, { signal: ac.signal })
+  await tick()
+  ac.abort()
+  expect(seen[0].aborted).toBe(true)
+  await expect(p).resolves.toMatchObject({ ok: false, reason: 'aborted' })
+})
+
+test('shutdown wins over live caller signals', async () => {
+  const pin = await makePin()
+  hangingDownload()
+  const a = new AbortController()
+  const b = new AbortController()
+  const pa = ensurePinnedEngine(pin, { signal: a.signal })
+  const pb = ensurePinnedEngine(pin, { signal: b.signal })
+  await tick()
+  callAllAbortControllers()
+  await expect(pa).resolves.toMatchObject({ ok: false, reason: 'aborted' })
+  await expect(pb).resolves.toMatchObject({ ok: false, reason: 'aborted' })
+})
+
+test('prune removes stale .tmp-* dirs when idle, keeps them during an install', async () => {
+  const root = pinnedEngineRoot()
+  mkdirSync(join(root, '.tmp-wine-abc'), { recursive: true })
+  pruneUnpinnedEngines()
+  expect(existsSync(join(root, '.tmp-wine-abc'))).toBe(false)
+
+  const pin = await makePin()
+  const seen = hangingDownload()
+  const p = ensurePinnedEngine(pin)
+  await tick()
+  expect(seen).toHaveLength(1)
+  mkdirSync(join(root, '.tmp-other-1'))
+  pruneUnpinnedEngines()
+  expect(existsSync(join(root, '.tmp-other-1'))).toBe(true)
+  expect(leftovers().length).toBeGreaterThanOrEqual(2)
+  callAllAbortControllers()
+  await p
 })

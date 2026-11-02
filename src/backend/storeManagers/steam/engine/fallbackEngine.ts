@@ -25,6 +25,10 @@ import {
 import { dirname, isAbsolute, join, relative, resolve } from 'path'
 import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import {
+  createAbortController,
+  deleteAbortController
+} from 'backend/utils/aborthandler/aborthandler'
 import { isOnline } from 'backend/online_monitor'
 import { calculateEta, downloadFile, extractFiles } from 'backend/utils'
 import { ENGINE_PINS, type EnginePin, type PinnedArtifact } from './enginePins'
@@ -179,6 +183,7 @@ async function installArtifact(
 ): Promise<void> {
   const root = pinnedEngineRoot()
   mkdirSync(root, { recursive: true })
+  activeArtifactInstalls++
   const tmp = mkdtempSync(join(root, `.tmp-${kind}-`))
   const emit = (p: Omit<FallbackDownloadProgress, 'artifact'>) =>
     opts.onProgress?.({ ...p, artifact: kind })
@@ -252,10 +257,21 @@ async function installArtifact(
     renameSync(out, finalDir)
   } finally {
     rmSync(tmp, { recursive: true, force: true })
+    activeArtifactInstalls--
   }
 }
 
-const inFlight = new Map<string, Promise<EnsureResult>>()
+/** Artifact installs currently holding a `.tmp-*` dir (prune must not touch them). */
+let activeArtifactInstalls = 0
+
+type InFlight = {
+  promise: Promise<EnsureResult>
+  listeners: Set<(p: FallbackDownloadProgress) => void>
+  callers: number
+  aborted: number
+  controller: AbortController
+}
+const inFlight = new Map<string, InFlight>()
 
 async function doEnsure(
   pin: EnginePin,
@@ -297,13 +313,73 @@ export function ensurePinnedEngine(
     signal?: AbortSignal
   } = {}
 ): Promise<EnsureResult> {
-  const existing = inFlight.get(pin.id)
-  if (existing) return existing
-  const p = doEnsure(pin, opts).finally(() => {
-    inFlight.delete(pin.id)
-  })
-  inFlight.set(pin.id, p)
-  return p
+  let entry = inFlight.get(pin.id)
+  const isFirst = !entry
+  if (!entry) {
+    // Registered with the shared registry so the sidecar's stdin-EOF release
+    // (callAllAbortControllers) aborts the download: gamelib-conventions
+    // sidecar exit contract, half 2 - in-flight work bounded at quit
+    // (59-REVIEW WR-11). Shutdown aborts unconditionally; a caller's own
+    // signal only counts toward the all-callers-aborted rule (WR-10).
+    const id = `steam-engine-download:${pin.id}`
+    const listeners = new Set<(p: FallbackDownloadProgress) => void>()
+    entry = {
+      promise: undefined as unknown as Promise<EnsureResult>,
+      listeners,
+      callers: 0,
+      aborted: 0,
+      controller: createAbortController(id)
+    }
+    inFlight.set(pin.id, entry)
+  }
+  const shared = entry
+  if (opts.onProgress) shared.listeners.add(opts.onProgress)
+  shared.callers++
+
+  let early: Promise<EnsureResult> | null = null
+  const signal = opts.signal
+  if (signal) {
+    let resolveEarly: (r: EnsureResult) => void = () => undefined
+    const earlyP = new Promise<EnsureResult>((res) => {
+      resolveEarly = res
+    })
+    const onAbort = () => {
+      shared.aborted++
+      if (opts.onProgress) shared.listeners.delete(opts.onProgress)
+      if (shared.aborted >= shared.callers) {
+        // nobody else is waiting: stop the shared download; the shared
+        // promise then settles as 'aborted' after its temp dirs are removed
+        shared.controller.abort()
+      } else {
+        resolveEarly({
+          ok: false,
+          reason: 'aborted',
+          detail: 'aborted by caller'
+        })
+      }
+    }
+    if (signal.aborted) onAbort()
+    else signal.addEventListener('abort', onAbort, { once: true })
+    early = earlyP
+  }
+
+  if (isFirst) {
+    const id = `steam-engine-download:${pin.id}`
+    // start on a microtask so callers joining in the same tick still see
+    // the first synchronous progress events
+    shared.promise = Promise.resolve()
+      .then(() =>
+        doEnsure(pin, {
+          onProgress: (p) => shared.listeners.forEach((l) => l(p)),
+          signal: shared.controller.signal
+        })
+      )
+      .finally(() => {
+        if (inFlight.get(pin.id) === shared) inFlight.delete(pin.id)
+        deleteAbortController(id)
+      })
+  }
+  return early ? Promise.race([shared.promise, early]) : shared.promise
 }
 
 /** Keep the current and previous pins' directories; remove other engines. */
@@ -318,7 +394,8 @@ export function pruneUnpinnedEngines(): void {
       keep.add(dxvkDirName(pin))
     }
     for (const name of readdirSync(root)) {
-      if (keep.has(name) || name.startsWith('.tmp-')) continue
+      if (keep.has(name)) continue
+      if (name.startsWith('.tmp-') && activeArtifactInstalls > 0) continue
       const full = join(root, name)
       if (!isContained(root, full) || full === root) continue
       const st = lstatSync(full)
