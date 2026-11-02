@@ -1344,7 +1344,11 @@ function setupWineEnvVars(gameSettings: GameSettings, gameId = '0') {
       if (existsSync(winedll_path_lib64) && existsSync(winedll_path_lib32)) {
         ret.WINEDLLPATH = winedll_path_lib64 + ':' + winedll_path_lib32
       }
-    } else {
+    } else if (!(isMac && !lib && !lib32)) {
+      // 59-HUMAN-UAT H3: a wine with no lib paths configured (the built-in
+      // engine) is not "missing" them, and on macOS this block only sets
+      // LD_LIBRARY_PATH, which dyld ignores. Skipping the log leaves the env
+      // byte-identical.
       logError(
         [
           `Couldn't find all library folders of ${wineVersion.name}!`,
