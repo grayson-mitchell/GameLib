@@ -15,7 +15,7 @@ jest.mock('frontend/components/UI/InfoIcon', () => ({
 
 import {
   SteamEngineOverrideView,
-  effectiveValue,
+  selectValue,
   optionLabel
 } from '../SteamEngineOverride'
 import { gamelibT } from '../../../Game/GamePage/components/__tests__/gamelibT'
@@ -59,7 +59,7 @@ const render = (stored: string | undefined, over = {}) =>
   SteamEngineOverrideView({
     options: opts,
     stored,
-    onOpen: jest.fn(),
+    loaded: true,
     onChange: jest.fn(),
     t: gamelibT,
     ...over
@@ -77,20 +77,6 @@ describe('SteamEngineOverride', () => {
     expect(summary.props.children).toBe('Engine (advanced)')
   })
 
-  it('fetches only when opened', () => {
-    const onOpen = jest.fn()
-    const el = render('automatic', { onOpen })
-    expect(onOpen).not.toHaveBeenCalled()
-    ;(el.props.onToggle as (e: unknown) => void)({
-      currentTarget: { open: false }
-    })
-    expect(onOpen).not.toHaveBeenCalled()
-    ;(el.props.onToggle as (e: unknown) => void)({
-      currentTarget: { open: true }
-    })
-    expect(onOpen).toHaveBeenCalledTimes(1)
-  })
-
   it('labels options and disables unavailable ones', () => {
     expect(optionLabel(opts[0], gamelibT)).toBe(
       'Automatic (CrossOver, then built-in)'
@@ -101,6 +87,7 @@ describe('SteamEngineOverride', () => {
     )
     const items = select(render('automatic')).props.children as El[]
     expect(items).toHaveLength(4)
+    expect(items.every((i) => i)).toBe(true)
     expect(items[1].props.disabled).toBe(true)
   })
 
@@ -122,11 +109,48 @@ describe('SteamEngineOverride', () => {
     expect(onChange).toHaveBeenCalledWith('pinned:wine-staging-11.20')
   })
 
-  it('treats an unknown stored value as automatic with no warning', () => {
-    expect(effectiveValue('pinned:gone', opts)).toBe('automatic')
-    const sel = select(render('pinned:gone'))
-    expect(sel.props.value).toBe('automatic')
-    expect(sel.props.afterSelect).toBeUndefined()
+  it('does not flag CrossOver as unsupported (G9)', () => {
+    expect(select(render('crossover')).props.afterSelect).toBeUndefined()
+  })
+
+  it('warns for a wine-manager choice', () => {
+    expect(select(render('wine-manager:X')).props.afterSelect).toBeTruthy()
+  })
+
+  it('keeps an uninstalled wine-manager value selected as a disabled entry (WR-05)', () => {
+    const onChange = jest.fn()
+    const sel = select(render('wine-manager:9.0-gone', { onChange }))
+    expect(selectValue('wine-manager:9.0-gone')).toBe('wine-manager:9.0-gone')
+    expect(sel.props.value).toBe('wine-manager:9.0-gone')
+    const items = sel.props.children as El[]
+    expect(items).toHaveLength(5)
+    expect(items[4].props.disabled).toBe(true)
+    expect(items[4].props.children).toBe(
+      'Wine Manager: 9.0-gone (not installed)'
+    )
+    expect(sel.props.afterSelect).toBeTruthy()
+    ;(sel.props.onChange as (e: unknown) => void)({
+      target: { value: 'automatic' }
+    })
+    expect(onChange).toHaveBeenCalledWith('automatic')
+  })
+
+  it('labels an uninstalled pinned value by its id', () => {
+    const items = select(render('pinned:old-pin')).props.children as El[]
+    expect(items[4].props.children).toBe('old-pin (not installed)')
+    expect(items[4].props.disabled).toBe(true)
+  })
+
+  it('is disabled and shows the stored value until options load (G12b)', () => {
+    const sel = select(
+      render('pinned:wine-staging-11.20', {
+        loaded: false,
+        options: []
+      })
+    )
+    expect(sel.props.disabled).toBe(true)
+    expect(sel.props.value).toBe('pinned:wine-staging-11.20')
+    expect(sel.props.children as El[]).toHaveLength(1)
   })
 
   it('puts the help icon on the label line', () => {

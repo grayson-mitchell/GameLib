@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MenuItem, SelectChangeEvent } from '@mui/material'
 import SelectField from 'frontend/components/UI/SelectField'
@@ -47,18 +47,61 @@ export function optionLabel(o: SteamEngineOption, t: T): string {
   return label
 }
 
-/** A stored value not offered by the options is treated as Automatic. */
-export function effectiveValue(
+/** The select always shows what is stored (59-UAT WR-05, G12b). */
+export function selectValue(stored: string | undefined): string {
+  return stored || 'automatic'
+}
+
+function idLabel(id: string, t: T): string {
+  if (id === 'crossover')
+    return t('steam.engine.override.crossover', 'CrossOver')
+  if (id.startsWith('wine-manager:'))
+    return `Wine Manager: ${id.slice('wine-manager:'.length)}`
+  if (id.startsWith('pinned:')) return id.slice('pinned:'.length)
+  return id
+}
+
+/**
+ * WR-05: a stored id the loaded options do not offer is still shown, as a
+ * disabled "<label> (not installed)" entry, so choosing Automatic is a real
+ * change. Before the options load, a single disabled entry stands in for the
+ * stored value so the select never shows Automatic for something else. The
+ * label is derived from the id only -- never a filesystem path (T-59-70).
+ */
+export function storedExtraOption(
   stored: string | undefined,
-  options: SteamEngineOption[]
-): string {
-  return stored && options.some((o) => o.id === stored) ? stored : 'automatic'
+  options: SteamEngineOption[],
+  loaded: boolean,
+  t: T
+): { id: string; label: string } | null {
+  const value = selectValue(stored)
+  if (!loaded) {
+    return {
+      id: value,
+      label:
+        value === 'automatic'
+          ? t(
+              'steam.engine.override.automatic',
+              'Automatic (CrossOver, then built-in)'
+            )
+          : idLabel(value, t)
+    }
+  }
+  if (value === 'automatic' || options.some((o) => o.id === value)) return null
+  return {
+    id: value,
+    label: t(
+      'steam.engine.override.storedUnavailable',
+      '{{label}} (not installed)',
+      { label: idLabel(value, t) }
+    )
+  }
 }
 
 interface ViewProps {
   options: SteamEngineOption[]
   stored: string | undefined
-  onOpen: () => void
+  loaded: boolean
   onChange: (id: string) => void
   t: T
 }
@@ -66,24 +109,41 @@ interface ViewProps {
 export function SteamEngineOverrideView({
   options,
   stored,
-  onOpen,
+  loaded,
   onChange,
   t
 }: ViewProps) {
-  const value = effectiveValue(stored, options)
+  const value = selectValue(stored)
+  const extra = storedExtraOption(stored, options, loaded, t)
+  // G9: CrossOver is the supported engine; only built-in and Wine Manager
+  // choices are flagged.
+  const unsupported =
+    value.startsWith('pinned:') || value.startsWith('wine-manager:')
+  const items = [
+    ...(loaded
+      ? options.map((o) => (
+          <MenuItem key={o.id} value={o.id} disabled={!o.available}>
+            {optionLabel(o, t)}
+          </MenuItem>
+        ))
+      : []),
+    ...(extra
+      ? [
+          <MenuItem key={`stored:${extra.id}`} value={extra.id} disabled>
+            {extra.label}
+          </MenuItem>
+        ]
+      : [])
+  ]
   return (
-    <details
-      className="steamEngineOverride"
-      onToggle={(e) => {
-        if ((e.currentTarget as HTMLDetailsElement).open) onOpen()
-      }}
-    >
+    <details className="steamEngineOverride">
       <summary>
         {t('steam.engine.override.summary', 'Engine (advanced)')}
       </summary>
       <SelectField
         htmlId="steamEngineOverride"
         value={value}
+        disabled={!loaded}
         label={t('steam.engine.override.label', 'Engine')}
         labelHelp={
           <InfoIcon
@@ -95,7 +155,7 @@ export function SteamEngineOverrideView({
         }
         onChange={(e: SelectChangeEvent) => onChange(e.target.value)}
         afterSelect={
-          value !== 'automatic' ? (
+          unsupported ? (
             <span className="smallInputInfo danger">
               {t(
                 'steam.engine.override.warning',
@@ -105,11 +165,7 @@ export function SteamEngineOverrideView({
           ) : undefined
         }
       >
-        {options.map((o) => (
-          <MenuItem key={o.id} value={o.id} disabled={!o.available}>
-            {optionLabel(o, t)}
-          </MenuItem>
-        ))}
+        {items}
       </SelectField>
     </details>
   )
@@ -119,22 +175,28 @@ const SteamEngineOverride = () => {
   const { t } = useTranslation('gamelib')
   const [override, setOverride] = useSetting('steamEngineOverride', 'automatic')
   const [options, setOptions] = useState<SteamEngineOption[]>([])
-  const [fetched, setFetched] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
-  const load = () => {
-    if (fetched) return
-    setFetched(true)
-    void window.api
+  useEffect(() => {
+    let cancelled = false
+    window.api
       .listSteamEngineOptions()
-      .then(setOptions)
-      .catch(() => setFetched(false))
-  }
+      .then((o) => {
+        if (cancelled) return
+        setOptions(o)
+        setLoaded(true)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <SteamEngineOverrideView
       options={options}
       stored={override}
-      onOpen={load}
+      loaded={loaded}
       onChange={setOverride}
       t={t as unknown as T}
     />
