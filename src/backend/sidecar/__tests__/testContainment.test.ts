@@ -954,6 +954,12 @@ const IN_SCOPE_SUITES = [
  * `../../game_config` and `../../logger` with `jest.mock` factories and calls the pure
  * `applyGameSetting`, so no path module, `homedir()`, filesystem or child process is reached.
  * Its landing commit did not classify it; the T-34.2-83 tripwire caught it (59 gap round 2).
+ *
+ * `engineTempSweepBootWire.test.ts` (Phase 59 Plan 33, G20) is structurally contained on the same
+ * basis as `playtimeLockBootClear.test.ts`, whose preamble it copies: the `backend/store_backend`/
+ * `axios` mocks, with `fallbackEngine` replaced by a `jest.mock` factory so the sweep never reaches
+ * the filesystem, and the real `bootstrap.init()` over `PassThrough` streams. Its landing commit did
+ * not classify it; the T-34.2-83 tripwire caught it (59 gap round 3 post-wave gate).
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -969,6 +975,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'downloadQueueFlows.test.ts',
   'electronReachLedger.test.ts',
   'electronUntouched.test.ts',
+  'engineTempSweepBootWire.test.ts',
   'eosOverlayFlows.test.ts',
   'externalDynamicImportGate.test.ts',
   'fileStore.test.ts',
