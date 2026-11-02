@@ -10,6 +10,7 @@ import PauseIcon from 'frontend/assets/pause-icon.svg?react'
 import { CachedImage, SvgButton } from 'frontend/components/UI'
 import { handleStopInstallation } from 'frontend/helpers/library'
 import { getGameInfo, getStoreName } from 'frontend/helpers'
+import { engineDownloadLabel } from 'frontend/hooks/engineDownloadLabel'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import ContextProvider from 'frontend/state/ContextProvider'
 import ProgressHeader from '../ProgressHeader'
@@ -68,16 +69,22 @@ export default function DownloadHero({ element, state }: Props) {
   const phase = heroPhase(
     appName ? libraryStatus.find((s) => s.appName === appName) : undefined
   )
-  const phaseLabel = (p: HeroPhase): string =>
-    p.kind === 'redist'
-      ? t('status.redist', 'Installing Redistributables ({{redist}})', {
+  const phaseLabel = (p: HeroPhase): string => {
+    switch (p.kind) {
+      case 'redist':
+        return t('status.redist', 'Installing Redistributables ({{redist}})', {
           redist: p.context
         })
-      : p.kind === 'drm-setup'
-        ? t('status.drmSetup', 'Preparing Steam DRM support ({{step}})', {
-            step: p.context
-          })
-        : t('status.steamFinishing', 'Finishing install…')
+      case 'drm-setup':
+        return t('status.drmSetup', 'Preparing Steam DRM support ({{step}})', {
+          step: p.context
+        })
+      case 'engine':
+        return engineDownloadLabel(p.context, t)
+      default:
+        return t('status.steamFinishing', 'Finishing install…')
+    }
+  }
 
   // quick 261029-exu: during a post-download phase the bar is indeterminate
   // and carries no aria-valuenow; the transfer stats would read as a stall.
