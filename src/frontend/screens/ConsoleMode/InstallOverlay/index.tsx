@@ -13,9 +13,11 @@ import type { GameInfo, InstallPlatform, WineInstallation } from 'common/types'
 import { getActionButtonIndex, getBackButtonIndex } from '../controller'
 import { useGamepadButtonPress, useGamepadInfo } from '../hooks'
 import {
+  handOffSteamClientSetupToDesktop,
   probeSteamQuickInstallTarget,
   resolveConsoleActionIntent,
   steamBlockedMessage,
+  type ConsoleClientSetupHandOff,
   type ConsoleFocusKey as FocusKey
 } from './consoleSteamTarget'
 import {
@@ -36,10 +38,12 @@ type PlatformOption = {
 
 export default function InstallOverlay({
   game,
-  onDismiss
+  onDismiss,
+  onExitConsole
 }: {
   game: GameInfo
   onDismiss: () => void
+  onExitConsole: () => void
 }) {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
@@ -86,8 +90,11 @@ export default function InstallOverlay({
   const [focused, setFocused] = useState<FocusKey>('install')
   const installButtonRef = useRef<HTMLButtonElement | null>(null)
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null)
+  const setupSteamButtonRef = useRef<HTMLButtonElement | null>(null)
   const [steamBlocked, setSteamBlocked] =
     useState<SteamQuickInstallDegrade | null>(null)
+  const [clientSetupHandOff, setClientSetupHandOff] =
+    useState<ConsoleClientSetupHandOff | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -128,6 +135,10 @@ export default function InstallOverlay({
       if (cancelled) return
       if (!verdict.ok) {
         setSteamBlocked(verdict.degrade)
+        setClientSetupHandOff(verdict.clientSetup ?? null)
+        // Client cause: land the controller on the remedy (confirm-first,
+        // like the install overlay's own Install-first default).
+        if (verdict.clientSetup) setFocused('setupSteam')
         return
       }
       // D-23 / WR-01 (34.13 review WR-02): route through `installSteamGame`
@@ -176,9 +187,12 @@ export default function InstallOverlay({
     const rows: FocusKey[] = []
     if (availablePlatforms.length > 1) rows.push('platform')
     if (hasWine) rows.push('wine')
+    if (game.runner === 'steam' && clientSetupHandOff) {
+      return ['cancel', 'setupSteam']
+    }
     rows.push('cancel', 'install')
     return rows
-  }, [availablePlatforms.length, hasWine])
+  }, [availablePlatforms.length, hasWine, game.runner, clientSetupHandOff])
 
   useEffect(() => {
     if (!visibleRows.includes(focused)) setFocused('install')
@@ -190,18 +204,21 @@ export default function InstallOverlay({
         ? installButtonRef.current
         : focused === 'cancel'
           ? cancelButtonRef.current
-          : null
+          : focused === 'setupSteam'
+            ? setupSteamButtonRef.current
+            : null
     btn?.focus({ preventScroll: true })
   }, [focused])
 
   // D-29: the failure card's Dismiss chip is the only control it renders --
   // land the controller on it directly, since the Steam branch's own
-  // FocusKey rows (above) never include it.
+  // FocusKey rows (above) never include it. The client-cause card also has
+  // the hand-off chip, and focus belongs on that one instead.
   useEffect(() => {
-    if (steamBlocked) {
+    if (steamBlocked && !clientSetupHandOff) {
       cancelButtonRef.current?.focus({ preventScroll: true })
     }
-  }, [steamBlocked])
+  }, [steamBlocked, clientSetupHandOff])
 
   const cycle =
     (length: number, setIndex: (fn: (i: number) => number) => void) =>
@@ -238,6 +255,15 @@ export default function InstallOverlay({
     }
   }
 
+  const handOff = () => {
+    if (!clientSetupHandOff) return
+    handOffSteamClientSetupToDesktop(
+      game.app_name,
+      clientSetupHandOff,
+      onExitConsole
+    )
+  }
+
   // Stash live values in a ref so the keydown listener can stay attached for
   // the lifetime of the overlay; otherwise it'd detach/reattach on every
   // focus change.
@@ -247,6 +273,7 @@ export default function InstallOverlay({
     cyclePlatform,
     cycleWine,
     installGame,
+    handOff,
     onDismiss,
     runner: game.runner
   })
@@ -256,6 +283,7 @@ export default function InstallOverlay({
     cyclePlatform,
     cycleWine,
     installGame,
+    handOff,
     onDismiss,
     runner: game.runner
   }
@@ -294,10 +322,13 @@ export default function InstallOverlay({
           h.cycleWine(delta)
           return
         }
-        if (h.focused === 'cancel' || h.focused === 'install') {
+        // The button row: toggle between its LAST TWO rows (cancel and
+        // install, or cancel and the hand-off chip on the client-cause card).
+        const buttonRow = h.visibleRows.slice(-2)
+        if (buttonRow.includes(h.focused)) {
           e.preventDefault()
           e.stopPropagation()
-          setFocused(h.focused === 'install' ? 'cancel' : 'install')
+          setFocused(h.focused === buttonRow[1] ? buttonRow[0] : buttonRow[1])
         }
         return
       }
@@ -309,6 +340,9 @@ export default function InstallOverlay({
         if (intent === 'install') {
           e.preventDefault()
           void h.installGame()
+        } else if (intent === 'handoff') {
+          e.preventDefault()
+          h.handOff()
         } else if (intent === 'dismiss') {
           e.preventDefault()
           h.onDismiss()
@@ -323,6 +357,7 @@ export default function InstallOverlay({
   useGamepadButtonPress(getActionButtonIndex(layout, mapping), () => {
     const intent = resolveConsoleActionIntent({ runner: game.runner, focused })
     if (intent === 'install') void installGame()
+    else if (intent === 'handoff') handOff()
     else if (intent === 'dismiss') onDismiss()
   })
   useGamepadButtonPress(getBackButtonIndex(layout, mapping), onDismiss)
@@ -348,11 +383,17 @@ export default function InstallOverlay({
           steamBlocked ? (
             // D-29's resolved open question: an in-place TERMINAL failure
             // card, reusing classes already in this file. No platform row,
-            // no wine row, no path row, no install control, no new
-            // FocusKey -- this is provably not an options path, structurally
-            // rather than by promise. No filesystem path is interpolated
-            // into any string here (see consoleSteamTarget.ts's doc comment
-            // and this task's D3 source gate).
+            // no wine row, no path row, no install control -- this is
+            // provably not an options path, structurally rather than by
+            // promise. No filesystem path is interpolated into any string
+            // here (see consoleSteamTarget.ts's doc comment and this task's
+            // D3 source gate).
+            //
+            // Quick 261102-pgy: when the Steam CLIENT is the cause, the card
+            // adds only the `setupSteam` hand-off chip, whose sole effect is
+            // leaving for desktop setup (SteamClientSetup is not mounted
+            // under /console). There is still no platform, wine or path
+            // row, no install control, and no options door.
             <>
               <div className="consoleModalTitle blocked">
                 {tGamelib(
@@ -371,11 +412,31 @@ export default function InstallOverlay({
               <div className="consoleInstallButtons">
                 <button
                   ref={cancelButtonRef}
-                  className="consoleChip active"
+                  className={classNames('consoleChip', {
+                    active: !clientSetupHandOff || focused === 'cancel'
+                  })}
                   onClick={onDismiss}
+                  onMouseEnter={() => setFocused('cancel')}
+                  onFocus={() => setFocused('cancel')}
                 >
                   {t('button.dismiss', 'Dismiss')}
                 </button>
+                {clientSetupHandOff && (
+                  <button
+                    ref={setupSteamButtonRef}
+                    className={classNames('consoleChip', {
+                      active: focused === 'setupSteam'
+                    })}
+                    onClick={handOff}
+                    onMouseEnter={() => setFocused('setupSteam')}
+                    onFocus={() => setFocused('setupSteam')}
+                  >
+                    {tGamelib(
+                      'gamelib:consoleMode.steamClientSetupHandOff',
+                      'Set up Steam in desktop mode'
+                    )}
+                  </button>
+                )}
               </div>
             </>
           ) : (

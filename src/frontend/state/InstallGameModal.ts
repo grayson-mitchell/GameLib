@@ -225,22 +225,35 @@ export function evaluateQuickInstallTarget(
  * channel. `ready === false` with no `error` and a needs-install / needs-launch
  * status means the backend has JUST sent the `steamClientSetupRequired` push
  * (the same predicate `runNativeDepotDownload` defers on), so the D-10/D-11
- * prompt is already opening and the caller must not stack a dialog on it.
+ * prompt is already opening. Resolves to the setup reason the backend pushed:
+ * `'install'` (needs-install, D-10) or `'launch-once'` (needs-launch, D-11).
+ * Those literals mirror the reason values `ensureSteamClientReady` pushes
+ * (`clientSetup.ts`); the store's `open()` type-checks them at the Console
+ * Mode hand-off call site.
+ *
  * Fails open: a rejection, an `error` verdict (e.g. a non-numeric appId, which
- * sends no push) or any other result returns false and the caller degrades as
- * before. Never throws. Module-private on purpose.
+ * sends no push) or any other result resolves `undefined` and the caller
+ * degrades as before. Never throws.
+ *
+ * Exported (quick 261102-pgy) because the desktop quick install and Console
+ * Mode's probe must share ONE definition of "the client is the cause".
  */
-async function steamClientSetupPending(appName: string): Promise<boolean> {
+export async function steamClientSetupCause(
+  appName: string
+): Promise<'install' | 'launch-once' | undefined> {
   try {
     const result = await window.api.steamClientSetupRecheck(appName)
-    return (
-      result.ready === false &&
-      result.error === undefined &&
-      (result.status === 'needs-install' || result.status === 'needs-launch')
-    )
+    if (result.ready !== false || result.error !== undefined) return undefined
+    if (result.status === 'needs-install') return 'install'
+    if (result.status === 'needs-launch') return 'launch-once'
+    return undefined
   } catch {
-    return false
+    return undefined
   }
+}
+
+async function steamClientSetupPending(appName: string): Promise<boolean> {
+  return (await steamClientSetupCause(appName)) !== undefined
 }
 
 /**

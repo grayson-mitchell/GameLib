@@ -551,6 +551,7 @@ export default function ConsoleMode() {
         <InstallOverlay
           game={installingGame}
           onDismiss={() => setInstallingGame(null)}
+          onExitConsole={quit}
         />
       )}
 
