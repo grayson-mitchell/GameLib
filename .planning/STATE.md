@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 60 context gathered
-last_updated: "2026-11-02T06:13:42.202Z"
+last_updated: "2026-11-02T06:18:19.071Z"
 last_activity: 2026-11-02
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 231
-  completed_plans: 218
+  completed_plans: 219
   percent: 80
 ---
 
@@ -72,11 +72,11 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 60 (steam-overlay-in-bridged-games-on-macos) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 Status: Ready to execute
 Last activity: 2026-11-02
 
-Progress: [█████████░] 94%
+Progress: [██████████] 95%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -487,7 +487,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-02T06:13:38.548Z
+Last session: 2026-11-02T06:18:19.065Z
 Stopped at: Phase 60 context gathered
 Resume file: None
 
