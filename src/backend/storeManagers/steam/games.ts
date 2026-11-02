@@ -2164,21 +2164,48 @@ export default class SteamGame implements Game {
     signal?: AbortSignal
   ): Promise<NonCrossoverEngine | InstallResult> {
     const { ensurePinnedEngine } = await import('./engine/fallbackEngine')
-    let lastPercent = -1
+    // G1 (59-22): one overall percent across both archives, so the label never
+    // resets when the Wine archive starts after the small DXVK one; verify and
+    // unpack are their own phases instead of a "0%" download.
+    const weights = { dxvk: pin.dxvk.size, wine: pin.wine.size }
+    const totalWeight = weights.dxvk + weights.wine
+    const finished = new Set<'dxvk' | 'wine'>()
+    let highest = 0
+    let lastContext = ''
+    let sentAny = false
+    const sendEngineContext = (context: string) => {
+      if (context === lastContext) return
+      lastContext = context
+      sentAny = true
+      sendGameStatusUpdate({
+        appName: this.appId,
+        runner: 'steam',
+        status: 'engine-download',
+        context
+      })
+    }
     const result = await ensurePinnedEngine(pin, {
       signal,
       onProgress: (p) => {
-        const percent = Math.round(p.percentage ?? 0)
-        if (percent === lastPercent) return
-        lastPercent = percent
-        sendGameStatusUpdate({
-          appName: this.appId,
-          runner: 'steam',
-          status: 'engine-download',
-          context: String(percent)
-        })
+        if (p.phase === 'downloading') {
+          let done = 0
+          for (const artifact of finished) done += weights[artifact]
+          const own = Math.min(Math.max(p.percentage ?? 0, 0), 100) / 100
+          const overall =
+            totalWeight > 0
+              ? Math.floor(
+                  (100 * (done + own * weights[p.artifact])) / totalWeight
+                )
+              : Math.floor(own * 100)
+          highest = Math.max(highest, overall)
+          sendEngineContext(`downloading:${highest}`)
+          return
+        }
+        finished.add(p.artifact)
+        sendEngineContext(p.phase)
       }
     })
+    if (result.ok && sentAny) sendEngineContext('setting-up')
     if (!result.ok) {
       logWarning(
         `SteamGame: built-in engine unavailable for appId ${this.appId}: ${result.reason} ${result.detail}`,
@@ -2372,6 +2399,16 @@ export default class SteamGame implements Game {
         fallbackAvailable: true
       })
       return { result: { status: 'done', deferredToSetup: true } }
+    }
+    if (engineUsed !== 'crossover') {
+      // G1 (59-22): nothing else replaces the last engine-download status, so
+      // the label read "Downloading built-in engine (0%)" through the whole
+      // game download. Hand the state back to installing.
+      sendGameStatusUpdate({
+        appName: this.appId,
+        runner: 'steam',
+        status: 'installing'
+      })
     }
     return { engine: engineUsed }
   }

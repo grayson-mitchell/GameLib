@@ -6792,14 +6792,23 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
       ;(ensurePinnedEngine as jest.Mock).mockImplementation((_pin, opts) => {
         for (const percentage of [0, 0.2, 10.4, 10.2, 99.6, 100]) {
-          opts.onProgress({ phase: 'download', artifact: 'wine', percentage })
+          opts.onProgress({
+            phase: 'downloading',
+            artifact: 'wine',
+            percentage
+          })
         }
         return Promise.resolve(ENGINE_OK)
       })
 
       const result = await new SteamGame(APP_ID).install({} as any)
 
-      expect(statuses()).toEqual(['0', '10', '100'])
+      expect(statuses()).toEqual([
+        'downloading:0',
+        'downloading:10',
+        'downloading:98',
+        'setting-up'
+      ])
       const call = (provisionBridgeBottle as jest.Mock).mock.calls[0][0]
       expect(call.bottleName).toBe(`GameLibSteamBridge-${APP_ID}`)
       expect(call.wineVersion).toBeUndefined()
@@ -13119,7 +13128,10 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       )
       expect(await new SteamGame(ID).launch({} as any)).toBe(true)
       expect(sendGameStatusUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'engine-download', context: '40' })
+        expect.objectContaining({
+          status: 'engine-download',
+          context: 'downloading:40'
+        })
       )
     })
 
