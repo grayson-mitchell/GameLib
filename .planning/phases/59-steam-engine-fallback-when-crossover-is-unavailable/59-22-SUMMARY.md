@@ -30,9 +30,9 @@ metrics:
 
 Engine status now carries one size-weighted overall percent plus verify, unpack and set-up phases, hands back to `installing` once the bottle exists, and every surface renders it through one formatter.
 
-## G1 root cause: FOUND (not yet operator-confirmed)
+## G1 root cause: FOUND (operator-confirmed 2026-11-02)
 
-Operator confirmation of the final fix is pending a rebuild/restart re-test. Two live traces were needed:
+Operator-confirmed on 2026-11-02 in a third live run. Dungeons of Dredmor (98800) went through the i386-recovery path with no CrossOver and the engine moved aside. The run was a clean sidecar rebuild with the trace removed. The phases showed in order, and the install button was greyed out at the right point. The operator then asked for one change: the button should read "Installing…" rather than repeat the phase that GameStatus already shows above it. The orchestrator made that change in `158bc680e`, with the test updated. Two live traces came before the confirmation:
 
 - **Run 1 (Asgaard, normal queue install):** all hops delivered; backend producer contract was wrong (resets, 0% for verify/extract, no hand-back). Fixed in eea11d3ab.
 - **Run 2 (Dredmor 98800, i386 recovery; re-test after fix, all-statuses trace):** every `gameStatusUpdate` frame reached `handleGameStatus` and `hasStatus` with the right status and context (installing -> downloading:0 -> verifying -> extracting -> downloading:1..100 -> verifying -> extracting -> setting-up -> installing -> done). Not an overwrite and not a dropped frame. The remaining defect was the **not-installed install button**: `MainButton.getButtonLabel` had no `downloadingEngine` branch, so on a title that is not yet installed the button read "Install" and was enabled for the whole engine setup (the operator's observation). `GameStatus` already rendered the phase. Fixed in 43829dc3e with `MainButton.engineDownloading.test.tsx` (RED seen: 4 cases read "Install"), and `downloadingEngine` added to `disabledInstallButtons`.
@@ -59,7 +59,7 @@ Original heading text follows.
 
 ## Task 2 outcome
 
-The live trace was run by the operator and orchestrator (Asgaard, no-crossover profile). Operator confirmation that the percent now advances through the phases after the fix is **still pending**: it needs a sidecar rebuild (`pnpm build:sidecar-sea`), a dev restart, and the engine directory moved aside again for a first-download re-test. Not done by this executor.
+The live trace was run by the operator and orchestrator (Asgaard, no-crossover profile). Operator confirmation: **done** on 2026-11-02 (see the G1 root cause section). Follow-ups filed as todos: the button spinner renders black instead of the label colour (`2026-11-02-main-button-spinner-black-not-font-color.md`), and native Steam downloads are missing from the Downloads screen (`2026-11-02-native-steam-download-show-in-downloads.md`).
 
 ## Deviations from Plan
 
