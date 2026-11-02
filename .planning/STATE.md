@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
-stopped_at: Phase 57 context gathered
-last_updated: "2026-11-02T01:41:05.963Z"
+stopped_at: Phase 60 context gathered
+last_updated: "2026-11-02T02:08:55.867Z"
 last_activity: 2026-11-02
 progress:
   total_phases: 10
@@ -485,9 +485,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-02T01:41:02.035Z
-Stopped at: Phase 57 context gathered
-Resume file: None
+Last session: 2026-11-02T02:08:55.862Z
+Stopped at: Phase 60 context gathered
+Resume file: .planning/phases/60-steam-overlay-in-bridged-games-on-macos/60-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
