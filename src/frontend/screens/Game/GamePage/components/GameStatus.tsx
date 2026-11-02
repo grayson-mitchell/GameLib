@@ -3,6 +3,7 @@ import GameContext from '../../GameContext'
 import { GameInfo, InstallProgress } from 'common/types'
 import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
 import { getProgress } from 'frontend/helpers'
+import { engineDownloadLabel } from 'frontend/hooks/engineDownloadLabel'
 import {
   useBottleLaunchWaiting,
   resolveWaitingCauseOrder
@@ -110,19 +111,12 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
 
     // Phase 59 (D-05): the built-in Steam engine is downloading.
     if (is.downloadingEngine) {
-      window.api.logInfo(
-        `[g1-trace] GameStatus render context=${statusContext}`
-      )
       return (
         <span
           style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
         >
           <CircularProgress size={14} color="inherit" />
-          {t(
-            'gamelib:steam.engine.status.downloading',
-            'Downloading built-in engine ({{percent}}%)',
-            { percent: statusContext || '0' }
-          )}
+          {engineDownloadLabel(statusContext, t)}
         </span>
       )
     }

@@ -21,6 +21,7 @@ import { faChevronDown, faSyncAlt } from '@fortawesome/free-solid-svg-icons'
 import classNames from 'classnames'
 import { GameInfo } from 'common/types'
 import useSetting from 'frontend/hooks/useSetting'
+import { engineDownloadLabel } from 'frontend/hooks/engineDownloadLabel'
 import Dropdown from 'frontend/components/UI/Dropdown'
 import { showSteamMainButtonInstallOptions } from 'frontend/helpers/steamInstallOptionsEntry'
 
@@ -86,13 +87,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
       return t('label.drmSetup', 'Preparing Steam DRM support')
     }
     if (is.downloadingEngine) {
-      return t(
-        'gamelib:steam.engine.status.downloading',
-        'Downloading built-in engine ({{percent}}%)',
-        {
-          percent: statusContext || '0'
-        }
-      )
+      return engineDownloadLabel(statusContext, t)
     }
     if (is.startingSteam) {
       return t('label.steamStarting', 'Starting Steam')

@@ -4137,7 +4137,16 @@ export default class SteamGame implements Game {
       next: sel,
       // 59-UAT G10: an override to CrossOver on an expired bottle must not run
       // the DXVK restore through CrossOver.
-      crossoverHealthy: decision.preflight?.kind === 'healthy'
+      crossoverHealthy: decision.preflight?.kind === 'healthy',
+      // IN-05 (59-22): a real engine switch is "setting up", not a stale
+      // "Downloading (100%)", until the monitor's launching status.
+      onSwitching: () =>
+        sendGameStatusUpdate({
+          appName: this.appId,
+          runner: 'steam',
+          status: 'engine-download',
+          context: 'setting-up'
+        })
     })
     if (!prep.ok) {
       if (prep.reason === 'dxvk-failed') {

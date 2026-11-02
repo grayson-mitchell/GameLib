@@ -13135,6 +13135,23 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       )
     })
 
+    it('IN-05: a real engine switch sends setting-up through onSwitching', async () => {
+      ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
+        pinnedDecision('cx-missing', { needsDownload: false })
+      )
+      ;(prepareBottleForEngine as jest.Mock).mockImplementation((args: any) => {
+        args.onSwitching?.()
+        return Promise.resolve({ ok: true })
+      })
+      await new SteamGame(ID).launch({} as any)
+      expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'engine-download',
+          context: 'setting-up'
+        })
+      )
+    })
+
     it('download failure: notifies, sends done, returns false, clears the registry, never marks the bridge failed', async () => {
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-missing', { needsDownload: true })

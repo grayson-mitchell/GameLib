@@ -4,6 +4,7 @@ import classNames from 'classnames'
 import './index.scss'
 
 import { hasStatus } from 'frontend/hooks/hasStatus'
+import { engineDownloadLabel } from 'frontend/hooks/engineDownloadLabel'
 
 import BackHint from '../BackHint'
 
@@ -162,11 +163,7 @@ export default function LaunchOverlay({
       )
       break
     case 'engine-download':
-      label = t(
-        'gamelib:steam.engine.status.downloading',
-        'Downloading built-in engine ({{percent}}%)',
-        { percent: statusContext || '0' }
-      )
+      label = engineDownloadLabel(statusContext, t)
       break
     case 'steam-starting':
       label = t('gamepage:status.steamStarting', 'Starting Steam')

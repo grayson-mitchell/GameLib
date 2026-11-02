@@ -1,5 +1,8 @@
 import { GameInfo, Runner, Status } from 'common/types'
 import { TFunction } from 'i18next'
+import { engineDownloadLabel } from './engineDownloadLabel'
+
+export { engineDownloadLabel }
 
 type StatusArgs = {
   status: Status
@@ -79,11 +82,7 @@ export function getStatusLabel({
       { step: statusContext || '' }
     ),
     // Phase 59 (D-05): built-in engine download, context carries the percent
-    'engine-download': t(
-      'gamelib:steam.engine.status.downloading',
-      'Downloading built-in engine ({{percent}}%)',
-      { percent: statusContext || '0' }
-    ),
+    'engine-download': engineDownloadLabel(statusContext, t),
     // quick 261029-ji2: Play is quitting and relaunching Mac Steam so it adopts
     // the install at startup
     'steam-starting': t('gamepage:status.steamStarting', 'Starting Steam')
