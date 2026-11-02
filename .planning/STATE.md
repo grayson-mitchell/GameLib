@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
-status: ready_to_plan
-stopped_at: Phase 58 complete (37/37) — ready to discuss Phase 59
-last_updated: 2026-11-01T01:49:18.475Z
-last_activity: 2026-11-01
+status: planning
+stopped_at: Phase 57 context gathered
+last_updated: "2026-11-01T19:33:53.364Z"
+last_activity: "2026-11-01 - Completed quick task 261101-tsq: hide titles toggle"
 progress:
   total_phases: 9
   completed_phases: 7
@@ -383,11 +383,17 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261101-jbm | A single --demo-status timeout is now inconclusive: preflightCrossover kills the wineserver and re-probes once; only two consecutive timeouts give cx-broken (pinned engine + bottle rewrite). Definitive answers (expired, nonzero-exit, spawn-error, invalid-bottle, unrecognised) still demote on the first probe. Todo closed. | 2026-11-01 | d3f83e677 | Jest pass (87 tests, 3 engine suites); codecheck: 2 pre-existing TS2737 in helperNetHarness.test.ts; live launch pending | [261101-jbm-single-demo-status-probe-timeout-must-no](./quick/261101-jbm-single-demo-status-probe-timeout-must-no/) |
 | 261101-llf | Bridge invite picker now opens in its own focused `bridge-invite` Tauri window (scoped capability, 4 permissions) instead of raising the main window; focus returns to the game on close; bridge-notice dialogs keep `main_window_raise`. | 2026-11-01 | 7cebc8c99 | cargo + touched Jest suites pass; live gate (7 items, frameless OFF/ON) pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
 | 261101-mmt | Phase 58 live checks recorded: WR-03 (two Schedule I sessions, 2m39s + 2m05s, no mid-session drop or shim reconnect) and WR-04 (3 invites from fresh snapshots, 0 bad-ordinal) marked live-verified in 58-REVIEW-FIX.md; filed todos: main-menu invite as a supported host path (supersedes 58-33 decision 5), lobby-0 invite dialog refuses every invite, quitting GameLib kills a hosted bridge session | 2026-11-01 | 413df5b28 | Live-verified; planning-gates 11/12 (state-sdk-field-anchor fails on pre-existing `Plan: Not started`) | [261101-mmt-record-phase-58-live-check-results-and-f](./quick/261101-mmt-record-phase-58-live-check-results-and-f/) |
+| 261101-mv3 | Invite dialog opened with lobby 0 (Schedule I calls ActivateGameOverlayInviteDialog in the same instant as CreateLobby) now waits and adopts the lobby id from the first successful LobbyCreated_t (513), call-result or broadcast path, once per dialog, never overriding an explicit lobby; Invite before 513 logs `refused reason=lobby-pending` (wire code unchanged). Todo moved to completed (`ready: live-gate`) | 2026-11-01 | fb9cf3974 | build-steam-bridge + 112 jest pass, codecheck clean; live check owed (first main-menu '+' sends) | [261101-mv3-fix-lobby-0-invite-dialog-adopt-lobby-id](./quick/261101-mv3-fix-lobby-0-invite-dialog-adopt-lobby-id/) |
 | fast | Invite picker header X removed (showCloseButton=false); the picker window closes via the traffic lights or the footer Close button. | 2026-11-01 | 821b996ec | 2 suites pass (16 tests); live check pending | [261101-llf-host-the-steam-bridge-invite-picker-in-i](./quick/261101-llf-host-the-steam-bridge-invite-picker-in-i/) |
 | 261101-whs | Windows isSteamClientInstalled() now probes <Default Steam path>/steam.exe (the same root as the D-11 libraryfolders.vdf gate); Phase 21 UAT todo gets a no-uninstall 4a/4b/4c recipe and ready: live-gate. | 2026-11-01 | 8b305b0f9 | 3 suites pass (158 tests); tsc/deadcode/lint ceiling OK; live 4a/4b/4c not yet run | [261101-whs-windows-steam-client-install-check-honor](./quick/261101-whs-windows-steam-client-install-check-honor/) |
 | 261102-0yc | D-UAT-17 fixed: Windows guided Steam install launches SteamSetup.exe via PowerShell Start-Process -Verb RunAs (UAC) and awaits the launch outcome; a declined or failed launch returns an error instead of "started". | 2026-11-02 | 3f0df053c | clientSetup + fakeHomeIsolation pass (25 tests); argv quoting checked live; live 4a re-run pending | [261102-0yc-fix-d-uat-17-windows-guided-steam-instal](./quick/261102-0yc-fix-d-uat-17-windows-guided-steam-instal/) |
 | 261102-21x | D-UAT-15 fixed: a library-missing quick-install verdict first asks steamClientSetupRecheck; Steam absent/never-launched goes straight to the D-10/D-11 client-setup prompt instead of the "library couldn't be reached" dialog. Library-missing copy no longer assumes a removable drive; Console Mode follow-up todo filed. | 2026-11-02 | b6d8bb7c8 | 3 targeted suites 190/190 (Group U1-U8 added); tsc/eslint/prettier clean; live 4a/4b re-run pending | [261102-21x-d-uat-15-library-missing-notice-before-s](./quick/261102-21x-d-uat-15-library-missing-notice-before-s/) |
 | fast | Closed D-UAT-15: live Windows 4a/4b re-run passed (covered by the D-UAT-17 4a re-run); todo moved to completed, 21-UAT.md finding marked RESOLVED. | 2026-11-02 | — | planning gates 11/12 (baseline state-sdk-field-anchor) | — |
+| 261101-t66 | Main-menu '+' invite scored as a supported Direction A host path: D-17 in 58-CONTEXT.md supersedes 58-33 scope decision 5 and item 2(e) (incl. the operator amendment) for the next bridge gate; 58-33 contract untouched; no code change (census scores `host=` from AcceptConnection). Todo stays pending (`ready: live-gate`) | 2026-11-01 | 37cfa575a | docs-only; planning-gates 11/12 (pre-existing STATE `Plan: Not started` anchor failure); live gate owed | [261101-t66-score-the-game-s-main-menu-invite-as-a-s](./quick/261101-t66-score-the-game-s-main-menu-invite-as-a-s/) |
+| 261101-tjv | Clean tile mode: `cleanTiles` pref (default off) + Accessibility toggle under "Always show titles"; grid tiles hide the bottom button bar (store badge included) and collapse to bare 3:4 art, click tile to open game page and launch there; list view Action column unchanged; right-click menu and controller shortcuts intact | 2026-11-01 | 41299c88b | tsc clean, 125 jest pass; live tauri dev check owed | [261101-tjv-clean-tile-mode-setting-hide-tile-button](./quick/261101-tjv-clean-tile-mode-setting-hide-tile-button/) |
+| 261101-tsq | Hide titles: `hideTitles` pref (default off) + Accessibility toggle under "Always show titles" (which is disabled while it's on); grid tile titles hidden entirely, hover included; list view name column unchanged | 2026-11-01 | 3948170d6 | tsc clean, jest pass; live tauri dev check owed | [261101-tsq-hide-titles-toggle-never-show-tile-title](./quick/261101-tsq-hide-titles-toggle-never-show-tile-title/) |
+| fast | Clean tiles exception: Recently Played just-played hero keeps its button bar (`.cleanTiles .gameCard:not(.justPlayed)`) | 2026-11-01 | bf39f3d03 | 79 GameCard jest pass | — |
+| fast | Clean tiles: just-played hero art shrinks by the bar height (and its placeholder matches) so hero + bar equals neighbours' bare-art height | 2026-11-01 | 8ca8a6700 | 259 GameCard/FocusRowStrip jest pass | — |
 
 ## Deferred Items
 
@@ -479,9 +485,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-01T01:45:23.886Z
-Stopped at: Phase 59 context gathered
-Resume file: None
+Last session: 2026-11-01T19:33:53.358Z
+Stopped at: Phase 57 context gathered
+Resume file: .planning/phases/57-opt-in-known-fix-sharing-via-relay/57-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 

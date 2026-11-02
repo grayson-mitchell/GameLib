@@ -212,7 +212,12 @@ describe('GameCard height is content and controller mode never resizes it (sourc
   it('G3: --game-card-bar-height is declared once, on .gameCard, as the store badge height plus twice the bar padding', () => {
     const css = readGameCardCss()
     const rules = parseTopLevelRules(css)
-    expect(countDecl(css, '--game-card-bar-height')).toBe(1)
+    // The one clean-tile override (quick 261101-tjv) is a second, legitimate
+    // declaration: it zeroes the bar under `.cleanTiles .gameCard:not(.justPlayed)` and must
+    // not be mistaken for a competing definition of the base height.
+    expect(countDecl(css, '--game-card-bar-height')).toBe(2)
+    const override = findRule(rules, '.cleanTiles .gameCard:not(.justPlayed)')
+    expect(override.declarations.get('--game-card-bar-height')).toBe('0px')
 
     const store = requireDecl(findRule(rules, STORE), STORE, 'height')
     const padding = requireDecl(findRule(rules, BAR), BAR, 'padding')

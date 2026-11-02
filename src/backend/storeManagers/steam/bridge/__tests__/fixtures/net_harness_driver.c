@@ -156,6 +156,67 @@ static void setup_invite_fakes(void) {
   g_bd_flat_SteamFriends017_GetFriendPersonaName = fake_friend_name;
   g_bd_flat_SteamMatchMaking009_InviteUserToLobby = fake_invite;
 }
+/* quick-261101-mv3: 513 injector driven through the real pump. */
+#define INJ_MAX 4
+static gl_CallbackMsg_t g_inj_q[INJ_MAX];
+static uint8_t g_inj_buf[INJ_MAX][12];
+static gl_SteamAPICallCompleted_t g_inj_done[INJ_MAX];
+static uint8_t g_inj_cr[12];
+static int g_inj_n = 0, g_inj_pos = 0;
+static void inj_run_frame(int32_t pipe) { (void)pipe; }
+static void inj_free_last(int32_t pipe) { (void)pipe; }
+static bool inj_get_next(int32_t pipe, gl_CallbackMsg_t *m) {
+  (void)pipe;
+  if (g_inj_pos >= g_inj_n) return false;
+  *m = g_inj_q[g_inj_pos++];
+  return true;
+}
+static bool inj_get_api_call_result(int32_t pipe, uint64_t h, void *buf, int cub, int id, bool *failed) {
+  (void)pipe;
+  (void)h;
+  if (cub != 12 || id != 513) return false;
+  memcpy(buf, g_inj_cr, 12);
+  *failed = false;
+  return true;
+}
+static void inj_pack(uint8_t *b, int32_t eResult, uint64_t lobby) {
+  memcpy(b, &eResult, 4);
+  memcpy(b + 4, &lobby, 8);
+}
+static void inj_push(int32_t id, int32_t eResult, uint64_t lobby) {
+  gl_CallbackMsg_t *m = &g_inj_q[g_inj_n];
+  inj_pack(g_inj_buf[g_inj_n], eResult, lobby);
+  memset(m, 0, sizeof *m);
+  m->m_iCallback = id;
+  m->m_pubParam = g_inj_buf[g_inj_n];
+  m->m_cubParam = 12;
+  g_inj_n++;
+}
+static void inj_push_703(uint64_t hCall, int32_t eResult, uint64_t lobby) {
+  gl_CallbackMsg_t *m = &g_inj_q[g_inj_n];
+  gl_SteamAPICallCompleted_t *d = &g_inj_done[g_inj_n];
+  inj_pack(g_inj_cr, eResult, lobby);
+  d->m_hAsyncCall = hCall;
+  d->m_iCallback = 513;
+  d->m_cubParam = 12;
+  memset(m, 0, sizeof *m);
+  m->m_iCallback = GL_CBQ_ID_API_CALL_COMPLETED;
+  m->m_pubParam = (uint8_t *)d;
+  m->m_cubParam = (int32_t)sizeof *d;
+  g_inj_n++;
+}
+static void inj_pump(void) {
+  g_inj_pos = 0;
+  gl_manual_pump_into_ring();
+  g_inj_n = 0;
+  g_inj_pos = 0;
+}
+static void inj_setup(void) {
+  g_manual_dispatch = 1;
+  g_md_run_frame = inj_run_frame;
+  g_md_get_next = inj_get_next;
+  g_md_free_last = inj_free_last;
+}
 int SteamAPI_ISteamFriends_GetFriendCount(void *self, int f) { return fake_friend_count(self, f); }
 uint64_t SteamAPI_ISteamFriends_GetFriendByIndex(void *self, int i, int f) { return fake_friend_by_index(self, i, f); }
 int SteamAPI_ISteamFriends_GetFriendPersonaState(void *self, uint64_t id) { return fake_friend_state(self, id); }
@@ -551,6 +612,57 @@ int main(int argc, char **argv) {
       gl_invite_list_friends((void *)1, body, sizeof body, &fn);
       r = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 2u);
       printf("r=%d calls=%d lobbyok=%d targetok=%d\n", r, g_inv_calls, g_inv_lobby == lobby, g_inv_target == k_fid[2]);
+      return 0;
+    }
+    if (strcmp(c, "invite-zero-adopt") == 0) {
+      uint64_t lobby = 109775240000000002ull;
+      uint32_t rl = 0, fn = 0;
+      int32_t pre, r;
+      inj_setup();
+      memset(arg, 0, 8);
+      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
+      gl_invite_list_friends((void *)1, body, sizeof body, &fn);
+      pre = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 2u);
+      inj_push(513, 1, lobby);
+      inj_pump();
+      r = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 2u);
+      printf("pre=%d r=%d calls=%d lobbyok=%d targetok=%d\n", pre, r, g_inv_calls, g_inv_lobby == lobby,
+             g_inv_target == k_fid[2]);
+      return 0;
+    }
+    if (strcmp(c, "invite-zero-guards") == 0) {
+      uint64_t l1 = 109775240000000011ull, l2 = 109775240000000012ull, l3 = 109775240000000013ull,
+               l4 = 109775240000000014ull;
+      uint32_t rl = 0;
+      int badres, zerolobby, explicit_, cr, oneshot;
+      inj_setup();
+      memset(arg, 0, 8);
+      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
+      inj_push(513, 2, l2);
+      inj_pump();
+      badres = g_invite_lobby != 0;
+      g_invite_lobby = 0;
+      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
+      inj_push(513, 1, 0);
+      inj_pump();
+      zerolobby = g_invite_lobby != 0;
+      memcpy(arg, &l1, 8);
+      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
+      inj_push(513, 1, l2);
+      inj_pump();
+      explicit_ = g_invite_lobby == l1;
+      g_invite_lobby = 0;
+      memset(arg, 0, 8);
+      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
+      g_md_get_api_call_result = inj_get_api_call_result;
+      gl_helper_cr_track(0x1234ull, 513);
+      inj_push_703(0x1234ull, 1, l3);
+      inj_pump();
+      cr = g_invite_lobby == l3;
+      inj_push(513, 1, l4);
+      inj_pump();
+      oneshot = g_invite_lobby == l3;
+      printf("badres=%d zerolobby=%d explicit=%d cr=%d oneshot=%d\n", badres, zerolobby, explicit_, cr, oneshot);
       return 0;
     }
     if (strcmp(c, "invite-refusals") == 0) {

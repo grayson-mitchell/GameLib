@@ -326,6 +326,18 @@ body.keyboardNav .gameCard:hover:not(:focus-within) {
   transform: translateY(0);
 }
 
+/* Hide titles (quick 261101-tsq): a third title state, never shown, beside
+   hover-only and always-visible, for a console-like look. It must stay AFTER
+   the reveal rule above: it ties the hover selector's specificity (0,3,0), so
+   source order makes it win, and it beats always-visible's (0,2,0). It also
+   covers controller and keyboard focus, which only reveal the title through
+   :hover. Scoped to .gameCard so list rows (.gameListItem .gameTitle, the name
+   column) are untouched. The .gameListInfo status label and the already-hidden
+   .runner are left alone, and the cover img alt keeps the accessible name. */
+.hideTitles .gameCard .gameTitle {
+  display: none;
+}
+
 /* `play` leads and `store` trails: the play/download control sits at the
    leading edge, and the store badge takes the trailing slot play used to
    hold. Only the grid-card variants below are reordered -- the list layout
@@ -370,6 +382,40 @@ body.keyboardNav .gameCard:hover:not(:focus-within) {
 
 .gameCard.gamepad > .icons > .svg-button {
   display: none;
+}
+
+/* Clean tile mode (quick 261101-tjv): the operator asked for the bottom bar
+   gone, with the game page (reached by clicking the tile's cover Link) as the
+   place to launch from. Zeroing --game-card-bar-height collapses both the
+   card's content height and the pre-reveal placeholder to the bare 3:4 art, so
+   the art keeps its ratio and no empty band is left behind. The bar itself is
+   hidden, store badge included. Its buttons stay in the DOM so the controller
+   play/install shortcut in gamepad.ts (.playIcon / .downIcon .click(), which
+   fires on display:none elements) keeps working.
+   Scope: every grid-card mount (main grid, Favourites/Recently-Played, the
+   FocusRowStrip) renders through GamesList, which
+   carries the .cleanTiles class. List rows (.gameListItem) are deliberately
+   untouched: their .icons is the table's Action column.
+   Exception: the Recently Played just-played hero (.justPlayed) keeps its bar
+   -- the operator wants that one tile to stay a direct launch point. */
+.cleanTiles .gameCard:not(.justPlayed) {
+  --game-card-bar-height: 0px;
+}
+
+.cleanTiles .gameCard:not(.justPlayed) > .icons {
+  display: none;
+}
+
+/* The hero keeps its bar, so in clean mode its art box gives up the bar's
+   height: art plus bar then equals a neighbour's bare art, and the hero's
+   bottom edge lines up with the row. Its pre-reveal placeholder takes the same
+   neighbour height. */
+.cleanTiles .gameCard.justPlayed .justPlayedImg {
+  block-size: calc(var(--game-card-art-height) - var(--game-card-bar-height));
+}
+
+.cleanTiles .gameCard.justPlayed:empty {
+  block-size: var(--game-card-art-height);
 }
 
 .gameCard > .icons > .svg-button {

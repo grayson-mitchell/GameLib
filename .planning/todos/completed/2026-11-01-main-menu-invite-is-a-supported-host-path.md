@@ -38,3 +38,11 @@ Live gate on the Mac host with the PC peer: send the invite from the main menu, 
 ## Related
 
 `2026-11-01-invite-dialog-with-lobby-0-refuses-every-invite.md`. Lobby 0 is what makes the first menu press fail.
+
+## Status (2026-11-01)
+
+The spec change is now recorded as D-17 in `.planning/phases/58-steam-bridge-multiplayer/58-CONTEXT.md` (quick 261101-t66), and the next bridge live gate inherits it. No code change was needed: the lobby-0 fix `6ab500d6a` makes the send succeed, and `bridgeCensus.ts` scores `host=` from the game's `AcceptConnection`. The live check in `## Verify` was then run the same day; see Resolution.
+
+## Resolution
+
+Live verified by the operator 2026-11-01 (20:56 run, `~/Library/Logs/GameLib/gamelib.log`, one HELLO, zero `ABORT`), the Direction A main-menu path end to end: `INVITE dialog` 20:56:25 at the main menu, `INVITE lobby adopted` 20:56:26, `INVITE sent ok=1` 20:56:29, Continue `CALL SteamNetworkingSockets013.CreateListenSocketP2P` 20:56:52, game `CALL SteamNetworkingSockets012.AcceptConnection` 20:56:56, `NET role=game kind=join iface=Sockets cb=1221 n=1 path=relayed` 20:56:57; role=game Sockets send 8 / recv 8; zero `refused reason=` lines. `pnpm bridge-census --multiplayer 3205720 --log` printed `verified join=1 send=1 recv=1 path=relayed oversize=0 host=1 client=0`. The scoring rule for future gates is D-17 in `58-CONTEXT.md`.

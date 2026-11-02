@@ -35,3 +35,9 @@ Live: host a bridged game with a peer connected, close the GameLib window, and c
 ## Related
 
 `2026-11-01-invite-picker-raises-whole-main-window.md`. The whole-window raise puts the main window in front of the game, which makes an accidental close likely.
+
+## Resolution
+
+2026-11-01 (quick 261101-okd, `18e855237`): Option 1, a confirm-quit. `hasLiveBridgeHelper()` in `helperProcess.ts` is true while any bridge helper is alive, and a helper lives exactly as long as its game. `handleExit()` in `src/backend/utils.ts` now shows its existing quit prompt in that case too. Window close, Cmd+Q and Dock Quit all route through `handleExit()`. When the bridge is the only reason for the prompt, it uses the bridge-specific message `box.quit.bridgeHosting`. `cancelId: 0` is unchanged, so Esc or dismissing still means No.
+
+Live verified by the operator 2026-11-01, after a dev restart with the sidecar rebuilt: closing the GameLib window while a bridged game was hosting showed the prompt.

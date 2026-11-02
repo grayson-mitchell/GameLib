@@ -150,6 +150,8 @@ describe('allow-list', () => {
     expect(isAllowedStoreField('humbleConfigStore', 'isLoggedIn')).toBe(true)
     expect(isAllowedStoreField('humbleConfigStore', 'expired')).toBe(true)
     expect(isAllowedStoreField('configStore', 'theme')).toBe(true)
+    expect(isAllowedStoreField('configStore', 'hideTitles')).toBe(true)
+    expect(isAllowedStoreField('configStore', 'cleanTiles')).toBe(true)
   })
 
   it('legendaryConfigStore.expired is allowed (non-secret boolean verdict)', () => {
