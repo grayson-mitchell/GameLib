@@ -1193,6 +1193,9 @@
         "sidebar": "Store Search",
         "title": "Store Search"
     },
+    "submenu": {
+        "settings": "Settings"
+    },
     "title": {
         "allGames": "All Games"
     },

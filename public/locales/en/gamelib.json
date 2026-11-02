@@ -613,11 +613,11 @@
                 "summary": "Engine (advanced)",
                 "warning": "Unsupported — known fixes and compatibility ratings don't apply"
             },
+            "overrideUnavailable": "The engine chosen for this game in Advanced settings is not available ({{detail}}). Choose Automatic or install it.",
             "overrideWarning": {
                 "cxBroken": "This game is set to CrossOver in Advanced settings, but CrossOver isn't working for it, so the game won't start on CrossOver. Fix CrossOver, or choose Automatic to use the built-in engine instead.",
                 "cxExpired": "This game is set to CrossOver in Advanced settings, but its CrossOver trial has expired. CrossOver will show its own expired-trial window when the game starts. Choose Automatic to use the built-in engine instead."
             },
-            "overrideUnavailable": "The engine chosen for this game in Advanced settings is not available ({{detail}}). Choose Automatic or install it.",
             "reason": {
                 "cxBroken": "CrossOver isn't working",
                 "cxExpired": "CrossOver trial expired",
