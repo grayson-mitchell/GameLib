@@ -451,6 +451,8 @@ export type RunnerReady = {
   source: 'cache' | 'clone'
   cloneMethod?: 'cp -c' | 'cp -R'
   provenanceRemaining?: boolean
+  /** Whether bin/wineloader carries the dyld entitlement (D-05, best effort). */
+  wineloaderResigned?: boolean
   pruned: string[]
   pruneSkipped: string[]
 }
@@ -598,6 +600,11 @@ function readyFor(
   }
 }
 
+/**
+ * Marker schema 2 (D-05) adds wineloaderSha256 and wineloaderResigned. The bump
+ * rebuilds every existing DRM clone once, which takes about 1 s on APFS and
+ * refuses with "quit the game and retry" if the title is running.
+ */
 type Marker = {
   schema: number
   crossoverBuild: string
@@ -607,6 +614,8 @@ type Marker = {
   lsteamclientDllSha256: string
   lsteamclientSoSha256: string
   loaderSha256: string
+  wineloaderSha256: string
+  wineloaderResigned: boolean
   cloneMethod?: string
   createdAt?: string
 }
@@ -641,7 +650,7 @@ export async function verifyRunnerClone(
     } catch {
       return bad('marker unreadable')
     }
-    if (!marker || marker.schema !== 1) return bad('marker schema mismatch')
+    if (!marker || marker.schema !== 2) return bad('marker schema mismatch')
     if (
       marker.crossoverBuild !== crossover.crossoverBuild ||
       marker.cleanNtdllSha256 !== crossover.cleanNtdllSha256 ||
@@ -715,6 +724,12 @@ export async function verifyRunnerClone(
       return bad('loader differs from marker')
     }
 
+    const wineloader = join(cx, WINELOADER_REL)
+    await statRegular(wineloader, MAX_LOADER_BYTES)
+    if ((await sha256File(wineloader)) !== marker.wineloaderSha256) {
+      return bad('wineloader differs from marker')
+    }
+
     for (const rel of MTIME_PINNED_PATHS) {
       const a = await fsp.stat(join(cx, rel))
       const b = await fsp.stat(join(crossover.cxRoot, rel))
@@ -731,6 +746,17 @@ export async function verifyRunnerClone(
     if (!keys) return bad('loader entitlements unreadable')
     for (const k of [...STOCK_LOADER_ENTITLEMENTS, DYLD_ENTITLEMENT]) {
       if (!keys.includes(k)) return bad(`loader lacks entitlement ${k}`)
+    }
+    if (marker.wineloaderResigned === true) {
+      const wkeys = await dumpLoaderEntitlements(
+        runTool,
+        wineloader,
+        RUNNER_TIMEOUTS.codesign
+      )
+      if (!wkeys) return bad('wineloader entitlements unreadable')
+      for (const k of [...STOCK_LOADER_ENTITLEMENTS, DYLD_ENTITLEMENT]) {
+        if (!wkeys.includes(k)) return bad(`wineloader lacks entitlement ${k}`)
+      }
     }
     return { ok: true }
   } catch (e) {
@@ -880,6 +906,17 @@ async function runFront(
     run,
     timeouts.ps
   )
+  if (built.wineloaderResigned === undefined) {
+    try {
+      const m = JSON.parse(
+        await fsp.readFile(join(runnerDir, RUNNER_MARKER_FILE), 'utf8')
+      ) as Marker
+      built = { ...built, wineloaderResigned: m.wineloaderResigned === true }
+    } catch {
+      // verify just read it; treat a race as not re-signed
+      built = { ...built, wineloaderResigned: false }
+    }
+  }
   return {
     status: 'ok',
     ...readyFor(cxRoot, runnerDir, build, {
@@ -1258,6 +1295,39 @@ async function buildRunner(
     )
     if (!signed.ok) stepFail('runner-patch', signed.cause)
 
+    // --- bin/wineloader re-sign (best effort, D-05 vs D-08) ---
+    // bin/wine execs bin/wineloader first, and that loader strips DYLD_*
+    // unless re-signed. A failure here only costs the overlay tokens.
+    const wineloader = join(dest, WINELOADER_REL)
+    const wl = await resignLoader(
+      run,
+      wineloader,
+      partial,
+      timeouts.codesign,
+      'strict'
+    )
+    let wineloaderResigned = true
+    if (!wl.ok) {
+      wineloaderResigned = false
+      logWarning(
+        `runnerClone: crossover-${build} wineloader re-sign skipped: ${wl.cause} (overlay tokens will be omitted, D-08)`,
+        LogPrefix.Steam
+      )
+      const orig = wineloader + '.gamelib-orig'
+      try {
+        // a half-signed loader must not ship
+        await fsp.copyFile(orig, wineloader)
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
+          stepFail(
+            'runner-patch',
+            `wineloader restore failed after re-sign skip: ${errText(e)}`
+          )
+        }
+      }
+      await removeInside(partial, orig)
+    }
+
     // --- scrub (runner-clone) ---
     const scrubbed = await scrubCloneXattrs(run, dest, timeouts.xattr)
     if (!scrubbed.ok) stepFail('runner-clone', scrubbed.cause)
@@ -1272,7 +1342,7 @@ async function buildRunner(
 
     // --- marker and atomic rename ---
     const marker: Marker = {
-      schema: 1,
+      schema: 2,
       crossoverBuild: build,
       cleanNtdllSha256: crossover.cleanNtdllSha256,
       patchedNtdllSha256: row.patchedSha256,
@@ -1280,6 +1350,8 @@ async function buildRunner(
       lsteamclientDllSha256: hashes[0],
       lsteamclientSoSha256: hashes[1],
       loaderSha256: await sha256File(loader),
+      wineloaderSha256: await sha256File(wineloader),
+      wineloaderResigned,
       cloneMethod,
       createdAt: new Date().toISOString()
     }
@@ -1297,7 +1369,7 @@ async function buildRunner(
       }
       throw e
     }
-    return { cloneMethod, provenanceRemaining }
+    return { cloneMethod, provenanceRemaining, wineloaderResigned }
   } finally {
     await safeRemove(runnersRoot, partial)
   }

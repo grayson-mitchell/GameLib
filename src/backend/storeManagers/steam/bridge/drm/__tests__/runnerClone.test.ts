@@ -153,6 +153,8 @@ type FakeOpts = {
   soSigned?: boolean
   stockKeys?: string[]
   forceExit?: number
+  wineloaderForceExit?: number
+  wineloaderStockKeys?: string[]
   skipDyld?: boolean
   quarantine?: boolean
   ps?: () => Partial<RunToolResult>
@@ -162,7 +164,14 @@ type Call = { tool: string; args: readonly string[] }
 
 function fakeRun(o: FakeOpts = {}) {
   const calls: Call[] = []
-  let keys = o.stockKeys ?? [...STOCK_LOADER_ENTITLEMENTS]
+  const keysBy = new Map<string, string[]>()
+  // keyed by the path under CrossOver/ because the partial dir is renamed
+  const rel = (path: string) => path.slice(path.lastIndexOf('/CrossOver/'))
+  const keysOf = (path: string) =>
+    keysBy.get(rel(path)) ??
+    (path.endsWith('/wineloader')
+      ? (o.wineloaderStockKeys ?? [...STOCK_LOADER_ENTITLEMENTS])
+      : (o.stockKeys ?? [...STOCK_LOADER_ENTITLEMENTS]))
   let cpCount = 0
   const base: RunToolResult = {
     code: 0,
@@ -205,12 +214,18 @@ function fakeRun(o: FakeOpts = {}) {
           ? { ...base, code: 0, stderr: 'Identifier=x' }
           : { ...base, code: 1, stderr: 'code object is not signed at all' }
       }
-      if (args[0] === '-d') return { ...base, stdout: entXml(keys) }
+      const target = args[args.length - 1]
+      if (args[0] === '-d') return { ...base, stdout: entXml(keysOf(target)) }
       if (args[0] === '--force') {
-        if (o.forceExit) return { ...base, code: o.forceExit }
-        keys = o.skipDyld
-          ? keys
-          : [...STOCK_LOADER_ENTITLEMENTS, DYLD_ENTITLEMENT]
+        const isWl = target.endsWith('/wineloader')
+        const exit = isWl ? o.wineloaderForceExit : o.forceExit
+        if (exit) return { ...base, code: exit }
+        keysBy.set(
+          rel(target),
+          o.skipDyld
+            ? keysOf(target)
+            : [...STOCK_LOADER_ENTITLEMENTS, DYLD_ENTITLEMENT]
+        )
         return base
       }
     }
@@ -532,7 +547,9 @@ describe('ensureRunnerClone build path', () => {
     expect(statSync(markerPath).mode & 0o777).toBe(0o600)
     const marker = JSON.parse(readFileSync(markerPath, 'utf8'))
     expect(marker).toMatchObject({
-      schema: 1,
+      schema: 2,
+      wineloaderResigned: true,
+      wineloaderSha256: expect.stringMatching(/^[0-9a-f]{64}$/),
       crossoverBuild: BUILD,
       cleanNtdllSha256: ROW.cleanSha256,
       patchedNtdllSha256: ROW.patchedSha256,
@@ -685,6 +702,44 @@ describe('ensureRunnerClone build path', () => {
     expect(res).toMatchObject({ status: 'error', step: 'runner-patch' })
   })
 
+  it('re-signs bin/wineloader too and records it (D-05)', async () => {
+    const { s, res } = await build()
+    expect(res).toMatchObject({ status: 'ok', wineloaderResigned: true })
+    const forced = s.fake.calls
+      .filter((c) => c.tool === '/usr/bin/codesign' && c.args[0] === '--force')
+      .map((c) => String(c.args[c.args.length - 1]))
+      .map((p) => p.slice(p.lastIndexOf('/CrossOver/')))
+    expect(forced).toEqual([
+      '/CrossOver/lib/wine/x86_64-unix/wine',
+      '/CrossOver/bin/wineloader'
+    ])
+  })
+
+  it('treats a wineloader re-sign failure as best effort (D-08)', async () => {
+    const { s, res } = await build({ wineloaderForceExit: 1 })
+    expect(res).toMatchObject({ status: 'ok', wineloaderResigned: false })
+    const { logWarning } = jest.requireMock('backend/logger')
+    expect(logWarning).toHaveBeenCalledWith(
+      expect.stringContaining('wineloader re-sign skipped'),
+      expect.anything()
+    )
+    const runnerDir = s.paths.runnerDir(BUILD)!
+    const marker = JSON.parse(
+      readFileSync(join(runnerDir, RUNNER_MARKER_FILE), 'utf8')
+    )
+    expect(marker.wineloaderResigned).toBe(false)
+    const wl = join(s.paths.runnerAppPath(BUILD)!, 'bin/wineloader')
+    expect(readFileSync(wl)).toEqual(
+      readFileSync(join(s.cx.cxRoot, 'bin/wineloader'))
+    )
+    expect(existsSync(wl + '.gamelib-orig')).toBe(false)
+  })
+
+  it('still fails runner-patch when the wine loader re-sign fails', async () => {
+    const { res } = await build({ forceExit: 1 })
+    expect(res).toMatchObject({ status: 'error', step: 'runner-patch' })
+  })
+
   const patchFailures: Array<[string, FakeOpts]> = [
     [
       'a loader missing disable-library-validation',
@@ -804,11 +859,11 @@ describe('verify, rebuild, prune, abort', () => {
       s.fake.run
     )
 
-  it('verify is ok on a fresh build and spawns one entitlements dump', async () => {
+  it('verify is ok on a fresh build and dumps the loader and the wineloader', async () => {
     const { s, runnerDir } = await ready()
     expect(await expectV(s, runnerDir)).toEqual({ ok: true })
-    expect(s.fake.calls).toHaveLength(1)
-    expect(s.fake.calls[0].tool).toBe('/usr/bin/codesign')
+    expect(s.fake.calls).toHaveLength(2)
+    expect(s.fake.calls.every((c) => c.tool === '/usr/bin/codesign')).toBe(true)
   })
 
   it('serves an intact clone from the cache without cp, xattr or signing', async () => {
@@ -854,6 +909,75 @@ describe('verify, rebuild, prune, abort', () => {
     const v = await expectV(s, s.paths.runnerDir(BUILD)!)
     expect((v as { reason: string }).reason).toContain('lsteamclient.dll')
     expect(await call()).toMatchObject({ status: 'ok', source: 'clone' })
+  })
+
+  describe('wineloader marker and verify (D-05)', () => {
+    const edit = (
+      runnerDir: string,
+      f: (m: Record<string, unknown>) => void
+    ) => {
+      const p = join(runnerDir, RUNNER_MARKER_FILE)
+      const m = JSON.parse(readFileSync(p, 'utf8'))
+      f(m)
+      writeFileSync(p, JSON.stringify(m))
+    }
+
+    it('rejects a schema-1 marker', async () => {
+      const { s, runnerDir } = await ready()
+      edit(runnerDir, (m) => (m.schema = 1))
+      const v = await expectV(s, runnerDir)
+      expect(v).toMatchObject({ ok: false, reason: 'marker schema mismatch' })
+    })
+
+    it('requires the dyld entitlement on a re-signed wineloader', async () => {
+      const { s, runnerDir } = await ready()
+      const run: RunTool = () =>
+        Promise.resolve({
+          code: 0,
+          stdout: entXml([...STOCK_LOADER_ENTITLEMENTS]),
+          stderr: '',
+          timedOut: false,
+          aborted: false
+        })
+      const tiered: RunTool = (tool, args, opts) =>
+        String(args[args.length - 1]).endsWith('/wineloader')
+          ? run(tool, args, opts)
+          : s.fake.run(tool, args, opts)
+      const v = await verifyRunnerClone(
+        runnerDir,
+        { crossover: s.crossover, component: s.component },
+        tiered
+      )
+      expect(v).toMatchObject({ ok: false })
+      expect((v as { reason: string }).reason).toContain(
+        'wineloader lacks entitlement'
+      )
+    })
+
+    it('passes with stock entitlements when wineloaderResigned is false', async () => {
+      const { s, runnerDir } = await ready({ wineloaderForceExit: 1 })
+      expect(await expectV(s, runnerDir)).toEqual({ ok: true })
+    })
+
+    it('fails when bin/wineloader differs from the marker hash', async () => {
+      const { s, runnerDir, cx } = await ready()
+      writeFileSync(join(cx, 'bin/wineloader'), '#!/bin/sh\necho tampered\n', {
+        mode: 0o755
+      })
+      const v = await expectV(s, runnerDir)
+      expect(v).toMatchObject({
+        ok: false,
+        reason: 'wineloader differs from marker'
+      })
+    })
+
+    it('reports wineloaderResigned from the marker on a cache hit', async () => {
+      const { call } = await ready()
+      expect(await call()).toMatchObject({
+        source: 'cache',
+        wineloaderResigned: true
+      })
+    })
   })
 
   describe('verify failures each carry a distinct reason', () => {
