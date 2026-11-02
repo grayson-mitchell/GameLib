@@ -5,6 +5,7 @@ import {
   hashIp,
   parseLimit,
   purgeExpiredBuckets,
+  rateLimitSubject,
   reserveDailyCreation
 } from '../limits'
 import { createTestD1 } from './helpers/d1Sqlite'
@@ -91,6 +92,44 @@ describe('limits', () => {
         .map((b) => b.bucket)
         .sort()
     ).toEqual(['edge', 'new'])
+  })
+
+  it('buckets IPv6 by /64 and leaves IPv4 alone (WR-02)', () => {
+    expect(rateLimitSubject('203.0.113.5')).toBe('203.0.113.5')
+    const p = '2001:0db8:0001:0002::/64'
+    for (const ip of [
+      '2001:db8:1:2::1',
+      '2001:db8:1:2:ffff:ffff:ffff:ffff',
+      '2001:DB8:1:2:0:0:0:9',
+      '2001:db8:1:2::a%en0',
+      '2001:0db8:0001:0002:0000:0000:0000:0001'
+    ]) {
+      expect(rateLimitSubject(ip)).toBe(p)
+    }
+    expect(rateLimitSubject('2001:db8:1:3::1')).not.toBe(p)
+    expect(rateLimitSubject('2001:db8::1')).toBe('2001:0db8:0000:0000::/64')
+    expect(rateLimitSubject('::1')).toBe('0000:0000:0000:0000::/64')
+    expect(rateLimitSubject('64:ff9b::192.0.2.1')).toBe(
+      '0064:ff9b:0000:0000::/64'
+    )
+    expect(rateLimitSubject('::ffff:198.51.100.7')).toBe('198.51.100.7')
+    expect(rateLimitSubject('not:an:ip::x')).toBe('not:an:ip::x')
+    expect(rateLimitSubject('1::2::3')).toBe('1::2::3')
+  })
+
+  it('shares one hourly bucket across a /64 (WR-02)', async () => {
+    const db = createTestD1()
+    for (let i = 1; i <= 10; i++) {
+      expect(
+        await checkIpLimit(db, 's', `2001:db8:1:2::${i.toString(16)}`, T0, 10)
+      ).toEqual({ ok: true })
+    }
+    expect(
+      (await checkIpLimit(db, 's', '2001:db8:1:2:dead:beef::1', T0, 10)).ok
+    ).toBe(false)
+    expect((await checkIpLimit(db, 's', '2001:db8:1:3::1', T0, 10)).ok).toBe(
+      true
+    )
   })
 
   it('propagates D1 errors', async () => {

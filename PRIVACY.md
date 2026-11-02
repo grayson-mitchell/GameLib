@@ -131,8 +131,8 @@ publishes files as GitHub release assets in `https://github.com/grayson-mitchell
   the client's User-Agent.
 
 The relay runs on Cloudflare. It sees the IP address of each request. It stores only a SHA-256 hash
-of that address, salted per day, in a rate-limit bucket that expires after about two hours, and it
-never writes the address or its hash to GitHub. For each app id, fix key and add/remove operation it
+of that address (for an IPv6 address, of its /64 network prefix), salted per day, in a rate-limit
+bucket that expires after about two hours, and it never writes the address or its hash to GitHub. For each app id, fix key and add/remove operation it
 stores a report count, first and last seen times, the last GameLib version and the number of the
 pull request or issue. It uses a GitHub App credential to open pull requests and issues on
 `grayson-mitchell/known-fixes`, which are public. Cloudflare's own handling of requests is governed
