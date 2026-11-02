@@ -201,9 +201,11 @@ describe('githubFiles', () => {
       'x-github-api-version': '2022-11-28',
       'user-agent': 'gamelib-fix-relay'
     })
+    // workerd rejects redirect: 'error'; 'manual' plus the 2xx check refuses redirects.
+    expect(fake.calls[0].redirect).toBe('manual')
   })
 
-  test.each([409, 422, 403, 429, 500, 502])(
+  test.each([301, 302, 307, 409, 422, 403, 429, 500, 502])(
     'status %i maps to GitHubUnavailableError without the token',
     async (status) => {
       const { repo } = client({

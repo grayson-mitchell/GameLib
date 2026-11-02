@@ -5,6 +5,7 @@ export interface FetchCall {
   url: string
   body: unknown
   headers: Record<string, string>
+  redirect?: string
 }
 
 export type Reply =
@@ -40,7 +41,13 @@ export function createFakeFetch(routes: Record<string, Route>) {
           body = init.body
         }
       }
-      const call: FetchCall = { method, url, body, headers }
+      const call: FetchCall = {
+        method,
+        url,
+        body,
+        headers,
+        redirect: init?.redirect
+      }
       calls.push(call)
 
       const key = `${method} ${url}`

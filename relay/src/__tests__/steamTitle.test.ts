@@ -113,14 +113,14 @@ describe('title', () => {
     })
   })
 
-  it('uses the exact URL with redirect error', async () => {
+  it('uses the exact URL with redirect manual', async () => {
     const { fetch, calls } = createFakeFetch({
       [`GET ${url('220')}`]: ok('220', 'game', 'HL2')
     })
     const spy = jest.fn(fetch)
     await lookupSteamTitle('220', spy)
     expect(spy.mock.calls[0][0]).toBe(url('220'))
-    expect(spy.mock.calls[0][1]?.redirect).toBe('error')
+    expect(spy.mock.calls[0][1]?.redirect).toBe('manual')
     expect(calls).toHaveLength(1)
   })
 })

@@ -31,7 +31,7 @@ export async function lookupSteamTitle(
     const res = await fetch(
       `https://store.steampowered.com/api/appdetails?appids=${appId}&filters=basic`,
       {
-        redirect: 'error',
+        redirect: 'manual',
         headers: {
           'User-Agent': 'gamelib-fix-relay',
           Accept: 'application/json'

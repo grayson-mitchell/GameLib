@@ -75,7 +75,7 @@ export function createRepoClient(opts: {
           'Content-Type': 'application/json'
         },
         body: body === undefined ? undefined : JSON.stringify(body),
-        redirect: 'error'
+        redirect: 'manual'
       })
     } catch {
       throw new GitHubUnavailableError(`${method} ${path} failed: network`)
