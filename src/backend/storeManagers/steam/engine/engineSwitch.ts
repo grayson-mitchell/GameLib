@@ -15,17 +15,20 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { GameSettings } from 'common/types'
 import { DXVK } from 'backend/tools'
 import {
+  bridgeBottleNameFor,
   buildFallbackGameSettings,
   getBottleDir,
   getBridgeBottleSettings,
   killBottleWineServerWith,
+  persistedWineBins,
   sanitizeBottleName
 } from '../bottle'
 import { getBottleProcessMonitorPhase } from '../bottleProcessMonitor'
 import { resolveCrossoverBinDirAsync } from '../crossoverLocation'
-import { steamBottleConfigStore } from '../electronStores'
 import { ENGINE_PINS, pinById } from './enginePins'
+import type { EnginePin } from './enginePins'
 import {
+  ensurePinnedEngine,
   isPinnedEngineInstalled,
   pinnedEnginePaths,
   pinnedEngineRoot
@@ -37,16 +40,15 @@ export const ENGINE_MARKER_FILE = '.gamelib-engine.json'
 const DXVK_VERSION_FILE = 'current_dxvk-macOS'
 const KILL_TIMEOUT_MS = 15_000
 
-/**
- * Which engine runs the DXVK restore when moving back to CrossOver. Recorded by the wave 0
- * probe in 59-01-SUMMARY.md (`dxvk_restore_engine: crossover`, `dxvk_restore_clean: yes`):
- * CrossOver removed Staging-installed DXVK cleanly and the bottle booted afterwards.
- */
-const DXVK_RESTORE_ENGINE: 'crossover' | 'staging' = 'crossover'
-const restoreEngine = (): 'crossover' | 'staging' => DXVK_RESTORE_ENGINE
-
 type MarkerKind = 'crossover' | 'pinned' | 'wine-manager'
-type EngineMarker = { kind: MarkerKind; id: string; wineserverBin: string }
+type MarkerDxvk = { dir: string; version: string } | 'failed'
+type EngineMarker = {
+  kind: MarkerKind
+  id: string
+  wineserverBin: string
+  /** Installed DXVK, or 'failed' when a switch handed the bottle over but DXVK did not install. */
+  dxvk?: MarkerDxvk
+}
 
 export interface EngineSwitchDeps {
   getMonitorPhase: (appId: string) => 'starting' | 'running' | null
@@ -60,13 +62,21 @@ export interface EngineSwitchDeps {
     engine: NonCrossoverEngine
   ) => GameSettings
   currentPinEngine: () => NonCrossoverEngine | null
+  /** Makes a pinned engine available (downloads it when absent); null when that fails. */
+  ensurePinEngine: (pin: EnginePin) => Promise<NonCrossoverEngine | null>
+  /** The title's own per-game bottle name (59-REVIEW WR-06). */
+  ownBottleName: (appId: string) => string | null
 }
 
 export type PrepareResult =
   | { ok: true; changed: boolean }
   | {
       ok: false
-      reason: 'game-running' | 'dxvk-failed' | 'invalid-bottle'
+      reason:
+        | 'game-running'
+        | 'dxvk-failed'
+        | 'invalid-bottle'
+        | 'shared-bottle'
       detail: string
     }
 
@@ -83,17 +93,31 @@ function defaultCurrentPinEngine(): NonCrossoverEngine | null {
   }
 }
 
+async function defaultEnsurePinEngine(
+  pin: EnginePin
+): Promise<NonCrossoverEngine | null> {
+  const res = await ensurePinnedEngine(pin)
+  if (!res.ok) return null
+  return {
+    wineBin: res.paths.wineBin,
+    wineserverBin: res.paths.wineserverBin,
+    label: pin.label,
+    version: pin.wine.version,
+    dxvk: { dir: res.paths.dxvkDir, version: pin.dxvk.version }
+  }
+}
+
 const defaultDeps: EngineSwitchDeps = {
   getMonitorPhase: getBottleProcessMonitorPhase,
   killWith: killBottleWineServerWith,
-  resolveCrossoverBinDir: () => {
-    const bin = steamBottleConfigStore.get_nodefault('wineVersion')?.bin
-    return resolveCrossoverBinDirAsync({ hintWineBins: bin ? [bin] : [] })
-  },
+  resolveCrossoverBinDir: () =>
+    resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() }),
   installRemove: (...args) => DXVK.installRemove(...args),
   crossoverSettings: getBridgeBottleSettings,
   fallbackSettings: buildFallbackGameSettings,
-  currentPinEngine: defaultCurrentPinEngine
+  currentPinEngine: defaultCurrentPinEngine,
+  ensurePinEngine: defaultEnsurePinEngine,
+  ownBottleName: bridgeBottleNameFor
 }
 
 function isInside(root: string, path: string): boolean {
@@ -117,11 +141,27 @@ function readMarker(bottleDir: string): EngineMarker | null {
     ) {
       return null
     }
-    return {
+    const out: EngineMarker = {
       kind: raw.kind as MarkerKind,
       id: raw.id,
       wineserverBin: raw.wineserverBin
     }
+    // T-59-60: a hand-edited dir must not steer the DLL removal list elsewhere.
+    const d: unknown = raw.dxvk
+    if (d === 'failed') {
+      out.dxvk = 'failed'
+    } else if (d && typeof d === 'object') {
+      const { dir, version } = d as { dir?: unknown; version?: unknown }
+      if (
+        typeof dir === 'string' &&
+        isInside(pinnedEngineRoot(), dir) &&
+        typeof version === 'string' &&
+        /^[A-Za-z0-9._-]{1,64}$/.test(version)
+      ) {
+        out.dxvk = { dir, version }
+      }
+    }
+    return out
   } catch {
     return null
   }
@@ -138,7 +178,12 @@ function writeMarker(bottleDir: string, marker: EngineMarker): void {
   }
 }
 
-function markerFor(next: EngineSelection): EngineMarker {
+function markerFor(next: EngineSelection, dxvk?: MarkerDxvk): EngineMarker {
+  const base = markerForBase(next)
+  return dxvk === undefined ? base : { ...base, dxvk }
+}
+
+function markerForBase(next: EngineSelection): EngineMarker {
   if (next.kind === 'crossover') {
     return {
       kind: 'crossover',
@@ -212,13 +257,54 @@ async function killPrevious(
   await deps.killWith(bottleName, bin, { USER: 'crossover' }, KILL_TIMEOUT_MS)
 }
 
+/**
+ * Where the DXVK DLL list for a restore comes from: the marker's recorded dir, else the pin the
+ * bottle was prepared with, else the current pin (downloaded when it is not on disk).
+ */
+async function resolveRestoreSource(
+  prev: EngineMarker,
+  deps: EngineSwitchDeps
+): Promise<NonCrossoverEngine | null> {
+  const pin =
+    (prev.kind === 'pinned' ? pinById(prev.id) : null) ?? ENGINE_PINS.current
+  const installed = isPinnedEngineInstalled(pin) ? pinnedEnginePaths(pin) : null
+  if (
+    prev.dxvk &&
+    prev.dxvk !== 'failed' &&
+    existsSync(join(prev.dxvk.dir, 'x64'))
+  ) {
+    return {
+      wineBin: installed?.wineBin ?? '',
+      wineserverBin: installed?.wineserverBin ?? '',
+      label: pin.label,
+      version: pin.wine.version,
+      dxvk: prev.dxvk
+    }
+  }
+  if (installed) {
+    return {
+      wineBin: installed.wineBin,
+      wineserverBin: installed.wineserverBin,
+      label: pin.label,
+      version: pin.wine.version,
+      dxvk: { dir: installed.dxvkDir, version: pin.dxvk.version }
+    }
+  }
+  return deps.ensurePinEngine(pin)
+}
+
 export async function prepareBottleForEngine(args: {
   appId: string
   bottleName: string
   next: EngineSelection
+  /** False when CrossOver cannot run (expired/missing): the restore then uses the built-in engine. */
+  crossoverHealthy?: boolean
+  /** Called once when a real engine change is about to start, before any kill or DXVK step. */
+  onSwitching?: () => void
   deps?: Partial<EngineSwitchDeps>
 }): Promise<PrepareResult> {
   const { appId, bottleName, next } = args
+  const crossoverHealthy = args.crossoverHealthy ?? true
   const deps: EngineSwitchDeps = { ...defaultDeps, ...args.deps }
   const bottleDir = getBottleDir(bottleName)
   if (sanitizeBottleName(bottleName) !== bottleName || !existsSync(bottleDir)) {
@@ -238,63 +324,119 @@ export async function prepareBottleForEngine(args: {
     }
   }
 
+  const dxvkMarkerPath = join(bottleDir, DXVK_VERSION_FILE)
+
+  // Installs the next engine's DXVK. Once the previous wineserver is gone the bottle belongs to
+  // `next`, so the marker is written on both outcomes (59-REVIEW WR-09).
+  const installNextDxvk = async (
+    n: Exclude<EngineSelection, { kind: 'crossover' }>
+  ): Promise<PrepareResult> => {
+    if (!n.dxvk) {
+      writeMarker(bottleDir, markerFor(n))
+      return { ok: true, changed: true }
+    }
+    const ok = await deps.installRemove(
+      deps.fallbackSettings(bottleName, n),
+      'dxvk',
+      'backup',
+      n.dxvk
+    )
+    if (!ok || !existsSync(dxvkMarkerPath)) {
+      writeMarker(bottleDir, markerFor(n, 'failed'))
+      return {
+        ok: false,
+        reason: 'dxvk-failed',
+        detail: `DXVK install failed for "${bottleName}"`
+      }
+    }
+    writeMarker(
+      bottleDir,
+      markerFor(n, { dir: n.dxvk.dir, version: n.dxvk.version })
+    )
+    return { ok: true, changed: true }
+  }
+
   const marker = readMarker(bottleDir)
   const prev = marker ?? inferMarker(bottleDir, deps)
   const nextMarker = markerFor(next)
   if (identityOf(prev) === identityOf(nextMarker)) {
+    if (prev.dxvk === 'failed' && next.kind !== 'crossover' && next.dxvk) {
+      // The last switch into this engine left DXVK uninstalled: retry, no wineserver kill.
+      return installNextDxvk(next)
+    }
     if (!marker) writeMarker(bottleDir, nextMarker)
     return { ok: true, changed: false }
   }
 
+  // 59-REVIEW WR-06: a legacy shared bottle holds several titles; switching its engine would
+  // kill and rewrite it under the others.
+  if (deps.ownBottleName(appId) !== bottleName) {
+    return {
+      ok: false,
+      reason: 'shared-bottle',
+      detail: `engine switch refused on shared bottle "${bottleName}" for appId ${appId}`
+    }
+  }
+
+  args.onSwitching?.()
   logInfo(
     `engine switch for "${bottleName}": ${identityOf(prev)} -> ${identityOf(nextMarker)}`,
     LogPrefix.Steam
   )
   await killPrevious(bottleName, prev, deps)
 
-  const dxvkMarkerPath = join(bottleDir, DXVK_VERSION_FILE)
-  if (next.kind !== 'crossover') {
-    if (next.dxvk) {
-      const ok = await deps.installRemove(
-        deps.fallbackSettings(bottleName, next),
-        'dxvk',
-        'backup',
-        next.dxvk
-      )
-      if (!ok || !existsSync(dxvkMarkerPath)) {
-        return {
-          ok: false,
-          reason: 'dxvk-failed',
-          detail: `DXVK install failed for "${bottleName}"`
-        }
+  if (next.kind !== 'crossover') return installNextDxvk(next)
+
+  if (existsSync(dxvkMarkerPath) || prev.dxvk !== undefined) {
+    // 59-REVIEW CR-03: a missing source is a failure that is retried, never a silent success.
+    const source = await resolveRestoreSource(prev, deps)
+    if (!source?.dxvk) {
+      return {
+        ok: false,
+        reason: 'dxvk-failed',
+        detail: `no DXVK source to restore "${bottleName}"`
       }
     }
-  } else if (existsSync(dxvkMarkerPath)) {
-    const pin = deps.currentPinEngine()
-    // installRemove needs the DLL list, which only a DXVK source dir can supply.
-    if (!pin?.dxvk) {
-      logWarning(
-        `engine switch: no DXVK source to restore from for "${bottleName}"; leaving DXVK in place`,
-        LogPrefix.Steam
-      )
+    // 59-UAT G7: the stock CrossOver settings carry the global winePrefix, not this bottle.
+    // 59-UAT G10: every CrossOver wine step on an expired bottle blocks on CodeWeavers'
+    // Expired Bottle dialog; the built-in engine never shows it, so an unhealthy CrossOver
+    // restores through the built-in engine and stops that wineserver afterwards.
+    let settings: GameSettings
+    if (crossoverHealthy) {
+      // 59-01 measurement: healthy CrossOver removed Staging-installed DXVK cleanly.
+      settings = { ...deps.crossoverSettings(appId), winePrefix: bottleDir }
     } else {
-      // 59-UAT G7: the stock CrossOver settings carry the global winePrefix,
-      // not this bottle, so installRemove checked an unrelated prefix, called
-      // it invalid and returned true with DXVK still in place. Pin the prefix
-      // to the bottle, and treat a marker that survives as a failed restore.
-      const settings = {
-        ...(restoreEngine() === 'staging'
-          ? deps.fallbackSettings(bottleName, pin)
-          : deps.crossoverSettings(appId)),
-        winePrefix: bottleDir
-      }
-      const ok = await deps.installRemove(settings, 'dxvk', 'restore', pin.dxvk)
-      if (!ok || existsSync(dxvkMarkerPath)) {
+      if (!source.wineBin || !source.wineserverBin) {
         return {
           ok: false,
           reason: 'dxvk-failed',
-          detail: `DXVK removal failed for "${bottleName}"`
+          detail: `no built-in engine to restore "${bottleName}" while CrossOver is unavailable`
         }
+      }
+      settings = {
+        ...deps.fallbackSettings(bottleName, source),
+        winePrefix: bottleDir
+      }
+    }
+    const ok = await deps.installRemove(
+      settings,
+      'dxvk',
+      'restore',
+      source.dxvk
+    )
+    if (!crossoverHealthy) {
+      await deps.killWith(
+        bottleName,
+        source.wineserverBin,
+        { USER: 'crossover' },
+        KILL_TIMEOUT_MS
+      )
+    }
+    if (!ok || existsSync(dxvkMarkerPath)) {
+      return {
+        ok: false,
+        reason: 'dxvk-failed',
+        detail: `DXVK removal failed for "${bottleName}"`
       }
     }
   }
