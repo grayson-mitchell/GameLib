@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 57 (opt-in-known-fix-sharing-via-relay) — EXECUTING
 Plan: 12 of 12
 Status: Phase complete — ready for verification
-Last activity: 2026-11-01
+Last activity: 2026-11-02 - Completed quick task 261102-ht4: SteamClient wire policy back to stub after Phase 56
 
 Progress: [██████████] 100%
 
@@ -398,6 +398,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast | Clean tiles: just-played hero art shrinks by the bar height (and its placeholder matches) so hero + bar equals neighbours' bare-art height | 2026-11-01 | 8ca8a6700 | 259 GameCard/FocusRowStrip jest pass | — |
 | 261102-fvg | Game page settings gear moved beside Play (inside .buttons, after MainButton); shown for every runner incl. Steam under the library card's rule (installed, not uninstalling, not Browser); title/aria-label from submenu.settings. | 2026-11-02 | 7032a414d | GamePage jest pass (441 tests, 9 new); live check passed (user, 2026-11-02) | [261102-fvg-in-the-game-page-add-a-settings-button-n](./quick/261102-fvg-in-the-game-page-add-a-settings-button-n/) |
 | fast | Closed todo `2026-10-26-route-steam-installs-by-platform-and-protect-authenticated-logons` as resolved by Phase 54: go-offline wrap shipped, spike completed, the steam://install routing half deliberately not built | 2026-11-02 | dcf2e752f | Verified (planning-gates 12/12) | — |
+| 261102-ht4 | SteamClient family (014/017/020/021) back to stub mode in `wire-policy.json` (pre-Phase-52 shape), manifests + shim + `bridge_dispatch.h` regenerated, generator wire-only SteamClient paths removed with a `validateManifest` guard; all 148 x64 `vt_SteamClient*` answers unchanged (only STUBCALL kind OFFPATH -> FALLBACK/STUB); table hashes b83c888ed949 -> e0eae15e3690. Todo closed | 2026-11-02 | 47224dc4f, e918ec4ab, ab11ff055 | Verified (jest 7 suites 831 tests; build-steam-bridge arm64 + x64; planning-gates 12/12) | [261102-ht4-steamclient-wire-policy-back-to-stub-aft](./quick/261102-ht4-steamclient-wire-policy-back-to-stub-aft/) |
 
 ## Deferred Items
 
