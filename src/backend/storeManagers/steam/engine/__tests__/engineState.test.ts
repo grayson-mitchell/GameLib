@@ -400,13 +400,23 @@ describe('truthful engine state (WR-02, WR-06, WR-07)', () => {
   })
   it('verdict without mode: steamstub scan is not override-eligible', () => {
     expect(isDrmModeFromVerdict({ mode: 'steamclient-layer' })).toBe(true)
-    expect(isDrmModeFromVerdict({ mode: 'tcp', drm: 'ceg' })).toBe(false)
+    expect(isDrmModeFromVerdict({ mode: 'tcp', drm: 'ceg' })).toBe(true)
     expect(isDrmModeFromVerdict({ scan: { drmWrapper: 'steamstub' } })).toBe(
       true
     )
     expect(isDrmModeFromVerdict({ drm: 'ceg' })).toBe(true)
     expect(isDrmModeFromVerdict({ scan: {} })).toBe(false)
     expect(isDrmModeFromVerdict(undefined)).toBe(false)
+  })
+  it('WR-01: a CEG verdict with persisted mode tcp is not offered the override', () => {
+    expect(
+      isDrmModeFromVerdict({
+        mode: 'tcp',
+        drm: 'ceg',
+        scan: { drmWrapper: 'none' }
+      })
+    ).toBe(true)
+    expect(isDrmModeFromVerdict({ mode: 'tcp', drm: 'none' })).toBe(false)
   })
 })
 

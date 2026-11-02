@@ -122,11 +122,12 @@ function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
 
 /**
  * WR-07: whether a persisted verdict means the engine override has no effect.
- * A persisted `mode` wins. A title installed before the mode was persisted is
- * resolved from its DRM signal: a steamstub scan, or a CEG verdict. CEG is not
- * the steamclient-layer mode (resolveBridgeMode gives tcp for it), but its
- * launch is refused, so the override has no effect there either. Read-only:
- * a page view must not write the verdict store.
+ * WR-01: a CEG verdict wins regardless of the persisted mode. The install
+ * prefetch persists `tcp` for CEG titles (resolveBridgeMode), but a CEG launch
+ * is refused, so the override has no effect there. Otherwise a persisted
+ * `mode` decides; a title installed before the mode was persisted is resolved
+ * from a steamstub scan. Read-only: a page view must not write the verdict
+ * store.
  */
 export function isDrmModeFromVerdict(
   verdict:
@@ -134,8 +135,9 @@ export function isDrmModeFromVerdict(
     | undefined
 ): boolean {
   if (!verdict) return false
+  if (verdict.drm === 'ceg') return true
   if (verdict.mode !== undefined) return verdict.mode === 'steamclient-layer'
-  return verdict.drm === 'ceg' || verdict.scan?.drmWrapper === 'steamstub'
+  return verdict.scan?.drmWrapper === 'steamstub'
 }
 
 function readOverride(appId: string, deps: EngineStateDeps): EngineOverrideId {
