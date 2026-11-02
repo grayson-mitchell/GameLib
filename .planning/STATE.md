@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60 (steam-overlay-in-bridged-games-on-macos) — EXECUTING
 Plan: 6 of 10
 Status: Ready to execute
-Last activity: 2026-11-02 - Completed quick task 261102-s32: Amazon store-exit arm-on-entry and nile post-sync publish
+Last activity: 2026-11-02 - Completed quick task 261102-sk8: store embed records SPA navigations for Back
 
 Progress: [██████████] 97%
 
@@ -404,6 +404,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast | Closed todo `2026-10-26-route-steam-installs-by-platform-and-protect-authenticated-logons` as resolved by Phase 54: go-offline wrap shipped, spike completed, the steam://install routing half deliberately not built | 2026-11-02 | dcf2e752f | Verified (planning-gates 12/12) | — |
 | 261102-ht4 | SteamClient family (014/017/020/021) back to stub mode in `wire-policy.json` (pre-Phase-52 shape), manifests + shim + `bridge_dispatch.h` regenerated, generator wire-only SteamClient paths removed with a `validateManifest` guard; all 148 x64 `vt_SteamClient*` answers unchanged (only STUBCALL kind OFFPATH -> FALLBACK/STUB); table hashes b83c888ed949 -> e0eae15e3690. Todo closed | 2026-11-02 | 47224dc4f, e918ec4ab, ab11ff055 | Verified (jest 7 suites 831 tests; build-steam-bridge arm64 + x64; planning-gates 12/12) | [261102-ht4-steamclient-wire-policy-back-to-stub-aft](./quick/261102-ht4-steamclient-wire-policy-back-to-stub-aft/) |
 | 261102-s32 | Amazon store-exit refresh: store entry arms from `startUrl` (SPA claims and hidden-embed re-entry never page-load), one `armed host=<h> via=<entry\|nav>` log line; nile `refresh()` awaits `library sync` before publishing (F3 confirmed live: pre-sync list published). | 2026-11-02 | 3c067504c, 0ae9213d6, a8a707c51 | Jest pass (176 tests, 4 suites); codecheck clean; live retest pending | [261102-s32-amazon-store-exit-refresh-arm-on-entry-a](./quick/261102-s32-amazon-store-exit-refresh-arm-on-entry-a/) |
+| 261102-sk8 | Shared store embed records SPA same-document navigations: `store_embed_take_nav_events` reads `Webview::url()` (no lock held) and `observe_live_url` pushes/moves/replaces under page-loading, suppression, nav-generation and same-origin guards, so Back works on gaming.amazon.com; Epic surface untouched. | 2026-11-02 | db6236f99, f8782dbbf | cargo test 405 pass (56 store_embed, 11 new); fmt clean; live retest pending | [261102-sk8-store-embed-records-spa-same-document-na](./quick/261102-sk8-store-embed-records-spa-same-document-na/) |
 
 ## Deferred Items
 
