@@ -122,9 +122,9 @@ describe('SteamEngineNotices', () => {
 
   it('overrideWarning cx-broken renders the broken text', () => {
     const els = render(make({ overrideWarning: 'cx-broken' }))
-    expect(els.map((e) => text(e)).join('|')).toContain(
-      "CrossOver isn't working for it. The launch may fail."
-    )
+    const all = els.map((e) => text(e)).join('|')
+    expect(all).toContain("so the game won't start on CrossOver")
+    expect(all).not.toContain('The launch may fail')
   })
 
   it('overrideWarning absent or null renders no warning notice', () => {

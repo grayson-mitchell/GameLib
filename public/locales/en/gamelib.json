@@ -613,7 +613,7 @@
                 "warning": "Unsupported — known fixes and compatibility ratings don't apply"
             },
             "overrideWarning": {
-                "cxBroken": "This game is set to CrossOver in Advanced settings, but CrossOver isn't working for it. The launch may fail. Choose Automatic to use the built-in engine instead.",
+                "cxBroken": "This game is set to CrossOver in Advanced settings, but CrossOver isn't working for it, so the game won't start on CrossOver. Fix CrossOver, or choose Automatic to use the built-in engine instead.",
                 "cxExpired": "This game is set to CrossOver in Advanced settings, but its CrossOver trial has expired. CrossOver will show its own expired-trial window when the game starts. Choose Automatic to use the built-in engine instead."
             },
             "overrideUnavailable": "The engine chosen for this game in Advanced settings is not available ({{detail}}). Choose Automatic or install it.",
@@ -626,6 +626,7 @@
             "selectionRejected": "GameLib couldn't set up {{engine}} for this game, so it did not start. Check the launch log (Settings > Logs).",
             "sharedBottle": "{{title}} is installed in GameLib's shared bridge bottle, where changing engines could stop other games. It can only run there on CrossOver. Uninstall and reinstall it to give it its own bottle.",
             "status": {
+                "creatingBottle": "Creating the game's bottle",
                 "downloading": "Downloading built-in engine ({{percent}}%)",
                 "extracting": "Unpacking built-in engine",
                 "settingUp": "Setting up built-in engine",

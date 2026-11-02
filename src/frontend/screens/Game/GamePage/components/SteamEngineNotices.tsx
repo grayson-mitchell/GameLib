@@ -101,7 +101,7 @@ const SteamEngineNotices = ({ state }: Props) => {
                 )
               : t(
                   'steam.engine.overrideWarning.cxBroken',
-                  "This game is set to CrossOver in Advanced settings, but CrossOver isn't working for it. The launch may fail. Choose Automatic to use the built-in engine instead."
+                  "This game is set to CrossOver in Advanced settings, but CrossOver isn't working for it, so the game won't start on CrossOver. Fix CrossOver, or choose Automatic to use the built-in engine instead."
                 )}
           </p>
         </div>
