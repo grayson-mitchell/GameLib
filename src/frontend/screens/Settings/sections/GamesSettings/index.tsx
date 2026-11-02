@@ -36,7 +36,8 @@ import {
   BeforeLaunchScriptPath,
   AfterLaunchScriptPath,
   NvidiaPrime,
-  SteamEngineOverride
+  SteamEngineOverride,
+  SteamOverlayOverride
 } from '../../components'
 import { TabPanel } from 'frontend/components/UI'
 import ContextProvider from 'frontend/state/ContextProvider'
@@ -266,8 +267,13 @@ export default function GamesSettings() {
         {!isSideloaded && <PreferedLanguage />}
         {/* D-14: per-game engine override, Steam titles on macOS only, never on
             the Default page. D-08: the only route to the previous pinned build. */}
+        {/* Phase 60 D-02: per-game overlay off switch; eligibility comes from
+            the backend and includes DRM-mode titles. */}
         {!isDefault && isMac && gameInfo?.runner === 'steam' && (
-          <SteamEngineOverride />
+          <>
+            <SteamEngineOverride />
+            <SteamOverlayOverride />
+          </>
         )}
       </TabPanel>
 

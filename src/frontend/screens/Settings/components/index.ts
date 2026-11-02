@@ -67,3 +67,4 @@ export { default as AllowInstallationBrokenAnticheat } from './AllowInstallation
 export { default as NvidiaPrime } from './NvidiaPrime'
 export { default as NotifyHumbleExpirations } from './NotifyHumbleExpirations'
 export { default as SteamEngineOverride } from './SteamEngineOverride'
+export { default as SteamOverlayOverride } from './SteamOverlayOverride'
