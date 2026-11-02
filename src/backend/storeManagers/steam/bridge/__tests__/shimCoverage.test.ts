@@ -288,8 +288,9 @@ describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK (51-1
     }
   })
 
-  // Phase 52: SteamClient017/014 forward to the native client (wire);
-  // remote storage 013 was never probed and stays stub.
+  // SteamClient017/014 answer locally on x64 but stay labelled wire so they
+  // raise no bridge-limited notice; remote storage 013 was never probed and
+  // stays stub.
   test('SteamClient017 and SteamClient014 are wire on x64', () => {
     for (const version of ['SteamClient017', 'SteamClient014']) {
       expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(version)?.mode).toBe('wire')
@@ -720,7 +721,7 @@ describe('evaluateShimCoverage (51-15 Task 3 acceptance check -- ELEX, 411300, W
     ]) {
       expect(result.stubbedInterfaces).not.toContain(family)
     }
-    // Phase 52: SteamClient is forwarded to the native client now.
+    // SteamClient is labelled wire in the served map: no stubbed notice.
     expect(result.stubbedInterfaces).not.toContain('SteamClient')
   })
 })

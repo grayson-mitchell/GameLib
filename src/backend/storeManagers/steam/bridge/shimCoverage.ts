@@ -229,11 +229,12 @@ export const SHIM_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
 // (BIsSubscribed, BIsSubscribedApp(411300), GetSteamID, GetAppID 411300
 // and GetPersonaName all matched; BLoggedOn returned false through the
 // Mac accessor, accepted by the operator as the existing x86 behaviour).
-// Phase 52: SteamClient017 and SteamClient014 are 'wire' -- the shim
-// forwards every non-callback ISteamClient method to the native client
-// through the helper (SteamClient() + flat SteamAPI_ISteamClient_*), so the
-// SteamStub check is answered by the genuine signed-in client. Only the
-// callback-pointer setters and SetLocalIPBinding stay local stubs. The other
+// SteamClient017/014 (like 020/021) answer locally on x64: the GetISteamXxx
+// lookups resolve to served proxies or null objects and the pipe/user calls
+// return fixed values (quick 261102-ht4: the family is stub mode in the
+// generator). They stay labelled 'wire' here so they raise no bridge-limited
+// notice (no stubbed:SteamClient verdict). The callback-pointer setters and
+// SetLocalIPBinding were always local stubs. The other
 // x64-only families stay 'stub' -- never measured, never invented.
 export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   string,

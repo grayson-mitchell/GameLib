@@ -625,6 +625,17 @@ export function validateManifest(
       }
     }
 
+    if (
+      manifest.family === STEAM_CLIENT_FAMILY &&
+      (method.mode ?? manifest.mode) === 'wire' &&
+      method.helperFallback === undefined &&
+      !method.shimLocal
+    ) {
+      errors.push(
+        `${methodCtx}: SteamClient has no wire path since Phase 56 (quick 261102-ht4): no x86 export hands out an ISteamClient and x64 answers locally -- use stub mode or helperFallback`
+      )
+    }
+
     if (method.zeroHandleParam !== undefined) {
       const zp = method.params.find((q) => q.name === method.zeroHandleParam)
       if ((method.mode ?? manifest.mode) !== 'wire') {
@@ -5390,70 +5401,6 @@ function isSteamClientVersionLookupMethod(
 }
 
 /**
- * WR-09 (52-20): the value each ISteamClient non-lookup wire method answers
- * LOCALLY for an ordinary x64 title (every x64 title since D-20). These
- * are the pre-phase answers at 7ed535984 -- CreateSteamPipe and
- * ConnectToGlobalUser were `helperFallback: 1` there. Every other
- * non-lookup method answers '0' (int32 return) or nothing (void).
- */
-export const STEAM_CLIENT_OFF_PATH_VALUES: Readonly<Record<string, string>> = {
-  CreateSteamPipe: '1',
-  ConnectToGlobalUser: '1'
-}
-
-/**
- * The x64 local-answer gate for a SteamClient-family non-lookup wire method
- * (WR-09): on x64 it returns its pre-phase local value and the wire body is
- * compiled for x86 only (D-20 removed the SteamStub entry point that used to
- * switch the wire path on). `prefix` opens the x64 branch and the `#else`;
- * `suffix` is the closing `#endif`. Both are '' for every other method.
- * Throws for a shape with no safe local value.
- */
-function steamClientOffPathGate(
-  manifest: InterfaceManifest,
-  method: MethodSignature
-): { prefix: string; suffix: string } {
-  const methodMode = method.mode ?? manifest.mode
-  if (
-    manifest.family !== STEAM_CLIENT_FAMILY ||
-    methodMode !== 'wire' ||
-    isSteamClientVersionLookupMethod(manifest, method)
-  ) {
-    return { prefix: '', suffix: '' }
-  }
-  // out-value params (CreateLocalUser's phSteamPipe) are left untouched
-  // off-path, exactly as the pre-phase stub did; out-buffer has no such
-  // precedent and needs a deliberate answer.
-  const hasOut = method.params.some((p) => p.kind === 'out-buffer')
-  if (
-    isSretReturn(method) ||
-    isStringReturn(method) ||
-    method.returnKind === 'pointer' ||
-    hasOut
-  ) {
-    throw new Error(
-      `SteamClient wire method ${manifest.interface}.${method.name} has no x64 local value: ` +
-        `sret, string, pointer returns and out-buffer params need a deliberate local answer`
-    )
-  }
-  let value = ''
-  if (method.returnKind !== 'void') {
-    const entry = STEAM_CLIENT_OFF_PATH_VALUES[method.name]
-    value = ` ${entry ?? (method.returnKind === 'int64' ? '0LL' : '0')}`
-  }
-  const site = stubCallSite(manifest, method, 'OFFPATH')
-  return {
-    prefix:
-      `#if defined(__x86_64__)\n` +
-      `${site.decl}` +
-      `${site.call}` +
-      `  return${value};\n` +
-      `#else\n`,
-    suffix: `#endif\n`
-  }
-}
-
-/**
  * Emits a GetISteamXxx version-lookup stub: looks up `pchVersion` in
  * `g_iface_table` via `resolve_iface_by_exact_version` (defined once,
  * where `g_iface_table` is complete -- see `emitIfaceTableAndBareAccessors`
@@ -5492,52 +5439,6 @@ function emitSteamClientVersionLookupStub(
     `  return x64_null_object_for_version(${versionParam.name});\n` +
     `#else\n` +
     `  return NULL;\n` +
-    `#endif\n` +
-    `}\n`
-  )
-}
-
-/**
- * Phase 52: the FORWARDED GetISteamXxx lookup (x86 only since D-20). Asks the native client (over
- * the wire, helper-side flat SteamAPI_ISteamClient_GetISteamXxx on
- * SteamClient()) whether it serves `pchVersion`; the helper answers a 4-byte
- * presence int (never the native pointer -- it is meaningless in the Wine
- * process). The shim hands back its existing proxy for that EXACT version
- * only when native answered non-NULL, otherwise NULL. It never fabricates an
- * answer locally on this path (T-52-02).
- *
- * D-20: x64 has no forwarded lookup; it compiles only the local answer (proxy
- * or null object). The x86 branch is the remaining 52-01 wire path, which no
- * x86 export reaches (no x86 export hands out an ISteamClient).
- */
-function emitSteamClientForwardedLookup(
-  manifest: InterfaceManifest,
-  method: MethodSignature,
-  header: string,
-  funcName: string
-): string {
-  const versionParam = method.params.find((p) => p.type === 'const char*')!
-  const realParams = method.params
-    .map((p) => `${cType(p.type)} ${p.name}`)
-    .join(', ')
-  const signatureParams = realParams
-    ? `void *self, ${realParams}`
-    : 'void *self'
-  const { decl: argBufDecl, lenExpr: argLenExpr } = packArgsBlock(method)
-  return (
-    header +
-    `static void * THISCALL ${funcName}(${signatureParams}) {\n` +
-    `  (void)self;\n` +
-    `#if defined(__x86_64__)\n` +
-    `  void *local = resolve_iface_by_exact_version(${versionParam.name});\n` +
-    `  return local != NULL ? local : x64_null_object_for_version(${versionParam.name});\n` +
-    `#else\n` +
-    `${argBufDecl}\n` +
-    `  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;\n` +
-    `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;\n` +
-    `  memcpy(&present, retbuf, 4);\n` +
-    `  if (present == 0) return NULL;\n` +
-    `  return resolve_iface_by_exact_version(${versionParam.name});\n` +
     `#endif\n` +
     `}\n`
   )
@@ -5838,11 +5739,6 @@ function emitVtableStubBody(
   // helperFallback/stub/wire) because an ISteamClient GetISteamXxx
   // accessor is never any of those; it always resolves by version string.
   if (isSteamClientVersionLookupMethod(manifest, method)) {
-    // Phase 52: a wire-mode lookup forwards to the native client; a
-    // stub-mode one keeps the old local lookup (unchanged for stub manifests).
-    if (methodMode === 'wire') {
-      return emitSteamClientForwardedLookup(manifest, method, header, funcName)
-    }
     return emitSteamClientVersionLookupStub(method, header, funcName)
   }
 
@@ -5899,10 +5795,6 @@ function emitVtableStubBody(
   }
 
   const { decl: argBufDecl, lenExpr: argLenExpr } = packArgsBlock(method)
-  const { prefix: offPathGate, suffix: offPathEnd } = steamClientOffPathGate(
-    manifest,
-    method
-  )
 
   if (stringReturn) {
     // CR-01: a register-return const char* cannot marshal a remote
@@ -5963,11 +5855,9 @@ function emitVtableStubBody(
       header +
       `static void THISCALL ${funcName}(${signatureParams}) {\n` +
       `  (void)self;\n` +
-      offPathGate +
       `${argBufDecl}\n` +
       `  uint8_t retbuf[1]; uint32_t retlen = 0;\n` +
       `  bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen);\n` +
-      offPathEnd +
       `}\n`
     )
   }
@@ -5986,13 +5876,11 @@ function emitVtableStubBody(
       header +
       `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
       `  (void)self;\n` +
-      offPathGate +
       `${argBufDecl}\n` +
       `  uint8_t retbuf[${retWidth}]; uint32_t retlen = 0;\n` +
       `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < ${retWidth}) return 0;\n` +
       `  ${returnType} ret; memcpy(&ret, retbuf, ${retWidth});\n` +
       `  return ret;\n` +
-      offPathEnd +
       `}\n`
     )
   }
@@ -6006,7 +5894,6 @@ function emitVtableStubBody(
     header +
     `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
     `  (void)self;\n` +
-    offPathGate +
     `${argBufDecl}\n` +
     `  uint8_t retbuf[${retBufSize}]; uint32_t retlen = 0;\n` +
     `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < ${retWidth}) {\n` +
@@ -6016,7 +5903,6 @@ function emitVtableStubBody(
     `  ${returnType} ret; memcpy(&ret, retbuf, ${retWidth});\n` +
     `${decodeLines.join('\n')}\n` +
     `  return ret;\n` +
-    offPathEnd +
     `}\n`
   )
 }
@@ -7563,18 +7449,6 @@ function dispatchCType(type: string): string {
   return cType(type)
 }
 
-/** Phase 52: a SteamClient GetISteamXxx lookup whose pointer return is
- * encoded on the wire as a 4-byte presence int (never the pointer). */
-function isSteamClientPresenceReturn(
-  manifest: InterfaceManifest,
-  method: MethodSignature
-): boolean {
-  return (
-    method.returnKind === 'pointer' &&
-    isSteamClientVersionLookupMethod(manifest, method)
-  )
-}
-
 /** Helper-side C type of a method's native return: `void *` for the
  * presence-encoded pointer, else the shared `cType`. */
 function dispatchReturnCType(method: MethodSignature): string {
@@ -7597,16 +7471,6 @@ function dispatchReturnWidth(
   method: MethodSignature,
   manifest?: InterfaceManifest
 ): number | null {
-  // Phase 52: an ISteamClient GetISteamXxx lookup returns a native pointer
-  // that means nothing in the Wine process -- the wire carries a 4-byte
-  // presence int instead. Every other pointer return stays refused.
-  if (
-    method.returnKind === 'pointer' &&
-    manifest !== undefined &&
-    isSteamClientPresenceReturn(manifest, method)
-  ) {
-    return 4
-  }
   switch (method.returnKind) {
     case 'void':
       return 0
@@ -7712,20 +7576,8 @@ function assertDispatchable(
   }
 }
 
-/** Phase 52 (T-52-03): ISteamClient lookups for app-scoped families are
- * refused in --identity-only mode, exactly like the direct family gate. */
-const STEAM_CLIENT_APP_SCOPED_LOOKUPS: ReadonlySet<string> = new Set([
-  'GetISteamUserStats',
-  'GetISteamRemoteStorage',
-  'GetISteamGameServerStats'
-])
-
 /** Max bytes of a game-supplied version string a FWD log line carries. */
 const FWD_VERSION_LOG_MAX_BYTES = 128
-
-function fwdLogLine(fwdName: string, tail: string): string {
-  return `      logts("FWD", "${fwdName} " ${tail});`
-}
 
 /** GameLib-authored helper header declaring gl_helper_cr_track and
  * gl_net_evidence (never a vendored Valve header; D-09). */
@@ -7787,20 +7639,10 @@ function emitDispatchCase(
   const isAppIdReport =
     manifest.family === 'SteamUtils' && method.name === 'GetAppID'
 
-  const isForwardedClient = manifest.family === STEAM_CLIENT_FAMILY
-  const fwdName = `${manifest.interface}.${method.name}`
-  const presenceReturn = isSteamClientPresenceReturn(manifest, method)
-
   const lines: string[] = []
   lines.push(
     `    case (((uint32_t)${ordinal}) << 16 | ${slot}u): { // ${manifest.interface}.${method.name}`
   )
-
-  if (isForwardedClient && STEAM_CLIENT_APP_SCOPED_LOOKUPS.has(method.name)) {
-    lines.push(
-      `      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-52-03: app-scoped family refused via ISteamClient too`
-    )
-  }
 
   if (isIdentityGatedFamily) {
     lines.push(
@@ -7817,15 +7659,9 @@ function emitDispatchCase(
     lines.push(`      }`)
   }
 
-  if (isForwardedClient) {
-    lines.push(
-      `      if (${flatVar} == NULL || ${selfVar} == NULL) { logts("FWD", "${fwdName} unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called`
-    )
-  } else {
-    lines.push(
-      `      if (${flatVar} == NULL || ${selfVar} == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called`
-    )
-  }
+  lines.push(
+    `      if (${flatVar} == NULL || ${selfVar} == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called`
+  )
 
   // 58-06: a helperCustom method hands the raw request blob to its named
   // helper function, which produces the whole response blob. It returns 0 for
@@ -8021,21 +7857,8 @@ function emitDispatchCase(
 
   // --- call + response encode ---
   const callExpr = `${flatVar}(${callArgs.join(', ')})`
-  if (presenceReturn) {
-    const versionParam = method.params.find((p) => p.type === 'const char*')!
-    lines.push(
-      `      void *result = ${callExpr};`,
-      `      int32_t present = (result != NULL) ? 1 : 0;`,
-      `      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_${versionParam.name}, fwdv, sizeof(fwdv));`,
-      `        snprintf(fwdmsg, sizeof(fwdmsg), "${fwdName} ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }`,
-      `      if (respCap < 4) { *respLen = 0; return 1; }`,
-      `      memcpy(resp, &present, 4);`,
-      `      *respLen = 4;`,
-      `      return 0;`
-    )
-  } else if (method.returnKind === 'void') {
+  if (method.returnKind === 'void') {
     lines.push(`      ${callExpr};`)
-    if (isForwardedClient) lines.push(fwdLogLine(fwdName, '"called"'))
     lines.push(`      *respLen = 0; return 0;`)
   } else if (method.returnKind === 'string') {
     lines.push(
@@ -8044,11 +7867,6 @@ function emitDispatchCase(
     )
   } else {
     const width = dispatchReturnWidth(method, manifest)
-    const fwdIntLog = isForwardedClient
-      ? [
-          `      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "${fwdName} -> %d", (int)__ret); logts("FWD", fwdmsg); }`
-        ]
-      : []
     const outValueParams = method.params.filter(
       (p) => (p.kind ?? 'value') === 'out-value'
     )
@@ -8065,7 +7883,6 @@ function emitDispatchCase(
     ) {
       lines.push(
         `      ${returnType} __ret = ${callExpr};`,
-        ...fwdIntLog,
         ...emitPolicyHooks(method),
         `      if (respCap < ${width}) { *respLen = 0; return 1; }`,
         `      memcpy(resp, &__ret, ${width});`,
@@ -8087,7 +7904,6 @@ function emitDispatchCase(
         outStructParams.reduce((sum, p) => sum + 1 + (p.structSize ?? 0), 0)
       lines.push(
         `      ${returnType} __ret = ${callExpr};`,
-        ...fwdIntLog,
         ...emitPolicyHooks(method),
         `      if (respCap < ${totalWidth}) { *respLen = 0; return 1; }`,
         `      memcpy(resp, &__ret, ${width});`

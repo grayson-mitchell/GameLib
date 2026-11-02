@@ -1871,11 +1871,6 @@ describe('gen_vtables', () => {
         ).toBeGreaterThanOrEqual(6)
       })
 
-      it('keeps the SteamStub forwarded path answering NULL on a miss (T-52-02)', () => {
-        const c = generateShimC(real, { x64NullSretInventory: realInventory })
-        expect(c).toContain('if (present == 0) return NULL;')
-      })
-
       it('rejects malformed inventories', () => {
         const bad = (e: ReturnType<typeof entry>) =>
           expect(() =>
@@ -2207,54 +2202,115 @@ describe('gen_vtables', () => {
     })
   })
 
-  describe('Phase 52: SteamClient forwarding manifests', () => {
+  describe('quick 261102-ht4: SteamClient family is stub mode', () => {
     const load = (file: string): InterfaceManifestV2 =>
       JSON.parse(readFileSync(join(SDK_DIR, file), 'utf-8'))
+    const files = [
+      'isteamclient014.manifest.json',
+      'isteamclient017.manifest.json',
+      'isteamclient020.manifest.json',
+      'isteamclient021.manifest.json'
+    ]
+    const manifests = files.map(load)
     const c17 = load('isteamclient017.manifest.json')
     const c14 = load('isteamclient014.manifest.json')
-    const localOnly = new Set([
-      'SetWarningMessageHook',
-      'DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess',
-      'DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess',
-      'Set_SteamAPI_CCheckCallbackRegisteredInProcess',
-      'SetLocalIPBinding'
-    ])
-    const strip = (n: string) => n.replace(/^DEPRECATED_/, '')
+    const shim = generateShimC([c17, c14])
 
-    it.each([
-      ['SteamClient017', c17],
-      ['SteamClient014', c14]
-    ])('%s is a wire manifest on helperInterface SteamClient', (_n, m) => {
-      expect(m.helperInterface).toBe('SteamClient')
-      expect(m.mode).toBe('wire')
-      expect(m.arches).toEqual(['x64'])
-      expect(JSON.stringify(m)).not.toContain('helperFallback')
-    })
+    const fnBody = (src: string, name: string): string => {
+      const start = src.indexOf(`${name}(`)
+      expect(start).toBeGreaterThan(-1)
+      return src.slice(start, src.indexOf('\n}\n', start))
+    }
 
-    it.each([
-      ['SteamClient017', c17],
-      ['SteamClient014', c14]
-    ])('%s forwards every method except the local-only set', (_n, m) => {
-      for (const method of m.methods) {
-        if (localOnly.has(method.name)) {
-          expect(method.mode).toBe('stub')
-          continue
-        }
-        expect(method.mode).toBe('wire')
-        expect(method.helperFlat).toBe(
-          `SteamAPI_ISteamClient_${strip(method.name)}`
-        )
-        for (const p of method.params) {
-          if (p.name === 'pchVersion') expect(p.kind).toBe('in-string')
+    // The x64 answers every title saw before this change (7ed535984).
+    const STUB_ANSWERS: Record<string, { kind: string; ret: string }> = {
+      CreateSteamPipe: { kind: 'FALLBACK', ret: ' 1' },
+      ConnectToGlobalUser: { kind: 'FALLBACK', ret: ' 1' },
+      BReleaseSteamPipe: { kind: 'STUB', ret: ' 0' },
+      CreateLocalUser: { kind: 'STUB', ret: ' 0' },
+      GetIPCCallCount: { kind: 'STUB', ret: ' 0' },
+      BShutdownIfAllPipesClosed: { kind: 'STUB', ret: ' 0' },
+      ReleaseUser: { kind: 'STUB', ret: '' },
+      RunFrame: { kind: 'STUB', ret: '' }
+    }
+
+    it('no SteamClient method carries helperFlat; only the two pipe methods are wire (helperFallback 1)', () => {
+      for (const m of manifests) {
+        expect(m.mode).toBe('stub')
+        for (const method of m.methods) {
+          expect(method.helperFlat).toBeUndefined()
+          const wired = ['CreateSteamPipe', 'ConnectToGlobalUser'].includes(
+            method.name
+          )
+          if (wired) {
+            expect(method.mode).toBe('wire')
+            expect(method.helperFallback).toBe(1)
+          } else {
+            expect(method.mode).toBeUndefined()
+          }
         }
       }
-      const create = m.methods.find((x) => x.name === 'CreateLocalUser')!
-      const pipe = create.params.find((p) => p.name === 'phSteamPipe')!
-      expect(pipe.kind).toBe('out-value')
-      expect(pipe.valueType).toBe('int32')
+    })
+
+    it('x64 non-lookup bodies return the pinned value with the pinned note kind', () => {
+      for (const iface of ['SteamClient017', 'SteamClient014']) {
+        for (const [name, want] of Object.entries(STUB_ANSWERS)) {
+          const b = fnBody(shim, `vt_${iface}_${name}`)
+          expect(b).toContain(`GAMELIB_STUBCALL_KIND_${want.kind});`)
+          if (want.ret === '') expect(b).not.toContain('return')
+          else expect(b).toContain(`\n  return${want.ret};`)
+          expect(b).not.toContain('#if')
+        }
+      }
+    })
+
+    it('every lookup resolves by exact version with the x64 null-object fallback', () => {
+      let seen = 0
+      for (const m of [c17, c14]) {
+        for (const method of m.methods) {
+          if (!/GetISteam/.test(method.name)) continue
+          if (!method.params.some((p) => p.type === 'const char*')) continue
+          const b = fnBody(shim, `vt_${m.interface}_${method.name}`)
+          expect(b).toContain('resolve_iface_by_exact_version(pchVersion)')
+          expect(b).toContain('x64_null_object_for_version(pchVersion)')
+          seen++
+        }
+      }
+      expect(seen).toBeGreaterThan(0)
+    })
+
+    it('no vt_SteamClient body contains bridge_transact(', () => {
+      const all = generateShimC(manifests)
+      const re = /static [^\n]*vt_SteamClient\d+_\w+\([^\n]*\{\n[\s\S]*?\n\}\n/g
+      let n = 0
+      for (const m of all.matchAll(re)) {
+        expect(m[0]).not.toContain('bridge_transact(')
+        n++
+      }
+      expect(n).toBeGreaterThan(100)
+    })
+
+    it('the dispatch header has no SteamClient case', () => {
+      expect(generateDispatchHeader(manifests)).not.toContain('SteamClient0')
+    })
+
+    it('generation refuses a SteamClient wire method with no helperFallback', () => {
+      const bad: InterfaceManifestV2 = JSON.parse(JSON.stringify(c17))
+      const m = bad.methods.find((x) => x.name === 'BReleaseSteamPipe')!
+      m.mode = 'wire'
+      expect(validateManifest(bad).join('\n')).toMatch(
+        /SteamClient has no wire path since Phase 56 \(quick 261102-ht4\)/
+      )
+      // the shipped manifests pass the guard
+      for (const real of manifests) {
+        expect(validateManifest(real).join('\n')).not.toContain(
+          'no wire path since Phase 56'
+        )
+      }
     })
 
     it('SteamClient014 has 29 slots equal in shape to 017 slots 0-28', () => {
+      const strip = (n: string) => n.replace(/^DEPRECATED_/, '')
       expect(c14.methods).toHaveLength(29)
       for (let i = 0; i < 29; i++) {
         const a = c14.methods[i]
@@ -2272,229 +2328,24 @@ describe('gen_vtables', () => {
       expect(ords.SteamClient014).toBe(22)
       expect(ords.SteamClient017).toBe(16)
     })
-  })
 
-  describe('Phase 52: SteamClient forwarded lookups and FWD dispatch', () => {
-    const load = (file: string): InterfaceManifestV2 =>
-      JSON.parse(readFileSync(join(SDK_DIR, file), 'utf-8'))
-    const c17 = load('isteamclient017.manifest.json')
-    const c14 = load('isteamclient014.manifest.json')
-    const shim = generateShimC([c17, c14])
-    const dispatch = generateDispatchHeader([c17, c14])
-
-    const fnBody = (src: string, name: string): string => {
-      const start = src.indexOf(`${name}(`)
-      expect(start).toBeGreaterThan(-1)
-      return src.slice(start, src.indexOf('\n}\n', start))
-    }
-    const caseBody = (name: string): string => {
-      const start = dispatch.indexOf(`// ${name}\n`)
-      expect(start).toBeGreaterThan(-1)
-      return dispatch.slice(start, dispatch.indexOf('\n    }', start))
-    }
-
-    // D-20: x64 compiles only the local answer; the wire body is x86-only.
-    const x64Slice = (b: string): string => {
-      const at = b.indexOf('#if defined(__x86_64__)')
-      const elseAt = b.indexOf('\n#else\n', at)
-      expect(at).toBeGreaterThan(-1)
-      expect(elseAt).toBeGreaterThan(at)
-      expect(b).toContain('\n#endif')
-      return b.slice(at, elseAt)
-    }
-    const assertGated = (b: string): void => {
-      const local = x64Slice(b)
-      expect(local).not.toContain('bridge_transact(')
-      expect(local).toContain('resolve_iface_by_exact_version(pchVersion)')
-      expect(local).toContain(
-        'return local != NULL ? local : x64_null_object_for_version(pchVersion);'
-      )
-      expect(b.slice(b.indexOf('\n#else\n'))).toContain(
-        'if (present == 0) return NULL;'
-      )
-    }
-
-    it.each(['SteamClient017', 'SteamClient014'])(
-      'CR-01: %s GetISteamUser answers locally on x64 with a null-object fallback',
-      (iface) => {
-        const b = fnBody(shim, `vt_${iface}_GetISteamUser`)
-        assertGated(b)
-        expect(b).toContain('resolve_iface_by_exact_version(pchVersion)')
-      }
-    )
-
-    it('CR-01: every wire GetISteam* lookup in 017 and 014 has the x64 local branch', () => {
-      let seen = 0
-      for (const m of [c17, c14]) {
-        for (const method of m.methods) {
-          if (method.mode !== 'wire') continue
-          if (!/GetISteam/.test(method.name)) continue
-          assertGated(fnBody(shim, `vt_${m.interface}_${method.name}`))
-          seen++
-        }
-      }
-      expect(seen).toBeGreaterThan(0)
-    })
-
-    // WR-09 (52-20): pre-phase local answers at 7ed535984.
-    const OFF_PATH_EXPECTED: Record<string, string> = {
-      CreateSteamPipe: ' 1',
-      ConnectToGlobalUser: ' 1',
-      BReleaseSteamPipe: ' 0',
-      CreateLocalUser: ' 0',
-      GetIPCCallCount: ' 0',
-      BShutdownIfAllPipesClosed: ' 0',
-      ReleaseUser: '',
-      RunFrame: ''
-    }
-    const assertOffPathGated = (b: string, ret: string): void => {
-      const local = x64Slice(b)
-      expect(local).toMatch(
-        new RegExp(
-          `gamelib_stubcall_note\\(gamelib_sc, [^;]*GAMELIB_STUBCALL_KIND_OFFPATH\\);\\n\\s*return${ret};$`
-        )
-      )
-      expect(local).not.toContain('bridge_transact(')
-    }
-
-    it('WR-09: every wire method of 017 and 014 answers locally on x64', () => {
-      for (const m of [c17, c14]) {
-        let nonLookups = 0
-        for (const method of m.methods) {
-          if (method.mode !== 'wire') continue
-          const b = fnBody(shim, `vt_${m.interface}_${method.name}`)
-          if (/GetISteam/.test(method.name)) {
-            assertGated(b)
-            continue
-          }
-          expect(OFF_PATH_EXPECTED).toHaveProperty(method.name)
-          assertOffPathGated(b, OFF_PATH_EXPECTED[method.name])
-          nonLookups++
-        }
-        expect(nonLookups).toBe(8)
-      }
-    })
-
-    it('WR-09: a non-SteamClient wire method has no SteamStub flag', () => {
-      const out = generateShimC([isteamuser])
-      expect(out).not.toContain(RETIRED_FLAG)
-    })
-
-    it('WR-09: generation refuses a SteamClient non-lookup wire method with no off-path value', () => {
-      const bad: InterfaceManifestV2 = JSON.parse(JSON.stringify(c17))
-      const m = bad.methods.find((x) => x.name === 'CreateSteamPipe')!
-      m.returnKind = 'pointer'
-      expect(() => generateShimC([bad])).toThrow(
-        /SteamClient017\.CreateSteamPipe/
-      )
-    })
-
-    it('WR-09: committed steam_api_shim.c gates all 16 non-lookup functions', () => {
-      const committed = readFileSync(
-        join(
-          __dirname,
-          '..',
-          '..',
-          'native',
-          'steam-bridge',
-          'generated',
-          'steam_api_shim.c'
-        ),
-        'utf-8'
-      )
-      let seen = 0
-      for (const iface of ['SteamClient017', 'SteamClient014']) {
-        for (const [name, ret] of Object.entries(OFF_PATH_EXPECTED)) {
-          assertOffPathGated(fnBody(committed, `vt_${iface}_${name}`), ret)
-          seen++
-        }
-      }
-      expect(seen).toBe(16)
-    })
-
-    it('CR-01: committed steam_api_shim.c keeps the null-object fallback for ordinary titles', () => {
-      const committed = readFileSync(
-        join(
-          __dirname,
-          '..',
-          '..',
-          'native',
-          'steam-bridge',
-          'generated',
-          'steam_api_shim.c'
-        ),
-        'utf-8'
-      )
-      for (const name of [
-        'vt_SteamClient017_GetISteamMatchmaking',
-        'vt_SteamClient017_GetISteamUser',
-        'vt_SteamClient017_GetISteamUtils',
-        'vt_SteamClient014_GetISteamMatchmaking'
-      ]) {
-        const b = fnBody(committed, name)
-        assertGated(b)
-        expect(b).toContain('x64_null_object_for_version(')
-      }
-    })
-
-    it('a stub-mode SteamClient GetISteam* keeps the old local lookup', () => {
-      const stubbed: InterfaceManifestV2 = JSON.parse(JSON.stringify(c17))
-      stubbed.interface = 'SteamClient017'
-      const m = stubbed.methods.find((x) => x.name === 'GetISteamUser')!
-      m.mode = 'stub'
-      delete m.helperFlat
-      const out = generateShimC([stubbed])
-      const b = fnBody(out, 'vt_SteamClient017_GetISteamUser')
+    it('a stub-mode SteamClient GetISteam* keeps the local lookup', () => {
+      const b = fnBody(shim, 'vt_SteamClient017_GetISteamUser')
       expect(b).toContain('x64_null_object_for_version(')
       expect(b).not.toContain(RETIRED_FLAG)
       expect(b).not.toContain('bridge_transact(')
     })
 
-    it('encodes a pointer return as a 4-byte presence int', () => {
-      const b = caseBody('SteamClient017.GetISteamUser')
-      expect(b).toContain('int32_t present = (result != NULL) ? 1 : 0;')
-      expect(b).toContain('memcpy(resp, &present, 4);')
-      expect(b).toContain('*respLen = 4;')
-      expect(b).toContain('native=%s')
-    })
-
-    it('still refuses a pointer return outside the SteamClient lookup family', () => {
+    it('still refuses a pointer return outside the SteamClient family', () => {
       const bad: InterfaceManifestV2 = JSON.parse(JSON.stringify(isteamuser))
       const m = bad.methods.find((x) => x.name === 'GetHSteamUser')!
       m.returnKind = 'pointer'
       m.returns = 'void*'
       expect(() => generateDispatchHeader([bad])).toThrow(/unsupported/)
-
-      const bad2: InterfaceManifestV2 = JSON.parse(JSON.stringify(c17))
-      const m2 = bad2.methods.find((x) => x.name === 'GetIPCCallCount')!
-      m2.returnKind = 'pointer'
-      m2.returns = 'void*'
-      expect(() => generateDispatchHeader([bad2])).toThrow(/unsupported/)
     })
 
-    it('every SteamClient dispatch case logs a FWD line, including the unresolved branch', () => {
-      expect(dispatch).toContain(
-        'logts("FWD", "SteamClient017.GetISteamUser unresolved")'
-      )
-      expect(dispatch).toContain(
-        'logts("FWD", "SteamClient017.CreateSteamPipe unresolved")'
-      )
-      expect(caseBody('SteamClient017.CreateSteamPipe')).toContain(
-        'logts("FWD"'
-      )
-      expect(caseBody('SteamClient017.ReleaseUser')).toContain('logts("FWD"')
-      expect(caseBody('SteamClient017.GetISteamUser')).toContain('logts("FWD"')
-      expect((dispatch.match(/FWD/g) ?? []).length).toBeGreaterThanOrEqual(30)
-    })
-
-    it('forward-declares logts and bounds/sanitises logged version strings', () => {
-      expect(dispatch).toContain(
-        'static void logts(const char *cat, const char *msg);'
-      )
-      expect(dispatch).toContain('static void bd_fwd_sanitize(')
-      expect(dispatch).toContain('i < 128')
-      expect(dispatch).toContain("(c >= 0x20 && c <= 0x7e) ? (char)c : '?'")
-      expect(dispatch).toContain('"(null)"')
+    it('a non-SteamClient wire method has no SteamStub flag', () => {
+      expect(generateShimC([isteamuser])).not.toContain(RETIRED_FLAG)
     })
 
     it('logs no CSteamID or 64-bit values on the SteamClient path', () => {
@@ -2503,24 +2354,6 @@ describe('gen_vtables', () => {
           expect(['uint64', 'int64', 'class']).not.toContain(method.returnKind)
         }
       }
-    })
-
-    it.each([
-      'GetISteamUserStats',
-      'GetISteamRemoteStorage',
-      'GetISteamGameServerStats'
-    ])('identity-only refuses forwarded %s (T-52-03)', (name) => {
-      const b = caseBody(`SteamClient017.${name}`)
-      expect(b.split('\n')[1]).toContain(
-        'if (g_bd_identity_only) { *respLen = 0; return 1; }'
-      )
-      expect(b).toContain('T-52-03')
-    })
-
-    it('does not gate the non-app-scoped lookups', () => {
-      expect(caseBody('SteamClient017.GetISteamUser')).not.toContain(
-        'g_bd_identity_only'
-      )
     })
 
     it('shim and dispatch table hashes agree for the real manifest set', () => {
@@ -4282,7 +4115,7 @@ describe('quick 261027-jgs: STUBCALL first-call reporting in the shim', () => {
     expect(fn(c, 'WireOnly')).not.toContain('gamelib_stubcall_note')
   })
 
-  it('SteamClient version lookups carry no report site; non-lookup wire methods carry the offpath one', () => {
+  it('SteamClient version lookups carry no report site; non-lookup methods carry the fallback/stub one', () => {
     const real017 = real.find((m) => m.interface === 'SteamClient017')!
     const c = generateShimC([real017])
     const lookup = c.match(
@@ -4290,7 +4123,9 @@ describe('quick 261027-jgs: STUBCALL first-call reporting in the shim', () => {
     )
     expect(lookup).not.toBeNull()
     expect(lookup![0]).not.toContain('gamelib_stubcall_note')
-    expect(c).toMatch(/GAMELIB_STUBCALL_KIND_OFFPATH\);\n\s*return/)
+    expect(c).toMatch(/GAMELIB_STUBCALL_KIND_FALLBACK\);\n\s*return 1;/)
+    expect(c).toMatch(/GAMELIB_STUBCALL_KIND_STUB\);\n\s*return 0;/)
+    expect(c).not.toContain('GAMELIB_STUBCALL_KIND_OFFPATH);')
   })
 
   it('rejects a non-identifier interface or method name before it becomes a C literal', () => {
