@@ -37,6 +37,7 @@ import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { parseMetacriticScore } from 'common/metacriticScore'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { isOnline } from 'backend/online_monitor'
 import { reportDetectedFix } from 'backend/knownFixReport'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
@@ -4193,6 +4194,48 @@ export default class SteamGame implements Game {
     const { recordLaunchDecision } = await import('./engine/engineState')
     const { isNonCrossover } = await import('./engine/engineTypes')
     const title = this.getGameInfo().title
+
+    // G22 (59-38): offline, a bottle on a built-in engine whose pin is absent cannot launch on
+    // any branch: a healthy CrossOver must restore DXVK from the absent pin (59-26), and an
+    // unhealthy one falls back to the current pin, which cannot be downloaded offline. The
+    // probe's result cannot change that, so refuse now instead of waiting it out. This only
+    // refuses: no engine is selected and nothing is routed or launched, so D-07/D-09 hold, and
+    // every launch that can start still probes below.
+    const { readStoredEngineOverride } = await import('./engine/engineDecision')
+    const { parseEngineOverride } = await import('./engine/engineIds')
+    const earlyOverride = parseEngineOverride(
+      readStoredEngineOverride(this.appId)
+    )
+    if (
+      !isOnline() &&
+      (earlyOverride === 'automatic' || earlyOverride === 'crossover')
+    ) {
+      const { readBottleEngineMarkerKind, restoreNeedsAbsentPin } =
+        await import('./engine/engineSwitch')
+      const { isPinnedEngineInstalled } =
+        await import('./engine/fallbackEngine')
+      const { ENGINE_PINS } = await import('./engine/enginePins')
+      if (
+        readBottleEngineMarkerKind(bottleName) === 'non-crossover' &&
+        !isPinnedEngineInstalled(ENGINE_PINS.current) &&
+        restoreNeedsAbsentPin(bottleName)
+      ) {
+        logWarning(
+          `SteamGame: appId ${this.appId} launch blocked before pre-flight: offline and the built-in engine is not installed`,
+          LogPrefix.Steam
+        )
+        this.showEngineDialog(
+          title,
+          i18next.t(
+            'gamelib:steam.engine.downloadFailed',
+            "GameLib couldn't download its built-in engine ({{reason}}). Check your connection and try again.",
+            { reason: 'offline' }
+          ),
+          'engine-download-failed'
+        )
+        return { ok: false }
+      }
+    }
 
     const decision = await decideLaunchEngine({
       appId: this.appId,

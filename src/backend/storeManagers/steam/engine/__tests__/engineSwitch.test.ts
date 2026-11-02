@@ -42,7 +42,12 @@ jest.mock('../fallbackEngine', () => ({
   ensurePinnedEngine: jest.fn()
 }))
 
-import { ENGINE_MARKER_FILE, prepareBottleForEngine } from '../engineSwitch'
+import {
+  ENGINE_MARKER_FILE,
+  prepareBottleForEngine,
+  readBottleEngineMarkerKind,
+  restoreNeedsAbsentPin
+} from '../engineSwitch'
 import type { EngineSwitchDeps } from '../engineSwitch'
 import type { EngineSelection } from '../engineTypes'
 
@@ -629,5 +634,49 @@ describe('prepareBottleForEngine ordered restore (CR-03, WR-05)', () => {
       'restore',
       { dir: '/tools/steam-engines/dxvk', version: 'v1' }
     )
+  })
+})
+
+describe('G22: read-only marker accessors', () => {
+  const seed = (m: object) =>
+    writeFileSync(join(dir, ENGINE_MARKER_FILE), JSON.stringify(m))
+  const pinnedMarker = (extra: object = {}) => ({
+    kind: 'pinned',
+    id: 'wine-staging-11.20',
+    wineserverBin: PIN_WS,
+    ...extra
+  })
+
+  test('G22: readBottleEngineMarkerKind maps kinds, null when absent or unsafe, never writes', () => {
+    expect(readBottleEngineMarkerKind(NAME)).toBeNull()
+    expect(existsSync(join(dir, ENGINE_MARKER_FILE))).toBe(false)
+    seed(pinnedMarker())
+    expect(readBottleEngineMarkerKind(NAME)).toBe('non-crossover')
+    seed({ kind: 'crossover', id: 'cx', wineserverBin: 'x' })
+    expect(readBottleEngineMarkerKind(NAME)).toBe('crossover')
+    expect(readBottleEngineMarkerKind('../escape')).toBeNull()
+    writeFileSync(join(dir, ENGINE_MARKER_FILE), '{not json')
+    expect(readBottleEngineMarkerKind(NAME)).toBeNull()
+  })
+
+  test('G22: restoreNeedsAbsentPin is true only when a restore must fetch the absent pin', () => {
+    seed(
+      pinnedMarker({
+        dxvk: { dir: '/tools/steam-engines/dxvk', version: 'v1' }
+      })
+    )
+    expect(restoreNeedsAbsentPin(NAME)).toBe(true)
+  })
+
+  test('G22: restoreNeedsAbsentPin is false when no restore is needed, the DXVK copy survives, or the marker is CrossOver', () => {
+    seed(pinnedMarker())
+    expect(restoreNeedsAbsentPin(NAME)).toBe(false)
+    const keep = join(mockState.root, 'dxvk-keep')
+    mkdirSync(join(keep, 'x64'), { recursive: true })
+    seed(pinnedMarker({ dxvk: { dir: keep, version: 'v1' } }))
+    expect(restoreNeedsAbsentPin(NAME)).toBe(false)
+    seed({ kind: 'crossover', id: 'cx', wineserverBin: 'x' })
+    expect(restoreNeedsAbsentPin(NAME)).toBe(false)
+    expect(restoreNeedsAbsentPin('../escape')).toBe(false)
   })
 })

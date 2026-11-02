@@ -114,7 +114,11 @@ import {
   decideLaunchEngine,
   preflightCrossover
 } from '../engine/engineDecision'
-import { prepareBottleForEngine } from '../engine/engineSwitch'
+import {
+  prepareBottleForEngine,
+  readBottleEngineMarkerKind,
+  restoreNeedsAbsentPin
+} from '../engine/engineSwitch'
 import { recordLaunchDecision } from '../engine/engineState'
 import {
   clearEngineSelection,
@@ -124,7 +128,11 @@ import {
   __activeLaunchDeadlineCount,
   cancelLaunchDeadline
 } from '../engine/launchDeadline'
-import { ensurePinnedEngine } from '../engine/fallbackEngine'
+import {
+  ensurePinnedEngine,
+  isPinnedEngineInstalled
+} from '../engine/fallbackEngine'
+import { isOnline } from 'backend/online_monitor'
 import { ENGINE_PINS } from '../engine/enginePins'
 import { buildFallbackGameSettings } from '../bottle'
 import { existsSync } from 'graceful-fs'
@@ -541,13 +549,16 @@ jest.mock('../engine/engineDecision', () => ({
 }))
 // Phase 59 (59-10): per-launch bottle preparation and state publishing.
 jest.mock('../engine/engineSwitch', () => ({
-  prepareBottleForEngine: jest.fn()
+  prepareBottleForEngine: jest.fn(),
+  readBottleEngineMarkerKind: jest.fn(),
+  restoreNeedsAbsentPin: jest.fn()
 }))
 jest.mock('../engine/engineState', () => ({
   recordLaunchDecision: jest.fn()
 }))
 jest.mock('../engine/fallbackEngine', () => ({
-  ensurePinnedEngine: jest.fn()
+  ensurePinnedEngine: jest.fn(),
+  isPinnedEngineInstalled: jest.fn()
 }))
 
 // ── backend/launcher.ts mock — runWineCommand, dynamically imported by
@@ -13677,6 +13688,71 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ).toBe(true)
       expect(getEngineSelection(ID)).toBeUndefined()
       expect(runWineCommand).not.toHaveBeenCalled()
+    })
+
+    describe('G22: offline refusal before the pre-flight probe', () => {
+      const blocked = (over: Record<string, unknown> = {}) => {
+        const o = {
+          online: false,
+          override: undefined as unknown,
+          kind: 'non-crossover',
+          pinInstalled: false,
+          needsPin: true,
+          ...over
+        }
+        ;(isOnline as jest.Mock).mockReturnValue(o.online)
+        ;(
+          jest.requireMock('../engine/engineDecision')
+            .readStoredEngineOverride as jest.Mock
+        ).mockReturnValue(o.override)
+        ;(readBottleEngineMarkerKind as jest.Mock).mockReturnValue(o.kind)
+        ;(isPinnedEngineInstalled as jest.Mock).mockReturnValue(o.pinInstalled)
+        ;(restoreNeedsAbsentPin as jest.Mock).mockReturnValue(o.needsPin)
+        engineDialog().mockClear()
+      }
+
+      it('G22: offline with the pin absent refuses without probing', async () => {
+        blocked()
+        expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+        expect(decideLaunchEngine).not.toHaveBeenCalled()
+        expect(engineDialog()).toHaveBeenCalledTimes(1)
+        expect(engineDialog().mock.calls[0][0].message).toContain(
+          'downloadFailed'
+        )
+        expect(
+          infoMessages().some((m) => m.includes('tag=engine-download-failed'))
+        ).toBe(true)
+        expect(getEngineSelection(ID)).toBeUndefined()
+        expect(prepareBottleForEngine).not.toHaveBeenCalled()
+        expect(runWineCommand).not.toHaveBeenCalled()
+        const warn = jest.requireMock('backend/logger').logWarning as jest.Mock
+        expect(
+          warn.mock.calls.some((c) =>
+            String(c[0]).includes(
+              `appId ${ID} launch blocked before pre-flight: offline and the built-in engine is not installed`
+            )
+          )
+        ).toBe(true)
+      })
+
+      it('G22: a CrossOver override is refused the same way', async () => {
+        blocked({ override: 'crossover' })
+        expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+        expect(decideLaunchEngine).not.toHaveBeenCalled()
+      })
+
+      it.each([
+        ['online', { online: true }],
+        ['pin installed', { pinInstalled: true }],
+        ['CrossOver marker', { kind: 'crossover' }],
+        ['no marker', { kind: null }],
+        ['restore needs no pin', { needsPin: false }],
+        ['pinned override', { override: 'pinned:wine-staging-11.20' }]
+      ])('G22: %s still runs decideLaunchEngine', async (_n, over) => {
+        blocked(over)
+        await new SteamGame(ID).launch({} as any)
+        expect(decideLaunchEngine).toHaveBeenCalledTimes(1)
+      })
     })
 
     it('a CrossOver override on an expired bottle passes crossoverHealthy:false (G10)', async () => {

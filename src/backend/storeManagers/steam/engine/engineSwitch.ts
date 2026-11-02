@@ -126,6 +126,55 @@ function isInside(root: string, path: string): boolean {
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
 }
 
+/**
+ * G22 (59-38): read-only view of the bottle's engine marker for the launch path. Never infers
+ * or writes a marker; null for an absent/unreadable marker or an unsafe bottle name.
+ */
+export function readBottleEngineMarkerKind(
+  bottleName: string
+): 'crossover' | 'non-crossover' | null {
+  try {
+    if (sanitizeBottleName(bottleName) !== bottleName) return null
+    const marker = readMarker(getBottleDir(bottleName))
+    if (!marker) return null
+    return marker.kind === 'crossover' ? 'crossover' : 'non-crossover'
+  } catch {
+    return null
+  }
+}
+
+/**
+ * G22 (59-38): true when switching this bottle back to a HEALTHY CrossOver would have to
+ * download a pin that is not installed (the same conditions resolveRestoreSource and
+ * prepareBottleForEngine use, read-only). False whenever the restore needs no pin download,
+ * and for any unreadable state.
+ */
+export function restoreNeedsAbsentPin(bottleName: string): boolean {
+  try {
+    if (sanitizeBottleName(bottleName) !== bottleName) return false
+    const bottleDir = getBottleDir(bottleName)
+    const prev = readMarker(bottleDir)
+    if (!prev || prev.kind === 'crossover') return false
+    const restoreNeeded =
+      existsSync(join(bottleDir, DXVK_VERSION_FILE)) || prev.dxvk !== undefined
+    if (!restoreNeeded) return false
+    const pin =
+      (prev.kind === 'pinned' ? pinById(prev.id) : null) ?? ENGINE_PINS.current
+    if (isPinnedEngineInstalled(pin)) return false
+    // A healthy CrossOver restores from the marker's own DXVK copy without the pin.
+    if (
+      prev.dxvk &&
+      prev.dxvk !== 'failed' &&
+      existsSync(join(prev.dxvk.dir, 'x64'))
+    ) {
+      return false
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 function readMarker(bottleDir: string): EngineMarker | null {
   try {
     const raw = JSON.parse(
