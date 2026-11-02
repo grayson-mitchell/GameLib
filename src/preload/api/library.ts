@@ -6,13 +6,7 @@ export const uninstall = makeHandlerInvoker('uninstall')
 export const repair = makeHandlerInvoker('repair')
 export const launch = makeHandlerInvoker('launch')
 export const importGame = makeHandlerInvoker('importGame')
-const gameStatusSlot = frontendListenerSlot('gameStatusUpdate')
-export const handleGameStatus: typeof gameStatusSlot = (listener) =>
-  gameStatusSlot((e, ...args) => {
-    const p = args[0]
-    window.api?.logInfo?.(`[g1-trace] preload slot app=${p?.appName} status=${p?.status} context=${p?.context}`)
-    listener(e, ...args)
-  })
+export const handleGameStatus = frontendListenerSlot('gameStatusUpdate')
 export const onProgressUpdate = frontendListenerSlot('progressUpdate')
 export const handleInstallGame = frontendListenerSlot('installGame')
 export const handleRefreshLibrary = frontendListenerSlot('refreshLibrary')
