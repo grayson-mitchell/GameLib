@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60 (steam-overlay-in-bridged-games-on-macos) — EXECUTING
 Plan: 10 of 10
 Status: Executing Phase 60
-Last activity: 2026-11-03 - Completed quick task 261103-wtm: DXVK restore drops wineboot -u on an engine flip and batches the override deletes (CrossOver gate passed)
+Last activity: 2026-11-03 - Completed quick task 261103-x0l: preflight refuses a bare tauri:dev:run (no secret-store arm)
 
 Progress: [██████████] 100%
 
@@ -419,6 +419,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261103-wci | Steam overlay now injected on the Phase 59 fallback engine (D-07): plain env vars (shim-first DYLD_INSERT_LIBRARIES + 3 app-ID vars) from one shared builder with the CX_ENV form; no clone/re-sign; fail-open. 60-UAT item 9 live gate added (item 8 superseded). | 2026-11-03 | d43f83c50 | Jest pass (steam dir 4447 tests), codecheck pass; 60-UAT item 9 live gate passed (Planet Crafter 1284190; 1 attach, draws and takes clicks) | [261103-wci-inject-steam-overlay-on-the-phase-59-fal](./quick/261103-wci-inject-steam-overlay-on-the-phase-59-fal/) |
 | 261103-wjs | Ten pre-existing jest failures fixed on their merits: gilrs crates pinned, i18n baseline + gate scope re-pinned (25 files promoted, 5 declared debt), installer stderr log exempted, 4 moved-code gates re-pointed, sidecar suites pinned to linux (no real `open steam://` on Mac), macArch recovery mocked; plus themeTokens from 813187cdc. | 2026-11-03 | 3a27f4e59 | Full jest green: 754 suites, 17364 tests pass | [261103-wjs-fix-the-ten-jest-suites-failing-on-main-](./quick/261103-wjs-fix-the-ten-jest-suites-failing-on-main-/) |
 | 261103-wtm | DXVK strict restore (engine switch) removes the DLLs before its first wine process so the flip's automatic prefix update restores the stock DLLs; `wineboot -u` only when one is still missing; per-DLL reg deletes batched into one `reg import` + one verifying `reg query`. G30 follow-ups; todo closed. | 2026-11-03 | ff82f781f | CrossOver gate passed on throwaway bottle (stock DLLs present at import exit, overrides gone); Jest 24 suites / 463 tests pass; in-app flip not watched | [261103-wtm-dxvk-restore-drop-wineboot-and-batch-ov](./quick/261103-wtm-dxvk-restore-drop-wineboot-and-batch-ov/) |
+| 261103-x0l | Dev preflight refuses a bare `pnpm tauri:dev:run` (the cause of a Keychain prompt on every dev launch): the boot must carry `GAMELIB_DEV_SECRET_VAULT=1` (`pnpm tauri:dev`) or the new explicit `GAMELIB_DEV_KEYRING=1` (`pnpm tauri:dev:keyring`); exact `'1'` only. README notes the opt-in. | 2026-11-03 | 6c17aa7f4 | Meta jest 60 suites / 2191 tests pass; CLI checked: bare exit 1, vault and keyring arms OK | [261103-x0l-preflight-guard-refuse-tauri-dev-run-wit](./quick/261103-x0l-preflight-guard-refuse-tauri-dev-run-wit/) |
 
 ## Deferred Items
 
