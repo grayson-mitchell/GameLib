@@ -132,7 +132,7 @@ import {
   ensurePinnedEngine,
   isPinnedEngineInstalled
 } from '../engine/fallbackEngine'
-import { isOnline } from 'backend/online_monitor'
+import { checkConnectivityNow } from 'backend/connectivityNow'
 import { ENGINE_PINS } from '../engine/enginePins'
 import { buildFallbackGameSettings } from '../bottle'
 import { existsSync } from 'graceful-fs'
@@ -303,6 +303,11 @@ jest.mock('../user', () => ({
     acquireAuthenticated: jest.fn(),
     acquireOpenAuthenticated: jest.fn()
   }
+}))
+// G25: the fresh connectivity check taken at Play. Default (set in the file-level
+// beforeEach, since resetMocks wipes it) is online.
+jest.mock('backend/connectivityNow', () => ({
+  checkConnectivityNow: jest.fn()
 }))
 jest.mock('backend/online_monitor', () => ({
   runOnceWhenOnline: jest.fn(),
@@ -596,7 +601,8 @@ jest.mock('../engine/engineDecision', () => ({
   decideCreationEngine: jest.fn(),
   decideLaunchEngine: jest.fn(),
   preflightCrossover: jest.fn(),
-  readStoredEngineOverride: jest.fn()
+  readStoredEngineOverride: jest.fn(),
+  isCrossoverMissing: jest.fn()
 }))
 // Phase 59 (59-10): per-launch bottle preparation and state publishing.
 jest.mock('../engine/engineSwitch', () => ({
@@ -2111,6 +2117,14 @@ beforeEach(() => {
   // bridge launch test keeps launching on CrossOver.
   ;(preflightCrossover as jest.Mock).mockResolvedValue(HEALTHY_PREFLIGHT)
   ;(decideLaunchEngine as jest.Mock).mockResolvedValue(cxDecision())
+  ;(checkConnectivityNow as jest.Mock).mockResolvedValue({
+    offline: false,
+    source: 'dns-ok',
+    elapsedMs: 0
+  })
+  ;(
+    jest.requireMock('../engine/engineDecision').isCrossoverMissing as jest.Mock
+  ).mockResolvedValue(false)
   ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
     ok: true,
     changed: false
@@ -2417,7 +2431,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const game = new SteamGame(APP_ID)
     const result = await game.launch({} as any)
 
-    expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
+    expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID, {
+      offline: false
+    })
     expect(placeShimForGame).toHaveBeenCalledWith(
       APP_ID,
       RESOLVED_EXE_PATH,
@@ -14581,13 +14597,22 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       const blocked = (over: Record<string, unknown> = {}) => {
         const o = {
           online: false,
+          cxMissing: false,
           override: undefined as unknown,
           kind: 'non-crossover',
           pinInstalled: false,
           needsPin: true,
           ...over
         }
-        ;(isOnline as jest.Mock).mockReturnValue(o.online)
+        ;(checkConnectivityNow as jest.Mock).mockResolvedValue({
+          offline: !o.online,
+          source: o.online ? 'dns-ok' : 'dns-failed',
+          elapsedMs: 0
+        })
+        ;(
+          jest.requireMock('../engine/engineDecision')
+            .isCrossoverMissing as jest.Mock
+        ).mockResolvedValue(o.cxMissing)
         ;(
           jest.requireMock('../engine/engineDecision')
             .readStoredEngineOverride as jest.Mock
@@ -14626,6 +14651,63 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         blocked({ override: 'crossover' })
         expect(await new SteamGame(ID).launch({} as any)).toBe(false)
         expect(decideLaunchEngine).not.toHaveBeenCalled()
+      })
+
+      it('G25: the bridge launch checks connectivity once, before resolveBridgeLaunchExe, and passes offline', async () => {
+        blocked({ online: false, needsPin: false, kind: 'crossover' })
+        await new SteamGame(ID).launch({} as any)
+        expect(checkConnectivityNow).toHaveBeenCalledTimes(1)
+        expect(checkConnectivityNow).toHaveBeenCalledWith(`launch ${ID}`)
+        expect(
+          (checkConnectivityNow as jest.Mock).mock.invocationCallOrder[0]
+        ).toBeLessThan(
+          (resolveBridgeLaunchExe as jest.Mock).mock.invocationCallOrder[0]
+        )
+        expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(ID, {
+          offline: true
+        })
+      })
+
+      it('G25: UAT 34 run 1, CrossOver missing with the DXVK copy present, is refused before the probe', async () => {
+        blocked({ cxMissing: true, needsPin: false })
+        expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+        expect(decideLaunchEngine).not.toHaveBeenCalled()
+        expect(engineDialog()).toHaveBeenCalledTimes(1)
+        expect(engineDialog().mock.calls[0][0].message).toContain(
+          'downloadFailed'
+        )
+        const warn = jest.requireMock('backend/logger').logWarning as jest.Mock
+        expect(
+          warn.mock.calls.some(
+            (c) =>
+              String(c[0]).includes(
+                `appId ${ID} launch blocked before pre-flight`
+              ) && String(c[0]).endsWith('(crossover-missing)')
+          )
+        ).toBe(true)
+        expect(getEngineSelection(ID)).toBeUndefined()
+        expect(runWineCommand).not.toHaveBeenCalled()
+      })
+
+      it('G25: CrossOver missing with a CrossOver override still reaches decideLaunchEngine', async () => {
+        blocked({ cxMissing: true, needsPin: false, override: 'crossover' })
+        await new SteamGame(ID).launch({} as any)
+        expect(decideLaunchEngine).toHaveBeenCalledTimes(1)
+      })
+
+      it('G25: UAT 34 run 2, CrossOver present with the DXVK copy, still runs decideLaunchEngine once', async () => {
+        blocked({ cxMissing: false, needsPin: false })
+        await new SteamGame(ID).launch({} as any)
+        expect(decideLaunchEngine).toHaveBeenCalledTimes(1)
+      })
+
+      it('G25: fresh online never calls isCrossoverMissing', async () => {
+        blocked({ online: true, cxMissing: true })
+        await new SteamGame(ID).launch({} as any)
+        expect(
+          jest.requireMock('../engine/engineDecision').isCrossoverMissing
+        ).not.toHaveBeenCalled()
+        expect(decideLaunchEngine).toHaveBeenCalledTimes(1)
       })
 
       it.each([

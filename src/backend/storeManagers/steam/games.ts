@@ -37,7 +37,7 @@ import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { parseMetacriticScore } from 'common/metacriticScore'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { isOnline } from 'backend/online_monitor'
+import { checkConnectivityNow } from 'backend/connectivityNow'
 import { reportDetectedFix } from 'backend/knownFixReport'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
@@ -4014,7 +4014,7 @@ export default class SteamGame implements Game {
         }
       }
     }
-    await shell.openExternal(url, { activate: false })
+    await shell.openExternal(url)
     return true
   }
 
@@ -4254,7 +4254,8 @@ export default class SteamGame implements Game {
    * re-reads the settings so every later spawn uses the registered engine.
    */
   private async selectLaunchEngine(
-    current: GameSettings
+    current: GameSettings,
+    connectivity: { offline: boolean }
   ): Promise<{ ok: true; settings: GameSettings } | { ok: false }> {
     const bottleName = current.wineCrossoverBottle
     const { decideLaunchEngine } = await import('./engine/engineDecision')
@@ -4265,19 +4266,21 @@ export default class SteamGame implements Game {
     const { isNonCrossover } = await import('./engine/engineTypes')
     const title = this.getGameInfo().title
 
-    // G22 (59-38): offline, a bottle on a built-in engine whose pin is absent cannot launch on
-    // any branch: a healthy CrossOver must restore DXVK from the absent pin (59-26), and an
-    // unhealthy one falls back to the current pin, which cannot be downloaded offline. The
-    // probe's result cannot change that, so refuse now instead of waiting it out. This only
-    // refuses: no engine is selected and nothing is routed or launched, so D-07/D-09 hold, and
-    // every launch that can start still probes below.
-    const { readStoredEngineOverride } = await import('./engine/engineDecision')
+    // G22/G25: offline, some launches cannot start on any branch: CrossOver missing needs the
+    // current pin downloaded, and a built-in-engine bottle whose restore needs the absent pin
+    // cannot restore under a healthy CrossOver (59-26). The probe's result cannot change that,
+    // so refuse now instead of waiting it out. The offline reading is a fresh check taken at
+    // Play (the monitor status can be stale, 59-40 diagnosis). This only refuses: no engine is
+    // selected and nothing is routed or launched, so D-07/D-09 hold, and every launch that can
+    // start still probes below.
+    const { readStoredEngineOverride, isCrossoverMissing } =
+      await import('./engine/engineDecision')
     const { parseEngineOverride } = await import('./engine/engineIds')
     const earlyOverride = parseEngineOverride(
       readStoredEngineOverride(this.appId)
     )
     if (
-      !isOnline() &&
+      connectivity.offline &&
       (earlyOverride === 'automatic' || earlyOverride === 'crossover')
     ) {
       const { readBottleEngineMarkerKind, restoreNeedsAbsentPin } =
@@ -4285,13 +4288,19 @@ export default class SteamGame implements Game {
       const { isPinnedEngineInstalled } =
         await import('./engine/fallbackEngine')
       const { ENGINE_PINS } = await import('./engine/enginePins')
-      if (
-        readBottleEngineMarkerKind(bottleName) === 'non-crossover' &&
-        !isPinnedEngineInstalled(ENGINE_PINS.current) &&
-        restoreNeedsAbsentPin(bottleName)
-      ) {
+      const { offlineLaunchCertainlyBlocked } =
+        await import('./engine/offlineRefusal')
+      const refusal = offlineLaunchCertainlyBlocked({
+        offline: connectivity.offline,
+        override: earlyOverride,
+        crossoverMissing: await isCrossoverMissing(),
+        markerKind: readBottleEngineMarkerKind(bottleName),
+        currentPinInstalled: isPinnedEngineInstalled(ENGINE_PINS.current),
+        restoreNeedsAbsentPin: restoreNeedsAbsentPin(bottleName)
+      })
+      if (refusal.blocked) {
         logWarning(
-          `SteamGame: appId ${this.appId} launch blocked before pre-flight: offline and the built-in engine is not installed`,
+          `SteamGame: appId ${this.appId} launch blocked before pre-flight: offline and the built-in engine is not installed (${refusal.arm})`,
           LogPrefix.Steam
         )
         this.showEngineDialog(
@@ -4837,7 +4846,12 @@ export default class SteamGame implements Game {
   }
 
   private async launchBridgeGameBody(): Promise<boolean> {
-    const exePath = await resolveBridgeLaunchExe(this.appId)
+    // G25: one fresh connectivity check at Play (the monitor can be stale); the launch-target
+    // read and the early offline refusal both use this result.
+    const connectivity = await checkConnectivityNow(`launch ${this.appId}`)
+    const exePath = await resolveBridgeLaunchExe(this.appId, {
+      offline: connectivity.offline
+    })
     if (!exePath) {
       logWarning(
         `SteamGame: could not resolve a Windows launch executable for appId ${this.appId} — not launching a bare/undefined path`,
@@ -4942,7 +4956,10 @@ export default class SteamGame implements Game {
         return false
       }
     } else {
-      const engine = await this.selectLaunchEngine(bridgeBottleSettings)
+      const engine = await this.selectLaunchEngine(
+        bridgeBottleSettings,
+        connectivity
+      )
       if (!engine.ok) {
         this.sendLaunchDone()
         return false
