@@ -64,4 +64,8 @@ result: pending
 
 ### 8. Fallback engine skipped (D-07)
 expected: Under the Phase 59 no-crossover.sb profile, a bridge launch logs `overlay=skipped reason=fallback-engine` and shows no overlay toast.
+result: skipped — superseded by item 9 (quick 261103-wci injects the overlay on the fallback engine via plain env)
+
+### 9. Fallback engine overlay via plain env (D-07, quick 261103-wci)
+expected: Run GameLib under the Phase 59 profile `.planning/phases/59-steam-engine-fallback-when-crossover-is-unavailable/wave0/no-crossover.sb` and launch a TCP-mode bridge title that runs on the fallback engine (Wine-Staging + DXVK; operator's choice, record the title and appId). The launch log has `overlay=on source=default`, `overlay=env reason=fallback-engine (D-07)` and `Wine-Staging` in the engine line, and no `GameLib overlay runner` line. Shift+Tab opens Mac Steam's overlay and it draws correctly and takes clicks (operator judgment, not screenshots; this is the winemac + DXVK-macOS/MoltenVK rendering question). `vmmap <game pid>` lists overlay_shim, steamloader and gameoverlayrenderer. Record the number of `overlay attach:` lines and whether `vmmap $(pgrep -x wineserver)` also lists gameoverlayrenderer (RESEARCH A1 multiple-attach observation; record only, it does not fail the item by itself). The game launches and no `overlay-exit-abnormal` dialog appears. Apply the bridge verified criterion strictly.
 result: pending
