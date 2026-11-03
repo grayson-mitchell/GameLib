@@ -3,6 +3,9 @@
  * `meta/tauriDevPreflight.cjs` -- `classifyShellProcesses`,
  * `parseWindowsCimJson`, `parsePsComm`, `ownDebugDir`. Pure inputs only:
  * never spawns, never reads the live process table.
+ *
+ * Quick task 261103-x0l adds `checkSecretStoreArm`, the pure env guard that
+ * refuses a bare `tauri:dev:run` (no secret-store arm chosen).
  */
 
 import path from 'node:path'
@@ -21,7 +24,8 @@ const {
   classifyShellProcesses,
   parseWindowsCimJson,
   parsePsComm,
-  ownDebugDir
+  ownDebugDir,
+  checkSecretStoreArm
 } = tauriDevPreflight
 
 describe('classifyShellProcesses', () => {
@@ -211,5 +215,61 @@ describe('ownDebugDir', () => {
     expect(
       ownDebugDir({ repoRoot: '/repo', env: { CARGO_TARGET_DIR: 'x' } })
     ).toBe(path.join('/repo', 'x', 'debug'))
+  })
+})
+
+describe('checkSecretStoreArm', () => {
+  test('Test 15: GAMELIB_DEV_SECRET_VAULT=1 -> dev-vault', () => {
+    expect(checkSecretStoreArm({ GAMELIB_DEV_SECRET_VAULT: '1' })).toEqual({
+      ok: true,
+      arm: 'dev-vault'
+    })
+  })
+
+  test('Test 16: GAMELIB_DEV_KEYRING=1 -> keyring', () => {
+    expect(checkSecretStoreArm({ GAMELIB_DEV_KEYRING: '1' })).toEqual({
+      ok: true,
+      arm: 'keyring'
+    })
+  })
+
+  test('Test 17: neither set -> fail naming both supported commands', () => {
+    const result = checkSecretStoreArm({})
+    expect(result.ok).toBe(false)
+    expect(result.message).toContain('pnpm tauri:dev')
+    expect(result.message).toContain('pnpm tauri:dev:keyring')
+    expect(result.message).toContain('GAMELIB_DEV_SECRET_VAULT')
+  })
+
+  test.each(['true', '0', '', ' 1', '1 ', 'yes'])(
+    'Test 18: GAMELIB_DEV_SECRET_VAULT=%j alone does not satisfy the guard',
+    (value) => {
+      expect(checkSecretStoreArm({ GAMELIB_DEV_SECRET_VAULT: value }).ok).toBe(
+        false
+      )
+    }
+  )
+
+  test.each(['true', '0', '', 'yes'])(
+    'Test 19: GAMELIB_DEV_KEYRING=%j alone does not satisfy the guard',
+    (value) => {
+      expect(checkSecretStoreArm({ GAMELIB_DEV_KEYRING: value }).ok).toBe(false)
+    }
+  )
+
+  test('Test 20: both set to 1 -> dev-vault wins, note says keyring ignored', () => {
+    const result = checkSecretStoreArm({
+      GAMELIB_DEV_SECRET_VAULT: '1',
+      GAMELIB_DEV_KEYRING: '1'
+    })
+    expect(result.ok).toBe(true)
+    expect(result.arm).toBe('dev-vault')
+    expect(result.note).toMatch(/keyring/i)
+    expect(result.note).toMatch(/ignored/i)
+  })
+
+  test('Test 21: undefined / null env -> fail without throwing', () => {
+    expect(checkSecretStoreArm(undefined).ok).toBe(false)
+    expect(checkSecretStoreArm(null).ok).toBe(false)
   })
 })

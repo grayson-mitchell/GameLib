@@ -58,6 +58,20 @@
  *   - an OWN debug instance already running -- Phase 46's hand-off to it is
  *     the intended behaviour between two dev builds, so this is reported as a
  *     NOTE only, never a block (D-01 scopes blocking to non-debug binaries).
+ *
+ * THE SECRET-STORE ARM GUARD (quick 261103-x0l). The operator was prompted for
+ * the macOS Keychain password on EVERY dev launch because they ran bare
+ * `pnpm tauri:dev:run`: that skips the `GAMELIB_DEV_SECRET_VAULT=1` that
+ * `pnpm tauri:dev` sets, the sidecar bootstrap takes the keyring arm, and every
+ * rebuilt unsigned dev binary re-triggers the Keychain prompt. So `main()` now
+ * first requires a DELIBERATE arm: `GAMELIB_DEV_SECRET_VAULT === '1'` (dev
+ * vault) or `GAMELIB_DEV_KEYRING === '1'` (`pnpm tauri:dev:keyring`). The
+ * keyring arm is a positive opt-in rather than `GAMELIB_DEV_SECRET_VAULT=0`
+ * because, per 260910-et3, the two live-gate contracts 260817-d61 and
+ * 260907-ov3 require the vault var be UNSET, not '0', in the keyring arm.
+ * This guard deliberately breaks the fail-safe asymmetry above: that asymmetry
+ * covers OS queries that can fail and false-red, whereas this is a
+ * deterministic env read with no failure mode, so blocking cannot false-red.
  */
 
 const { spawnSync } = require('node:child_process')
@@ -66,6 +80,8 @@ const path = require('node:path')
 
 const SHELL_BASENAME = 'gamelib-shell'
 const QUERY_TIMEOUT_MS = 20000
+const DEV_SECRET_VAULT_ENV_VAR = 'GAMELIB_DEV_SECRET_VAULT'
+const DEV_KEYRING_ENV_VAR = 'GAMELIB_DEV_KEYRING'
 
 // ---------------------------------------------------------------------------
 // Pure helpers (the tested surface). No I/O; `platform` is an explicit
@@ -252,6 +268,41 @@ function ownDebugDir({ repoRoot, env }) {
   return path.join(resolvedTargetDir, 'debug')
 }
 
+/**
+ * Require a deliberately chosen secret-store arm. Exact `=== '1'` comparison
+ * only (mirrors devSecretVault.ts guardrail (a)): no trimming, truthiness or
+ * case folding, so 'true' / '0' / '' / ' 1' never select an arm.
+ *
+ * `env` is a plain object ARGUMENT, not a spawn option -- same fake-HOME-gate
+ * rationale as `ownDebugDir`; this function never spawns anything.
+ */
+function checkSecretStoreArm(env) {
+  const vault = Boolean(env) && env[DEV_SECRET_VAULT_ENV_VAR] === '1'
+  const keyring = Boolean(env) && env[DEV_KEYRING_ENV_VAR] === '1'
+  if (vault && keyring) {
+    return {
+      ok: true,
+      arm: 'dev-vault',
+      note:
+        `${DEV_KEYRING_ENV_VAR}=1 is ignored because ${DEV_SECRET_VAULT_ENV_VAR}=1 ` +
+        `is also set -- the sidecar takes the dev-vault arm.`
+    }
+  }
+  if (vault) return { ok: true, arm: 'dev-vault' }
+  if (keyring) return { ok: true, arm: 'keyring' }
+  return {
+    ok: false,
+    message: [
+      `neither ${DEV_SECRET_VAULT_ENV_VAR}=1 nor ${DEV_KEYRING_ENV_VAR}=1 is set, so the sidecar`,
+      'would use the OS keyring and every rebuilt unsigned dev binary would re-prompt for the macOS Keychain password.',
+      'Run one of:',
+      '  pnpm tauri:dev          (dev vault, no Keychain prompts)',
+      '  pnpm tauri:dev:keyring  (real OS credential store, deliberately)',
+      '`tauri:dev:run` is the internal base script and is not meant to be run bare.'
+    ].join('\n')
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Impure collectors (untested, kept thin). Each returns `{ processes }` or
 // `{ error }` and NEVER throws out -- any spawn error, non-zero status,
@@ -386,6 +437,16 @@ function stopCommandFor(pid, platform) {
 }
 
 function main() {
+  const arm = checkSecretStoreArm(process.env)
+  if (!arm.ok) {
+    const [first, ...rest] = arm.message.split('\n')
+    console.error(`[tauri-dev-preflight] FAIL: ${first}`)
+    for (const line of rest) console.error(`  ${line}`)
+    process.exit(1)
+  }
+  console.log(`[tauri-dev-preflight] OK: secret-store arm: ${arm.arm}`)
+  if (arm.note) console.log(`[tauri-dev-preflight] NOTE: ${arm.note}`)
+
   const platform = process.platform
   const repoRoot = path.resolve(__dirname, '..')
   const debugDir = ownDebugDir({ repoRoot, env: process.env })
@@ -450,5 +511,6 @@ module.exports = {
   parseWindowsCimJson,
   parsePsComm,
   ownDebugDir,
+  checkSecretStoreArm,
   SHELL_BASENAME
 }
