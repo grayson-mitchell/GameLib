@@ -51,3 +51,11 @@ Fix each row on its own merits. For each gate failure, decide whether the gate o
 the thing that drifted, and do not loosen a gate just to make it pass (the logSecretGate,
 buildLsteamclient and appShellLayout rows each guard a specific defect). Finish with a green
 full `npx jest` run.
+
+## Resolution (2026-11-03, quick 261103-wjs)
+
+Closed by `709ad23db`, `863c8f53e`, `ed98cead3` and `3a27f4e59`. Two causes differed from the table:
+`genI18nGateScope` had 30 *more* live entries, not fewer; `steamFlows`/`skeletonFlows` were not an
+undefined seam but a real `open -g steam://…` on macOS (tests now pin `process.platform` to linux).
+A later regression in `themeTokens` (from `813187cdc`) was fixed in the same task. Full `npx jest`:
+754 suites, 17364 tests pass.
