@@ -62,8 +62,11 @@ const cancelProbing = () => {
 }
 
 // handle setting the status, dispatch events for backend and frontend, and trigger pings
-const setStatus = (newStatus: ConnectivityStatus) => {
-  logInfo(`Connectivity: ${newStatus}`, LogPrefix.Connection)
+const setStatus = (newStatus: ConnectivityStatus, source?: string) => {
+  logInfo(
+    `Connectivity: ${newStatus}${source ? ` (${source})` : ''}`,
+    LogPrefix.Connection
+  )
 
   status = newStatus
   // Whatever was probing or counting down belongs to the previous status.
@@ -215,7 +218,7 @@ export const initOnlineMonitor = () => {
   addListener(
     'connectivity-changed',
     (event, newStatus: ConnectivityStatus): void => {
-      setStatus(newStatus)
+      setStatus(newStatus, 'from renderer')
     }
   )
 
@@ -232,7 +235,7 @@ export const initOnlineMonitor = () => {
   })
 
   addListener('set-connectivity-online', () => {
-    setStatus('online')
+    setStatus('online', 'from renderer')
   })
 }
 
@@ -265,3 +268,13 @@ export const runOnceWhenOnline = (callback: () => unknown) => {
 }
 
 export const isOnline = () => status === 'online'
+
+// G25: after boot nothing in the backend re-probes while the status is 'online', so a fresh
+// offline finding (see connectivityNow.ts) hands the decision back to the ping loop (bounded
+// axios HEAD with a 10 s timeout, unref'd retry timer). That loop also brings the status back
+// to 'online' when the network returns, without waiting for the webview's 'online' event.
+// Never set 'offline' directly: nothing in the backend would ever leave it.
+export const recheckConnectivity = (reason: string, finding: string) => {
+  if (status !== 'online') return
+  setStatus('check-online', `fresh check at ${reason} found ${finding}`)
+}

@@ -359,3 +359,77 @@ describe('ordering stamps (a pull reply and a push take different routes to the 
     expect(lastPush()?.epoch).not.toBe(epochA)
   })
 })
+
+describe('G25: recheckConnectivity', () => {
+  const goOnline = async () => {
+    const monitor = await loadMonitor()
+    monitor.initOnlineMonitor()
+    newestRound()[0].answer(200)
+    await flush()
+    expect(monitor.isOnline()).toBe(true)
+    return monitor
+  }
+
+  it('G25: moves an online monitor to check-online, publishes it and starts a round', async () => {
+    const monitor = await goOnline()
+    const rounds = pending.length / 4
+
+    monitor.recheckConnectivity('launch', 'no-interface')
+    await flush()
+
+    expect(monitor.isOnline()).toBe(false)
+    expect(lastPush()).toMatchObject({ status: 'check-online', retryIn: 0 })
+    expect(pending.length / 4).toBe(rounds + 1)
+    expect(mockLogInfo).toHaveBeenCalledWith(
+      'Connectivity: check-online (fresh check at launch found no-interface)',
+      'Connection'
+    )
+  })
+
+  it('G25: recovers to online on its own when a later round answers', async () => {
+    const monitor = await goOnline()
+    monitor.recheckConnectivity('launch', 'dns-failed')
+    newestRound().forEach((ping) => ping.fail('ENOTFOUND'))
+    await flush()
+    expect(lastPush()).toMatchObject({ status: 'check-online', retryIn: 5 })
+
+    await jest.advanceTimersByTimeAsync(5000)
+    newestRound()[0].answer(200)
+    await flush()
+
+    expect(monitor.isOnline()).toBe(true)
+    expect(lastPush()).toMatchObject({ status: 'online', retryIn: 0 })
+  })
+
+  it('G25: is a no-op when the monitor is offline or already checking', async () => {
+    const monitor = await loadMonitor()
+    monitor.initOnlineMonitor()
+    // check-online (boot round in flight)
+    let count = pushes().length
+    let rounds = pending.length
+    monitor.recheckConnectivity('launch', 'no-interface')
+    expect(pushes()).toHaveLength(count)
+    expect(pending).toHaveLength(rounds)
+
+    listenerFor('connectivity-changed')({}, 'offline')
+    count = pushes().length
+    rounds = pending.length
+    monitor.recheckConnectivity('launch', 'no-interface')
+    expect(pushes()).toHaveLength(count)
+    expect(pending).toHaveLength(rounds)
+    expect(lastPush()).toMatchObject({ status: 'offline' })
+  })
+
+  it('G25: status-change log lines name their source', async () => {
+    const monitor = await loadMonitor()
+    monitor.initOnlineMonitor()
+    listenerFor('connectivity-changed')({}, 'offline')
+    listenerFor('set-connectivity-online')({})
+    expect(monitor.isOnline()).toBe(true)
+
+    const lines = mockLogInfo.mock.calls.map(([m]) => String(m))
+    expect(lines).toContain('Connectivity: offline (from renderer)')
+    expect(lines).toContain('Connectivity: online (from renderer)')
+    expect(lines).toContain('Connectivity: check-online')
+  })
+})
