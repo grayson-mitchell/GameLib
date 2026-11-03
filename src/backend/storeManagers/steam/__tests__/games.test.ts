@@ -14954,6 +14954,28 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         expect(s1).toHaveBeenCalledTimes(1)
         expect(s2).toHaveBeenCalledTimes(1)
       })
+
+      it('IN-04: two concurrent launch() calls run the bridge body once and notify once', async () => {
+        const d = deferred()
+        const spy = jest
+          .spyOn(SteamGame.prototype as any, 'launchBridgeGameBody')
+          .mockReturnValue(d.promise)
+        ;(notify as jest.Mock).mockClear()
+        try {
+          const a = new SteamGame(ID).launch({} as any)
+          const b = new SteamGame(ID).launch({} as any)
+          d.resolve(true)
+          expect(await a).toBe(true)
+          expect(await b).toBe(true)
+          expect(spy).toHaveBeenCalledTimes(1)
+          expect(notify).toHaveBeenCalledTimes(1)
+          expect((notify as jest.Mock).mock.calls[0][0].body).toContain(
+            'alreadyLaunching'
+          )
+        } finally {
+          spy.mockRestore()
+        }
+      })
     })
 
     it('a CrossOver override on an expired bottle passes crossoverHealthy:false (G10)', async () => {
