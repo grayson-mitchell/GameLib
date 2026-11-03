@@ -89,6 +89,59 @@ describe('resolveBridgeLaunchExe', () => {
     jest.mocked(getBottleSteamappsDir).mockReturnValue(BRIDGE_STEAMAPPS_DIR)
   })
 
+  it('G25: offline with a stored target skips both PICS reads and uses it', async () => {
+    jest.mocked(readBridgeVerdict).mockReturnValue({
+      launchTarget: { executable: 'Avernum4.exe', installdir: 'Avernum 4' }
+    } as any)
+
+    const result = await resolveBridgeLaunchExe(APP_ID, { offline: true })
+
+    expect(result).toBe(
+      join(BRIDGE_STEAMAPPS_DIR, 'common', 'Avernum 4', 'Avernum4.exe')
+    )
+    expect(getAnonymousPicsClient).not.toHaveBeenCalled()
+    expect(SteamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
+    expect(setBridgeLaunchTarget).not.toHaveBeenCalled()
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `offline at launch for appId ${APP_ID}, using the stored launch target without a CM logon`
+      ),
+      expect.anything()
+    )
+  })
+
+  it('G25: offline with no stored target still takes the PICS path', async () => {
+    jest.mocked(readBridgeVerdict).mockReturnValue(undefined as any)
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(206020, {
+          config: {
+            installdir: 'Avernum 4',
+            launch: { '0': { executable: 'Avernum4.exe' } }
+          }
+        })
+      }) as any
+    )
+
+    const result = await resolveBridgeLaunchExe(APP_ID, { offline: true })
+
+    expect(getAnonymousPicsClient).toHaveBeenCalledTimes(1)
+    expect(result).toBe(
+      join(BRIDGE_STEAMAPPS_DIR, 'common', 'Avernum 4', 'Avernum4.exe')
+    )
+  })
+
+  it('G25: offline with an unsafe stored installdir returns undefined', async () => {
+    jest.mocked(readBridgeVerdict).mockReturnValue({
+      launchTarget: { executable: 'x.exe', installdir: '../../etc' }
+    } as any)
+
+    const result = await resolveBridgeLaunchExe(APP_ID, { offline: true })
+
+    expect(result).toBeUndefined()
+    expect(getAnonymousPicsClient).not.toHaveBeenCalled()
+  })
+
   it('returns the WINDOWS launch entry executable (oslist filter), not a linux sibling entry', async () => {
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({

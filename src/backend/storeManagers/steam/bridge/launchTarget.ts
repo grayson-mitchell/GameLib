@@ -162,9 +162,12 @@ async function readLaunch(
  *
  * Source order (Phase 54): anonymous PICS -> an already-open authenticated
  * session -> the persisted `bridge.launchTarget`. Never a logon.
+ * Offline at launch with a stored target: the stored target only (G25) --
+ * no CM connect, so the launch does not wait for DNS to fail.
  */
 export async function resolveBridgeLaunchExe(
-  appId: string
+  appId: string,
+  opts?: { offline?: boolean }
 ): Promise<string | undefined> {
   if (!NUMERIC_APP_ID.test(appId)) {
     logWarning(
@@ -178,18 +181,31 @@ export async function resolveBridgeLaunchExe(
     let launch: WindowsLaunch | undefined
     let fromPics = false
 
+    if (opts?.offline) {
+      const storedOffline = readBridgeVerdict(appId)?.launchTarget
+      if (storedOffline) {
+        logInfo(
+          `resolveBridgeLaunchExe: offline at launch for appId ${appId}, using the stored launch target without a CM logon`,
+          LogPrefix.Steam
+        )
+        launch = storedOffline
+      }
+    }
+
     let anonymous: Awaited<ReturnType<typeof getAnonymousPicsClient>> = null
-    try {
-      anonymous = await withTimeout(
-        getAnonymousPicsClient('launch-target'),
-        STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS,
-        'resolveBridgeLaunchExe anonymous connect'
-      )
-    } catch (err) {
-      logWarning(
-        `resolveBridgeLaunchExe: anonymous connect failed for appId ${appId}: ${String(err)}`,
-        LogPrefix.Steam
-      )
+    if (!launch) {
+      try {
+        anonymous = await withTimeout(
+          getAnonymousPicsClient('launch-target'),
+          STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS,
+          'resolveBridgeLaunchExe anonymous connect'
+        )
+      } catch (err) {
+        logWarning(
+          `resolveBridgeLaunchExe: anonymous connect failed for appId ${appId}: ${String(err)}`,
+          LogPrefix.Steam
+        )
+      }
     }
 
     if (anonymous) {
