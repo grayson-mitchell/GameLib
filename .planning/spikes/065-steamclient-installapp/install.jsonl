@@ -1,0 +1,5 @@
+{"step":"engine","ok":true,"rc":0,"rtti":"12CSteamClient"}
+{"step":"pipe","pipe":1}
+{"step":"user","user":1}
+{"step":"rtti","clientUser":"14IClientUserMap","clientUtils":"15IClientUtilsMap","appManager":"20IClientAppManagerMap"}
+{"step":"InstallApp","appId":440,"folder":0,"EAppUpdateError":0}

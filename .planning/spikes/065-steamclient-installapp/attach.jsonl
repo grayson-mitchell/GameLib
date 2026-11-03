@@ -1,0 +1,7 @@
+{"step":"engine","ok":true,"rc":0,"rtti":"12CSteamClient"}
+{"step":"pipe","pipe":1}
+{"step":"user","user":1}
+{"step":"rtti","clientUser":"14IClientUserMap","clientUtils":"15IClientUtilsMap","appManager":"20IClientAppManagerMap"}
+{"step":"GetNumInstalledApps","value":13}
+{"step":"app","appId":440,"installState":1,"dirRet":90,"dir":"/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Team Fortress 2"}
+{"step":"app","appId":264160,"installState":4,"dirRet":82,"dir":"/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/WazHack"}
