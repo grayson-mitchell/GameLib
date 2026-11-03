@@ -43,4 +43,32 @@ describe('reduceDialogRequest', () => {
   it('closing with nothing open stays closed', () => {
     expect(reduceDialogRequest(closed, { showDialog: false })).toEqual(closed)
   })
+
+  it('G28: a promoted dialog gets a dialogKey distinct from the closed one', () => {
+    let state = reduceDialogRequest(closed, { title: 'A' })
+    state = reduceDialogRequest(state, { title: 'B' })
+    const closedKey = state.current.dialogKey
+    expect(closedKey).toBeDefined()
+    state = reduceDialogRequest(state, { showDialog: false })
+    expect(state.current.title).toBe('B')
+    expect(state.current.dialogKey).toBeDefined()
+    expect(state.current.dialogKey).not.toBe(closedKey)
+  })
+
+  it('G28: consecutive dialogs opened one after another have different dialogKeys', () => {
+    let state = reduceDialogRequest(closed, { title: 'A' })
+    const keyA = state.current.dialogKey
+    state = reduceDialogRequest(state, { showDialog: false })
+    state = reduceDialogRequest(state, { title: 'B' })
+    expect(keyA).toBeDefined()
+    expect(state.current.dialogKey).toBeDefined()
+    expect(state.current.dialogKey).not.toBe(keyA)
+  })
+
+  it('G28: queuing does not change the open dialog dialogKey', () => {
+    const first = reduceDialogRequest(closed, { title: 'A' })
+    const second = reduceDialogRequest(first, { title: 'B' })
+    expect(first.current.dialogKey).toBeDefined()
+    expect(second.current.dialogKey).toBe(first.current.dialogKey)
+  })
 })
