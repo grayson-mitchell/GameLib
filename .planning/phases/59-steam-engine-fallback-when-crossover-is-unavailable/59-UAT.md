@@ -1,5 +1,5 @@
 ---
-status: complete
+status: testing
 phase: 59-steam-engine-fallback-when-crossover-is-unavailable
 source: [59-13-PLAN.md]
 ---
@@ -186,6 +186,26 @@ result: issue — 2026-11-03, severity major (G26-G28). Normal dev, pin aside, D
 expected: (G25 a) Across the item 36-38 sessions, for each Wi-Fi-off window record whether a `Connectivity: offline (from renderer)` line appeared and its delay after Wi-Fi off (evidence for the 59-40 diagnosis; recorded either way, not a pass criterion), and that a `Connectivity: check-online (fresh check at launch 1284190 found <source>)` line followed each offline fresh check; after Wi-Fi is back on, `Connectivity: online` appears within 60 s without restarting GameLib; then, online, Play Planet Crafter: `Connectivity: fresh check (launch 1284190) -> online via dns-ok`, a `reason=launch-target` CM logon is present (online path unchanged), the demo-status probe runs and the game launches on CrossOver.
 result: pass — 2026-11-03. Renderer evidence: no `Connectivity: offline (from renderer)` line appeared in any Wi-Fi-off window (items 36, 37, 38); every offline was found by the fresh check at Play, and each was followed by the check-online line. Recovery to online without restarting: 19:26:41 (item 36 window; last failed probe 19:26:21), 19:30:02 (item 37, about 16 s after the click), 19:32:26 (item 38, `probe answered by cloudflare-dns.com (HTTP 200, 576ms)`). Online Play 19:53:02 (pin moved back first, with go-ahead): `fresh check (launch 1284190) -> online via dns-ok in 38ms`, `CM logon mode=anonymous reason=launch-target`, demo-status probe ok licensed 5421ms, `pinned:wine-staging-11.20 -> crossover`, `Removing DXVK DLLs` succeeded (the `dxvk:"failed"` state recovered), launched on CrossOver 19:53:30; marker now crossover.
 
+## Re-UAT 5 (gap closure 59-44..59-47)
+
+Re-tests UAT 38's findings live after round 5: CR-01 (check-online read as offline), G26 (concurrent launches), G27 (offline restore latency; decided "accept", D-09 unchanged, see 59-47-SUMMARY.md) and G28 (queued engine notice never visible). Every Wi-Fi-off step turns the network off only for the action: off, act, on, report. Before the session: `pnpm build:sidecar-sea`, restart `pnpm tauri:dev:run`, confirm `build/main/sidecar.js` is newer than `git log -1 --format=%ci -- src/backend`. Record the licence mtime first.
+
+### 40. Unknown connectivity is checked, not assumed offline
+expected: (CR-01) Normal dev (CrossOver visible), network on. Wi-Fi off immediately before Play; Play; wait 3 s; Play again; Wi-Fi back on. The first Play logs `Connectivity: fresh check (launch 1284190) -> offline via no-interface` followed by `Connectivity: check-online (fresh check at launch 1284190 found no-interface)`; the second Play, made while the status is check-online, also logs `-> offline via no-interface` (not `via monitor`) and logs no second check-online transition; no `via monitor` line appears for either click; afterwards `Connectivity: online` returns without a restart. Then, network on, Play once: `-> online via dns-ok` and the launch proceeds (quit the game after it opens).
+result: pending
+
+### 41. A double Play runs one launch
+expected: (G26) Normal dev, network on, marker switched to the built-in engine (item 34 preparation: Play under no-crossover.sb with the pin present, then quit) so this Play performs a `pinned:wine-staging-11.20 -> crossover` switch. Double-click Play (two clicks within one second). One `Connectivity: fresh check (launch 1284190)` line and one `demo-status probe` line for the pair, `SteamGame: appId 1284190 bridge launch already in progress; joining it instead of starting a second (G26)` once, an "already starting" notification ("This game is already starting. Wait for its window to open."), exactly one engine switch that succeeds (no `DXVK restore failed`), the game opens once, and the marker afterwards reads crossover without `dxvk:"failed"`. If the second click never reaches the backend (no G26 line and no second fresh check), record that the UI absorbed it; the unit tests then carry G26.
+result: pending
+
+### 42. Offline restore with CrossOver healthy
+expected: (G27, decision accept) Normal dev, marker on the built-in engine again (repeat item 41's preparation), pin moved aside (operator go-ahead), the marker's DXVK copy in place. Wi-Fi off immediately before Play; observe; Wi-Fi back on. A `SteamEngine: demo-status probe` line still runs (D-09 unchanged); record its elapsedMs and the click-to-window time. The item passes when the `pinned:wine-staging-11.20 -> crossover` restore and the launch on CrossOver succeed and no refusal fires; the probe latency is the accepted override.
+result: pending
+
+### 43. Every engine notice is shown, including a queued one
+expected: (G28) Normal dev, pin still aside, the marker's DXVK copy moved aside too (operator go-ahead; item 37's refusal state). Wi-Fi off immediately before Play; Play: the "couldn't download its built-in engine (offline)" dialog appears. Leave it open and trigger a second engine notice without the Play button (a Play from the library grid, if reachable with the dialog open; otherwise close the first dialog and Play again); Wi-Fi back on. Each `[engine-notice] appId=1284190 tag=engine-download-failed (or engine-restore-failed) dispatched=...` has a matching `[dialog] shown ackId=` line and `display=confirmed`; a notice that arrived with `replacesOpenDialog=true` (`[dialog] showDialog frame received ... replacesOpenDialog=true`) is shown (its `[dialog] shown ackId=` appears) right after the first is closed (`[dialog] closed ackId=`) and the operator sees it; no `display=unconfirmed` line for any notice in the item. Afterwards move the DXVK copy back.
+result: pending
+
 ## Restore
 
 Done 2026-11-02: GameLibSteamBridge-38400's system.reg restored from the pre-test copy (cmp identical), `InstallTime.orig` removed, `--demo-status` with the licence visible reads "Standard version"; licence file unchanged (304 bytes, Oct 22 19:57) before and after. The bottle's engine marker is pinned from item 9; its next Automatic launch switches it back to CrossOver.
@@ -200,6 +220,8 @@ Re-UAT 2 restore (59-30), done and verified 2026-11-02 22:08: wine-staging-11.20
 Re-UAT 3 restore (59-39), done and verified 2026-11-03 18:30: wine-staging-11.20 moved back into `steam-engines` (dxvk present; a spare 856 MB copy remains in `tools/steam-engines-aside-59-39` pending the operator's call), network back on (Steam, GitHub and cloudflare-dns resolve), 576770's ledger left settled (backup kept in the session scratchpad), Batman 200260 not installed and its bottle deleted (operator go-ahead), 1284190 marker back to `crossover` (item 34 run 2), licence still 304 bytes Oct 22 19:57, Bottles list equals the session-start snapshot minus GameLibSteamBridge-200260. Original steps: restore 576770's `gamelib-shared-redists.json` backup if the pre-test state is wanted (or keep the settled ledger); move the pinned engine back (or let GameLib re-download it); network back on; uninstall or keep any Batman (200260) install as the operator chooses; confirm the licence file is unchanged (304 bytes, Oct 22 19:57) and the Bottles list matches the session-start snapshot.
 
 Re-UAT 4 restore (59-43), done and verified 2026-11-03: wine-staging-11.20 moved back from .uat-aside at 19:41, DXVK copy moved back after item 37, Wi-Fi on, 1284190 marker back to `crossover` after the 19:53 online launch, licence unchanged (304 bytes, Oct 22 19:57, before and after), bottle list (30 bottles) identical before and after, nothing touched /Applications/CrossOver.app. Original steps: move wine-staging-11.20 back into `steam-engines` (or let GameLib re-download it), confirm the marker's DXVK copy is in place, network on, Planet Crafter's override automatic, and confirm the CrossOver licence file mtime is unchanged.
+
+Re-UAT 5 restore (59-48), pending: move wine-staging-11.20 back into `steam-engines` (or let GameLib re-download it), confirm the marker's DXVK copy is in place, network on, Planet Crafter's override automatic, and confirm the CrossOver licence file mtime is unchanged (304 bytes, Oct 22 19:57).
 
 ## Gaps
 
