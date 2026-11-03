@@ -193,6 +193,8 @@ export type DialogModalOptions = {
   onClose?: () => void
   /** Backend correlation id; the renderer acks it once the dialog is on screen. */
   ackId?: string
+  /** Distinct per accepted request; DialogHandler keys the modal by it so a promoted dialog mounts fresh (G28). */
+  dialogKey?: number
 }
 
 export interface ExternalLinkDialogOptions {

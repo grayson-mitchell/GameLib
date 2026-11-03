@@ -117,7 +117,17 @@ export default function DialogHandler() {
 
   // Ack only once THIS dialog is the one rendered (a queued dialog waits its turn) and the
   // document is visible; the backend turns the ack into `display=confirmed`.
-  const { showDialog: dialogOpen, ackId: openAckId } = dialogModalOptions
+  const {
+    showDialog: dialogOpen,
+    ackId: openAckId,
+    dialogKey: openKey
+  } = dialogModalOptions
+  useEffect(() => {
+    if (!dialogOpen) return
+    window.api.logInfo(
+      `[dialog] shown ackId=${openAckId ?? 'none'} key=${openKey ?? 'none'}`
+    )
+  }, [dialogOpen, openKey, openAckId])
   useEffect(() => {
     if (!dialogOpen || !openAckId) return undefined
     return ackWhenVisible(openAckId, window.api.dialogDisplayed, document)
@@ -127,16 +137,19 @@ export default function DialogHandler() {
     <>
       {dialogModalOptions.showDialog && (
         <MessageBoxModal
+          key={dialogModalOptions.dialogKey}
           type={dialogModalOptions.type ? dialogModalOptions.type : 'MESSAGE'}
           title={dialogModalOptions.title ? dialogModalOptions.title : ''}
           message={dialogModalOptions.message ? dialogModalOptions.message : ''}
           buttons={dialogModalOptions.buttons ? dialogModalOptions.buttons : []}
           className={dialogModalOptions.className}
-          onClose={() =>
-            dialogModalOptions.onClose
-              ? dialogModalOptions.onClose()
-              : showDialogModal({ showDialog: false })
-          }
+          onClose={() => {
+            if (dialogModalOptions.onClose) return dialogModalOptions.onClose()
+            window.api.logInfo(
+              `[dialog] closed ackId=${dialogModalOptions.ackId ?? 'none'} key=${dialogModalOptions.dialogKey ?? 'none'}`
+            )
+            showDialogModal({ showDialog: false })
+          }}
         />
       )}
     </>

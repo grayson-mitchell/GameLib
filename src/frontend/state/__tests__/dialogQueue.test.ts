@@ -5,7 +5,7 @@ const closed: DialogQueueState = { current: { showDialog: false }, queue: [] }
 describe('reduceDialogRequest', () => {
   it('opens a dialog immediately when none is open', () => {
     const next = reduceDialogRequest(closed, { title: 'A' })
-    expect(next.current).toEqual({ showDialog: true, title: 'A' })
+    expect(next.current).toMatchObject({ showDialog: true, title: 'A' })
     expect(next.queue).toEqual([])
   })
 
@@ -21,7 +21,7 @@ describe('reduceDialogRequest', () => {
     state = reduceDialogRequest(state, { title: 'B', ackId: 'b-1' })
     state = reduceDialogRequest(state, { title: 'C' })
     state = reduceDialogRequest(state, { showDialog: false })
-    expect(state.current).toEqual({
+    expect(state.current).toMatchObject({
       showDialog: true,
       title: 'B',
       ackId: 'b-1'
