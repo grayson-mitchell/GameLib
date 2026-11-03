@@ -9,6 +9,9 @@ import { join } from 'path'
 import {
   appendCxEnvTokens,
   buildOverlayCxTokens,
+  buildOverlayEnvVars,
+  mergeOverlayEnvVars,
+  prepareOverlayEnv,
   checkOverlayInputs,
   prepareOverlayLaunch,
   prepareOverlayTokens
@@ -228,5 +231,130 @@ describe('prepareOverlayLaunch', () => {
       }
     })
     expect(r.status).toBe('error')
+  })
+})
+
+describe('buildOverlayEnvVars (D-07)', () => {
+  const SBIN = '/u/Steam/Contents/MacOS'
+  const a = { appId: '3205720', shimPath: '/s/shim.dylib', steamBinDir: SBIN }
+
+  it('returns the four plain vars, shim first, unquoted', () => {
+    expect(buildOverlayEnvVars(a)).toEqual({
+      status: 'ok',
+      vars: [
+        {
+          key: 'DYLD_INSERT_LIBRARIES',
+          value: `/s/shim.dylib:${SBIN}/steamloader.dylib:${SBIN}/gameoverlayrenderer.dylib`
+        },
+        { key: 'SteamOverlayGameId', value: '3205720' },
+        { key: 'SteamGameId', value: '3205720' },
+        { key: 'SteamAppId', value: '3205720' }
+      ]
+    })
+  })
+
+  it.each([
+    { ...a, appId: 'x1' },
+    { ...a, shimPath: 'rel/shim.dylib' },
+    { ...a, shimPath: '/s/a:b.dylib' },
+    { ...a, steamBinDir: "/s/a'b" },
+    { ...a, steamBinDir: '/s/a\nb' }
+  ])('rejects bad input %#', (bad) => {
+    const r = buildOverlayEnvVars(bad)
+    expect(r.status).toBe('error')
+    if (r.status === 'error') expect(r.step).toBe('env')
+  })
+
+  it('stays in step with buildOverlayCxTokens', () => {
+    const env = buildOverlayEnvVars(a)
+    const cx = buildOverlayCxTokens(a)
+    if (env.status !== 'ok' || cx.status !== 'ok') throw new Error('not ok')
+    expect(cx.tokens).toEqual(
+      env.vars.map((v) =>
+        v.key === 'DYLD_INSERT_LIBRARIES'
+          ? `${v.key}='${v.value}'`
+          : `${v.key}=${v.value}`
+      )
+    )
+  })
+})
+
+describe('prepareOverlayEnv', () => {
+  const a = { appId: '1', shimPath: '/s/shim.dylib', steamBinDir: '/u/bin' }
+
+  it('returns the input check error unchanged', async () => {
+    const err = { status: 'error', step: 'shim', cause: 'missing' } as const
+    const r = await prepareOverlayEnv(a, {
+      checkInputs: async () => err
+    })
+    expect(r).toEqual(err)
+  })
+
+  it('returns vars on ok', async () => {
+    const r = await prepareOverlayEnv(a, {
+      checkInputs: async () => ({ status: 'ok' })
+    })
+    expect(r).toEqual(buildOverlayEnvVars(a))
+  })
+
+  it('never rejects', async () => {
+    const r = await prepareOverlayEnv(a, {
+      checkInputs: async () => {
+        throw new Error('boom')
+      }
+    })
+    expect(r.status).toBe('error')
+    if (r.status === 'error') expect(r.step).toBe('env')
+  })
+})
+
+describe('mergeOverlayEnvVars', () => {
+  const vars = [
+    { key: 'DYLD_INSERT_LIBRARIES', value: '/ours' },
+    { key: 'SteamOverlayGameId', value: '9' },
+    { key: 'SteamGameId', value: '9' },
+    { key: 'SteamAppId', value: '9' }
+  ]
+
+  it('replaces same-key Steam entries and keeps unrelated ones in order', () => {
+    const env = [
+      { key: 'WINEDEBUG', value: '-all' },
+      { key: 'SteamAppId', value: '1' },
+      { key: 'CX_ENV', value: 'A=b' },
+      { key: 'steamappid', value: 'lower' }
+    ]
+    const out = mergeOverlayEnvVars(env, vars)
+    expect(out.map((e) => e.key)).toEqual([
+      'WINEDEBUG',
+      'CX_ENV',
+      'steamappid',
+      'DYLD_INSERT_LIBRARIES',
+      'SteamOverlayGameId',
+      'SteamGameId',
+      'SteamAppId'
+    ])
+    expect(out.filter((e) => e.key === 'SteamAppId')).toEqual([
+      { key: 'SteamAppId', value: '9' }
+    ])
+  })
+
+  it.each([
+    ['x.dylib', '/ours:x.dylib'],
+    ['"x.dylib"', '/ours:x.dylib'],
+    ['', '/ours']
+  ])('DYLD existing %j -> %j', (existing, expected) => {
+    const out = mergeOverlayEnvVars(
+      [{ key: 'DYLD_INSERT_LIBRARIES', value: existing }],
+      vars
+    )
+    const d = out.filter((e) => e.key === 'DYLD_INSERT_LIBRARIES')
+    expect(d).toEqual([{ key: 'DYLD_INSERT_LIBRARIES', value: expected }])
+  })
+
+  it('does not mutate its input', () => {
+    const env = [{ key: 'SteamAppId', value: '1' }]
+    const copy = JSON.parse(JSON.stringify(env))
+    mergeOverlayEnvVars(env, vars)
+    expect(env).toEqual(copy)
   })
 })

@@ -4,7 +4,9 @@
  * Builds the CX_ENV tokens that inject the Steam overlay into a bridged game,
  * merges them into an existing CX_ENV, checks the input files, and offers the
  * fail-open prepare functions for the TCP route (clone plus tokens) and the DRM
- * route (tokens only). Nothing here throws or rejects; every failure is a step
+ * route (tokens only). The Phase 59 fallback engine (Wine-Staging + DXVK)
+ * ignores CX_ENV and needs no clone or re-sign, so it gets the same values as
+ * plain env vars (D-07). Nothing here throws or rejects; every failure is a step
  * error. The caller passes shimPath and steamBinDir (no games.ts import).
  */
 import { isAbsolute, join } from 'path'
@@ -18,7 +20,8 @@ import {
 } from './overlayRunnerClone'
 import type { RunTool } from '../drm/runnerClone'
 
-type EnvVar = { key: string; value: string }
+// ts-prune-ignore-next
+export type EnvVar = { key: string; value: string }
 
 const APP_ID_RE = /^[0-9]{1,10}$/
 // eslint-disable-next-line no-control-regex
@@ -55,13 +58,15 @@ export function appendCxEnvTokens(
   return { status: 'ok', env: [...rest, { key: 'CX_ENV', value }] }
 }
 
-/** D-12 tokens, shim first. No GPU or OS gate (D-13). */
-// ts-prune-ignore-next
-export function buildOverlayCxTokens(a: {
-  appId: string
-  shimPath: string
-  steamBinDir: string
-}): OverlayStepResult<{ tokens: string[] }> {
+type OverlayEnvArgs = { appId: string; shimPath: string; steamBinDir: string }
+
+/**
+ * The one value builder behind both overlay routes (D-12, shim first). The
+ * CX_ENV tokens and the plain env vars derive from it, so they cannot drift.
+ */
+function overlayEnvValues(a: OverlayEnvArgs): OverlayStepResult<{
+  vars: EnvVar[]
+}> {
   try {
     if (typeof a.appId !== 'string' || !APP_ID_RE.test(a.appId)) {
       return overlayStepError('env', 'invalid appId')
@@ -73,17 +78,90 @@ export function buildOverlayCxTokens(a: {
     const renderer = join(a.steamBinDir, 'gameoverlayrenderer.dylib')
     return {
       status: 'ok',
-      tokens: [
-        `DYLD_INSERT_LIBRARIES='${a.shimPath}:${loader}:${renderer}'`,
-        `SteamOverlayGameId=${a.appId}`,
-        `SteamGameId=${a.appId}`,
-        `SteamAppId=${a.appId}`
+      vars: [
+        {
+          key: 'DYLD_INSERT_LIBRARIES',
+          value: `${a.shimPath}:${loader}:${renderer}`
+        },
+        { key: 'SteamOverlayGameId', value: a.appId },
+        { key: 'SteamGameId', value: a.appId },
+        { key: 'SteamAppId', value: a.appId }
       ]
     }
   } catch (e) {
     return overlayStepError('env', e)
   }
 }
+
+/** D-12 tokens, shim first. No GPU or OS gate (D-13). */
+// ts-prune-ignore-next
+export function buildOverlayCxTokens(
+  a: OverlayEnvArgs
+): OverlayStepResult<{ tokens: string[] }> {
+  const built = overlayEnvValues(a)
+  if (built.status === 'error') return built
+  return {
+    status: 'ok',
+    tokens: built.vars.map((v) =>
+      v.key === 'DYLD_INSERT_LIBRARIES'
+        ? `${v.key}='${v.value}'`
+        : `${v.key}=${v.value}`
+    )
+  }
+}
+
+/** Fallback-engine route (D-07): the same values as plain, unquoted env. */
+// ts-prune-ignore-next
+export function buildOverlayEnvVars(
+  a: OverlayEnvArgs
+): OverlayStepResult<{ vars: EnvVar[] }> {
+  return overlayEnvValues(a)
+}
+
+const OVERLAY_ENV_KEYS = new Set([
+  'SteamOverlayGameId',
+  'SteamGameId',
+  'SteamAppId'
+])
+
+/**
+ * Merges overlay vars into an env list. Our Steam* keys replace same-key
+ * entries (case-sensitive). An existing DYLD_INSERT_LIBRARIES is kept, with
+ * ours prepended so the shim stays first. Pure; never mutates its input.
+ */
+// ts-prune-ignore-next
+export function mergeOverlayEnvVars(
+  env: readonly EnvVar[],
+  vars: readonly EnvVar[]
+): EnvVar[] {
+  const dyld = vars.find((v) => v.key === 'DYLD_INSERT_LIBRARIES')
+  const ours = new Set(vars.map((v) => v.key))
+  let existingDyld = ''
+  const rest: EnvVar[] = []
+  for (const e of env) {
+    if (e.key === 'DYLD_INSERT_LIBRARIES') {
+      let v = e.value ?? ''
+      if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
+        v = v.slice(1, -1)
+      }
+      if (v) existingDyld = existingDyld ? `${existingDyld}:${v}` : v
+      continue
+    }
+    if (OVERLAY_ENV_KEYS.has(e.key) && ours.has(e.key)) continue
+    rest.push(e)
+  }
+  const out = vars.map((v) =>
+    v === dyld && existingDyld
+      ? { key: v.key, value: `${v.value}:${existingDyld}` }
+      : { key: v.key, value: v.value }
+  )
+  return [...rest, ...out]
+}
+
+// ts-prune-ignore-next
+export type OverlayLaunchPayload =
+  | { kind: 'cx-env'; tokens: string[]; runnerBin: string }
+  | { kind: 'env'; vars: EnvVar[] }
 
 type LstatLike = (p: string) => Promise<{ isFile(): boolean }>
 
@@ -137,6 +215,21 @@ export async function prepareOverlayTokens(
     const inputs = await (deps.checkInputs ?? checkOverlayInputs)(a)
     if (inputs.status === 'error') return inputs
     return buildOverlayCxTokens(a)
+  } catch (e) {
+    return overlayStepError('env', e)
+  }
+}
+
+/** Fallback-engine route: inputs, then plain env vars. Never rejects. */
+// ts-prune-ignore-next
+export async function prepareOverlayEnv(
+  a: TokenArgs,
+  deps: { checkInputs?: typeof checkOverlayInputs } = {}
+): Promise<OverlayStepResult<{ vars: EnvVar[] }>> {
+  try {
+    const inputs = await (deps.checkInputs ?? checkOverlayInputs)(a)
+    if (inputs.status === 'error') return inputs
+    return buildOverlayEnvVars(a)
   } catch (e) {
     return overlayStepError('env', e)
   }
