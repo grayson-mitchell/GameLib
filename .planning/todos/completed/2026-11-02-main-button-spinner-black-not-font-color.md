@@ -28,3 +28,11 @@ button's label text.
 
 The button spinner matches the label colour in every theme the sketch findings require to
 survive.
+
+## Result
+
+Fixed in quick-261103-stm (code commit 843d75b58).
+
+The cause was `.buttons .mainBtn svg { color: var(--neutral-02) }` (#161c1e, not themed) in `GamePage/index.css`. It came from upstream and pinned every main-button icon. The rule now uses `color: currentColor`, so the spinner and the Play/Stop/Pause icons follow the label (`--text-tertiary`, or `--text-secondary` when disabled) in every theme.
+
+Not done: no live visual check across themes was run. On the default theme the icons were already near-black by coincidence (`--text-tertiary` = #070a0b), so the change shows most in the disabled installing state and in non-default themes.
