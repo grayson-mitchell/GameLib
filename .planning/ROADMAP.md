@@ -842,7 +842,7 @@ Plans:
 **Goal:** A Windows Steam title on the macOS native bridge still launches when CrossOver is missing, its trial has expired for that bottle, or it is broken. CrossOver stays the first-choice engine. The fallback is one Wine-Staging + DXVK build pinned per GameLib release, which GameLib installs and manages itself. GameLib keeps the previous pinned build so a bad bump can be rolled back. The fallback runs the game's existing bridge bottle with `USER=crossover`, so saves and settings stay in one Windows profile. Before every CrossOver launch, GameLib checks the bottle's trial state with `CX_BOTTLE=<bottle> wine --demo-status`. An expired bottle goes to the fallback instead of hanging on CrossOver's nag dialog. CrossOver launches always run with a timeout. Users see "N days remaining" before expiry. A per-game engine override exists only as an advanced, explicitly unsupported option (the Proton model): known-fixes and census verdicts do not apply to it, and the launch log records the exact engine and version. GameLib records the CrossOver versions it has tested, and warns on an untested one without blocking it. Out of scope: DRM mode and bottled Steam (CrossOver-only), GPTK and `-DXMT` for Steam, a full census on the fallback (it is best-effort). Evidence: spikes 056–060 and the Idea B engine decision in `.planning/spikes/MANIFEST.md`.
 **Requirements**: TBD
 **Depends on:** Phase 51 (per-game bridge bottles)
-**Plans:** 48/48 plans complete
+**Plans:** 48/53 plans complete
 
 Plans:
 **Wave 1**
@@ -977,6 +977,19 @@ Plans:
 **Gap round 5, wave 3**
 
 - [x] 59-48-PLAN.md — Live re-UAT 5 (items 40-43) and gate battery (CR-01, G26-G28)
+
+**Gap closure round 6** *(from 59-UAT.md G29-G30 and 59-REVIEW.md round 5: CR-01, WR-01..03, IN-01..04; WR-03, IN-04 and the G30 follow-ups filed as todos)*
+
+**Gap round 6, wave 1**
+
+- [ ] 59-49-PLAN.md — Launch-option picker updates in place; a close names its dialog; redundant button closes removed (CR-01, WR-01, IN-01)
+- [ ] 59-50-PLAN.md — One retry for a transient demo-status nonzero exit or spawn error; stdout in the probe log; D-09 amendment (G29)
+- [ ] 59-51-PLAN.md — CrossOver DXVK restore settles on exit with one wineserver stop; one engine switch per bottle (G30, WR-02)
+- [ ] 59-52-PLAN.md — Empty DNS host list fails open; accurate refusal log; deferred WR-03/IN-04 and G30 follow-up todos (IN-02, IN-03)
+
+**Gap round 6, wave 2**
+
+- [ ] 59-53-PLAN.md — Live re-UAT 6 (items 44-47) and gate battery (G29, G30, CR-01, WR-01)
 
 ### Phase 60: Steam overlay in bridged games on macOS
 
