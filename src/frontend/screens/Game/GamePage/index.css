@@ -160,6 +160,11 @@
     .mainInfo {
       padding: 0px min(4vw, 70px);
       background-color: var(--body-background);
+      /* The shared `overflow: hidden` above clips whatever the notices push
+      ** past the bottom, and .buttons is the last in-flow child. Scroll
+      ** instead, and pin .buttons (below) so Play/Settings stay reachable. */
+      overflow-x: hidden;
+      overflow-y: auto;
 
       .store-icon {
         position: absolute;
@@ -333,6 +338,10 @@
         align-items: center;
         margin-top: 15px;
         border-radius: 8px;
+        position: sticky;
+        bottom: 0;
+        padding-block: var(--space-xs);
+        background-color: var(--body-background);
 
         & > .settings-icon {
           margin-inline-start: var(--space-xs);
