@@ -30,7 +30,7 @@
   "packageManager": "pnpm@10.28.0",
   "scripts": {
     "tauri:dev": "cross-env GAMELIB_DEV_SECRET_VAULT=1 pnpm tauri:dev:run",
-    "tauri:dev:keyring": "pnpm tauri:dev:run",
+    "tauri:dev:keyring": "cross-env GAMELIB_DEV_KEYRING=1 pnpm tauri:dev:run",
     "tauri:dev:vault": "pnpm tauri:dev",
     "tauri:dev:run": "node meta/tauriDevPreflight.cjs && pnpm build:sidecar && pnpm build:decompress-worker-dev && tauri dev",
     "tauri:dev:packaged": "pnpm exec vite build && pnpm build:sidecar-sea && pnpm build:decompress-worker-dev && tauri build --debug",
