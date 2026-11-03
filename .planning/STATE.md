@@ -4,8 +4,8 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 60 context gathered
-last_updated: "2026-11-03T07:21:59.128Z"
-last_activity: 2026-11-03 -- Phase 59 planning complete
+last_updated: "2026-11-03T07:37:12.912Z"
+last_activity: 2026-11-03 -- Phase 59 execution started
 progress:
   total_phases: 10
   completed_phases: 8
@@ -72,9 +72,9 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 59 (steam-engine-fallback-when-crossover-is-unavailable) — EXECUTING
-Plan: 5 of 43
-Status: Ready to execute
-Last activity: 2026-11-03 -- Phase 59 planning complete
+Plan: 1 of 48
+Status: Executing Phase 59
+Last activity: 2026-11-03 -- Phase 59 execution started
 
 Progress: [██████████] 100%
 
@@ -346,6 +346,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-10-26] [steam-bridge] "Bridge scan auto-clear drops scan.originalFingerprints, so the next launch does one extra rescan and shim re-place" — [todo file](.planning/todos/pending/2026-10-26-bridge-auto-clear-drops-original-fingerprints.md)
 - [2026-10-29] [login-window] "Epic login window presents as a macOS sheet on main, like GOG and the other logins (lift the REQ-34.4.2-10 Epic descope)" — [todo file](.planning/todos/pending/2026-10-29-epic-login-window-as-macos-sheet-like-gog.md)
 - [2026-10-31] [feedback] In-app "Report a problem" form for non-technical users — no account, auto-attached redacted diagnostics — [todo file](.planning/todos/pending/2026-10-31-in-app-report-a-problem-form-for-non-technical-users.md)
+- [2026-11-03] [steam-install] "Add setting to use Steam Experimental InstallApp Feature — IClientAppManager::InstallApp installs headless and adopts GameLib downloads without restart (spikes 065/066)" — [todo file](.planning/todos/pending/2026-11-03-steam-experimental-installapp-setting.md)
 
 ### Blockers/Concerns
 
