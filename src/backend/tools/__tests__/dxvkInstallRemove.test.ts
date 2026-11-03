@@ -266,6 +266,28 @@ describe('DXVK.installRemove backup short-circuit (CR-03)', () => {
 describe('DXVK.installRemove strict restore with a pinned source', () => {
   let srcDir: string
   const ok = { stdout: '', stderr: '', code: 0 }
+  const KEY = 'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides'
+  // `reg query` of DllOverrides as CrossOver prints it, 261103-wtm gate.
+  const query = (...values: string[]) => ({
+    ...ok,
+    stdout: `\r\n${KEY}\r\n    *autorun.exe    REG_SZ    native,builtin\r\n${values
+      .map((v) => `    ${v}    REG_SZ    native\r\n`)
+      .join('')}`
+  })
+  const stockDlls = () =>
+    ['system32', 'syswow64'].flatMap((dir) =>
+      DLLS.map((dll) => join(prefix, 'drive_c/windows', dir, dll))
+    )
+  // Every wine step succeeds and the overrides are gone; `onImport` stands in for the prefix
+  // update an engine flip triggers on the first wine process.
+  const wine =
+    (overrides: Record<string, unknown> = {}, onImport?: () => void) =>
+    ({ commandParts }: { commandParts: string[] }) => {
+      const verb = commandParts[0] === 'reg' ? commandParts[1] : commandParts[0]
+      if (verb === 'import') onImport?.()
+      if (verb in overrides) return Promise.resolve(overrides[verb])
+      return Promise.resolve(verb === 'query' ? query() : ok)
+    }
 
   beforeEach(() => {
     srcDir = mkdtempSync(join(root, 'src-'))
@@ -289,22 +311,104 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
 
   it('returns true and removes the version file last when every step succeeds', async () => {
     const order: string[] = []
+    const inner = wine()
     mockRunWineCommand.mockImplementation(
-      async ({ commandParts }: { commandParts: string[] }) => {
-        order.push(commandParts[0] === 'reg' ? 'reg' : commandParts[0])
+      async (args: { commandParts: string[] }) => {
+        const [cmd, verb] = args.commandParts
+        order.push(cmd === 'reg' ? `reg ${verb}` : cmd)
         order.push(`ver:${versionFile()}`)
-        return ok
+        return inner(args)
       }
     )
     expect(await restore()).toBe(true)
     // the version file was still present during every wine step (incl. wineboot)
     expect(order.filter((e) => e.startsWith('ver:'))).not.toContain('ver:false')
-    expect(order[order.length - 2]).toBe('wineboot')
+    expect(order.filter((e) => !e.startsWith('ver:'))).toEqual([
+      'reg import',
+      'reg query',
+      'wineboot'
+    ])
     expect(versionFile()).toBe(false)
   })
 
-  it('G30: a strict restore runs every reg delete and wineboot -u with wait:false and resolveOnExit', async () => {
-    mockRunWineCommand.mockResolvedValue(ok)
+  it('G30: removes the DLLs before the first wine process and batches the overrides into one reg import', async () => {
+    let regFile = ''
+    const dllsAtFirstCall: boolean[] = []
+    mockRunWineCommand.mockImplementation(
+      async (args: { commandParts: string[] }) => {
+        if (mockRunWineCommand.mock.calls.length === 1) {
+          dllsAtFirstCall.push(...stockDlls().map((f) => existsSync(f)))
+          regFile = readFileSync(
+            join(prefix, 'drive_c', 'gamelib-dxvk-restore.reg'),
+            'utf-8'
+          )
+        }
+        return wine()(args)
+      }
+    )
+    expect(await restore()).toBe(true)
+    expect(dllsAtFirstCall).not.toContain(true)
+    expect(mockRunWineCommand.mock.calls[0][0].commandParts).toEqual([
+      'reg',
+      'import',
+      'C:\\gamelib-dxvk-restore.reg'
+    ])
+    expect(regFile).toBe(
+      `Windows Registry Editor Version 5.00\r\n\r\n[${KEY}]\r\n"d3d11"=-\r\n"d3d9"=-\r\n`
+    )
+    expect(
+      existsSync(join(prefix, 'drive_c', 'gamelib-dxvk-restore.reg'))
+    ).toBe(false)
+    const regCalls = mockRunWineCommand.mock.calls.filter(
+      (c) => c[0].commandParts[0] === 'reg'
+    )
+    expect(regCalls).toHaveLength(2)
+  })
+
+  it('G30: skips wineboot -u when the prefix update already restored the stock DLLs', async () => {
+    const restock = () =>
+      stockDlls().forEach((f) => writeFileSync(f, 'builtin'))
+    mockRunWineCommand.mockImplementation(wine({}, restock))
+    expect(await restore()).toBe(true)
+    const verbs = mockRunWineCommand.mock.calls.map((c) => c[0].commandParts[0])
+    expect(verbs).not.toContain('wineboot')
+    expect(versionFile()).toBe(false)
+  })
+
+  it('G30: runs wineboot -u when a stock DLL is still missing after the import', async () => {
+    // only one of the four comes back, as on a same-engine restore with no prefix update
+    const partial = () => writeFileSync(stockDlls()[0], 'builtin')
+    mockRunWineCommand.mockImplementation(wine({}, partial))
+    expect(await restore()).toBe(true)
+    const verbs = mockRunWineCommand.mock.calls.map((c) => c[0].commandParts[0])
+    expect(verbs[verbs.length - 1]).toBe('wineboot')
+  })
+
+  it('G30: returns false and keeps the version file when an override survives the import', async () => {
+    mockRunWineCommand.mockImplementation(wine({ query: query('d3d11') }))
+    expect(await restore()).toBe(false)
+    expect(versionFile()).toBe(true)
+  })
+
+  it('G30: returns false when the verify query shows nothing, which proves nothing', async () => {
+    mockRunWineCommand.mockImplementation(wine({ query: ok }))
+    expect(await restore()).toBe(false)
+    expect(versionFile()).toBe(true)
+  })
+
+  it('G30: treats a missing DllOverrides key as no overrides left', async () => {
+    const missingKey = {
+      stdout: '',
+      stderr: 'reg: Unable to find the specified registry key',
+      code: 1
+    }
+    mockRunWineCommand.mockImplementation(wine({ query: missingKey }))
+    expect(await restore()).toBe(true)
+    expect(versionFile()).toBe(false)
+  })
+
+  it('G30: a strict restore runs every wine step with wait:false and resolveOnExit', async () => {
+    mockRunWineCommand.mockImplementation(wine())
     expect(await restore()).toBe(true)
     const calls = mockRunWineCommand.mock.calls.map((c) => c[0])
     expect(calls.length).toBeGreaterThan(1)
@@ -315,43 +419,24 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
     }
   })
 
-  it('returns false and keeps the version file when a reg delete fails', async () => {
+  it('returns false and keeps the version file when the reg import fails', async () => {
     mockRunWineCommand.mockImplementation(
-      async ({ commandParts }: { commandParts: string[] }) =>
-        commandParts[0] === 'reg'
-          ? { stdout: '', stderr: 'reg: access denied', code: 1 }
-          : ok
+      wine({ import: { stdout: '', stderr: 'reg: access denied', code: 1 } })
     )
     expect(await restore()).toBe(false)
     expect(versionFile()).toBe(true)
   })
 
-  it('treats "unable to find" on a reg delete as already removed', async () => {
-    mockRunWineCommand.mockImplementation(
-      async ({ commandParts }: { commandParts: string[] }) =>
-        commandParts[0] === 'reg'
-          ? {
-              stdout: '',
-              stderr: 'reg: Unable to find the specified registry key or value',
-              code: 1
-            }
-          : ok
-    )
-    expect(await restore()).toBe(true)
-    expect(versionFile()).toBe(false)
-  })
-
   it('returns false and keeps the version file when wineboot -u fails', async () => {
     mockRunWineCommand.mockImplementation(
-      async ({ commandParts }: { commandParts: string[] }) =>
-        commandParts[0] === 'wineboot' ? { ...ok, code: 3 } : ok
+      wine({ wineboot: { ...ok, code: 3 } })
     )
     expect(await restore()).toBe(false)
     expect(versionFile()).toBe(true)
   })
 
   it('returns false and keeps the version file when a DLL cannot be removed', async () => {
-    mockRunWineCommand.mockResolvedValue(ok)
+    mockRunWineCommand.mockImplementation(wine())
     // a non-empty directory where the DLL should be makes rmSync throw (not ENOENT)
     const blocked = join(prefix, 'drive_c/windows/system32/d3d9.dll')
     rmSync(blocked, { force: true })
@@ -362,7 +447,7 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
   })
 
   it('treats an already-absent DLL as success', async () => {
-    mockRunWineCommand.mockResolvedValue(ok)
+    mockRunWineCommand.mockImplementation(wine())
     for (const dir of ['system32', 'syswow64'])
       for (const dll of DLLS)
         rmSync(join(prefix, 'drive_c/windows', dir, dll), { force: true })

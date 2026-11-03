@@ -317,12 +317,19 @@ export const DXVK = {
       // 59-REVIEW WR-01 / 59-UAT G7+G10: the source-pinned path (the Steam engine switch)
       // reports failure strictly and keeps the version file until every step has succeeded,
       // so a half-done restore is visible and retried. Heroic's toggle path is unchanged.
-      const strict = source !== undefined
-      const failed: string[] = []
-      if (!strict) {
-        logInfo(`Removing ${tool} version information`, LogPrefix.ToolInstaller)
+      if (source) {
+        return restoreDxvkStrict({
+          gameSettings,
+          winePrefix,
+          tool,
+          is64bitPrefix,
+          dlls32,
+          dlls64,
+          currentVersionCheck
+        })
       }
-      if (!strict && existsSync(currentVersionCheck)) {
+      logInfo(`Removing ${tool} version information`, LogPrefix.ToolInstaller)
+      if (existsSync(currentVersionCheck)) {
         rm(currentVersionCheck, { force: true }, (err) => {
           if (err) {
             logError(
@@ -353,25 +360,12 @@ export const DXVK = {
           dll,
           '/f'
         ]
-        const regResult = await runWineCommand({
+        await runWineCommand({
           gameSettings,
           commandParts: unregisterDll,
-          // G30: the strict restore settles on the process exit (as a2f661281 / 110920bcd).
-          // Settling on pipe close waits out the wineserver the call started (3-4 s linger),
-          // and `wait: true` adds `wineserver --wait`, which blocks until that server exits.
-          // Ordering holds: each step awaits its own process exit. prepareBottleForEngine
-          // stops the lingering CrossOver wineserver once afterwards.
-          wait: !strict,
-          resolveOnExit: strict,
+          wait: true,
           protonVerb: 'run'
         })
-        if (strict && regResult?.code !== 0) {
-          // "Unable to find" means the value is already gone (a retried restore).
-          const output = `${regResult?.stdout ?? ''}${regResult?.stderr ?? ''}`
-          if (!/unable to find/i.test(output)) {
-            failed.push(`reg delete ${dll} code=${regResult?.code}`)
-          }
-        }
       }
 
       logInfo('Removing DXVK DLLs', LogPrefix.ToolInstaller)
@@ -392,40 +386,21 @@ export const DXVK = {
       }
       dllsToRemove.forEach((dllFile) => {
         try {
-          rmSync(dllFile, { force: strict })
+          rmSync(dllFile)
         } catch (err) {
           logError([`Error removing ${dllFile}`, err], LogPrefix.ToolInstaller)
-          failed.push(`rm ${dllFile}`)
         }
       })
 
       // Restore stock Wine libraries
       logInfo('Restoring Wine stock DLLs', LogPrefix.ToolInstaller)
 
-      const bootResult = await runWineCommand({
+      await runWineCommand({
         gameSettings,
         commandParts: ['wineboot', '-u'],
-        // G30: see the reg delete note above. Dropping `wineboot -u` for the .update-timestamp
-        // auto-update is deferred until it is shown on CrossOver (todo filed by 59-52).
-        wait: !strict,
-        resolveOnExit: strict,
+        wait: true,
         protonVerb: 'run'
       })
-      if (!strict) return true
-
-      if (bootResult?.code !== 0) {
-        failed.push(`wineboot -u code=${bootResult?.code}`)
-      }
-      if (failed.length > 0) {
-        logError(
-          `DXVK restore failed for ${winePrefix}: ${failed.join('; ')}`,
-          LogPrefix.ToolInstaller
-        )
-        return false
-      }
-      // Last, and synchronous: the version file is the "DXVK is installed" signal.
-      logInfo(`Removing ${tool} version information`, LogPrefix.ToolInstaller)
-      rmSync(currentVersionCheck, { force: true })
       return true
     }
 
@@ -626,6 +601,140 @@ type ScriptMetadata = {
   needsGui: ReturnType<typeof deriveNeedsGuiVerbs>
 }
 let scriptMetadataCache: { key: string; value: ScriptMetadata } | null = null
+
+// G30 (261103-wtm): the DLL overrides the strict restore removes, batched into one `reg import`.
+const DXVK_RESTORE_REG_FILE = 'gamelib-dxvk-restore.reg'
+const DLL_OVERRIDES_KEY = 'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides'
+
+/**
+ * The source-pinned DXVK restore (Steam engine switch), strict: any failed step returns false
+ * and keeps the version file, so a half-done restore is visible and retried (59-REVIEW WR-01).
+ *
+ * G30 (261103-wtm), shown on a throwaway CrossOver bottle after a Staging -> CrossOver flip:
+ *   - The DLLs go first. The engine flip leaves a mismatched `.update-timestamp`, so the first
+ *     wine process below runs the automatic prefix update, which puts the stock DLLs back when
+ *     they are already gone. `wineboot -u` then only runs when they are still missing (same
+ *     engine, a retry, `disable`); forging the timestamp is not an option, as CrossOver ignored
+ *     several mismatched values (0, 1, 1700000000).
+ *   - The overrides go in one `reg import` instead of a `reg delete` per DLL. An import that
+ *     matches nothing still exits 0, so one `reg query` of the key checks the values are gone.
+ *
+ * Every step settles on the process exit (as a2f661281 / 110920bcd): settling on pipe close
+ * waits out the wineserver the call started (3-4 s linger). prepareBottleForEngine stops the
+ * lingering CrossOver wineserver once afterwards, which is also when the registry is saved.
+ */
+async function restoreDxvkStrict(args: {
+  gameSettings: GameSettings
+  winePrefix: string
+  tool: string
+  is64bitPrefix: boolean
+  dlls32: string[]
+  dlls64: string[]
+  currentVersionCheck: string
+}): Promise<boolean> {
+  const { gameSettings, winePrefix, tool, is64bitPrefix, currentVersionCheck } =
+    args
+  const { dlls32, dlls64 } = args
+  const failed: string[] = []
+  const run = (commandParts: string[]) =>
+    runWineCommand({
+      gameSettings,
+      commandParts,
+      wait: false,
+      resolveOnExit: true,
+      protonVerb: 'run'
+    })
+
+  logInfo('Removing DXVK DLLs', LogPrefix.ToolInstaller)
+  const dllsToRemove = is64bitPrefix
+    ? [
+        ...dlls64.map((dll) => `${winePrefix}/drive_c/windows/system32/${dll}`),
+        ...dlls32.map((dll) => `${winePrefix}/drive_c/windows/syswow64/${dll}`)
+      ]
+    : dlls32.map((dll) => `${winePrefix}/drive_c/windows/system32/${dll}`)
+  for (const dllFile of dllsToRemove) {
+    try {
+      rmSync(dllFile, { force: true })
+    } catch (err) {
+      logError([`Error removing ${dllFile}`, err], LogPrefix.ToolInstaller)
+      failed.push(`rm ${dllFile}`)
+    }
+  }
+
+  logInfo('Removing DLL overrides', LogPrefix.ToolInstaller)
+  // dlls64 and dlls32 carry the same file names, and DllOverrides is keyed by name.
+  const overrides = [
+    ...new Set(
+      (is64bitPrefix ? [...dlls64, ...dlls32] : dlls32).map((dll) =>
+        dll.replace('.dll', '')
+      )
+    )
+  ]
+  const regFile = join(winePrefix, 'drive_c', DXVK_RESTORE_REG_FILE)
+  try {
+    writeFileSync(
+      regFile,
+      [
+        'Windows Registry Editor Version 5.00',
+        '',
+        `[${DLL_OVERRIDES_KEY}]`,
+        ...overrides.map((dll) => `"${dll}"=-`),
+        ''
+      ].join('\r\n')
+    )
+    const importResult = await run([
+      'reg',
+      'import',
+      `C:\\${DXVK_RESTORE_REG_FILE}`
+    ])
+    if (importResult?.code !== 0) {
+      failed.push(`reg import code=${importResult?.code}`)
+    }
+  } catch (err) {
+    logError([`Error importing ${regFile}`, err], LogPrefix.ToolInstaller)
+    failed.push('reg import')
+  } finally {
+    rmSync(regFile, { force: true })
+  }
+
+  const queryResult = await run(['reg', 'query', DLL_OVERRIDES_KEY])
+  const queryOutput = `${queryResult?.stdout ?? ''}${queryResult?.stderr ?? ''}`
+  if (queryResult?.code === 0 && queryOutput.includes(DLL_OVERRIDES_KEY)) {
+    const left = overrides.filter((dll) =>
+      new RegExp(`^\\s+${dll}\\s+REG_`, 'im').test(queryOutput)
+    )
+    if (left.length > 0) failed.push(`overrides left: ${left.join(', ')}`)
+  } else if (!/unable to find/i.test(queryOutput)) {
+    // A missing key has no overrides left; anything else (or no output) proves nothing.
+    failed.push(`reg query code=${queryResult?.code}`)
+  }
+
+  const missing = dllsToRemove.filter((dllFile) => !existsSync(dllFile))
+  if (missing.length > 0) {
+    logInfo('Restoring Wine stock DLLs', LogPrefix.ToolInstaller)
+    const bootResult = await run(['wineboot', '-u'])
+    if (bootResult?.code !== 0) {
+      failed.push(`wineboot -u code=${bootResult?.code}`)
+    }
+  } else {
+    logInfo(
+      'Wine stock DLLs restored by the prefix update',
+      LogPrefix.ToolInstaller
+    )
+  }
+
+  if (failed.length > 0) {
+    logError(
+      `DXVK restore failed for ${winePrefix}: ${failed.join('; ')}`,
+      LogPrefix.ToolInstaller
+    )
+    return false
+  }
+  // Last, and synchronous: the version file is the "DXVK is installed" signal.
+  logInfo(`Removing ${tool} version information`, LogPrefix.ToolInstaller)
+  rmSync(currentVersionCheck, { force: true })
+  return true
+}
 
 // 261011-iel (D-16): bounds for the `wine --version` probe `checkWineVersion`
 // runs at list-all time. Measured on the GPTK bottle wine64, 2026-10-11: 36
