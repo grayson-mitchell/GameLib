@@ -2,10 +2,12 @@
 created: 2026-11-02
 title: "Amazon store: no back navigation after opening a claim page"
 area: store-embed
+status: "RESOLVED 2026-11-03. Quick tasks 261102-sk8 (record same-document navigations) and 261102-szs (3s landing settle window so luna.amazon.com URL rewrites replace instead of push). Live-verified by the operator 2026-11-03: Back from a claim returns to the grid and disables, Forward works, Steam and GOG unchanged."
 files:
   - src-tauri/src/main.rs
   - src/frontend/screens/WebView/useStoreEmbedHost.ts
   - src/frontend/screens/WebView/index.tsx
+  - src/frontend/screens/WebView/storeExitRefresh.ts
 severity: medium
 platform: any
 ready: live-gate
@@ -37,3 +39,19 @@ page loads for product pages, which would explain why only Amazon shows it.
 
 Live: open a claim in `/store/amazon` and step back to the grid with the embed's back control.
 Check Steam, GOG and Epic back navigation still works.
+
+## Resolution (2026-11-03)
+
+Confirmed as pushState: opening a claim fired no page load. The store now runs on
+`luna.amazon.com`, not `gaming.amazon.com`.
+
+- `261102-sk8`: the nav-event drain reads the webview's live URL and records same-origin
+  same-document changes in the Rust history stack (push, in-place replace for the same path, or a
+  cursor move onto an adjacent entry).
+- `261102-szs`: the first live retest looped (Back reloaded the same page indefinitely), because
+  luna rewrites its URL just after each landing and the rewrite was recorded as a new step. For
+  `STORE_EMBED_LANDING_SETTLE` (3s) after a back/forward/reload/navigate lands, a URL change
+  replaces the current entry, and adjacent duplicates collapse. `luna.amazon.com` was also added
+  to `AMAZON_HOSTS` for the store-exit refresh.
+
+Live retest 2026-11-03: pass on all three checks (Amazon Back/Forward, Steam, GOG).
