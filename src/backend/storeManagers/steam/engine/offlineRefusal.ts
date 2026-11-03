@@ -12,9 +12,10 @@
  *   blocked. Under override 'crossover' this holds even when the current pin is
  *   installed (WR-02): the restore needs the marker's own pin and
  *   prepareBottleForEngine's resolveRestoreSource downloads it in both the
- *   healthy and the unhealthy (G10) branch. Under 'automatic' an installed
- *   current pin lets an unhealthy CrossOver fall back, so it never refuses; a surviving DXVK copy means the restore needs no pin, so a healthy
- *   CrossOver still probes and launches (UAT 34 run 2).
+ *   healthy and the unhealthy (G10) branch. Under 'automatic' with the
+ *   current pin installed this arm does not refuse: an unhealthy CrossOver
+ *   falls back to the pin, and a surviving DXVK copy means the restore needs
+ *   no pin, so a healthy CrossOver still probes and launches (UAT 34 run 2).
  *
  * This only ever refuses. It never selects an engine or routes to bottled
  * Steam. A CrossOver override with CrossOver missing is left to the normal

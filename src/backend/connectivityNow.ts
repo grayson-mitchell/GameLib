@@ -109,6 +109,13 @@ export async function checkConnectivityNow(
     } else if (!hasRoutableAddress(d.networkInterfaces())) {
       result = { offline: true, source: 'no-interface' }
       notifyFreshOffline('no-interface')
+    } else if (d.hosts.length === 0) {
+      // Fail open: with nothing to probe we cannot prove offline (IN-02).
+      result = {
+        offline: false,
+        source: 'error',
+        detail: 'no DNS probe hosts configured'
+      }
     } else {
       let timer: NodeJS.Timeout | undefined
       try {
@@ -116,10 +123,7 @@ export async function checkConnectivityNow(
         const lookups = new Promise<{ kind: 'ok' } | { kind: 'failed' }>(
           (resolve) => {
             let pending = d.hosts.length
-            if (pending === 0) {
-              resolve({ kind: 'failed' })
-              return
-            }
+            // hosts is non-empty here (empty list handled above)
             d.hosts.forEach((host, i) => {
               Promise.resolve()
                 .then(() => d.lookup(host))

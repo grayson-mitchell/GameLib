@@ -4307,8 +4307,12 @@ export default class SteamGame implements Game {
         restoreNeedsAbsentPin: restoreNeedsAbsentPin(bottleName)
       })
       if (refusal.blocked) {
+        const why =
+          refusal.arm === 'crossover-missing'
+            ? `offline, CrossOver is missing and the built-in engine ${ENGINE_PINS.current.id} is not installed`
+            : 'offline, and returning this bottle to CrossOver needs an engine pin that is not on disk'
         logWarning(
-          `SteamGame: appId ${this.appId} launch blocked before pre-flight: offline and the built-in engine is not installed (${refusal.arm})`,
+          `SteamGame: appId ${this.appId} launch blocked before pre-flight: ${why} (${refusal.arm})`,
           LogPrefix.Steam
         )
         this.showEngineDialog(

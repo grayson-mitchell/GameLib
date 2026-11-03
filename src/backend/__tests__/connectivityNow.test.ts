@@ -64,6 +64,16 @@ describe('checkConnectivityNow', () => {
     mockLogWarning.mockClear()
   })
 
+  it('IN-02: an empty host list fails open, no hook fired', async () => {
+    const deps = makeDeps({ hosts: [] })
+    const r = await checkConnectivityNow('t', deps as never)
+    expect(r.offline).toBe(false)
+    expect(r.source).toBe('error')
+    expect(r.detail).toMatch(/no DNS probe hosts/)
+    expect(deps.lookup).not.toHaveBeenCalled()
+    expect(deps.onFreshOffline).not.toHaveBeenCalled()
+  })
+
   it('G25: monitor offline -> offline, no lookup, no recheck', async () => {
     const deps = makeDeps({
       status: jest.fn((): ConnectivityStatus => 'offline')
