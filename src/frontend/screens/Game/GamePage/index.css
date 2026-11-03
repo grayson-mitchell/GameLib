@@ -160,6 +160,11 @@
     .mainInfo {
       padding: 0px min(4vw, 70px);
       background-color: var(--body-background);
+      /* quick 261103-w9l: the shared rule's overflow: hidden made .mainInfo a
+         scroll container that never scrolls, so overflowing content (the
+         Play/Settings strip first) was clipped at mid window heights. */
+      overflow-x: hidden;
+      overflow-y: auto;
 
       .store-icon {
         position: absolute;
@@ -333,6 +338,14 @@
         align-items: center;
         margin-top: 15px;
         border-radius: 8px;
+        /* quick 261103-w9l: pinned so Play and Settings stay visible when
+           Steam-engine notices overflow the panel. Background is the panel's
+           own token so it survives every theme. */
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        background-color: var(--body-background);
+        padding-block: var(--space-xs);
 
         & > .settings-icon {
           margin-inline-start: var(--space-xs);
