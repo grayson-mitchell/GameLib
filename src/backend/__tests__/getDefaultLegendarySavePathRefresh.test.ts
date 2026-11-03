@@ -90,6 +90,9 @@
  *  - `backend/online_monitor`, `../storeManagers/legendary/electronStores`,
  *    `../storeManagers/legendary/user`, `../storeManagers/legendary/games` -> qop's set,
  *    verbatim, not on this call path either, needed only for module resolution.
+ *  - `backend/macArch/recovery` -> `recordedMacArch` / `scheduleMacArchSweep` stubs (7f9920654,
+ *                            quick 261029-t39): the real module's load chain evaluates
+ *                            `app.getAppPath()` and constructs a real electron store.
  *  - `backend/platform`   -> minimal `{ app: { getPath: jest.fn() } }`. `save_sync.ts` imports
  *                            `app` at module scope; `app.getPath` is only actually called on the
  *                            GOG branch (`getDefaultGogSavePaths`), never the legendary branch
@@ -177,6 +180,15 @@ jest.mock('../launcher', () => ({
 jest.mock('backend/online_monitor', () => ({
   isOnline: jest.fn(() => true),
   runOnceWhenOnline: jest.fn()
+}))
+
+// ── backend/macArch/recovery mock ────────────────────────────────────────────────────────────
+// 7f9920654 (quick 261029-t39) made legendary/library.ts import this module, whose load chain
+// (macArch/electronStores -> constants/paths) evaluates app.getAppPath() and constructs a real
+// TypeCheckedStoreBackend. The macOS-arch sweep is irrelevant to the save-path refresh under test.
+jest.mock('backend/macArch/recovery', () => ({
+  recordedMacArch: jest.fn(() => undefined),
+  scheduleMacArchSweep: jest.fn()
 }))
 
 // ── ../storeManagers/legendary/electronStores mock ───────────────────────────────────────────

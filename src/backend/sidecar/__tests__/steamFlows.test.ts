@@ -65,6 +65,10 @@ jest.mock('backend/utils', () => ({
 
 // ── backend/constants/environment mock — pins the native (non-bottle) Steam branch
 // deterministically regardless of the host OS running this test. ─────────────────────────
+// The runtime `process.platform` pin below is also needed: since 721c2fa01 `shell.openExternal`
+// calls `shouldOpenInBackground(process.platform, ...)` at call time, so on a Mac the
+// `isMac:false` mock alone still spawns a real detached `/usr/bin/open -g steam://...`
+// and never writes the `openExternal` frame.
 jest.mock('backend/constants/environment', () => ({
   isWindows: false,
   isMac: false,
@@ -100,6 +104,16 @@ async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
 }
+
+// Pin the native Linux branch of shell.openExternal regardless of host OS (see the
+// environment mock above): restored afterAll, same idiom as openExternalBackground.test.ts.
+const realPlatform = process.platform
+beforeAll(() => {
+  Object.defineProperty(process, 'platform', { value: 'linux' })
+})
+afterAll(() => {
+  Object.defineProperty(process, 'platform', { value: realPlatform })
+})
 
 describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, plan 34.5-46)', () => {
   beforeEach(() => {
