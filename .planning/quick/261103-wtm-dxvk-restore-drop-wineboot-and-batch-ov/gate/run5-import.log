@@ -1,0 +1,26 @@
+CrossOver wine.inf mtime: 1784047440
+Staging  wine.inf mtime: 1793246336
+== create bottle (CrossOver)
+== flip to Staging: wineboot -u + DXVK install (as installRemove backup)
+after Staging + DXVK:
+  system32/d3d11.dll: NOT-builtin
+  system32/d3d10core.dll: NOT-builtin
+  syswow64/d3d11.dll: NOT-builtin
+  syswow64/d3d10core.dll: NOT-builtin
+  .update-timestamp=1793246336
+  overrides in user.reg:
+    "d3d10core"="native"
+    "d3d11"="native"
+== restore through CrossOver: rm DLLs first, then ONE reg import, no wineboot -u
+reg import exit=0 in 5.89 s
+after CrossOver restore (wineserver stopped, registry saved):
+  system32/d3d11.dll: builtin
+  system32/d3d10core.dll: builtin
+  syswow64/d3d11.dll: builtin
+  syswow64/d3d10core.dll: builtin
+  .update-timestamp=1784047440
+  overrides in user.reg:
+    (none)
+== negative: import of a missing file / bad header
+missing file exit=1
+bad header exit=1

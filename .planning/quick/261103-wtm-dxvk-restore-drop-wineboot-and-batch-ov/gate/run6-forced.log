@@ -1,0 +1,14 @@
+control (matching ts, DLLs removed, one reg query, no update expected):
+  system32/d3d11.dll MISSING
+  syswow64/d3d11.dll MISSING
+  system32/d3d10core.dll MISSING
+  syswow64/d3d10core.dll MISSING
+  ts=1784047440
+forced (ts := 0, then reg import + reg query):
+  import exit=0
+  query (no d3d1x lines above = gone)
+  system32/d3d11.dll MISSING
+  syswow64/d3d11.dll MISSING
+  system32/d3d10core.dll MISSING
+  syswow64/d3d10core.dll MISSING
+  ts=0

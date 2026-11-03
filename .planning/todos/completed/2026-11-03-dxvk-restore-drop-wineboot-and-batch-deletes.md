@@ -32,3 +32,13 @@ were deferred, each only once shown on CrossOver.
 On a throwaway CrossOver bottle, after a Staging -> CrossOver flip with the
 DXVK DLLs removed, show that the stock d3d11 and d3d10core are back without
 `wineboot -u`.
+
+## Resolution (2026-11-03, quick 261103-wtm)
+
+Closed by `ff82f781f`. The gate passed on a throwaway CrossOver bottle: with the DLLs removed
+before the first CrossOver process, the flip's automatic update restored all four stock DLLs by
+the time a single batched `reg import` exited, with no `wineboot -u`. Two findings changed the
+shape. Forged `.update-timestamp` values did not reliably trigger the update, so the restore
+checks whether the DLLs came back and runs `wineboot -u` only if they did not. A no-match import
+exits 0, so one `reg query` verifies the overrides are gone. Evidence:
+`.planning/quick/261103-wtm-dxvk-restore-drop-wineboot-and-batch-ov/`.
