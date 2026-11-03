@@ -277,6 +277,9 @@ Frontend changes reload live. Sidecar changes need a restart.
 
 `pnpm tauri:dev` sets `GAMELIB_DEV_SECRET_VAULT=1`. That keeps the Steam refresh token and the Humble Bundle session secrets in a plaintext development vault on local disk instead of the OS credential store.
 `pnpm tauri:dev:keyring` runs the same thing with the OS credential store.
+It sets `GAMELIB_DEV_KEYRING=1`.
+The pre-flight refuses to start when neither `GAMELIB_DEV_SECRET_VAULT=1` nor `GAMELIB_DEV_KEYRING=1` is set, so running the internal `pnpm tauri:dev:run` directly fails with a pointer to the two supported commands.
+This prevents a macOS Keychain password prompt on every launch of the unsigned dev binary.
 
 ### Development on Nix
 
