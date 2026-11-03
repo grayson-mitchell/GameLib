@@ -79,4 +79,29 @@ describe('offlineLaunchCertainlyBlocked', () => {
       expected
     )
   })
+
+  it('WR-02: crossover override, pin installed, restore needs absent pin -> blocked', () => {
+    expect(
+      offlineLaunchCertainlyBlocked({
+        ...base,
+        override: 'crossover',
+        currentPinInstalled: true
+      })
+    ).toEqual({ blocked: true, arm: 'restore-needs-pin' })
+  })
+  it('WR-02: automatic, pin installed, restore needs absent pin -> not blocked', () => {
+    expect(
+      offlineLaunchCertainlyBlocked({ ...base, currentPinInstalled: true })
+    ).toEqual({ blocked: false })
+  })
+  it('WR-02: crossover override, CrossOver missing, pin installed -> not blocked', () => {
+    expect(
+      offlineLaunchCertainlyBlocked({
+        ...base,
+        override: 'crossover',
+        crossoverMissing: true,
+        currentPinInstalled: true
+      })
+    ).toEqual({ blocked: false })
+  })
 })
