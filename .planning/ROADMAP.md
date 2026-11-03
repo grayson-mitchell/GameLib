@@ -842,7 +842,7 @@ Plans:
 **Goal:** A Windows Steam title on the macOS native bridge still launches when CrossOver is missing, its trial has expired for that bottle, or it is broken. CrossOver stays the first-choice engine. The fallback is one Wine-Staging + DXVK build pinned per GameLib release, which GameLib installs and manages itself. GameLib keeps the previous pinned build so a bad bump can be rolled back. The fallback runs the game's existing bridge bottle with `USER=crossover`, so saves and settings stay in one Windows profile. Before every CrossOver launch, GameLib checks the bottle's trial state with `CX_BOTTLE=<bottle> wine --demo-status`. An expired bottle goes to the fallback instead of hanging on CrossOver's nag dialog. CrossOver launches always run with a timeout. Users see "N days remaining" before expiry. A per-game engine override exists only as an advanced, explicitly unsupported option (the Proton model): known-fixes and census verdicts do not apply to it, and the launch log records the exact engine and version. GameLib records the CrossOver versions it has tested, and warns on an untested one without blocking it. Out of scope: DRM mode and bottled Steam (CrossOver-only), GPTK and `-DXMT` for Steam, a full census on the fallback (it is best-effort). Evidence: spikes 056–060 and the Idea B engine decision in `.planning/spikes/MANIFEST.md`.
 **Requirements**: TBD
 **Depends on:** Phase 51 (per-game bridge bottles)
-**Plans:** 40/43 plans executed
+**Plans:** 41/43 plans executed
 
 Plans:
 **Wave 1**
@@ -952,7 +952,7 @@ Plans:
 **Gap round 4, wave 1**
 
 - [x] 59-40-PLAN.md — Fresh bounded connectivity check at an action; monitor re-probes on a fresh offline finding; G25(a) diagnosis (G25)
-- [ ] 59-41-PLAN.md — Offline-refusal predicate with a CrossOver-missing arm; probe-free isCrossoverMissing (G25)
+- [x] 59-41-PLAN.md — Offline-refusal predicate with a CrossOver-missing arm; probe-free isCrossoverMissing (G25)
 
 **Gap round 4, wave 2** *(blocked on gap round 4 wave 1)*
 
