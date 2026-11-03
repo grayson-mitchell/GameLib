@@ -1,0 +1,19 @@
+07:28:17
+{"step":"RefreshLibraryFolders","called":true}
++2s {"step":"state","appId":264160,"installState":1,"numInstalled":12}
++5s {"step":"state","appId":264160,"installState":1,"numInstalled":12}
++10s {"step":"state","appId":264160,"installState":1,"numInstalled":12}
++20s {"step":"state","appId":264160,"installState":1,"numInstalled":12}
+07:29:05
+{"step":"RecoverAppFromFolder","appId":264160,"path":"/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/WazHack","ret":18}
++2s {"step":"state","appId":264160,"installState":1,"numInstalled":12}
++5s {"step":"state","appId":264160,"installState":1,"numInstalled":12}
++10s {"step":"state","appId":264160,"installState":1,"numInstalled":12}
++20s {"step":"state","appId":264160,"installState":1,"numInstalled":12}
+07:30:11
+{"step":"InstallApp","appId":264160,"folder":0,"EAppUpdateError":0}
++2s {"step":"state","appId":264160,"installState":268,"numInstalled":13}
++5s {"step":"state","appId":264160,"installState":4,"numInstalled":13}
++10s {"step":"state","appId":264160,"installState":4,"numInstalled":13}
++20s {"step":"state","appId":264160,"installState":4,"numInstalled":13}
++30s {"step":"state","appId":264160,"installState":4,"numInstalled":13}
