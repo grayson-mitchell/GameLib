@@ -134,8 +134,11 @@ import {
 // Phase 60: Steam overlay in bridged games (macOS).
 import {
   appendCxEnvTokens,
+  mergeOverlayEnvVars,
+  prepareOverlayEnv,
   prepareOverlayLaunch,
-  prepareOverlayTokens
+  prepareOverlayTokens,
+  type OverlayLaunchPayload
 } from './bridge/overlay/overlayLaunch'
 import {
   resolveOverlayEnabled,
@@ -4752,7 +4755,8 @@ export default class SteamGame implements Game {
   /**
    * Phase 60 (D-01/D-04/D-07/D-08): the TCP-route overlay decision. Returns the
    * settings to launch with and, when the overlay is injecting, its tokens and
-   * runner. Ends the bottle's wineserver with the PREVIOUS runner's own
+   * runner. On the fallback engine (Wine-Staging + DXVK) the overlay is plain
+   * env vars (kind 'env', D-07): no clone, no re-sign, no runner change. Ends the bottle's wineserver with the PREVIOUS runner's own
    * wineserver whenever the runner changes (stock/overlay/DRM never share one).
    * Never throws and never blocks the launch.
    */
@@ -4761,7 +4765,7 @@ export default class SteamGame implements Game {
     previousRunner: ReturnType<typeof getDrmBridgeRunner>
   ): Promise<{
     settings: GameSettings
-    overlayLaunch?: { tokens: string[]; runnerBin: string }
+    overlayLaunch?: OverlayLaunchPayload
   }> {
     let registered = false
     try {
@@ -4777,11 +4781,26 @@ export default class SteamGame implements Game {
             tokens: string[]
           }
         | undefined
+      let envVars:
+        | Extract<OverlayLaunchPayload, { kind: 'env' }>['vars']
+        | undefined
       if (fallbackEngine) {
-        logInfo(
-          `SteamGame: appId ${this.appId} overlay=skipped reason=fallback-engine (D-07)`,
-          LogPrefix.Steam
-        )
+        if (this.resolveLaunchOverlay().enabled) {
+          const result = await prepareOverlayEnv({
+            appId: this.appId,
+            shimPath: builtOverlayShimPath,
+            steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH)
+          })
+          if (result.status === 'error') {
+            this.notifyOverlaySetupFailed(result.step, result.cause)
+          } else {
+            envVars = result.vars
+            logInfo(
+              `SteamGame: appId ${this.appId} overlay=env reason=fallback-engine (D-07)`,
+              LogPrefix.Steam
+            )
+          }
+        }
       } else if (this.resolveLaunchOverlay().enabled) {
         const result = await prepareOverlayLaunch({
           appId: this.appId,
@@ -4812,6 +4831,7 @@ export default class SteamGame implements Game {
           return {
             settings: getBridgeBottleSettings(this.appId),
             overlayLaunch: {
+              kind: 'cx-env',
               tokens: ok.tokens,
               runnerBin: ok.runner.wrapperBin
             }
@@ -4827,6 +4847,9 @@ export default class SteamGame implements Game {
       // wineVersion must not ride along.
       if (previousRunner?.kind === 'overlay' && !fallbackEngine) {
         return { settings: getBridgeBottleSettings(this.appId) }
+      }
+      if (envVars) {
+        return { settings, overlayLaunch: { kind: 'env', vars: envVars } }
       }
       return { settings }
     } catch (error) {
@@ -4966,7 +4989,7 @@ export default class SteamGame implements Game {
     // Only a DRM runner's absence changes the settings drmLaunchSetup clears;
     // an overlay entry is handled by prepareTcpOverlay below.
     const hadDrmRunner = previousRunner?.kind === 'drm'
-    let overlayLaunch: { tokens: string[]; runnerBin: string } | undefined
+    let overlayLaunch: OverlayLaunchPayload | undefined
     const wantsDrm =
       resolveBridgeMode(launchDrmWrapper, launchCegMarkers) ===
       'steamclient-layer'
@@ -5357,7 +5380,7 @@ export default class SteamGame implements Game {
     exePath: string,
     bridgeBottleSettings: GameSettings,
     drm?: DrmWineLaunch,
-    overlay?: { tokens: string[]; runnerBin: string }
+    overlay?: OverlayLaunchPayload
   ): Promise<boolean> {
     const reportLaunchFailure = (error: unknown) => {
       logWarning(
@@ -5626,7 +5649,21 @@ export default class SteamGame implements Game {
         }
       }
 
-      if (!drm && overlay) {
+      if (!drm && overlay?.kind === 'env') {
+        // Fallback engine (D-07): its own runner stands; no restore.
+        try {
+          launchSettings = {
+            ...launchSettings,
+            enviromentOptions: mergeOverlayEnvVars(
+              launchSettings.enviromentOptions ?? [],
+              overlay.vars
+            )
+          }
+          overlayInjected = true
+        } catch (error) {
+          this.notifyOverlaySetupFailed('env', String(error))
+        }
+      } else if (!drm && overlay?.kind === 'cx-env') {
         // One runner per bottle (T-60-08-04): a known fix must not swap it.
         if (launchSettings.wineVersion.bin !== overlay.runnerBin) {
           logWarning(

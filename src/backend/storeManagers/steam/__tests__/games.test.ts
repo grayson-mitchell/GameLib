@@ -512,8 +512,11 @@ jest.mock('../bridge/overlay/overlayWineLog', () => {
 jest.mock('../bridge/overlay/overlayLaunch', () => {
   const prepareLaunchMock = jest.fn()
   const prepareTokensMock = jest.fn()
+  const prepareEnvMock = jest.fn()
   return {
     ...jest.requireActual('../bridge/overlay/overlayLaunch'),
+    __prepareOverlayEnvMock: prepareEnvMock,
+    prepareOverlayEnv: (...args: unknown[]) => prepareEnvMock(...args),
     __prepareOverlayLaunchMock: prepareLaunchMock,
     __prepareOverlayTokensMock: prepareTokensMock,
     prepareOverlayLaunch: (...args: unknown[]) => prepareLaunchMock(...args),
@@ -13475,9 +13478,11 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       const { __resolveOverlayEnabledMock } = jest.requireMock<{
         __resolveOverlayEnabledMock: jest.Mock
       }>('../bridge/overlay/overlayPolicy')
-      const { __prepareOverlayLaunchMock } = jest.requireMock<{
-        __prepareOverlayLaunchMock: jest.Mock
-      }>('../bridge/overlay/overlayLaunch')
+      const { __prepareOverlayLaunchMock, __prepareOverlayEnvMock } =
+        jest.requireMock<{
+          __prepareOverlayLaunchMock: jest.Mock
+          __prepareOverlayEnvMock: jest.Mock
+        }>('../bridge/overlay/overlayLaunch')
       const bottleMod = jest.requireMock<{
         setOverlayBridgeRunner: jest.Mock
         endPerGameBridgeBottleSessionWith: jest.Mock
@@ -13503,6 +13508,8 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           source: 'default'
         })
         __prepareOverlayLaunchMock.mockReset()
+        __prepareOverlayEnvMock.mockReset()
+        __prepareOverlayEnvMock.mockResolvedValue({ status: 'ok', vars: [] })
         bottleMod.setOverlayBridgeRunner.mockImplementation(() => {
           registered.current = true
           return true
@@ -13628,8 +13635,17 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
       })
 
-      it('fallback engine: no prepare, skipped log line, no toast (D-07)', async () => {
-        const id = freshId()
+      const envVarsFor = (id: string) => [
+        {
+          key: 'DYLD_INSERT_LIBRARIES',
+          value:
+            '/s/shim.dylib:/b/steamloader.dylib:/b/gameoverlayrenderer.dylib'
+        },
+        { key: 'SteamOverlayGameId', value: id },
+        { key: 'SteamGameId', value: id },
+        { key: 'SteamAppId', value: id }
+      ]
+      const pinStaging = (id: string) => {
         const { setEngineSelection } = jest.requireActual(
           '../engine/engineRegistry'
         )
@@ -13643,26 +13659,129 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           version: '11.20',
           dxvk: null
         })
+      }
+      const callPrepare = async (id: string, settings: unknown) => {
         const game = new SteamGame(id) as unknown as {
           prepareTcpOverlay: (
             s: unknown,
             p: unknown
-          ) => Promise<{ overlayLaunch?: unknown }>
+          ) => Promise<{ settings: unknown; overlayLaunch?: unknown }>
         }
-        const out = await game.prepareTcpOverlay(
-          {
-            wineCrossoverBottle: bottleFor(id),
-            wineVersion: { bin: '/e/wine', name: 'e', type: 'wine' }
-          },
-          undefined
-        )
-        clearEngineSelection(id)
-        expect(out.overlayLaunch).toBeUndefined()
+        try {
+          return await game.prepareTcpOverlay(settings, undefined)
+        } finally {
+          clearEngineSelection(id)
+        }
+      }
+
+      it('fallback engine: env route, env log line, no clone, no toast (D-07)', async () => {
+        const id = freshId()
+        pinStaging(id)
+        __prepareOverlayEnvMock.mockResolvedValue({
+          status: 'ok',
+          vars: envVarsFor(id)
+        })
+        const input = {
+          wineCrossoverBottle: bottleFor(id),
+          wineVersion: { bin: '/e/wine', name: 'e', type: 'wine' }
+        }
+        const out = await callPrepare(id, input)
+        expect(out.overlayLaunch).toEqual({ kind: 'env', vars: envVarsFor(id) })
+        expect(out.settings).toBe(input)
         expect(__prepareOverlayLaunchMock).not.toHaveBeenCalled()
+        expect(bottleMod.setOverlayBridgeRunner).not.toHaveBeenCalled()
         expect(infoLines()).toContain(
-          `SteamGame: appId ${id} overlay=skipped reason=fallback-engine (D-07)`
+          `SteamGame: appId ${id} overlay=env reason=fallback-engine (D-07)`
         )
+        expect(infoLines().join('\n')).not.toContain('overlay=skipped')
         expect(notify).not.toHaveBeenCalled()
+      })
+
+      it('fallback engine: setup failure toasts once and launches without overlay (D-08)', async () => {
+        const id = freshId()
+        pinStaging(id)
+        __prepareOverlayEnvMock.mockResolvedValue({
+          status: 'error',
+          step: 'shim',
+          cause: 'overlay shim missing'
+        })
+        const out = await callPrepare(id, {
+          wineCrossoverBottle: bottleFor(id),
+          wineVersion: { bin: '/e/wine', name: 'e', type: 'wine' }
+        })
+        expect(out.overlayLaunch).toBeUndefined()
+        expect(notify).toHaveBeenCalledTimes(1)
+        expect(
+          (logWarning as jest.Mock).mock.calls.some((c) =>
+            String(c[0]).includes(`appId=${id} reason=overlay-shim`)
+          )
+        ).toBe(true)
+      })
+
+      it('fallback engine with the overlay off: no env prepared', async () => {
+        const id = freshId()
+        pinStaging(id)
+        __resolveOverlayEnabledMock.mockReturnValue({
+          enabled: false,
+          source: 'user'
+        })
+        const out = await callPrepare(id, {
+          wineCrossoverBottle: bottleFor(id),
+          wineVersion: { bin: '/e/wine', name: 'e', type: 'wine' }
+        })
+        expect(out.overlayLaunch).toBeUndefined()
+        expect(__prepareOverlayEnvMock).not.toHaveBeenCalled()
+        expect(notify).not.toHaveBeenCalled()
+      })
+
+      it('fallback engine launch: plain env on the unchanged runner, no CX_ENV DYLD, known-fix runner stands', async () => {
+        const id = freshId()
+        pinStaging(id)
+        __prepareOverlayEnvMock.mockResolvedValue({
+          status: 'ok',
+          vars: envVarsFor(id)
+        })
+        ;(getBridgeBottleSettings as jest.Mock).mockImplementation(
+          (bid: string) => ({
+            wineCrossoverBottle: bottleFor(bid),
+            wineVersion: { bin: '/e/wine', name: 'e', type: 'wine' },
+            enviromentOptions: [{ key: 'SteamAppId', value: 'old' }]
+          })
+        )
+        ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
+          (_id: string, settings: object) =>
+            Promise.resolve({
+              ...settings,
+              wineVersion: { bin: '/swapped/wine', name: 's', type: 'wine' }
+            })
+        )
+        const game = new SteamGame(id) as unknown as {
+          fireBridgeWineLaunch: (
+            e: string,
+            s: unknown,
+            d: unknown,
+            o: unknown
+          ) => Promise<boolean>
+        }
+        const launched = await game.fireBridgeWineLaunch(
+          '/g/game.exe',
+          (getBridgeBottleSettings as jest.Mock)(id),
+          undefined,
+          { kind: 'env', vars: envVarsFor(id) }
+        )
+        expect(launched).toBe(true)
+        expect(usedSettings().wineVersion.bin).toBe('/swapped/wine')
+        const env = usedSettings().enviromentOptions as {
+          key: string
+          value: string
+        }[]
+        expect(env.filter((e) => e.key === 'SteamAppId')).toEqual([
+          { key: 'SteamAppId', value: id }
+        ])
+        expect(env.find((e) => e.key === 'DYLD_INSERT_LIBRARIES')?.value).toBe(
+          envVarsFor(id)[0].value
+        )
+        expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
       })
 
       it('fallback engine after an overlay launch ends the clone wineserver', async () => {
