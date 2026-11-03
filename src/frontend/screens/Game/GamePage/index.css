@@ -470,7 +470,8 @@
             height: 16px;
             width: 16px;
             align-self: center;
-            color: var(--neutral-02);
+            /* Inherit the button label colour so the spinner and Play/Stop icons follow .button / :disabled.is-secondary in every theme (quick 261103-stm) */
+            color: currentColor;
             &[data-icon='play'],
             &[data-icon='stop'] {
               /* For some reason Play/Stop icons are much smaller the rest */
