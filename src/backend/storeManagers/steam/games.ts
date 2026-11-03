@@ -4014,7 +4014,7 @@ export default class SteamGame implements Game {
         }
       }
     }
-    await shell.openExternal(url)
+    await shell.openExternal(url, { activate: false })
     return true
   }
 
