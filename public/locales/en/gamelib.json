@@ -480,6 +480,7 @@
             }
         },
         "bridge": {
+            "alreadyLaunching": "This game is already starting. Wait for its window to open.",
             "drm": {
                 "detail": "Details: {{cause}}",
                 "step": {

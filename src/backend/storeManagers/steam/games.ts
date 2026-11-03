@@ -286,6 +286,14 @@ interface NativeInstallEntry {
 const nativeInstallsInFlight = new Map<string, NativeInstallEntry>()
 
 /**
+ * G26: a second Play during bridge pre-flight joined nothing and ran a
+ * concurrent engine switch in the same bottle (UAT 38: DXVK removal failed,
+ * marker dxvk:"failed"). One launch per appId at a time, released when it
+ * settles.
+ */
+const bridgeLaunchesInFlight = new Map<string, Promise<boolean>>()
+
+/**
  * quick 261024-urq: appId -> the bridge bottle a live bridge launch was fired
  * into. The single source `SteamGame.stop()` consults to detect the bridge
  * route: the process monitor alone is insufficient (none starts when the
@@ -4832,7 +4840,36 @@ export default class SteamGame implements Game {
    * must not outlive a launch that did not start. A started launch keeps it
    * until the process monitor's onStopped clears it.
    */
-  private async launchBridgeGame(): Promise<boolean> {
+  private launchBridgeGame(): Promise<boolean> {
+    const appId = this.appId
+    const existing = bridgeLaunchesInFlight.get(appId)
+    if (existing) {
+      logInfo(
+        `SteamGame: appId ${appId} bridge launch already in progress; joining it instead of starting a second (G26)`,
+        LogPrefix.Steam
+      )
+      notify({
+        title: this.getGameInfo().title,
+        body: i18next.t(
+          'gamelib:steam.bridge.alreadyLaunching',
+          'This game is already starting. Wait for its window to open.'
+        )
+      })
+      return existing
+    }
+    const run = this.runBridgeLaunch()
+    bridgeLaunchesInFlight.set(appId, run)
+    run
+      .finally(() => {
+        if (bridgeLaunchesInFlight.get(appId) === run) {
+          bridgeLaunchesInFlight.delete(appId)
+        }
+      })
+      .catch(() => undefined)
+    return run
+  }
+
+  private async runBridgeLaunch(): Promise<boolean> {
     let started = false
     try {
       started = await this.launchBridgeGameBody()

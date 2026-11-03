@@ -14724,6 +14724,119 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       })
     })
 
+    describe('G26: one bridge launch per appId', () => {
+      const deferred = () => {
+        let resolve!: (v: boolean) => void
+        let reject!: (e: unknown) => void
+        const promise = new Promise<boolean>((res, rej) => {
+          resolve = res
+          reject = rej
+        })
+        return { promise, resolve, reject }
+      }
+      const bodySpy = (game: SteamGame) =>
+        jest.spyOn(game as any, 'launchBridgeGameBody')
+
+      it('G26: a second concurrent launch runs the body once and both resolve to its value', async () => {
+        const game = new SteamGame(ID)
+        const d = deferred()
+        const spy = bodySpy(game).mockReturnValue(d.promise)
+        const a = (game as any).launchBridgeGame() as Promise<boolean>
+        const b = (game as any).launchBridgeGame() as Promise<boolean>
+        d.resolve(true)
+        expect(await a).toBe(true)
+        expect(await b).toBe(true)
+        expect(spy).toHaveBeenCalledTimes(1)
+      })
+
+      it('G26: the joiner logs, notifies once, and never shows a modal', async () => {
+        const game = new SteamGame(ID)
+        const d = deferred()
+        bodySpy(game).mockReturnValue(d.promise)
+        const { logInfo } = jest.requireMock('backend/logger')
+        ;(notify as jest.Mock).mockClear()
+        engineDialog().mockClear()
+        const a = (game as any).launchBridgeGame() as Promise<boolean>
+        expect(notify).not.toHaveBeenCalled()
+        const b = (game as any).launchBridgeGame() as Promise<boolean>
+        d.resolve(true)
+        await Promise.all([a, b])
+        expect(notify).toHaveBeenCalledTimes(1)
+        expect((notify as jest.Mock).mock.calls[0][0].title).toBe('Test Game')
+        expect((notify as jest.Mock).mock.calls[0][0].body).toContain(
+          'alreadyLaunching'
+        )
+        expect(
+          (logInfo as jest.Mock).mock.calls.some((c) =>
+            String(c[0]).includes(
+              `appId ${ID} bridge launch already in progress`
+            )
+          )
+        ).toBe(true)
+        expect(engineDialog()).not.toHaveBeenCalled()
+      })
+
+      it('G26: the guard is released when the launch resolves', async () => {
+        const game = new SteamGame(ID)
+        const d = deferred()
+        const spy = bodySpy(game).mockReturnValueOnce(d.promise)
+        const a = (game as any).launchBridgeGame() as Promise<boolean>
+        d.resolve(true)
+        await a
+        spy.mockResolvedValue(true)
+        await (game as any).launchBridgeGame()
+        expect(spy).toHaveBeenCalledTimes(2)
+      })
+
+      it('G26: a rejecting body rejects both callers and releases the guard', async () => {
+        const game = new SteamGame(ID)
+        const d = deferred()
+        const spy = bodySpy(game).mockReturnValueOnce(d.promise)
+        const a = (game as any).launchBridgeGame() as Promise<boolean>
+        const b = (game as any).launchBridgeGame() as Promise<boolean>
+        const settled = Promise.allSettled([a, b])
+        d.reject(new Error('boom'))
+        const res = await settled
+        expect(res.map((r) => r.status)).toEqual(['rejected', 'rejected'])
+        spy.mockResolvedValue(true)
+        await (game as any).launchBridgeGame()
+        expect(spy).toHaveBeenCalledTimes(2)
+      })
+
+      it('G26: a body resolving false clears the engine selection once (owner only)', async () => {
+        const game = new SteamGame(ID)
+        const d = deferred()
+        bodySpy(game).mockReturnValue(d.promise)
+        const reg = await import('../engine/engineRegistry')
+        const clearSpy = jest.spyOn(reg, 'clearEngineSelection')
+        clearSpy.mockClear()
+        const a = (game as any).launchBridgeGame() as Promise<boolean>
+        const b = (game as any).launchBridgeGame() as Promise<boolean>
+        d.resolve(false)
+        expect(await a).toBe(false)
+        expect(await b).toBe(false)
+        expect(clearSpy).toHaveBeenCalledTimes(1)
+        clearSpy.mockRestore()
+      })
+
+      it('G26: launches of different appIds each run their own body', async () => {
+        library.set('571', makeEntry({ title: 'Other Game' }))
+        const g1 = new SteamGame(ID)
+        const g2 = new SteamGame('571')
+        const d1 = deferred()
+        const d2 = deferred()
+        const s1 = bodySpy(g1).mockReturnValue(d1.promise)
+        const s2 = bodySpy(g2).mockReturnValue(d2.promise)
+        const a = (g1 as any).launchBridgeGame() as Promise<boolean>
+        const b = (g2 as any).launchBridgeGame() as Promise<boolean>
+        d1.resolve(true)
+        d2.resolve(true)
+        await Promise.all([a, b])
+        expect(s1).toHaveBeenCalledTimes(1)
+        expect(s2).toHaveBeenCalledTimes(1)
+      })
+    })
+
     it('a CrossOver override on an expired bottle passes crossoverHealthy:false (G10)', async () => {
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         cxDecision({
