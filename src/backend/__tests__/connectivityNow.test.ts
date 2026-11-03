@@ -1,15 +1,18 @@
 export {}
 
 const mockLogInfo = jest.fn()
+const mockLogWarning = jest.fn()
 jest.mock('../logger', () => ({
   LogPrefix: { Connection: 'Connection' },
-  logInfo: (...args: unknown[]) => mockLogInfo(...args)
+  logInfo: (...args: unknown[]) => mockLogInfo(...args),
+  logWarning: (...args: unknown[]) => mockLogWarning(...args)
 }))
 jest.mock('backend/online_monitor', () => ({
-  isOnline: jest.fn(() => true),
+  getConnectivityStatus: jest.fn(() => 'online'),
   recheckConnectivity: jest.fn()
 }))
 
+import type { ConnectivityStatus } from 'common/types'
 import { checkConnectivityNow, hasRoutableAddress } from '../connectivityNow'
 
 const lan = {
@@ -20,7 +23,8 @@ const loopback = {
 } as never
 
 const makeDeps = (over: Record<string, unknown> = {}) => ({
-  isOnline: jest.fn(() => true),
+  status: jest.fn((): ConnectivityStatus => 'online'),
+  hosts: ['a.test', 'b.test'],
   networkInterfaces: jest.fn(() => lan),
   lookup: jest.fn(() => Promise.resolve({ address: '1.2.3.4' })),
   onFreshOffline: jest.fn(),
@@ -57,10 +61,13 @@ describe('hasRoutableAddress', () => {
 describe('checkConnectivityNow', () => {
   beforeEach(() => {
     mockLogInfo.mockClear()
+    mockLogWarning.mockClear()
   })
 
-  it('G25: monitor already not online -> offline, no lookup, no recheck', async () => {
-    const deps = makeDeps({ isOnline: jest.fn(() => false) })
+  it('G25: monitor offline -> offline, no lookup, no recheck', async () => {
+    const deps = makeDeps({
+      status: jest.fn((): ConnectivityStatus => 'offline')
+    })
     const r = await checkConnectivityNow('launch', deps)
     expect(r).toMatchObject({ offline: true, source: 'monitor' })
     expect(deps.lookup).not.toHaveBeenCalled()
@@ -136,6 +143,115 @@ describe('checkConnectivityNow', () => {
     })
     const r = await checkConnectivityNow('launch', deps)
     expect(r).toMatchObject({ offline: false, source: 'error' })
+  })
+
+  it('CR-01: check-online + routable + resolving lookup -> online dns-ok, no hook', async () => {
+    const deps = makeDeps({
+      status: jest.fn((): ConnectivityStatus => 'check-online')
+    })
+    const r = await checkConnectivityNow('launch', deps)
+    expect(r).toMatchObject({ offline: false, source: 'dns-ok' })
+    expect(deps.onFreshOffline).not.toHaveBeenCalled()
+  })
+
+  it('CR-01: check-online + no routable interface -> offline, hook not called', async () => {
+    const deps = makeDeps({
+      status: jest.fn((): ConnectivityStatus => 'check-online'),
+      networkInterfaces: jest.fn(() => loopback)
+    })
+    const r = await checkConnectivityNow('launch', deps)
+    expect(r).toMatchObject({ offline: true, source: 'no-interface' })
+    expect(deps.onFreshOffline).not.toHaveBeenCalled()
+  })
+
+  it('CR-01: check-online + every lookup rejects -> dns-failed, hook not called', async () => {
+    const deps = makeDeps({
+      status: jest.fn((): ConnectivityStatus => 'check-online'),
+      lookup: jest.fn(() =>
+        Promise.reject(Object.assign(new Error('x'), { code: 'ENOTFOUND' }))
+      )
+    })
+    const r = await checkConnectivityNow('launch', deps)
+    expect(r).toMatchObject({ offline: true, source: 'dns-failed' })
+    expect(deps.onFreshOffline).not.toHaveBeenCalled()
+  })
+
+  it('WR-03: throwing hook on no-interface keeps the offline result and warns', async () => {
+    const deps = makeDeps({
+      networkInterfaces: jest.fn(() => loopback),
+      onFreshOffline: jest.fn(() => {
+        throw new Error('hook')
+      })
+    })
+    const r = await checkConnectivityNow('launch', deps)
+    expect(r).toMatchObject({ offline: true, source: 'no-interface' })
+    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+  })
+
+  it('WR-03: throwing hook on dns-failed keeps the offline result', async () => {
+    const deps = makeDeps({
+      lookup: jest.fn(() =>
+        Promise.reject(Object.assign(new Error('x'), { code: 'ENOTFOUND' }))
+      ),
+      onFreshOffline: jest.fn(() => {
+        throw new Error('hook')
+      })
+    })
+    const r = await checkConnectivityNow('launch', deps)
+    expect(r).toMatchObject({ offline: true, source: 'dns-failed' })
+  })
+
+  it('WR-01: first host fails, second resolves -> dns-ok', async () => {
+    const deps = makeDeps({
+      lookup: jest.fn((host: string) =>
+        host === 'a.test'
+          ? Promise.reject(Object.assign(new Error('x'), { code: 'ENOTFOUND' }))
+          : Promise.resolve({ address: '1.2.3.4' })
+      )
+    })
+    const r = await checkConnectivityNow('launch', deps)
+    expect(r).toMatchObject({ offline: false, source: 'dns-ok' })
+    expect(deps.onFreshOffline).not.toHaveBeenCalled()
+  })
+
+  it('WR-01: both hosts fail -> dns-failed naming the first host code', async () => {
+    const deps = makeDeps({
+      lookup: jest.fn((host: string) =>
+        Promise.reject(
+          Object.assign(new Error('x'), {
+            code: host === 'a.test' ? 'ENOTFOUND' : 'ETIMEOUT'
+          })
+        )
+      )
+    })
+    const r = await checkConnectivityNow('launch', deps)
+    expect(r).toMatchObject({
+      offline: true,
+      source: 'dns-failed',
+      detail: 'ENOTFOUND'
+    })
+  })
+
+  it('WR-01: first fails, second never settles -> dns-timeout, timer cleared', async () => {
+    jest.useFakeTimers()
+    try {
+      const deps = makeDeps({
+        lookup: jest.fn((host: string) =>
+          host === 'a.test'
+            ? Promise.reject(
+                Object.assign(new Error('x'), { code: 'ENOTFOUND' })
+              )
+            : new Promise(() => {})
+        )
+      })
+      const p = checkConnectivityNow('launch', { ...deps, timeoutMs: 1500 })
+      await jest.advanceTimersByTimeAsync(1500)
+      const r = await p
+      expect(r).toMatchObject({ offline: false, source: 'dns-timeout' })
+      expect(jest.getTimerCount()).toBe(0)
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it('G25: logs exactly one line per call', async () => {

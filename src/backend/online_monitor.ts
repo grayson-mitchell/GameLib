@@ -269,6 +269,9 @@ export const runOnceWhenOnline = (callback: () => unknown) => {
 
 export const isOnline = () => status === 'online'
 
+// Three-state status for callers that must tell unknown ('check-online') from offline.
+export const getConnectivityStatus = (): ConnectivityStatus => status
+
 // G25: after boot nothing in the backend re-probes while the status is 'online', so a fresh
 // offline finding (see connectivityNow.ts) hands the decision back to the ping loop (bounded
 // axios HEAD with a 10 s timeout, unref'd retry timer). That loop also brings the status back

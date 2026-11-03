@@ -166,6 +166,20 @@ describe('what the probe accepts as "reachable"', () => {
   })
 })
 
+describe('CR-01: getConnectivityStatus', () => {
+  it('CR-01: reads check-online at boot before any ping answers, online after one does', async () => {
+    const monitor = await loadMonitor()
+    monitor.initOnlineMonitor()
+    expect(monitor.getConnectivityStatus()).toBe('check-online')
+    expect(monitor.isOnline()).toBe(false)
+
+    newestRound()[0].answer(200)
+    await flush()
+
+    expect(monitor.getConnectivityStatus()).toBe('online')
+  })
+})
+
 describe('overlapping probe rounds', () => {
   it('does not report the newer round as failed once an older round proved online', async () => {
     const monitor = await loadMonitor()

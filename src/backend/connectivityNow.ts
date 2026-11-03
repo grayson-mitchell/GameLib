@@ -4,12 +4,27 @@
 // the webview's DOM 'offline' event, so Wi-Fi switched off just before an action can still
 // read 'online' (UAT 34). This check asks the OS instead.
 //
+// CR-01: only a definite monitor 'offline' short-circuits. 'check-online' means unknown (every
+// boot until the first probe answers, and after each recheckConnectivity) and falls through to
+// the OS check, so a Play is never refused while the Mac is online.
+//
 // A DNS lookup that does not settle within the cap is reported as NOT offline (unknown): a
 // slow resolver must never cause a refusal. Any internal error is also not offline.
+// WR-01: dns-failed needs EVERY probe host to fail; one resolving host means online.
+//
+// IN-01: an abandoned lookup stays queued on the libuv threadpool until the OS resolver gives
+// up. That is bounded by the OS, and runs at an action, never at boot.
+// IN-02: VPN utun, bridge100, vnic/vmnet and fd00::/8 ULA addresses count as routable, so on
+// such Macs the decision falls to DNS and a hanging resolver reads as dns-timeout, a deliberate
+// fail-open.
 import dns from 'node:dns'
 import os from 'node:os'
-import { logInfo, LogPrefix } from './logger'
-import { isOnline, recheckConnectivity } from 'backend/online_monitor'
+import { logInfo, logWarning, LogPrefix } from './logger'
+import {
+  getConnectivityStatus,
+  recheckConnectivity
+} from 'backend/online_monitor'
+import type { ConnectivityStatus } from 'common/types'
 
 const FRESH_DNS_CAP_MS = 1500
 
@@ -27,20 +42,20 @@ type FreshConnectivity = {
 }
 
 interface ConnectivityNowDeps {
-  isOnline(): boolean
+  status(): ConnectivityStatus
   networkInterfaces(): NodeJS.Dict<os.NetworkInterfaceInfo[]>
   lookup(host: string): Promise<unknown>
   onFreshOffline(reason: string, source: string): void
-  host: string
+  hosts: string[]
   timeoutMs: number
 }
 
 const defaultDeps: ConnectivityNowDeps = {
-  isOnline,
+  status: () => getConnectivityStatus(),
   networkInterfaces: () => os.networkInterfaces(),
   lookup: (host) => dns.promises.lookup(host),
   onFreshOffline: recheckConnectivity,
-  host: 'github.com',
+  hosts: ['github.com', 'gog.com'],
   timeoutMs: FRESH_DNS_CAP_MS
 }
 
@@ -77,32 +92,64 @@ export async function checkConnectivityNow(
   let result: Omit<FreshConnectivity, 'elapsedMs'>
   try {
     const d = { ...defaultDeps, ...deps }
-    if (!d.isOnline()) {
+    const st = d.status()
+    const notifyFreshOffline = (source: string) => {
+      if (st !== 'online') return
+      try {
+        d.onFreshOffline(reason, source)
+      } catch (error) {
+        logWarning(
+          `Connectivity: fresh-offline hook failed: ${String(error)}`,
+          LogPrefix.Connection
+        )
+      }
+    }
+    if (st === 'offline') {
       result = { offline: true, source: 'monitor' }
     } else if (!hasRoutableAddress(d.networkInterfaces())) {
-      d.onFreshOffline(reason, 'no-interface')
       result = { offline: true, source: 'no-interface' }
+      notifyFreshOffline('no-interface')
     } else {
       let timer: NodeJS.Timeout | undefined
       try {
+        const errors: unknown[] = []
+        const lookups = new Promise<{ kind: 'ok' } | { kind: 'failed' }>(
+          (resolve) => {
+            let pending = d.hosts.length
+            if (pending === 0) {
+              resolve({ kind: 'failed' })
+              return
+            }
+            d.hosts.forEach((host, i) => {
+              Promise.resolve()
+                .then(() => d.lookup(host))
+                .then(
+                  () => resolve({ kind: 'ok' }),
+                  (error: unknown) => {
+                    errors[i] = error
+                    pending -= 1
+                    if (pending === 0) resolve({ kind: 'failed' })
+                  }
+                )
+            })
+          }
+        )
         const outcome = await Promise.race([
-          Promise.resolve(d.lookup(d.host)).then(
-            () => ({ kind: 'ok' as const }),
-            (error: unknown) => ({ kind: 'failed' as const, error })
-          ),
+          lookups,
           new Promise<{ kind: 'timeout' }>((resolve) => {
             timer = setTimeout(() => resolve({ kind: 'timeout' }), d.timeoutMs)
             timer.unref?.()
           })
         ])
         if (outcome.kind === 'failed') {
-          const code = (outcome.error as { code?: string } | undefined)?.code
-          d.onFreshOffline(reason, 'dns-failed')
+          const first = errors.find((e) => e !== undefined) ?? errors[0]
+          const code = (first as { code?: string } | undefined)?.code
           result = {
             offline: true,
             source: 'dns-failed',
-            detail: code ?? String(outcome.error)
+            detail: code ?? String(first)
           }
+          notifyFreshOffline('dns-failed')
         } else if (outcome.kind === 'timeout') {
           result = { offline: false, source: 'dns-timeout' }
         } else {
