@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 phase: 59-steam-engine-fallback-when-crossover-is-unavailable
 source: [59-13-PLAN.md]
 ---
@@ -212,11 +212,11 @@ Re-tests round 6 live: G30 (the pinned -> CrossOver restore settles on process e
 
 ### 44. Return to CrossOver restores without the linger wait
 expected: (G30) Normal dev, network on, 1284190 marker `pinned:wine-staging-11.20` with the pin and DXVK copy present in `steam-engines`, CrossOver healthy, override automatic. Play Planet Crafter once. `SteamEngine: demo-status probe bottle=GameLibSteamBridge-1284190 outcome=ok ...`; one `engine switch for "GameLibSteamBridge-1284190": pinned:wine-staging-11.20 -> crossover`; then in order `Removing DLL overrides`, `Removing DXVK DLLs`, `Restoring Wine stock DLLs`, `Removing dxvk-macOS version information`, then `engine switch: stopped the restore's CrossOver wineserver for "GameLibSteamBridge-1284190"`; launch on `SteamEngine: appId 1284190 uses engine=crossover ... reason=cx-healthy`; no `DXVK restore failed`; the marker reads crossover without `dxvk:"failed"`; a new `<appId>-<ms>.overlay.wine.log` appears in the overlay trace dir for this session. Record switch-line-to-launch-line time (item 42 was about 20 s) and `Removing DLL overrides` to `Removing dxvk-macOS version information`. Pass when switch-to-launch is under 15 s and every other expectation holds. Leave the game running for item 45.
-result: pending
+result: pass — 2026-11-03, normal dev, sidecar.js built 23:00 (newer than the last src/backend commit 22:26). 23:03:17 `demo-status ... outcome=ok status=licensed elapsedMs=10097`; `engine=crossover build=26.3.0.39832 reason=cx-healthy`; `engine switch for "GameLibSteamBridge-1284190": pinned:wine-staging-11.20 -> crossover` 23:03:17; then in order `reg delete` d3d10core, `reg delete` d3d11, `wineboot -u`, `Removing dxvk-macOS version information`; 23:03:23 `engine switch: stopped the restore's CrossOver wineserver for "GameLibSteamBridge-1284190"` (once). Switch about 6 s (under 15 s; item 42 was about 20 s). Game started 23:03:26 (pid 58341), bridge HELLO and GINIT `SteamAPI_Init ret=1 ok=1` 23:03:30, overlay attached (gameoverlayui) after 4010 ms. New trace `steam-bridge/overlay/trace/1284190-1793700204521.overlay.wine.log` (5041 bytes, 23:03). G30 closed live.
 
 ### 45. A quick re-Play after a session stays on CrossOver
 expected: (G29) Continuing from item 44. Quit the game from its own menu; within 3 s of its window closing, Play again; quit and repeat for three re-Plays in total. For every re-Play: `uses engine=crossover ... reason=cx-healthy` and no `engine switch for "GameLibSteamBridge-1284190": crossover -> pinned`. If a probe logs `outcome=nonzero-exit`, its line carries `stdout=` with CrossOver's text, a `SteamEngine: --demo-status ... (attempt 1/2); inconclusive, retrying once` warning follows, and the next probe is `outcome=ok`; record the stdout text. If no probe fails in three tries, record "transient not reproduced": the retry then rests on the 59-50 unit tests (pass with that caveat).
-result: pending
+result: pass — 2026-11-03. Three stop and re-Play cycles through GameLib's Stop (SteamGame.stop, wineserver -k): 23:04:42 to 23:04:43, 23:05:05 to 23:05:07, 23:05:26 to 23:05:28. Each re-Play: demo-status `outcome=ok` first try (5192 / 5276 / 5262 ms), `engine=crossover ... reason=cx-healthy`, game started (23:04:52, 23:05:14, 23:05:35), no switch to the pinned engine. Transient not reproduced: no probe failed, so G29's retry path was not exercised live and rests on the 59-50 demoStatus/engineDecision unit tests (pass with that caveat). Caveat on method: the quits used Stop, not the game's own menu.
 
 ### 46. The launch-option picker launches once
 expected: (CR-01) Needs a title whose `getLaunchOptions` returns two or more options and whose saved launch option can be cleared first (operator go-ahead and a backup before editing GamesConfig, dev quit while editing). Run a: Play; watch the countdown for about 3 s, then pick the first option: the title counts down in place in one dialog; after the pick no other picker appears for 15 s; the backend logs one launch; the renderer log shows one `[dialog] current ackId=... key=...` for the picker (one key) and one `[dialog] closed ackId=... key=...`. Clear the saved option again, run b: Play and leave the picker alone: at 10 s it auto-selects, one launch, no picker reappears.
@@ -224,7 +224,7 @@ result: skipped — no installed title on this machine has two or more launch op
 
 ### 47. Dialog buttons still close their dialog once
 expected: (WR-01) Run only the paths the operator can reach, in this order. (a) Humble Keys, a key with a Gift action: open the gift dialog, Cancel: it closes and the Keys page stays usable; open it again, Open Humble: the Humble keys page opens once in the browser and the dialog closes. (b) If a title with the offline warning exists (`notPlayableOffline`): Wi-Fi off immediately before Play, Play: the Offline Warning appears; OK closes it and nothing launches; Wi-Fi back on; repeat with Play Anyway: the dialog closes and the launch proceeds once (quit the game). For each dialog: one `[dialog] closed ackId=... key=...` line per close, no leftover or flashing dialog. The dropped-promotion case itself cannot be produced from the UI (modal dialogs) and rests on the 59-49 tests.
-result: pending
+result: pass for (a), (b) not run — 2026-11-03. (a) Humble Keys gift dialog Cancel: `[dialog] current ackId=none key=2` 23:06:44, `[dialog] closed ackId=none key=2` 23:06:48; reopened, Open Humble: `current ... key=3` 23:06:56, `closed ... key=3` 23:06:58. One close line per close, no stale queued copy. (b) the offline warning path was optional and not run. The dropped-promotion case rests on the 59-49 tests.
 
 ## Restore
 
@@ -243,7 +243,7 @@ Re-UAT 4 restore (59-43), done and verified 2026-11-03: wine-staging-11.20 moved
 
 Re-UAT 5 restore (59-48), done 2026-11-03: pin and DXVK folders moved back into `steam-engines`, network on, licence unchanged (304 bytes, Oct 22 19:57), bottle count unchanged (30), CrossOver.app untouched, no bottled-Steam route line. The Planet Crafter marker is currently `pinned:wine-staging-11.20`; the next normal online Play restores it. Original steps: move wine-staging-11.20 back into `steam-engines` (or let GameLib re-download it), confirm the marker's DXVK copy is in place, network on, Planet Crafter's override automatic, and confirm the CrossOver licence file mtime is unchanged (304 bytes, Oct 22 19:57).
 
-Re-UAT 6 restore (59-53): pending. To record: CR-01 title not applicable (item 46 skipped, no saved launch option touched); network on; 1284190 marker state (crossover after item 44); licence mtime confirmed unchanged (304 bytes, Oct 22 19:57); CrossOver.app untouched.
+Re-UAT 6 restore (59-53), done 2026-11-03: CR-01 title not applicable (item 46 skipped, no saved launch option touched); network on; 1284190 marker crossover (after item 44, and every re-Play in item 45 stayed on crossover); licence unchanged (304 bytes, Oct 22 19:57, before and after); CrossOver.app untouched. Observations, not gaps: (1) every Stop logs `[ERROR] [Backend] Aborting not possible. Could not find a matching abort controller for 1284190`; Stop still works. (2) After the third re-Play the game ran 11 s then exited and a "Game closed soon after starting" dialog showed (23:05:49, key=1, closed 23:05:55); possibly a false positive if the operator quit deliberately, unconfirmed.
 
 ## Gaps
 
