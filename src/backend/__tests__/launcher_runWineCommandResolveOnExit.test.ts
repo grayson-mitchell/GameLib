@@ -152,4 +152,22 @@ describe('runWineCommand resolveOnExit', () => {
     child.emit('close', 0, null)
     await promise
   })
+
+  it('59-REVIEW WR-01: output written after the drain grace is lost while the exit code survives', async () => {
+    const { promise } = run(true)
+    await flush()
+
+    child.emit('exit', 1, null)
+    jest.advanceTimersByTime(250)
+    const res = await promise
+    child.stderr.emit(
+      'data',
+      'reg: Unable to find the specified registry value'
+    )
+    await flush()
+
+    expect(res.code).toBe(1)
+    expect(res.stderr).toBe('')
+    expect(child.stderr.destroy).toHaveBeenCalled()
+  })
 })

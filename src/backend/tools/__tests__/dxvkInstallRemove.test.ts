@@ -267,26 +267,30 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
   let srcDir: string
   const ok = { stdout: '', stderr: '', code: 0 }
   const KEY = 'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides'
-  // `reg query` of DllOverrides as CrossOver prints it, 261103-wtm gate.
-  const query = (...values: string[]) => ({
-    ...ok,
-    stdout: `\r\n${KEY}\r\n    *autorun.exe    REG_SZ    native,builtin\r\n${values
-      .map((v) => `    ${v}    REG_SZ    native\r\n`)
-      .join('')}`
-  })
   const stockDlls = () =>
     ['system32', 'syswow64'].flatMap((dir) =>
       DLLS.map((dll) => join(prefix, 'drive_c/windows', dir, dll))
     )
   // Every wine step succeeds and the overrides are gone; `onImport` stands in for the prefix
-  // update an engine flip triggers on the first wine process.
+  // update an engine flip triggers on the first wine process. The verify step is one
+  // `reg query KEY /v <name>` per override, judged by exit code: `values` maps a name to its
+  // result, and the default is code 1 with no output (absent, as when the text arrives late).
+  const absent = { stdout: '', stderr: '', code: 1 }
   const wine =
-    (overrides: Record<string, unknown> = {}, onImport?: () => void) =>
+    (
+      overrides: Record<string, unknown> = {},
+      onImport?: () => void,
+      values: Record<string, unknown> = {}
+    ) =>
     ({ commandParts }: { commandParts: string[] }) => {
       const verb = commandParts[0] === 'reg' ? commandParts[1] : commandParts[0]
       if (verb === 'import') onImport?.()
+      if (verb === 'query') {
+        const name = commandParts[commandParts.indexOf('/v') + 1]
+        return Promise.resolve(values[name] ?? absent)
+      }
       if (verb in overrides) return Promise.resolve(overrides[verb])
-      return Promise.resolve(verb === 'query' ? query() : ok)
+      return Promise.resolve(ok)
     }
 
   beforeEach(() => {
@@ -326,6 +330,7 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
     expect(order.filter((e) => !e.startsWith('ver:'))).toEqual([
       'reg import',
       'reg query',
+      'reg query',
       'wineboot'
     ])
     expect(versionFile()).toBe(false)
@@ -362,7 +367,21 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
     const regCalls = mockRunWineCommand.mock.calls.filter(
       (c) => c[0].commandParts[0] === 'reg'
     )
-    expect(regCalls).toHaveLength(2)
+    expect(regCalls).toHaveLength(3)
+    expect(regCalls[1][0].commandParts).toEqual([
+      'reg',
+      'query',
+      KEY,
+      '/v',
+      'd3d11'
+    ])
+    expect(regCalls[2][0].commandParts).toEqual([
+      'reg',
+      'query',
+      KEY,
+      '/v',
+      'd3d9'
+    ])
   })
 
   it('G30: skips wineboot -u when the prefix update already restored the stock DLLs', async () => {
@@ -385,26 +404,73 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
   })
 
   it('G30: returns false and keeps the version file when an override survives the import', async () => {
-    mockRunWineCommand.mockImplementation(wine({ query: query('d3d11') }))
+    // value present, output truncated: only the exit code says so
+    mockRunWineCommand.mockImplementation(
+      wine({}, undefined, { d3d11: { stdout: '', stderr: '', code: 0 } })
+    )
     expect(await restore()).toBe(false)
     expect(versionFile()).toBe(true)
   })
 
-  it('G30: returns false when the verify query shows nothing, which proves nothing', async () => {
-    mockRunWineCommand.mockImplementation(wine({ query: ok }))
+  it('G30: a verify query with an exit code of null proves nothing', async () => {
+    mockRunWineCommand.mockImplementation(
+      wine({}, undefined, { d3d9: { stdout: '', stderr: '', code: null } })
+    )
     expect(await restore()).toBe(false)
     expect(versionFile()).toBe(true)
   })
 
-  it('G30: treats a missing DllOverrides key as no overrides left', async () => {
+  it('G30: a verify query with an exit code other than 0 or 1 proves nothing', async () => {
+    mockRunWineCommand.mockImplementation(
+      wine({}, undefined, { d3d11: { stdout: '', stderr: '', code: 2 } })
+    )
+    expect(await restore()).toBe(false)
+    expect(versionFile()).toBe(true)
+  })
+
+  it('59-REVIEW WR-01: an already-absent override with empty (late) output returns true', async () => {
+    mockRunWineCommand.mockImplementation(wine())
+    expect(await restore()).toBe(true)
+    expect(versionFile()).toBe(false)
+  })
+
+  it('G30: a missing DllOverrides key (code 1) counts as no overrides left', async () => {
     const missingKey = {
       stdout: '',
       stderr: 'reg: Unable to find the specified registry key',
       code: 1
     }
-    mockRunWineCommand.mockImplementation(wine({ query: missingKey }))
+    mockRunWineCommand.mockImplementation(
+      wine({}, undefined, { d3d11: missingKey, d3d9: missingKey })
+    )
     expect(await restore()).toBe(true)
     expect(versionFile()).toBe(false)
+  })
+
+  it('the verdict ignores output text: a listed value with code 1 is absent', async () => {
+    const listed = {
+      stdout: `\r\n${KEY}\r\n    d3d11    REG_SZ    native\r\n`,
+      stderr: '',
+      code: 1
+    }
+    mockRunWineCommand.mockImplementation(
+      wine({}, undefined, { d3d11: listed })
+    )
+    expect(await restore()).toBe(true)
+    expect(versionFile()).toBe(false)
+  })
+
+  it('a failed reg import never reads code 1 as absent: no /v query runs', async () => {
+    mockRunWineCommand.mockImplementation(
+      wine({ import: { stdout: '', stderr: 'reg: access denied', code: 1 } })
+    )
+    expect(await restore()).toBe(false)
+    expect(
+      mockRunWineCommand.mock.calls.some((c) =>
+        c[0].commandParts.includes('/v')
+      )
+    ).toBe(false)
+    expect(versionFile()).toBe(true)
   })
 
   it('G30: a strict restore runs every wine step with wait:false and resolveOnExit', async () => {
