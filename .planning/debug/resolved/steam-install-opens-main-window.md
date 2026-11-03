@@ -37,6 +37,9 @@ updated: 2026-11-03
 - OFF path: `SteamGame.install()` (src/backend/storeManagers/steam/games.ts ~2035) calls `shell.openExternal('steam://install/<id>')` with no options; on macOS that is a plain `open`, which activates Steam.
 - Tried `shell.openExternal(url, { activate: false })` (→ `open -g`, as the rungameid launch path uses). Operator live-tested 2026-11-03: no difference — Steam's main window still opens.
 - Tried `steam://nav/games/details/<id>` as an alternative (operator live test, macOS, 2026-11-03, appId 440): opens the main window on the library page with no install dialog — strictly worse than `steam://install`. Rejected.
+- Tried cold start `open -g -a Steam --args -silent steam://install/440` (operator live test, macOS, 2026-11-03): main window + install dialog. `-silent` does not suppress it.
+- Tried Steam running with main window closed (menu bar only), then `open -g steam://install/440`: main window reopens + dialog. Steam raises its main window for steam://install in every state tested.
+- SteamCMD considered and not pursued: equivalent to GameLib-as-downloader ON (own depot download), adds a second login session and a shipped binary; does not yield Steam's dialog without the window.
 - Windows/Linux: GameLib does nothing that raises the window; URL goes straight through the opener. `activate` is darwin-only.
 
 ## Eliminated
@@ -47,4 +50,4 @@ updated: 2026-11-03
 - fix: none. The `activate: false` attempt was reverted (no observable effect).
 - verification: operator live test on macOS, 2026-11-03.
 - files_changed: none
-- untried: launching Steam with `-silent steam://install/<id>` when Steam is not running (would not help when Steam is already running).
+- conclusion: no URL scheme or launch flag yields Steam's install dialog without the main window. Use GameLib-as-downloader ON for window-free installs.
