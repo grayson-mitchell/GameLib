@@ -11,9 +11,9 @@ import os from 'node:os'
 import { logInfo, LogPrefix } from './logger'
 import { isOnline, recheckConnectivity } from 'backend/online_monitor'
 
-export const FRESH_DNS_CAP_MS = 1500
+const FRESH_DNS_CAP_MS = 1500
 
-export type FreshConnectivity = {
+type FreshConnectivity = {
   offline: boolean
   source:
     | 'monitor'
@@ -26,7 +26,7 @@ export type FreshConnectivity = {
   elapsedMs: number
 }
 
-export interface ConnectivityNowDeps {
+interface ConnectivityNowDeps {
   isOnline(): boolean
   networkInterfaces(): NodeJS.Dict<os.NetworkInterfaceInfo[]>
   lookup(host: string): Promise<unknown>

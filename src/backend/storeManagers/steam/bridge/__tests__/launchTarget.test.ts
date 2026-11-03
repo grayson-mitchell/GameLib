@@ -100,6 +100,7 @@ describe('resolveBridgeLaunchExe', () => {
       join(BRIDGE_STEAMAPPS_DIR, 'common', 'Avernum 4', 'Avernum4.exe')
     )
     expect(getAnonymousPicsClient).not.toHaveBeenCalled()
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock assertion, same as the other SteamUser checks below
     expect(SteamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
     expect(setBridgeLaunchTarget).not.toHaveBeenCalled()
     expect(logInfo).toHaveBeenCalledWith(
