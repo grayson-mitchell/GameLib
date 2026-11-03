@@ -193,8 +193,10 @@ export type DialogModalOptions = {
   onClose?: () => void
   /** Backend correlation id; the renderer acks it once the dialog is on screen. */
   ackId?: string
-  /** Distinct per accepted request; DialogHandler keys the modal by it so a promoted dialog mounts fresh (G28). */
+  /** Distinct per accepted request; DialogHandler keys the modal by it so a promoted dialog mounts fresh (G28). A close may carry it to close only that dialog (WR-01). */
   dialogKey?: number
+  /** Stable identity chosen by the caller: a request with the dialogId of an open or queued dialog updates it in place (no queue, no remount), and a close carrying it closes only that dialog. */
+  dialogId?: string
 }
 
 export interface ExternalLinkDialogOptions {

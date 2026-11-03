@@ -124,8 +124,10 @@ export default function DialogHandler() {
   } = dialogModalOptions
   useEffect(() => {
     if (!dialogOpen) return
+    // Records state only: this dialog is current. Only the ack
+    // (display=confirmed) proves it was visible.
     window.api.logInfo(
-      `[dialog] shown ackId=${openAckId ?? 'none'} key=${openKey ?? 'none'}`
+      `[dialog] current ackId=${openAckId ?? 'none'} key=${openKey ?? 'none'}`
     )
   }, [dialogOpen, openKey, openAckId])
   useEffect(() => {
@@ -144,11 +146,14 @@ export default function DialogHandler() {
           buttons={dialogModalOptions.buttons ? dialogModalOptions.buttons : []}
           className={dialogModalOptions.className}
           onClose={() => {
-            if (dialogModalOptions.onClose) return dialogModalOptions.onClose()
             window.api.logInfo(
               `[dialog] closed ackId=${dialogModalOptions.ackId ?? 'none'} key=${dialogModalOptions.dialogKey ?? 'none'}`
             )
-            showDialogModal({ showDialog: false })
+            if (dialogModalOptions.onClose) return dialogModalOptions.onClose()
+            showDialogModal({
+              showDialog: false,
+              dialogKey: dialogModalOptions.dialogKey
+            })
           }}
         />
       )}
