@@ -43,3 +43,18 @@ stay visible without the user having to discover a scroll. One option is to pin 
 (sticky, or outside the scrolling region); another is to let the notices or the description
 scroll instead. Verify live by resizing the window on a title whose page carries the override
 warning.
+
+## Resolution
+
+Fixed in quick task 261103-w9l (`813187cdc`). Root cause: `.mainInfo` had `overflow: hidden`, so content
+taller than the panel was clipped with no scrollbar and the `.buttons` strip, near the bottom, was the
+first thing cut. The 560/500/450px container queries hide enough content at the smallest heights for
+everything to fit again, which is why the buttons came back there. `.mainInfoWrapper .mainInfo` now
+scrolls (`overflow-y: auto`), and `.buttons` is pinned with `position: sticky; bottom: 0` on
+`var(--body-background)`. CSS only; the TSX and the container queries are unchanged.
+
+Operator confirmed the live gate passed on 2026-11-03: Fallout (38400) with its trial backdated past
+expiry under `nolicence.sb` and the override forced to CrossOver, showing the `cx-expired` warning, with the
+window resized from minimum height to fits-everything. No per-step breakdown was recorded with the
+confirmation. Restored afterwards: InstallTime `611e42db -> 6145cfdb` (`--demo-status` reads "Standard
+version"), override back to automatic, licence file unchanged (304 bytes, Oct 22 19:57).

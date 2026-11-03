@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-03
+Last activity: 2026-11-03 - Completed quick task 261103-w9l: Game-page Play and Settings buttons hidden at mid window heights
 
 Progress: [██████████] 100%
 
@@ -415,6 +415,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261102-sk8 | Shared store embed records SPA same-document navigations: `store_embed_take_nav_events` reads `Webview::url()` (no lock held) and `observe_live_url` pushes/moves/replaces under page-loading, suppression, nav-generation and same-origin guards, so Back works on gaming.amazon.com; Epic surface untouched. | 2026-11-02 | db6236f99, f8782dbbf | cargo test 405 pass (56 store_embed, 11 new); fmt clean; live retest pending | [261102-sk8-store-embed-records-spa-same-document-na](./quick/261102-sk8-store-embed-records-spa-same-document-na/) |
 | 261102-szs | Store-embed Back loop on luna.amazon.com fixed: a 3s settle window after a Back/Forward/Reload/navigate landing makes a URL rewrite replace the current entry (not append/move), adjacent duplicates collapse; drain logs recorded/replaced/moved + host; `luna.amazon.com` added to AMAZON_HOSTS (measured). | 2026-11-02 | 9e182b84a, 6d0d11343, 5e78b0252 | cargo store_embed 62 pass; fmt clean; jest storeExitRefresh 93 pass; prettier clean; live retest pending | [261102-szs-store-embed-treats-post-load-url-rewrite](./quick/261102-szs-store-embed-treats-post-load-url-rewrite/) |
 | 261103-stm | Game-page main button icons (Installing… spinner, Play/Stop/Pause) inherit the label colour: `.mainBtn svg` had `color: var(--neutral-02)` (#161c1e in every theme), so the spinner showed black on the disabled grey label. Now `currentColor`. Todo closed. | 2026-11-03 | 843d75b58 | Needs Review (no live check across themes) | [261103-stm-fix-main-button-spinner-black-instead-of](./quick/261103-stm-fix-main-button-spinner-black-instead-of/) |
+| 261103-w9l | Game-page Play/Settings no longer hidden at mid window heights: `.mainInfo` scrolls instead of clipping and `.buttons` is sticky at the bottom on `--body-background`; CSS only. Todo closed. | 2026-11-03 | 813187cdc | Live resize gate passed (operator, Fallout 38400 with cx-expired warning) | [261103-w9l-game-page-play-and-settings-buttons-hidd](./quick/261103-w9l-game-page-play-and-settings-buttons-hidd/) |
 
 ## Deferred Items
 
