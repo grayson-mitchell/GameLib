@@ -71,10 +71,10 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 60
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-11-03 - Completed quick task 261103-wci: Steam overlay injected on the Phase 59 fallback engine (D-07), live gate pending
+Phase: 60 (steam-overlay-in-bridged-games-on-macos) — EXECUTING
+Plan: 10 of 10
+Status: Executing Phase 60
+Last activity: 2026-11-03 - Completed quick task 261103-wci: Steam overlay injected on the Phase 59 fallback engine (D-07), live gate passed (60-UAT item 9)
 
 Progress: [██████████] 100%
 
