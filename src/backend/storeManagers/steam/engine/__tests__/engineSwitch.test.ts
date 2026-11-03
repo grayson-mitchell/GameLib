@@ -587,7 +587,9 @@ describe('prepareBottleForEngine ordered restore (CR-03, WR-05)', () => {
       return true
     })
     await run(crossover)
-    expect(deps.killWith).not.toHaveBeenCalled()
+    // only the post-restore CrossOver stop (G30); the missing marker wineserver is not spawned
+    expect(deps.killWith).toHaveBeenCalledTimes(1)
+    expect(deps.killWith.mock.calls[0][1]).toBe(`${BIN_DIR}/wineserver`)
   })
 
   test('wineboot -u failure rewrites the marker with dxvk failed', async () => {
@@ -678,5 +680,151 @@ describe('G22: read-only marker accessors', () => {
     seed({ kind: 'crossover', id: 'cx', wineserverBin: 'x' })
     expect(restoreNeedsAbsentPin(NAME)).toBe(false)
     expect(restoreNeedsAbsentPin('../escape')).toBe(false)
+  })
+})
+
+describe('G30 / WR-02 engine switch', () => {
+  const dxvkFile = () => join(dir, 'current_dxvk-macOS')
+  const seedPinnedMarker = () => {
+    seedMarker({
+      kind: 'pinned',
+      id: 'wine-staging-11.20',
+      wineserverBin: PIN_WS,
+      dxvk: { dir: '/tools/steam-engines/dxvk', version: 'v1' }
+    })
+    writeFileSync(dxvkFile(), 'v1')
+  }
+  const restoring = (ok: boolean) =>
+    (deps.installRemove as jest.Mock).mockImplementation(async () => {
+      if (ok) rmSync(dxvkFile(), { force: true })
+      return ok
+    })
+  const dxvkSrcDir = () => {
+    mockState.engines = join(mockState.root, 'engines')
+    const srcDir = join(mockState.engines, 'dxvk')
+    mkdirSync(join(srcDir, 'x64'), { recursive: true })
+    seedMarker({
+      kind: 'pinned',
+      id: 'wine-staging-11.20',
+      wineserverBin: '',
+      dxvk: { dir: srcDir, version: 'v1' }
+    })
+    writeFileSync(dxvkFile(), 'v1')
+  }
+
+  test('G30: a healthy-CrossOver restore stops the CrossOver wineserver once afterwards', async () => {
+    dxvkSrcDir()
+    restoring(true)
+    await run(crossover)
+    const cxKills = deps.killWith.mock.calls.filter(
+      (c) => c[1] === `${BIN_DIR}/wineserver`
+    )
+    expect(cxKills).toHaveLength(1)
+    expect(cxKills[0][2]).toEqual({
+      CX_ROOT: '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver'
+    })
+    expect(deps.killWith.mock.invocationCallOrder[0]).toBeGreaterThan(
+      (deps.installRemove as jest.Mock).mock.invocationCallOrder[0]
+    )
+  })
+
+  test('G30: the CrossOver wineserver is stopped after a failed restore too', async () => {
+    dxvkSrcDir()
+    restoring(false)
+    const res = await run(crossover)
+    expect(res).toMatchObject({ ok: false, reason: 'dxvk-failed' })
+    expect(
+      deps.killWith.mock.calls.filter((c) => c[1] === `${BIN_DIR}/wineserver`)
+    ).toHaveLength(1)
+  })
+
+  test('G30: the unhealthy branch keeps its single built-in stop and no CrossOver stop', async () => {
+    seedPinnedMarker()
+    restoring(true)
+    await prepareBottleForEngine({
+      appId: '620',
+      bottleName: NAME,
+      next: crossover,
+      crossoverHealthy: false,
+      deps
+    })
+    expect(deps.killWith).toHaveBeenCalledTimes(1)
+    expect(deps.killWith.mock.calls[0][1]).toBe(PIN_WS)
+  })
+
+  const deferred = () => {
+    let resolve!: (v: boolean) => void
+    const promise = new Promise<boolean>((r) => (resolve = r))
+    return { promise, resolve }
+  }
+  const tick = () => new Promise((r) => setImmediate(r))
+
+  test('WR-02: concurrent same-bottle switches run installRemove once', async () => {
+    seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    const gate = deferred()
+    ;(deps.installRemove as jest.Mock).mockImplementation(
+      async (_s, _t, action) => {
+        await gate.promise
+        if (action === 'backup') writeFileSync(dxvkFile(), 'v1')
+        return true
+      }
+    )
+    const first = run(pinned)
+    const second = run(pinned)
+    await tick()
+    expect(deps.installRemove).toHaveBeenCalledTimes(1)
+    expect(deps.killWith).toHaveBeenCalledTimes(1)
+    gate.resolve(true)
+    expect(await first).toEqual({ ok: true, changed: true })
+    expect(await second).toEqual({ ok: true, changed: false })
+    expect(deps.installRemove).toHaveBeenCalledTimes(1)
+    expect(marker().id).toBe('wine-staging-11.20')
+  })
+
+  test('WR-02: different bottles are independent', async () => {
+    const other = 'GameLibSteamBridge-730'
+    mkdirSync(join(mockState.root, other))
+    seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    writeFileSync(
+      join(mockState.root, other, ENGINE_MARKER_FILE),
+      JSON.stringify({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    )
+    const gate = deferred()
+    ;(deps.installRemove as jest.Mock).mockImplementation(async () => {
+      await gate.promise
+      return true
+    })
+    const a = run(pinned)
+    const b = prepareBottleForEngine({
+      appId: '730',
+      bottleName: other,
+      next: pinned,
+      deps
+    })
+    await tick()
+    expect(deps.installRemove).toHaveBeenCalledTimes(2)
+    gate.resolve(true)
+    await Promise.all([a, b])
+  })
+
+  test('WR-02: a rejected first switch does not block the second or later calls', async () => {
+    seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    const gate = deferred()
+    ;(deps.installRemove as jest.Mock).mockImplementationOnce(async () => {
+      await gate.promise
+      throw new Error('boom')
+    })
+    const first = run(pinned)
+    const second = run(pinned)
+    const firstSettled = first.catch((e) => e)
+    gate.resolve(true)
+    expect((await firstSettled).message).toBe('boom')
+    // the second ran after the first rejected and was not blocked by it
+    await expect(second).resolves.toBeDefined()
+    const third = await Promise.race([
+      run(pinned),
+      new Promise((r) => setTimeout(() => r('hung'), 500).unref())
+    ])
+    expect(third).not.toBe('hung')
   })
 })

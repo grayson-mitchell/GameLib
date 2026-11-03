@@ -361,7 +361,36 @@ async function resolveRestoreSource(
  * `deps.ensurePinEngine` is overridable: games.ts passes one that reports download progress
  * through the same engine-download statuses as a launch download.
  */
-export async function prepareBottleForEngine(args: {
+export function prepareBottleForEngine(
+  args: PrepareArgs
+): Promise<PrepareResult> {
+  // WR-02: one switch per bottle at a time. The legacy shared bottle is already refused before
+  // any kill (WR-06); this covers the remaining launch-vs-install interleave on a per-game
+  // bottle. A waiting call re-reads the marker in the body, so it never repeats a step.
+  const tail = inFlightSwitches.get(args.bottleName)
+  if (tail) {
+    logInfo(
+      `engine switch for "${args.bottleName}" waits for an in-flight switch (WR-02)`,
+      LogPrefix.Steam
+    )
+  }
+  const mine: Promise<PrepareResult> = (async () => {
+    if (tail) await tail.catch(() => undefined)
+    return prepareBottleForEngineBody(args)
+  })()
+  inFlightSwitches.set(args.bottleName, mine)
+  const clear = (): void => {
+    if (inFlightSwitches.get(args.bottleName) === mine) {
+      inFlightSwitches.delete(args.bottleName)
+    }
+  }
+  mine.then(clear, clear)
+  return mine
+}
+
+const inFlightSwitches = new Map<string, Promise<PrepareResult>>()
+
+type PrepareArgs = {
   appId: string
   bottleName: string
   next: EngineSelection
@@ -370,7 +399,11 @@ export async function prepareBottleForEngine(args: {
   /** Called once when a real engine change is about to start, before any kill or DXVK step. */
   onSwitching?: () => void
   deps?: Partial<EngineSwitchDeps>
-}): Promise<PrepareResult> {
+}
+
+async function prepareBottleForEngineBody(
+  args: PrepareArgs
+): Promise<PrepareResult> {
   const { appId, bottleName, next } = args
   const crossoverHealthy = args.crossoverHealthy ?? true
   const deps: EngineSwitchDeps = { ...defaultDeps, ...args.deps }
@@ -497,7 +530,29 @@ export async function prepareBottleForEngine(args: {
       }
     }
     const ok = await deps.installRemove(settings, 'dxvk', 'restore', sourceDxvk)
-    if (!crossoverHealthy) {
+    if (crossoverHealthy) {
+      // G30: the restore now returns while its CrossOver wineserver lingers, and the next
+      // launch may run on a different runner (overlay clone, 60-RESEARCH Pitfall 2), so stop
+      // it once, on both outcomes.
+      const binDir = await deps.resolveCrossoverBinDir()
+      if (binDir) {
+        await deps.killWith(
+          bottleName,
+          join(binDir, 'wineserver'),
+          { CX_ROOT: dirname(binDir) },
+          KILL_TIMEOUT_MS
+        )
+        logInfo(
+          `engine switch: stopped the restore's CrossOver wineserver for "${bottleName}"`,
+          LogPrefix.Steam
+        )
+      } else {
+        logWarning(
+          `engine switch: no CrossOver found to stop the restore's wineserver for "${bottleName}"`,
+          LogPrefix.Steam
+        )
+      }
+    } else {
       await deps.killWith(
         bottleName,
         source.wineserverBin,

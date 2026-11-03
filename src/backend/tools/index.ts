@@ -356,7 +356,13 @@ export const DXVK = {
         const regResult = await runWineCommand({
           gameSettings,
           commandParts: unregisterDll,
-          wait: true,
+          // G30: the strict restore settles on the process exit (as a2f661281 / 110920bcd).
+          // Settling on pipe close waits out the wineserver the call started (3-4 s linger),
+          // and `wait: true` adds `wineserver --wait`, which blocks until that server exits.
+          // Ordering holds: each step awaits its own process exit. prepareBottleForEngine
+          // stops the lingering CrossOver wineserver once afterwards.
+          wait: !strict,
+          resolveOnExit: strict,
           protonVerb: 'run'
         })
         if (strict && regResult?.code !== 0) {
@@ -399,7 +405,10 @@ export const DXVK = {
       const bootResult = await runWineCommand({
         gameSettings,
         commandParts: ['wineboot', '-u'],
-        wait: true,
+        // G30: see the reg delete note above. Dropping `wineboot -u` for the .update-timestamp
+        // auto-update is deferred until it is shown on CrossOver (todo filed by 59-52).
+        wait: !strict,
+        resolveOnExit: strict,
         protonVerb: 'run'
       })
       if (!strict) return true

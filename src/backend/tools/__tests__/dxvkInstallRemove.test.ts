@@ -303,6 +303,18 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
     expect(versionFile()).toBe(false)
   })
 
+  it('G30: a strict restore runs every reg delete and wineboot -u with wait:false and resolveOnExit', async () => {
+    mockRunWineCommand.mockResolvedValue(ok)
+    expect(await restore()).toBe(true)
+    const calls = mockRunWineCommand.mock.calls.map((c) => c[0])
+    expect(calls.length).toBeGreaterThan(1)
+    expect(calls.some((c) => c.commandParts[0] === 'wineboot')).toBe(true)
+    for (const c of calls) {
+      expect(c.wait).toBe(false)
+      expect(c.resolveOnExit).toBe(true)
+    }
+  })
+
   it('returns false and keeps the version file when a reg delete fails', async () => {
     mockRunWineCommand.mockImplementation(
       async ({ commandParts }: { commandParts: string[] }) =>
@@ -355,6 +367,20 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
       for (const dll of DLLS)
         rmSync(join(prefix, 'drive_c/windows', dir, dll), { force: true })
     expect(await restore()).toBe(true)
+  })
+
+  it('G30: a restore without a source keeps wait:true and no resolveOnExit', async () => {
+    mockRunWineCommand.mockResolvedValue(ok)
+    rmSync(join(prefix, 'system.reg'))
+    writeFileSync(join(prefix, '.update-timestamp'), '')
+    writeFileSync(join(toolsPath, 'dxvk', 'latest_dxvk'), VERSION)
+    await restore(false)
+    const calls = mockRunWineCommand.mock.calls.map((c) => c[0])
+    expect(calls.length).toBeGreaterThan(0)
+    for (const c of calls) {
+      expect(c.wait).toBe(true)
+      expect(c.resolveOnExit).toBeFalsy()
+    }
   })
 
   it('without a source keeps the lenient Heroic toggle behaviour', async () => {
