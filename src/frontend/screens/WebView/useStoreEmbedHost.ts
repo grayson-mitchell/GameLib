@@ -14,6 +14,14 @@ import { readWebviewZoomFactor, scaleRectForZoom } from './storeEmbedZoom'
 const TITLEBAR_STYLE_APPLIED_EVENT = 'gamelib-titlebar-style-applied'
 
 /**
+ * The hook instance that currently owns the shared native embed, or null once the route has been
+ * left. Module-level because a route leave unmounts the hook and a late `storeEmbedOpen`
+ * resolution from that dead instance must still be able to tell whether a NEWER instance has
+ * since taken the embed over (a fast Stores -> Library -> Stores bounce) before it hides anything.
+ */
+let activeEmbedOwner: symbol | null = null
+
+/**
  * Store embed host hook (Phase 40 Plan 08, D-18/D-19/D-20/D-21, REQ-40-02/REQ-40-03).
  *
  * Under the retired Electron `<webview>` model the element was IN the document and CSS laid it
@@ -445,6 +453,8 @@ export function useStoreEmbedHost({
 
   // ── BOUNDS SYNC + OPEN — the single geometry oracle (D-18, T-40-08-01/03) ──────────────────
   const openedRef = useRef(false)
+  // Set by the route-leave cleanup. Read by the open follow-up below (see there).
+  const unmountedRef = useRef(false)
   // Declared here (CR-02), ABOVE this effect, because `flush()` below seeds it on a late open —
   // see the seed at the `!openedRef.current` branch. The start-url effect further down is the
   // effect that actually CONSUMES this ref; it still reads/writes it the same way it always has.
@@ -536,6 +546,27 @@ export function useStoreEmbedHost({
           // this re-sends the same rect, which is harmless. It goes through `scheduleFlush` ->
           // `flush`, so it is not a second `storeEmbedSetBounds` call site.
           .then((result) => {
+            // Lost-hide guard. Rust runs every embed channel on its own freshly spawned worker
+            // thread, so a route-leave `storeEmbedHide` is NOT ordered against an earlier
+            // `storeEmbedOpen`: on a first open the webview does not exist yet when the hide
+            // lands (`store_embed_hide:no-webview`, only logged), and on a warm open the hide can
+            // run before the open's own `show()`. Either way the open then leaves the embed drawn
+            // over whatever page the user moved to. If the route was left while this open was in
+            // flight (and no newer instance has taken the embed over), hide again now that the
+            // open is known to have finished.
+            if (
+              unmountedRef.current &&
+              activeEmbedOwner === null &&
+              result?.status === 'ok'
+            ) {
+              window.api.storeEmbedHide().catch((error) => {
+                logNavCallFailure(
+                  'storeEmbedHide (open resolved after leave)',
+                  error
+                )
+              })
+              return
+            }
             if (disposed || result?.status !== 'ok') return
             scheduleFlush()
             if (authChanged) {
@@ -890,6 +921,9 @@ export function useStoreEmbedHost({
   }, [storeKey])
 
   useEffect(() => {
+    const owner = Symbol('storeEmbedHost')
+    activeEmbedOwner = owner
+    unmountedRef.current = false
     const handleBeforeUnload = () => {
       tearingDownRef.current = true
     }
@@ -897,6 +931,8 @@ export function useStoreEmbedHost({
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      unmountedRef.current = true
+      if (activeEmbedOwner === owner) activeEmbedOwner = null
       // This cleanup fires when the hook unmounts, i.e. when the user leaves the store/wiki
       // route. `beforeunload` firing FIRST is the only signal that this unmount is instead part
       // of the whole app tearing down — in that case, and ONLY that case, close() rather than

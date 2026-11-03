@@ -1865,6 +1865,56 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     )
   })
 
+  // Todo 2026-11-04 (amazon embed stays drawn over the Library game page). Rust runs each embed
+  // channel on its own worker thread, so a route-leave hide can land BEFORE an in-flight open
+  // finishes (first open: no webview yet, hide errors; warm open: hide runs before the open's
+  // show). The open follow-up must hide again once it resolves after a leave.
+  it('46. leaving the route while the open is in flight hides again once the open resolves', async () => {
+    let resolveOpen: (v: { status: 'ok' }) => void = () => undefined
+    mockApi.storeEmbedOpen.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveOpen = resolve
+      })
+    )
+    mount(epicOptions('connected'))
+    jest.advanceTimersByTime(40)
+    harness().__unmount()
+    expect(mockApi.storeEmbedHide).toHaveBeenCalledTimes(1)
+
+    resolveOpen({ status: 'ok' })
+    await flushMicrotasks()
+
+    expect(mockApi.storeEmbedHide).toHaveBeenCalledTimes(2)
+  })
+
+  it('46b. a newer mount that took the embed over is not hidden by the old open resolving', async () => {
+    let resolveOpen: (v: { status: 'ok' }) => void = () => undefined
+    mockApi.storeEmbedOpen.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveOpen = resolve
+      })
+    )
+    mount(epicOptions('connected'))
+    jest.advanceTimersByTime(40)
+    harness().__unmount()
+    const hidesAfterLeave = mockApi.storeEmbedHide.mock.calls.length
+
+    // Fast return: a fresh mount (fresh refs, as in production) registers as the owner while the
+    // old instance's open is still pending.
+    mount(epicOptions('connected'))
+    resolveOpen({ status: 'ok' })
+    await flushMicrotasks()
+
+    expect(mockApi.storeEmbedHide).toHaveBeenCalledTimes(hidesAfterLeave)
+  })
+
+  it('46c. an open that resolves while the route is still mounted does not hide', async () => {
+    mount(epicOptions('connected'))
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+    expect(mockApi.storeEmbedHide).not.toHaveBeenCalled()
+  })
+
   it('42. a remount with an unchanged sign-in state reloads nothing (instant return kept)', async () => {
     mount(epicOptions('connected'))
     jest.advanceTimersByTime(40)
