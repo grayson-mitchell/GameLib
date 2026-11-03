@@ -2,22 +2,24 @@
 phase: 59-steam-engine-fallback-when-crossover-is-unavailable
 reviewed: 2026-11-03T00:00:00Z
 depth: standard
-scope: gap-closure round 4, plans 59-40 to 59-43 (git diff f333a61ba..HEAD per file; committed hunks only, the uncommitted games.ts install() openExternal hunk is excluded)
-history: round 2 review (plans 59-24 to 59-30 plus 8e7f931f8 and f63afb1f3, diff 4cf305b51..HEAD) replaced by this round-4 review
-files_reviewed: 12
+scope: gap-closure round 5, plans 59-44 to 59-48 (git diff 6039a5d20..HEAD per file; committed hunks only; src/frontend/screens/Game/GamePage/index.css excluded as unrelated quick task 843d75b58)
+history: round 4 review (plans 59-40 to 59-43, diff f333a61ba..HEAD) replaced by this round-5 review; round 4 had itself replaced the round-2 review (plans 59-24 to 59-30, diff 4cf305b51..HEAD)
+files_reviewed: 14
 files_reviewed_list:
   - src/backend/connectivityNow.ts
   - src/backend/online_monitor.ts
-  - src/backend/storeManagers/steam/bridge/launchTarget.ts
-  - src/backend/storeManagers/steam/engine/engineDecision.ts
   - src/backend/storeManagers/steam/engine/offlineRefusal.ts
   - src/backend/storeManagers/steam/games.ts
+  - src/frontend/state/dialogQueue.ts
+  - src/frontend/types.ts
+  - src/frontend/components/UI/DialogHandler/index.tsx
+  - public/locales/en/gamelib.json
   - src/backend/__tests__/connectivityNow.test.ts
   - src/backend/__tests__/onlineMonitor.test.ts
-  - src/backend/storeManagers/steam/bridge/__tests__/launchTarget.test.ts
-  - src/backend/storeManagers/steam/engine/__tests__/engineDecision.test.ts
   - src/backend/storeManagers/steam/engine/__tests__/offlineRefusal.test.ts
   - src/backend/storeManagers/steam/__tests__/games.test.ts
+  - src/frontend/state/__tests__/dialogQueue.test.ts
+  - src/frontend/helpers/library.ts (read for cross-file impact of the G28 change only; not in the round-5 diff)
 findings:
   critical: 1
   warning: 3
@@ -26,248 +28,238 @@ findings:
 status: issues_found
 ---
 
-# Phase 59: Code Review Report (gap-closure round 4)
+# Phase 59: Code Review Report (gap-closure round 5)
 
 **Reviewed:** 2026-11-03
 **Depth:** standard
-**Files Reviewed:** 12
+**Files Reviewed:** 14
 **Status:** issues_found
 
-_History: this file previously held the round-2 review (plans 59-24 to 59-30, diff
-4cf305b51..HEAD). It now covers round 4 only._
+_History: this file previously held the round-4 review (plans 59-40 to 59-43, diff
+f333a61ba..HEAD). It now covers round 5 only._
 
 ## Summary
 
-Round 4 adds a fresh connectivity check at Play (`connectivityNow.ts`), a monitor re-probe hook
-(`recheckConnectivity`), an offline short-circuit to the stored launch target in
-`resolveBridgeLaunchExe`, an `isCrossoverMissing` presence check, and a pure
-`offlineLaunchCertainlyBlocked` predicate wired into `selectLaunchEngine`.
+Round 5 changes four things:
 
-The pure parts are sound. `isCrossoverMissing` matches the two `missing` branches of
-`preflightCrossover`. The predicate's `crossover-missing` arm matches `decideLaunchEngine`, whose
-unhealthy branch always selects `d.pins.current`. The offline launch-target path persists nothing
-and still goes through `sanitizeInstalldir`.
+- **CR-01, WR-01, WR-03 and IN-01..03 from round 4.** `checkConnectivityNow` now reads the
+  monitor's three-state status, uses two DNS hosts, and isolates the fresh-offline hook.
+  `offlineLaunchCertainlyBlocked` now refuses under a CrossOver override.
+- **G28.** Each dialog request carries a `dialogKey`, and `DialogHandler` remounts
+  `MessageBoxModal` by that key.
+- **G26.** A per-appId `bridgeLaunchesInFlight` guard sits in front of the bridge launch body.
+- **G27.** Accepted. No source change.
 
-The main defect is in `checkConnectivityNow`. It short-circuits to `offline: true` whenever the
-monitor is not `'online'`, and that includes `'check-online'`, which means "probing / unknown".
-Round 4 creates that state itself through `recheckConnectivity`, and the monitor is also in it
-during every boot probe. While it lasts, Play is treated as offline without asking the OS. That
-breaks the module's own rule that unknown must never refuse, and it now gates the new
-`crossover-missing` arm: the first-run "no CrossOver, download the built-in engine" path.
+The backend fixes are correct as written:
 
-Sidecar exit contract: the new cap timer is `unref?.()`'d and cleared in `finally`. The re-probe
-reuses the existing bounded ping loop (10 s axios timeout, unref'd retry timer). No new boot-time
-in-flight work. One INFO note below covers the lookup that the cap abandons.
+- Only a definite `'offline'` short-circuits. `'check-online'` goes on to the OS check.
+- A throwing hook can no longer erase an offline finding.
+- `dns-failed` needs every host to fail.
+- The new `restore-needs-pin` arm under override `crossover` matches `restoreNeedsAbsentPin`.
+  That function falls back to `ENGINE_PINS.current` only for non-pinned markers, so an
+  installed current pin correctly clears it.
+- The G26 guard is set before the first await and released only by its owner. The joiner never
+  runs the `clearEngineSelection` cleanup.
 
-Known items, located but not re-filed:
+The main defect is in the frontend. The G28 remount fixes the bug it targets, but it also makes
+queued dialogs visible again, and one caller relied on them staying hidden. The launch-option
+picker in `helpers/library.ts` calls `showDialogModal` once a second to update its countdown
+title. Each call is queued behind the open picker. Before round 5, the promoted copies were
+invisible (G28). Now each one mounts and shows, and every option button in a stale copy calls
+`window.api.launch` again (CR-01). G28 also has a second cause that round 5 does not fix:
+buttons that close the dialog in their own `onClick` close it twice, which silently drops the
+next queued dialog (WR-01).
 
-- **G26** (no in-flight guard for concurrent same-appId launches): `launchBridgeGame()` at
-  `games.ts:4835` has no guard. Round 4 widens the pre-flight window: `launchBridgeGameBody` now
-  awaits `checkConnectivityNow` (up to the 1500 ms DNS cap) at `games.ts:4851`, before anything
-  marks the launch as started, and `await isCrossoverMissing()` at `games.ts:4296` adds to it when
-  offline.
-- **G27** and **G28** are not re-filed.
+Sidecar exit contract: no new timers, watchers or boot-time work. The two-host race shares the
+existing cap timer (`unref?.()` and cleared in `finally`). A lookup abandoned at the cap is
+bounded by the OS resolver, as the header comment now records.
+
+Interaction with known gaps (not re-filed):
+
+- **G29** (a transient demo-status failure reclassifies CrossOver as cx-broken). Round 5 neither
+  causes nor changes it. The G26 guard does not cover it: the guard is released when a launch
+  settles, and the item-40 G29 probe ran about 2 s after the previous session ended, when no
+  launch was in flight.
+- **G30** (about 20 s of DXVK removal). This widens the window that the G26 guard protects, but
+  it does not interact with round-5 code.
 
 ## Critical Issues
 
-### CR-01: `'check-online'` (unknown) is reported as offline, so an online Play can be refused
+### CR-01: The G28 remount turns the launch-option countdown's queued copies into visible, live duplicate launch pickers
 
-**File:** `src/backend/connectivityNow.ts:80-81` (consumed at `src/backend/storeManagers/steam/games.ts:4283-4300` and `src/backend/storeManagers/steam/bridge/launchTarget.ts:184`)
+**File:** `src/frontend/state/dialogQueue.ts:32-40` and `src/frontend/components/UI/DialogHandler/index.tsx:140`. The trigger is in `src/frontend/helpers/library.ts:381-410` and `:463-471`. Button order is set in `src/frontend/components/UI/DialogHandler/components/MessageBoxModal/index.tsx:50-52`.
 
-**Issue:** `if (!d.isOnline()) result = { offline: true, source: 'monitor' }`.
-`isOnline()` is `status === 'online'` (`online_monitor.ts:270`), so `'check-online'` also
-counts as offline. The OS is never asked in that state.
+**Issue:** `launchGame`'s launch-option picker calls `updateCountdown()` once at start and then
+once a second for 9 ticks. Each call is `showDialogModal({ title: 'Select Launch Option (Ns)',
+buttons: optionButtons, onClose })`. `reduceDialogRequest` never replaces an open dialog: a
+request that arrives while one is open goes into the queue. So after k seconds the queue holds k
+copies of the picker, each with its own `dialogKey`.
 
-`'check-online'` is the monitor saying "I don't know yet":
+When the user picks an option:
 
-1. **Boot.** `initOnlineMonitor` sets `'check-online'` and stays there until a probe answers.
-   That can take up to 10 s, or much longer on a network where every probe fails, because the
-   retry loop backs off by 5 s per attempt.
-2. **After a recheck (new this round).** A fresh `no-interface`/`dns-failed` finding calls
-   `recheckConnectivity`, which moves the monitor to `'check-online'`. When the network comes
-   back, the monitor stays there until the next backoff tick (5, 10, 15 ... s) or the webview's
-   DOM `online` event.
+1. `MessageBoxModal` calls `props.onClose()` first. That is the picker's `onClose`, which clears
+   the timers, closes the dialog (pop 1) and calls `res({status:'done'})`.
+2. It then calls the button's `onClick`, which closes the dialog again (pop 2) and calls
+   `window.api.launch(...)`.
 
-Any Play in either window gets `offline: true` without an OS check. The effects:
+The next queued copy is promoted. Before round 5 it reused the closed `Dialog` instance with
+`open=false` and stayed invisible (the G28 bug). Now `key={dialogKey}` mounts it fresh, so it
+**appears**: a stale "Select Launch Option (Ns)" picker shows up right after the user chose.
+Clicking an option in it runs the same closure. `res` has already settled, but
+`window.api.launch(...)` is called again, so the game launches a second time and
+`lastUsedLaunchOption` is overwritten. This repeats for each remaining copy, about k/2 of them
+because every click pops twice.
 
-- **Wrong refusal.** On a machine without CrossOver, override `automatic`, with the current pin
-  not installed, `offlineLaunchCertainlyBlocked` returns `crossover-missing`. The user sees
-  "GameLib couldn't download its built-in engine (offline)", although the download would
-  succeed. This is the first-run fallback path that phase 59 exists for.
-- **Stale target.** `resolveBridgeLaunchExe` skips PICS and uses a possibly stale stored target.
+The auto-select path (`autoSelectFirstOption` at 10 s) leaves 9 queued copies behind.
 
-This contradicts the header of `connectivityNow.ts` ("Any internal error is also not offline",
-"a slow resolver must never cause a refusal") and the predicate's "only ever refuses when
-certain" contract.
+This is a round-5 regression. The queue made the copies (509bcb01b), but the remount made them
+visible and clickable. None of the `dialogQueue.test.ts` G28 tests covers an update to the open
+dialog.
 
-The test `connectivityNow.test.ts:62-68` encodes this behaviour: `isOnline: false` gives
-`offline: true`. No test covers `'check-online'`.
-
-**Fix:** Short-circuit only on a definite `'offline'`. Let `'check-online'` fall through to the
-OS check.
+**Fix:** Let a request update the open dialog in place instead of queueing it. Keep its
+`dialogKey` so it is not remounted.
 
 ```ts
-// online_monitor.ts
-export const getConnectivityStatus = () => status
+// types.ts
+/** Same id as the open dialog: update it in place (no queue, no remount). */
+dialogId?: string
 
-// connectivityNow.ts
-interface ConnectivityNowDeps {
-  status(): ConnectivityStatus
-  // ...
-}
-const st = d.status()
-if (st === 'offline') {
-  result = { offline: true, source: 'monitor' }
-} else if (!hasRoutableAddress(d.networkInterfaces())) {
-  if (st === 'online') d.onFreshOffline(reason, 'no-interface')
-  result = { offline: true, source: 'no-interface' }
-} else {
-  /* DNS race as today; recheck only when st === 'online' (recheckConnectivity already no-ops otherwise) */
+// dialogQueue.ts
+if (state.current.showDialog) {
+  if (options.dialogId && state.current.dialogId === options.dialogId) {
+    return {
+      current: { ...state.current, ...options, showDialog: true },
+      queue: state.queue
+    }
+  }
+  return { current: state.current, queue: [...state.queue, request] }
 }
 ```
 
-Add tests for `'check-online'` with a routable interface and a resolving lookup (expect
-`offline: false`, `source: 'dns-ok'`), and for `'check-online'` with no interface (expect
-offline).
+Pass `dialogId: 'launch-option-picker'` from `updateCountdown`. Add a reducer test: an update
+with the same `dialogId` keeps `dialogKey` and leaves the queue empty. Add a `library.ts` test:
+pick an option at 3 s, then expect no dialog open and `launch` called once.
 
 ## Warnings
 
-### WR-01: Any DNS error for a single host is a definite "offline", with app-wide side effects
+### WR-01: Buttons that close the dialog in their own `onClick` drop the next queued dialog (a G28 cause round 5 leaves in place)
 
-**File:** `src/backend/connectivityNow.ts:98-105`, `src/backend/online_monitor.ts:277-280`
+**File:** `src/frontend/components/UI/DialogHandler/components/MessageBoxModal/index.tsx:50-52` together with `src/frontend/components/UI/DialogHandler/index.tsx:146-152`. Callers: `src/frontend/helpers/library.ts:263, 270, 440`, `src/frontend/screens/Humble/Keys/index.tsx:362, 373`.
 
-**Issue:** Every rejection of `dns.promises.lookup('github.com')` is classified as
-`offline: true`. That includes transient `EAI_AGAIN`/`ESERVFAIL` and a filtering resolver that
-blocks github.com (Pi-hole, NextDNS, corporate DNS).
+**Issue:** A button click runs `props.onClose()` and then `button.onClick()`. With no custom
+`onClose`, the first call already dispatches `{ showDialog: false }`, which promotes queued
+dialog B. A button whose `onClick` also calls `showDialogModal({ showDialog: false })` pops a
+second time in the same batch. B is discarded before it renders, and its `ackId` is never acked.
 
-The monitor checks four hosts on purpose so that one blocked host does not read as offline (see
-the comment at `online_monitor.ts:126-132`). This check uses one host and one attempt.
+That produces exactly the G28 symptom ("display=unconfirmed", a queued notice that never shows),
+but from a cause the dialogKey fix does not touch. The Offline Warning's OK and Play Anyway
+buttons (`library.ts:263/270`) are on the offline Play path that phase 59 exercises.
 
-When the user is really online, a false `dns-failed` result has three side effects:
+The new `[dialog] closed` log is written once (first pop only), so the logs will not show the
+second pop either.
 
-1. **Refusal.** The Play can be refused (CR-01's arms).
-2. **Banner.** `recheckConnectivity` flips the app-wide status to `'check-online'`. The renderer
-   then shows the OfflineMessage "Retrying..." banner.
-3. **Sign-in probe pass.** When the ping answers, the transition back to `'online'` counts as an
-   edge in `signInProbe/pass.ts:312-318`, which requests a full sign-in probe pass. This repeats
-   on every Play while the condition lasts.
-
-**Fix:**
-
-- Treat only codes that mean "no resolver / no network" as offline, for example
-  `ENOTFOUND`/`ECONNREFUSED` when `hasRoutableAddress` is borderline. Report `EAI_AGAIN` and
-  `ESERVFAIL` as unknown (`offline: false`).
-- Or resolve two of the monitor's hosts and call it offline only if both fail.
-- Either way, keep `recheckConnectivity` for the definite case only.
-
-### WR-02: The predicate misses a certain refusal under a CrossOver override when the current pin is installed
-
-**File:** `src/backend/storeManagers/steam/engine/offlineRefusal.ts:38`
-
-**Issue:** `if (input.currentPinInstalled) return { blocked: false }` runs before the arms, for
-both overrides. The early return is right for `automatic`: an unhealthy CrossOver falls back to
-the current pin, so the launch might start.
-
-Under `override === 'crossover'`, `decideLaunchEngine` never selects the current pin (it returns
-`crossover` or `unavailable`). So when the bottle's marker is a non-current pin (for example
-`pinned:<previous>`) whose pin is absent, `restoreNeedsAbsentPin` is true. The restore cannot run
-offline no matter whether the current pin is installed. The predicate returns `blocked: false`
-and the launch waits out the probe and the failed restore download: the UAT 34 symptom G25 set
-out to remove. The old G22 condition had the same gap, but the new predicate makes it the
-documented contract. `offlineRefusal.test.ts` has no case for override `crossover` with
-`currentPinInstalled: true` and `restoreNeedsAbsentPin: true`.
-
-**Fix:**
+**Fix:** Make the close idempotent per dialog. Have the close request carry the key it closes,
+and ignore a close whose key is no longer current.
 
 ```ts
-if (input.crossoverMissing) {
-  return input.override === 'automatic' && !input.currentPinInstalled
-    ? { blocked: true, arm: 'crossover-missing' }
-    : { blocked: false }
+// DialogHandler onClose
+showDialogModal({ showDialog: false, dialogKey: dialogModalOptions.dialogKey })
+// dialogQueue.ts
+if (!showDialog) {
+  if (options.dialogKey !== undefined && options.dialogKey !== state.current.dialogKey) return state
+  ...
 }
-if (input.markerKind === 'non-crossover' && input.restoreNeedsAbsentPin) {
-  // automatic + current pin installed: an unhealthy CrossOver can still fall back, so not certain
-  if (input.override === 'automatic' && input.currentPinInstalled) return { blocked: false }
-  return { blocked: true, arm: 'restore-needs-pin' }
-}
-return { blocked: false }
 ```
 
-Add the missing table case.
+Alternatively, remove the redundant `showDialogModal({ showDialog: false })` calls from those
+`onClick` handlers.
 
-### WR-03: A throwing `onFreshOffline` throws away a definite offline finding
+### WR-02: The G26 guard is keyed by appId, but engine switches race per bottle, and the legacy shared bridge bottle hosts many appIds
 
-**File:** `src/backend/connectivityNow.ts:83, 100, 115-116`
+**File:** `src/backend/storeManagers/steam/games.ts:294, 4843-4872` (bottle resolution: `src/backend/storeManagers/steam/bottle.ts:1379-1405`)
 
-**Issue:** `d.onFreshOffline(...)` runs inside the outer `try`, before `result` is assigned. In
-production it is `recheckConnectivity`, which calls `setStatus`, then `publish()`, then
-`sendFrontendMessage`, then `pingSites()`. Unlike the emitter listeners, `publish` is not guarded.
-If anything in that chain throws, the outer `catch` overwrites the finding with
-`{ offline: false, source: 'error' }`. A side-effect failure turns a confirmed "no interface"
-into "online", and the stale-online symptom G25 fixed comes back for that launch.
+**Issue:** G26's failure was two `prepareBottleForEngine` runs in the same bottle (DXVK removal
+failed, marker `dxvk:"failed"`). Both the engine marker and the DXVK DLLs are per bottle.
+`findBridgeInstallBottle` returns `DEFAULT_BRIDGE_BOTTLE_NAME` for any appId whose manifest
+lives in the legacy shared bottle. Two different games there can each get past the
+`bridgeLaunchesInFlight` check (different keys) and run concurrent engine switches in one
+bottle, which is the G26 failure again. The install path's `resolveInstallEngineSettings`
+(`games.ts:2580-2614`) also calls `prepareBottleForEngine` with no guard.
 
-**Fix:** Assign `result` first, then call the hook in its own try/catch:
+**Fix:** Serialise per bottle as well as per appId. A simple version: key a second map by
+`findBridgeInstallBottle(appId)` (synchronous, already computed in `launch()` at line 3908) and
+await or refuse when the bottle is busy. A sturdier version: put a per-bottle mutex inside
+`prepareBottleForEngine`, which covers launch and install alike.
 
-```ts
-result = { offline: true, source: 'no-interface' }
-try { d.onFreshOffline(reason, 'no-interface') } catch (e) { logWarning(...) }
-```
+### WR-03: The joined second Play still runs the whole launcher-level pre- and post-launch sequence
+
+**File:** `src/backend/storeManagers/steam/games.ts:4843-4860` (guard placement). Duplicated work is in `src/backend/launcher.ts:181-337`.
+
+**Issue:** The guard sits inside `SteamGame.launchBridgeGame`, below `launcher.ts`. A joining
+Play still runs, a second time:
+
+- `createGameLogWriter` (a second writer for the same game log)
+- `checkWineBeforeLaunch` and `persistBottleWineVersion`
+- the user's `beforeLaunchScript` and `afterLaunchScript`
+- the `'launching'` and `'done'` status updates
+
+The summary of 59-46 says the second click "joins" the launch. In fact it is a second launch
+session that only shares the bridge body. A user before/after script that is not idempotent
+(mount, VPN toggle) runs twice for one game start.
+
+**Fix:** Either move the single-flight check up to the launch IPC entry (keyed per
+`appName`/runner, returning `{ status: 'abort' }` or the shared result before any launcher
+work), or document that the guard covers only the bridge body and file the launcher-level
+duplication with the open "second entry point" todo from 59-48.
 
 ## Info
 
-### IN-01: A lookup abandoned at the cap keeps running
+### IN-01: `[dialog] shown` logs the state, not visibility, so it cannot confirm a G28 fix
 
-**File:** `src/backend/connectivityNow.ts:88-97`
+**File:** `src/frontend/components/UI/DialogHandler/index.tsx:126-130`
 
-**Issue:** `Promise.race` stops waiting at 1500 ms, but the `getaddrinfo` request stays queued
-on the libuv threadpool and holds the event loop alive until the OS resolver gives up. That can
-be tens of seconds against an unresponsive resolver. The work is bounded by the OS, happens at
-Play rather than boot, and so does not break rule 2 of the sidecar exit contract. A quit right
-after a slow-DNS Play can still delay sidecar exit past the cap. Each repeated Play during a
-resolver stall also takes one of the 4 default threadpool slots, which the fs work in the same
-launch also needs.
+**Issue:** The effect fires whenever `showDialog` is true with a new key. The G28 fault was
+exactly "state says open, nothing visible". 59-45 says these lines "will prove" the fix, but they
+cannot. Only the ack (`display=confirmed`) proves visibility. Dialogs with a custom `onClose` (the
+launch-option picker) also never write `[dialog] closed` (line 147 returns first).
 
-**Fix:** Use `dns.Resolver` with `timeout`/`tries` set and `resolver.cancel()` on timeout, or
-note the bound in the module header.
+**Fix:** Rename the log to `[dialog] current`, or write it from inside the mounted modal. Log the
+close on both branches.
 
-### IN-02: Persistent host-only and VPN interfaces defeat the `no-interface` arm
+### IN-02: An empty `hosts` list fails closed (offline), against the module's fail-open rule
 
-**File:** `src/backend/connectivityNow.ts:54-70`
+**File:** `src/backend/connectivityNow.ts:118-121, 145-150`
 
-**Issue:** `hasRoutableAddress` counts every non-internal, non-link-local address. These all
-survive Wi-Fi off:
+**Issue:** `pending === 0` resolves `failed`, giving `offline: true, source: 'dns-failed',
+detail: 'undefined'` and, while online, a monitor recheck. It is reachable only through deps
+injection today, but the header says anything other than a definite failure must not refuse.
 
-- Tailscale/VPN `utun` addresses (100.64/10)
-- `bridge100` (192.168.64.1, Virtualization.framework / Internet Sharing)
-- Parallels/VMware `vnic`/`vmnet` addresses
-- IPv6 ULA (fd00::/8)
+**Fix:** With no hosts, return `{ kind: 'ok' }`, or report `source: 'error'`, `offline: false`.
 
-On such Macs the decision falls to DNS, and a VPN's own resolver tends to hang rather than fail,
-which gives `dns-timeout` and therefore "online". This is a deliberate fail-open, but it is not
-documented and the UAT 34 environment would not show it.
+### IN-03: The refusal log and the `offlineRefusal.ts` header are inaccurate after WR-02
 
-**Fix:** Ignore `utun*`, `bridge*`, `vnic*`, `vmnet*` and fd00::/8, or record the limitation in
-the header comment.
+**File:** `src/backend/storeManagers/steam/games.ts:4310-4313`, `src/backend/storeManagers/steam/engine/offlineRefusal.ts:10-17`
 
-### IN-03: `OfflineRefusalInput.override` is typed `string`
+**Issue:** The log says "offline and the built-in engine is not installed". On the new override
+`crossover` arm the current pin *is* installed, and the missing one is the marker's own older
+pin. The header's inserted sentence runs on ("...so it never refuses; a surviving DXVK copy
+means...") past the line width. It also states "never refuses" for `automatic` with the pin
+installed, which is true only of the `restore-needs-pin` arm.
 
-**File:** `src/backend/storeManagers/steam/engine/offlineRefusal.ts:21`
+**Fix:** Log `arm` together with the missing pin id. Rewrap and narrow the header sentence.
 
-**Issue:** The caller passes the result of `parseEngineOverride`. With a bare `string`, a typo
-such as `'Automatic'` silently becomes "never refuse".
+### IN-04: The G26 tests drive the private `launchBridgeGame` directly, not `launch()`
 
-**Fix:** Type the field as `EngineOverride` from `./engineIds`.
+**File:** `src/backend/storeManagers/steam/__tests__/games.test.ts:14727-14838`
 
-### IN-04: The fresh check also runs for DRM-mode launches, which never read the refusal
+**Issue:** Every G26 case calls `(game as any).launchBridgeGame()`, so the routing in `launch()`
+is never exercised with two concurrent callers. That routing is the
+`getBottleProcessMonitorPhase` single-flight, then `findBridgeInstallBottle`, then
+`bridgeFailedThisSession`. 59-48 item 41 could not reach the join path live either, so the whole
+guard rests on these tests. One case through `launch()` would pin the integration.
 
-**File:** `src/backend/storeManagers/steam/games.ts:4851`
-
-**Issue:** `checkConnectivityNow` runs before the `wantsDrm` branch. On a DRM-mode launch its
-result only feeds `resolveBridgeLaunchExe`, but a false `dns-failed` there still triggers
-WR-01's app-wide recheck side effects. This is only a note: the stored-target shortcut makes the
-check worth keeping for DRM launches too.
-
-**Fix:** Nothing required. If WR-01 is fixed, this goes away.
+**Fix:** Add one test that calls `game.launch()` twice with a deferred body and asserts one body
+run and one notify.
 
 ---
 
