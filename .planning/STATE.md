@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
-status: ready_to_plan
-stopped_at: Phase 59 complete (53/53) — ready to discuss Phase 60
-last_updated: 2026-11-03T10:15:07.150Z
-last_activity: 2026-11-03
+status: executing
+stopped_at: Phase 60 context gathered
+last_updated: "2026-11-03T19:07:52.692Z"
+last_activity: 2026-11-03 -- Phase 60 planning complete
 progress:
   total_phases: 10
   completed_phases: 9
-  total_plans: 254
-  completed_plans: 253
+  total_plans: 260
+  completed_plans: 254
   percent: 90
 ---
 
@@ -73,8 +73,8 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 Phase: 60 (steam-overlay-in-bridged-games-on-macos) — EXECUTING
 Plan: 10 of 10
-Status: Executing Phase 60
-Last activity: 2026-11-04 - Completed quick task 261104-9ou: strict DXVK restore judges already-absent by exit code
+Status: Ready to execute
+Last activity: 2026-11-03 -- Phase 60 planning complete
 
 Progress: [██████████] 100%
 
