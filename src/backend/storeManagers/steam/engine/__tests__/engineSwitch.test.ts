@@ -695,9 +695,9 @@ describe('G30 / WR-02 engine switch', () => {
     writeFileSync(dxvkFile(), 'v1')
   }
   const restoring = (ok: boolean) =>
-    (deps.installRemove as jest.Mock).mockImplementation(async () => {
+    (deps.installRemove as jest.Mock).mockImplementation(() => {
       if (ok) rmSync(dxvkFile(), { force: true })
-      return ok
+      return Promise.resolve(ok)
     })
   const dxvkSrcDir = () => {
     mockState.engines = join(mockState.root, 'engines')
