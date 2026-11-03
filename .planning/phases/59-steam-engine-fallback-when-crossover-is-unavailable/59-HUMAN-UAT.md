@@ -3,7 +3,7 @@ status: complete
 phase: 59-steam-engine-fallback-when-crossover-is-unavailable
 source: [59-VERIFICATION.md]
 started: 2026-11-02T22:20:00+13:00
-updated: 2026-11-02T22:40:00+13:00
+updated: 2026-11-03T23:30:00+13:00
 ---
 
 ## Current Test
@@ -28,10 +28,14 @@ result: pass — 2026-11-02, with testedCrossoverVersions.ts temporarily set to 
 expected: The prefix updates silently, the game launches, and the save is still present.
 result: skipped — accepted by the operator 2026-11-02. No second Wine-Staging-macOS build exists. Revisit when the pin is bumped.
 
+### 5. Round-6 paths not exercised live: G29 transient retry (UAT 45), launch-option picker launches once (UAT 46), offline-warning button closes (UAT 47b)
+expected: Retry: after a nonzero-exit probe, a `stdout=` detail, an "inconclusive, retrying once" warning and a following `outcome=ok`. Picker: one dialogId and one launch at a pick or the 10 s auto-select. Offline warning: OK closes it and leaves no queued dialog.
+result: pass — accepted on unit-test coverage by the operator 2026-11-03. Re-UAT 6 could not reach these paths: no transient probe failure happened (all three re-Play probes were `outcome=ok` first try), no installed title has two launch options, and 47b was not run. They rest on the demoStatus, engineDecision, dialogQueue and launchOptionPicker suites, all passing at 6f1484ebb.
+
 ## Summary
 
-total: 4
-passed: 3
+total: 5
+passed: 4
 issues: 0
 pending: 0
 skipped: 1
