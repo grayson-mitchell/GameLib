@@ -101,6 +101,30 @@ describe('probeDemoStatus', () => {
     expect(r).toMatchObject({ kind: 'failed', reason: 'nonzero-exit' })
   })
 
+  it('G29: keeps the stand-in fatal_error stdout on one line', async () => {
+    const r = await probeDemoStatus({
+      binDir,
+      bottleName: 'Steam',
+      baseEnv: env('cxfatal')
+    })
+    expect(r).toMatchObject({ kind: 'failed', reason: 'nonzero-exit' })
+    if (r.kind !== 'failed') return
+    expect(r.detail).toContain('code=1')
+    expect(r.detail).toContain('stderr=')
+    expect(r.detail).toContain('is not readable')
+    expect(r.detail).not.toMatch(/[\r\n]/)
+  })
+
+  it('G29: caps the stdout in the detail', async () => {
+    const r = await probeDemoStatus({
+      binDir,
+      bottleName: 'Steam',
+      baseEnv: env('bigout')
+    })
+    if (r.kind !== 'failed') throw new Error('expected failed')
+    expect(r.detail.split('stdout=')[1]).toHaveLength(400)
+  })
+
   it('reports a missing wine binary as spawn-error', async () => {
     const r = await probeDemoStatus({
       binDir: join(profile.root, 'nowhere'),

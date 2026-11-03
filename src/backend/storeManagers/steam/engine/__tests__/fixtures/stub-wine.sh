@@ -9,4 +9,6 @@ case "$STUB_MODE" in
   hang) exec sleep 30 ;;
   hang-once) if [ -e "$STUB_STATE" ]; then echo "Standard version"; else : > "$STUB_STATE"; exec sleep 30; fi ;;
   fail) exit 3 ;;
+  cxfatal) echo "cxmessage standin was called."; echo "Fatal Error"; echo "'cxbottle.conf' is not readable"; exit 1 ;;
+  bigout) printf 'x%.0s' $(seq 1 2000); echo; exit 1 ;;
 esac

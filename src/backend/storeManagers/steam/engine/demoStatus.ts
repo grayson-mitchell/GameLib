@@ -49,6 +49,13 @@ export function parseDemoStatus(stdout: string): DemoStatus {
   return { kind: 'unrecognised' }
 }
 
+// On macOS CrossOver's Perl bin/wine reports wrapper fatal errors on stdout via
+// the cxmessage stand-in (G29), so the nonzero-exit detail keeps stdout too.
+// Collapsing whitespace keeps the text on one log line (no forged lines).
+function oneLine(s: string, cap: number): string {
+  return s.replace(/\s+/g, ' ').trim().slice(0, cap)
+}
+
 function unrefHandle(handle: unknown): void {
   ;(handle as { unref?: () => void } | null | undefined)?.unref?.()
 }
@@ -63,7 +70,7 @@ export async function probeDemoStatus(args: {
   const started = Date.now()
   const log = (outcome: string, extra = '') =>
     logInfo(
-      `SteamEngine: demo-status probe bottle=${bottleName.slice(0, 64)} outcome=${outcome}${extra ? ` ${extra.slice(0, 200)}` : ''} elapsedMs=${Date.now() - started}`,
+      `SteamEngine: demo-status probe bottle=${bottleName.slice(0, 64)} outcome=${outcome}${extra ? ` ${extra.slice(0, 700)}` : ''} elapsedMs=${Date.now() - started}`,
       LogPrefix.Steam
     )
   const fail = (
@@ -133,7 +140,10 @@ export async function probeDemoStatus(args: {
     child.on('close', (code) => {
       if (code !== 0) {
         settle(
-          fail('nonzero-exit', `code=${code} stderr=${stderr.slice(0, 200)}`)
+          fail(
+            'nonzero-exit',
+            `code=${code} stderr=${oneLine(stderr, 200)} stdout=${oneLine(stdout, 400)}`
+          )
         )
         return
       }
