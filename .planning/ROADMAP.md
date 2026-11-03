@@ -842,7 +842,7 @@ Plans:
 **Goal:** A Windows Steam title on the macOS native bridge still launches when CrossOver is missing, its trial has expired for that bottle, or it is broken. CrossOver stays the first-choice engine. The fallback is one Wine-Staging + DXVK build pinned per GameLib release, which GameLib installs and manages itself. GameLib keeps the previous pinned build so a bad bump can be rolled back. The fallback runs the game's existing bridge bottle with `USER=crossover`, so saves and settings stay in one Windows profile. Before every CrossOver launch, GameLib checks the bottle's trial state with `CX_BOTTLE=<bottle> wine --demo-status`. An expired bottle goes to the fallback instead of hanging on CrossOver's nag dialog. CrossOver launches always run with a timeout. Users see "N days remaining" before expiry. A per-game engine override exists only as an advanced, explicitly unsupported option (the Proton model): known-fixes and census verdicts do not apply to it, and the launch log records the exact engine and version. GameLib records the CrossOver versions it has tested, and warns on an untested one without blocking it. Out of scope: DRM mode and bottled Steam (CrossOver-only), GPTK and `-DXMT` for Steam, a full census on the fallback (it is best-effort). Evidence: spikes 056–060 and the Idea B engine decision in `.planning/spikes/MANIFEST.md`.
 **Requirements**: TBD
 **Depends on:** Phase 51 (per-game bridge bottles)
-**Plans:** 45/48 plans executed
+**Plans:** 46/48 plans executed
 
 Plans:
 **Wave 1**
@@ -968,7 +968,7 @@ Plans:
 
 - [x] 59-44-PLAN.md — check-online is checked, not assumed offline; isolated re-probe hook; two-host DNS; refusal predicate under a CrossOver override (CR-01, WR-01..03)
 - [x] 59-45-PLAN.md — Queued dialogs remount visible on promotion; renderer shown/closed log, diagnosis first (G28)
-- [ ] 59-46-PLAN.md — One bridge launch per appId; a second Play joins it with an "already starting" notice (G26)
+- [x] 59-46-PLAN.md — One bridge launch per appId; a second Play joins it with an "already starting" notice (G26)
 
 **Gap round 5, wave 2** *(blocked on 59-46)*
 
