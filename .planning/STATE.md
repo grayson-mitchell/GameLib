@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60 (steam-overlay-in-bridged-games-on-macos) — EXECUTING
 Plan: 10 of 10
 Status: Executing Phase 60
-Last activity: 2026-11-04 - Completed quick task 261103-x6m: launch single-flight at the launch IPC entry
+Last activity: 2026-11-04 - Completed quick task 261104-9ou: strict DXVK restore judges already-absent by exit code
 
 Progress: [██████████] 100%
 
@@ -421,6 +421,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261103-wtm | DXVK strict restore (engine switch) removes the DLLs before its first wine process so the flip's automatic prefix update restores the stock DLLs; `wineboot -u` only when one is still missing; per-DLL reg deletes batched into one `reg import` + one verifying `reg query`. G30 follow-ups; todo closed. | 2026-11-03 | ff82f781f | CrossOver gate passed on throwaway bottle (stock DLLs present at import exit, overrides gone); Jest 24 suites / 463 tests pass; in-app flip not watched | [261103-wtm-dxvk-restore-drop-wineboot-and-batch-ov](./quick/261103-wtm-dxvk-restore-drop-wineboot-and-batch-ov/) |
 | 261103-x0l | Dev preflight refuses a bare `pnpm tauri:dev:run` (the cause of a Keychain prompt on every dev launch): the boot must carry `GAMELIB_DEV_SECRET_VAULT=1` (`pnpm tauri:dev`) or the new explicit `GAMELIB_DEV_KEYRING=1` (`pnpm tauri:dev:keyring`); exact `'1'` only. README notes the opt-in. | 2026-11-03 | 6c17aa7f4 | Meta jest 60 suites / 2191 tests pass; CLI checked: bare exit 1, vault and keyring arms OK | [261103-x0l-preflight-guard-refuse-tauri-dev-run-wit](./quick/261103-x0l-preflight-guard-refuse-tauri-dev-run-wit/) |
 | 261103-x6m | Launch single-flight moved to the launch IPC entry (WR-03/IN-04): new `launchSingleFlight.ts` keyed `runner:appName` guards `dispatchSteamLaunch` (one "already starting" notice) and `launchEventCallback` (log only), so a joined Play skips all launcher-level work; G26 kept. Second entry point: the GameCard context-menu Play, not disabled while launching. | 2026-11-04 | 4daa26b34 | 12 suites / 794 tests pass; tsc clean; eslint warnings unchanged (17); no live check | [261103-x6m-single-flight-bridge-launches-at-the-lau](./quick/261103-x6m-single-flight-bridge-launches-at-the-lau/) |
+| 261104-9ou | Strict DXVK restore (WR-01) judges "already absent" by exit code, not truncated text: `restoreDxvkStrict` queries each override with `reg query /v <dll>` after the import (0 = still set → fail, 1 = absent only when the import exited 0, else fail closed); no stdout/stderr read. Test pins late stderr lost / exit code kept under resolveOnExit. Todo closed. | 2026-11-04 | 1249a076f | 3 suites / 72 tests pass; tsc + prettier clean; eslint warnings unchanged; planning-gates 12/12; no live check | [261104-9ou-strict-dxvk-restore-judge-already-absent](./quick/261104-9ou-strict-dxvk-restore-judge-already-absent/) |
 
 ## Deferred Items
 
