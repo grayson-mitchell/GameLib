@@ -4,7 +4,8 @@ plan: 47
 subsystem: steam-launch
 tags: [demo-status, offline, gap-closure, G27]
 requirements: [G27]
-status: in-progress (paused at Task 2 decision checkpoint)
+status: complete
+completed: 2026-11-03
 ---
 
 # Phase 59 Plan 47: G27 offline demo-status latency Summary
@@ -36,6 +37,27 @@ Rows 5 and 6 are context only; row 5 is the whole dialog time (probe-dominated) 
 - accept: keep D-09 unchanged, every CrossOver launch is probed, so an expired trial is caught before launch, and the offline restore keeps its roughly 10-12 s wait (about 7 s of which is offline-specific).
 - skip: amend D-09 so that an offline launch with override automatic/crossover, CrossOver present, non-crossover marker and the marker's DXVK copy present goes to CrossOver unprobed (no trial-days reading; D-10's deadline remains the only bound), and the restore starts immediately.
 
-## Status
+## G27 decision: accept
 
-Paused at Task 2 (blocking decision checkpoint). Tasks 2 and 3 are pending the operator's answer.
+Date: 2026-11-03. Operator chose "Accept (Recommended)": keep D-09 unchanged and accept the offline restore probe latency (relayed by the coordinator).
+
+## Override for 59-VERIFICATION.md
+
+Add under `overrides:` (the verifier applies it; 59-VERIFICATION.md is not edited by this plan):
+
+```yaml
+- truth: "G27 (UAT 38) minor: with CrossOver healthy and the DXVK copy present, an offline launch restores and starts promptly"
+  reason: "D-09 requires a demo-status check before every CrossOver launch and D-10's timeout bounds it; the latency is the probe itself (about 5.3 s cold CrossOver start plus about 7 s offline retry), per the G27 diagnosis in 59-47-SUMMARY.md"
+  accepted_by: operator
+  date: 2026-11-03
+```
+
+## Deviations from Plan
+
+None. Task 3 took the accept path: no source file changed.
+
+## Commits
+
+- c4e267e56: docs(59-47): G27 diagnosis
+
+## Self-Check: PASSED

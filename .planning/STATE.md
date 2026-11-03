@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 60 context gathered
-last_updated: "2026-11-03T07:43:06.625Z"
+last_updated: "2026-11-03T07:49:53.828Z"
 last_activity: 2026-11-03
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 249
-  completed_plans: 246
+  completed_plans: 247
   percent: 80
 ---
 
@@ -72,9 +72,9 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 59 (steam-engine-fallback-when-crossover-is-unavailable) — EXECUTING
-Plan: 4 of 48
+Plan: 5 of 48
 Status: Ready to execute
-Last activity: 2026-11-03 - Completed quick task 261103-stm: main button spinner inherits label colour
+Last activity: 2026-11-03
 
 Progress: [██████████] 99%
 
@@ -319,6 +319,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 59-06]: Fallback bottle cxbottle.conf written last; DXVK restore runs on CrossOver (59-01)
 - [Phase 57]: 57-08: CEG report precedes forced-bridge return; no Mach-O retry seam (D-18)
 - [Phase 57]: [57-11] wrangler 4.156.0 user-approved; compatibility_date 2026-10-30 (workerd limit)
+- [Phase 59]: G27 accepted (operator 2026-11-03): D-09 unchanged, offline probe latency accepted
 
 ### Pending Todos
 
@@ -505,7 +506,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-03T07:43:06.619Z
+Last session: 2026-11-03T07:49:50.457Z
 Stopped at: Phase 60 context gathered
 Resume file: None
 
