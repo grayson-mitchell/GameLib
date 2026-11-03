@@ -4850,6 +4850,8 @@ export default class SteamGame implements Game {
       )
       notify({
         title: this.getGameInfo().title,
+        // Same call shape as the file's other i18next.t uses; the lint ceiling counts warnings.
+        // eslint-disable-next-line import-x/no-named-as-default-member
         body: i18next.t(
           'gamelib:steam.bridge.alreadyLaunching',
           'This game is already starting. Wait for its window to open.'
