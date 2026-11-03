@@ -1,5 +1,5 @@
 ---
-status: complete
+status: testing
 phase: 59-steam-engine-fallback-when-crossover-is-unavailable
 source: [59-13-PLAN.md]
 ---
@@ -166,6 +166,26 @@ result: issue — 2026-11-03. Prepared: Play under no-crossover.sb switched 1284
 expected: (WR-02, WR-03, 59-36) Under no-crossover.sb, Batman (200260): start the install, cancel during the depot stream, and immediately (within a second or two, while the Downloads entry is still clearing) start the install again and cancel it during 'Creating the game's bottle' or engine setup: no `chunk-stream` or depot lines after the second cancel, no "Could not find a matching abort controller" line, Install is offered, no GameLibSteamBridge-200260 dir remains. If the timing cannot be hit after three attempts, record skipped with the reason and cite the WR-02/WR-03 unit tests from 59-36.
 result: pass — 2026-11-03, no-crossover.sb, engine present. Attempt 1 (18:08:29 / 18:11:53) missed the timing; attempt 2: install created the bottle 18:17:14, depot stream from 18:17:23, operator cancel 18:17:27 (`status=cancelled`, partial removed), Install again 18:17:29 (2 s later) started a fresh run (resolve, plan, stream), operator cancel 18:18:57 during the depot stream: `aborting in-flight native depot download`, `status=cancelled`, partial removed, the only chunk-stream line after the cancel is the final @75s flush in the same second, nothing after 18:18:57, no "Could not find a matching abort controller" line in the whole session. Deviation: the second cancel landed in the depot stream, not bottle creation (the first install had already made the bottle), so GameLibSteamBridge-200260 remained, as after any depot cancel; the cancel-during-bottle-creation leg (bottle removed) is item 33 round b, 18:12:08-11. Bottle deleted by hand afterwards.
 
+## Re-UAT 4 (gap closure 59-40..59-42)
+
+Re-tests G25 live with Wi-Fi turned off immediately before Play. Item 38 supersedes item 34's expectation (G25): with CrossOver healthy and the marker's DXVK copy present, an offline launch correctly restores and starts on CrossOver; a block needs CrossOver missing (item 36) or the DXVK copy gone too (item 37). Item 34 is left as recorded.
+
+### 36. Offline Play with CrossOver hidden is refused at once
+expected: (G25 a, b, c; the UAT 34 run 1 state) Prepare as in item 34: Planet Crafter (1284190) marker `pinned`, wine-staging-11.20 moved aside (operator go-ahead), the marker's DXVK copy left in place, a stored launch target exists; run under no-crossover.sb. Wi-Fi off immediately before Play: the dialog "GameLib couldn't download its built-in engine (offline). Check your connection and try again." appears within 2 s of the click and the game does not start; the log for that launch has `Connectivity: fresh check (launch 1284190) -> offline via <source>` (record the source), `resolveBridgeLaunchExe: offline at launch for appId 1284190, using the stored launch target without a CM logon` and `SteamGame: appId 1284190 launch blocked before pre-flight: offline and the built-in engine is not installed (crossover-missing)`, and has no `reason=launch-target` CM logon, no `downloading wine` and no `demo-status probe` line; the marker still says pinned.
+result: pending
+
+### 37. Offline Play with the DXVK copy gone is refused at once
+expected: (G25 a, b; the 59-38 arm) Normal dev (CrossOver visible), pin still aside, the marker's DXVK copy moved aside too (operator go-ahead). Wi-Fi off immediately before Play: the same dialog within 2 s, `SteamGame: appId 1284190 launch blocked before pre-flight: offline and the built-in engine is not installed (restore-needs-pin)`, preceded by `Connectivity: fresh check (launch 1284190) -> offline via <source>` (record the source), no `reason=launch-target` CM logon and no `demo-status probe` line for that launch, the game does not start, the marker still says pinned. Afterwards move the DXVK copy back.
+result: pending
+
+### 38. Offline Play with CrossOver healthy and the DXVK copy present restores and launches
+expected: (G25 b; revises item 34's expectation, item 34's result stays as recorded) Normal dev, pin still aside, DXVK copy back in place. Wi-Fi off immediately before Play: no block dialog; the log has `Connectivity: fresh check (launch 1284190) -> offline via <source>` (record the source), `resolveBridgeLaunchExe: offline at launch for appId 1284190, using the stored launch target without a CM logon` and no `reason=launch-target` CM logon, then a `demo-status probe` line (D-09 still runs), then the `pinned:wine-staging-11.20 -> crossover` restore from the marker's DXVK copy; the game launches on CrossOver; the time from the click to the game window is recorded and is shorter than run 2's (no ~9 s CM wait before the probe).
+result: pending
+
+### 39. Connectivity recovers by itself and the online path is unchanged
+expected: (G25 a) Across the item 36-38 sessions, for each Wi-Fi-off window record whether a `Connectivity: offline (from renderer)` line appeared and its delay after Wi-Fi off (evidence for the 59-40 diagnosis; recorded either way, not a pass criterion), and that a `Connectivity: check-online (fresh check at launch 1284190 found <source>)` line followed each offline fresh check; after Wi-Fi is back on, `Connectivity: online` appears within 60 s without restarting GameLib; then, online, Play Planet Crafter: `Connectivity: fresh check (launch 1284190) -> online via dns-ok`, a `reason=launch-target` CM logon is present (online path unchanged), the demo-status probe runs and the game launches on CrossOver.
+result: pending
+
 ## Restore
 
 Done 2026-11-02: GameLibSteamBridge-38400's system.reg restored from the pre-test copy (cmp identical), `InstallTime.orig` removed, `--demo-status` with the licence visible reads "Standard version"; licence file unchanged (304 bytes, Oct 22 19:57) before and after. The bottle's engine marker is pinned from item 9; its next Automatic launch switches it back to CrossOver.
@@ -178,6 +198,8 @@ Undo the throwaway bottle's backdate by re-running spike-060 `backdate.py`, or d
 Re-UAT 2 restore (59-30), done and verified 2026-11-02 22:08: wine-staging-11.20 moved back (aside dir removed; dxvk present), leftover .tmp-wine removed by hand, network on, 38400 InstallTime restored 611e42db -> 6145cfdb, overrides 1284190 and 38400 automatic, no metadata-store backup needed, Batman 200260 not installed and no bottle, licence still 304 bytes Oct 22 19:57, Bottles list identical to the session-start snapshot. Original steps: move the pinned engine back (or let GameLib re-download it), network back on, undo the 38400 backdate with backdate.py, reset hand-set overrides (1284190, 38400) to automatic, restore the metadata-store backup from item 28, uninstall or keep any Batman (200260) install as the operator chooses, and confirm the licence mtime (Oct 22 19:57, 304 bytes) is unchanged.
 
 Re-UAT 3 restore (59-39), done and verified 2026-11-03 18:30: wine-staging-11.20 moved back into `steam-engines` (dxvk present; a spare 856 MB copy remains in `tools/steam-engines-aside-59-39` pending the operator's call), network back on (Steam, GitHub and cloudflare-dns resolve), 576770's ledger left settled (backup kept in the session scratchpad), Batman 200260 not installed and its bottle deleted (operator go-ahead), 1284190 marker back to `crossover` (item 34 run 2), licence still 304 bytes Oct 22 19:57, Bottles list equals the session-start snapshot minus GameLibSteamBridge-200260. Original steps: restore 576770's `gamelib-shared-redists.json` backup if the pre-test state is wanted (or keep the settled ledger); move the pinned engine back (or let GameLib re-download it); network back on; uninstall or keep any Batman (200260) install as the operator chooses; confirm the licence file is unchanged (304 bytes, Oct 22 19:57) and the Bottles list matches the session-start snapshot.
+
+Re-UAT 4 restore (59-43), pending: move wine-staging-11.20 back into `steam-engines` (or let GameLib re-download it), confirm the marker's DXVK copy is in place, network on, Planet Crafter's override automatic, and confirm the CrossOver licence file mtime is unchanged.
 
 ## Gaps
 
