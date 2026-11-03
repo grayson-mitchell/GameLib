@@ -28,3 +28,9 @@ restore live without hitting it.
 Decide "already absent" from state instead of text. Query the value (`reg query`), or read the
 bottle's `user.reg` `[Software\\Wine\\DllOverrides]` section after the delete. Add a test where the
 stub's stderr arrives after `exit`.
+
+## Resolution
+
+Fixed in quick 261104-9ou (commit 1249a076f). The strict restore's verdict now comes from per-override `reg query KEY /v <dll>` exit codes (0 = still set, 1 = absent, anything else fails closed), with code 1 trusted only after a successful `reg import`. No stdout/stderr text is read.
+
+The line pointers above had been superseded by G30 (261103-wtm), which moved the logic into `restoreDxvkStrict`. Reading `user.reg` was rejected because CrossOver saves it only when the wineserver stops, after the restore returns.
