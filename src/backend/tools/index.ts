@@ -617,7 +617,12 @@ const DLL_OVERRIDES_KEY = 'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides'
  *     engine, a retry, `disable`); forging the timestamp is not an option, as CrossOver ignored
  *     several mismatched values (0, 1, 1700000000).
  *   - The overrides go in one `reg import` instead of a `reg delete` per DLL. An import that
- *     matches nothing still exits 0, so one `reg query` of the key checks the values are gone.
+ *     matches nothing still exits 0, so the values are checked afterwards: each override by
+ *     `reg query KEY /v <name>`, judged by exit code (Wine reg query.c: 1 for a missing key or
+ *     value, 0 for present), because `resolveOnExit` may cut the output short (59-REVIEW round-6
+ *     WR-01, quick 261104-9ou). Code 1 is trusted only after a successful import, which proves
+ *     wine and reg.exe run in this bottle. Cost: one process per override (about 5 for DXVK
+ *     2.x), each settling at exit plus at most 250 ms.
  *
  * Every step settles on the process exit (as a2f661281 / 110920bcd): settling on pipe close
  * waits out the wineserver the call started (3-4 s linger). prepareBottleForEngine stops the
@@ -671,6 +676,7 @@ async function restoreDxvkStrict(args: {
     )
   ]
   const regFile = join(winePrefix, 'drive_c', DXVK_RESTORE_REG_FILE)
+  let importSucceeded = false
   try {
     writeFileSync(
       regFile,
@@ -687,7 +693,9 @@ async function restoreDxvkStrict(args: {
       'import',
       `C:\\${DXVK_RESTORE_REG_FILE}`
     ])
-    if (importResult?.code !== 0) {
+    if (importResult?.code === 0) {
+      importSucceeded = true
+    } else {
       failed.push(`reg import code=${importResult?.code}`)
     }
   } catch (err) {
@@ -697,16 +705,16 @@ async function restoreDxvkStrict(args: {
     rmSync(regFile, { force: true })
   }
 
-  const queryResult = await run(['reg', 'query', DLL_OVERRIDES_KEY])
-  const queryOutput = `${queryResult?.stdout ?? ''}${queryResult?.stderr ?? ''}`
-  if (queryResult?.code === 0 && queryOutput.includes(DLL_OVERRIDES_KEY)) {
-    const left = overrides.filter((dll) =>
-      new RegExp(`^\\s+${dll}\\s+REG_`, 'im').test(queryOutput)
-    )
+  if (importSucceeded) {
+    // Sequential: the wine processes must not race on one wineserver.
+    const left: string[] = []
+    for (const dll of overrides) {
+      const result = await run(['reg', 'query', DLL_OVERRIDES_KEY, '/v', dll])
+      const code = result?.code
+      if (code === 0) left.push(dll)
+      else if (code !== 1) failed.push(`reg query ${dll} code=${code}`)
+    }
     if (left.length > 0) failed.push(`overrides left: ${left.join(', ')}`)
-  } else if (!/unable to find/i.test(queryOutput)) {
-    // A missing key has no overrides left; anything else (or no output) proves nothing.
-    failed.push(`reg query code=${queryResult?.code}`)
   }
 
   const missing = dllsToRemove.filter((dllFile) => !existsSync(dllFile))
