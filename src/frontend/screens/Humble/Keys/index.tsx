@@ -359,7 +359,8 @@ export default function HumbleKeys() {
       buttons: [
         {
           text: t('button.cancel', 'Cancel'),
-          onClick: () => showDialogModal({ showDialog: false })
+          // MessageBoxModal closes the dialog before onClick runs (WR-01).
+          onClick: () => undefined
         },
         {
           text: tGamelib('gamelib:humbleKeys.giftConfirmAction', 'Open Humble'),
@@ -370,7 +371,8 @@ export default function HumbleKeys() {
               ...prev,
               [key.machineName]: Date.now()
             }))
-            showDialogModal({ showDialog: false })
+            // MessageBoxModal already closed this dialog; a second close dropped
+            // the next queued dialog (WR-01).
           }
         }
       ]

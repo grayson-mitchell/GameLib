@@ -260,14 +260,14 @@ const launch = async ({
           {
             text: t('box.ok', 'OK'),
             onClick: () => {
-              showDialogModal({ showDialog: false })
+              // MessageBoxModal closes the dialog before onClick runs; a second close dropped the next queued dialog (WR-01).
               res({ status: 'abort' })
             }
           },
           {
             text: t('gamepage:box.offline_warning.playAnyway', 'Play Anyway'),
             onClick: async () => {
-              showDialogModal({ showDialog: false })
+              // MessageBoxModal closes the dialog before onClick runs; a second close dropped the next queued dialog (WR-01).
               res(await proceedToLaunch())
             }
           }
@@ -278,6 +278,9 @@ const launch = async ({
 
   return proceedToLaunch()
 }
+
+// One id per picker invocation so two pickers never share an identity (CR-01).
+let pickerCounter = 0
 
 async function checkLaunchOptionsAndLaunch({
   appName,
@@ -338,6 +341,7 @@ async function checkLaunchOptionsAndLaunch({
   }
 
   // Show dialog to select launch option
+  const dialogId = `launch-option-picker:${appName}:${++pickerCounter}`
   return new Promise((res) => {
     let timeoutId: NodeJS.Timeout | null = null
     let countdownInterval: NodeJS.Timeout | null = null
@@ -356,8 +360,8 @@ async function checkLaunchOptionsAndLaunch({
         clearInterval(countdownInterval)
       }
 
-      // Close the dialog
-      showDialogModal({ showDialog: false })
+      // Close the dialog (targeted: only this picker)
+      showDialogModal({ showDialog: false, dialogId })
 
       // Save this choice for future launches
       window.api.setSetting({
@@ -384,6 +388,7 @@ async function checkLaunchOptionsAndLaunch({
         return res({ status: 'done' })
       }
       showDialogModal({
+        dialogId,
         message: t(
           'gamepage:box.selectLaunchOption.body',
           'Please select a launch option for this game (it can be changed later on the game settings):'
@@ -402,7 +407,7 @@ async function checkLaunchOptionsAndLaunch({
           if (countdownInterval) {
             clearInterval(countdownInterval)
           }
-          showDialogModal({ showDialog: false })
+          showDialogModal({ showDialog: false, dialogId })
           launchCanceled = true
           return res({ status: 'done' })
         }
@@ -436,8 +441,8 @@ async function checkLaunchOptionsAndLaunch({
             clearInterval(countdownInterval)
           }
 
-          // Close the dialog
-          showDialogModal({ showDialog: false })
+          // MessageBoxModal runs the picker's onClose (which closes it) before
+          // this onClick; a second close dropped the next queued dialog (WR-01).
 
           // Save this choice for future launches
           window.api.setSetting({
