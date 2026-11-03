@@ -105,6 +105,7 @@ import {
 import { formatSystemInfo, getSystemInfo } from './utils/systeminfo'
 import { gameAnticheatInfo } from './anticheat/utils'
 
+import { singleFlightLaunch } from './launchSingleFlight'
 import type { PartialDeep } from 'type-fest'
 import type LogWriter from './logger/log_writer'
 import { isEnabled } from './storeManagers/legendary/eos_overlay/eos_overlay'
@@ -112,7 +113,7 @@ import { Game } from 'common/types/game_manager'
 
 let powerDisplayId: number | null
 
-const launchEventCallback: (args: LaunchParams) => StatusPromise = async ({
+const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
   appName,
   launchArguments,
   runner,
@@ -234,6 +235,9 @@ const launchEventCallback: (args: LaunchParams) => StatusPromise = async ({
       return { status: 'error' }
     }
 
+    // NOTE (WR-03): Steam does not reach launchEventCallback today. The sidecar
+    // `launch` handler and the gamelib:// deep link both use dispatchSteamLaunch,
+    // so this block is dead code for Steam; it is kept in place.
     // debug/steam-bottle-game-no-launch (Pitfall 6, real-game-launch gap):
     // checkWineBeforeLaunch's self-heal above persists any corrected
     // wineVersion via GameConfig.get(gameInfo.app_name).setSetting(...) — a
@@ -373,6 +377,23 @@ const launchEventCallback: (args: LaunchParams) => StatusPromise = async ({
 
   return { status: launchResult ? 'done' : 'error' }
 }
+
+// WR-03: a second concurrent launch of the same runner+app joins the first
+// before any launcher-level work runs. Deliberately a plain (non-async) arrow
+// so the in-flight check precedes runLaunchEventCallback's first await. No
+// notify on join: the span covers the whole play session for these runners.
+const launchEventCallback: (args: LaunchParams) => StatusPromise = (params) =>
+  singleFlightLaunch(
+    params.runner,
+    params.appName,
+    () => {
+      logInfo(
+        `Launch of ${params.appName} (${params.runner}) already in progress; joining it (WR-03)`,
+        LogPrefix.Backend
+      )
+    },
+    () => runLaunchEventCallback(params)
+  )
 
 function filterGameSettingsForLog(
   originalSettings: GameSettings,
