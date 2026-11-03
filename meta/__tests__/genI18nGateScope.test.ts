@@ -407,6 +407,19 @@ const FIXTURE_DIFF_LINES = [
  * committed without the artifact) joins fork-touched, net zero.
  * `meta/i18nForkTouchedFiles.json` regenerated with
  * `pnpm gen-i18n-gate-scope`, `generatedAt` restored.
+ *
+ * 2026-11-03 (quick 261103-wjs): fork-touched 293 -> 323, scope 246 -> 271.
+ * 30 files added by phases 59/60 and quicks 261031-261103 joined fork-touched.
+ * 25 audited ZERO violations with `scanScope({ extraFiles })` and were
+ * hand-inserted into `meta/i18nGateScope.json` in sorted position. 5 have
+ * measured violations and are declared as debt instead (fixing the strings is
+ * out of scope here): `components/UI/WindowControls/CaptionGlyphs.tsx` (3),
+ * `helpers/connectivitySync.ts` (5), `helpers/reportProblem.ts` (2),
+ * `screens/Settings/components/SteamEngineOverride.tsx` (3),
+ * `screens/Settings/components/WinePrefix.tsx` (1).
+ * `meta/i18nForkTouchedFiles.json` regenerated with
+ * `pnpm gen-i18n-gate-scope`, `generatedAt` restored.
+ * DECLARED_UNSCANNED_DEBT +5.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -421,7 +434,10 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/ProgressDialog/index.tsx',
   'src/frontend/components/UI/SliderField/index.tsx',
   'src/frontend/components/UI/SteamGridDBPicker/index.tsx',
+  'src/frontend/components/UI/WindowControls/CaptionGlyphs.tsx',
+  'src/frontend/helpers/connectivitySync.ts',
   'src/frontend/helpers/declaredUnavailable.ts',
+  'src/frontend/helpers/reportProblem.ts',
   'src/frontend/helpers/gamepad_layouts/nintendo.ts',
   'src/frontend/screens/ConsoleMode/components/ConfirmDialog/index.tsx',
   'src/frontend/screens/ConsoleMode/controller.ts',
@@ -439,10 +455,12 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Settings/components/EgsSettings.tsx',
   'src/frontend/screens/Settings/components/GamePadDelayRepeat.tsx',
   'src/frontend/screens/Settings/components/LauncherArgs.tsx',
+  'src/frontend/screens/Settings/components/SteamEngineOverride.tsx',
   'src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx',
   'src/frontend/screens/Settings/components/Tools/index.tsx',
   'src/frontend/screens/Settings/components/UseDarkTrayIcon.tsx',
   'src/frontend/screens/Settings/components/UseFramelessWindow.tsx',
+  'src/frontend/screens/Settings/components/WinePrefix.tsx',
   'src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx',
   'src/frontend/screens/Settings/sections/GamesSettings/index.tsx',
   'src/frontend/screens/Settings/sections/SyncSaves/gog.tsx',
@@ -1172,9 +1190,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 246-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 293-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(246)
-    expect(forkTouchedSnapshot.files.length).toBe(293)
+  it('A0 fixture sanity: the seeded scope is the REAL 271-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 323-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(271)
+    expect(forkTouchedSnapshot.files.length).toBe(323)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1215,7 +1233,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 246 -> 293 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 271 -> 323 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1238,7 +1256,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 293', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 323', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1251,12 +1269,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(293)
+    expect(rewritten.files.length).toBe(323)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 293 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 323 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1269,7 +1287,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(293)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(323)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
