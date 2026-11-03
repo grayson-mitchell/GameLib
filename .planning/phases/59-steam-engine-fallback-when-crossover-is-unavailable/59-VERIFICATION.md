@@ -1,9 +1,13 @@
 ---
 phase: 59-steam-engine-fallback-when-crossover-is-unavailable
 verified: 2026-11-03T23:45:00Z
-status: human_needed
-score: 13/13 roadmap truths verified; round-4/5/6 gaps CR-01 (connectivity), G25..G30, CR-01 (picker), WR-01 closed in code and live or by unit test; 4 open human decisions
-overrides_applied: 0
+status: passed
+score: 13/13 roadmap truths verified; round-4/5/6 gaps CR-01 (connectivity), G25..G30, CR-01 (picker), WR-01 closed in code and live or by unit test; 5/5 human verification items resolved in 59-HUMAN-UAT.md (4 pass, 1 skip accepted as override)
+overrides_applied: 1
+overrides:
+  - item: "Fallback bottle survives a different Wine-Staging build (UAT 11)"
+    decision: "Skip accepted by the operator 2026-11-02: no second Wine-Staging-macOS build exists. Revisit when the pin is bumped (D-08 release lever)."
+    source: 59-HUMAN-UAT.md item 4
 re_verification:
   previous_status: gaps_found
   previous_score: 13/13 roadmap truths; round-4 plan must-haves 15/19
@@ -25,7 +29,7 @@ deferred: []
 follow_ups:
   - id: WR-01-round6
     severity: low
-    item: "tools/index.ts:359-373 strict DXVK restore reads the 'unable to find' tolerance from captured output that resolveOnExit may have cut 250 ms after exit; a retried restore can be recorded as failed (marker dxvk 'failed'), forcing one more repair on the next launch. Fails in the safe direction (a false failure, never a false success; the 'failed return never launches on CrossOver' truth holds). Not filed as a todo yet: file one with severity/platform/ready frontmatter (suggested: severity low, platform macos, ready code) and fix by checking user.reg / the registry value instead of captured text."
+    item: "tools/index.ts:359-373 strict DXVK restore reads the 'unable to find' tolerance from captured output that resolveOnExit may have cut 250 ms after exit; a retried restore can be recorded as failed (marker dxvk 'failed'), forcing one more repair on the next launch. Fails in the safe direction (a false failure, never a false success; the 'failed return never launches on CrossOver' truth holds). Filed as .planning/todos/pending/2026-11-03-strict-dxvk-restore-tolerance-reads-truncated-output.md (minor, macos, code): fix by checking user.reg / the registry value instead of captured text."
   - id: WR-02-round6
     item: "Carried old WR-03: joined second Play re-runs the launcher-level pre/post-launch sequence; filed as .planning/todos/pending/2026-11-03-launch-single-flight-at-ipc-entry.md (with IN-04, a launch()-level G26 test)."
   - id: G30-followups
@@ -40,30 +44,35 @@ follow_ups:
   - id: WR-06
     item: "GameConfig.load() tests the global config path instead of this.path (pre-existing, not introduced by phase 59)."
   - id: G24
-    item: "Amazon store embed drawn over the Library game page after leaving Stores (not phase 59 code). Still needs its own todo."
+    item: "Amazon store embed drawn over the Library game page after leaving Stores (not phase 59 code). Filed as .planning/todos/pending/2026-11-04-amazon-store-embed-stays-drawn-over-library-game-page.md."
 human_verification:
   - test: "Live no-CrossOver install of a title WITH shared redists (UAT 14 redist half)"
     expected: "Install-time redist lines run the pinned wine and no redist entry fails on a missing CrossOver binary"
     why_human: "Partially exercised by UAT 29 (576770 DirectX on the built-in engine at Play, not install). Decide whether UAT 29 suffices"
+    result: "pass — live 2026-11-02, Low Magic Age (576770) under no-crossover.sb; every redist ran the pinned wine, none failed on a missing CrossOver binary (59-HUMAN-UAT.md item 1)"
   - test: "Install refusal on a rejected stored Steam session (UAT 13, skipped)"
     expected: "No bottle directory appears and no engine download starts"
     why_human: "Unreachable through the UI when signed out; unit-tested only"
+    result: "pass — accepted on unit-test coverage by the operator 2026-11-02 (59-HUMAN-UAT.md item 2)"
   - test: "Untested CrossOver build warning (D-15)"
     expected: "A warning line on a CrossOver version absent from testedCrossoverVersions, launch not blocked"
     why_human: "Passed live 2026-11-02 (59-HUMAN-UAT.md item 3, fake tested-version entry, reverted)"
+    result: "pass — live 2026-11-02, notice shown, launch not blocked (59-HUMAN-UAT.md item 3)"
   - test: "Fallback bottle survives a different Wine-Staging build (UAT 11, skipped)"
     expected: "Silent prefix update, game launches, save present"
     why_human: "No second Wine-Staging-macOS build exists; decide whether to accept the skip"
+    result: "skipped — accepted by the operator 2026-11-02 and recorded under overrides; revisit when the pin is bumped (59-HUMAN-UAT.md item 4)"
   - test: "Round-6 paths not exercised live: G29 transient retry (UAT 45), launch-option picker launches once (UAT 46), offline-warning button closes (UAT 47b)"
     expected: "Retry: after a nonzero-exit probe, a stdout= line, an 'inconclusive, retrying once' warning and a following outcome=ok; picker: one dialogId, one launch at a pick or the 10 s auto-select; offline warning OK / Play Anyway each close once"
     why_human: "No transient could be provoked and no installed title has two launch options; they rest on demoStatus/engineDecision/dialogQueue/launchOptionPicker unit tests (all passing). Decide whether to accept the unit-test evidence or re-test when a multi-option title exists"
+    result: "pass — accepted on unit-test coverage by the operator 2026-11-03 (59-HUMAN-UAT.md item 5)"
 ---
 
 # Phase 59: Steam engine fallback when CrossOver is unavailable - Verification Report (re-verification 6)
 
 **Phase Goal:** A Windows Steam title on the macOS native bridge still launches when CrossOver is missing, its trial has expired for that bottle, or it is broken. CrossOver stays first choice; one pinned Wine-Staging + DXVK build per release, previous kept; demo-status check before every CrossOver launch; timeouts; "N days remaining" notice; override advanced and unsupported; tested versions recorded. Out of scope: DRM mode and bottled Steam, GPTK/-DXMT, full census on the fallback.
 **Verified:** 2026-11-03 (HEAD 6f1484ebb)
-**Status:** human_needed
+**Status:** passed (human verification resolved 2026-11-03 in 59-HUMAN-UAT.md; status updated 2026-11-04)
 **Re-verification:** Yes, after gap-closure round 6 (59-49..59-53). This file also absorbs round 5 (59-44..59-48), whose verification report was never written; round 4's table is superseded below.
 
 ## Basis
@@ -77,7 +86,7 @@ All 13 roadmap truths hold; none is defeated by rounds 4-6, and the pieces round
 | Area | Evidence at HEAD | Status |
 | --- | --- | --- |
 | CrossOver first choice, healthy launch stays on CrossOver (truth 1) | UAT 1; UAT 44/45 `engine=crossover ... reason=cx-healthy` on every Play, including three quick re-Plays | VERIFIED |
-| Per-launch `--demo-status` check, timeout, no demotion on a transient (truths 2, 3) | engineDecision.ts two-attempt probe with wineserver stop between attempts (G29); UAT 45 probes `outcome=ok` (5.2-5.3 s); retry path on unit tests only | VERIFIED (retry on unit tests, listed under human decisions) |
+| Per-launch `--demo-status` check, timeout, no demotion on a transient (truths 2, 3) | engineDecision.ts two-attempt probe with wineserver stop between attempts (G29); UAT 45 probes `outcome=ok` (5.2-5.3 s); retry path on unit tests only | VERIFIED (retry on unit tests; accepted by the operator, 59-HUMAN-UAT.md item 5) |
 | CrossOver missing / expired / broken falls back to pinned Wine-Staging + DXVK, "N days remaining" notice, advanced unsupported override, tested-version record (truths 4-9) | Rounds 1-3 live UAT 1-35 unchanged; round-6 changes do not touch these paths | VERIFIED (D-15 untested-build warning never live, human item) |
 | Shared bottle, failed return never launches on CrossOver (truth 6) | Strict restore still fails closed on a nonzero code (tools/index.ts:359-373); WR-02 serialisation prevents interleaved switches; UAT 44 clean restore and `dxvk` marker not failed | VERIFIED (WR-01-round6 can only produce a false failure) |
 | No-CrossOver install and first-run fallback (truth 7) | CR-01 (connectivity) closed: check-online no longer read as offline (UAT 40); offline refusal only for crossover-missing and restore-needs-pin (UAT 36, 37, 43) | VERIFIED |
@@ -119,17 +128,17 @@ All 13 roadmap truths hold; none is defeated by rounds 4-6, and the pieces round
 
 None blocking. Carried warnings are listed under `follow_ups` (WR-01-round6 low, WR-02-round6 and G30 follow-ups filed). The frontmatter defect flagged by `pnpm planning-gates` was the only blocker on this file and is fixed.
 
-## Human verification required
+## Human verification (resolved)
 
-1. **Live no-CrossOver install with shared redists (UAT 14 redist half).** Expected: redist lines run the pinned wine; none fails on a missing CrossOver binary. Why human: UAT 29 covered Play, not install.
-2. **Install refusal on a rejected stored Steam session (UAT 13).** Expected: no bottle, no engine download. Why human: unreachable via UI when signed out; unit-tested.
-3. **Untested CrossOver build warning (D-15).** Expected: warning line, launch not blocked. Why human: never live.
-4. **Fallback bottle survives a different Wine-Staging build (UAT 11).** Expected: silent prefix update, game launches. Why human: no second build exists.
-5. **Round-6 paths resting on unit tests only (G29 retry, picker, UAT 47b).** Decide to accept the unit evidence or re-test when a multi-option title is available.
+1. **Live no-CrossOver install with shared redists (UAT 14 redist half).** Expected: redist lines run the pinned wine; none fails on a missing CrossOver binary. Why human: UAT 29 covered Play, not install. **Result: pass**: live install of Low Magic Age under no-crossover.sb, 2026-11-02.
+2. **Install refusal on a rejected stored Steam session (UAT 13).** Expected: no bottle, no engine download. Why human: unreachable via UI when signed out; unit-tested. **Result: pass**: accepted on unit tests by the operator, 2026-11-02.
+3. **Untested CrossOver build warning (D-15).** Expected: warning line, launch not blocked. Why human: never live at verification time. **Result: pass**: live 2026-11-02, the notice was shown and the launch was not blocked.
+4. **Fallback bottle survives a different Wine-Staging build (UAT 11).** Expected: silent prefix update, game launches. Why human: no second build exists. **Result: skipped**: the operator accepted the skip on 2026-11-02 (recorded as an override); revisit when the pin is bumped.
+5. **Round-6 paths resting on unit tests only (G29 retry, picker, UAT 47b).** Decide to accept the unit evidence or re-test when a multi-option title is available. **Result: pass**: accepted on unit tests by the operator, 2026-11-03.
 
 ## Gaps summary
 
-No failed must-have remains. Rounds 4, 5 and 6 closed CR-01 (connectivity), G25-G30, the picker CR-01, WR-01 and WR-02, with live confirmation for connectivity, switch serialisation, the DXVK restore speed and dialog behaviour, and unit-test confirmation for the G26 join, the G29 retry and the picker. The new round-6 review warning (WR-01, restore tolerance) is a low-severity follow-up, not a gap. Status is human_needed only because the four long-standing human decisions plus the unit-test-only round-6 paths remain open.
+No failed must-have remains. Rounds 4, 5 and 6 closed CR-01 (connectivity), G25-G30, the picker CR-01, WR-01 and WR-02, with live confirmation for connectivity, switch serialisation, the DXVK restore speed and dialog behaviour, and unit-test confirmation for the G26 join, the G29 retry and the picker. The new round-6 review warning (WR-01, restore tolerance) is a low-severity follow-up, not a gap. All five human verification items were resolved in 59-HUMAN-UAT.md (status complete, 2026-11-03): four pass and one skip that the operator accepted, recorded under `overrides`. Status is therefore passed.
 
 ---
 
