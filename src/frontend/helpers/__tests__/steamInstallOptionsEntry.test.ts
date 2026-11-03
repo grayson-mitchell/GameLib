@@ -247,7 +247,13 @@ describe('GameCard/index.tsx source gates (D-27 row 3, D-28 -- comment-stripped)
 
   it('C3: the pre-existing plain install entry is untouched (D-28 proof by absence-of-change)', () => {
     const source = readStrippedGameCard()
-    expect(source).toContain("label: t('button.install')")
+    // The label is indirect since e704b397e (quick 261029-ocq, D-UAT-12): an
+    // incomplete Steam install reads "Resume Install", everything else still
+    // falls back to t('button.install'). The entry itself is `label: installLabel`.
+    expect(source).toContain('label: installLabel')
+    expect(source).toMatch(
+      /const installLabel = [\s\S]*?: t\('button\.install'\)/
+    )
     expect(source).toContain(
       'show: !isInstalled && !isQueued && isInstallable && !isDelisted'
     )

@@ -610,8 +610,8 @@ export async function main(): Promise<void> {
  * Phase 60 (D-14): the vendored NotProton overlay shim, built from source.
  * Floor rationale: no `minimumSystemVersion` / `LSMinimumSystemVersion` is set in
  * src-tauri/*.json, so GameLib declares no floor. The shim compiled clean at 11.0
- * through 15.0. 11.0 is the first Apple-silicon macOS. meta/buildLsteamclient.ts's
- * 15.0 belongs to the DRM-only lsteamclient build and is not a project floor.
+ * through 15.0. 11.0 is the first Apple-silicon macOS. The 15.0 floor in the
+ * DRM-only lsteamclient build script belongs to that build and is not a project floor.
  */
 const OVERLAY_SHIM_SOURCE_PATH = join(
   'native',

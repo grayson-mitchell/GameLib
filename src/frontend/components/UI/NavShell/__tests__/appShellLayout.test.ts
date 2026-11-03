@@ -81,6 +81,12 @@ const GAMES_LIST_TSX = join(
   FRONTEND_ROOT,
   'screens/Library/components/GamesList/index.tsx'
 )
+// 40f8efd82 extracted GamesList's focus-scroll handler into this helper, which
+// resolves `main.content` at call time; index.tsx now only wires the listener.
+const SCROLL_CARD_INTO_VIEW_TS = join(
+  FRONTEND_ROOT,
+  'screens/Library/components/GamesList/scrollCardIntoView.ts'
+)
 
 function readStripped(path: string): string {
   return stripSourceComments(readFileSync(path, 'utf8'))
@@ -374,7 +380,9 @@ describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation
     expect(navbarBlock).not.toMatch(/position:\s*sticky/)
   })
 
-  it.each([LIBRARY_TSX, GAMES_LIST_TSX])(
+  // GamesList's scroll logic moved to scrollCardIntoView.ts in 40f8efd82, so the
+  // full check set (including the `main.content` positive) runs on the helper.
+  it.each([LIBRARY_TSX, SCROLL_CARD_INTO_VIEW_TS])(
     'scroll-container migration, per file: %s no longer uses document.body as a scroll container',
     (path) => {
       // Silent-failure mode this gate guards: a scroll listener or a
@@ -392,6 +400,15 @@ describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation
       expect(text).toMatch(/main\.content/)
     }
   )
+
+  it('scroll-container migration, GamesList listener site (40f8efd82): index.tsx never scrolls document.body and wires the main.content-resolving helper', () => {
+    const text = readStripped(GAMES_LIST_TSX)
+    expect(text).not.toMatch(/document\.body\.addEventListener\(\s*'scroll'/)
+    expect(text).not.toMatch(/document\.body\.removeEventListener\(\s*'scroll'/)
+    expect(text).not.toMatch(/document\.body\.scrollTop/)
+    expect(text).not.toMatch(/document\.body\.scrollTo/)
+    expect(text).toMatch(/addEventListener\(\s*'focus',\s*scrollCardIntoView/)
+  })
 
   it('scroll-container migration, whole tree: no file under src/frontend outside __tests__ uses document.body as a scroll container', () => {
     // The gate that is NOT structurally blind. Gate 8 above is an

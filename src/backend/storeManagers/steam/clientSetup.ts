@@ -274,6 +274,7 @@ export async function startGuidedClientInstall(): Promise<StartGuidedInstallResu
           { windowsHide: true }
         )
     if (code !== 0) {
+      // log-secret-gate-exempt: stderr of powershell Start-Process -Verb RunAs / open (Steam installer launch), not an auth command
       logError(
         [
           `startGuidedClientInstall: ${launcherName} exited with code ${String(code)} (${destPath})`,

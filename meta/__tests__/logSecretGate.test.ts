@@ -417,10 +417,14 @@ describe('logSecretGate', () => {
     // (truncated) so a non-applied override is distinguishable in the log.
     // Dropped to 13 by quick-261029-toq: a retired store manager's `games.ts` held one exemption and
     // was deleted with it.
-    it('carries exactly 13 exemptions — adding a 14th must be a conscious act', () => {
+    // Back to 14 by quick-261103-wjs: stderr of the Steam installer launch
+    // (powershell Start-Process -Verb RunAs / macOS open) in steam/clientSetup.ts.
+    // Its only input is the downloaded installer path, and the stderr is the one
+    // diagnostic for a cancelled UAC prompt.
+    it('carries exactly 14 exemptions — adding a 15th must be a conscious act', () => {
       const report = auditReport()
 
-      expect(report.exemptions).toHaveLength(13)
+      expect(report.exemptions).toHaveLength(14)
     })
 
     it('pins WHICH files hold them, so a silent swap at the same count still fails', () => {
@@ -433,6 +437,7 @@ describe('logSecretGate', () => {
         'src/backend/storeManagers/legendary/library.ts',
         'src/backend/storeManagers/steam/bottle.ts',
         'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts',
+        'src/backend/storeManagers/steam/clientSetup.ts',
         'src/backend/tools/index.ts',
         'src/backend/utils.ts'
       ])
