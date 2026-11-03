@@ -341,7 +341,7 @@ async function checkLaunchOptionsAndLaunch({
   }
 
   // Show dialog to select launch option
-  const dialogId = `launch-option-picker:${appName}:${++pickerCounter}`
+  const dialogId = ['launch-option-picker', appName, ++pickerCounter].join(':')
   return new Promise((res) => {
     let timeoutId: NodeJS.Timeout | null = null
     let countdownInterval: NodeJS.Timeout | null = null

@@ -14641,7 +14641,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         expect(
           warn.mock.calls.some((c) =>
             String(c[0]).includes(
-              `appId ${ID} launch blocked before pre-flight: offline and the built-in engine is not installed`
+              `appId ${ID} launch blocked before pre-flight: offline, and returning this bottle to CrossOver needs an engine pin that is not on disk (restore-needs-pin)`
             )
           )
         ).toBe(true)
