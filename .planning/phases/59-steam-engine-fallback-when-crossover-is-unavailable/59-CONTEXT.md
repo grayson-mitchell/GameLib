@@ -64,6 +64,7 @@ only rescue bottles CrossOver made (D-01).
   - the CrossOver app or `bin/wine` is missing or can't run;
   - `--demo-status` errors, hangs past its own short cap, or prints output that matches none
     of `Standard version` / `Demo version (N days remaining)` /
+  - Amended 2026-11-03 (59-50, G29): a --demo-status nonzero exit or spawn error counts as broken only when two consecutive probes in one pre-flight fail (one retry, after stopping the bottle's wineserver when no game is running); mirrors quick-261101-jbm's timeout corroboration; still per launch (D-07).
     `Demo version (expired N days ago)`.
 
   Expired (`Demo version (expired …)`) routes to the fallback. A failure after the game has

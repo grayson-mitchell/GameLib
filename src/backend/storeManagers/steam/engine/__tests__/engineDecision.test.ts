@@ -47,6 +47,7 @@ function mkDeps(
     isExecutable: () => true,
     fileExists: () => true,
     probe: () => Promise.resolve(ok({ kind: 'licensed' })),
+    retrySettleMs: 0,
     readBuild: () => Promise.resolve('26.3.0.39832'),
     killCrossoverWineserver: () => Promise.resolve(undefined),
     readOverride: () => undefined,
@@ -110,8 +111,6 @@ describe('preflightCrossover (stub deps)', () => {
     expect((r as { detail: string }).detail).toContain('not executable')
   })
   it.each([
-    ['spawn-error', failed('spawn-error'), 'broken'],
-    ['nonzero-exit', failed('nonzero-exit'), 'broken'],
     ['invalid-bottle', failed('invalid-bottle'), 'broken'],
     ['unrecognised', ok({ kind: 'unrecognised' }), 'broken'],
     ['expired', ok({ kind: 'expired', daysAgo: 2 }), 'expired']
@@ -129,6 +128,60 @@ describe('preflightCrossover (stub deps)', () => {
       expect(kill).toHaveBeenCalledTimes(0)
     }
   )
+  it.each(['nonzero-exit', 'spawn-error'] as const)(
+    'G29: %s then licensed is healthy, one stop before the retry',
+    async (reason) => {
+      const probe = seq(failed(reason), ok({ kind: 'licensed' }))
+      const kill = jest.fn(() => Promise.resolve(undefined))
+      const r = await preflightCrossover(
+        'B',
+        mkDeps({ probe, killCrossoverWineserver: kill })
+      )
+      expect(r).toMatchObject({ kind: 'healthy' })
+      expect(probe).toHaveBeenCalledTimes(2)
+      expect(kill).toHaveBeenCalledTimes(1)
+    }
+  )
+  it('G29: nonzero-exit twice is broken, not inconclusive', async () => {
+    const probe = seq(failed('nonzero-exit'))
+    const kill = jest.fn(() => Promise.resolve(undefined))
+    const r = await preflightCrossover(
+      'B',
+      mkDeps({ probe, killCrossoverWineserver: kill })
+    )
+    expect(r).toMatchObject({ kind: 'broken' })
+    expect((r as { inconclusive?: boolean }).inconclusive).toBeUndefined()
+    expect((r as { detail: string }).detail).toContain('nonzero-exit')
+    expect((r as { detail: string }).detail).toContain('2 consecutive attempts')
+    expect(probe).toHaveBeenCalledTimes(2)
+    expect(kill).toHaveBeenCalledTimes(1)
+  })
+  it('G29: a no-kill reason retries without a stop', async () => {
+    for (const mode of ['running', 'page'] as const) {
+      const probe = seq(failed('nonzero-exit'), ok({ kind: 'licensed' }))
+      const kill = jest.fn(() => Promise.resolve(undefined))
+      const r = await preflightCrossover(
+        'B',
+        mkDeps({
+          probe,
+          killCrossoverWineserver: kill,
+          monitorPhase: () => (mode === 'running' ? 'running' : null)
+        }),
+        mode === 'running'
+          ? { killOnTimeout: true, appId: '1' }
+          : { killOnTimeout: false }
+      )
+      expect(r).toMatchObject({ kind: 'healthy' })
+      expect(probe).toHaveBeenCalledTimes(2)
+      expect(kill).toHaveBeenCalledTimes(0)
+    }
+  })
+  it('G29: timeout then nonzero-exit is broken after two probes', async () => {
+    const probe = seq(failed('timeout'), failed('nonzero-exit'))
+    const r = await preflightCrossover('B', mkDeps({ probe }))
+    expect(r).toMatchObject({ kind: 'broken' })
+    expect(probe).toHaveBeenCalledTimes(2)
+  })
   it('timeout then licensed is healthy', async () => {
     const probe = seq(failed('timeout'), ok({ kind: 'licensed' }))
     const kill = jest.fn(() => Promise.resolve(undefined))
@@ -239,7 +292,7 @@ describe('preflightCrossover (real probe, stub wine)', () => {
     ['garbage', { kind: 'broken' }, 0],
     ['hang', { kind: 'broken' }, 2],
     ['hang-once', { kind: 'healthy', trialDaysRemaining: null }, 1],
-    ['fail', { kind: 'broken' }, 0]
+    ['fail', { kind: 'broken' }, 1]
   ])('maps stub mode %s', async (mode, expected, kills) => {
     const kill = jest.fn(() => Promise.resolve(undefined))
     const r = await preflightCrossover('Steam', {
@@ -289,6 +342,17 @@ describe('decideLaunchEngine', () => {
     const r = await decideLaunchEngine(
       args,
       mkDeps({ probe: seq(failed('timeout'), ok({ kind: 'licensed' })) })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'crossover', reason: 'cx-healthy' },
+      needsDownload: false
+    })
+  })
+  it('G29: one nonzero-exit then licensed stays on CrossOver', async () => {
+    const r = await decideLaunchEngine(
+      args,
+      mkDeps({ probe: seq(failed('nonzero-exit'), ok({ kind: 'licensed' })) })
     )
     expect(r).toMatchObject({
       kind: 'use',

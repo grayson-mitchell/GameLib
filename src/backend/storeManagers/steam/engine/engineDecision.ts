@@ -42,14 +42,18 @@ import {
 export const CX_CREATE_CAP_MS = 120_000
 
 /**
- * A --demo-status timeout must be corroborated before CrossOver counts as
- * broken (todo 2026-11-01 demo-status-probe-timeout; the 2026-11-01 Schedule I
- * launches flipped the bottle to the pinned engine on one transient hang).
- * D-09: a hang is broken, but only when seen on two consecutive capped
- * attempts. D-07: the corroboration lives inside one preflight call; nothing
- * is stored between launches.
+ * A --demo-status timeout, nonzero exit or spawn error must be corroborated
+ * before CrossOver counts as broken (todo 2026-11-01 demo-status-probe-timeout;
+ * G29: one nonzero exit 3 s after an overlay-clone session demoted a healthy
+ * CrossOver). D-09 as amended 2026-11-03: broken only when seen on two
+ * consecutive attempts; the budget is two probes in total across failure
+ * kinds. D-07: the corroboration lives inside one preflight call; nothing is
+ * stored between launches.
  */
-const PROBE_TIMEOUT_ATTEMPTS = 2
+const PROBE_ATTEMPTS = 2
+
+/** Settle wait before a retry after a nonzero exit or spawn error (G29). */
+const RETRY_SETTLE_MS = 2000
 
 export type CrossoverPreflight =
   | {
@@ -109,6 +113,8 @@ export interface EngineDecisionDeps {
   /** Env passed to the probe; undefined means the real process env (real-profile arm). */
   probeEnv?: NodeJS.ProcessEnv
   probeTimeoutMs?: number
+  /** Wait before a transient-failure retry; default 2000 ms. */
+  retrySettleMs?: number
   readBuild(binDir: string): Promise<string | null>
   killCrossoverWineserver(bottleName: string, binDir: string): Promise<void>
   readOverride(appId: string): unknown
@@ -236,7 +242,7 @@ export async function preflightCrossover(
       await d.killCrossoverWineserver(bottleName, binDir)
     } catch (e) {
       logWarning(
-        `SteamEngine: could not stop wineserver after probe timeout: ${String(e)}`,
+        `SteamEngine: could not stop wineserver after a failed probe: ${String(e)}`,
         LogPrefix.Steam
       )
     }
@@ -254,13 +260,26 @@ export async function preflightCrossover(
       : opts?.appId !== undefined && d.monitorPhase(opts.appId) !== null
         ? 'game running'
         : null
-  // A single timeout is inconclusive: stop the wineserver and probe again.
+  const settle = (ms: number) =>
+    ms > 0
+      ? new Promise<void>((resolve) => {
+          const t = setTimeout(resolve, ms)
+          ;(t as { unref?: () => void }).unref?.()
+        })
+      : Promise.resolve()
+  const settleMs = d.retrySettleMs ?? RETRY_SETTLE_MS
+  // A single timeout, nonzero exit or spawn error is inconclusive: stop the
+  // wineserver (when allowed), settle, and probe again (G29).
   for (
     let attempt = 1;
-    probe.kind === 'failed' && probe.reason === 'timeout';
+    probe.kind === 'failed' &&
+    (probe.reason === 'timeout' ||
+      probe.reason === 'nonzero-exit' ||
+      probe.reason === 'spawn-error');
     attempt++
   ) {
-    if (noKillReason !== null) {
+    const isTimeout = probe.reason === 'timeout'
+    if (isTimeout && noKillReason !== null) {
       return {
         kind: 'broken',
         binDir,
@@ -269,19 +288,25 @@ export async function preflightCrossover(
         detail: `--demo-status timeout (not retried: ${noKillReason}): ${probe.detail}`
       }
     }
-    await stopWineserver()
-    if (attempt >= PROBE_TIMEOUT_ATTEMPTS) {
+    const last = attempt >= PROBE_ATTEMPTS
+    if (isTimeout) {
+      await stopWineserver()
+    } else if (!last && noKillReason === null) {
+      await stopWineserver()
+    }
+    if (last) {
       return {
         kind: 'broken',
         binDir,
         build,
-        detail: `--demo-status timeout on ${PROBE_TIMEOUT_ATTEMPTS} consecutive attempts: ${probe.detail}`
+        detail: `--demo-status ${probe.reason} on ${PROBE_ATTEMPTS} consecutive attempts: ${probe.detail}`
       }
     }
     logWarning(
-      `SteamEngine: --demo-status timed out for bottle ${bottleName.slice(0, 64)} (attempt ${attempt}/${PROBE_TIMEOUT_ATTEMPTS}); inconclusive, retrying once`,
+      `SteamEngine: --demo-status ${probe.reason} for bottle ${bottleName.slice(0, 64)} (attempt ${attempt}/${PROBE_ATTEMPTS}); inconclusive, retrying once`,
       LogPrefix.Steam
     )
+    await settle(settleMs)
     probe = await runProbe()
   }
   if (probe.kind === 'failed') {
