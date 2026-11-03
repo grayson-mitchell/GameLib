@@ -183,6 +183,25 @@ export async function resolveCrossoverBinDirForEngine(): Promise<
   return defaultEngineDecisionDeps().resolveCrossoverBinDir()
 }
 
+/**
+ * G25: true when CrossOver is not installed. Mirrors the two 'missing' branches
+ * at the top of preflightCrossover without the probe, so it is safe to call
+ * before the D-09 pre-flight. An error is "unknown", which must never produce a
+ * refusal, so it reports false.
+ */
+export async function isCrossoverMissing(
+  deps?: Partial<EngineDecisionDeps>
+): Promise<boolean> {
+  try {
+    const d = withDefaults(deps)
+    const binDir = await d.resolveCrossoverBinDir()
+    if (binDir === undefined) return true
+    return !d.fileExists(join(binDir, 'wine'))
+  } catch {
+    return false
+  }
+}
+
 export async function preflightCrossover(
   bottleName: string,
   deps?: Partial<EngineDecisionDeps>,

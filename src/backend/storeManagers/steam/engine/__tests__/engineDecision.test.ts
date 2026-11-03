@@ -5,6 +5,7 @@ import {
   CX_CREATE_CAP_MS,
   decideCreationEngine,
   decideLaunchEngine,
+  isCrossoverMissing,
   listEngineOverrideOptions,
   preflightCrossover,
   resolveWineManagerStaging
@@ -57,6 +58,36 @@ function mkDeps(
     ...over
   }
 }
+
+describe('isCrossoverMissing (G25)', () => {
+  const run = async (over: Partial<EngineDecisionDeps>) => {
+    const probe = jest.fn(() => Promise.resolve(ok({ kind: 'licensed' })))
+    const readBuild = jest.fn(() => Promise.resolve('1'))
+    const r = await isCrossoverMissing(mkDeps({ probe, readBuild, ...over }))
+    expect(probe).not.toHaveBeenCalled()
+    expect(readBuild).not.toHaveBeenCalled()
+    return r
+  }
+  it('G25: missing when no CrossOver bin dir', async () => {
+    expect(
+      await run({ resolveCrossoverBinDir: () => Promise.resolve(undefined) })
+    ).toBe(true)
+  })
+  it('G25: missing when bin/wine is absent', async () => {
+    expect(await run({ fileExists: () => false })).toBe(true)
+  })
+  it('G25: present when wine exists, even if not executable', async () => {
+    expect(await run({ isExecutable: () => false })).toBe(false)
+    expect(await run({})).toBe(false)
+  })
+  it('G25: a resolver error is unknown, not missing', async () => {
+    expect(
+      await run({
+        resolveCrossoverBinDir: () => Promise.reject(new Error('x'))
+      })
+    ).toBe(false)
+  })
+})
 
 describe('preflightCrossover (stub deps)', () => {
   it('missing when no CrossOver bin dir', async () => {
