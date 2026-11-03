@@ -996,7 +996,7 @@ Plans:
 **Goal:** Shift+Tab opens Mac Steam's own overlay, drawn correctly and taking clicks, in games GameLib launches through the macOS Steam bridge. GameLib injects the user's own `steamloader.dylib` + `gameoverlayrenderer.dylib` (with `SteamOverlayGameId`) through `CX_ENV` on a cloned CrossOver runner whose `bin/wineloader` and `lib/wine/x86_64-unix/wine` are both re-signed with `allow-dyld-environment-variables`. Mac Steam then attaches `gameoverlayui` itself. A vendored, self-built copy of NotProton's GPLv3 `overlay_shim.m` fixes 10-bit (`RGB10A2Unorm`) and Metal 4 layers. Blueprint: `spike-findings-gamelib` → `references/steam-overlay-in-bottles.md` (spikes 061–064).
 **Requirements**: TBD
 **Depends on:** Phase 56
-**Plans:** 9/10 plans executed
+**Plans:** 10/16 plans executed
 
 Plans:
 **Wave 1**
@@ -1025,4 +1025,27 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 60-10-PLAN.md — Four-title live UAT gate, invite observation, D-07 gap todo (D-15, D-16)
+- [x] 60-10-PLAN.md — Four-title live UAT gate, invite observation, D-07 gap todo (D-15, D-16)
+
+**Gap closure (60-UAT G1-G4)**
+
+**Wave 7**
+
+- [ ] 60-11-PLAN.md — G1 diagnosis instrument: GameLib-owned cursor/input probe dylib behind GAMELIB_OVERLAY_INPUT_PROBE=1
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 60-12-PLAN.md — G1 live probe runs (CrossOver vs Staging, Planet Crafter) and the verdict (checkpoint)
+- [ ] 60-13-PLAN.md — G2 DRM-mode attach window (30 s); G3 getSettings drops steamOverlayOverride (root-cause test, fix, split audit)
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 60-14-PLAN.md — G4 in-app non-modal "Steam overlay unavailable" notice via the engine state push (D-08, D-09)
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 60-15-PLAN.md — G1 fix for the proven cause (V-CLIP Mac Driver value, or overlay_input dylib)
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 60-16-PLAN.md — Gap re-run live gate: UAT items 10-16 (D-15 titles, G2-G4 checks, fallback regression) (checkpoint)
