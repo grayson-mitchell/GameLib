@@ -36,6 +36,7 @@ updated: 2026-11-03
 
 - OFF path: `SteamGame.install()` (src/backend/storeManagers/steam/games.ts ~2035) calls `shell.openExternal('steam://install/<id>')` with no options; on macOS that is a plain `open`, which activates Steam.
 - Tried `shell.openExternal(url, { activate: false })` (→ `open -g`, as the rungameid launch path uses). Operator live-tested 2026-11-03: no difference — Steam's main window still opens.
+- Tried `steam://nav/games/details/<id>` as an alternative (operator live test, macOS, 2026-11-03, appId 440): opens the main window on the library page with no install dialog — strictly worse than `steam://install`. Rejected.
 - Windows/Linux: GameLib does nothing that raises the window; URL goes straight through the opener. `activate` is darwin-only.
 
 ## Eliminated
