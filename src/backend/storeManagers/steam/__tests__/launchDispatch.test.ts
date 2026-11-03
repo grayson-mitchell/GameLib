@@ -34,11 +34,23 @@ jest.mock('backend/recent_games/recent_games', () => ({
 const logWarningMock = jest.fn()
 jest.mock('backend/logger', () => ({
   logWarning: (...args: unknown[]) => logWarningMock(...args),
+  logInfo: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
+}))
+
+const notifyMock = jest.fn()
+jest.mock('backend/dialog/dialog', () => ({
+  notify: (...args: unknown[]) => notifyMock(...args)
+}))
+
+jest.mock('i18next', () => ({
+  __esModule: true,
+  default: { t: (k: string, d?: string) => d ?? k }
 }))
 
 // ── Imports (after mocks) ──────────────────────────────────────────────────────────────────
 import { dispatchSteamLaunch } from '../launchDispatch'
+import { resetLaunchSingleFlightForTests } from 'backend/launchSingleFlight'
 
 describe('dispatchSteamLaunch', () => {
   const appId = '999002'
@@ -47,6 +59,7 @@ describe('dispatchSteamLaunch', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    resetLaunchSingleFlightForTests()
     gameInfo = {
       app_name: appId,
       title: 'Some Steam Game',
@@ -97,5 +110,62 @@ describe('dispatchSteamLaunch', () => {
 
     expect(result).toBe(true)
     expect(logWarningMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('WR-03: single-flight at the launch IPC entry', () => {
+  const appId = '999003'
+  let launchMock: jest.Mock
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    resetLaunchSingleFlightForTests()
+    launchMock = jest.fn()
+    getGameMock.mockReturnValue({
+      launch: (...args: unknown[]) => launchMock(...args),
+      getGameInfo: () => ({
+        app_name: appId,
+        title: 'Some Steam Game',
+        runner: 'steam',
+        is_installed: true
+      })
+    })
+    addRecentGameMock.mockResolvedValue(undefined)
+  })
+
+  it('two concurrent dispatches launch once, record once, notify once', async () => {
+    let resolveLaunch!: (v: boolean) => void
+    launchMock.mockReturnValue(
+      new Promise<boolean>((res) => {
+        resolveLaunch = res
+      })
+    )
+
+    const a = dispatchSteamLaunch(appId)
+    const b = dispatchSteamLaunch(appId)
+    await new Promise(setImmediate)
+    resolveLaunch(true)
+
+    await expect(a).resolves.toBe(true)
+    await expect(b).resolves.toBe(true)
+    await new Promise(setImmediate)
+
+    expect(launchMock).toHaveBeenCalledTimes(1)
+    expect(addRecentGameMock).toHaveBeenCalledTimes(1)
+    expect(notifyMock).toHaveBeenCalledTimes(1)
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Some Steam Game',
+        body: expect.stringContaining('already starting')
+      })
+    )
+  })
+
+  it('releases after settle: a later dispatch launches again', async () => {
+    launchMock.mockResolvedValue(true)
+    await dispatchSteamLaunch(appId)
+    await new Promise(setImmediate)
+    await dispatchSteamLaunch(appId)
+    expect(launchMock).toHaveBeenCalledTimes(2)
   })
 })

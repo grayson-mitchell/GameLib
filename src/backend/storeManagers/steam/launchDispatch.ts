@@ -17,9 +17,19 @@
  * `'steam'`. This module is the single place that now decides what "a Steam
  * launch succeeded" means for the recent-games list, so both callers stay in
  * sync by construction rather than by convention.
+ *
+ * WR-03: this is also the single-flight point for Steam launches. A second
+ * Play for the same appId (library card context-menu Play, grid card plus
+ * GamePage, the `gamelib://launch` deep link, the SteamBridgeSetup fallback)
+ * joins the first launch here, before `SteamGame.launch()`'s pre-routing or a
+ * second `addRecentGame` runs, and the user sees one "already starting"
+ * notification.
  */
 
-import { logWarning, LogPrefix } from 'backend/logger'
+import i18next from 'i18next'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { notify } from 'backend/dialog/dialog'
+import { singleFlightLaunch } from 'backend/launchSingleFlight'
 import { addRecentGame } from 'backend/recent_games/recent_games'
 import type LogWriter from 'backend/logger/log_writer'
 
@@ -40,7 +50,41 @@ import type LogWriter from 'backend/logger/log_writer'
  * successful launch into a reported failure — so a rejection here is logged
  * and swallowed, and `dispatchSteamLaunch` still resolves `true`.
  */
-export async function dispatchSteamLaunch(appName: string): Promise<boolean> {
+export function dispatchSteamLaunch(appName: string): Promise<boolean> {
+  return singleFlightLaunch(
+    'steam',
+    appName,
+    () => notifyAlreadyLaunching(appName),
+    () => runDispatch(appName)
+  )
+}
+
+async function notifyAlreadyLaunching(appName: string): Promise<void> {
+  try {
+    logInfo(
+      `dispatchSteamLaunch: appId ${appName} launch already in progress; joining it (WR-03)`,
+      LogPrefix.Steam
+    )
+    const { libraryManagerMap } = await import('backend/storeManagers')
+    const title = libraryManagerMap.steam.getGame(appName).getGameInfo().title
+    notify({
+      title,
+      // Same call shape as the file's other i18next.t uses; the lint ceiling counts warnings.
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      body: i18next.t(
+        'gamelib:steam.bridge.alreadyLaunching',
+        'This game is already starting. Wait for its window to open.'
+      )
+    })
+  } catch (err) {
+    logWarning(
+      ['dispatchSteamLaunch: already-launching notice failed:', err],
+      LogPrefix.Steam
+    )
+  }
+}
+
+async function runDispatch(appName: string): Promise<boolean> {
   const { libraryManagerMap } = await import('backend/storeManagers')
   const game = libraryManagerMap.steam.getGame(appName)
   const launched = await game.launch(undefined as unknown as LogWriter)
