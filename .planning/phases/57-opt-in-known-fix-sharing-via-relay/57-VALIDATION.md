@@ -1,10 +1,11 @@
 ---
 phase: 57
 slug: opt-in-known-fix-sharing-via-relay
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-11-02
+audited: 2026-11-04
 ---
 
 # Phase 57 — Validation Strategy
@@ -37,7 +38,7 @@ created: 2026-11-02
 
 ## Per-Task Verification Map
 
-Task IDs are filled by the planner. Decision-level map (plan-task owning each row):
+Decision-level map (plan-task owning each row):
 
 | Row | Plan-Task |
 |-----|-----------|
@@ -60,23 +61,24 @@ Relay test commands use explicit paths (e.g. `pnpm jest relay/src/__tests__/file
 
 | Decision | Behavior | Test Type | Automated Command | File Exists | Status |
 |----------|----------|-----------|-------------------|-------------|--------|
-| D-03 | Schema pairs equal `TIER1_ROUTING_KEYS` and pass `filterTier1KnownFixes` | unit | `pnpm jest src/backend/__tests__/knownFixReportDrift.test.ts` | ❌ W0 | ⬜ pending |
-| D-03/D-19 | Strict schema accepts valid; rejects extra keys (including `title`), bad pair, `drm`+`remove`, non-numeric appId | unit | `pnpm jest src/common/__tests__/knownFixReport.test.ts` | ❌ W0 | ⬜ pending |
-| D-04 | URL constant not a placeholder; env override wins | unit | `pnpm jest src/backend/__tests__/knownFixReport.test.ts -t url` | ❌ W0 | ⬜ pending |
-| D-09/D-10 | Toggle renders on darwin only, writes the setting, has the (i) icon; backend default false | unit | `pnpm jest src/frontend/screens/Settings` | ❌ W0 | ⬜ pending |
-| D-10 | Setting off → no post; non-mac → no post | unit | `... knownFixReport.test.ts -t gate` | ❌ W0 | ⬜ pending |
-| D-12 | Skip when the winning layer agrees; CEG passes when the file has only macArch; removal only when the winning entry is still 32; local layer skipped | unit | `... knownFixReport.test.ts -t skip` | ❌ W0 | ⬜ pending |
-| D-16/D-17 | Mark on 2xx and on 4xx other than 408/429; no mark on 5xx/408/429/network/abort | unit | `... knownFixReport.test.ts -t sent` | ❌ W0 | ⬜ pending |
-| exit contract | Controller registered; `callAllAbortControllers()` aborts an in-flight send; no un-unref'd timer; send never rejects | unit | `... knownFixReport.test.ts -t abort` | ❌ W0 | ⬜ pending |
-| hooks / D-18 | 32-bit verdict, 64-vs-curated-32, and CEG (including forced-bridge) each call `reportDetectedFix` without awaiting it | unit | extend `library.test.ts`, games test around `persistBridgeDrmSignal` | ❌ W0 | ⬜ pending |
-| D-05..D-08 | Create/merge/remove/delete-file bytes, key order, UTF-8 round-trip | unit | `pnpm jest relay -t fileEdit` | ❌ W0 | ⬜ pending |
-| D-06 | Open PR → commit on its branch, no second PR | unit (fake GitHub fetch) | `pnpm jest relay -t pr` | ❌ W0 | ⬜ pending |
-| D-20 | PR closed unmerged → suppressed, counted, no reopen or new PR | unit | `pnpm jest relay -t closed` | ❌ W0 | ⬜ pending |
-| D-11 | Removal + no file/key on main → labelled issue, opened once | unit | `pnpm jest relay -t bundled` | ❌ W0 | ⬜ pending |
-| D-13 | Repeat report increments the count and opens no new PR | unit (node:sqlite D1Like) | `pnpm jest relay -t repeat` | ❌ W0 | ⬜ pending |
-| D-14 | Unknown app → 422; Steam 5xx → 503; canonical title written | unit | `pnpm jest relay -t title` | ❌ W0 | ⬜ pending |
-| D-15 | Over the per-IP hourly limit → 429; daily cap → 429; stored hash is not the raw IP and rotates daily | unit | `pnpm jest relay -t limits` | ❌ W0 | ⬜ pending |
-| D-02 | JWT header/claims verify under RS256; a PKCS#1 key gives a clear error | unit | `pnpm jest relay -t jwt` | ❌ W0 | ⬜ pending |
+| D-03 | Schema pairs equal `TIER1_ROUTING_KEYS` and pass `filterTier1KnownFixes` | unit | `pnpm jest src/backend/__tests__/knownFixReportDrift.test.ts` | ✅ | ✅ green |
+| D-03/D-19 | Strict schema accepts valid; rejects extra keys (including `title`), bad pair, `drm`+`remove`, non-numeric appId | unit | `pnpm jest src/common/__tests__/knownFixReport.test.ts` | ✅ | ✅ green |
+| D-04 | URL constant not a placeholder; env override wins | unit | `pnpm jest src/backend/__tests__/knownFixReport.test.ts -t url` + `src/backend/__tests__/knownFixReportUrl.test.ts` | ✅ | ✅ green |
+| D-09/D-10 | Toggle renders on darwin only, writes the setting, has the (i) icon | unit | `pnpm jest src/frontend/screens/Settings/components/__tests__/ShareDetectedFixes.test.tsx` | ✅ | ✅ green |
+| D-09 | Backend default false; absent or false setting posts nothing through the real deps | unit | `pnpm jest src/backend/__tests__/configShareDetectedFixesDefault.test.ts src/backend/__tests__/knownFixReport.test.ts -t "D-09"` | ✅ (audit 2026-11-04) | ✅ green |
+| D-10 | Setting off → no post; non-mac → no post | unit | `pnpm jest src/backend/__tests__/knownFixReport.test.ts -t gate` | ✅ | ✅ green |
+| D-12 | Skip when the winning layer agrees; CEG passes when the file has only macArch; removal only when the winning entry is still 32; local layer skipped | unit | `pnpm jest src/backend/__tests__/knownFixReport.test.ts -t skip` | ✅ | ✅ green |
+| D-16/D-17 | Mark on 2xx and on 4xx other than 408/429; no mark on 5xx/408/429/network/abort | unit | `pnpm jest src/backend/__tests__/knownFixReport.test.ts -t sent` | ✅ | ✅ green |
+| exit contract | Controller registered; `callAllAbortControllers()` aborts an in-flight send; no un-unref'd timer; send never rejects | unit | `pnpm jest src/backend/__tests__/knownFixReport.test.ts -t abort` | ✅ | ✅ green |
+| hooks / D-18 | 32-bit verdict, 64-vs-curated-32, and CEG (including forced-bridge) each call `reportDetectedFix` without awaiting it | unit | `pnpm jest src/backend/storeManagers/steam/__tests__/library.test.ts src/backend/storeManagers/steam/__tests__/games.test.ts -t "report\|CEG\|ceg"` | ✅ | ✅ green |
+| D-05..D-08 | Create/merge/remove/delete-file bytes, key order, UTF-8 round-trip | unit | `pnpm jest relay/src/__tests__/fileEdit.test.ts` | ✅ | ✅ green |
+| D-06 | Open PR → commit on its branch, no second PR | unit (fake GitHub fetch) | `pnpm jest relay/src/__tests__/publish.test.ts -t pr` | ✅ | ✅ green |
+| D-20 | PR closed unmerged → suppressed, counted, no reopen or new PR | unit | `pnpm jest relay -t closed` | ✅ | ✅ green |
+| D-11 | Removal + no file/key on main → labelled issue, opened once | unit | `pnpm jest relay/src/__tests__/publish.test.ts -t bundled` | ✅ | ✅ green |
+| D-13 | Repeat report increments the count and opens no new PR | unit (node:sqlite D1Like) | `pnpm jest relay/src/__tests__/handler.test.ts -t repeat` | ✅ | ✅ green |
+| D-14 | Unknown app → 422; Steam 5xx → 503; canonical title written | unit | `pnpm jest relay -t title` | ✅ | ✅ green |
+| D-15 | Over the per-IP hourly limit → 429; daily cap → 429; stored hash is not the raw IP and rotates daily | unit | `pnpm jest relay -t limits` | ✅ | ✅ green |
+| D-02 | JWT header/claims verify under RS256; a PKCS#1 key gives a clear error | unit | `pnpm jest relay/src/__tests__/githubApp.test.ts -t jwt` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -84,11 +86,11 @@ Relay test commands use explicit paths (e.g. `pnpm jest relay/src/__tests__/file
 
 ## Wave 0 Requirements
 
-- [ ] `relay/jest.config.js` + root `projects` entry; `relay/tsconfig.json`
-- [ ] `relay/src/__tests__/` helpers: `node:sqlite` `D1Like` adapter, scripted fake `fetch` (GitHub + Steam), WebCrypto test keypair
-- [ ] Every test file in the map above
-- [ ] Export `TIER1_ROUTING_KEYS` from `src/backend/knownFixes.ts`
-- [ ] `relay/` dependency install (`pnpm install --ignore-workspace`), behind a checkpoint
+- [x] `relay/jest.config.js` + root `projects` entry; `relay/tsconfig.json`
+- [x] `relay/src/__tests__/` helpers: `node:sqlite` `D1Like` adapter, scripted fake `fetch` (GitHub + Steam), WebCrypto test keypair
+- [x] Every test file in the map above
+- [x] Export `TIER1_ROUTING_KEYS` from `src/backend/knownFixes.ts`
+- [x] `relay/` dependency install (`pnpm install --ignore-workspace`), behind a checkpoint
 
 ---
 
@@ -96,18 +98,31 @@ Relay test commands use explicit paths (e.g. `pnpm jest relay/src/__tests__/file
 
 | Behavior | Decision | Why Manual | Test Instructions |
 |----------|----------|------------|-------------------|
-| Worker boots and rejects `{}` | D-01 | Needs the wrangler runtime | `cd relay && pnpm wrangler dev`, then curl POST `{}` → 4xx |
-| Live done-when | all | Needs a real Cloudflare account, GitHub App and this Mac | Setting on + fresh install of a 32-bit Mac title → PR with the correct `steam/<appId>-steam.json`; setting off → no request in the log |
+| Worker boots and rejects `{}` | D-01 | Needs the wrangler runtime | `cd relay && pnpm wrangler dev`, then curl POST `{}` → 4xx. Run 2026-11-02 (57-11-SUMMARY): POST `{}` → 422, GET → 405 |
+| Live done-when | all | Needs a real Cloudflare account, GitHub App and this Mac | Setting on + fresh install of a 32-bit Mac title → PR with the correct `steam/<appId>-steam.json`; setting off → no request in the log. Recorded in `57-UAT.md` (`status: complete`) |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-11-04 (`/gsd-validate-phase 57`)
+
+---
+
+## Validation Audit 2026-11-04
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 1 |
+| Resolved | 1 |
+| Escalated | 0 |
+
+- Phase suites re-run: 16 suites, 265 tests green (backend/common/frontend phase-57 files + `relay`), plus 37 detector-hook tests in `library.test.ts` / `games.test.ts`.
+- Gap: D-09 backend default `shareDetectedFixes: false` was grep-verified only (57-02-T1). Filled in `75792b6e6`. `configShareDetectedFixesDefault.test.ts` covers the factory default and a fresh config. The new `gate with the real default deps (D-09)` describe in `knownFixReport.test.ts` covers an absent or false setting, which posts nothing. Sabotage-checked: flipping the default to `true`, or loosening the gate to `!== false`, turns them red. 26/26 green after restore.
