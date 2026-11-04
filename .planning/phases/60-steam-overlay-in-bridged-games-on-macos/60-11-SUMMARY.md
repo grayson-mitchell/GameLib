@@ -48,7 +48,7 @@ A GameLib-owned, behaviour-neutral interposer dylib that logs which image calls 
 
 ## Deviations from Plan
 
-None to behaviour. Minor: `builtOverlayInputProbePath` carries a `// ts-prune-ignore-next` comment? No - it is consumed by games.ts, so dead-code check passes without it (the comment I briefly added noting this is only prose). The games.test.ts `backend/constants/paths` mock gained a tmp `builtOverlayInputProbePath` so tests do not depend on a built dylib.
+None to behaviour. The games.test.ts `backend/constants/paths` mock gained a tmp `builtOverlayInputProbePath` so tests do not depend on a built dylib. `builtOverlayInputProbePath` needed no ts-prune marker once games.ts consumed it.
 
 ## Deferred Issues
 
