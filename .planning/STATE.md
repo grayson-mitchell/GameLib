@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
-status: executing
-stopped_at: Phase 60 context gathered
-last_updated: "2026-11-04T07:50:33.547Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 60 was final phase)
+last_updated: 2026-11-04T08:00:11.271Z
 last_activity: 2026-11-04
 progress:
   total_phases: 10
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 60 — steam-overlay-in-bridged-games-on-macos
+**Current focus:** Milestone complete
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -71,9 +71,9 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 60 (steam-overlay-in-bridged-games-on-macos) — EXECUTING
-Plan: 10 of 16
-Status: Ready to execute
+Phase: 60
+Plan: Not started
+Status: Milestone complete
 Last activity: 2026-11-04
 
 Progress: [██████████] 100%
