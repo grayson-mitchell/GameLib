@@ -11,7 +11,7 @@
  */
 import axios from 'axios'
 import i18next from 'i18next'
-import { readFileSync } from 'fs'
+import { readFileSync, rmSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { sendFrontendMessage } from '../../../ipc'
@@ -539,6 +539,13 @@ jest.mock('../bridge/peSteamDrm', () => ({
 // Phase 56 (56-12): no test writes under a real app folder.
 jest.mock('backend/constants/paths', () => ({
   ...jest.requireActual('backend/constants/paths'),
+  builtOverlayInputPath: jest
+    .requireActual('node:path')
+    .join(
+      jest.requireActual('node:os').tmpdir(),
+      `gamelib input games-test-${process.pid}`,
+      'overlay_input.dylib'
+    ),
   builtOverlayInputProbePath: jest
     .requireActual('node:path')
     .join(
@@ -13880,6 +13887,155 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             )
           }
         )
+      })
+
+      describe('60-20 overlay input fix (G1)', () => {
+        const inputPath = jest.requireMock('backend/constants/paths')
+          .builtOverlayInputPath as string
+        const probePath = jest.requireMock('backend/constants/paths')
+          .builtOverlayInputProbePath as string
+        const keys = [
+          'GAMELIB_OVERLAY_INPUT_FIX',
+          'GAMELIB_OVERLAY_INPUT_PROBE',
+          'GAMELIB_OVERLAY_RELEASE_EXPERIMENT'
+        ]
+        const saved: Record<string, string | undefined> = {}
+        const crossover = {
+          bin: '/stock/bin/wine',
+          name: 's',
+          type: 'crossover'
+        }
+        const staging = { bin: '/e/wine', name: 'e', type: 'wine' }
+        const fixLines = () =>
+          infoLines()
+            .concat(
+              (logWarning as jest.Mock).mock.calls.map((c) => String(c[0]))
+            )
+            .filter((l) => l.includes('overlay input fix='))
+        const withModule = (present: boolean) => {
+          mkdirSync(join(inputPath, '..'), { recursive: true })
+          if (present) writeFileSync(inputPath, 'x')
+          else rmSync(inputPath, { force: true })
+        }
+        beforeEach(() => {
+          for (const k of keys) {
+            saved[k] = process.env[k]
+            delete process.env[k]
+          }
+          withModule(true)
+        })
+        afterEach(() => {
+          for (const k of keys) {
+            if (saved[k] === undefined) delete process.env[k]
+            else process.env[k] = saved[k]
+          }
+        })
+
+        it('CrossOver clone, module present: passed and logged applied=true', async () => {
+          const id = freshId()
+          __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+          await callPrepare(id, {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: crossover
+          })
+          expect(
+            __prepareOverlayLaunchMock.mock.calls[0][0].inputModulePath
+          ).toBe(inputPath)
+          expect(fixLines()).toEqual([
+            `SteamGame: appId ${id} overlay input fix=X-RELEASE+BLOCK applied=true`
+          ])
+        })
+
+        it('fallback engine: passed and logged applied=true', async () => {
+          const id = freshId()
+          pinStaging(id)
+          await callPrepare(id, {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: staging
+          })
+          expect(__prepareOverlayEnvMock.mock.calls[0][0].inputModulePath).toBe(
+            inputPath
+          )
+          expect(fixLines()).toHaveLength(1)
+          expect(fixLines()[0]).toContain('applied=true')
+        })
+
+        it('module missing: no arg, one warning, no toast, overlay still prepared', async () => {
+          withModule(false)
+          const id = freshId()
+          __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+          const out = await callPrepare(id, {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: crossover
+          })
+          expect(
+            __prepareOverlayLaunchMock.mock.calls[0][0]
+          ).not.toHaveProperty('inputModulePath')
+          expect(out.overlayLaunch).toBeDefined()
+          expect(notify).not.toHaveBeenCalled()
+          const warns = (logWarning as jest.Mock).mock.calls
+            .map((c) => String(c[0]))
+            .filter((l) => l.includes('overlay input fix='))
+          expect(warns).toEqual([
+            `SteamGame: appId ${id} overlay input fix=X-RELEASE+BLOCK applied=false reason=missing`
+          ])
+        })
+
+        it('GAMELIB_OVERLAY_INPUT_FIX=off: disabled; other values ignored', async () => {
+          process.env.GAMELIB_OVERLAY_INPUT_FIX = 'off'
+          const id = freshId()
+          __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+          await callPrepare(id, {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: crossover
+          })
+          expect(
+            __prepareOverlayLaunchMock.mock.calls[0][0]
+          ).not.toHaveProperty('inputModulePath')
+          expect(fixLines()[0]).toContain('applied=false reason=disabled')
+          __prepareOverlayLaunchMock.mockClear()
+          process.env.GAMELIB_OVERLAY_INPUT_FIX = '0'
+          const id2 = freshId()
+          __prepareOverlayLaunchMock.mockResolvedValue(okResult(id2))
+          await callPrepare(id2, {
+            wineCrossoverBottle: bottleFor(id2),
+            wineVersion: crossover
+          })
+          expect(
+            __prepareOverlayLaunchMock.mock.calls[0][0].inputModulePath
+          ).toBe(inputPath)
+        })
+
+        it('armed 60-15 experiment: applied=false reason=experiment', async () => {
+          mkdirSync(join(probePath, '..'), { recursive: true })
+          writeFileSync(probePath, 'x')
+          process.env.GAMELIB_OVERLAY_INPUT_PROBE = '1'
+          process.env.GAMELIB_OVERLAY_RELEASE_EXPERIMENT = 'cb:release+block'
+          const id = freshId()
+          __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+          await callPrepare(id, {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: crossover
+          })
+          expect(
+            __prepareOverlayLaunchMock.mock.calls[0][0]
+          ).not.toHaveProperty('inputModulePath')
+          expect(fixLines()[0]).toContain('applied=false reason=experiment')
+        })
+
+        it('overlay off: no module and no fix line', async () => {
+          __resolveOverlayEnabledMock.mockReturnValue({
+            enabled: false,
+            source: 'user'
+          })
+          const id = freshId()
+          await callPrepare(id, {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: crossover
+          })
+          expect(__prepareOverlayLaunchMock).not.toHaveBeenCalled()
+          expect(fixLines()).toHaveLength(0)
+        })
       })
 
       it('fallback engine with the overlay off: no env prepared', async () => {

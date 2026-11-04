@@ -246,6 +246,7 @@ import { isScanVerdictNowCovered } from './bridge/shimCoverage'
 import {
   builtBridgeShim64Path,
   builtOverlayShimPath,
+  builtOverlayInputPath,
   builtOverlayInputProbePath,
   appFolder,
   userHome
@@ -1238,6 +1239,14 @@ function drmStepNoticeText(step: DrmStep): string {
     }
   }
 }
+
+// 60-18 `## G1 experiment verdict`: verdict code and `fix routes:` line. The
+// DRM route is never in the set (D-04: unchanged).
+const OVERLAY_INPUT_FIX_CODE = 'X-RELEASE+BLOCK'
+const OVERLAY_INPUT_FIX_ROUTES: ReadonlySet<string> = new Set([
+  'tcp-clone',
+  'env'
+])
 
 export default class SteamGame implements Game {
   private readonly appId: string
@@ -4702,6 +4711,7 @@ export default class SteamGame implements Game {
           appId: this.appId,
           shimPath: builtOverlayShimPath,
           steamBinDir: macSteamClientDir,
+          ...this.overlayInputArg('drm'),
           ...this.overlayProbeArg()
         })
         if (r.status === 'ok') overlayTokens = r.tokens
@@ -4777,6 +4787,52 @@ export default class SteamGame implements Game {
         }
       )
     })
+  }
+
+  /**
+   * 60-20 (G1): route-scoped overlay_input.dylib. Synchronous, no handle or
+   * timer, never throws, never raises a notice (D-08). Logs exactly one
+   * `overlay input fix=` line per overlay launch. The DRM route only logs: its
+   * result is not spread into the launch (D-04).
+   */
+  private overlayInputArg(
+    route: 'tcp-clone' | 'env' | 'drm'
+  ): { inputModulePath: string } | Record<string, never> {
+    const line = (applied: boolean, reason?: string) =>
+      `SteamGame: appId ${this.appId} overlay input fix=${OVERLAY_INPUT_FIX_CODE} applied=${applied}${
+        reason ? ` reason=${reason}` : ''
+      }`
+    try {
+      if (!OVERLAY_INPUT_FIX_ROUTES.has(route)) {
+        logInfo(line(false, 'route'), LogPrefix.Steam)
+        return {}
+      }
+      if (process.env.GAMELIB_OVERLAY_INPUT_FIX === 'off') {
+        logInfo(line(false, 'disabled'), LogPrefix.Steam)
+        return {}
+      }
+      const armed = overlayInputProbeFromEnv(process.env, {
+        appId: this.appId,
+        traceRoot: '/',
+        dylibPath: builtOverlayInputProbePath,
+        now: 0
+      })
+      if (armed?.experiment) {
+        logInfo(line(false, 'experiment'), LogPrefix.Steam)
+        return {}
+      }
+      if (
+        !lstatSync(builtOverlayInputPath, { throwIfNoEntry: false })?.isFile()
+      ) {
+        logWarning(line(false, 'missing'), LogPrefix.Steam)
+        return {}
+      }
+      logInfo(line(true), LogPrefix.Steam)
+      return { inputModulePath: builtOverlayInputPath }
+    } catch (e) {
+      logWarning(line(false, `missing: ${String(e)}`), LogPrefix.Steam)
+      return {}
+    }
   }
 
   /**
@@ -4868,6 +4924,7 @@ export default class SteamGame implements Game {
             appId: this.appId,
             shimPath: builtOverlayShimPath,
             steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
+            ...this.overlayInputArg('env'),
             ...this.overlayProbeArg()
           })
           if (result.status === 'error') {
@@ -4886,6 +4943,7 @@ export default class SteamGame implements Game {
           appFolder,
           shimPath: builtOverlayShimPath,
           steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
+          ...this.overlayInputArg('tcp-clone'),
           ...this.overlayProbeArg()
         })
         if (result.status === 'error') {
