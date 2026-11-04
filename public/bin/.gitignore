@@ -21,6 +21,7 @@
 # toolchain change that re-emits them mid-build cannot be silently committed.
 **/steam-bridge-helper
 **/overlay_shim.dylib
+**/overlay_input_probe.dylib
 **/steam_api.dll
 **/steam_api.pdb
 **/steam_api_shim.lib

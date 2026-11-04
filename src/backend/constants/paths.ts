@@ -146,6 +146,13 @@ export const builtOverlayShimPath = fixAsarPath(
   join(publicDir, 'bin', process.arch, 'darwin', 'overlay_shim.dylib')
 )
 
+// Phase 60 gap closure (G1): dev-only diagnostic probe, injected only behind
+// GAMELIB_OVERLAY_INPUT_PROBE=1; a missing dylib never blocks a launch.
+// Consumed by steam/games.ts in Task 2 of the same plan.
+export const builtOverlayInputProbePath = fixAsarPath(
+  join(publicDir, 'bin', process.arch, 'darwin', 'overlay_input_probe.dylib')
+)
+
 // Phase 51 Plan 01 (D-51-01): per-appId staging root for the bridge helper's
 // own cwd. Each running helper gets its OWN subdirectory
 // `<steamBridgeHelperStateDir>/<appId>/` so two concurrently-running
