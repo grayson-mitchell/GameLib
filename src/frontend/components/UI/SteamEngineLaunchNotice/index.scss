@@ -38,3 +38,8 @@
 .steamEngineLaunchNoticeDismiss:hover {
   color: var(--text-default);
 }
+
+// Phase 60 G4: stacks above the engine notice when both are shown.
+.steamEngineLaunchNotice--overlay {
+  bottom: calc(var(--space-lg) + 4.5rem);
+}
