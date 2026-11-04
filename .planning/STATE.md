@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-11-04 - Completed quick task 261104-tm6: move Steam engine override to the Wine tab
+Last activity: 2026-11-04 - Completed quick task 261104-uas: show stats overlay for native mac games (superseded)
 
 Progress: [██████████] 100%
 
@@ -426,6 +426,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261104-9ou | Strict DXVK restore (WR-01) judges "already absent" by exit code, not truncated text: `restoreDxvkStrict` queries each override with `reg query /v <dll>` after the import (0 = still set → fail, 1 = absent only when the import exited 0, else fail closed); no stdout/stderr read. Test pins late stderr lost / exit code kept under resolveOnExit. Todo closed. | 2026-11-04 | 1249a076f | 3 suites / 72 tests pass; tsc + prettier clean; eslint warnings unchanged; planning-gates 12/12; no live check | [261104-9ou-strict-dxvk-restore-judge-already-absent](./quick/261104-9ou-strict-dxvk-restore-judge-already-absent/) |
 | 261104-rvy | Bottle-eligible Steam titles read 11 allowlisted per-title keys (launcherArgs, targetExe, env/wrapper options, scripts, language, verboseLogs, showFps, showMangohud, lastUsedLaunchOption) back from GamesConfig/<appId>.json over the shared bottle settings; wine/prefix/bottle keys stay bottle-owned; todo closed. | 2026-11-04 | 1cc26ea94 | Jest steam suites pass (4529 tests); codecheck clean; live reopen check pending | [261104-rvy-bottle-eligible-steam-per-title-settings](./quick/261104-rvy-bottle-eligible-steam-per-title-settings/) |
 | 261104-tm6 | Steam engine override moved from the Advanced tab to the Wine tab for macOS Steam titles (D-14 deviation: tab only; collapsed/unsupported semantics kept); inert per-game Wine Version/Prefix/CrossOver Bottle hidden there with a hint line; four "Advanced settings" pointers now say "Wine settings". | 2026-11-04 | a03e2232c | Placement test + 244 related tests pass; tsc clean; live app check pending | [261104-tm6-move-steam-engine-override-to-wine-tab](./quick/261104-tm6-move-steam-engine-override-to-wine-tab/) |
+| 261104-uas | Show Stats Overlay exposed on an Other tab for native macOS Epic/GOG/sideload games (Steam, Windows, native Linux excluded; Amazon inert: nile isNative is Windows-only). Superseded by 261104-unp before live check. | 2026-11-04 | bbc3d00d5 | Source-text test + tsc/eslint/prettier pass; live check skipped (superseded) | [261104-uas-show-stats-overlay-for-native-mac-games](./quick/261104-uas-show-stats-overlay-for-native-mac-games/) |
 
 ## Deferred Items
 
