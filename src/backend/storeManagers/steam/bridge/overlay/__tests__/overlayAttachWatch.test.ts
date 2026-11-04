@@ -138,6 +138,67 @@ describe('watchOverlayAttach', () => {
     unrefs.forEach((u) => expect(u).toHaveBeenCalled())
   })
 
+  describe('timeoutMs (60-UAT G2)', () => {
+    const feed = (matchOnRead: number) => {
+      let n = 0
+      return jest.fn(async () => {
+        n += 1
+        return n >= matchOnRead ? attachLine(Date.now()) : ''
+      })
+    }
+    const run = async (
+      readTail: jest.Mock,
+      timeoutMs: number | undefined,
+      advance: number
+    ) => {
+      const { deps, log } = makeDeps(readTail)
+      const p = watchOverlayAttach(
+        {
+          appId: '620',
+          consoleLogPath: '/x',
+          launchStartedAt: Date.now(),
+          ...(timeoutMs === undefined ? {} : { timeoutMs })
+        },
+        deps
+      )
+      await jest.advanceTimersByTimeAsync(advance)
+      return { r: await p, log }
+    }
+
+    it('attaches at about 13 s with a 30 s window', async () => {
+      const { r, log } = await run(feed(14), 30_000, 31_000)
+      expect(r.attached).toBe(true)
+      expect(log.mock.calls[0][0]).toContain(
+        'overlay attach: attached gameoverlayui pid='
+      )
+    })
+
+    it('the default window misses the same feed and logs 10s', async () => {
+      const { r, log } = await run(feed(14), undefined, 12_000)
+      expect(r.attached).toBe(false)
+      expect(log.mock.calls[0][0]).toMatch(
+        /overlay attach: not attached within 10s$/
+      )
+    })
+
+    it('logs the actual window length after 30 reads', async () => {
+      const readTail = jest.fn().mockResolvedValue('')
+      const { r, log } = await run(readTail, 30_000, 35_000)
+      expect(r.attached).toBe(false)
+      expect(readTail).toHaveBeenCalledTimes(30)
+      expect(log.mock.calls[0][0]).toMatch(/not attached within 30s$/)
+    })
+
+    it('clamps to [1000, 60000]', async () => {
+      const low = jest.fn().mockResolvedValue('')
+      await run(low, 500, 5000)
+      expect(low).toHaveBeenCalledTimes(1)
+      const high = jest.fn().mockResolvedValue('')
+      await run(high, 120_000, 70_000)
+      expect(high).toHaveBeenCalledTimes(60)
+    })
+  })
+
   it('aborts mid-watch with no further reads and deletes the controller', async () => {
     const readTail = jest.fn().mockResolvedValue('')
     const { deps } = makeDeps(readTail)

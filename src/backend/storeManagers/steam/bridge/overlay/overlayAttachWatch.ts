@@ -1,13 +1,13 @@
 /**
  * Phase 60 plan 04 (D-11): a diagnostic watcher for Mac Steam's overlay attach.
  *
- * Polls Mac Steam's console_log.txt once a second for at most 10 s, looking for
+ * Polls Mac Steam's console_log.txt once a second for 10 s (30 s in DRM mode), looking for
  * `GameOverlay: started '.../gameoverlayui' (pid N) for game process P`, and
- * logs exactly one line: attached, or `not attached within 10s`.
+ * logs exactly one line: attached, or `not attached within Ns`.
  *
  * Real-profile arm (gamelib-conventions, two-profile rule): this reads the
  * user's real Mac Steam log under the real HOME. It is read-only, spawns
- * nothing, and is bounded to one 64 KiB tail read per second for 10 s.
+ * nothing, and is bounded to one 64 KiB tail read per second for 10 s (30 s in DRM mode).
  *
  * Sidecar exit contract: every timer is unref'd and tracked, the watch
  * registers an abort controller so callAllAbortControllers() at stdin EOF ends
@@ -30,6 +30,11 @@ import {
 export const OVERLAY_ATTACH_POLL_MS = 1000
 // ts-prune-ignore-next
 export const OVERLAY_ATTACH_TIMEOUT_MS = 10_000
+// 60-UAT G2: in DRM mode the steam.exe helper hop makes Mac Steam attach
+// gameoverlayui about 13 s after launch (TCP: 4 s, Staging: 7 s).
+export const OVERLAY_ATTACH_DRM_TIMEOUT_MS = 30_000
+const MIN_TIMEOUT_MS = 1000
+const MAX_TIMEOUT_MS = 60_000
 const TAIL_BYTES = 65536
 const CUTOFF_SLACK_MS = 5000
 const MAX_LINE = 512
@@ -108,6 +113,7 @@ export async function watchOverlayAttach(
     consoleLogPath: string
     launchStartedAt: number
     gamePid?: number
+    timeoutMs?: number
   },
   deps: WatchDeps = {}
 ): Promise<OverlayAttachResult> {
@@ -145,9 +151,11 @@ export async function watchOverlayAttach(
     })
 
   try {
-    const maxReads = Math.ceil(
-      OVERLAY_ATTACH_TIMEOUT_MS / OVERLAY_ATTACH_POLL_MS
+    const timeout = Math.min(
+      MAX_TIMEOUT_MS,
+      Math.max(MIN_TIMEOUT_MS, opts.timeoutMs ?? OVERLAY_ATTACH_TIMEOUT_MS)
     )
+    const maxReads = Math.ceil(timeout / OVERLAY_ATTACH_POLL_MS)
     while (reads < maxReads) {
       if (controller.signal.aborted) return { attached: false, aborted: true }
       reads += 1
@@ -165,7 +173,7 @@ export async function watchOverlayAttach(
       await sleep(OVERLAY_ATTACH_POLL_MS)
     }
     if (controller.signal.aborted) return { attached: false, aborted: true }
-    log(`${prefix} not attached within 10s`)
+    log(`${prefix} not attached within ${Math.round(timeout / 1000)}s`)
     return { attached: false }
   } catch {
     return { attached: false }

@@ -14169,6 +14169,37 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         ).toBe(true)
       })
 
+      it('DRM overlay launch gives the attach watch the 30 s window (60-UAT G2); TCP gets none', async () => {
+        const id = freshId()
+        const r = readyFor(id)
+        __drmLaunchSetupMock.mockImplementation(() =>
+          Promise.resolve({
+            ...r,
+            runner: { ...r.runner, wineloaderResigned: true }
+          })
+        )
+        ;(existsSync as jest.Mock).mockImplementation(() => true)
+        __prepareOverlayTokensMock.mockResolvedValue({
+          status: 'ok',
+          tokens: [`DYLD_INSERT_LIBRARIES='/s/shim.dylib'`]
+        })
+        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        if (monitor) mon().onFirstMatch()
+        expect(__watchOverlayAttachMock).toHaveBeenCalledTimes(1)
+        expect(__watchOverlayAttachMock.mock.calls[0][0].timeoutMs).toBe(30_000)
+
+        __watchOverlayAttachMock.mockClear()
+        __drmLaunchSetupMock.mockReset()
+        monitor = undefined
+        const tcpId = freshId()
+        await launchOn(tcpId)
+        mon().onFirstMatch()
+        expect(__watchOverlayAttachMock).toHaveBeenCalledTimes(1)
+        expect(
+          __watchOverlayAttachMock.mock.calls[0][0].timeoutMs
+        ).toBeUndefined()
+      })
+
       it('with a monitor the watch starts at first match, once, with the start time', async () => {
         const id = freshId()
         const t0 = Date.now()

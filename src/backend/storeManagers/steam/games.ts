@@ -148,6 +148,7 @@ import {
 } from './bridge/overlay/overlayPolicy'
 import {
   watchOverlayAttach,
+  OVERLAY_ATTACH_DRM_TIMEOUT_MS,
   macSteamConsoleLogPath
 } from './bridge/overlay/overlayAttachWatch'
 import {
@@ -5746,7 +5747,9 @@ export default class SteamGame implements Game {
           watchOverlayAttach({
             appId: this.appId,
             consoleLogPath: macSteamConsoleLogPath(userHome),
-            launchStartedAt
+            launchStartedAt,
+            // 60-UAT G2: the DRM helper hop attaches about 13 s in.
+            ...(drm ? { timeoutMs: OVERLAY_ATTACH_DRM_TIMEOUT_MS } : {})
           })
         ).catch(() => undefined)
       }
