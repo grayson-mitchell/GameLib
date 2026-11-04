@@ -1,45 +1,233 @@
 // D-06 / 59-UAT G6: non-blocking, dismissible; no backdrop or focus trap.
-// Theme variables only (multi-theme survival).
-.steamEngineLaunchNotice {
+// Theme variables only (multi-theme survival); the shadow rgba is the one
+// allowed literal colour. Sketch 006 variant A, "Refined stripe".
+
+// One fixed bottom-right stack for both notices (L1).
+.steamEngineLaunchNoticeRegion {
   position: fixed;
   bottom: var(--space-lg);
   right: var(--space-lg);
   z-index: 20;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
+  width: min(420px, calc(100vw - 2 * var(--space-lg)));
+  pointer-events: none;
+}
+
+// The slot collapses (1fr -> 0fr) when its toast leaves, so the neighbour
+// glides into place.
+.steamEngineLaunchNoticeSlot {
+  display: grid;
+  grid-template-rows: 1fr;
+  width: 100%;
+  animation: steamEngineLaunchNoticeSlotOpen 200ms cubic-bezier(0.4, 0, 0.2, 1)
+    both;
+
+  &:not(:first-child) {
+    margin-top: var(--space-sm);
+  }
+
+  > div {
+    min-height: 0;
+    overflow: visible;
+  }
+}
+
+.steamEngineLaunchNoticeSlot--collapsing {
+  animation: steamEngineLaunchNoticeSlotClose 200ms cubic-bezier(0.4, 0, 0.2, 1)
+    forwards;
+}
+
+.steamEngineLaunchNotice {
+  pointer-events: auto;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
   gap: var(--space-sm);
-  max-width: min(420px, calc(100vw - 2 * var(--space-lg)));
-  background: var(--background-darker, var(--body-background));
-  color: var(--text-default);
   padding: var(--space-md);
-  border-radius: var(--space-2xs);
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.35);
-  border-inline-start: var(--space-3xs) solid var(--status-warning);
+  font-size: var(--text-sm);
+  color: var(--text-default);
+  background: var(--background-darker, var(--body-background));
+  border-radius: 10px;
+  border-inline-start: 3px solid var(--status-warning);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: steamEngineLaunchNoticeIn 240ms cubic-bezier(0.2, 1.1, 0.3, 1) both;
+}
+
+.steamEngineLaunchNotice--leaving {
+  animation: steamEngineLaunchNoticeOut 180ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+// Kept as a hook for tests and styling; carries no positioning (the region
+// owns the stack).
+.steamEngineLaunchNotice--overlay {
+  order: 0;
 }
 
 .steamEngineLaunchNoticeIcon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding-top: 1px;
   color: var(--status-warning);
-  flex-shrink: 0;
 }
 
-.steamEngineLaunchNoticeMessage {
+.steamEngineLaunchNoticeText {
   flex: 1;
-  font-size: var(--text-sm);
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.steamEngineLaunchNoticeTitle {
+  display: block;
+  font-weight: var(--bold);
+}
+
+.steamEngineLaunchNoticeBody {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-secondary);
 }
 
 .steamEngineLaunchNoticeDismiss {
-  background: transparent;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border: none;
+  border-radius: 50%;
+  background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: var(--space-3xs);
+  transition:
+    background 120ms,
+    color 120ms;
+
+  &:hover {
+    color: var(--text-default);
+    background: color-mix(in srgb, var(--text-default) 12%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
 }
 
-.steamEngineLaunchNoticeDismiss:hover {
-  color: var(--text-default);
+// Countdown hairline (L7). Display only: the real timer lives in the TSX; the
+// 8000ms here matches AUTO_HIDE_MS and is overridden inline from it. Paused by
+// the same React state as the timer (modifier classes, not :hover).
+.steamEngineLaunchNoticeBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  transform-origin: left;
+  background: var(--status-warning);
+  opacity: 0.7;
+  animation: steamEngineLaunchNoticeBar 8000ms linear forwards;
 }
 
-// Phase 60 G4: stacks above the engine notice when both are shown.
-.steamEngineLaunchNotice--overlay {
-  bottom: calc(var(--space-lg) + 4.5rem);
+.steamEngineLaunchNotice--paused .steamEngineLaunchNoticeBar,
+.steamEngineLaunchNotice--waiting .steamEngineLaunchNoticeBar {
+  animation-play-state: paused;
+}
+
+// Frozen until GameLib is visible and focused.
+.steamEngineLaunchNotice--waiting .steamEngineLaunchNoticeBar {
+  opacity: 0.25;
+}
+
+@keyframes steamEngineLaunchNoticeIn {
+  from {
+    opacity: 0;
+    transform: translateX(calc(100% + var(--space-lg)));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes steamEngineLaunchNoticeOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(calc(100% + var(--space-lg)));
+  }
+}
+
+@keyframes steamEngineLaunchNoticeFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes steamEngineLaunchNoticeFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes steamEngineLaunchNoticeSlotOpen {
+  from {
+    grid-template-rows: 0fr;
+    margin-top: 0;
+  }
+}
+
+@keyframes steamEngineLaunchNoticeSlotClose {
+  to {
+    grid-template-rows: 0fr;
+    margin-top: 0;
+  }
+}
+
+@keyframes steamEngineLaunchNoticeBar {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+// Reduced motion: fade only. The slot keeps a 1ms animation (not none) so
+// animationend still fires and the lifecycle completes; the bar keeps running
+// because it is the countdown indicator, not entrance/exit motion.
+@media (prefers-reduced-motion: reduce) {
+  .steamEngineLaunchNotice {
+    animation-name: steamEngineLaunchNoticeFadeIn;
+    animation-duration: 160ms;
+  }
+
+  .steamEngineLaunchNotice--leaving {
+    animation-name: steamEngineLaunchNoticeFadeOut;
+  }
+
+  .steamEngineLaunchNoticeSlot,
+  .steamEngineLaunchNoticeSlot--collapsing {
+    animation-duration: 1ms;
+  }
 }
