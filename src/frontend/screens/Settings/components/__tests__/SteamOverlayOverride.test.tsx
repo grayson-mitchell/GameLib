@@ -109,6 +109,13 @@ describe('SteamOverlayOverride', () => {
     expect(parseOverlayValue(undefined)).toBe('automatic')
   })
 
+  it('shows a loaded off as Off (60-UAT G3: the renderer read path is sound)', () => {
+    mockStored = 'off'
+    expect((select(render()!).props as Props).value).toBe('off')
+    mockStored = 'on'
+    expect((select(render()!).props as Props).value).toBe('on')
+  })
+
   it('fetches the engine state once when it is missing', () => {
     mockStore = {}
     expect(render()).toBeNull()

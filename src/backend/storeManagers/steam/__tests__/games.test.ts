@@ -488,7 +488,9 @@ jest.mock('../bridge/overlay/overlayPolicy', () => {
       resolveMock(...args) ?? { enabled: false, source: 'user' },
     readStoredOverlayOverride: (...args: unknown[]) => storedMock(...args),
     isAbnormalOverlayExit: jest.requireActual('../bridge/overlay/overlayPolicy')
-      .isAbnormalOverlayExit
+      .isAbnormalOverlayExit,
+    parseOverlayOverride: jest.requireActual('../bridge/overlay/overlayPolicy')
+      .parseOverlayOverride
   }
 })
 // Phase 60 (60-09): attach watch and overlay wine log. The shim forwarder and
@@ -8381,6 +8383,50 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       wineCrossoverBottle: 'GameLibSteam',
       steamEngineOverride: 'pinned:wine-staging-11.20'
     })
+  })
+
+  describe('getSettings() overlay override (60-UAT G3, same split as 59-UAT G11)', () => {
+    const storedOverlay = () =>
+      jest.requireMock('../bridge/overlay/overlayPolicy')
+        .__readStoredOverlayOverrideMock as jest.Mock
+    const storedEngine = () =>
+      jest.requireMock('../engine/engineDecision')
+        .readStoredEngineOverride as jest.Mock
+    beforeEach(() => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+        wineCrossoverBottle: 'GameLibSteam'
+      })
+    })
+
+    it('a bottle-eligible game carries its own overlay override', async () => {
+      storedOverlay().mockReturnValueOnce('off')
+      const settings = await new SteamGame(APP_ID).getSettings()
+      expect(settings).toEqual({
+        wineCrossoverBottle: 'GameLibSteam',
+        steamOverlayOverride: 'off'
+      })
+    })
+
+    it('carries both overrides when both are stored', async () => {
+      storedEngine().mockReturnValueOnce('pinned:wine-staging-11.20')
+      storedOverlay().mockReturnValueOnce('on')
+      const settings = await new SteamGame(APP_ID).getSettings()
+      expect(settings).toEqual({
+        wineCrossoverBottle: 'GameLibSteam',
+        steamEngineOverride: 'pinned:wine-staging-11.20',
+        steamOverlayOverride: 'on'
+      })
+    })
+
+    it.each(['automatic', undefined, 'garbage', 42])(
+      'omits the key for a stored %p',
+      async (value) => {
+        storedOverlay().mockReturnValueOnce(value)
+        const settings = await new SteamGame(APP_ID).getSettings()
+        expect(settings).not.toHaveProperty('steamOverlayOverride')
+      }
+    )
   })
 
   it('D2: isNative() is false for a forced game — launcher.ts must run checkWineBeforeLaunch', () => {

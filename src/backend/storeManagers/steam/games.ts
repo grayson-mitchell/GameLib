@@ -144,6 +144,7 @@ import {
 import {
   resolveOverlayEnabled,
   readStoredOverlayOverride,
+  parseOverlayOverride,
   isAbnormalOverlayExit
 } from './bridge/overlay/overlayPolicy'
 import {
@@ -1265,9 +1266,24 @@ export default class SteamGame implements Game {
       const { readStoredEngineOverride } =
         await import('./engine/engineDecision')
       const override = readStoredEngineOverride(this.appId)
-      return typeof override !== 'string'
-        ? settings
-        : { ...settings, steamEngineOverride: override }
+      // 60-UAT G3, same split as 59-UAT G11: the overlay override is also
+      // written to the title's GameConfig, so merge it back ('on'/'off' only;
+      // anything else stays Automatic, T-60-06-01).
+      const overlay = parseOverlayOverride(
+        readStoredOverlayOverride(this.appId)
+      )
+      const overlayOverride =
+        overlay === 'on' || overlay === 'off' ? overlay : undefined
+      if (typeof override !== 'string' && overlayOverride === undefined) {
+        return settings
+      }
+      return {
+        ...settings,
+        ...(typeof override === 'string'
+          ? { steamEngineOverride: override }
+          : {}),
+        ...(overlayOverride ? { steamOverlayOverride: overlayOverride } : {})
+      }
     }
     const gameConfig = GameConfig.get(this.appId)
     return gameConfig.config || (await gameConfig.getSettings())
