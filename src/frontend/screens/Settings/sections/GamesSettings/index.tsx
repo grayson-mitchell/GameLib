@@ -89,6 +89,8 @@ export default function GamesSettings() {
     gameInfo?.runner === 'gog' || gameInfo?.runner === 'legendary'
   const isBrowserGame = gameInfo?.install.platform === 'Browser'
   const isSideloaded = gameInfo?.runner === 'sideload'
+  // Shared gate (was D-14's): per-game Steam titles on macOS, never Default.
+  const isMacSteamTitle = !isDefault && isMac && gameInfo?.runner === 'steam'
 
   function shouldShowSettings(tab: 'wine' | 'other'): boolean {
     if (tab === 'wine') {
@@ -201,9 +203,30 @@ export default function GamesSettings() {
       </Tabs>
 
       <TabPanel value={value} index={'wine'}>
-        <WineVersionSelector />
-        <WinePrefix />
-        <CrossoverBottle />
+        {/* quick 261104-tm6: the engine override moved here from Advanced
+            (deviation from D-14, tab only; still collapsed and unsupported-
+            flagged, D-08 unchanged). The per-game wineVersion, winePrefix and
+            wineCrossoverBottle are not read by the bridge launch
+            (titleSettings.ts LD-2; bottle.ts getBridgeBottleSettings), so they
+            are hidden for these titles to leave one which-Wine control. */}
+        {isMacSteamTitle ? (
+          <>
+            <span className="defaults-hint">
+              <FontAwesomeIcon icon={faInfoCircle} />
+              {t(
+                'gamelib:steam.engine.wineTabHint',
+                'GameLib chooses the Wine engine and bottle for Steam games.'
+              )}
+            </span>
+            <SteamEngineOverride />
+          </>
+        ) : (
+          <>
+            <WineVersionSelector />
+            <WinePrefix />
+            <CrossoverBottle />
+          </>
+        )}
         {!isCrossover && (
           <>
             <AutoDXVK />
@@ -265,16 +288,11 @@ export default function GamesSettings() {
         <WrappersTable />
         <EnvVariablesTable />
         {!isSideloaded && <PreferedLanguage />}
-        {/* D-14: per-game engine override, Steam titles on macOS only, never on
-            the Default page. D-08: the only route to the previous pinned build. */}
+        {/* The per-game engine override moved to the Wine tab (quick
+            261104-tm6). */}
         {/* Phase 60 D-02: per-game overlay off switch; eligibility comes from
             the backend and includes DRM-mode titles. */}
-        {!isDefault && isMac && gameInfo?.runner === 'steam' && (
-          <>
-            <SteamEngineOverride />
-            <SteamOverlayOverride />
-          </>
-        )}
+        {isMacSteamTitle && <SteamOverlayOverride />}
       </TabPanel>
 
       <TabPanel value={value} index={'saves'}>

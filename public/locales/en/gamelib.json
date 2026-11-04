@@ -647,7 +647,8 @@
             },
             "untested": {
                 "body": "CrossOver {{build}} is untested with GameLib. Games should still work; please report issues."
-            }
+            },
+            "wineTabHint": "GameLib chooses the Wine engine and bottle for Steam games."
         },
         "goOffline": {
             "body": "GameLib needs to sign in to your Steam account for this. To keep your Steam Friends list signed in, it signs in while the Steam app is offline, but Steam did not go offline when GameLib asked. This can happen while a Steam game is running.",
