@@ -9,6 +9,7 @@ jest.mock('../logger', () => ({
   LogPrefix: { Backend: 'Backend' }
 }))
 
+import axios from 'axios'
 import {
   GAMELIB_FIX_RELAY_URL,
   RELAY_URL_PENDING_SENTINEL,
@@ -24,6 +25,13 @@ import {
 } from '../utils/aborthandler/aborthandler'
 import { parseKnownFixReport } from 'common/knownFixReport'
 import { logInfo } from '../logger'
+
+// D-09: the real default deps read the setting through GlobalConfig; drive it.
+let mockSettings: Record<string, unknown> = {}
+jest.mock('../config', () => ({
+  GlobalConfig: { get: () => ({ getSettings: () => mockSettings }) }
+}))
+jest.mock('../constants/environment', () => ({ isMac: true }))
 
 type PostCall = { url: string; body: unknown; signal: AbortSignal }
 
@@ -107,6 +115,29 @@ describe('gate', () => {
     on = false
     expect(await runKnownFixReport(addCeg, deps)).toBe('disabled')
     expect(calls).toHaveLength(1)
+  })
+})
+
+describe('gate with the real default deps (D-09)', () => {
+  afterEach(() => {
+    mockSettings = {}
+    jest.restoreAllMocks()
+  })
+
+  it('an absent shareDetectedFixes setting posts nothing', async () => {
+    const post = jest.spyOn(axios, 'post')
+    mockSettings = {}
+    expect(await runKnownFixReport(addArch)).toBe('disabled')
+    reportDetectedFix(addCeg)
+    await new Promise((r) => setImmediate(r))
+    expect(post).not.toHaveBeenCalled()
+  })
+
+  it('an explicit false posts nothing', async () => {
+    const post = jest.spyOn(axios, 'post')
+    mockSettings = { shareDetectedFixes: false }
+    expect(await runKnownFixReport(addArch)).toBe('disabled')
+    expect(post).not.toHaveBeenCalled()
   })
 })
 
