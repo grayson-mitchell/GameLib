@@ -58,7 +58,32 @@ export function appendCxEnvTokens(
   return { status: 'ok', env: [...rest, { key: 'CX_ENV', value }] }
 }
 
-type OverlayEnvArgs = { appId: string; shimPath: string; steamBinDir: string }
+// 60-11 (G1): dev-only diagnostic input probe. Optional everywhere; an unsafe
+// one is dropped so a diagnostic can never fail the overlay.
+type OverlayProbe = { dylibPath: string; logPath: string }
+
+type OverlayEnvArgs = {
+  appId: string
+  shimPath: string
+  steamBinDir: string
+  probe?: OverlayProbe
+}
+
+/**
+ * The probe is armed only by the sidecar's own env, exactly '1'. Pure; the
+ * caller supplies the trace root, the dylib path and the clock.
+ */
+// ts-prune-ignore-next
+export function overlayInputProbeFromEnv(
+  env: Record<string, string | undefined>,
+  a: { appId: string; traceRoot: string; dylibPath: string; now: number }
+): OverlayProbe | undefined {
+  if (env.GAMELIB_OVERLAY_INPUT_PROBE !== '1') return undefined
+  return {
+    dylibPath: a.dylibPath,
+    logPath: join(a.traceRoot, `input-probe-${a.appId}-${a.now}.log`)
+  }
+}
 
 /**
  * The one value builder behind both overlay routes (D-12, shim first). The
@@ -76,16 +101,25 @@ function overlayEnvValues(a: OverlayEnvArgs): OverlayStepResult<{
     }
     const loader = join(a.steamBinDir, 'steamloader.dylib')
     const renderer = join(a.steamBinDir, 'gameoverlayrenderer.dylib')
+    const probe =
+      a.probe && safePath(a.probe.dylibPath) && safePath(a.probe.logPath)
+        ? a.probe
+        : undefined
     return {
       status: 'ok',
       vars: [
         {
           key: 'DYLD_INSERT_LIBRARIES',
-          value: `${a.shimPath}:${loader}:${renderer}`
+          value: `${a.shimPath}:${loader}:${renderer}${
+            probe ? `:${probe.dylibPath}` : ''
+          }`
         },
         { key: 'SteamOverlayGameId', value: a.appId },
         { key: 'SteamGameId', value: a.appId },
-        { key: 'SteamAppId', value: a.appId }
+        { key: 'SteamAppId', value: a.appId },
+        ...(probe
+          ? [{ key: 'GAMELIB_OVERLAY_PROBE_LOG', value: probe.logPath }]
+          : [])
       ]
     }
   } catch (e) {
@@ -103,7 +137,7 @@ export function buildOverlayCxTokens(
   return {
     status: 'ok',
     tokens: built.vars.map((v) =>
-      v.key === 'DYLD_INSERT_LIBRARIES'
+      v.key === 'DYLD_INSERT_LIBRARIES' || v.key === 'GAMELIB_OVERLAY_PROBE_LOG'
         ? `${v.key}='${v.value}'`
         : `${v.key}=${v.value}`
     )
@@ -119,6 +153,7 @@ export function buildOverlayEnvVars(
 }
 
 const OVERLAY_ENV_KEYS = new Set([
+  'GAMELIB_OVERLAY_PROBE_LOG',
   'SteamOverlayGameId',
   'SteamGameId',
   'SteamAppId'
@@ -201,7 +236,7 @@ export async function checkOverlayInputs(
   }
 }
 
-type TokenArgs = { appId: string; shimPath: string; steamBinDir: string }
+type TokenArgs = OverlayEnvArgs
 
 /** DRM route: inputs, then tokens. Never rejects. */
 // ts-prune-ignore-next

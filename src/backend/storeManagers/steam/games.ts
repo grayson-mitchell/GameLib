@@ -135,6 +135,7 @@ import {
 import {
   appendCxEnvTokens,
   mergeOverlayEnvVars,
+  overlayInputProbeFromEnv,
   prepareOverlayEnv,
   prepareOverlayLaunch,
   prepareOverlayTokens,
@@ -242,6 +243,7 @@ import { isScanVerdictNowCovered } from './bridge/shimCoverage'
 import {
   builtBridgeShim64Path,
   builtOverlayShimPath,
+  builtOverlayInputProbePath,
   appFolder,
   userHome
 } from 'backend/constants/paths'
@@ -4681,7 +4683,8 @@ export default class SteamGame implements Game {
         const r = await prepareOverlayTokens({
           appId: this.appId,
           shimPath: builtOverlayShimPath,
-          steamBinDir: macSteamClientDir
+          steamBinDir: macSteamClientDir,
+          ...this.overlayProbeArg()
         })
         if (r.status === 'ok') overlayTokens = r.tokens
         else this.notifyOverlaySetupFailed(r.step, r.cause)
@@ -4753,6 +4756,46 @@ export default class SteamGame implements Game {
   }
 
   /**
+   * 60-11 (G1): the dev-only input probe. Armed only when the sidecar was
+   * started with GAMELIB_OVERLAY_INPUT_PROBE=1. Never blocks a launch and never
+   * raises a notice: a missing or unusable probe just logs a warning.
+   */
+  private overlayProbeArg():
+    | { probe: { dylibPath: string; logPath: string } }
+    | Record<string, never> {
+    try {
+      const traceRoot = buildOverlayPaths(appFolder)?.traceRoot
+      if (!traceRoot) return {}
+      const probe = overlayInputProbeFromEnv(process.env, {
+        appId: this.appId,
+        traceRoot,
+        dylibPath: builtOverlayInputProbePath,
+        now: Date.now()
+      })
+      if (!probe) return {}
+      if (!lstatSync(probe.dylibPath, { throwIfNoEntry: false })?.isFile()) {
+        logWarning(
+          `SteamGame: appId ${this.appId} overlay input probe=missing`,
+          LogPrefix.Steam
+        )
+        return {}
+      }
+      mkdirSync(traceRoot, { recursive: true, mode: 0o700 })
+      logInfo(
+        `SteamGame: appId ${this.appId} overlay input probe=on log=${probe.logPath.replace(userHome, '~')}`,
+        LogPrefix.Steam
+      )
+      return { probe }
+    } catch (e) {
+      logWarning(
+        `SteamGame: appId ${this.appId} overlay input probe=unavailable: ${String(e)}`,
+        LogPrefix.Steam
+      )
+      return {}
+    }
+  }
+
+  /**
    * Phase 60 (D-01/D-04/D-07/D-08): the TCP-route overlay decision. Returns the
    * settings to launch with and, when the overlay is injecting, its tokens and
    * runner. On the fallback engine (Wine-Staging + DXVK) the overlay is plain
@@ -4789,7 +4832,8 @@ export default class SteamGame implements Game {
           const result = await prepareOverlayEnv({
             appId: this.appId,
             shimPath: builtOverlayShimPath,
-            steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH)
+            steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
+            ...this.overlayProbeArg()
           })
           if (result.status === 'error') {
             this.notifyOverlaySetupFailed(result.step, result.cause)
@@ -4806,7 +4850,8 @@ export default class SteamGame implements Game {
           appId: this.appId,
           appFolder,
           shimPath: builtOverlayShimPath,
-          steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH)
+          steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
+          ...this.overlayProbeArg()
         })
         if (result.status === 'error') {
           this.notifyOverlaySetupFailed(result.step, result.cause)

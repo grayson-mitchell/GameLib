@@ -11,6 +11,7 @@ import {
   buildOverlayCxTokens,
   buildOverlayEnvVars,
   mergeOverlayEnvVars,
+  overlayInputProbeFromEnv,
   prepareOverlayEnv,
   checkOverlayInputs,
   prepareOverlayLaunch,
@@ -356,5 +357,87 @@ describe('mergeOverlayEnvVars', () => {
     const copy = JSON.parse(JSON.stringify(env))
     mergeOverlayEnvVars(env, vars)
     expect(env).toEqual(copy)
+  })
+})
+
+describe('overlay input probe (60-11, G1)', () => {
+  const base = {
+    appId: '3205720',
+    shimPath: '/A/overlay_shim.dylib',
+    steamBinDir: SBIN
+  }
+  const probe = {
+    dylibPath: '/A B/overlay_input_probe.dylib',
+    logPath: '/T R/input-probe-3205720-1.log'
+  }
+
+  test('overlayInputProbeFromEnv returns paths only for flag exactly 1', () => {
+    const a = {
+      appId: '3205720',
+      traceRoot: '/abs/trace',
+      dylibPath: '/abs/p.dylib',
+      now: 1700000000000
+    }
+    expect(
+      overlayInputProbeFromEnv({ GAMELIB_OVERLAY_INPUT_PROBE: '1' }, a)
+    ).toEqual({
+      dylibPath: '/abs/p.dylib',
+      logPath: '/abs/trace/input-probe-3205720-1700000000000.log'
+    })
+    expect(overlayInputProbeFromEnv({}, a)).toBeUndefined()
+    for (const v of ['0', 'true', '', '11', ' 1']) {
+      expect(
+        overlayInputProbeFromEnv({ GAMELIB_OVERLAY_INPUT_PROBE: v }, a)
+      ).toBeUndefined()
+    }
+  })
+
+  test('tokens: probe appended last and log token single-quoted', () => {
+    const r = buildOverlayCxTokens({ ...base, probe })
+    expect(r).toEqual({
+      status: 'ok',
+      tokens: [
+        `DYLD_INSERT_LIBRARIES='/A/overlay_shim.dylib:${SBIN}/steamloader.dylib:${SBIN}/gameoverlayrenderer.dylib:${probe.dylibPath}'`,
+        'SteamOverlayGameId=3205720',
+        'SteamGameId=3205720',
+        'SteamAppId=3205720',
+        `GAMELIB_OVERLAY_PROBE_LOG='${probe.logPath}'`
+      ]
+    })
+  })
+
+  test('env vars carry the probe last in DYLD and the log var', () => {
+    const r = buildOverlayEnvVars({ ...base, probe })
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.vars[0].value.endsWith(`:${probe.dylibPath}`)).toBe(true)
+    expect(r.vars[0].value.startsWith('/A/overlay_shim.dylib:')).toBe(true)
+    expect(r.vars).toContainEqual({
+      key: 'GAMELIB_OVERLAY_PROBE_LOG',
+      value: probe.logPath
+    })
+  })
+
+  test('without a probe the output is unchanged', () => {
+    const r = buildOverlayEnvVars(base)
+    expect(r.status === 'ok' && r.vars.map((v) => v.key)).toEqual([
+      'DYLD_INSERT_LIBRARIES',
+      'SteamOverlayGameId',
+      'SteamGameId',
+      'SteamAppId'
+    ])
+  })
+
+  test.each([
+    ['quote in dylib', { dylibPath: "/A/p'.dylib", logPath: '/T/l.log' }],
+    ['colon in log', { dylibPath: '/A/p.dylib', logPath: '/T:x/l.log' }],
+    ['relative dylib', { dylibPath: 'p.dylib', logPath: '/T/l.log' }]
+  ])('unsafe probe (%s) is dropped, status stays ok', (_n, bad) => {
+    expect(buildOverlayCxTokens({ ...base, probe: bad })).toEqual(
+      buildOverlayCxTokens(base)
+    )
+    expect(buildOverlayEnvVars({ ...base, probe: bad })).toEqual(
+      buildOverlayEnvVars(base)
+    )
   })
 })

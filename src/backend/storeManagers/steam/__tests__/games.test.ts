@@ -534,6 +534,13 @@ jest.mock('../bridge/peSteamDrm', () => ({
 // Phase 56 (56-12): no test writes under a real app folder.
 jest.mock('backend/constants/paths', () => ({
   ...jest.requireActual('backend/constants/paths'),
+  builtOverlayInputProbePath: jest
+    .requireActual('node:path')
+    .join(
+      jest.requireActual('node:os').tmpdir(),
+      `gamelib probe games-test-${process.pid}`,
+      'overlay_input_probe.dylib'
+    ),
   appFolder: jest
     .requireActual('node:path')
     .join(
@@ -13407,6 +13414,44 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         )
       })
 
+      it('probe flag 1: the DRM prepare call receives the probe; unset: none', async () => {
+        const probePath = jest.requireMock('backend/constants/paths')
+          .builtOverlayInputProbePath as string
+        mkdirSync(join(probePath, '..'), { recursive: true })
+        writeFileSync(probePath, 'x')
+        const saved = process.env.GAMELIB_OVERLAY_INPUT_PROBE
+        try {
+          const id = freshId()
+          useResigned(id, true)
+          __prepareOverlayTokensMock.mockResolvedValue({
+            status: 'ok',
+            tokens: tokensFor(id)
+          })
+          process.env.GAMELIB_OVERLAY_INPUT_PROBE = '1'
+          await new SteamGame(id).launch({} as never)
+          expect(
+            __prepareOverlayTokensMock.mock.calls[0][0].probe.dylibPath
+          ).toBe(probePath)
+          __prepareOverlayTokensMock.mockClear()
+          delete process.env.GAMELIB_OVERLAY_INPUT_PROBE
+          const id2 = freshId()
+          useResigned(id2, true)
+          __prepareOverlayTokensMock.mockResolvedValue({
+            status: 'ok',
+            tokens: tokensFor(id2)
+          })
+          ;(runWineCommand as jest.Mock).mockClear()
+          await new SteamGame(id2).launch({} as never)
+          expect(
+            __prepareOverlayTokensMock.mock.calls[0][0]
+          ).not.toHaveProperty('probe')
+        } finally {
+          if (saved === undefined)
+            delete process.env.GAMELIB_OVERLAY_INPUT_PROBE
+          else process.env.GAMELIB_OVERLAY_INPUT_PROBE = saved
+        }
+      })
+
       it('unresigned clone: no tokens, one resign notice and log line, game still launches', async () => {
         const id = freshId()
         useResigned(id, false)
@@ -13716,6 +13761,66 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             String(c[0]).includes(`appId=${id} reason=overlay-shim`)
           )
         ).toBe(true)
+      })
+
+      describe('60-11 input probe flag (G1)', () => {
+        const saved = process.env.GAMELIB_OVERLAY_INPUT_PROBE
+        const probePath = jest.requireMock('backend/constants/paths')
+          .builtOverlayInputProbePath as string
+        beforeEach(() => {
+          mkdirSync(join(probePath, '..'), { recursive: true })
+          writeFileSync(probePath, 'x')
+        })
+        afterEach(() => {
+          if (saved === undefined)
+            delete process.env.GAMELIB_OVERLAY_INPUT_PROBE
+          else process.env.GAMELIB_OVERLAY_INPUT_PROBE = saved
+        })
+        const probeOf = (m: jest.Mock) => m.mock.calls[0][0].probe
+
+        it('flag 1: fallback engine and TCP clone calls receive the probe', async () => {
+          process.env.GAMELIB_OVERLAY_INPUT_PROBE = '1'
+          const id = freshId()
+          pinStaging(id)
+          await callPrepare(id, {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: { bin: '/e/wine', name: 'e', type: 'wine' }
+          })
+          expect(probeOf(__prepareOverlayEnvMock)).toEqual({
+            dylibPath: probePath,
+            logPath: expect.stringMatching(
+              new RegExp(`input-probe-${id}-\\d+\\.log$`)
+            )
+          })
+          const id2 = freshId()
+          __prepareOverlayLaunchMock.mockResolvedValue(okResult(id2))
+          await callPrepare(id2, {
+            wineCrossoverBottle: bottleFor(id2),
+            wineVersion: {
+              bin: '/stock/bin/wine',
+              name: 's',
+              type: 'crossover'
+            }
+          })
+          expect(probeOf(__prepareOverlayLaunchMock).dylibPath).toBe(probePath)
+        })
+
+        it.each([undefined, '0', 'true'])(
+          'flag %s: no probe arg on either call',
+          async (v) => {
+            if (v === undefined) delete process.env.GAMELIB_OVERLAY_INPUT_PROBE
+            else process.env.GAMELIB_OVERLAY_INPUT_PROBE = v
+            const id = freshId()
+            pinStaging(id)
+            await callPrepare(id, {
+              wineCrossoverBottle: bottleFor(id),
+              wineVersion: { bin: '/e/wine', name: 'e', type: 'wine' }
+            })
+            expect(__prepareOverlayEnvMock.mock.calls[0][0]).not.toHaveProperty(
+              'probe'
+            )
+          }
+        )
       })
 
       it('fallback engine with the overlay off: no env prepared', async () => {
