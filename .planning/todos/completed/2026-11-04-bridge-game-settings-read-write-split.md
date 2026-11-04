@@ -6,6 +6,7 @@ severity: medium
 platform: macos
 ready: code
 found_by: '60-13 audit of the 60-UAT G3 defect (Off reopened as Automatic)'
+status: 'RESOLVED 2026-11-04 (quick 261104-rvy): getSettings() merges an allowlist of 11 title-authoritative keys from GamesConfig/<appId>.json over the bottle settings; bottle stays authoritative for wine/prefix/bottle keys.'
 files:
   - src/backend/storeManagers/steam/games.ts
   - src/backend/sidecar/gameSettingWrite.ts
@@ -37,3 +38,14 @@ global default) is a design question, so it was not decided in 60-13.
 
 Decide per key, then merge the title's GameConfig over the bottle settings in `getSettings()`
 (or generalise the G11/G3 merge), with a regression test per key.
+
+## Resolution
+
+Quick 261104-rvy. `getSettings()` now merges an allowlist of 11 title-authoritative keys
+(launcherArgs, targetExe, enviromentOptions, wrapperOptions, beforeLaunchScriptPath,
+afterLaunchScriptPath, language, verboseLogs, showFps, showMangohud, lastUsedLaunchOption)
+from `GamesConfig/<appId>.json` over the bottle settings when present. The bottle stays
+authoritative for wineVersion, wineCrossoverBottle, winePrefix and every other key. The
+planned names `alternativeExe` and `preferedLanguage` were Settings component names; the
+real keys are `targetExe` and `language`. New files:
+`src/backend/storeManagers/steam/titleSettings.ts` and its test.
