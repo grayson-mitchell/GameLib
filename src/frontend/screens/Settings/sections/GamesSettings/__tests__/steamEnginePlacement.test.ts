@@ -45,11 +45,12 @@ describe('Steam engine override placement (quick 261104-tm6)', () => {
     expect(wine).toContain('gamelib:steam.engine.wineTabHint')
   })
 
-  test('Advanced tab keeps only the overlay override', () => {
+  test('overlay override moved from Advanced to Run (261104-unp)', () => {
     const advanced = slice("index={'advanced'}>")
     expect(advanced).not.toContain('<SteamEngineOverride />')
-    expect(advanced).toContain('<SteamOverlayOverride />')
-    expect(advanced).toContain('isMacSteamTitle &&')
+    expect(advanced).not.toContain('<SteamOverlayOverride />')
+    const run = slice("index={'run'}>")
+    expect(run).toContain('isMacSteamTitle && <SteamOverlayOverride />')
   })
 
   test('catalogue carries the hint text', () => {

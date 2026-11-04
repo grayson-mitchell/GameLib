@@ -62,16 +62,14 @@ function getStartingTab(platform: string, gameInfo?: GameInfo | null): string {
     if (platform !== 'win32') {
       return 'wine'
     }
-    return 'advanced'
+    return 'run'
   }
   if (platform === 'win32') {
-    return 'advanced'
+    return 'run'
   } else if (windowsPlatforms.includes(gameInfo?.install.platform || '')) {
     return 'wine'
-  } else if (platform === 'darwin') {
-    return 'advanced'
   } else {
-    return 'other'
+    return 'run'
   }
 }
 
@@ -91,30 +89,18 @@ export default function GamesSettings() {
   const isSideloaded = gameInfo?.runner === 'sideload'
   // Shared gate (was D-14's): per-game Steam titles on macOS, never Default.
   const isMacSteamTitle = !isDefault && isMac && gameInfo?.runner === 'steam'
-  // These runners launch native Mac binaries through setupEnvVars, so MTL_HUD_ENABLED reaches the game; native Mac Steam launches via steam://rungameid and cannot take env vars, so it is deliberately absent. Browser games are excluded (not launched via setupEnvVars).
-  const isMacNativeStatsOverlayTitle =
-    !isDefault &&
-    isMac &&
-    isNative &&
-    !isBrowserGame &&
-    ['legendary', 'gog', 'nile', 'sideload'].includes(gameInfo?.runner ?? '')
+  const showWineTab = !(isWin || isNative || isBrowserGame)
+  // Native Linux games and native macOS Steam games (steam://rungameid cannot take env vars) are excluded; nile is listed but inert because isNative is Windows-only for it. Browser games are not launched via setupEnvVars.
+  const showStatsOverlay =
+    !isWin &&
+    (!isNative ||
+      (isMac &&
+        !isDefault &&
+        !isBrowserGame &&
+        ['legendary', 'gog', 'nile', 'sideload'].includes(
+          gameInfo?.runner ?? ''
+        )))
 
-  function shouldShowSettings(tab: 'wine' | 'other'): boolean {
-    if (tab === 'wine') {
-      if (isWin || isNative || isBrowserGame) {
-        return false
-      }
-      return true
-    }
-
-    // Other tab shows on linux and mac (if not native, and native Mac games that can take the Metal HUD)
-    if (isLinux || (isMac && (!isNative || isMacNativeStatsOverlayTitle))) {
-      return true
-    }
-    return false
-  }
-  const showOtherTab = shouldShowSettings('other')
-  const showWineTab = shouldShowSettings('wine')
   // Phase 45 Plan 01 (D-03): mirrors `Tools/index.tsx`'s own gate, plus the Wine
   // tab's `!isCrossover` guard -- see visibility.ts for why both are required.
   const showWinetricksTab = shouldShowWinetricksTab({
@@ -137,6 +123,10 @@ export default function GamesSettings() {
   // stable across the Default-page / per-game Settings boundary. Falling
   // back to the same starting tab a fresh mount would pick keeps `value`
   // from ever pointing at a `<Tab>` that was not rendered.
+  // The Other tab was removed in 261104-unp; 'advanced' remains a valid saved value.
+  if (latestTabIndex === 'other') {
+    latestTabIndex = 'run'
+  }
   if (latestTabIndex === 'winetricks' && !showWinetricksTab) {
     latestTabIndex = getStartingTab(platform, gameInfo)
   }
@@ -184,9 +174,7 @@ export default function GamesSettings() {
       >
         {showWineTab && <Tab label="Wine" value="wine" />}
         {showWinetricksTab && <Tab label="Winetricks" value="winetricks" />}
-        {showOtherTab && (
-          <Tab label={t('settings.navbar.other', 'Other')} value="other" />
-        )}
+        <Tab label={t('gamelib:settings.navbar.run', 'Run')} value="run" />
         <Tab
           label={t('settings.navbar.advanced', 'Advanced')}
           value="advanced"
@@ -262,31 +250,22 @@ export default function GamesSettings() {
         </TabPanel>
       )}
 
-      <TabPanel value={value} index={'other'}>
-        {(!isNative || isMacNativeStatsOverlayTitle) && <ShowFPS />}
+      <TabPanel value={value} index={'run'}>
+        <LaunchOptionSelector />
+        <LauncherArgs />
+        {!isSideloaded && <PreferedLanguage />}
+        {!isSideloaded && <OfflineMode />}
+        {showStatsOverlay && <ShowFPS />}
         <Mangohud />
         <GameMode />
-        {isLinux && <PreferSystemLibs />}
         <NvidiaPrime />
-        {!isNative && (
-          <>
-            <BattlEyeRuntime />
-            <EacRuntime />
-          </>
-        )}
+        {/* Phase 60 D-02: per-game overlay off switch; eligibility comes from
+            the backend and includes DRM-mode titles. */}
+        {isMacSteamTitle && <SteamOverlayOverride />}
       </TabPanel>
 
       <TabPanel value={value} index={'advanced'}>
-        {!isSideloaded && (
-          <>
-            <IgnoreGameUpdates />
-            <OfflineMode />
-          </>
-        )}
-        <VerboseLogs />
         <AlternativeExe />
-        <LaunchOptionSelector />
-        <LauncherArgs />
         <div className="Field">
           <label>{t('setting.scripts', 'Scripts:')}</label>
           <BeforeLaunchScriptPath />
@@ -294,12 +273,15 @@ export default function GamesSettings() {
         </div>
         <WrappersTable />
         <EnvVariablesTable />
-        {!isSideloaded && <PreferedLanguage />}
-        {/* The per-game engine override moved to the Wine tab (quick
-            261104-tm6). */}
-        {/* Phase 60 D-02: per-game overlay off switch; eligibility comes from
-            the backend and includes DRM-mode titles. */}
-        {isMacSteamTitle && <SteamOverlayOverride />}
+        <VerboseLogs />
+        {!isSideloaded && <IgnoreGameUpdates />}
+        {isLinux && <PreferSystemLibs />}
+        {!isNative && (
+          <>
+            <BattlEyeRuntime />
+            <EacRuntime />
+          </>
+        )}
       </TabPanel>
 
       <TabPanel value={value} index={'saves'}>
