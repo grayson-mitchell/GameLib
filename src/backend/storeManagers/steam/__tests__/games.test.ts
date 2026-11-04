@@ -14137,6 +14137,36 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           expect(fixLines()[0]).toContain('applied=false reason=experiment')
         })
 
+        // 60-REVIEW WR-02: the probe (observe-only too) hooks the same entry
+        // points, so the fix is withheld whenever the probe is armed.
+        it.each([
+          ['CrossOver clone', crossover],
+          ['fallback engine', staging]
+        ])(
+          'armed probe, no experiment (%s): probe passed, no module, applied=false reason=probe',
+          async (_n, wineVersion) => {
+            mkdirSync(join(probePath, '..'), { recursive: true })
+            writeFileSync(probePath, 'x')
+            process.env.GAMELIB_OVERLAY_INPUT_PROBE = '1'
+            const id = freshId()
+            if (wineVersion === staging) pinStaging(id)
+            __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+            await callPrepare(id, {
+              wineCrossoverBottle: bottleFor(id),
+              wineVersion
+            })
+            const mock =
+              wineVersion === staging
+                ? __prepareOverlayEnvMock
+                : __prepareOverlayLaunchMock
+            expect(mock.mock.calls[0][0]).not.toHaveProperty('inputModulePath')
+            expect(mock.mock.calls[0][0].probe.dylibPath).toBe(probePath)
+            expect(fixLines()).toEqual([
+              `SteamGame: appId ${id} overlay input fix=X-RELEASE+BLOCK applied=false reason=probe`
+            ])
+          }
+        )
+
         it('overlay off: no module and no fix line', async () => {
           __resolveOverlayEnabledMock.mockReturnValue({
             enabled: false,

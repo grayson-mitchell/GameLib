@@ -123,7 +123,10 @@ function overlayEnvValues(a: OverlayEnvArgs): OverlayStepResult<{
       a.probe && safePath(a.probe.dylibPath) && safePath(a.probe.logPath)
         ? a.probe
         : undefined
-    const input = safePath(a.inputModulePath) ? a.inputModulePath : undefined
+    // 60-REVIEW WR-02: never beside the probe (they hook the same entry points
+    // and each would see the other as the caller, not winemac.so).
+    const input =
+      !probe && safePath(a.inputModulePath) ? a.inputModulePath : undefined
     return {
       status: 'ok',
       vars: [

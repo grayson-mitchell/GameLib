@@ -539,7 +539,10 @@ describe('overlay input fix module (60-20, G1)', () => {
     expect(r.tokens[0]).toBe(`DYLD_INSERT_LIBRARIES='${std}:${input}'`)
   })
 
-  test('tokens: input then probe', () => {
+  // 60-REVIEW WR-02: the two hook the same entry points, so they never load
+  // together. games.ts already withholds the input module (reason=probe); the
+  // builder drops it too, so a caller passing both cannot get the pair.
+  test('tokens: a safe probe drops the input module', () => {
     const probe = {
       dylibPath: '/A B/overlay_input_probe.dylib',
       logPath: '/T R/p.log'
@@ -548,8 +551,9 @@ describe('overlay input fix module (60-20, G1)', () => {
     expect(r.status).toBe('ok')
     if (r.status !== 'ok') return
     expect(r.tokens[0]).toBe(
-      `DYLD_INSERT_LIBRARIES='${std}:${input}:${probe.dylibPath}'`
+      `DYLD_INSERT_LIBRARIES='${std}:${probe.dylibPath}'`
     )
+    expect(r.tokens[0]).not.toContain(input)
   })
 
   test('env vars carry the same order', () => {

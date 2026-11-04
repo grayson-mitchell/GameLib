@@ -4824,8 +4824,15 @@ export default class SteamGame implements Game {
         dylibPath: builtOverlayInputProbePath,
         now: 0
       })
-      if (armed?.experiment) {
-        logInfo(line(false, 'experiment'), LogPrefix.Steam)
+      // 60-REVIEW WR-02: never load the fix beside the probe. Both hook the same
+      // entry points, so each one's winemac caller check sees the other image
+      // and the fix degrades to set_active only. Order: route, disabled,
+      // experiment, probe, missing.
+      if (armed) {
+        logInfo(
+          line(false, armed.experiment ? 'experiment' : 'probe'),
+          LogPrefix.Steam
+        )
         return {}
       }
       if (
