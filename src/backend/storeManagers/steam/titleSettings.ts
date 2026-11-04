@@ -47,7 +47,7 @@ export function readStoredTitleConfig(
  * real keys are `targetExe` and `language`.
  */
 // ts-prune-ignore-next
-export const TITLE_AUTHORITATIVE_KEYS: readonly (keyof GameSettings)[] = [
+export const TITLE_AUTHORITATIVE_KEYS = [
   'launcherArgs',
   'targetExe',
   'enviromentOptions',
@@ -59,7 +59,7 @@ export const TITLE_AUTHORITATIVE_KEYS: readonly (keyof GameSettings)[] = [
   'showFps',
   'showMangohud',
   'lastUsedLaunchOption'
-]
+] as const satisfies readonly (keyof GameSettings)[]
 
 /** Only the allowlisted keys present (`!== undefined`) in the entry. */
 // ts-prune-ignore-next

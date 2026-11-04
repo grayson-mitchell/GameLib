@@ -147,6 +147,7 @@ import {
   parseOverlayOverride,
   isAbnormalOverlayExit
 } from './bridge/overlay/overlayPolicy'
+import { readStoredTitleConfig, pickTitleSettings } from './titleSettings'
 import {
   watchOverlayAttach,
   OVERLAY_ATTACH_DRM_TIMEOUT_MS,
@@ -1273,6 +1274,7 @@ export default class SteamGame implements Game {
       // title's GameConfig (where the launch reads it), so the shared bottle
       // settings alone made the Settings screen read it back as Automatic.
       const settings = getSteamBottleSettings()
+      const title = pickTitleSettings(readStoredTitleConfig(this.appId))
       const { readStoredEngineOverride } =
         await import('./engine/engineDecision')
       const override = readStoredEngineOverride(this.appId)
@@ -1284,11 +1286,16 @@ export default class SteamGame implements Game {
       )
       const overlayOverride =
         overlay === 'on' || overlay === 'off' ? overlay : undefined
-      if (typeof override !== 'string' && overlayOverride === undefined) {
+      if (
+        typeof override !== 'string' &&
+        overlayOverride === undefined &&
+        Object.keys(title).length === 0
+      ) {
         return settings
       }
       return {
         ...settings,
+        ...title,
         ...(typeof override === 'string'
           ? { steamEngineOverride: override }
           : {}),

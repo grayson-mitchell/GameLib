@@ -17,6 +17,7 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { sendFrontendMessage } from '../../../ipc'
 import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
 import { steamMetadataStore, steamLibraryStore } from '../electronStores'
+import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
 import SteamGame, {
   parseSteamStorageRequirement,
   getSteamInstallSize,
@@ -494,6 +495,18 @@ jest.mock('../bridge/overlay/overlayPolicy', () => {
       .isAbnormalOverlayExit,
     parseOverlayOverride: jest.requireActual('../bridge/overlay/overlayPolicy')
       .parseOverlayOverride
+  }
+})
+// Todo 2026-11-04: titleSettings. The stored-config reader is a jest.fn() so it
+// survives resetMocks (undefined by default: no title keys in older tests).
+jest.mock('../titleSettings', () => {
+  const storedMock = jest.fn()
+  return {
+    __readStoredTitleConfigMock: storedMock,
+    readStoredTitleConfig: (...args: unknown[]) => storedMock(...args),
+    pickTitleSettings: jest.requireActual('../titleSettings').pickTitleSettings,
+    TITLE_AUTHORITATIVE_KEYS:
+      jest.requireActual('../titleSettings').TITLE_AUTHORITATIVE_KEYS
   }
 })
 // Phase 60 (60-09): attach watch and overlay wine log. The shim forwarder and
@@ -8438,6 +8451,107 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         expect(settings).not.toHaveProperty('steamOverlayOverride')
       }
     )
+  })
+
+  describe('getSettings() per-title keys (todo 2026-11-04 read/write split)', () => {
+    const storedTitle = () =>
+      jest.requireMock('../titleSettings')
+        .__readStoredTitleConfigMock as jest.Mock
+    const storedOverlay = () =>
+      jest.requireMock('../bridge/overlay/overlayPolicy')
+        .__readStoredOverlayOverrideMock as jest.Mock
+    const storedEngine = () =>
+      jest.requireMock('../engine/engineDecision')
+        .readStoredEngineOverride as jest.Mock
+    beforeEach(() => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+        wineCrossoverBottle: 'GameLibSteam'
+      })
+    })
+
+    const VALUES: Record<(typeof TITLE_AUTHORITATIVE_KEYS)[number], unknown> = {
+      launcherArgs: '-novid',
+      targetExe: 'C:\\Game\\alt.exe',
+      enviromentOptions: [{ key: 'A', value: '1' }],
+      wrapperOptions: [{ exe: 'w', args: '' }],
+      beforeLaunchScriptPath: '/s/before.sh',
+      afterLaunchScriptPath: '/s/after.sh',
+      language: 'de',
+      verboseLogs: true,
+      showFps: true,
+      showMangohud: true,
+      lastUsedLaunchOption: { type: 'basic', name: 'x', parameters: '-y' }
+    }
+
+    it.each(TITLE_AUTHORITATIVE_KEYS.map((k) => [k]))(
+      'carries the stored %s',
+      async (key) => {
+        storedTitle().mockReturnValueOnce({ [key]: VALUES[key] })
+        const settings = await new SteamGame(APP_ID).getSettings()
+        expect(settings).toEqual({
+          wineCrossoverBottle: 'GameLibSteam',
+          [key]: VALUES[key]
+        })
+      }
+    )
+
+    it('a stale wine/prefix/bottle in the title file never wins', async () => {
+      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+        wineCrossoverBottle: 'GameLibSteam',
+        wineVersion: { name: 'bottle' },
+        winePrefix: '/bottle'
+      })
+      storedTitle().mockReturnValueOnce({
+        wineVersion: { name: 'stale' },
+        winePrefix: '/stale',
+        wineCrossoverBottle: 'OldBottle',
+        launcherArgs: '-a'
+      })
+      const settings = await new SteamGame(APP_ID).getSettings()
+      expect(settings).toEqual({
+        wineCrossoverBottle: 'GameLibSteam',
+        wineVersion: { name: 'bottle' },
+        winePrefix: '/bottle',
+        launcherArgs: '-a'
+      })
+    })
+
+    it('a key absent from the title file keeps the bottle/global value', async () => {
+      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+        wineCrossoverBottle: 'GameLibSteam',
+        launcherArgs: '-global'
+      })
+      storedTitle().mockReturnValueOnce({ language: 'de' })
+      const settings = await new SteamGame(APP_ID).getSettings()
+      expect(settings).toMatchObject({
+        launcherArgs: '-global',
+        language: 'de'
+      })
+    })
+
+    it('the title value beats the bottle/global value', async () => {
+      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+        wineCrossoverBottle: 'GameLibSteam',
+        launcherArgs: '-global'
+      })
+      storedTitle().mockReturnValueOnce({ launcherArgs: '-title' })
+      const settings = await new SteamGame(APP_ID).getSettings()
+      expect(settings).toMatchObject({ launcherArgs: '-title' })
+    })
+
+    it('merges engine, overlay and a title key together', async () => {
+      storedEngine().mockReturnValueOnce('pinned:wine-staging-11.20')
+      storedOverlay().mockReturnValueOnce('on')
+      storedTitle().mockReturnValueOnce({ showFps: true })
+      const settings = await new SteamGame(APP_ID).getSettings()
+      expect(settings).toEqual({
+        wineCrossoverBottle: 'GameLibSteam',
+        steamEngineOverride: 'pinned:wine-staging-11.20',
+        steamOverlayOverride: 'on',
+        showFps: true
+      })
+    })
   })
 
   it('D2: isNative() is false for a forced game — launcher.ts must run checkWineBeforeLaunch', () => {
