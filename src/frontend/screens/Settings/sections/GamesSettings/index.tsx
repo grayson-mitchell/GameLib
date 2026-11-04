@@ -91,6 +91,13 @@ export default function GamesSettings() {
   const isSideloaded = gameInfo?.runner === 'sideload'
   // Shared gate (was D-14's): per-game Steam titles on macOS, never Default.
   const isMacSteamTitle = !isDefault && isMac && gameInfo?.runner === 'steam'
+  // These runners launch native Mac binaries through setupEnvVars, so MTL_HUD_ENABLED reaches the game; native Mac Steam launches via steam://rungameid and cannot take env vars, so it is deliberately absent. Browser games are excluded (not launched via setupEnvVars).
+  const isMacNativeStatsOverlayTitle =
+    !isDefault &&
+    isMac &&
+    isNative &&
+    !isBrowserGame &&
+    ['legendary', 'gog', 'nile', 'sideload'].includes(gameInfo?.runner ?? '')
 
   function shouldShowSettings(tab: 'wine' | 'other'): boolean {
     if (tab === 'wine') {
@@ -100,8 +107,8 @@ export default function GamesSettings() {
       return true
     }
 
-    // Other tab show on linux and mac (if not native)
-    if (isLinux || (isMac && !isNative)) {
+    // Other tab shows on linux and mac (if not native, and native Mac games that can take the Metal HUD)
+    if (isLinux || (isMac && (!isNative || isMacNativeStatsOverlayTitle))) {
       return true
     }
     return false
@@ -256,7 +263,7 @@ export default function GamesSettings() {
       )}
 
       <TabPanel value={value} index={'other'}>
-        {!isNative && <ShowFPS />}
+        {(!isNative || isMacNativeStatsOverlayTitle) && <ShowFPS />}
         <Mangohud />
         <GameMode />
         {isLinux && <PreferSystemLibs />}
