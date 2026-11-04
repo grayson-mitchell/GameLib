@@ -59,8 +59,14 @@ within one poll interval, both still degrade to the old no-timeout behaviour. A 
 no watch.
 Tests: a live-publisher case (held open 4.5 s, no self-close) and a dead-publisher case (a reaped child's
 pid gives one close and `set_active 0` without a close post).
-**Status:** fixed: requires human verification. This is new state-machine logic, and it needs the live
-check above.
+**Status:** fixed: live spot-check passed 2026-11-04. Schedule I on CrossOver (launched 21:34:52,
+`applied=true`) held the overlay open for 16 s (shim `blocking` at 21:35:24, `passing` at 21:35:40) and
+it did not close itself. The Planet Crafter on Wine-Staging (launched 21:37:08, `reason=cx-missing`,
+`applied=true`) passed the same check. On both runs the operator confirmed the cursor, clicks, and
+mouse-look returning after close. Each overlay log shows exactly one
+`overlay_input open windows=4 unhide=1 assoc=1 err=0`, `set_active 1`/`0`, and
+`close deferred=0 assoc=1 hide=1 rect=replayed`, so the close came from the signal and not from the
+publisher-gone path.
 
 ### WR-02: The fix and the probe together break the fix's winemac caller check
 
