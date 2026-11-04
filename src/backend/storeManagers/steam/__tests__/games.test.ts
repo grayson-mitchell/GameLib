@@ -13585,6 +13585,50 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         )
       })
 
+      // 60-REVIEW WR-06 (D-04): the DRM clone only logs the input fix, never
+      // injects it. Every other gate would pass here (module present, no probe,
+      // fix not off), so only the route keeps the module out.
+      it('DRM route: input module never passed, logged applied=false reason=route', async () => {
+        const inputPath = jest.requireMock('backend/constants/paths')
+          .builtOverlayInputPath as string
+        const keys = [
+          'GAMELIB_OVERLAY_INPUT_FIX',
+          'GAMELIB_OVERLAY_INPUT_PROBE',
+          'GAMELIB_OVERLAY_RELEASE_EXPERIMENT'
+        ]
+        const saved = keys.map((k) => process.env[k])
+        try {
+          for (const k of keys) delete process.env[k]
+          mkdirSync(join(inputPath, '..'), { recursive: true })
+          writeFileSync(inputPath, 'x')
+          const id = freshId()
+          useResigned(id, true)
+          __prepareOverlayTokensMock.mockResolvedValue({
+            status: 'ok',
+            tokens: tokensFor(id)
+          })
+          expect(await new SteamGame(id).launch({} as never)).toBe(true)
+          expect(__prepareOverlayTokensMock).toHaveBeenCalledTimes(1)
+          expect(
+            __prepareOverlayTokensMock.mock.calls[0][0]
+          ).not.toHaveProperty('inputModulePath')
+          expect(cxEnv() ?? '').not.toContain('overlay_input.dylib')
+          const fixLines = infoLines()
+            .concat(
+              (logWarning as jest.Mock).mock.calls.map((c) => String(c[0]))
+            )
+            .filter((l) => l.includes('overlay input fix='))
+          expect(fixLines).toEqual([
+            `SteamGame: appId ${id} overlay input fix=X-RELEASE+BLOCK applied=false reason=route`
+          ])
+        } finally {
+          keys.forEach((k, i) => {
+            if (saved[i] === undefined) delete process.env[k]
+            else process.env[k] = saved[i]
+          })
+        }
+      })
+
       it('probe flag 1: the DRM prepare call receives the probe; unset: none', async () => {
         const probePath = jest.requireMock('backend/constants/paths')
           .builtOverlayInputProbePath as string
